@@ -25,7 +25,7 @@ except ImportError:
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 from tests.support.paths import TMP, FILES
 
 # Import salt libs
@@ -36,39 +36,51 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(not HAS_GITPYTHON, 'GitPython is not installed')
-class GitfsConfigTestCase(TestCase):
+class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
 
-    def setUp(self):
+    def setup_loader_modules(self):
         self.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
-        self.opts = {
-            '__role': 'master',
-            'cachedir': self.tmp_cachedir,
-            'fileserver_backend': ['git'],
-            'gitfs_provider': 'gitpython',
-            'gitfs_mountpoint': '',
-            'gitfs_root': 'salt',
-            'gitfs_base': 'master',
-            'gitfs_user': '',
-            'gitfs_password': '',
-            'gitfs_insecure_auth': False,
-            'gitfs_privkey': '',
-            'gitfs_pubkey': '',
-            'gitfs_passphrase': '',
-            'gitfs_env_whitelist': [],
-            'gitfs_env_blacklist': [],
-            'gitfs_global_lock': True,
-            'gitfs_ssl_verify': True,
-            'gitfs_saltenv': [],
-            'gitfs_refspecs': ['+refs/heads/*:refs/remotes/origin/*',
-                               '+refs/tags/*:refs/tags/*'],
+        self.tmp_sock_dir = tempfile.mkdtemp(dir=TMP)
+        return {
+            gitfs: {
+                '__opts__': {
+                    'cachedir': self.tmp_cachedir,
+                    'sock_dir': self.tmp_sock_dir,
+                    'gitfs_root': 'salt',
+                    'fileserver_backend': ['git'],
+                    'gitfs_base': 'master',
+                    'fileserver_events': True,
+                    'transport': 'zeromq',
+                    'gitfs_mountpoint': '',
+                    'gitfs_saltenv': [],
+                    'gitfs_env_whitelist': [],
+                    'gitfs_env_blacklist': [],
+                    'gitfs_saltenv_whitelist': [],
+                    'gitfs_saltenv_blacklist': [],
+                    'gitfs_user': '',
+                    'gitfs_password': '',
+                    'gitfs_insecure_auth': False,
+                    'gitfs_privkey': '',
+                    'gitfs_pubkey': '',
+                    'gitfs_passphrase': '',
+                    'gitfs_refspecs': [
+                        '+refs/heads/*:refs/remotes/origin/*',
+                        '+refs/tags/*:refs/tags/*'
+                    ],
+                    'gitfs_ssl_verify': True,
+                    'gitfs_disable_saltenv_mapping': False,
+                    'gitfs_ref_types': ['branch', 'tag', 'sha'],
+                    '__role': 'master',
+                }
+            }
         }
 
     def tearDown(self):
         shutil.rmtree(self.tmp_cachedir)
-        del self.opts
+        shutil.rmtree(self.tmp_sock_dir)
 
     def test_per_saltenv_config(self):
-        opts = textwrap.dedent('''
+        opts_override = textwrap.dedent('''
             gitfs_saltenv:
               - baz:
                 # when loaded, the "salt://" prefix will be removed
@@ -90,10 +102,11 @@ class GitfsConfigTestCase(TestCase):
                   - baz:
                     - mountpoint: abc
         ''')
-        self.opts.update(yaml.safe_load(opts))
-        git_fs = salt.utils.gitfs.GitFS(self.opts)
-        git_fs.init_remotes(self.opts['gitfs_remotes'],
-                            gitfs.PER_REMOTE_OVERRIDES, gitfs.PER_REMOTE_ONLY)
+        with patch.dict(gitfs.__opts__, yaml.safe_load(opts_override)):
+            git_fs = salt.utils.gitfs.GitFS(gitfs.__opts__)
+            git_fs.init_remotes(
+                gitfs.__opts__['gitfs_remotes'],
+                gitfs.PER_REMOTE_OVERRIDES, gitfs.PER_REMOTE_ONLY)
 
         # repo1 (branch: foo)
         # The mountpoint should take the default (from gitfs_mountpoint), while
@@ -154,27 +167,35 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
         self.tmp_repo_dir = os.path.join(TMP, 'gitfs_root')
         return {
             gitfs: {
-                '__opts__': {'cachedir': self.tmp_cachedir,
-                             'sock_dir': self.tmp_sock_dir,
-                             'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                             'gitfs_root': '',
-                             'fileserver_backend': ['git'],
-                             'gitfs_base': 'master',
-                             'fileserver_events': True,
-                             'transport': 'zeromq',
-                             'gitfs_mountpoint': '',
-                             'gitfs_env_whitelist': [],
-                             'gitfs_env_blacklist': [],
-                             'gitfs_user': '',
-                             'gitfs_password': '',
-                             'gitfs_insecure_auth': False,
-                             'gitfs_privkey': '',
-                             'gitfs_pubkey': '',
-                             'gitfs_passphrase': '',
-                             'gitfs_refspecs': ['+refs/heads/*:refs/remotes/origin/*',
-                                                '+refs/tags/*:refs/tags/*'],
-                             'gitfs_ssl_verify': True,
-                             '__role': 'master'
+                '__opts__': {
+                    'cachedir': self.tmp_cachedir,
+                    'sock_dir': self.tmp_sock_dir,
+                    'gitfs_remotes': ['file://' + self.tmp_repo_dir],
+                    'gitfs_root': '',
+                    'fileserver_backend': ['git'],
+                    'gitfs_base': 'master',
+                    'fileserver_events': True,
+                    'transport': 'zeromq',
+                    'gitfs_mountpoint': '',
+                    'gitfs_saltenv': [],
+                    'gitfs_env_whitelist': [],
+                    'gitfs_env_blacklist': [],
+                    'gitfs_saltenv_whitelist': [],
+                    'gitfs_saltenv_blacklist': [],
+                    'gitfs_user': '',
+                    'gitfs_password': '',
+                    'gitfs_insecure_auth': False,
+                    'gitfs_privkey': '',
+                    'gitfs_pubkey': '',
+                    'gitfs_passphrase': '',
+                    'gitfs_refspecs': [
+                        '+refs/heads/*:refs/remotes/origin/*',
+                        '+refs/tags/*:refs/tags/*'
+                    ],
+                    'gitfs_ssl_verify': True,
+                    'gitfs_disable_saltenv_mapping': False,
+                    'gitfs_ref_types': ['branch', 'tag', 'sha'],
+                    '__role': 'master',
                 }
             }
         }

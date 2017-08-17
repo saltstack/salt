@@ -13,6 +13,7 @@ import logging
 # Import salt libs
 import salt.config
 import salt.utils
+import salt.utils.platform
 try:
     # Gated for salt-ssh (salt.utils.cloud imports msgpack)
     import salt.utils.cloud
@@ -25,9 +26,9 @@ import salt.syspaths as syspaths
 import salt.utils.sdb as sdb
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     _HOSTS_FILE = os.path.join(
         os.environ['SystemRoot'], 'System32', 'drivers', 'etc', 'hosts')
 else:
@@ -176,14 +177,14 @@ def merge(value,
     if not omit_opts:
         if value in __opts__:
             ret = __opts__[value]
-            if isinstance(ret, str):
+            if isinstance(ret, six.string_types):
                 return ret
     if not omit_master:
         if value in __pillar__.get('master', {}):
             tmp = __pillar__['master'][value]
             if ret is None:
                 ret = tmp
-                if isinstance(ret, str):
+                if isinstance(ret, six.string_types):
                     return ret
             elif isinstance(ret, dict) and isinstance(tmp, dict):
                 tmp.update(ret)
@@ -196,7 +197,7 @@ def merge(value,
             tmp = __pillar__[value]
             if ret is None:
                 ret = tmp
-                if isinstance(ret, str):
+                if isinstance(ret, six.string_types):
                     return ret
             elif isinstance(ret, dict) and isinstance(tmp, dict):
                 tmp.update(ret)

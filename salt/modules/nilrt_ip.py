@@ -15,7 +15,7 @@ import salt.utils.validate.net
 import salt.exceptions
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import pyconnman
     HAS_PYCONNMAN = True
@@ -338,7 +338,7 @@ def set_dhcp_linklocal_all(interface):
 
     .. code-block:: bash
 
-        salt '*' ip.dhcp_linklocal_all interface-label
+        salt '*' ip.set_dhcp_linklocal_all interface-label
     '''
     service = _interface_to_service(interface)
     if not service:
@@ -373,7 +373,7 @@ def set_static_all(interface, address, netmask, gateway, domains):
 
     .. code-block:: bash
 
-        salt '*' ip.dhcp_linklocal_all interface-label address netmask gateway domains
+        salt '*' ip.set_static_all interface-label address netmask gateway domains
     '''
     service = _interface_to_service(interface)
     if not service:

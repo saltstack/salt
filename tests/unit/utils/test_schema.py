@@ -13,7 +13,7 @@ import yaml
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
-from salt.utils import schema
+import salt.utils.schema as schema
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs

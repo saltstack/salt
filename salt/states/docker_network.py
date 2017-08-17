@@ -33,6 +33,9 @@ module (formerly called **dockerng**) in the 2017.7.0 release.
 from __future__ import absolute_import
 import logging
 
+# Import salt libs
+import salt.utils
+
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -50,7 +53,10 @@ def __virtual__():
     return (False, __salt__.missing_fun_string('docker.version'))
 
 
-def present(name, driver=None, containers=None):
+def present(name,
+            driver=None,
+            driver_opts=None,
+            containers=None):
     '''
     Ensure that a network is present.
 
@@ -59,6 +65,9 @@ def present(name, driver=None, containers=None):
 
     driver
         Type of driver for that network.
+
+    driver_opts
+        Options for the network driver.
 
     containers:
         List of container names that should be part of this network
@@ -76,6 +85,8 @@ def present(name, driver=None, containers=None):
         network_bar:
           docker_network.present
             - name: bar
+            - driver_opts:
+                - com.docker.network.driver.mtu: "1450"
             - containers:
                 - cont1
                 - cont2
@@ -85,13 +96,29 @@ def present(name, driver=None, containers=None):
            'changes': {},
            'result': False,
            'comment': ''}
+
+    if salt.utils.is_dictlist(driver_opts):
+        driver_opts = salt.utils.repack_dictlist(driver_opts)
+
     if containers is None:
         containers = []
     # map containers to container's Ids.
     containers = [__salt__['docker.inspect_container'](c)['Id'] for c in containers]
     networks = __salt__['docker.networks'](names=[name])
+    log.trace(
+        'docker_network.present: current networks: {0}'.format(networks)
+    )
+
+    # networks will contain all Docker networks which partially match 'name'.
+    # We need to loop through to find the matching network, if there is one.
+    network = None
     if networks:
-        network = networks[0]  # we expect network's name to be unique
+        for network_iter in networks:
+            if network_iter['Name'] == name:
+                network = network_iter
+                break
+
+    if network is not None:
         if all(c in network['Containers'] for c in containers):
             ret['result'] = True
             ret['comment'] = 'Network \'{0}\' already exists.'.format(name)
@@ -115,7 +142,11 @@ def present(name, driver=None, containers=None):
             return ret
         try:
             ret['changes']['created'] = __salt__['docker.create_network'](
-                name, driver=driver)
+                name,
+                driver=driver,
+                driver_opts=driver_opts,
+                check_duplicate=True)
+
         except Exception as exc:
             ret['comment'] = ('Failed to create network \'{0}\': {1}'
                               .format(name, exc))
@@ -154,7 +185,20 @@ def absent(name, driver=None):
            'comment': ''}
 
     networks = __salt__['docker.networks'](names=[name])
-    if not networks:
+    log.trace(
+        'docker_network.absent: current networks: {0}'.format(networks)
+    )
+
+    # networks will contain all Docker networks which partially match 'name'.
+    # We need to loop through to find the matching network, if there is one.
+    network = None
+    if networks:
+        for network_iter in networks:
+            if network_iter['Name'] == name:
+                network = network_iter
+                break
+
+    if network is None:
         ret['result'] = True
         ret['comment'] = 'Network \'{0}\' already absent'.format(name)
         return ret

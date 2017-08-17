@@ -14,12 +14,14 @@ import traceback
 import salt.crypt
 import salt.payload
 import salt.utils
-import salt.utils.network
+import salt.utils.args
 import salt.utils.event
+import salt.utils.network
+import salt.utils.versions
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 MINE_INTERNAL_KEYWORDS = frozenset([
     '__pub_user',
@@ -197,7 +199,7 @@ def send(func, *args, **kwargs):
         salt '*' mine.send network.ip_addrs eth0
         salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     mine_func = kwargs.pop('mine_function', func)
     if mine_func not in __salt__:
         return False
@@ -270,7 +272,7 @@ def get(tgt,
 
         salt '*' mine.get '*' network.interfaces
         salt '*' mine.get 'os:Fedora' network.interfaces grain
-        salt '*' mine.get 'os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
+        salt '*' mine.get 'G@os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
 
     .. seealso:: Retrieving Mine data from Pillar and Orchestrate
 
@@ -291,7 +293,7 @@ def get(tgt,
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '

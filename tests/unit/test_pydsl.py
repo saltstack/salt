@@ -16,13 +16,14 @@ from tests.support.paths import TMP
 # Import Salt libs
 import salt.loader
 import salt.config
-import salt.utils
+import salt.utils.files
+import salt.utils.versions
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO
 
 
@@ -90,7 +91,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
 
     def render_sls(self, content, sls='', saltenv='base', **kws):
         if 'env' in kws:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Oxygen',
                 'Parameter \'env\' has been detected in the argument list.  This '
                 'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -348,7 +349,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 '''.format(output, output, output)))
 
             self.state_highstate({'base': ['aaa']}, dirpath)
-            with salt.utils.fopen(output, 'r') as f:
+            with salt.utils.files.fopen(output, 'r') as f:
                 self.assertEqual(''.join(f.read().split()), "XYZABCDEF")
 
         finally:
@@ -381,9 +382,9 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 A()
                 '''.format(dirpath, dirpath, dirpath, dirpath)))
             self.state_highstate({'base': ['aaa']}, dirpath)
-            with salt.utils.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
+            with salt.utils.files.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
                 self.assertEqual(f.read(), 'hehe\nhoho\n')
-            with salt.utils.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
+            with salt.utils.files.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
                 self.assertEqual(f.read(), 'hehe\n')
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
@@ -456,5 +457,5 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
 
 
 def write_to(fpath, content):
-    with salt.utils.fopen(fpath, 'w') as f:
+    with salt.utils.files.fopen(fpath, 'w') as f:
         f.write(content)

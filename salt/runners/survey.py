@@ -20,7 +20,7 @@ import salt.client
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 

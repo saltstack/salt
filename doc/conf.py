@@ -245,9 +245,9 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2016.11.6'  # latest release
-previous_release = '2016.3.6'  # latest release from previous branch
-previous_release_dir = '2016.3'  # path on web server for previous branch
+latest_release = '2017.7.1'  # latest release
+previous_release = '2016.11.7'  # latest release from previous branch
+previous_release_dir = '2016.11'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
@@ -515,6 +515,7 @@ epub_copyright = copyright
 epub_scheme = 'URL'
 epub_identifier = 'http://saltstack.com/'
 
+epub_tocdup = False
 #epub_tocdepth = 3
 
 

@@ -21,11 +21,11 @@ import time
 
 import yaml
 
-import salt.utils
+import salt.utils.files
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
 import salt.defaults.exitcodes as exitcodes
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 from tests.support.unit import TestCase
@@ -210,7 +210,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         if not config:
             return
         cpath = self.abs_path(self.config_file_get(config))
-        with salt.utils.fopen(cpath, 'w') as cfo:
+        with salt.utils.files.fopen(cpath, 'w') as cfo:
             cfg = self.config_stringify(config)
             log.debug('Writing configuration for {0} to {1}:\n{2}'.format(self.name, cpath, cfg))
             cfo.write(cfg)
@@ -660,7 +660,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         '''Generate the script file that calls python objects and libraries.'''
         lines = []
         script_source = os.path.join(CODE_DIR, 'scripts', self.script)
-        with salt.utils.fopen(script_source, 'r') as sso:
+        with salt.utils.files.fopen(script_source, 'r') as sso:
             lines.extend(sso.readlines())
         if lines[0].startswith('#!'):
             lines.pop(0)
@@ -668,7 +668,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
 
         script_path = self.abs_path(os.path.join(self.script_dir, self.script))
         log.debug('Installing "{0}" to "{1}"'.format(script_source, script_path))
-        with salt.utils.fopen(script_path, 'w') as sdo:
+        with salt.utils.files.fopen(script_path, 'w') as sdo:
             sdo.write(''.join(lines))
             sdo.flush()
 

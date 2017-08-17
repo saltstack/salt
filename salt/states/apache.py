@@ -45,7 +45,7 @@ from __future__ import absolute_import
 import os.path
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 
 
 def __virtual__():
@@ -61,7 +61,7 @@ def configfile(name, config):
     configs = __salt__['apache.config'](name, config, edit=False)
     current_configs = ''
     if os.path.exists(name):
-        with salt.utils.fopen(name) as config_file:
+        with salt.utils.files.fopen(name) as config_file:
             current_configs = config_file.read()
 
     if configs == current_configs.strip():
@@ -78,7 +78,7 @@ def configfile(name, config):
         return ret
 
     try:
-        with salt.utils.fopen(name, 'w') as config_file:
+        with salt.utils.files.fopen(name, 'w') as config_file:
             print(configs, file=config_file)
         ret['changes'] = {
             'old': current_configs,

@@ -4,11 +4,11 @@ Module for configuring Windows Firewall using ``netsh``
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import re
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -19,7 +19,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, "Module win_firewall: module only available on Windows"
 
     return __virtualname__

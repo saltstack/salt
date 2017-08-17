@@ -47,8 +47,8 @@ try:
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 PY2 = sys.version_info[0] == 2
@@ -62,7 +62,7 @@ def __virtual__():
     '''
     Only works on Windows systems with the _winreg python module
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return (False, 'reg execution module failed to load: '
                        'The module will only run on Windows systems')
 
@@ -150,7 +150,9 @@ class Registry(object):  # pylint: disable=R0903
             _winreg.REG_DWORD:     'REG_DWORD',
             _winreg.REG_EXPAND_SZ: 'REG_EXPAND_SZ',
             _winreg.REG_MULTI_SZ:  'REG_MULTI_SZ',
-            _winreg.REG_SZ:        'REG_SZ'
+            _winreg.REG_SZ:        'REG_SZ',
+            # REG_QWORD isn't in the winreg library
+            11:                    'REG_QWORD'
         }
         self.opttype_reverse = {
             _winreg.REG_OPTION_NON_VOLATILE: 'REG_OPTION_NON_VOLATILE',
@@ -747,3 +749,56 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         log.error('ValueName: {0}'.format(local_vname))
         log.error('32bit Reg: {0}'.format(use_32bit_registry))
         return False
+
+
+def import_file(source, use_32bit_registry=False):
+    '''
+    Import registry settings from a Windows ``REG`` file by invoking ``REG.EXE``.
+
+    .. versionadded:: Oxygen
+
+    Usage:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt machine1 reg.import_file salt://win/printer_config/110_Canon/postinstall_config.reg
+
+    :param str source: The full path of the ``REG`` file. This
+        can be either a local file path or a URL type supported by salt
+        (e.g. ``salt://salt_master_path``).
+
+    :param bool use_32bit_registry: If the value of this paramater is ``True``
+        then the ``REG`` file will be imported into the Windows 32 bit registry.
+        Otherwise the Windows 64 bit registry will be used.
+
+    :return: If the value of ``source`` is an invalid path or otherwise
+       causes ``cp.cache_file`` to return ``False`` then
+       the function will not return and
+       a ``ValueError`` exception will be raised.
+       If ``reg.exe`` exits with a non-0 exit code, then
+       a ``CommandExecutionError`` exception will be
+       raised. On success this function will return
+       ``True``.
+
+    :rtype: bool
+
+    '''
+    cache_path = __salt__['cp.cache_file'](source)
+    if not cache_path:
+        error_msg = "File/URL '{0}' probably invalid.".format(source)
+        raise ValueError(error_msg)
+    if use_32bit_registry:
+        word_sz_txt = "32"
+    else:
+        word_sz_txt = "64"
+    cmd = 'reg import "{0}" /reg:{1}'.format(cache_path, word_sz_txt)
+    cmd_ret_dict = __salt__['cmd.run_all'](cmd, python_shell=True)
+    retcode = cmd_ret_dict['retcode']
+    if retcode != 0:
+        raise CommandExecutionError(
+            'reg.exe import failed',
+            info=cmd_ret_dict
+        )
+    return True

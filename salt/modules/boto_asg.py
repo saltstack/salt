@@ -58,7 +58,7 @@ DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # Import third party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 try:
     import boto
     import boto.ec2
@@ -325,6 +325,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
                      'resource_id': t['ResourceId'],
                      'propagate_at_launch': t.get('PropagateAtLaunch', False)}
                           for t in current_tags]
+    add_tags = []
     desired_tags = []
     if tags:
         tags = __utils__['boto3.ordered'](tags)
@@ -345,7 +346,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
                     'resource_id': name,
                     'propagate_at_launch': propagate_at_launch}
             if _tag not in current_tags:
-                desired_tags.append(_tag)
+                add_tags.append(_tag)
+            desired_tags.append(_tag)
     delete_tags = [t for t in current_tags if t not in desired_tags]
 
     try:
@@ -358,7 +360,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             default_cooldown=default_cooldown,
             health_check_type=health_check_type,
             health_check_period=health_check_period,
-            placement_group=placement_group, tags=desired_tags,
+            placement_group=placement_group, tags=add_tags,
             vpc_zone_identifier=vpc_zone_identifier,
             termination_policies=termination_policies)
         if notification_arn and notification_types:
@@ -366,9 +368,9 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         _asg.update()
         # Seems the update call doesn't handle tags, so we'll need to update
         # that separately.
-        if desired_tags:
-            log.debug('Adding/updating tags from ASG: {}'.format(desired_tags))
-            conn.create_or_update_tags([autoscale.Tag(**t) for t in desired_tags])
+        if add_tags:
+            log.debug('Adding/updating tags from ASG: {}'.format(add_tags))
+            conn.create_or_update_tags([autoscale.Tag(**t) for t in add_tags])
         if delete_tags:
             log.debug('Deleting tags from ASG: {}'.format(delete_tags))
             conn.delete_tags([autoscale.Tag(**t) for t in delete_tags])

@@ -1,0 +1,5 @@
+============================
+Salt 2016.11.7 Release Notes
+============================
+
+Version 2016.11.7 is a bugfix release for :ref:`2016.11.0 <release-2016-11-0>`.

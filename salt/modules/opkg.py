@@ -24,15 +24,18 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
-import salt.utils.pkg
+import salt.utils  # Can be removed when is_true, compare_dicts are moved
+import salt.utils.args
+import salt.utils.files
 import salt.utils.itertools
-from salt.utils.versions import LooseVersion as _LooseVersion
+import salt.utils.path
+import salt.utils.pkg
+import salt.utils.versions
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
@@ -129,7 +132,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db():
+def refresh_db(failhard=False):
     '''
     Updates the opkg database to latest packages based upon repositories
 
@@ -138,6 +141,14 @@ def refresh_db():
 
     - ``True``: Database updated successfully
     - ``False``: Problem updating database
+
+    failhard
+        If False, return results of failed lines as ``False`` for the package
+        database that encountered the error.
+        If True, raise an error with a list of the package databases that
+        encountered errors.
+
+        .. versionadded:: Oxygen
 
     CLI Example:
 
@@ -148,28 +159,44 @@ def refresh_db():
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     ret = {}
+    error_repos = []
     cmd = ['opkg', 'update']
+    # opkg returns a non-zero retcode when there is a failure to refresh
+    # from one or more repos. Due to this, ignore the retcode.
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
-                                   python_shell=False)
-    if call['retcode'] != 0:
-        comment = ''
-        if 'stderr' in call:
-            comment += call['stderr']
+                                   python_shell=False,
+                                   ignore_retcode=True,
+                                   redirect_stderr=True)
 
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
-    else:
-        out = call['stdout']
-
+    out = call['stdout']
+    prev_line = ''
     for line in salt.utils.itertools.split(out, '\n'):
         if 'Inflating' in line:
-            key = line.strip().split()[1].split('.')[0]
+            key = line.strip().split()[1][:-1]
+            ret[key] = True
+        elif 'Updated source' in line:
+            # Use the previous line.
+            key = prev_line.strip().split()[1][:-1]
             ret[key] = True
         elif 'Failed to download' in line:
             key = line.strip().split()[5].split(',')[0]
             ret[key] = False
+            error_repos.append(key)
+        prev_line = line
+
+    if failhard and error_repos:
+        raise CommandExecutionError(
+            'Error getting repos: {0}'.format(', '.join(error_repos))
+        )
+
+    # On a non-zero exit code where no failed repos were found, raise an
+    # exception because this appears to be a different kind of error.
+    if call['retcode'] != 0 and not error_repos:
+        raise CommandExecutionError(
+            '{0}'.format(out)
+        )
+
     return ret
 
 
@@ -300,13 +327,13 @@ def install(name=None,
             else:
                 pkgstr = '{0}={1}'.format(pkgname, version_num)
                 cver = old.get(pkgname, '')
-                if reinstall and cver and salt.utils.compare_versions(
+                if reinstall and cver and salt.utils.versions.compare(
                         ver1=version_num,
                         oper='==',
                         ver2=cver,
                         cmp_func=version_cmp):
                     to_reinstall.append(pkgstr)
-                elif not cver or salt.utils.compare_versions(
+                elif not cver or salt.utils.versions.compare(
                         ver1=version_num,
                         oper='>=',
                         ver2=cver,
@@ -351,12 +378,40 @@ def install(name=None,
             output_loglevel='trace',
             python_shell=False
         )
-        if out['retcode'] != 0 and out['stderr']:
-            errors.append(out['stderr'])
+        if out['retcode'] != 0:
+            if out['stderr']:
+                errors.append(out['stderr'])
+            else:
+                errors.append(out['stdout'])
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
+
+    if pkg_type == 'file' and reinstall:
+        # For file-based packages, prepare 'to_reinstall' to have a list
+        # of all the package names that may have been reinstalled.
+        # This way, we could include reinstalled packages in 'ret'.
+        for pkgfile in to_install:
+            # Convert from file name to package name.
+            cmd = ['opkg', 'info', pkgfile]
+            out = __salt__['cmd.run_all'](
+                cmd,
+                output_loglevel='trace',
+                python_shell=False
+            )
+            if out['retcode'] == 0:
+                # Just need the package name.
+                pkginfo_dict = _process_info_installed_output(
+                    out['stdout'], []
+                )
+                if pkginfo_dict:
+                    to_reinstall.append(list(pkginfo_dict.keys())[0])
+
+    for pkgname in to_reinstall:
+        if pkgname not in ret or pkgname in old:
+            ret.update({pkgname: {'old': old.get(pkgname, ''),
+                                  'new': new.get(pkgname, '')}})
 
     if errors:
         raise CommandExecutionError(
@@ -409,8 +464,11 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         output_loglevel='trace',
         python_shell=False
     )
-    if out['retcode'] != 0 and out['stderr']:
-        errors = [out['stderr']]
+    if out['retcode'] != 0:
+        if out['stderr']:
+            errors = [out['stderr']]
+        else:
+            errors = [out['stdout']]
     else:
         errors = []
 
@@ -729,7 +787,13 @@ def list_pkgs(versions_as_list=False, **kwargs):
     ret = {}
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in salt.utils.itertools.split(out, '\n'):
-        pkg_name, pkg_version = line.split(' - ')
+        # This is a continuation of package description
+        if not line or line[0] == ' ':
+            continue
+
+        # This contains package name, version, and description.
+        # Extract the first two.
+        pkg_name, pkg_version = line.split(' - ', 2)[:2]
         __salt__['pkg_resource.add_pkg'](ret, pkg_name, pkg_version)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
@@ -867,7 +931,7 @@ def info_installed(*names, **kwargs):
     attr = kwargs.pop('attr', None)
     if attr is None:
         filter_attrs = None
-    elif isinstance(attr, str):
+    elif isinstance(attr, six.string_types):
         filter_attrs = set(attr.split(','))
     else:
         filter_attrs = set(attr)
@@ -882,8 +946,10 @@ def info_installed(*names, **kwargs):
                                            python_shell=False)
             if call['retcode'] != 0:
                 comment = ''
-                if 'stderr' in call:
+                if call['stderr']:
                     comment += call['stderr']
+                else:
+                    comment += call['stdout']
 
                 raise CommandExecutionError(
                     '{0}'.format(comment)
@@ -897,8 +963,10 @@ def info_installed(*names, **kwargs):
                                        python_shell=False)
         if call['retcode'] != 0:
             comment = ''
-            if 'stderr' in call:
+            if call['stderr']:
                 comment += call['stderr']
+            else:
+                comment += call['stdout']
 
             raise CommandExecutionError(
                 '{0}'.format(comment)
@@ -946,9 +1014,10 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
                                         output_loglevel='trace',
                                         python_shell=False)
     opkg_version = output.split(' ')[2].strip()
-    if _LooseVersion(opkg_version) >= _LooseVersion('0.3.4'):
+    if salt.utils.versions.LooseVersion(opkg_version) >= \
+            salt.utils.versions.LooseVersion('0.3.4'):
         cmd_compare = ['opkg', 'compare-versions']
-    elif salt.utils.which('opkg-compare-versions'):
+    elif salt.utils.path.which('opkg-compare-versions'):
         cmd_compare = ['opkg-compare-versions']
     else:
         log.warning('Unable to find a compare-versions utility installed. Either upgrade opkg to '
@@ -983,7 +1052,7 @@ def list_repos():
     regex = re.compile(REPO_REGEXP)
     for filename in os.listdir(OPKG_CONFDIR):
         if filename.endswith(".conf"):
-            with salt.utils.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
+            with salt.utils.files.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
                 for line in conf_file:
                     if regex.search(line):
                         repo = {}
@@ -992,7 +1061,7 @@ def list_repos():
                             line = line[1:]
                         else:
                             repo['enabled'] = True
-                        cols = salt.utils.shlex_split(line.strip())
+                        cols = salt.utils.args.shlex_split(line.strip())
                         if cols[0] in 'src':
                             repo['compressed'] = False
                         else:
@@ -1030,17 +1099,17 @@ def _del_repo_from_file(alias, filepath):
     '''
     Remove a repo from filepath
     '''
-    with salt.utils.fopen(filepath) as fhandle:
+    with salt.utils.files.fopen(filepath) as fhandle:
         output = []
         regex = re.compile(REPO_REGEXP)
         for line in fhandle:
             if regex.search(line):
                 if line.startswith('#'):
                     line = line[1:]
-                cols = salt.utils.shlex_split(line.strip())
+                cols = salt.utils.args.shlex_split(line.strip())
                 if alias != cols[1]:
                     output.append(line)
-    with salt.utils.fopen(filepath, 'w') as fhandle:
+    with salt.utils.files.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
 
 
@@ -1057,7 +1126,7 @@ def _add_new_repo(alias, uri, compressed, enabled=True):
     repostr += uri + '\n'
     conffile = os.path.join(OPKG_CONFDIR, alias + '.conf')
 
-    with salt.utils.fopen(conffile, 'a') as fhandle:
+    with salt.utils.files.fopen(conffile, 'a') as fhandle:
         fhandle.write(repostr)
 
 
@@ -1065,15 +1134,15 @@ def _mod_repo_in_file(alias, repostr, filepath):
     '''
     Replace a repo entry in filepath with repostr
     '''
-    with salt.utils.fopen(filepath) as fhandle:
+    with salt.utils.files.fopen(filepath) as fhandle:
         output = []
         for line in fhandle:
-            cols = salt.utils.shlex_split(line.strip())
+            cols = salt.utils.args.shlex_split(line.strip())
             if alias not in cols:
                 output.append(line)
             else:
                 output.append(repostr + '\n')
-    with salt.utils.fopen(filepath, 'w') as fhandle:
+    with salt.utils.files.fopen(filepath, 'w') as fhandle:
         fhandle.writelines(output)
 
 

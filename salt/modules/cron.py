@@ -16,6 +16,8 @@ import random
 # Import salt libs
 import salt.utils
 import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 from salt.ext.six.moves import range
 from salt.utils.locales import sdecode
 
@@ -25,7 +27,7 @@ SALT_CRON_NO_IDENTIFIER = 'NO ID SET'
 
 
 def __virtual__():
-    if salt.utils.which('crontab'):
+    if salt.utils.path.which('crontab'):
         return True
     else:
         return (False, 'Cannot load cron module: crontab command not found')
@@ -33,7 +35,7 @@ def __virtual__():
 
 def _encode(string):
     try:
-        string = salt.utils.to_str(string)
+        string = salt.utils.stringutils.to_str(string)
     except TypeError:
         if not string:
             string = ''
@@ -130,7 +132,7 @@ def _render_tab(lst):
             comment = '#'
             if cron['comment']:
                 comment += ' {0}'.format(
-                    cron['comment'].rstrip().replace('\n', '\n# '))
+                    cron['comment'].replace('\n', '\n# '))
             if cron['identifier']:
                 comment += ' {0}:{1}'.format(SALT_CRON_IDENTIFIER,
                                              cron['identifier'])
@@ -227,13 +229,13 @@ def _write_cron_lines(user, lines):
     path = salt.utils.files.mkstemp()
     if _check_instance_uid_match(user) or __grains__.get('os_family') in ('Solaris', 'AIX'):
         # In some cases crontab command should be executed as user rather than root
-        with salt.utils.fpopen(path, 'w+', uid=__salt__['file.user_to_uid'](user), mode=0o600) as fp_:
+        with salt.utils.files.fpopen(path, 'w+', uid=__salt__['file.user_to_uid'](user), mode=0o600) as fp_:
             fp_.writelines(lines)
         ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path),
                                       runas=user,
                                       python_shell=False)
     else:
-        with salt.utils.fpopen(path, 'w+', mode=0o600) as fp_:
+        with salt.utils.files.fpopen(path, 'w+', mode=0o600) as fp_:
             fp_.writelines(lines)
         ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
                                       python_shell=False)
@@ -604,10 +606,10 @@ def rm_job(user,
     if rm_ is not None:
         lst['crons'].pop(rm_)
         ret = 'removed'
-    comdat = _write_cron_lines(user, _render_tab(lst))
-    if comdat['retcode']:
-        # Failed to commit, return the error
-        return comdat['stderr']
+        comdat = _write_cron_lines(user, _render_tab(lst))
+        if comdat['retcode']:
+            # Failed to commit, return the error
+            return comdat['stderr']
     return ret
 
 rm = salt.utils.alias_function(rm_job, 'rm')

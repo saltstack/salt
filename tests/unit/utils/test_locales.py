@@ -1,16 +1,17 @@
 # coding: utf-8
 
-# python libs
+# Import Python libs
 from __future__ import absolute_import
 
-# salt testing libs
+
+# Import Salt libs
+import salt.utils.locales as locales
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
-# salt libs
-import salt.ext.six as six
+# Import 3rd-part libs
+from salt.ext import six
 from salt.ext.six.moves import reload_module
-from salt.utils import locales
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

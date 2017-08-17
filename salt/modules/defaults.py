@@ -7,9 +7,9 @@ import yaml
 
 import salt.fileclient
 import salt.utils
+import salt.utils.dictupdate as dictupdate
+import salt.utils.files
 import salt.utils.url
-
-from salt.utils import dictupdate
 
 
 __virtualname__ = 'defaults'
@@ -60,7 +60,7 @@ def _load(formula):
 
         if os.path.exists(file_):
             log.debug("Reading defaults from %r", file_)
-            with salt.utils.fopen(file_) as fhr:
+            with salt.utils.files.fopen(file_) as fhr:
                 defaults = loader.load(fhr)
                 log.debug("Read defaults %r", defaults)
 

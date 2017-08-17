@@ -36,7 +36,9 @@ import uuid
 import string
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.files
+import salt.utils.path
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
 from salt.ext import six
@@ -49,7 +51,7 @@ def __virtual__():
     '''
     Only load the module if iptables is installed
     '''
-    if not salt.utils.which('iptables'):
+    if not salt.utils.path.which('iptables'):
         return (False, 'The iptables execution module cannot be loaded: iptables not installed.')
 
     return True
@@ -60,9 +62,9 @@ def _iptables_cmd(family='ipv4'):
     Return correct command based on the family, e.g. ipv4 or ipv6
     '''
     if family == 'ipv6':
-        return salt.utils.which('ip6tables')
+        return salt.utils.path.which('ip6tables')
     else:
-        return salt.utils.which('iptables')
+        return salt.utils.path.which('iptables')
 
 
 def _has_option(option, family='ipv4'):
@@ -107,6 +109,11 @@ def _conf(family='ipv4'):
     elif __grains__['os_family'] == 'Suse':
         # SuSE does not seem to use separate files for IPv4 and IPv6
         return '/etc/sysconfig/scripts/SuSEfirewall2-custom'
+    elif __grains__['os_family'] == 'Void':
+        if family == 'ipv6':
+            return '/etc/iptables/iptables.rules'
+        else:
+            return '/etc/iptables/ip6tables.rules'
     elif __grains__['os'] == 'Alpine':
         if family == 'ipv6':
             return '/etc/iptables/rules6-save'
@@ -200,6 +207,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     If a position is required (as with `-I` or `-D`), it may be specified as
     `position`. This will only be useful if `full` is True.
 
+    If `state` is passed, it will be ignored, use `connstate`.
     If `connstate` is passed in, it will automatically be changed to `state`.
 
     To pass in jump options that doesn't take arguments, pass in an empty
@@ -213,19 +221,19 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             connstate=RELATED,ESTABLISHED jump=ACCEPT
 
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
-            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT
+            full=True match=state connstate=RELATED,ESTABLISHED jump=ACCEPT
 
         salt '*' iptables.build_rule filter INPUT command=A \\
-            full=True match=state state=RELATED,ESTABLISHED \\
+            full=True match=state connstate=RELATED,ESTABLISHED \\
             source='127.0.0.1' jump=ACCEPT
 
         .. Invert Rules
         salt '*' iptables.build_rule filter INPUT command=A \\
-            full=True match=state state=RELATED,ESTABLISHED \\
-            source='! 127.0.0.1' jump=ACCEPT
+            full=True match=state connstate=RELATED,ESTABLISHED \\
+            source='!127.0.0.1' jump=ACCEPT
 
         salt '*' iptables.build_rule filter INPUT command=A \\
-            full=True match=state state=RELATED,ESTABLISHED \\
+            full=True match=state connstate=RELATED,ESTABLISHED \\
             destination='not 127.0.0.1' jump=ACCEPT
 
         IPv6:
@@ -233,7 +241,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             connstate=RELATED,ESTABLISHED jump=ACCEPT \\
             family=ipv6
         salt '*' iptables.build_rule filter INPUT command=I position=3 \\
-            full=True match=state state=RELATED,ESTABLISHED jump=ACCEPT \\
+            full=True match=state connstate=RELATED,ESTABLISHED jump=ACCEPT \\
             family=ipv6
 
     '''
@@ -501,7 +509,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
 
     rule += after_jump
 
-    if full in ['True', 'true']:
+    if full:
         if not table:
             return 'Error: Table needs to be specified'
         if not chain:
@@ -964,7 +972,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
 
     rules = ''
     if conf_file:
-        with salt.utils.fopen(conf_file, 'r') as ifile:
+        with salt.utils.files.fopen(conf_file, 'r') as ifile:
             rules = ifile.read()
     elif in_mem:
         cmd = '{0}-save' . format(_iptables_cmd(family))
@@ -991,7 +999,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
             ret[table][chain]['rules'] = []
             ret[table][chain]['rules_comment'] = {}
         elif line.startswith('-A'):
-            args = salt.utils.shlex_split(line)
+            args = salt.utils.args.shlex_split(line)
             index = 0
             while index + 1 < len(args):
                 swap = args[index] == '!' and args[index + 1].startswith('-')

@@ -143,12 +143,18 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 from salt.modules.cron import (
     _needs_change,
     _cron_matched
 )
+
+
+def __virtual__():
+    if 'cron.list_tab' in __salt__:
+        return True
+    else:
+        return (False, 'cron module could not be loaded')
 
 
 def _check_cron(user,
@@ -529,7 +535,7 @@ def file(name,
         return ret
 
     cron_path = salt.utils.files.mkstemp()
-    with salt.utils.fopen(cron_path, 'w+') as fp_:
+    with salt.utils.files.fopen(cron_path, 'w+') as fp_:
         raw_cron = __salt__['cron.raw_cron'](user)
         if not raw_cron.endswith('\n'):
             raw_cron = "{0}\n".format(raw_cron)

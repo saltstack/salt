@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Management of APT/YUM package repos
+Management of APT/RPM package repos
 ===================================
 
-Package repositories for APT-based and YUM-based distros can be managed with
+Package repositories for APT-based and RPM-based distros(openSUSE/SUSE, CentOS/Fedora/Redhat) can be managed with
 these states. Here is some example SLS:
 
 .. code-block:: yaml
@@ -79,10 +79,9 @@ these states. Here is some example SLS:
     ``python-pycurl`` will need to be manually installed if it is not present
     once ``python-software-properties`` is installed.
 
-    On Ubuntu & Debian systems, the ```python-apt`` package is required to be
-    installed.  To check if this package is installed, run ``dpkg -l
-    python-software-properties``.  ``python-apt`` will need to be manually
-    installed if it is not present.
+    On Ubuntu & Debian systems, the ``python-apt`` package is required to be
+    installed. To check if this package is installed, run ``dpkg -l python-apt``.
+    ``python-apt`` will need to be manually installed if it is not present.
 
 '''
 
@@ -95,6 +94,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 import salt.utils
+import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
 
@@ -438,7 +438,7 @@ def managed(name, ppa=None, **kwargs):
 
     # empty file before configure
     if kwargs.get('clean_file', False):
-        with salt.utils.fopen(kwargs['file'], 'w'):
+        with salt.utils.files.fopen(kwargs['file'], 'w'):
             pass
 
     try:

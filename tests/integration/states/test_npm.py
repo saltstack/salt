@@ -14,10 +14,14 @@ from tests.support.helpers import destructiveTest, requires_network
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import salt.utils
+import salt.modules.cmdmod as cmd
+import salt.utils.path
+from salt.utils.versions import LooseVersion
+
+MAX_NPM_VERSION = '5.0.0'
 
 
-@skipIf(salt.utils.which('npm') is None, 'npm not installed')
+@skipIf(salt.utils.path.which('npm') is None, 'npm not installed')
 class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_network()
@@ -53,6 +57,8 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('npm.installed', name=None, pkgs=['pm2', 'grunt'])
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(salt.utils.path.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),
+            'Skip with npm >= 5.0.0 until #41770 is fixed')
     @destructiveTest
     def test_npm_cache_clean(self):
         '''

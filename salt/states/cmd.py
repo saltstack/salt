@@ -171,8 +171,8 @@ Should I use :mod:`cmd.run <salt.states.cmd.run>` or :mod:`cmd.wait <salt.states
 
 .. note::
 
-    Use ``cmd.run`` together with :mod:`onchanges </ref/states/requisites#onchanges>`
-    instead of ``cmd.wait``.
+    Use :mod:`cmd.run <salt.states.cmd.run>` together with :ref:`onchanges <requisites-onchanges>`
+    instead of :mod:`cmd.wait <salt.states.cmd.wait>`.
 
 These two states are often confused. The important thing to remember about them
 is that :mod:`cmd.run <salt.states.cmd.run>` states are run each time the SLS
@@ -241,6 +241,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.ext.six import string_types
 
@@ -276,7 +277,7 @@ def _reinterpreted_state(state):
             out = out[idx + 1:]
         data = {}
         try:
-            for item in salt.utils.shlex_split(out):
+            for item in salt.utils.args.shlex_split(out):
                 key, val = item.split('=')
                 data[key] = val
         except ValueError:
@@ -415,7 +416,8 @@ def wait(name,
 
     .. note::
 
-        Use :mod:`cmd.run <salt.states.cmd.run>` with :mod:`onchange </ref/states/requisites#onchanges>` instead.
+        Use :mod:`cmd.run <salt.states.cmd.run>` together with :mod:`onchanges </ref/states/requisites#onchanges>`
+        instead of :mod:`cmd.wait <salt.states.cmd.wait>`.
 
     name
         The command to execute, remember that the command will execute with the
@@ -501,16 +503,6 @@ def wait(name,
         interactively to the console and the logs.
         This is experimental.
     '''
-    if 'user' in kwargs or 'group' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The legacy user/group arguments are deprecated. '
-            'Replace them with runas. '
-            'These arguments will be removed in Salt Oxygen.'
-        )
-        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
-            runas = kwargs.pop('user')
-
     # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
@@ -631,16 +623,6 @@ def wait_script(name,
         regardless, unless ``quiet`` is used for this value.
 
     '''
-    if 'user' in kwargs or 'group' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The legacy user/group arguments are deprecated. '
-            'Replace them with runas. '
-            'These arguments will be removed in Salt Oxygen.'
-        )
-        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
-            runas = kwargs.pop('user')
-
     # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
@@ -819,16 +801,6 @@ def run(name,
                           'documentation.')
         return ret
 
-    if 'user' in kwargs or 'group' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The legacy user/group arguments are deprecated. '
-            'Replace them with runas. '
-            'These arguments will be removed in Salt Oxygen.'
-        )
-        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
-            runas = kwargs.pop('user')
-
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({'cwd': cwd,
                        'runas': runas,
@@ -867,7 +839,7 @@ def run(name,
 
     ret['changes'] = cmd_all
     ret['result'] = not bool(cmd_all['retcode'])
-    ret['comment'] = 'Command "{0}" run'.format(name)
+    ret['comment'] = u'Command "{0}" run'.format(name)
 
     # Ignore timeout errors if asked (for nohups) and treat cmd as a success
     if ignore_timeout:
@@ -1054,16 +1026,6 @@ def script(name,
     tmpctx = defaults if defaults else {}
     if context:
         tmpctx.update(context)
-
-    if 'user' in kwargs or 'group' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'The legacy user/group arguments are deprecated. '
-            'Replace them with runas. '
-            'These arguments will be removed in Salt Oxygen.'
-        )
-        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
-            runas = kwargs.pop('user')
 
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({'runas': runas,

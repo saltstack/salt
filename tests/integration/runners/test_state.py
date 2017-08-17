@@ -22,7 +22,9 @@ from tests.support.paths import TMP
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.platform
 import salt.utils.event
+import salt.utils.files
 
 
 class StateRunnerTest(ShellCase):
@@ -101,7 +103,7 @@ class StateRunnerTest(ShellCase):
         server_thread.join()
 
 
-@skipIf(salt.utils.is_windows(), '*NIX-only test')
+@skipIf(salt.utils.platform.is_windows(), '*NIX-only test')
 class OrchEventTest(ShellCase):
     '''
     Tests for orchestration events
@@ -153,14 +155,14 @@ class OrchEventTest(ShellCase):
         })
 
         state_sls = os.path.join(self.base_env, 'test_state.sls')
-        with salt.utils.fopen(state_sls, 'w') as fp_:
+        with salt.utils.files.fopen(state_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 date:
                   cmd.run
             '''))
 
         orch_sls = os.path.join(self.base_env, 'test_orch.sls')
-        with salt.utils.fopen(orch_sls, 'w') as fp_:
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 date_cmd:
                   salt.state:

@@ -19,17 +19,19 @@ import re
 import subprocess
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
+import salt.utils.decorators.path
 import salt.utils.files
-import salt.utils.decorators as decorators
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
 )
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ if six.PY3:
 
 def __virtual__():
     # TODO: This could work on windows with some love
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The module cannot be loaded on windows.')
     return True
 
@@ -149,7 +151,7 @@ def _replace_auth_key(
 
     try:
         # open the file for both reading AND writing
-        with salt.utils.fopen(full, 'r') as _fh:
+        with salt.utils.files.fopen(full, 'r') as _fh:
             for line in _fh:
                 if line.startswith('#'):
                     # Commented Line
@@ -162,7 +164,7 @@ def _replace_auth_key(
                     lines.append(line)
             _fh.close()
             # Re-open the file writable after properly closing it
-            with salt.utils.fopen(full, 'w') as _fh:
+            with salt.utils.files.fopen(full, 'w') as _fh:
                 # Write out any changes
                 _fh.writelines(lines)
     except (IOError, OSError) as exc:
@@ -179,7 +181,7 @@ def _validate_keys(key_file, fingerprint_hash_type):
     linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
 
     try:
-        with salt.utils.fopen(key_file, 'r') as _fh:
+        with salt.utils.files.fopen(key_file, 'r') as _fh:
             for line in _fh:
                 if line.startswith('#'):
                     # Commented Line
@@ -295,7 +297,7 @@ def _get_known_hosts_file(config=None, user=None):
     return full
 
 
-def host_keys(keydir=None, private=True):
+def host_keys(keydir=None, private=True, certs=True):
     '''
     Return the minion's host keys
 
@@ -306,6 +308,7 @@ def host_keys(keydir=None, private=True):
         salt '*' ssh.host_keys
         salt '*' ssh.host_keys keydir=/etc/ssh
         salt '*' ssh.host_keys keydir=/etc/ssh private=False
+        salt '*' ssh.host_keys keydir=/etc/ssh certs=False
     '''
     # TODO: support parsing sshd_config for the key directory
     if not keydir:
@@ -315,22 +318,29 @@ def host_keys(keydir=None, private=True):
             # If keydir is None, os.listdir() will blow up
             raise SaltInvocationError('ssh.host_keys: Please specify a keydir')
     keys = {}
+    fnre = re.compile(
+        r'ssh_host_(?P<type>.+)_key(?P<pub>(?P<cert>-cert)?\.pub)?')
     for fn_ in os.listdir(keydir):
-        if fn_.startswith('ssh_host_'):
-            if fn_.endswith('.pub') is False and private is False:
+        m = fnre.match(fn_)
+        if m:
+            if not m.group('pub') and private is False:
                 log.info(
                     'Skipping private key file {0} as private is set to False'
                     .format(fn_)
                 )
                 continue
+            if m.group('cert') and certs is False:
+                log.info(
+                    'Skipping key file {0} as certs is set to False'
+                    .format(fn_)
+                )
+                continue
 
-            top = fn_.split('.')
-            comps = top[0].split('_')
-            kname = comps[2]
-            if len(top) > 1:
-                kname += '.{0}'.format(top[1])
+            kname = m.group('type')
+            if m.group('pub'):
+                kname += m.group('pub')
             try:
-                with salt.utils.fopen(os.path.join(keydir, fn_), 'r') as _fh:
+                with salt.utils.files.fopen(os.path.join(keydir, fn_), 'r') as _fh:
                     # As of RFC 4716 "a key file is a text file, containing a
                     # sequence of lines", although some SSH implementations
                     # (e.g. OpenSSH) manage their own format(s).  Please see
@@ -560,7 +570,7 @@ def rm_auth_key(user,
         try:
             # Read every line in the file to find the right ssh key
             # and then write out the correct one. Open the file once
-            with salt.utils.fopen(full, 'r') as _fh:
+            with salt.utils.files.fopen(full, 'r') as _fh:
                 for line in _fh:
                     if line.startswith('#'):
                         # Commented Line
@@ -591,7 +601,7 @@ def rm_auth_key(user,
 
             # Let the context manager do the right thing here and then
             # re-open the file in write mode to save the changes out.
-            with salt.utils.fopen(full, 'w') as _fh:
+            with salt.utils.files.fopen(full, 'w') as _fh:
                 _fh.writelines(lines)
         except (IOError, OSError) as exc:
             log.warning('Could not read/write key file: {0}'.format(str(exc)))
@@ -726,7 +736,7 @@ def set_auth_key(
                 os.chown(dpath, uinfo['uid'], uinfo['gid'])
             os.chmod(dpath, 448)
             # If SELINUX is available run a restorecon on the file
-            rcon = salt.utils.which('restorecon')
+            rcon = salt.utils.path.which('restorecon')
             if rcon:
                 cmd = [rcon, dpath]
                 subprocess.call(cmd)
@@ -737,7 +747,7 @@ def set_auth_key(
             new_file = False
 
         try:
-            with salt.utils.fopen(fconfig, 'ab+') as _fh:
+            with salt.utils.files.fopen(fconfig, 'ab+') as _fh:
                 if new_file is False:
                     # Let's make sure we have a new line at the end of the file
                     _fh.seek(1024, 2)
@@ -756,7 +766,7 @@ def set_auth_key(
                 os.chown(fconfig, uinfo['uid'], uinfo['gid'])
             os.chmod(fconfig, 384)
             # If SELINUX is available run a restorecon on the file
-            rcon = salt.utils.which('restorecon')
+            rcon = salt.utils.path.which('restorecon')
             if rcon:
                 cmd = [rcon, fconfig]
                 subprocess.call(cmd)
@@ -783,7 +793,7 @@ def _parse_openssh_output(lines, fingerprint_hash_type=None):
                'fingerprint': fingerprint}
 
 
-@decorators.which('ssh-keygen')
+@salt.utils.decorators.path.which('ssh-keygen')
 def get_known_host(user,
                    hostname,
                    config=None,
@@ -816,7 +826,7 @@ def get_known_host(user,
     return known_hosts[0] if known_hosts else None
 
 
-@decorators.which('ssh-keyscan')
+@salt.utils.decorators.path.which('ssh-keyscan')
 def recv_known_host(hostname,
                     enc=None,
                     port=None,
@@ -1084,15 +1094,24 @@ def set_known_host(user=None,
             if remote_host['key'] == stored_host['key']:
                 return {'status': 'exists', 'key': stored_host['key']}
 
-    # remove everything we had in the config so far
-    rm_known_host(user, hostname, config=config)
-    # set up new value
-
     full = _get_known_hosts_file(config=config, user=user)
 
     if isinstance(full, dict):
         return full
 
+    # Get information about the known_hosts file before rm_known_host()
+    # because it will create a new file with mode 0600
+    orig_known_hosts_st = None
+    try:
+        orig_known_hosts_st = os.stat(full)
+    except OSError as exc:
+        if exc.args[1] == 'No such file or directory':
+            log.debug('{0} doesnt exist.  Nothing to preserve.'.format(full))
+
+    # remove everything we had in the config so far
+    rm_known_host(user, hostname, config=config)
+
+    # set up new value
     if key:
         remote_host = {'hostname': hostname, 'enc': enc, 'key': key}
 
@@ -1125,16 +1144,23 @@ def set_known_host(user=None,
 
     # write line to known_hosts file
     try:
-        with salt.utils.fopen(full, 'a') as ofile:
+        with salt.utils.files.fopen(full, 'a') as ofile:
             ofile.write(line)
     except (IOError, OSError) as exception:
         raise CommandExecutionError(
             "Couldn't append to known hosts file: '{0}'".format(exception)
         )
 
-    if os.geteuid() == 0 and user:
-        os.chown(full, uinfo['uid'], uinfo['gid'])
-    os.chmod(full, 0o644)
+    if os.geteuid() == 0:
+        if user:
+            os.chown(full, uinfo['uid'], uinfo['gid'])
+        elif orig_known_hosts_st:
+            os.chown(full, orig_known_hosts_st.st_uid, orig_known_hosts_st.st_gid)
+
+    if orig_known_hosts_st:
+        os.chmod(full, orig_known_hosts_st.st_mode)
+    else:
+        os.chmod(full, 0o600)
 
     if key and hash_known_hosts:
         cmd_result = __salt__['ssh.hash_known_hosts'](user=user, config=full)
@@ -1206,7 +1232,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
 
             if os.path.exists(fn_):
                 try:
-                    with salt.utils.fopen(fn_, 'r') as _fh:
+                    with salt.utils.files.fopen(fn_, 'r') as _fh:
                         keys[u][keyname] = ''.join(_fh.readlines()).strip()
                 except (IOError, OSError):
                     pass
@@ -1219,7 +1245,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
     return _keys
 
 
-@decorators.which('ssh-keygen')
+@salt.utils.decorators.path.which('ssh-keygen')
 def hash_known_hosts(user=None, config=None):
     '''
 
@@ -1284,7 +1310,7 @@ def key_is_encrypted(key):
         salt '*' ssh.key_is_encrypted /root/id_rsa
     '''
     try:
-        with salt.utils.fopen(key, 'r') as fp_:
+        with salt.utils.files.fopen(key, 'r') as fp_:
             key_data = fp_.read()
     except (IOError, OSError) as exc:
         # Raise a CommandExecutionError

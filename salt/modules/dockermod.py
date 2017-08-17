@@ -185,7 +185,6 @@ import copy
 import fnmatch
 import functools
 import gzip
-import io
 import json
 import logging
 import os
@@ -200,12 +199,15 @@ import subprocess
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 import salt.utils
+import salt.utils.args
 import salt.utils.decorators
 import salt.utils.docker
 import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.thin
 import salt.pillar
 import salt.exceptions
@@ -231,7 +233,7 @@ except ImportError:
     HAS_LZMA = False
 # pylint: enable=import-error
 
-HAS_NSENTER = bool(salt.utils.which('nsenter'))
+HAS_NSENTER = bool(salt.utils.path.which('nsenter'))
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -343,7 +345,8 @@ def _get_client(timeout=NOTSET, **kwargs):
             ['docker-machine', 'inspect', docker_machine],
             python_shell=False)
         try:
-            docker_machine_json = json.loads(docker_machine_json)
+            docker_machine_json = \
+                json.loads(salt.utils.stringutils.to_str(docker_machine_json))
             docker_machine_tls = \
                 docker_machine_json['HostOptions']['AuthOptions']
             docker_machine_ip = docker_machine_json['Driver']['IPAddress']
@@ -389,7 +392,7 @@ def _docker_client(wrapped):
         '''
         Ensure that the client is present
         '''
-        kwargs = salt.utils.clean_kwargs(**kwargs)
+        kwargs = salt.utils.args.clean_kwargs(**kwargs)
         timeout = kwargs.pop('client_timeout', NOTSET)
         if 'docker.client' not in __context__ \
                 or not hasattr(__context__['docker.client'], 'timeout'):
@@ -421,7 +424,7 @@ def _ensure_exists(wrapped):
             raise CommandExecutionError(
                 'Container \'{0}\' does not exist'.format(name)
             )
-        return wrapped(name, *args, **salt.utils.clean_kwargs(**kwargs))
+        return wrapped(name, *args, **salt.utils.args.clean_kwargs(**kwargs))
     return wrapper
 
 
@@ -434,7 +437,7 @@ def _refresh_mine_cache(wrapped):
         '''
         refresh salt mine on exit.
         '''
-        returned = wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
+        returned = wrapped(*args, **salt.utils.args.clean_kwargs(**kwargs))
         __salt__['mine.send']('docker.ps', verbose=True, all=True, host=True)
         return returned
     return wrapper
@@ -559,6 +562,21 @@ def _prep_pull():
     __context__['docker._pull_status'] = [x[:12] for x in images(all=True)]
 
 
+def _scrub_links(links, name):
+    '''
+    Remove container name from HostConfig:Links values to enable comparing
+    container configurations correctly.
+    '''
+    if isinstance(links, list):
+        ret = []
+        for l in links:
+            ret.append(l.replace('/{0}/'.format(name), '/', 1))
+    else:
+        ret = links
+
+    return ret
+
+
 def _size_fmt(num):
     '''
     Format bytes as human-readable file sizes
@@ -619,7 +637,7 @@ def _client_wrapper(attr, *args, **kwargs):
             api_events = []
             try:
                 for event in ret:
-                    api_events.append(json.loads(salt.utils.to_str(event)))
+                    api_events.append(json.loads(salt.utils.stringutils.to_str(event)))
             except Exception as exc:
                 raise CommandExecutionError(
                     'Unable to interpret API event: \'{0}\''.format(event),
@@ -884,8 +902,15 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict][item]
             val2 = result2[conf_dict].get(item)
-            if val1 != val2:
-                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            if item in ('OomKillDisable',):
+                if bool(val1) != bool(val2):
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            else:
+                if item == 'Links':
+                    val1 = _scrub_links(val1, first)
+                    val2 = _scrub_links(val2, second)
+                if val1 != val2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
         # and not the first.
         for item in result2[conf_dict]:
@@ -895,8 +920,15 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict].get(item)
             val2 = result2[conf_dict][item]
-            if val1 != val2:
-                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            if item in ('OomKillDisable',):
+                if bool(val1) != bool(val2):
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            else:
+                if item == 'Links':
+                    val1 = _scrub_links(val1, first)
+                    val2 = _scrub_links(val2, second)
+                if val1 != val2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
     return ret
 
 
@@ -978,6 +1010,10 @@ def login(*registries):
             cmd = ['docker', 'login', '-u', username, '-p', password]
             if registry.lower() != 'hub':
                 cmd.append(registry)
+            log.debug(
+                'Attempting to login to docker registry \'%s\' as user \'%s\'',
+                registry, username
+            )
             login_cmd = __salt__['cmd.run_all'](
                 cmd,
                 python_shell=False,
@@ -1803,7 +1839,7 @@ def create(image,
         generate one for you (it will be included in the return data).
 
     skip_translate
-        This function translates Salt CLI input into the format which
+        This function translates Salt CLI or SLS input into the format which
         docker-py_ expects. However, in the event that Salt's translation logic
         fails (due to potential changes in the Docker Remote API, or to bugs in
         the translation code), this argument can be used to exert granular
@@ -2071,9 +2107,9 @@ def create(image,
         - ``dns_search="[foo1.domain.tld, foo2.domain.tld]"``
 
     domainname
-        Set custom DNS search domains
+        The domain name to use for the container
 
-        Example: ``domainname=domain.tld,domain2.tld``
+        Example: ``domainname=domain.tld``
 
     entrypoint
         Entrypoint for the container. Either a string (e.g. ``"mycmd --arg1
@@ -2709,6 +2745,8 @@ def copy_to(name,
 
         salt myminion docker.copy_to mycontainer /tmp/foo /root/foo
     '''
+    if exec_driver is None:
+        exec_driver = _get_exec_driver()
     return __salt__['container_resource.copy_to'](
         name,
         __salt__['container_resource.cache_file'](source),
@@ -2860,7 +2898,7 @@ def export(name,
             # open the filehandle. If not using gzip, we need to open the
             # filehandle here. We make sure to close it in the "finally" block
             # below.
-            out = salt.utils.fopen(path, 'wb')  # pylint: disable=resource-leakage
+            out = salt.utils.files.fopen(path, 'wb')  # pylint: disable=resource-leakage
         response = _client_wrapper('export', name)
         buf = None
         while buf != '':
@@ -2940,10 +2978,10 @@ def rm_(name, force=False, volumes=False, **kwargs):
         salt myminion docker.rm mycontainer
         salt myminion docker.rm mycontainer force=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     stop_ = kwargs.pop('stop', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if state(name) == 'running' and not (force or stop_):
         raise CommandExecutionError(
@@ -3092,7 +3130,7 @@ def build(path=None,
     stream_data = []
     for line in response:
         stream_data.extend(
-            json.loads(salt.utils.to_str(line), cls=DockerJSONDecoder)
+            json.loads(salt.utils.stringutils.to_str(line), cls=DockerJSONDecoder)
         )
     errors = []
     # Iterate through API response and collect information
@@ -3872,12 +3910,12 @@ def save(name,
             compressor = lzma.LZMACompressor()
 
         try:
-            with salt.utils.fopen(saved_path, 'rb') as uncompressed:
+            with salt.utils.files.fopen(saved_path, 'rb') as uncompressed:
                 if compression != 'gzip':
                     # gzip doesn't use a Compressor object, it uses a .open()
                     # method to open the filehandle. If not using gzip, we need
                     # to open the filehandle here.
-                    out = salt.utils.fopen(path, 'wb')
+                    out = salt.utils.files.fopen(path, 'wb')
                 buf = None
                 while buf != '':
                     buf = uncompressed.read(4096)
@@ -3994,7 +4032,9 @@ def networks(names=None, ids=None):
     return response
 
 
-def create_network(name, driver=None):
+def create_network(name,
+                   driver=None,
+                   driver_opts=None):
     '''
     Create a new network
 
@@ -4004,13 +4044,21 @@ def create_network(name, driver=None):
     driver
         Driver of the network
 
+    driver_opts
+        Options for the network driver.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion docker.create_network web_network driver=bridge
     '''
-    response = _client_wrapper('create_network', name, driver=driver)
+    response = _client_wrapper('create_network',
+                               name,
+                               driver=driver,
+                               options=driver_opts,
+                               check_duplicate=True)
+
     _clear_context()
     # Only non-error return case is a True return, so just return the response
     return response
@@ -5196,7 +5244,7 @@ def call(name, function, *args, **kwargs):
     thin_dest_path = _generate_tmp_path()
     mkdirp_thin_argv = ['mkdir', '-p', thin_dest_path]
 
-    # put_archive reqires the path to exist
+    # make thin_dest_path in the container
     ret = run_all(name, subprocess.list2cmdline(mkdirp_thin_argv))
     if ret['retcode'] != 0:
         return {'result': False, 'comment': ret['stderr']}
@@ -5208,14 +5256,25 @@ def call(name, function, *args, **kwargs):
     thin_path = salt.utils.thin.gen_thin(__opts__['cachedir'],
                                          extra_mods=__salt__['config.option']("thin_extra_mods", ''),
                                          so_mods=__salt__['config.option']("thin_so_mods", ''))
-    with io.open(thin_path, 'rb') as file:
-        _client_wrapper('put_archive', name, thin_dest_path, file)
+    ret = copy_to(name, thin_path, os.path.join(thin_dest_path, os.path.basename(thin_path)))
+
+    # untar archive
+    untar_cmd = ["python", "-c", (
+                     "import tarfile; "
+                     "tarfile.open(\"{0}/{1}\").extractall(path=\"{0}\")"
+                 ).format(thin_dest_path, os.path.basename(thin_path))]
+    ret = run_all(name, subprocess.list2cmdline(untar_cmd))
+    if ret['retcode'] != 0:
+        return {'result': False, 'comment': ret['stderr']}
+
     try:
         salt_argv = [
             'python',
             os.path.join(thin_dest_path, 'salt-call'),
             '--metadata',
             '--local',
+            '--log-file', os.path.join(thin_dest_path, 'log'),
+            '--cachedir', os.path.join(thin_dest_path, 'cache'),
             '--out', 'json',
             '-l', 'quiet',
             '--',
@@ -5373,7 +5432,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         salt myminion docker.sls_build imgname base=mybase mods=rails,web
 
     '''
-    create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    create_kwargs = salt.utils.args.clean_kwargs(**copy.deepcopy(kwargs))
     for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
         try:
             del create_kwargs[key]

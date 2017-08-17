@@ -34,7 +34,7 @@ from __future__ import absolute_import
 import sys
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def _changes(name,

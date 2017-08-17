@@ -20,8 +20,8 @@ import re
 import json
 
 # Import Salt libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict
 
@@ -369,7 +369,7 @@ class _Ini(_Section):
     def refresh(self, inicontents=None):
         if inicontents is None:
             try:
-                with salt.utils.fopen(self.name) as rfh:
+                with salt.utils.files.fopen(self.name) as rfh:
                     inicontents = rfh.read()
             except (OSError, IOError) as exc:
                 raise CommandExecutionError(
@@ -395,7 +395,7 @@ class _Ini(_Section):
 
     def flush(self):
         try:
-            with salt.utils.fopen(self.name, 'w') as outfile:
+            with salt.utils.files.fopen(self.name, 'w') as outfile:
                 ini_gen = self.gen_ini()
                 next(ini_gen)
                 outfile.writelines(ini_gen)

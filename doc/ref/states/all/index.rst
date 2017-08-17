@@ -132,14 +132,19 @@ state modules
     junos
     k8s
     kapacitor
+    kernelpkg
     keyboard
     keystone
     kmod
+    kubernetes
     layman
     ldap
     libcloud_dns
+    libcloud_loadbalancer
+    libcloud_storage
     linux_acl
     locale
+    logadm
     logrotate
     loop
     lvm
@@ -245,7 +250,6 @@ state modules
     stateconf
     status
     statuspage
-    stormpath_account
     supervisord
     svn
     sysctl

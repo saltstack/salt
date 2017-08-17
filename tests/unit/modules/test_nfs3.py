@@ -33,7 +33,7 @@ class NfsTestCase(TestCase, LoaderModuleMockMixin):
         Test for List configured exports
         '''
         file_d = '\n'.join(['A B1(23'])
-        with patch('salt.utils.fopen',
+        with patch('salt.utils.files.fopen',
                    mock_open(read_data=file_d), create=True) as mfi:
             mfi.return_value.__iter__.return_value = file_d.splitlines()
             self.assertDictEqual(nfs3.list_exports(),

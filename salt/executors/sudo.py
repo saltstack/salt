@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Sudo executor module
-
-@author: Dmitry Kuzmenko <dmitry.kuzmenko@dsr-company.com>
 '''
 # Import python libs
 from __future__ import absolute_import
@@ -13,24 +11,19 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
-from salt.executors import ModuleExecutorBase
-import salt.utils
+import salt.utils.path
 import salt.syspaths
 
 __virtualname__ = 'sudo'
 
 
 def __virtual__():
-    if salt.utils.which('sudo') and __opts__.get('sudo_user'):
+    if salt.utils.path.which('sudo') and __opts__.get('sudo_user'):
         return __virtualname__
     return False
 
 
-def get(*args, **kwargs):
-    return SudoExecutor(*args, **kwargs)
-
-
-class SudoExecutor(ModuleExecutorBase):
+def execute(opts, data, func, args, kwargs):
     '''
     Allow for the calling of execution modules via sudo.
 
@@ -59,52 +52,29 @@ class SudoExecutor(ModuleExecutorBase):
 
     being run on ``sudo_minion``.
     '''
+    cmd = ['sudo',
+           '-u', opts.get('sudo_user'),
+           'salt-call',
+           '--out', 'json',
+           '--metadata',
+           '-c', salt.syspaths.CONFIG_DIR,
+           '--',
+           data.get('fun')]
+    if data['fun'] in ('state.sls', 'state.highstate', 'state.apply'):
+        kwargs['concurrent'] = True
+    for arg in args:
+        cmd.append(_cmd_quote(str(arg)))
+    for key in kwargs:
+        cmd.append(_cmd_quote('{0}={1}'.format(key, kwargs[key])))
 
-    def __init__(self, opts, data, func, args, kwargs):
-        '''
-        Constructor
-        '''
-        super(SudoExecutor, self).__init__()
-        self.cmd = ['sudo',
-                    '-u', opts.get('sudo_user'),
-                    'salt-call',
-                    '--out', 'json',
-                    '--metadata',
-                    '-c', salt.syspaths.CONFIG_DIR,
-                    '--',
-                    data.get('fun')]
-        if data['fun'] == 'state.sls':
-            kwargs['concurrent'] = True
-        for arg in args:
-            self.cmd.append(_cmd_quote(str(arg)))
-        for key in kwargs:
-            self.cmd.append(_cmd_quote('{0}={1}'.format(key, kwargs[key])))
+    cmd_ret = __salt__['cmd.run_all'](cmd, use_vt=True, python_shell=False)
 
-    def execute(self):
-        '''
-        Wrap a shell execution out to salt call with sudo
+    if cmd_ret['retcode'] == 0:
+        cmd_meta = json.loads(cmd_ret['stdout'])['local']
+        ret = cmd_meta['return']
+        __context__['retcode'] = cmd_meta.get('retcode', 0)
+    else:
+        ret = cmd_ret['stderr']
+        __context__['retcode'] = cmd_ret['retcode']
 
-        Example:
-
-        /etc/salt/minion
-
-        .. code-block:: yaml
-
-            sudo_user: saltdev
-
-        .. code-block:: bash
-
-            salt '*' test.ping  # is run as saltdev user
-        '''
-
-        cmd_ret = __salt__['cmd.run_all'](self.cmd, use_vt=True, python_shell=False)
-
-        if cmd_ret['retcode'] == 0:
-            cmd_meta = json.loads(cmd_ret['stdout'])['local']
-            ret = cmd_meta['return']
-            __context__['retcode'] = cmd_meta.get('retcode', 0)
-        else:
-            ret = cmd_ret['stderr']
-            __context__['retcode'] = cmd_ret['retcode']
-
-        return ret
+    return ret

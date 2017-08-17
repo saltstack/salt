@@ -59,17 +59,20 @@ import logging
 import pprint
 import base64
 import yaml
+import collections
 import salt.cache
 import salt.config as config
 import salt.utils
 import salt.utils.cloud
-import salt.ext.six as six
+import salt.utils.files
+from salt.ext import six
 import salt.version
 from salt.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
 )
+from salt.ext.six.moves import filter
 
 # Import 3rd-party libs
 HAS_LIBS = False
@@ -93,6 +96,7 @@ try:
         OSDisk,
         OSProfile,
         StorageProfile,
+        SubResource,
         VirtualHardDisk,
         VirtualMachine,
         VirtualMachineSizeTypes,
@@ -101,6 +105,7 @@ try:
     from azure.mgmt.network.models import (
         IPAllocationMethod,
         NetworkInterface,
+        NetworkInterfaceDnsSettings,
         NetworkInterfaceIPConfiguration,
         NetworkSecurityGroup,
         PublicIPAddress,
@@ -247,7 +252,9 @@ def avail_locations(conn=None, call=None):  # pylint: disable=unused-argument
 
     ret = {}
     regions = webconn.global_model.get_subscription_geo_regions()
-    for location in regions.value:  # pylint: disable=no-member
+    if hasattr(regions, 'value'):
+        regions = regions.value
+    for location in regions:  # pylint: disable=no-member
         lowername = str(location.name).lower().replace(' ', '')
         ret[lowername] = object_to_dict(location)
     return ret
@@ -370,7 +377,7 @@ def avail_sizes(call=None):  # pylint: disable=unused-argument
 
 def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
     '''
-    List VMs on this Azure account
+    List VMs on this Azure Active Provider
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -383,7 +390,17 @@ def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
         compconn = get_conn()
 
     nodes = list_nodes_full(compconn, call)
+
+    active_resource_group = None
+    try:
+        provider, driver = __active_provider_name__.split(':')
+        active_resource_group = __opts__['providers'][provider][driver]['resource_group']
+    except KeyError:
+        pass
+
     for node in nodes:
+        if not nodes[node]['resource_group'] == active_resource_group:
+            continue
         ret[node] = {'name': node}
         for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
             ret[node][prop] = nodes[node].get(prop)
@@ -407,13 +424,14 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
     for group in list_resource_groups():
         nodes = compconn.virtual_machines.list(group)
         for node in nodes:
+            private_ips, public_ips = __get_ips_from_node(group, node)
             ret[node.name] = object_to_dict(node)
             ret[node.name]['id'] = node.id
             ret[node.name]['name'] = node.name
             ret[node.name]['size'] = node.hardware_profile.vm_size
             ret[node.name]['state'] = node.provisioning_state
-            ret[node.name]['private_ips'] = node.network_profile.network_interfaces
-            ret[node.name]['public_ips'] = node.network_profile.network_interfaces
+            ret[node.name]['private_ips'] = private_ips
+            ret[node.name]['public_ips'] = public_ips
             ret[node.name]['storage_profile']['data_disks'] = []
             ret[node.name]['resource_group'] = group
             for disk in node.storage_profile.data_disks:
@@ -431,6 +449,30 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
                 except TypeError:
                     ret[node.name]['image'] = None
     return ret
+
+
+def __get_ips_from_node(resource_group, node):
+    '''
+    List private and public IPs from a VM interface
+    '''
+    global netconn  # pylint: disable=global-statement,invalid-name
+    if not netconn:
+        netconn = get_conn(NetworkManagementClient)
+
+    private_ips = []
+    public_ips = []
+    for node_iface in node.network_profile.network_interfaces:
+        node_iface_name = node_iface.id.split('/')[-1]
+        network_interface = netconn.network_interfaces.get(resource_group, node_iface_name)
+        for ip_configuration in network_interface.ip_configurations:
+            if ip_configuration.private_ip_address:
+                private_ips.append(ip_configuration.private_ip_address)
+            if ip_configuration.public_ip_address and ip_configuration.public_ip_address.id:
+                public_iface_name = ip_configuration.public_ip_address.id.split('/')[-1]
+                public_iface = netconn.public_ip_addresses.get(resource_group, public_iface_name)
+                public_ips.append(public_iface.ip_address)
+
+    return private_ips, public_ips
 
 
 def list_resource_groups(conn=None, call=None):  # pylint: disable=unused-argument
@@ -707,16 +749,17 @@ def show_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     data['ip_configurations'] = {}
     for ip_ in iface.ip_configurations:
         data['ip_configurations'][ip_.name] = make_safe(ip_)
-        try:
-            pubip = netconn.public_ip_addresses.get(
-                kwargs['resource_group'],
-                ip_.name,
-            )
-            data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
-        except Exception as exc:
-            log.warning('There was a cloud error: {0}'.format(exc))
-            log.warning('{0}'.format(type(exc)))
-            continue
+        if ip_.public_ip_address is not None:
+            try:
+                pubip = netconn.public_ip_addresses.get(
+                    kwargs['resource_group'],
+                    ip_.name,
+                )
+                data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
+            except Exception as exc:
+                log.warning('There was a cloud error: {0}'.format(exc))
+                log.warning('{0}'.format(type(exc)))
+                continue
 
     return data
 
@@ -824,6 +867,17 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     if kwargs.get('iface_name') is None:
         kwargs['iface_name'] = '{0}-iface0'.format(vm_['name'])
 
+    backend_pools = None
+    if kwargs.get('load_balancer') and kwargs.get('backend_pool'):
+        load_balancer_obj = netconn.load_balancers.get(
+            resource_group_name=kwargs['network_resource_group'],
+            load_balancer_name=kwargs['load_balancer'],
+        )
+        backend_pools = list(filter(
+            lambda backend: backend.name == kwargs['backend_pool'],
+            load_balancer_obj.backend_address_pools,
+        ))
+
     subnet_obj = netconn.subnets.get(
         resource_group_name=kwargs['network_resource_group'],
         virtual_network_name=kwargs['network'],
@@ -864,6 +918,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                     ip_configurations = [
                         NetworkInterfaceIPConfiguration(
                             name='{0}-ip'.format(kwargs['iface_name']),
+                            load_balancer_backend_address_pools=backend_pools,
                             subnet=subnet_obj,
                             **ip_kwargs
                         )
@@ -880,10 +935,22 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         ip_configurations = [
             NetworkInterfaceIPConfiguration(
                 name='{0}-ip'.format(kwargs['iface_name']),
+                load_balancer_backend_address_pools=backend_pools,
                 subnet=subnet_obj,
                 **ip_kwargs
             )
         ]
+
+    dns_settings = None
+    if kwargs.get('dns_servers') is not None:
+        if isinstance(kwargs['dns_servers'], list):
+            dns_settings = NetworkInterfaceDnsSettings(
+                dns_servers=kwargs['dns_servers'],
+                applied_dns_servers=kwargs['dns_servers'],
+                internal_dns_name_label=None,
+                internal_fqdn=None,
+                internal_domain_name_suffix=None,
+            )
 
     network_security_group = None
     if kwargs.get('security_group') is not None:
@@ -896,6 +963,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         location=kwargs['location'],
         network_security_group=network_security_group,
         ip_configurations=ip_configurations,
+        dns_settings=dns_settings,
     )
 
     poller = netconn.network_interfaces.create_or_update(
@@ -939,6 +1007,16 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
             'name', vm_, __opts__, search_global=True
         )
 
+    vm_['availability_set_id'] = None
+    if vm_.get('availability_set'):
+        availability_set = compconn.availability_sets.get(
+            resource_group_name=vm_['resource_group'],
+            availability_set_name=vm_['availability_set'],
+        )
+        vm_['availability_set_id'] = SubResource(
+            id=availability_set.id
+        )
+
     os_kwargs = {}
     userdata = None
     userdata_file = config.get_cloud_config_value(
@@ -950,7 +1028,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
     else:
         if os.path.exists(userdata_file):
-            with salt.utils.fopen(userdata_file, 'r') as fh_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
     userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
@@ -1107,6 +1185,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 NetworkInterfaceReference(vm_['iface_id']),
             ],
         ),
+        availability_set=vm_['availability_set_id'],
     )
 
     __utils__['cloud.fire_event'](
@@ -1252,6 +1331,15 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
             '-a or --action.'
         )
 
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
     global compconn  # pylint: disable=global-statement,invalid-name
     if not compconn:
         compconn = get_conn()
@@ -1344,6 +1432,15 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
                     call='function',
                 )
             )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroyed instance',
+        'salt/cloud/{0}/destroyed'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
     return ret
 
@@ -1593,9 +1690,14 @@ def pages_to_list(items):
     while True:
         try:
             page = items.next()  # pylint: disable=incompatible-py3-code
-            for item in page:
-                objs.append(item)
+            if isinstance(page, collections.Iterable):
+                for item in page:
+                    objs.append(item)
+            else:
+                objs.append(page)
         except GeneratorExit:
+            break
+        except StopIteration:
             break
     return objs
 

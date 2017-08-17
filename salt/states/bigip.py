@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import json
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 #set up virtual function
@@ -85,7 +85,7 @@ def _check_for_changes(entity_type, ret, existing, modified):
         if 'generation' in existing['content'].keys():
             del existing['content']['generation']
 
-        if cmp(modified['content'], existing['content']) == 0:
+        if modified['content'] == existing['content']:
             ret['comment'] = '{entity_type} is currently enforced to the desired state.  No changes made.'.format(entity_type=entity_type)
         else:
             ret['comment'] = '{entity_type} was enforced to the desired state.  Note: Only parameters specified ' \
@@ -94,7 +94,7 @@ def _check_for_changes(entity_type, ret, existing, modified):
             ret['changes']['new'] = modified['content']
 
     else:
-        if cmp(modified, existing) == 0:
+        if modified == existing:
             ret['comment'] = '{entity_type} is currently enforced to the desired state.  No changes made.'.format(entity_type=entity_type)
         else:
             ret['comment'] = '{entity_type} was enforced to the desired state.  Note: Only parameters specified ' \

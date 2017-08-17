@@ -89,14 +89,12 @@ import re
 import decimal
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.cloud
+import salt.utils.files
 import salt.utils.hashutils
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
-
-# Import salt.cloud libs
-import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
     SaltCloudException,
@@ -107,7 +105,7 @@ from salt.exceptions import (
 )
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import map, range, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
 
@@ -1030,10 +1028,18 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return config.get_cloud_config_value(
+    ret = config.get_cloud_config_value(
         'ssh_interface', vm_, __opts__, default='public_ips',
         search_global=False
     )
+    if ret not in ('public_ips', 'private_ips'):
+        log.warning((
+            'Invalid ssh_interface: {0}. '
+            'Allowed options are ("public_ips", "private_ips"). '
+            'Defaulting to "public_ips".'
+        ).format(ret))
+        ret = 'public_ips'
+    return ret
 
 
 def get_ssh_gateway_config(vm_):
@@ -1046,7 +1052,7 @@ def get_ssh_gateway_config(vm_):
     )
 
     # Check to see if a SSH Gateway will be used.
-    if not isinstance(ssh_gateway, str):
+    if not isinstance(ssh_gateway, six.string_types):
         return None
 
     # Create dictionary of configuration items
@@ -1433,7 +1439,7 @@ def _create_eni_if_necessary(interface, vm_):
     )
 
     associate_public_ip = interface.get('AssociatePublicIpAddress', False)
-    if isinstance(associate_public_ip, str):
+    if isinstance(associate_public_ip, six.string_types):
         # Assume id of EIP as value
         _associate_eip_with_interface(eni_id, associate_public_ip, vm_=vm_)
 
@@ -1787,7 +1793,7 @@ def request_instance(vm_=None, call=None):
     else:
         log.trace('userdata_file: {0}'.format(userdata_file))
         if os.path.exists(userdata_file):
-            with salt.utils.fopen(userdata_file, 'r') as fh_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
     userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
@@ -2328,6 +2334,9 @@ def wait_for_instance(
         use_winrm = config.get_cloud_config_value(
             'use_winrm', vm_, __opts__, default=False
         )
+        winrm_verify_ssl = config.get_cloud_config_value(
+            'winrm_verify_ssl', vm_, __opts__, default=True
+        )
 
         if win_passwd and win_passwd == 'auto':
             log.debug('Waiting for auto-generated Windows EC2 password')
@@ -2399,7 +2408,8 @@ def wait_for_instance(
                                                           winrm_port,
                                                           username,
                                                           win_passwd,
-                                                          timeout=ssh_connect_timeout):
+                                                          timeout=ssh_connect_timeout,
+                                                          verify=winrm_verify_ssl):
                 raise SaltCloudSystemExit(
                     'Failed to authenticate against remote windows host'
                 )
@@ -2440,7 +2450,7 @@ def wait_for_instance(
                     continue
                 keys += '\n{0} {1}'.format(ip_address, line)
 
-            with salt.utils.fopen(known_hosts_file, 'a') as fp_:
+            with salt.utils.files.fopen(known_hosts_file, 'a') as fp_:
                 fp_.write(keys)
             fp_.close()
 
@@ -2609,7 +2619,7 @@ def create(vm_=None, call=None):
         data, vm_ = request_instance(vm_, location)
 
         # If data is a str, it's an error
-        if isinstance(data, str):
+        if isinstance(data, six.string_types):
             log.error('Error requesting instance: {0}'.format(data))
             return {}
 
@@ -2642,7 +2652,7 @@ def create(vm_=None, call=None):
         )
 
     for value in six.itervalues(tags):
-        if not isinstance(value, str):
+        if not isinstance(value, six.string_types):
             raise SaltCloudConfigError(
                 '\'tag\' values must be strings. Try quoting the values. '
                 'e.g. "2013-09-19T20:09:46Z".'
@@ -2829,7 +2839,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     if 'instance_id' not in kwargs:
         kwargs['instance_id'] = _get_node(name)['instanceId']
 
-    if isinstance(kwargs['volumes'], str):
+    if isinstance(kwargs['volumes'], six.string_types):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
@@ -2863,6 +2873,8 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             volume_dict['iops'] = volume['iops']
         if 'encrypted' in volume:
             volume_dict['encrypted'] = volume['encrypted']
+        if 'kmskeyid' in volume:
+            volume_dict['kmskeyid'] = volume['kmskeyid']
 
         if 'volume_id' not in volume_dict:
             created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
@@ -3612,7 +3624,8 @@ def list_nodes_select(call=None):
 
 def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     '''
-    Show the details from EC2 concerning an AMI
+    Show the details from EC2 concerning an instance's termination protection state
+
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -3648,6 +3661,51 @@ def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     return disable_protect
 
 
+def show_detailed_monitoring(name=None, instance_id=None, call=None, quiet=False):
+    '''
+    Show the details from EC2 regarding cloudwatch detailed monitoring.
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_detailed_monitoring action must be called with -a or --action.'
+        )
+    location = get_location()
+    if str(name).startswith('i-') and (len(name) == 10 or len(name) == 19):
+        instance_id = name
+
+    if not name and not instance_id:
+        raise SaltCloudSystemExit(
+            'The show_detailed_monitoring action must be provided with a name or instance\
+ ID'
+        )
+    matched = _get_node(name=name, instance_id=instance_id, location=location)
+    log.log(
+        logging.DEBUG if quiet is True else logging.INFO,
+        'Detailed Monitoring is {0} for {1}'.format(matched['monitoring'], name)
+    )
+    return matched['monitoring']
+
+
+def _toggle_term_protect(name, value):
+    '''
+    Enable or Disable termination protection on a node
+
+    '''
+    instance_id = _get_node(name)['instanceId']
+    params = {'Action': 'ModifyInstanceAttribute',
+              'InstanceId': instance_id,
+              'DisableApiTermination.Value': value}
+
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       return_root=True,
+                       opts=__opts__,
+                       sigver='4')
+
+    return show_term_protect(name=name, instance_id=instance_id, call='action')
+
+
 def enable_term_protect(name, call=None):
     '''
     Enable termination protection on a node
@@ -3667,39 +3725,21 @@ def enable_term_protect(name, call=None):
     return _toggle_term_protect(name, 'true')
 
 
-def disable_term_protect(name, call=None):
+def disable_detailed_monitoring(name, call=None):
     '''
-    Disable termination protection on a node
+    Enable/disable detailed monitoring on a node
 
     CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a disable_term_protect mymachine
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The disable_term_protect action must be called with '
+            'The enable_term_protect action must be called with '
             '-a or --action.'
         )
 
-    return _toggle_term_protect(name, 'false')
-
-
-def _toggle_term_protect(name, value):
-    '''
-    Disable termination protection on a node
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a disable_term_protect mymachine
-    '''
     instance_id = _get_node(name)['instanceId']
-    params = {'Action': 'ModifyInstanceAttribute',
-              'InstanceId': instance_id,
-              'DisableApiTermination.Value': value}
+    params = {'Action': 'UnmonitorInstances',
+              'InstanceId.1': instance_id}
 
     result = aws.query(params,
                        location=get_location(),
@@ -3708,7 +3748,34 @@ def _toggle_term_protect(name, value):
                        opts=__opts__,
                        sigver='4')
 
-    return show_term_protect(name=name, instance_id=instance_id, call='action')
+    return show_detailed_monitoring(name=name, instance_id=instance_id, call='action')
+
+
+def enable_detailed_monitoring(name, call=None):
+    '''
+    Enable/disable detailed monitoring on a node
+
+    CLI Example:
+
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The enable_term_protect action must be called with '
+            '-a or --action.'
+        )
+
+    instance_id = _get_node(name)['instanceId']
+    params = {'Action': 'MonitorInstances',
+              'InstanceId.1': instance_id}
+
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       return_root=True,
+                       opts=__opts__,
+                       sigver='4')
+
+    return show_detailed_monitoring(name=name, instance_id=instance_id, call='action')
 
 
 def show_delvol_on_destroy(name, kwargs=None, call=None):
@@ -4043,6 +4110,13 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
     # You can't set `encrypted` if you pass a snapshot
     if 'encrypted' in kwargs and 'snapshot' not in kwargs:
         params['Encrypted'] = kwargs['encrypted']
+        if 'kmskeyid' in kwargs:
+            params['KmsKeyId'] = kwargs['kmskeyid']
+    if 'kmskeyid' in kwargs and 'encrypted' not in kwargs:
+        log.error(
+            'If a KMS Key ID is specified, encryption must be enabled'
+        )
+        return False
 
     log.debug(params)
 
@@ -4321,7 +4395,7 @@ def import_keypair(kwargs=None, call=None):
     public_key_file = kwargs['file']
 
     if os.path.exists(public_key_file):
-        with salt.utils.fopen(public_key_file, 'r') as fh_:
+        with salt.utils.files.fopen(public_key_file, 'r') as fh_:
             public_key = fh_.read()
 
     if public_key is not None:
@@ -4710,7 +4784,7 @@ def get_password_data(
 
     if 'key' not in kwargs:
         if 'key_file' in kwargs:
-            with salt.utils.fopen(kwargs['key_file'], 'r') as kf_:
+            with salt.utils.files.fopen(kwargs['key_file'], 'r') as kf_:
                 kwargs['key'] = kf_.read()
 
     if 'key' in kwargs:
@@ -4810,7 +4884,7 @@ def _parse_pricing(url, name):
     outfile = os.path.join(
         __opts__['cachedir'], 'ec2-pricing-{0}.p'.format(name)
     )
-    with salt.utils.fopen(outfile, 'w') as fho:
+    with salt.utils.files.fopen(outfile, 'w') as fho:
         msgpack.dump(regions, fho)
 
     return True
@@ -4878,7 +4952,7 @@ def show_pricing(kwargs=None, call=None):
     if not os.path.isfile(pricefile):
         update_pricing({'type': name}, 'function')
 
-    with salt.utils.fopen(pricefile, 'r') as fhi:
+    with salt.utils.files.fopen(pricefile, 'r') as fhi:
         ec2_price = msgpack.load(fhi)
 
     region = get_location(profile)

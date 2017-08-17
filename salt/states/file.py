@@ -21,6 +21,7 @@ the jinja templating system would look like this:
         - user: root
         - group: root
         - mode: 644
+        - attrs: ai
         - template: jinja
         - defaults:
             custom_var: "default value"
@@ -74,6 +75,7 @@ salt fileserver. Here's an example:
         - user: foo
         - group: users
         - mode: 644
+        - attrs: i
         - backup: minion
 
 .. note::
@@ -94,6 +96,7 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
         - user: foo
         - group: users
         - mode: '0644'
+        - attrs: i
 
 .. warning::
 
@@ -282,19 +285,21 @@ import salt.payload
 import salt.utils
 import salt.utils.dictupdate
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.templates
 import salt.utils.url
+import salt.utils.versions
 from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
     import salt.utils.win_functions
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip_longest
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     import pywintypes
     import win32com.client
 
@@ -317,7 +322,7 @@ def _load_accumulators():
         serial = salt.payload.Serial(__opts__)
         ret = {'accumulators': {}, 'accumulators_deps': {}}
         try:
-            with salt.utils.fopen(path, 'rb') as f:
+            with salt.utils.files.fopen(path, 'rb') as f:
                 loaded = serial.load(f)
                 return loaded if loaded else ret
         except (IOError, NameError):
@@ -335,7 +340,7 @@ def _persist_accummulators(accumulators, accumulators_deps):
 
     serial = salt.payload.Serial(__opts__)
     try:
-        with salt.utils.fopen(_get_accumulator_filepath(), 'w+b') as f:
+        with salt.utils.files.fopen(_get_accumulator_filepath(), 'w+b') as f:
             serial.dump(accumm_data, f)
     except NameError:
         # msgpack error from salt-ssh
@@ -1062,7 +1067,7 @@ def _get_template_texts(source_list=None,
         log.debug(msg.format(rndrd_templ_fn, source))
         if rndrd_templ_fn:
             tmplines = None
-            with salt.utils.fopen(rndrd_templ_fn, 'rb') as fp_:
+            with salt.utils.files.fopen(rndrd_templ_fn, 'rb') as fp_:
                 tmplines = fp_.read()
                 if six.PY3:
                     tmplines = tmplines.decode(__salt_system_encoding__)
@@ -1259,7 +1264,7 @@ def symlink(
     if user is None:
         user = __opts__['user']
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
 
         # Make sure the user exists in Windows
         # Salt default is 'root'
@@ -1433,7 +1438,10 @@ def absent(name):
             ret['comment'] = 'File {0} is set for removal'.format(name)
             return ret
         try:
-            __salt__['file.remove'](name)
+            if salt.utils.platform.is_windows():
+                __salt__['file.remove'](name, force=True)
+            else:
+                __salt__['file.remove'](name)
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -1447,7 +1455,10 @@ def absent(name):
             ret['comment'] = 'Directory {0} is set for removal'.format(name)
             return ret
         try:
-            __salt__['file.remove'](name)
+            if salt.utils.platform.is_windows():
+                __salt__['file.remove'](name, force=True)
+            else:
+                __salt__['file.remove'](name)
             ret['comment'] = 'Removed directory {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -1476,11 +1487,11 @@ def exists(name):
            'result': True,
            'comment': ''}
     if not name:
-        return _error(ret, 'Must provide name to file.exists')
+        return _error(ret, u'Must provide name to file.exists')
     if not os.path.exists(name):
-        return _error(ret, 'Specified path {0} does not exist'.format(name))
+        return _error(ret, u'Specified path {0} does not exist'.format(name))
 
-    ret['comment'] = 'Path {0} exists'.format(name)
+    ret['comment'] = u'Path {0} exists'.format(name)
     return ret
 
 
@@ -1500,11 +1511,11 @@ def missing(name):
            'result': True,
            'comment': ''}
     if not name:
-        return _error(ret, 'Must provide name to file.missing')
+        return _error(ret, u'Must provide name to file.missing')
     if os.path.exists(name):
-        return _error(ret, 'Specified path {0} exists'.format(name))
+        return _error(ret, u'Specified path {0} exists'.format(name))
 
-    ret['comment'] = 'Path {0} is missing'.format(name)
+    ret['comment'] = u'Path {0} is missing'.format(name)
     return ret
 
 
@@ -1515,6 +1526,7 @@ def managed(name,
             user=None,
             group=None,
             mode=None,
+            attrs=None,
             template=None,
             makedirs=False,
             dir_mode=None,
@@ -1742,6 +1754,16 @@ def managed(name,
             unable to stat the file as it exists on the fileserver and thus
             cannot mirror the mode on the salt-ssh minion
 
+    attrs
+        The attributes to have on this file, e.g. ``a``, ``i``. The attributes
+        can be any or a combination of the following characters:
+        ``acdijstuADST``.
+
+        .. note::
+            This option is **not** supported on Windows.
+
+        .. versionadded: Oxygen
+
     template
         If this setting is applied, the named templating engine will be used to
         render the downloaded file. The following templates are supported:
@@ -1837,6 +1859,7 @@ def managed(name,
                 - user: deployer
                 - group: deployer
                 - mode: 600
+                - attrs: a
                 - contents_pillar: userdata:deployer:id_rsa
 
         This would populate ``/home/deployer/.ssh/id_rsa`` with the contents of
@@ -1959,6 +1982,7 @@ def managed(name,
                 - user: root
                 - group: root
                 - mode: 0440
+                - attrs: i
                 - source: salt://sudoers/files/sudoers.jinja
                 - template: jinja
                 - check_cmd: /usr/sbin/visudo -c -f
@@ -2051,7 +2075,7 @@ def managed(name,
             - win_inheritance: False
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -2067,8 +2091,11 @@ def managed(name,
            'name': name,
            'result': True}
 
-    if mode is not None and salt.utils.is_windows():
+    if mode is not None and salt.utils.platform.is_windows():
         return _error(ret, 'The \'mode\' option is not supported on Windows')
+
+    if attrs is not None and salt.utils.platform.is_windows():
+        return _error(ret, 'The \'attrs\' option is not supported on Windows')
 
     try:
         keep_mode = mode.lower() == 'keep'
@@ -2220,7 +2247,7 @@ def managed(name,
     if not name:
         return _error(ret, 'Must provide name to file.managed')
     user = _test_owner(kwargs, user=user)
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
 
         # If win_owner not passed, use user
         if win_owner is None:
@@ -2238,8 +2265,8 @@ def managed(name,
     if not create:
         if not os.path.isfile(name):
             # Don't create a file that is not already present
-            ret['comment'] = ('File {0} is not present and is not set for '
-                              'creation').format(name)
+            ret['comment'] = (u'File {0} is not present and is not set for '
+                              u'creation').format(name)
             return ret
     u_check = _check_user(user, group)
     if u_check:
@@ -2247,10 +2274,10 @@ def managed(name,
         return _error(ret, u_check)
     if not os.path.isabs(name):
         return _error(
-            ret, 'Specified file {0} is not an absolute path'.format(name))
+            ret, u'Specified file {0} is not an absolute path'.format(name))
 
     if os.path.isdir(name):
-        ret['comment'] = 'Specified target {0} is a directory'.format(name)
+        ret['comment'] = u'Specified target {0} is a directory'.format(name)
         ret['result'] = False
         return ret
 
@@ -2265,18 +2292,18 @@ def managed(name,
 
     if not replace and os.path.exists(name):
         # Check and set the permissions if necessary
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             ret = __salt__['file.check_perms'](
-                name, ret, win_owner, win_perms, win_deny_perms,
+                name, ret, win_owner, win_perms, win_deny_perms, None,
                 win_inheritance)
         else:
             ret, _ = __salt__['file.check_perms'](
-                name, ret, user, group, mode, follow_symlinks)
+                name, ret, user, group, mode, attrs, follow_symlinks)
         if __opts__['test']:
-            ret['comment'] = 'File {0} not updated'.format(name)
+            ret['comment'] = u'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
-            ret['comment'] = ('File {0} exists with proper permissions. '
-                              'No changes made.'.format(name))
+            ret['comment'] = (u'File {0} exists with proper permissions. '
+                              u'No changes made.'.format(name))
         return ret
 
     accum_data, _ = _load_accumulators()
@@ -2296,6 +2323,7 @@ def managed(name,
                     user,
                     group,
                     mode,
+                    attrs,
                     template,
                     context,
                     defaults,
@@ -2306,23 +2334,23 @@ def managed(name,
                     **kwargs
                 )
 
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     ret = __salt__['file.check_perms'](
-                        name, ret, win_owner, win_perms, win_deny_perms,
+                        name, ret, win_owner, win_perms, win_deny_perms, None,
                         win_inheritance)
 
             if isinstance(ret['pchanges'], tuple):
                 ret['result'], ret['comment'] = ret['pchanges']
             elif ret['pchanges']:
                 ret['result'] = None
-                ret['comment'] = 'The file {0} is set to be changed'.format(name)
+                ret['comment'] = u'The file {0} is set to be changed'.format(name)
                 if show_changes and 'diff' in ret['pchanges']:
                     ret['changes']['diff'] = ret['pchanges']['diff']
                 if not show_changes:
                     ret['changes']['diff'] = '<show_changes=False>'
             else:
                 ret['result'] = True
-                ret['comment'] = 'The file {0} is in the correct state'.format(name)
+                ret['comment'] = u'The file {0} is in the correct state'.format(name)
 
             return ret
 
@@ -2348,6 +2376,7 @@ def managed(name,
             user,
             group,
             mode,
+            attrs,
             __env__,
             context,
             defaults,
@@ -2386,6 +2415,7 @@ def managed(name,
                 user,
                 group,
                 mode,
+                attrs,
                 __env__,
                 backup,
                 makedirs,
@@ -2459,6 +2489,7 @@ def managed(name,
                 user,
                 group,
                 mode,
+                attrs,
                 __env__,
                 backup,
                 makedirs,
@@ -2751,7 +2782,7 @@ def directory(name,
         return _error(ret, 'Cannot specify both max_depth and clean')
 
     user = _test_owner(kwargs, user=user)
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
 
         # If win_owner not passed, use user
         if win_owner is None:
@@ -2776,7 +2807,7 @@ def directory(name,
     dir_mode = salt.utils.normalize_mode(dir_mode)
     file_mode = salt.utils.normalize_mode(file_mode)
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         # Verify win_owner is valid on the target system
         try:
             salt.utils.win_dacl.get_sid(win_owner)
@@ -2829,7 +2860,7 @@ def directory(name,
                     'Specified location {0} exists and is a symlink'.format(name))
 
     # Check directory?
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         presult, pcomment, ret['pchanges'] = _check_directory_win(
             name, win_owner, win_perms, win_deny_perms, win_inheritance)
     else:
@@ -2848,7 +2879,7 @@ def directory(name,
             # The parent directory does not exist, create them
             if makedirs:
                 # Everything's good, create the parent Dirs
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     # Make sure the drive is mapped before trying to create the
                     # path in windows
                     drive, path = os.path.splitdrive(name)
@@ -2864,7 +2895,7 @@ def directory(name,
                 return _error(
                     ret, 'No directory to create {0} in'.format(name))
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             __salt__['file.mkdir'](name, win_owner, win_perms, win_deny_perms,
                                    win_inheritance)
         else:
@@ -2878,12 +2909,12 @@ def directory(name,
     # issue 32707: skip this __salt__['file.check_perms'] call if children_only == True
     # Check permissions
     if not children_only:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             ret = __salt__['file.check_perms'](
-                name, ret, win_owner, win_perms, win_deny_perms, win_inheritance)
+                name, ret, win_owner, win_perms, win_deny_perms, None, win_inheritance)
         else:
             ret, perms = __salt__['file.check_perms'](
-                name, ret, user, group, dir_mode, follow_symlinks)
+                name, ret, user, group, dir_mode, None, follow_symlinks)
 
     errors = []
     if recurse or clean:
@@ -2949,13 +2980,13 @@ def directory(name,
                 for fn_ in files:
                     full = os.path.join(root, fn_)
                     try:
-                        if salt.utils.is_windows():
+                        if salt.utils.platform.is_windows():
                             ret = __salt__['file.check_perms'](
-                                full, ret, win_owner, win_perms, win_deny_perms,
+                                full, ret, win_owner, win_perms, win_deny_perms, None,
                                 win_inheritance)
                         else:
                             ret, _ = __salt__['file.check_perms'](
-                                full, ret, user, group, file_mode, follow_symlinks)
+                                full, ret, user, group, file_mode, None, follow_symlinks)
                     except CommandExecutionError as exc:
                         if not exc.strerror.endswith('does not exist'):
                             errors.append(exc.strerror)
@@ -2964,13 +2995,13 @@ def directory(name,
                 for dir_ in dirs:
                     full = os.path.join(root, dir_)
                     try:
-                        if salt.utils.is_windows():
+                        if salt.utils.platform.is_windows():
                             ret = __salt__['file.check_perms'](
-                                full, ret, win_owner, win_perms, win_deny_perms,
+                                full, ret, win_owner, win_perms, win_deny_perms, None,
                                 win_inheritance)
                         else:
                             ret, _ = __salt__['file.check_perms'](
-                                full, ret, user, group, dir_mode, follow_symlinks)
+                                full, ret, user, group, dir_mode, None, follow_symlinks)
                     except CommandExecutionError as exc:
                         if not exc.strerror.endswith('does not exist'):
                             errors.append(exc.strerror)
@@ -2982,14 +3013,14 @@ def directory(name,
         removed = _clean_dir(name, list(keep), exclude_pat)
         if removed:
             ret['changes']['removed'] = removed
-            ret['comment'] = 'Files cleaned from directory {0}'.format(name)
+            ret['comment'] = u'Files cleaned from directory {0}'.format(name)
 
     # issue 32707: reflect children_only selection in comments
     if not ret['comment']:
         if children_only:
-            ret['comment'] = 'Directory {0}/* updated'.format(name)
+            ret['comment'] = u'Directory {0}/* updated'.format(name)
         else:
-            ret['comment'] = 'Directory {0} updated'.format(name)
+            ret['comment'] = u'Directory {0} updated'.format(name)
 
     if __opts__['test']:
         ret['comment'] = 'Directory {0} not updated'.format(name)
@@ -2998,9 +3029,9 @@ def directory(name,
         if ret['comment']:
             orig_comment = ret['comment']
 
-        ret['comment'] = 'Directory {0} is in the correct state'.format(name)
+        ret['comment'] = u'Directory {0} is in the correct state'.format(name)
         if orig_comment:
-            ret['comment'] = '\n'.join([ret['comment'], orig_comment])
+            ret['comment'] = u'\n'.join([ret['comment'], orig_comment])
 
     if errors:
         ret['result'] = False
@@ -3177,7 +3208,7 @@ def recurse(name,
         option is usually not needed except in special circumstances.
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -3188,7 +3219,7 @@ def recurse(name,
     name = os.path.expanduser(sdecode(name))
 
     user = _test_owner(kwargs, user=user)
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         if group is not None:
             log.warning(
                 'The group argument for {0} has been ignored as this '
@@ -3212,7 +3243,7 @@ def recurse(name,
         return ret
 
     if any([x is not None for x in (dir_mode, file_mode, sym_mode)]) \
-            and salt.utils.is_windows():
+            and salt.utils.platform.is_windows():
         return _error(ret, 'mode management is not supported on Windows')
 
     # Make sure that leading zeros stripped by YAML loader are added back
@@ -3266,8 +3297,8 @@ def recurse(name,
                          if x.startswith(srcpath + '/'))):
         ret['result'] = False
         ret['comment'] = (
-            'The directory \'{0}\' does not exist on the salt fileserver '
-            'in saltenv \'{1}\''.format(srcpath, senv)
+            u'The directory \'{0}\' does not exist on the salt fileserver '
+            u'in saltenv \'{1}\''.format(srcpath, senv)
         )
         return ret
 
@@ -3303,8 +3334,8 @@ def recurse(name,
         if clean and os.path.exists(path) and os.path.isdir(path):
             _ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
             if __opts__['test']:
-                _ret['comment'] = 'Replacing directory {0} with a ' \
-                                  'file'.format(path)
+                _ret['comment'] = u'Replacing directory {0} with a ' \
+                                  u'file'.format(path)
                 _ret['result'] = None
                 merge_ret(path, _ret)
                 return
@@ -3327,6 +3358,7 @@ def recurse(name,
             user=user,
             group=group,
             mode='keep' if keep_mode else file_mode,
+            attrs=None,
             template=template,
             makedirs=True,
             context=context,
@@ -3341,7 +3373,7 @@ def recurse(name,
         if clean and os.path.exists(path) and not os.path.isdir(path):
             _ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
             if __opts__['test']:
-                _ret['comment'] = 'Replacing {0} with a directory'.format(path)
+                _ret['comment'] = u'Replacing {0} with a directory'.format(path)
                 _ret['result'] = None
                 merge_ret(path, _ret)
                 return
@@ -3406,10 +3438,10 @@ def recurse(name,
     ) for (k, v) in six.iteritems(ret['comment'])).strip()
 
     if not ret['comment']:
-        ret['comment'] = 'Recursively updated {0}'.format(name)
+        ret['comment'] = u'Recursively updated {0}'.format(name)
 
     if not ret['changes'] and ret['result']:
-        ret['comment'] = 'The directory {0} is in the correct state'.format(
+        ret['comment'] = u'The directory {0} is in the correct state'.format(
             name
         )
 
@@ -3593,13 +3625,13 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
 
     # TODO: track and report how much space was / would be reclaimed
     if __opts__['test']:
-        ret['comment'] = '{0} backups would have been removed from {1}.\n'.format(len(deletable_files), name)
+        ret['comment'] = u'{0} backups would have been removed from {1}.\n'.format(len(deletable_files), name)
         if deletable_files:
             ret['result'] = None
     else:
         for f in deletable_files:
             __salt__['file.remove'](os.path.join(name, f))
-        ret['comment'] = '{0} backups were removed from {1}.\n'.format(len(deletable_files), name)
+        ret['comment'] = u'{0} backups were removed from {1}.\n'.format(len(deletable_files), name)
         ret['changes'] = changes
 
     return ret
@@ -3736,7 +3768,13 @@ def line(name, content=None, match=None, mode=None, location=None,
     if not name:
         return _error(ret, 'Must provide name to file.line')
 
-    managed(name, create=create, user=user, group=group, mode=file_mode)
+    managed(
+        name,
+        create=create,
+        user=user,
+        group=group,
+        mode=file_mode,
+        replace=False)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -3784,7 +3822,8 @@ def replace(name,
             not_found_content=None,
             backup='.bak',
             show_changes=True,
-            ignore_if_missing=False):
+            ignore_if_missing=False,
+            backslash_literal=False):
     r'''
     Maintain an edit in a file.
 
@@ -3798,12 +3837,13 @@ def replace(name,
         A regular expression, to be matched using Python's
         :py:func:`~re.search`.
 
-        ..note::
+        .. note::
+
             If you need to match a literal string that contains regex special
             characters, you may want to use salt's custom Jinja filter,
             ``escape_regex``.
 
-            ..code-block:: jinja
+            .. code-block:: jinja
 
                 {{ 'http://example.com?foo=bar%20baz' | escape_regex }}
 
@@ -3883,6 +3923,14 @@ def replace(name,
         state will display an error raised by the execution module. If set to
         ``True``, the state will simply report no changes.
 
+    backslash_literal : False
+        .. versionadded:: 2016.11.7
+
+        Interpret backslashes as literal backslashes for the repl and not
+        escape characters.  This will help when using append/prepend so that
+        the backslashes are not interpreted for the repl on the second run of
+        the state.
+
     For complex regex patterns, it can be useful to avoid the need for complex
     quoting and escape sequences by making use of YAML's multiline string
     syntax.
@@ -3931,7 +3979,8 @@ def replace(name,
                                        backup=backup,
                                        dry_run=__opts__['test'],
                                        show_changes=show_changes,
-                                       ignore_if_missing=ignore_if_missing)
+                                       ignore_if_missing=ignore_if_missing,
+                                       backslash_literal=backslash_literal)
 
     if changes:
         ret['pchanges']['diff'] = changes
@@ -4291,10 +4340,10 @@ def comment(name, regex, char='#', backup='.bak'):
 
     ret['pchanges'][name] = 'updated'
     if __opts__['test']:
-        ret['comment'] = 'File {0} is set to be updated'.format(name)
+        ret['comment'] = u'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         slines = fp_.read()
         if six.PY3:
             slines = slines.decode(__salt_system_encoding__)
@@ -4303,7 +4352,7 @@ def comment(name, regex, char='#', backup='.bak'):
     # Perform the edit
     __salt__['file.comment_line'](name, regex, char, True, backup)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         nlines = fp_.read()
         if six.PY3:
             nlines = nlines.decode(__salt_system_encoding__)
@@ -4398,11 +4447,11 @@ def uncomment(name, regex, char='#', backup='.bak'):
 
     ret['pchanges'][name] = 'updated'
     if __opts__['test']:
-        ret['comment'] = 'File {0} is set to be updated'.format(name)
+        ret['comment'] = u'File {0} is set to be updated'.format(name)
         ret['result'] = None
         return ret
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         slines = fp_.read()
         if six.PY3:
             slines = slines.decode(__salt_system_encoding__)
@@ -4411,7 +4460,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     # Perform the edit
     __salt__['file.comment_line'](name, regex, char, False, backup)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         nlines = fp_.read()
         if six.PY3:
             nlines = nlines.decode(__salt_system_encoding__)
@@ -4635,7 +4684,7 @@ def append(name,
 
     text = _validate_str_list(text)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         slines = fp_.read()
         if six.PY3:
             slines = slines.decode(__salt_system_encoding__)
@@ -4663,7 +4712,7 @@ def append(name,
         return _error(ret, 'No text found to append. Nothing appended')
 
     if __opts__['test']:
-        ret['comment'] = 'File {0} is set to be updated'.format(name)
+        ret['comment'] = u'File {0} is set to be updated'.format(name)
         ret['result'] = None
         nlines = list(slines)
         nlines.extend(append_lines)
@@ -4676,7 +4725,7 @@ def append(name,
                     '\n'.join(difflib.unified_diff(slines, nlines))
                 )
         else:
-            ret['comment'] = 'File {0} is in correct state'.format(name)
+            ret['comment'] = u'File {0} is in correct state'.format(name)
             ret['result'] = True
         return ret
 
@@ -4684,9 +4733,9 @@ def append(name,
         __salt__['file.append'](name, args=append_lines)
         ret['comment'] = 'Appended {0} lines'.format(len(append_lines))
     else:
-        ret['comment'] = 'File {0} is in correct state'.format(name)
+        ret['comment'] = u'File {0} is in correct state'.format(name)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         nlines = fp_.read()
         if six.PY3:
             nlines = nlines.decode(__salt_system_encoding__)
@@ -4827,7 +4876,7 @@ def prepend(name,
 
     text = _validate_str_list(text)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         slines = fp_.read()
         if six.PY3:
             slines = slines.decode(__salt_system_encoding__)
@@ -4851,7 +4900,7 @@ def prepend(name,
 
         for line in lines:
             if __opts__['test']:
-                ret['comment'] = 'File {0} is set to be updated'.format(name)
+                ret['comment'] = u'File {0} is set to be updated'.format(name)
                 ret['result'] = None
                 test_lines.append('{0}\n'.format(line))
             else:
@@ -4870,13 +4919,13 @@ def prepend(name,
                 )
             ret['result'] = None
         else:
-            ret['comment'] = 'File {0} is in correct state'.format(name)
+            ret['comment'] = u'File {0} is in correct state'.format(name)
             ret['result'] = True
         return ret
 
     # if header kwarg is True, use verbatim compare
     if header:
-        with salt.utils.fopen(name, 'rb') as fp_:
+        with salt.utils.files.fopen(name, 'rb') as fp_:
             # read as many lines of target file as length of user input
             contents = fp_.read()
             if six.PY3:
@@ -4897,7 +4946,7 @@ def prepend(name,
     else:
         __salt__['file.prepend'](name, *preface)
 
-    with salt.utils.fopen(name, 'rb') as fp_:
+    with salt.utils.files.fopen(name, 'rb') as fp_:
         nlines = fp_.read()
         if six.PY3:
             nlines = nlines.decode(__salt_system_encoding__)
@@ -4915,7 +4964,7 @@ def prepend(name,
     if count:
         ret['comment'] = 'Prepended {0} lines'.format(count)
     else:
-        ret['comment'] = 'File {0} is in correct state'.format(name)
+        ret['comment'] = u'File {0} is in correct state'.format(name)
     ret['result'] = True
     return ret
 
@@ -4980,7 +5029,7 @@ def patch(name,
     hash_ = kwargs.pop('hash', None)
 
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -5013,7 +5062,7 @@ def patch(name,
     # get cached file or copy it to cache
     cached_source_path = __salt__['cp.cache_file'](source, __env__)
     if not cached_source_path:
-        ret['comment'] = ('Unable to cache {0} from saltenv \'{1}\''
+        ret['comment'] = (u'Unable to cache {0} from saltenv \'{1}\''
                           .format(source, __env__))
         return ret
 
@@ -5027,7 +5076,7 @@ def patch(name,
             name, cached_source_path, options=options, dry_run=True
         )
         if __opts__['test']:
-            ret['comment'] = 'File {0} will be patched'.format(name)
+            ret['comment'] = u'File {0} will be patched'.format(name)
             ret['result'] = None
             return ret
         if ret['changes']['retcode'] != 0:
@@ -5106,10 +5155,10 @@ def touch(name, atime=None, mtime=None, makedirs=False):
 
     ret['result'] = __salt__['file.touch'](name, atime, mtime)
     if not extant and ret['result']:
-        ret['comment'] = 'Created empty file {0}'.format(name)
+        ret['comment'] = u'Created empty file {0}'.format(name)
         ret['changes']['new'] = name
     elif extant and ret['result']:
-        ret['comment'] = 'Updated times on {0} {1}'.format(
+        ret['comment'] = u'Updated times on {0} {1}'.format(
             'directory' if os.path.isdir(name) else 'file', name
         )
         ret['changes']['touched'] = name
@@ -5197,7 +5246,7 @@ def copy(
     ret = {
         'name': name,
         'changes': {},
-        'comment': 'Copied "{0}" to "{1}"'.format(source, name),
+        'comment': u'Copied "{0}" to "{1}"'.format(source, name),
         'result': True}
     if not name:
         return _error(ret, 'Must provide name to file.copy')
@@ -5219,7 +5268,7 @@ def copy(
         if user is None:
             user = __opts__['user']
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             if group is not None:
                 log.warning(
                     'The group argument for {0} has been ignored as this is '
@@ -5267,20 +5316,20 @@ def copy(
 
     if __opts__['test']:
         if changed:
-            ret['comment'] = 'File "{0}" is set to be copied to "{1}"'.format(
+            ret['comment'] = u'File "{0}" is set to be copied to "{1}"'.format(
                 source,
                 name
             )
             ret['result'] = None
         else:
-            ret['comment'] = ('The target file "{0}" exists and will not be '
-                              'overwritten'.format(name))
+            ret['comment'] = (u'The target file "{0}" exists and will not be '
+                              u'overwritten'.format(name))
             ret['result'] = True
         return ret
 
     if not changed:
-        ret['comment'] = ('The target file "{0}" exists and will not be '
-                          'overwritten'.format(name))
+        ret['comment'] = (u'The target file "{0}" exists and will not be '
+                          u'overwritten'.format(name))
         ret['result'] = True
         return ret
 
@@ -5349,17 +5398,17 @@ def rename(name, source, force=False, makedirs=False):
 
     if not os.path.isabs(name):
         return _error(
-            ret, 'Specified file {0} is not an absolute path'.format(name))
+            ret, u'Specified file {0} is not an absolute path'.format(name))
 
     if not os.path.lexists(source):
-        ret['comment'] = ('Source file "{0}" has already been moved out of '
-                          'place').format(source)
+        ret['comment'] = (u'Source file "{0}" has already been moved out of '
+                          u'place').format(source)
         return ret
 
     if os.path.lexists(source) and os.path.lexists(name):
         if not force:
-            ret['comment'] = ('The target file "{0}" exists and will not be '
-                              'overwritten'.format(name))
+            ret['comment'] = (u'The target file "{0}" exists and will not be '
+                              u'overwritten'.format(name))
             ret['result'] = False
             return ret
         elif not __opts__['test']:
@@ -5369,12 +5418,12 @@ def rename(name, source, force=False, makedirs=False):
             except (IOError, OSError):
                 return _error(
                     ret,
-                    'Failed to delete "{0}" in preparation for '
-                    'forced move'.format(name)
+                    u'Failed to delete "{0}" in preparation for '
+                    u'forced move'.format(name)
                 )
 
     if __opts__['test']:
-        ret['comment'] = 'File "{0}" is set to be moved to "{1}"'.format(
+        ret['comment'] = u'File "{0}" is set to be moved to "{1}"'.format(
             source,
             name
         )
@@ -5389,7 +5438,7 @@ def rename(name, source, force=False, makedirs=False):
         else:
             return _error(
                 ret,
-                'The target directory {0} is not present'.format(dname))
+                u'The target directory {0} is not present'.format(dname))
     # All tests pass, move the file into place
     try:
         if os.path.islink(source):
@@ -5400,9 +5449,9 @@ def rename(name, source, force=False, makedirs=False):
             shutil.move(source, name)
     except (IOError, OSError):
         return _error(
-            ret, 'Failed to move "{0}" to "{1}"'.format(source, name))
+            ret, u'Failed to move "{0}" to "{1}"'.format(source, name))
 
-    ret['comment'] = 'Moved "{0}" to "{1}"'.format(source, name)
+    ret['comment'] = u'Moved "{0}" to "{1}"'.format(source, name)
     ret['changes'] = {name: source}
     return ret
 
@@ -5481,7 +5530,7 @@ def accumulated(name, filename, text, **kwargs):
     deps = require_in + watch_in
     if not [x for x in deps if 'file' in x]:
         ret['result'] = False
-        ret['comment'] = 'Orphaned accumulator {0} in {1}:{2}'.format(
+        ret['comment'] = u'Orphaned accumulator {0} in {1}:{2}'.format(
             name,
             __low__['__sls__'],
             __low__['__id__']
@@ -5505,8 +5554,8 @@ def accumulated(name, filename, text, **kwargs):
     for chunk in text:
         if chunk not in accum_data[filename][name]:
             accum_data[filename][name].append(chunk)
-            ret['comment'] = ('Accumulator {0} for file {1} '
-                              'was charged by text'.format(name, filename))
+            ret['comment'] = (u'Accumulator {0} for file {1} '
+                              u'was charged by text'.format(name, filename))
     _persist_accummulators(accum_data, accum_deps)
     return ret
 
@@ -5519,7 +5568,6 @@ def serialize(name,
               mode=None,
               backup='',
               makedirs=False,
-              show_diff=None,
               show_changes=True,
               create=True,
               merge_if_exists=False,
@@ -5592,12 +5640,6 @@ def serialize(name,
 
         .. versionadded:: 2014.1.3
 
-    show_diff
-        DEPRECATED: Please use show_changes.
-
-        If set to ``False``, the diff will not be shown in the return data if
-        changes are made.
-
     show_changes
         Output a unified diff of the old file and the new file. If ``False``
         return a boolean if any changes were made.
@@ -5645,7 +5687,7 @@ def serialize(name,
         }
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -5674,8 +5716,8 @@ def serialize(name,
     if not create:
         if not os.path.isfile(name):
             # Don't create a file that is not already present
-            ret['comment'] = ('File {0} is not present and is not set for '
-                              'creation').format(name)
+            ret['comment'] = (u'File {0} is not present and is not set for '
+                              u'creation').format(name)
             return ret
 
     formatter = kwargs.pop('formatter', 'yaml').lower()
@@ -5691,11 +5733,11 @@ def serialize(name,
         return _error(
             ret, 'Neither \'dataset\' nor \'dataset_pillar\' was defined')
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         if group is not None:
             log.warning(
-                'The group argument for {0} has been ignored as this '
-                'is a Windows system.'.format(name)
+                u'The group argument for %s has been ignored as this '
+                u'is a Windows system.', name
             )
         group = user
 
@@ -5704,7 +5746,7 @@ def serialize(name,
 
     if serializer_name not in __serializers__:
         return {'changes': {},
-                'comment': '{0} format is not supported'.format(
+                'comment': u'{0} format is not supported'.format(
                     formatter.capitalize()),
                 'name': name,
                 'result': False
@@ -5714,19 +5756,19 @@ def serialize(name,
         if os.path.isfile(name):
             if '{0}.deserialize'.format(formatter) not in __serializers__:
                 return {'changes': {},
-                        'comment': ('{0} format is not supported for merging'
+                        'comment': (u'{0} format is not supported for merging'
                                     .format(formatter.capitalize())),
                         'name': name,
                         'result': False}
 
-            with salt.utils.fopen(name, 'r') as fhr:
+            with salt.utils.files.fopen(name, 'r') as fhr:
                 existing_data = __serializers__[deserializer_name](fhr)
 
             if existing_data is not None:
                 merged_data = salt.utils.dictupdate.merge_recurse(existing_data, dataset)
                 if existing_data == merged_data:
                     ret['result'] = True
-                    ret['comment'] = 'The file {0} is in the correct state'.format(name)
+                    ret['comment'] = u'The file {0} is in the correct state'.format(name)
                     return ret
                 dataset = merged_data
     contents = __serializers__[serializer_name](dataset, **default_serializer_opts.get(serializer_name, {}))
@@ -5735,14 +5777,6 @@ def serialize(name,
 
     # Make sure that any leading zeros stripped by YAML loader are added back
     mode = salt.utils.normalize_mode(mode)
-
-    if show_diff is not None:
-        show_changes = show_diff
-        msg = (
-            'The \'show_diff\' argument to the file.serialized state has been '
-            'deprecated, please use \'show_changes\' instead.'
-        )
-        salt.utils.warn_until('Oxygen', msg)
 
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
@@ -5753,6 +5787,7 @@ def serialize(name,
             user=user,
             group=group,
             mode=mode,
+            attrs=None,
             template=None,
             context=None,
             defaults=None,
@@ -5764,14 +5799,14 @@ def serialize(name,
 
         if ret['changes']:
             ret['result'] = None
-            ret['comment'] = 'Dataset will be serialized and stored into {0}'.format(
+            ret['comment'] = u'Dataset will be serialized and stored into {0}'.format(
                 name)
 
             if not show_changes:
                 ret['changes']['diff'] = '<show_changes=False>'
         else:
             ret['result'] = True
-            ret['comment'] = 'The file {0} is in the correct state'.format(name)
+            ret['comment'] = u'The file {0} is in the correct state'.format(name)
         return ret
 
     return __salt__['file.manage_file'](name=name,
@@ -5782,6 +5817,7 @@ def serialize(name,
                                         user=user,
                                         group=group,
                                         mode=mode,
+                                        attrs=None,
                                         saltenv=__env__,
                                         backup=backup,
                                         makedirs=makedirs,
@@ -5875,16 +5911,15 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
         # Check for file existence
         if __salt__['file.file_exists'](name):
             ret['comment'] = (
-                'File exists and is not a character device {0}. Cowardly '
-                'refusing to continue'.format(name)
+                u'File {0} exists and is not a character device. Refusing '
+                u'to continue'.format(name)
             )
 
         # Check if it is a character device
         elif not __salt__['file.is_chrdev'](name):
             if __opts__['test']:
-                ret['comment'] = (
-                    'Character device {0} is set to be created'
-                ).format(name)
+                ret['comment'] = \
+                    u'Character device {0} is set to be created'.format(name)
                 ret['result'] = None
             else:
                 ret = __salt__['file.mknod'](name,
@@ -5900,8 +5935,8 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
             devmaj, devmin = __salt__['file.get_devmm'](name)
             if (major, minor) != (devmaj, devmin):
                 ret['comment'] = (
-                    'Character device {0} exists and has a different '
-                    'major/minor {1}/{2}. Cowardly refusing to continue'
+                    u'Character device {0} exists and has a different '
+                    u'major/minor {1}/{2}. Refusing to continue'
                         .format(name, devmaj, devmin)
                 )
             # Check the perms
@@ -5913,7 +5948,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                                                    mode)[0]
                 if not ret['changes']:
                     ret['comment'] = (
-                        'Character device {0} is in the correct state'.format(
+                        u'Character device {0} is in the correct state'.format(
                             name
                         )
                     )
@@ -5922,16 +5957,14 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
         # Check for file existence
         if __salt__['file.file_exists'](name):
             ret['comment'] = (
-                'File exists and is not a block device {0}. Cowardly '
-                'refusing to continue'.format(name)
+                u'File {0} exists and is not a block device. Refusing to '
+                u'continue'.format(name)
             )
 
         # Check if it is a block device
         elif not __salt__['file.is_blkdev'](name):
             if __opts__['test']:
-                ret['comment'] = (
-                    'Block device {0} is set to be created'
-                ).format(name)
+                ret['comment'] = u'Block device {0} is set to be created'.format(name)
                 ret['result'] = None
             else:
                 ret = __salt__['file.mknod'](name,
@@ -5947,8 +5980,8 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
             devmaj, devmin = __salt__['file.get_devmm'](name)
             if (major, minor) != (devmaj, devmin):
                 ret['comment'] = (
-                    'Block device {0} exists and has a different major/minor '
-                    '{1}/{2}. Cowardly refusing to continue'.format(
+                    u'Block device {0} exists and has a different major/minor '
+                    u'{1}/{2}. Refusing to continue'.format(
                         name, devmaj, devmin
                     )
                 )
@@ -5961,21 +5994,21 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                                                    mode)[0]
                 if not ret['changes']:
                     ret['comment'] = (
-                        'Block device {0} is in the correct state'.format(name)
+                        u'Block device {0} is in the correct state'.format(name)
                     )
 
     elif ntype == 'p':
         # Check for file existence
         if __salt__['file.file_exists'](name):
             ret['comment'] = (
-                'File exists and is not a fifo pipe {0}. Cowardly refusing '
-                'to continue'.format(name)
+                u'File {0} exists and is not a fifo pipe. Refusing to '
+                u'continue'.format(name)
             )
 
         # Check if it is a fifo
         elif not __salt__['file.is_fifo'](name):
             if __opts__['test']:
-                ret['comment'] = 'Fifo pipe {0} is set to be created'.format(
+                ret['comment'] = u'Fifo pipe {0} is set to be created'.format(
                     name
                 )
                 ret['result'] = None
@@ -5997,7 +6030,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                                                mode)[0]
             if not ret['changes']:
                 ret['comment'] = (
-                    'Fifo pipe {0} is in the correct state'.format(name)
+                    u'Fifo pipe {0} is in the correct state'.format(name)
                 )
 
     else:
@@ -6220,7 +6253,7 @@ def shortcut(
            'changes': {},
            'result': True,
            'comment': ''}
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return _error(ret, 'Shortcuts are only supported on Windows')
     if not name:
         return _error(ret, 'Must provide name to file.shortcut')
@@ -6353,18 +6386,18 @@ def shortcut(
         else:
             if _check_shortcut_ownership(name, user):
                 # The shortcut looks good!
-                ret['comment'] = ('Shortcut {0} is present and owned by '
-                                  '{1}'.format(name, user))
+                ret['comment'] = (u'Shortcut {0} is present and owned by '
+                                  u'{1}'.format(name, user))
             else:
                 if _set_shortcut_ownership(name, user):
-                    ret['comment'] = ('Set ownership of shortcut {0} to '
-                                      '{1}'.format(name, user))
+                    ret['comment'] = (u'Set ownership of shortcut {0} to '
+                                      u'{1}'.format(name, user))
                     ret['changes']['ownership'] = '{0}'.format(user)
                 else:
                     ret['result'] = False
                     ret['comment'] += (
-                        'Failed to set ownership of shortcut {0} to '
-                        '{1}'.format(name, user)
+                        u'Failed to set ownership of shortcut {0} to '
+                        u'{1}'.format(name, user)
                     )
             return ret
 
@@ -6383,12 +6416,12 @@ def shortcut(
             scut.Save()
         except (AttributeError, pywintypes.com_error) as exc:
             ret['result'] = False
-            ret['comment'] = ('Unable to create new shortcut {0} -> '
-                              '{1}: {2}'.format(name, target, exc))
+            ret['comment'] = (u'Unable to create new shortcut {0} -> '
+                              u'{1}: {2}'.format(name, target, exc))
             return ret
         else:
-            ret['comment'] = ('Created new shortcut {0} -> '
-                              '{1}'.format(name, target))
+            ret['comment'] = (u'Created new shortcut {0} -> '
+                              u'{1}'.format(name, target))
             ret['changes']['new'] = name
 
         if not _check_shortcut_ownership(name, user):

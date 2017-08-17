@@ -30,6 +30,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 
 log = logging.getLogger(__name__)
@@ -123,7 +124,7 @@ def latest_version(*names, **kwargs):
             continue
         pkgname += '--{0}'.format(flavor) if flavor else ''
         cur = pkgs.get(pkgname, '')
-        if not cur or salt.utils.compare_versions(ver1=cur,
+        if not cur or salt.utils.versions.compare(ver1=cur,
                                                   oper='<',
                                                   ver2=pkgver):
             ret[pkgname] = pkgver
