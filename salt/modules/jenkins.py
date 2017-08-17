@@ -451,7 +451,7 @@ def get_job_config(name=None):
 
     server = _connect()
 
-    job_exists(name)
+    if not job_exists(name)
         raise CommandExecutionError('Job \'{0}\' does not exist'.format(name))
 
     job_info = server.get_job_config(name)
