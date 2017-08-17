@@ -12,6 +12,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import network
+import salt.utils
 
 LINUX = '''\
 eth0      Link encap:Ethernet  HWaddr e0:3f:49:85:6a:af
@@ -114,13 +115,14 @@ class NetworkTestCase(TestCase):
         '''
         def _side_effect(host, *args):
             try:
+                ipv6_fam = 30 if salt.utils.is_darwin() else 10
                 return {
                     'github.com': [
                         (2, 1, 6, '', ('192.30.255.112', 0)),
                         (2, 1, 6, '', ('192.30.255.113', 0)),
                     ],
                     'ipv6host.foo': [
-                        (10, 1, 6, '', ('2001:a71::1', 0, 0, 0)),
+                        (ipv6_fam, 1, 6, '', ('2001:a71::1', 0, 0, 0)),
                     ],
                 }[host]
             except KeyError:
