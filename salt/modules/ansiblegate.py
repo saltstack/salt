@@ -15,8 +15,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import os
+import logging
+import importlib
+import yaml
+
+from salt.exceptions import LoaderError
 try:
     import ansible
     import ansible.constants
@@ -35,7 +39,7 @@ class AnsibleModuleResolver(object):
     '''
     def __init__(self, opts):
         self._opts = opts
-        self._modules_map = self._get_modules_map()
+        self._modules_map = {}
 
     def _get_modules_map(self, path=None):
         '''
@@ -62,22 +66,32 @@ class AnsibleModuleResolver(object):
 
         return paths
 
-    def _introspect_module(self, module):
+    def load_module(self, module):
         '''
         Introspect Ansible module.
 
         :param module:
         :return:
         '''
+        m_ref = self._modules_map.get(module)
+        if m_ref is None:
+            raise LoaderError('Module "{0}" was not found'.format(module))
+        mod = importlib.import_module('ansible.modules{0}'.format(
+            '.'.join([elm.split('.')[0] for elm in m_ref.split(os.path.sep)])))
+
+        return mod
 
     def resolve(self):
         log.debug('Resolving Ansible modules')
+        self._modules_map = self._get_modules_map()
         return self
 
     def install(self):
         log.debug('Installing Ansible modules')
         return self
 
+
+_resolver = None
 
 def __virtual__():
     '''
@@ -89,5 +103,36 @@ def __virtual__():
     if msg:
         log.warning(msg)
     else:
-        AnsibleModuleResolver(__opts__).resolve().install()
+        global _resolver
+        _resolver = AnsibleModuleResolver(__opts__).resolve().install()
     return ret, msg
+
+
+def help(module=None, *args):
+    '''
+    Display help on Ansible standard module.
+
+    :param module:
+    :return:
+    '''
+    if not module:
+        return 'Please tell me what module you want to have a help on. Or call ansible.list to know what is available.'
+    module = _resolver.load_module(module)
+    doc = {}
+    ret = {}
+    for docset in module.DOCUMENTATION.split('---'):
+        try:
+            docset = yaml.load(docset)
+            if docset:
+                doc.update(docset)
+        except Exception as err:
+            log.error("Error parsing doc section: {0}".format(err))
+    if not args:
+        ret['Available sections on module "{}"'.format(module.__name__.replace('ansible.modules.', ''))] = doc.keys()
+    else:
+        for arg in args:
+            info = doc.get(arg)
+            if info is not None:
+                ret[arg] = info
+
+    return ret
