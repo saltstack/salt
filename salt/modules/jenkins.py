@@ -35,7 +35,7 @@ import salt.utils
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
@@ -85,6 +85,19 @@ def _connect():
     return jenkins.Jenkins(jenkins_url,
                            username=jenkins_user,
                            password=jenkins_password)
+
+
+def _retrieve_config_xml(config_xml, saltenv):
+    '''
+    Helper to cache the config XML and raise a CommandExecutionError if we fail
+    to do so. If we successfully cache the file, return the cached path.
+    '''
+    ret = __salt__['cp.cache_file'](config_xml, saltenv)
+
+    if not ret:
+        raise CommandExecutionError('Failed to retrieve {0}'.format(config_xml))
+
+    return ret
 
 
 def get_version():
@@ -240,7 +253,7 @@ def create_job(name=None,
     if not config_xml:
         config_xml = jenkins.EMPTY_CONFIG_XML
     else:
-        config_xml_file = __salt__['cp.cache_file'](config_xml, saltenv)
+        config_xml_file = _retrieve_config_xml(config_xml, saltenv)
 
         with salt.utils.fopen(config_xml_file) as _fp:
             config_xml = _fp.read()
@@ -279,7 +292,7 @@ def update_job(name=None,
     if not config_xml:
         config_xml = jenkins.EMPTY_CONFIG_XML
     else:
-        config_xml_file = __salt__['cp.cache_file'](config_xml, saltenv)
+        config_xml_file = _retrieve_config_xml(config_xml, saltenv)
 
         with salt.utils.fopen(config_xml_file) as _fp:
             config_xml = _fp.read()
