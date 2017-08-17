@@ -40,10 +40,11 @@ specified target expression.
     supported, allowing for entire directories to be copied.
 
 .. versionchanged:: 2016.11.7,2017.7.2
-    Returned the old mode when salt-cp copies all files in one command back.
-    The new chunked mode is available with the new ``-C``, ``--chunked`` argument.
-    The compression and directories copying and large files support is available
-    in the chunked mode only.
+    Reverted back to the old copy mode to preserve backward compatibility. The
+    new functionality added in 2016.6.6 and 2017.7.0 is now available using the
+    ``-C`` or ``--chunked`` CLI arguments. Note that compression, recursive
+    copying, and support for copying large files is only available in chunked
+    mode.
 
 Options
 =======
