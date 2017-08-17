@@ -88,12 +88,12 @@ from __future__ import absolute_import
 from uuid import uuid4 as _uuid
 
 # Import salt libs
+import salt.utils.versions
 from salt.utils.odict import OrderedDict
-from salt.utils import warn_until
 from salt.state import HighState
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 REQUISITES = set('listen require watch prereq use listen_in require_in watch_in prereq_in use_in onchanges onfail'.split())
@@ -140,7 +140,7 @@ class Sls(object):
 
     def include(self, *sls_names, **kws):
         if 'env' in kws:
-            warn_until(
+            salt.utils.versions.warn_until(
                 'Oxygen',
                 'Parameter \'env\' has been detected in the argument list.  This '
                 'parameter is no longer used and has been replaced by \'saltenv\' '

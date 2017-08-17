@@ -13,10 +13,9 @@ for the generation and signing of certificates for systems running libvirt:
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import fnmatch
 import os
-from salt.ext import six
 
 try:
     import libvirt  # pylint: disable=import-error
@@ -24,10 +23,13 @@ try:
 except ImportError:
     HAS_LIBVIRT = False
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.args
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 __virtualname__ = 'virt'
 
@@ -228,7 +230,7 @@ def running(name, **kwargs):
            'comment': '{0} is running'.format(name)
            }
 
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     cpu = kwargs.pop('cpu', False)
     mem = kwargs.pop('mem', False)
     image = kwargs.pop('image', False)
@@ -241,7 +243,7 @@ def running(name, **kwargs):
                 ret['changes'][name] = 'Domain started'
                 ret['comment'] = 'Domain {0} started'.format(name)
         except CommandExecutionError:
-            kwargs = salt.utils.clean_kwargs(**kwargs)
+            kwargs = salt.utils.args.clean_kwargs(**kwargs)
             __salt__['virt.init'](name, cpu=cpu, mem=mem, image=image, **kwargs)
             ret['changes'][name] = 'Domain defined and started'
             ret['comment'] = 'Domain {0} defined and started'.format(name)

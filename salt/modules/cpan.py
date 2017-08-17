@@ -12,8 +12,8 @@ import os.path
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ def __virtual__():
     '''
     Only work on supported POSIX-like systems
     '''
-    if salt.utils.which('cpan'):
+    if salt.utils.path.which('cpan'):
         return True
     return (False, 'Unable to locate cpan. Make sure it is installed and in the PATH.')
 

@@ -7,10 +7,9 @@ import yaml
 
 import salt.fileclient
 import salt.utils
+import salt.utils.dictupdate as dictupdate
 import salt.utils.files
 import salt.utils.url
-
-from salt.utils import dictupdate
 
 
 __virtualname__ = 'defaults'

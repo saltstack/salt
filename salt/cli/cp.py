@@ -21,7 +21,9 @@ import salt.client
 import salt.utils.gzip_util
 import salt.utils.itertools
 import salt.utils.minions
-from salt.utils import parsers, to_bytes
+import salt.utils.parsers
+import salt.utils.platform
+import salt.utils.stringutils
 from salt.utils.verify import verify_log
 import salt.output
 
@@ -31,7 +33,7 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
-class SaltCPCli(parsers.SaltCPOptionParser):
+class SaltCPCli(salt.utils.parsers.SaltCPOptionParser):
     '''
     Run the salt-cp command line client
     '''
@@ -56,7 +58,7 @@ class SaltCP(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.is_windows = salt.utils.is_windows()
+        self.is_windows = salt.utils.platform.is_windows()
 
     def _mode(self, path):
         if self.is_windows:
@@ -152,7 +154,7 @@ class SaltCP(object):
             index = 1
             failed = {}
             for chunk in reader(fn_, chunk_size=self.opts['salt_cp_chunk_size']):
-                chunk = base64.b64encode(to_bytes(chunk))
+                chunk = base64.b64encode(salt.utils.stringutils.to_bytes(chunk))
                 append = index > 1
                 log.debug(
                     'Copying %s to %starget \'%s\' as %s%s',

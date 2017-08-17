@@ -42,7 +42,7 @@ import time
 from functools import cmp_to_key
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
@@ -50,9 +50,12 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.exceptions import (CommandExecutionError,
                              SaltInvocationError,
                              SaltRenderError)
-import salt.utils
+import salt.utils  # Can be removed once is_true, get_hash, compare_dicts are moved
+import salt.utils.args
 import salt.utils.files
 import salt.utils.pkg
+import salt.utils.platform
+import salt.utils.versions
 import salt.syspaths
 import salt.payload
 from salt.exceptions import MinionError
@@ -68,7 +71,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return __virtualname__
     return (False, "Module win_pkg: module only works on Windows systems")
 
@@ -147,7 +150,7 @@ def latest_version(*names, **kwargs):
 
             # check, whether latest available version
             # is newer than latest installed version
-            if salt.utils.compare_versions(ver1=str(latest_available),
+            if salt.utils.versions.compare(ver1=str(latest_available),
                                            oper='>',
                                            ver2=str(latest_installed)):
                 log.debug('Upgrade of {0} from {1} to {2} '
@@ -946,27 +949,63 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             packages listed under ``pkgs`` will be installed via a single
             command.
 
+            You can specify a version by passing the item as a dict:
+
+            CLI Example:
+
+            .. code-block:: bash
+
+                # will install the latest version of foo and bar
+                salt '*' pkg.install pkgs='["foo", "bar"]'
+
+                # will install the latest version of foo and version 1.2.3 of bar
+                salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3"}]'
+
     Kwargs:
 
         version (str):
-            The specific version to install. If omitted, the latest version
-            will be installed. If passed with multiple install, the version
-            will apply to all packages. Recommended for single installation
-            only.
+            The specific version to install. If omitted, the latest version will
+            be installed. Recommend for use when installing a single package.
+
+            If passed with a list of packages in the ``pkgs`` parameter, the
+            version will be ignored.
+
+            CLI Example:
+
+             .. code-block:: bash
+
+                # Version is ignored
+                salt '*' pkg.install pkgs="['foo', 'bar']" version=1.2.3
+
+            If passed with a comma seperated list in the ``name`` parameter, the
+            version will apply to all packages in the list.
+
+            CLI Example:
+
+             .. code-block:: bash
+
+                # Version 1.2.3 will apply to packages foo and bar
+                salt '*' pkg.install foo,bar version=1.2.3
 
         cache_file (str):
-            A single file to copy down for use with the installer. Copied to
-            the same location as the installer. Use this over ``cache_dir`` if
-            there are many files in the directory and you only need a specific
-            file and don't want to cache additional files that may reside in
-            the installer directory. Only applies to files on ``salt://``
+            A single file to copy down for use with the installer. Copied to the
+            same location as the installer. Use this over ``cache_dir`` if there
+            are many files in the directory and you only need a specific file
+            and don't want to cache additional files that may reside in the
+            installer directory. Only applies to files on ``salt://``
 
         cache_dir (bool):
             True will copy the contents of the installer directory. This is
-            useful for installations that are not a single file. Only applies
-            to directories on ``salt://``
+            useful for installations that are not a single file. Only applies to
+            directories on ``salt://``
 
-        saltenv (str): Salt environment. Default 'base'
+        extra_install_flags (str):
+            Additional install flags that will be appended to the
+            ``install_flags`` defined in the software definition file. Only
+            applies when single package is passed.
+
+        saltenv (str):
+            Salt environment. Default 'base'
 
         report_reboot_exit_codes (bool):
             If the installer exits with a recognized exit code indicating that
@@ -1062,13 +1101,22 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     # "sources" argument
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs, **kwargs)[0]
 
+    if len(pkg_params) > 1:
+        if kwargs.get('extra_install_flags') is not None:
+            log.warning('\'extra_install_flags\' argument will be ignored for '
+                        'multiple package targets')
+
+    # Windows expects an Options dictionary containing 'version'
+    for pkg in pkg_params:
+        pkg_params[pkg] = {'version': pkg_params[pkg]}
+
     if pkg_params is None or len(pkg_params) == 0:
         log.error('No package definition found')
         return {}
 
     if not pkgs and len(pkg_params) == 1:
-        # Only use the 'version' param if 'name' was not specified as a
-        # comma-separated list
+        # Only use the 'version' param if a single item was passed to the 'name'
+        # parameter
         pkg_params = {
             name: {
                 'version': kwargs.get('version'),
@@ -1247,10 +1295,10 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 arguments = ['/i', cached_pkg]
                 if pkginfo['version_num'].get('allusers', True):
                     arguments.append('ALLUSERS="1"')
-                arguments.extend(salt.utils.shlex_split(install_flags))
+                arguments.extend(salt.utils.args.shlex_split(install_flags))
             else:
                 cmd = cached_pkg
-                arguments = salt.utils.shlex_split(install_flags)
+                arguments = salt.utils.args.shlex_split(install_flags)
 
             # Create Scheduled Task
             __salt__['task.create_task'](name='update-salt-software',
@@ -1279,7 +1327,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     cmd.append('ALLUSERS="1"')
             else:
                 cmd.append(cached_pkg)
-            cmd.extend(salt.utils.shlex_split(install_flags))
+            cmd.extend(salt.utils.args.shlex_split(install_flags))
             # Launch the command
             result = __salt__['cmd.run_all'](cmd,
                                              cache_path,
@@ -1550,10 +1598,10 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 if use_msiexec:
                     cmd = msiexec
                     arguments = ['/x']
-                    arguments.extend(salt.utils.shlex_split(uninstall_flags))
+                    arguments.extend(salt.utils.args.shlex_split(uninstall_flags))
                 else:
                     cmd = expanded_cached_pkg
-                    arguments = salt.utils.shlex_split(uninstall_flags)
+                    arguments = salt.utils.args.shlex_split(uninstall_flags)
 
                 # Create Scheduled Task
                 __salt__['task.create_task'](name='update-salt-software',
@@ -1580,7 +1628,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                     cmd.extend([msiexec, '/x', expanded_cached_pkg])
                 else:
                     cmd.append(expanded_cached_pkg)
-                cmd.extend(salt.utils.shlex_split(uninstall_flags))
+                cmd.extend(salt.utils.args.shlex_split(uninstall_flags))
                 # Launch the command
                 result = __salt__['cmd.run_all'](
                         cmd,
@@ -1768,4 +1816,4 @@ def compare_versions(ver1='', oper='==', ver2=''):
 
         salt '*' pkg.compare_versions 1.2 >= 1.3
     '''
-    return salt.utils.compare_versions(ver1, oper, ver2)
+    return salt.utils.versions.compare(ver1, oper, ver2)

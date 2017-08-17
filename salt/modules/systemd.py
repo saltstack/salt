@@ -10,7 +10,7 @@ Provides the service module for systemd
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
 '''
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import errno
 import glob
@@ -20,11 +20,14 @@ import fnmatch
 import re
 import shlex
 
-import salt.utils
+# Import Salt libs
 import salt.utils.files
 import salt.utils.itertools
+import salt.utils.path
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -254,7 +257,7 @@ def _get_service_exec():
     if contextkey not in __context__:
         executables = ('update-rc.d', 'chkconfig')
         for executable in executables:
-            service_exec = salt.utils.which(executable)
+            service_exec = salt.utils.path.which(executable)
             if service_exec is not None:
                 break
         else:

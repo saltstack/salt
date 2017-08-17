@@ -19,6 +19,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ def __virtual__():
     '''
     Only load if RabbitMQ is installed.
     '''
-    return salt.utils.which('rabbitmqctl') is not None
+    return salt.utils.path.which('rabbitmqctl') is not None
 
 
 def joined(name, host, user='rabbit', ram_node=None, runas='root'):

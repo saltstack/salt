@@ -26,7 +26,7 @@ import salt.cache.localfs as localfs
 from salt.exceptions import SaltCacheError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

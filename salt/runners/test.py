@@ -6,7 +6,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 # Import python libs
 import time
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 

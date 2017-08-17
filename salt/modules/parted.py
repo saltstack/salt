@@ -23,8 +23,9 @@ import stat
 import string
 import logging
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -48,16 +49,16 @@ def __virtual__():
     Only work on POSIX-like systems, which have parted and lsblk installed.
     These are usually provided by the ``parted`` and ``util-linux`` packages.
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The parted execution module failed to load '
                 'Windows systems are not supported.')
-    if not salt.utils.which('parted'):
+    if not salt.utils.path.which('parted'):
         return (False, 'The parted execution module failed to load '
                 'parted binary is not in the path.')
-    if not salt.utils.which('lsblk'):
+    if not salt.utils.path.which('lsblk'):
         return (False, 'The parted execution module failed to load '
                 'lsblk binary is not in the path.')
-    if not salt.utils.which('partprobe'):
+    if not salt.utils.path.which('partprobe'):
         return (False, 'The parted execution module failed to load '
                 'partprobe binary is not in the path.')
     return __virtualname__
@@ -216,7 +217,7 @@ def align_check(device, part_type, partition):
             'Invalid partition passed to partition.align_check'
         )
 
-    cmd = 'parted -m -s {0} align-check {1} {2}'.format(
+    cmd = 'parted -m {0} align-check {1} {2}'.format(
         device, part_type, partition
     )
     out = __salt__['cmd.run'](cmd).splitlines()
@@ -388,7 +389,7 @@ def mkfs(device, fs_type):
     else:
         mkfs_cmd = 'mkfs.{0}'.format(fs_type)
 
-    if not salt.utils.which(mkfs_cmd):
+    if not salt.utils.path.which(mkfs_cmd):
         return 'Error: {0} is unavailable.'.format(mkfs_cmd)
     cmd = '{0} {1}'.format(mkfs_cmd, device)
     out = __salt__['cmd.run'](cmd).splitlines()

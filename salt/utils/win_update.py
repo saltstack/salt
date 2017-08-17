@@ -9,6 +9,7 @@ import subprocess
 
 # Import Salt libs
 import salt.utils
+import salt.utils.args
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
@@ -963,7 +964,7 @@ class WindowsUpdateAgent(object):
         '''
 
         if isinstance(cmd, six.string_types):
-            cmd = salt.utils.shlex_split(cmd)
+            cmd = salt.utils.args.shlex_split(cmd)
 
         try:
             log.debug(cmd)

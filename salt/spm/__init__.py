@@ -25,7 +25,7 @@ import salt.cache
 import salt.utils.files
 import salt.utils.http as http
 import salt.syspaths as syspaths
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
 from salt.ext.six.moves import filter
@@ -358,6 +358,7 @@ class SPMClient(object):
 
         # First we download everything, then we install
         for package in dl_list:
+            out_file = dl_list[package]['dest_file']
             # Kick off the install
             self._install_indv_pkg(package, out_file)
         return
