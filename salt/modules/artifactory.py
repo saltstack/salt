@@ -202,45 +202,48 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
     has_classifier = classifier is not None and classifier != ""
 
     if snapshot_version is None:
-        snapshot_version_metadata = _get_snapshot_version_metadata(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version, headers=headers)
+        try:
+            snapshot_version_metadata = _get_snapshot_version_metadata(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version, headers=headers)
+            if packaging not in snapshot_version_metadata['snapshot_versions']:
+                error_message = '''Cannot find requested packaging '{packaging}' in the snapshot version metadata.
+                          artifactory_url: {artifactory_url}
+                          repository: {repository}
+                          group_id: {group_id}
+                          artifact_id: {artifact_id}
+                          packaging: {packaging}
+                          classifier: {classifier}
+                          version: {version}'''.format(
+                            artifactory_url=artifactory_url,
+                            repository=repository,
+                            group_id=group_id,
+                            artifact_id=artifact_id,
+                            packaging=packaging,
+                            classifier=classifier,
+                            version=version)
+                raise ArtifactoryError(error_message)
 
-        if packaging not in snapshot_version_metadata['snapshot_versions']:
-            error_message = '''Cannot find requested packaging '{packaging}' in the snapshot version metadata.
-                      artifactory_url: {artifactory_url}
-                      repository: {repository}
-                      group_id: {group_id}
-                      artifact_id: {artifact_id}
-                      packaging: {packaging}
-                      classifier: {classifier}
-                      version: {version}'''.format(
-                        artifactory_url=artifactory_url,
-                        repository=repository,
-                        group_id=group_id,
-                        artifact_id=artifact_id,
-                        packaging=packaging,
-                        classifier=classifier,
-                        version=version)
-            raise ArtifactoryError(error_message)
+            if has_classifier and classifier not in snapshot_version_metadata['snapshot_versions']:
+                error_message = '''Cannot find requested classifier '{classifier}' in the snapshot version metadata.
+                          artifactory_url: {artifactory_url}
+                          repository: {repository}
+                          group_id: {group_id}
+                          artifact_id: {artifact_id}
+                          packaging: {packaging}
+                          classifier: {classifier}
+                          version: {version}'''.format(
+                            artifactory_url=artifactory_url,
+                            repository=repository,
+                            group_id=group_id,
+                            artifact_id=artifact_id,
+                            packaging=packaging,
+                            classifier=classifier,
+                            version=version)
+                raise ArtifactoryError(error_message)
 
-        if has_classifier and classifier not in snapshot_version_metadata['snapshot_versions']:
-            error_message = '''Cannot find requested classifier '{classifier}' in the snapshot version metadata.
-                      artifactory_url: {artifactory_url}
-                      repository: {repository}
-                      group_id: {group_id}
-                      artifact_id: {artifact_id}
-                      packaging: {packaging}
-                      classifier: {classifier}
-                      version: {version}'''.format(
-                        artifactory_url=artifactory_url,
-                        repository=repository,
-                        group_id=group_id,
-                        artifact_id=artifact_id,
-                        packaging=packaging,
-                        classifier=classifier,
-                        version=version)
-            raise ArtifactoryError(error_message)
-
-        snapshot_version = snapshot_version_metadata['snapshot_versions'][packaging]
+            snapshot_version = snapshot_version_metadata['snapshot_versions'][packaging]
+        except CommandExecutionError as err:
+            log.error('Could not fetch maven-metadat.xml. Assuming snapshot_version=%s.', version)
+            snapshot_version = version
 
     group_url = __get_group_id_subpath(group_id, use_literal_group_id)
 
