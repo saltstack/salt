@@ -1256,53 +1256,8 @@ def set_container_setting(name, container, settings):
             settings="{'managedPipeLineMode': 'Integrated'}"
     '''
 
-    def identity_type_map(identity_id,map_type):
-        '''
-
-        :param identity_id: app pool identity type id - string or string number   
-        :return: the equivalent id number ot string
-         mapping:
-                'LocalSystem' <--> '0'
-                'LocalService' <--> '1'
-                'NetworkService' <--> '2'
-                'SpecificUser' <--> '3'
-                'ApplicationPoolIdentity' <--> '4'
-        '''
-
-        available_ids = ('0','1','2','3','4','LocalSystem','LocalSystem','NetworkService','SpecificUser','ApplicationPoolIdentity')
-        ID = str(identity_id)
-
-        if ID in available_ids:
-            if map_type == "numeric":
-                if ID == 'LocalSystem':
-                    return '0'
-                elif ID == 'LocalSystem':
-                    return '1'
-                elif ID == 'NetworkService':
-                    return '2'
-                elif ID == 'SpecificUser':
-                    return '3'
-                elif ID == 'ApplicationPoolIdentity':
-                    return '4'
-                else:
-                    return ID
-
-            if map_type == "string":
-                if ID == '0':
-                    return 'LocalSystem'
-                elif ID == '1':
-                    return 'LocalService'
-                elif ID == '2':
-                    return 'NetworkService'
-                elif ID == '3':
-                    return 'SpecificUser'
-                elif ID == '4':
-                    return 'ApplicationPoolIdentity'
-                else:
-                    return ID
-        else:
-            raise CommandExecutionError('no such identity type {0}'.format(identity_id))
-
+    identityType_map2string = {'0': 'LocalSystem', '1': 'LocalService', '2': 'NetworkService', '3': 'SpecificUser', '4': 'ApplicationPoolIdentity'}
+    identityType_map2numeric = {'LocalSystem': '0', 'LocalService': '1', 'NetworkService': '2', 'SpecificUser': '3', 'ApplicationPoolIdentity': '4'}
     ps_cmd = list()
     container_path = r"IIS:\{0}\{1}".format(container, name)
 
@@ -1329,6 +1284,10 @@ def set_container_setting(name, container, settings):
         except ValueError:
             value = "'{0}'".format(settings[setting])
 
+        # Map to numeric to support server 2008
+        if (setting == 'processModel.identityType' and settings[setting] in identityType_map2numeric.keys()):
+            value = identityType_map2numeric[settings[setting]]
+
         ps_cmd.extend(['Set-ItemProperty',
                        '-Path', "'{0}'".format(container_path),
                        '-Name', "'{0}'".format(setting),
@@ -1349,8 +1308,8 @@ def set_container_setting(name, container, settings):
 
     for setting in settings:
         # map identity type from numeric to string for comparing
-        if (container == 'AppPools' and setting == 'processModel.identityType'):
-            settings[setting] = identity_type_map(settings[setting],'string')
+        if (setting == 'processModel.identityType' and settings[setting] in identityType_map2string.keys()):
+            settings[setting] = identityType_map2string[settings[setting]]
 
         if str(settings[setting]) != str(new_settings[setting]):
             failed_settings[setting] = settings[setting]
