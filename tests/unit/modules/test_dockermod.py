@@ -184,10 +184,23 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(docker_mod, '_get_client', get_client_mock):
                 docker_mod.create_network('foo',
                                           driver='bridge',
-                                          driver_opts={})
+                                          driver_opts={},
+                                          gateway='192.168.0.1',
+                                          ip_range='192.168.0.128/25',
+                                          subnet='192.168.0.0/24'
+                                          )
         client.create_network.assert_called_once_with('foo',
                                                       driver='bridge',
                                                       options={},
+                                                      ipam={
+                                                          'Config': [{
+                                                              'Gateway': '192.168.0.1',
+                                                              'IPRange': '192.168.0.128/25',
+                                                              'Subnet': '192.168.0.0/24'
+                                                          }],
+                                                          'Driver': 'default',
+                                                          'Options': {}
+                                                      },
                                                       check_duplicate=True)
 
     @skipIf(docker_version < (1, 5, 0),

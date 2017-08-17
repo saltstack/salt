@@ -61,10 +61,16 @@ class DockerNetworkTestCase(TestCase, LoaderModuleMockMixin):
             ret = docker_state.present(
                 'network_foo',
                 containers=['container'],
+                gateway='192.168.0.1',
+                ip_range='192.168.0.128/25',
+                subnet='192.168.0.0/24'
                 )
         docker_create_network.assert_called_with('network_foo',
                                                  driver=None,
-                                                 driver_opts=None)
+                                                 driver_opts=None,
+                                                 gateway='192.168.0.1',
+                                                 ip_range='192.168.0.128/25',
+                                                 subnet='192.168.0.0/24')
         docker_connect_container_to_network.assert_called_with('abcd',
                                                                  'network_foo')
         self.assertEqual(ret, {'name': 'network_foo',

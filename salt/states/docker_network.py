@@ -56,6 +56,9 @@ def __virtual__():
 def present(name,
             driver=None,
             driver_opts=None,
+            gateway=None,
+            ip_range=None,
+            subnet=None,
             containers=None):
     '''
     Ensure that a network is present.
@@ -69,8 +72,17 @@ def present(name,
     driver_opts
         Options for the network driver.
 
+    gateway
+        IPv4 or IPv6 gateway for the master subnet
+
+    ip_range
+        Allocate container IP from a sub-range within the subnet
+
     containers:
         List of container names that should be part of this network
+
+    subnet:
+        Subnet in CIDR format that represents a network segment
 
     Usage Examples:
 
@@ -90,6 +102,18 @@ def present(name,
             - containers:
                 - cont1
                 - cont2
+
+
+    .. code-block:: yaml
+
+        network_baz:
+          docker_network.present
+            - name: baz
+            - driver_opts:
+                - parent: eth0
+            - gateway: "172.20.0.1"
+            - ip_range: "172.20.0.128/25"
+            - subnet: "172.20.0.0/24"
 
     '''
     ret = {'name': name,
@@ -144,7 +168,10 @@ def present(name,
             ret['changes']['created'] = __salt__['docker.create_network'](
                 name,
                 driver=driver,
-                driver_opts=driver_opts)
+                driver_opts=driver_opts,
+                gateway=gateway,
+                ip_range=ip_range,
+                subnet=subnet)
 
         except Exception as exc:
             ret['comment'] = ('Failed to create network \'{0}\': {1}'
