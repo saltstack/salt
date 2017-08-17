@@ -764,6 +764,8 @@ def _virtual(osdata):
                         grains['virtual_subtype'] = 'ovirt'
                     elif 'Google' in output:
                         grains['virtual'] = 'gce'
+                    elif 'BHYVE' in output:
+                        grains['virtual'] = 'bhyve'
             except IOError:
                 pass
     elif osdata['kernel'] == 'FreeBSD':
