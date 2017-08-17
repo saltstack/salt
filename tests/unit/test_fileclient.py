@@ -6,6 +6,7 @@
 # Import Python libs
 from __future__ import absolute_import
 import errno
+import os
 
 # Import Salt Testing libs
 from tests.support.mock import patch, Mock
@@ -38,7 +39,7 @@ class FileclientTestCase(TestCase):
             for exists in range(2):
                 with patch('os.makedirs', self._fake_makedir()):
                     with Client(self.opts)._cache_loc('testfile') as c_ref_itr:
-                        assert c_ref_itr == '/__test__/files/base/testfile'
+                        assert c_ref_itr == os.sep + os.sep.join(['__test__', 'files', 'base', 'testfile'])
 
     def test_cache_raises_exception_on_non_eexist_ioerror(self):
         '''
