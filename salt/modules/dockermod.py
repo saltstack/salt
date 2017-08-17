@@ -3843,7 +3843,6 @@ def save(name,
     if os.path.exists(path) and not overwrite:
         raise CommandExecutionError('{0} already exists'.format(path))
 
-    compression = kwargs.get('compression')
     if compression is None:
         if path.endswith('.tar.gz') or path.endswith('.tgz'):
             compression = 'gzip'
