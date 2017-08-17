@@ -33,6 +33,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
+import salt.utils.versions
 from salt.utils.locales import sdecode
 from salt.utils.openstack.swift import SaltSwift
 
@@ -736,7 +737,7 @@ class Client(object):
         Cache a file then process it as a template
         '''
         if u'env' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Oxygen',
                 u'Parameter \'env\' has been detected in the argument list.  This '
                 u'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -1286,7 +1287,7 @@ class RemoteClient(Client):
                     u'specified file %s is not present to generate hash: %s',
                     path, err
                 )
-                return {}
+                return {}, None
             else:
                 ret = {}
                 hash_type = self.opts.get(u'hash_type', u'md5')

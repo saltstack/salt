@@ -23,8 +23,8 @@ import json
 import os
 
 # Import Salt libs
-import salt.utils
 import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Set up logging
@@ -50,7 +50,7 @@ def __virtual__():
         return False, 'Module DSC: Requires PowerShell'
 
     # Verify PowerShell 5.0 or greater
-    if salt.utils.compare_versions(powershell_info['version'], '<', '5.0'):
+    if salt.utils.versions.compare(powershell_info['version'], '<', '5.0'):
         log.debug('Module DSC: Requires PowerShell 5 or later')
         return False, 'Module DSC: Requires PowerShell 5 or later'
 

@@ -729,18 +729,9 @@ class Cloud(object):
                     continue
 
                 for vm_name, details in six.iteritems(vms):
-                    # If VM was created with use_fqdn with either of the softlayer drivers,
-                    # we need to strip the VM name and only search for the short hostname.
-                    if driver == 'softlayer' or driver == 'softlayer_hw':
-                        ret = []
-                        for name in names:
-                            name = name.split('.')[0]
-                            ret.append(name)
-                        if vm_name not in ret:
-                            continue
                     # XXX: The logic below can be removed once the aws driver
                     # is removed
-                    elif vm_name not in names:
+                    if vm_name not in names:
                         continue
 
                     elif driver == 'ec2' and 'aws' in handled_drivers and \

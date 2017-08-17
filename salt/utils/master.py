@@ -22,6 +22,8 @@ import salt.pillar
 import salt.utils
 import salt.utils.atomicfile
 import salt.utils.minions
+import salt.utils.verify
+import salt.utils.versions
 import salt.payload
 from salt.exceptions import SaltException
 import salt.config
@@ -78,7 +80,7 @@ class MasterPillarUtil(object):
         # remember to remove the expr_form argument from this function when
         # performing the cleanup on this deprecation.
         if expr_form is not None:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'the target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
