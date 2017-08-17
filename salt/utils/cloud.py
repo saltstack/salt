@@ -1005,6 +1005,7 @@ def deploy_windows(host,
     '''
     Copy the install files to a remote Windows box, and execute them
     '''
+
     if not isinstance(opts, dict):
         opts = {}
 
@@ -1016,15 +1017,15 @@ def deploy_windows(host,
     log.debug('Deploying {0} at {1} (Windows)'.format(host, starttime))
     log.trace('HAS_WINRM: {0}, use_winrm: {1}'.format(HAS_WINRM, use_winrm))
 
-    count = 0
-    while True:
-        count = count + 1
+    attempts_deployment = 128
+    for count in range(attempts_deployment):
         log.debug("Attempting "+str(count))
         try:
             port_available = wait_for_port(host=host, port=port, timeout=port_timeout * 60)
 
             if not port_available:
-                return False
+                log.debug("Port {0} on {1} is not available.".format(host,port))
+                continue
 
             service_available = False
             winrm_session = None
@@ -1192,6 +1193,7 @@ def deploy_windows(host,
                 )
                 return True
         except:
+            time.sleep(5)
             log.debug("Failed deploying, try again...")
             continue
     return False
