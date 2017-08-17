@@ -19,8 +19,9 @@ import os
 import logging
 import importlib
 import yaml
+import fnmatch
 
-from salt.exceptions import LoaderError
+from salt.exceptions import LoaderError, CommandExecutionError
 try:
     import ansible
     import ansible.constants
@@ -80,6 +81,21 @@ class AnsibleModuleResolver(object):
             '.'.join([elm.split('.')[0] for elm in m_ref.split(os.path.sep)])))
 
         return mod
+
+    def get_modules_list(self, pattern=None):
+        '''
+        Return module map references.
+        :return:
+        '''
+        if pattern and '*' not in pattern:
+            pattern = '*{0}*'.format(pattern)
+        modules = []
+        for m_name, m_path in self._modules_map.items():
+            m_path = m_path.split('.')[0]
+            m_name = '.'.join([elm for elm in m_path.split(os.path.sep) if elm])
+            if pattern and fnmatch.fnmatch(m_name, pattern) or not pattern:
+                modules.append(m_name)
+        return sorted(modules)
 
     def resolve(self):
         log.debug('Resolving Ansible modules')
@@ -141,3 +157,11 @@ def help(module=None, *args):
                 ret[arg] = info
 
     return ret
+
+
+def list(pattern=None):
+    '''
+    Lists available modules.
+    :return:
+    '''
+    return _resolver.get_modules_list(pattern=pattern)
