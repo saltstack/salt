@@ -11,14 +11,10 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 # Import Salt libs
-import salt.config
-import salt.loader
 import salt.utils.boto
 from salt.ext import six
 from salt.utils.versions import LooseVersion
 import salt.states.boto_vpc as boto_vpc
-
-# Import test suite libs
 
 # pylint: disable=import-error,unused-import
 from tests.unit.modules.test_boto_vpc import BotoVpcTestCaseMixin
