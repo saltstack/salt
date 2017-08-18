@@ -91,7 +91,7 @@ def _connect():
 
 def run(script):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2017.7.0
 
     Execute a groovy script on the jenkins master
 
