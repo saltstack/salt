@@ -30,9 +30,12 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.paths import CODE_DIR
 
 # Import salt libs
-#import salt.config
-import salt.utils
+import salt.config
+import salt.utils  # Can be removed once namespaced_function is moved
+import salt.utils.event
 import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 import salt.version
 import salt.exceptions
 from salt.utils.verify import verify_env
@@ -41,7 +44,7 @@ from salt._compat import ElementTree as etree
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -245,9 +248,8 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
     def test_salt_with_git_version(self):
         if getattr(self, '_call_binary_', None) is None:
             self.skipTest('\'_call_binary_\' not defined.')
-        from salt.utils import which
         from salt.version import __version_info__, SaltStackVersion
-        git = which('git')
+        git = salt.utils.path.which('git')
         if not git:
             self.skipTest('The git binary is not available')
 
@@ -273,7 +275,7 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
             self.skipTest(
                 'Failed to get the output of \'git describe\'. '
                 'Error: \'{0}\''.format(
-                    salt.utils.to_str(err)
+                    salt.utils.stringutils.to_str(err)
                 )
             )
 

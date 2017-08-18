@@ -16,14 +16,16 @@ import logging
 import uuid
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt.key
-import salt.utils
+import salt.utils.compat
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.raetevent
+import salt.utils.versions
 import salt.client
 import salt.client.ssh
 import salt.wheel
@@ -86,7 +88,7 @@ def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, 
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -653,6 +655,7 @@ def versions():
         return ret
 
     labels = {
+        -2: 'Minion offline',
         -1: 'Minion requires update',
         0: 'Up to date',
         1: 'Minion newer than master',
@@ -664,12 +667,19 @@ def versions():
     master_version = salt.version.__saltstack_version__
 
     for minion in minions:
-        minion_version = salt.version.SaltStackVersion.parse(minions[minion])
-        ver_diff = cmp(minion_version, master_version)
+        if not minions[minion]:
+            minion_version = False
+            ver_diff = -2
+        else:
+            minion_version = salt.version.SaltStackVersion.parse(minions[minion])
+            ver_diff = salt.utils.compat.cmp(minion_version, master_version)
 
         if ver_diff not in version_status:
             version_status[ver_diff] = {}
-        version_status[ver_diff][minion] = minion_version.string
+        if minion_version:
+            version_status[ver_diff][minion] = minion_version.string
+        else:
+            version_status[ver_diff][minion] = minion_version
 
     # Add version of Master to output
     version_status[2] = master_version.string

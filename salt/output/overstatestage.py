@@ -14,7 +14,7 @@ from __future__ import absolute_import
 import salt.utils
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # [{'group2': {'match': ['fedora17-2', 'fedora17-3'],
 #              'require': ['group1'],

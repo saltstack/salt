@@ -18,70 +18,73 @@ the saltmaster's minion pillar.
 
 .. versionadded: 2016.3.0
 
-:configuration: Example configuration using only a "default" group.  The default group is not special.  In addition, other groups are being loaded from pillars
+:configuration: Example configuration using only a "default" group. The default group is not special.
+In addition, other groups are being loaded from pillars.
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
-        engines:
-            slack:
-               token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
-               control: True
-               fire_all: False
-               groups_pillar_name: "slack_engine:groups_pillar"
-               groups:
-                 default:
-                   users:
-                       - *
-                   commands:
-                       - test.ping
-                       - cmd.run
-                       - list_jobs
-                       - list_commands
-                   aliases:
-                       list_jobs:
-                           cmd: jobs.list_jobs
-                       list_commands:
-                           cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
-                   default_target:
-                       target: saltmaster
-                       tgt_type: glob
-                   targets:
-                       test.ping:
-                         target: '*'
-                         tgt_type: glob
-                       cmd.run:
-                         target: saltmaster
-                         tgt_type: list
+    engines:
+      - slack:
+          token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
+          control: True
+          fire_all: False
+          groups_pillar_name: "slack_engine:groups_pillar"
+          groups:
+            default:
+              users:
+                - *
+            commands:
+              - test.ping
+              - cmd.run
+              - list_jobs
+              - list_commands
+            aliases:
+              list_jobs:
+                cmd: jobs.list_jobs
+              list_commands:
+                cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
+            default_target:
+              target: saltmaster
+              tgt_type: glob
+            targets:
+              test.ping:
+                target: '*'
+                tgt_type: glob
+              cmd.run:
+                target: saltmaster
+                tgt_type: list
 
+:configuration: Example configuration using the "default" group and a non-default group and a pillar that will be merged in
+    If the user is '*' (without the quotes) then the group's users or commands will match all users as appropriate
 
-    :configuration: Example configuration using the "default" group and a non-default group and a pillar that will be merged in
-        If the user is '*' (without the quotes) then the group's users or commands will match all users as appropriate
-    .. versionadded: 2017.7.0
+.. versionadded: 2017.7.0
 
-        engines:
-            slack:
-               groups_pillar: slack_engine_pillar
-               token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
-               control: True
-               fire_all: True
-               tag: salt/engines/slack
-               groups_pillar_name: "slack_engine:groups_pillar"
-               groups:
-                 default:
-                   valid_users:
-                       - *
-                   valid_commands:
-                       - test.ping
-                   aliases:
-                       list_jobs:
-                           cmd: jobs.list_jobs
-                       list_commands:
-                           cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
-                 gods:
-                   users:
-                     - garethgreenaway
-                   commands:
-                     - *
+.. code-block:: yaml
+
+    engines:
+      - slack:
+          groups_pillar: slack_engine_pillar
+          token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
+          control: True
+          fire_all: True
+          tag: salt/engines/slack
+          groups_pillar_name: "slack_engine:groups_pillar"
+          groups:
+            default:
+              valid_users:
+                - *
+              valid_commands:
+                - test.ping
+              aliases:
+                list_jobs:
+                  cmd: jobs.list_jobs
+                list_commands:
+                  cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
+            gods:
+              users:
+                - garethgreenaway
+              commands:
+                - *
 
 :depends: slackclient
 
@@ -111,6 +114,7 @@ import salt.loader
 import salt.minion
 import salt.runner
 import salt.utils
+import salt.utils.args
 import salt.utils.event
 import salt.utils.http
 import salt.utils.slack
@@ -293,7 +297,7 @@ def commandline_to_list(cmdline_str, trigger_string):
     cmdline_str is the string of the command line
     trigger_string is the trigger string, to be removed
     """
-    cmdline = salt.utils.shlex_split(cmdline_str[len(trigger_string):])
+    cmdline = salt.utils.args.shlex_split(cmdline_str[len(trigger_string):])
     # Remove slack url parsing
     #  Translate target=<http://host.domain.net|host.domain.net>
     #  to target=host.domain.net
@@ -707,7 +711,7 @@ def run_command_async(msg):
         log.debug("Command {} will run via runner_functions".format(cmd))
         # pylint is tripping
         # pylint: disable=missing-whitespace-after-comma
-        job_id_dict = runner.async(cmd, {"args":args, "kwargs":kwargs})
+        job_id_dict = runner.async(cmd, {"args": args, "kwargs": kwargs})
         job_id = job_id_dict['jid']
 
     # Default to trying to run as a client module.
@@ -716,7 +720,7 @@ def run_command_async(msg):
         log.debug("Command {} will run via local.cmd_async, targeting {}".format(cmd, target))
         log.debug("Running {}, {}, {}, {}, {}".format(str(target), cmd, args, kwargs, str(tgt_type)))
         # according to https://github.com/saltstack/salt-api/issues/164, tgt_type has changed to expr_form
-        job_id = local.cmd_async(str(target), cmd, arg=args, kwargs=kwargs, expr_form=str(tgt_type))
+        job_id = local.cmd_async(str(target), cmd, arg=args, kwargs=kwargs, tgt_type=str(tgt_type))
         log.info("ret from local.cmd_async is {}".format(job_id))
     return job_id
 
