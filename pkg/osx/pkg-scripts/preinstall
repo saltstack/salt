@@ -6,7 +6,8 @@
 # Date: December 2015
 #
 # Description: This script stops the salt minion service before attempting to
-#              install Salt on macOS
+#              install Salt on macOS. It also removes the /opt/salt/bin
+#              directory.
 #
 # Requirements:
 #    - None
@@ -15,26 +16,93 @@
 #     This script is run as a part of the macOS Salt Installation
 #
 ###############################################################################
-echo "Preinstall started on:" > /tmp/preinstall.txt
-date >> /tmp/preinstall.txt
+
+###############################################################################
+# Define Variables
+###############################################################################
+# Get Minor Version
+OSX_VERSION=$(sw_vers | grep ProductVersion | cut -f 2 -d: | tr -d '[:space:]')
+MINOR=$(echo ${OSX_VERSION} | cut -f 2 -d.)
+# Path Variables
+INSTALL_DIR="/opt/salt"
+BIN_DIR="$INSTALL_DIR/bin"
+CONFIG_DIR="/etc/salt"
+TEMP_DIR="/tmp"
+SBIN_DIR="/usr/local/sbin"
+
+###############################################################################
+# Set up logging and error handling
+###############################################################################
+echo "Preinstall started on:" > "$TEMP_DIR/preinstall.txt"
+date "+%Y/%m/%d %H:%m:%S" >> "$TEMP_DIR/preinstall.txt"
 trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 
 quit_on_error() {
-    echo "$(basename $0) caught error on line : $1 command was: $2" >> /tmp/preinstall.txt
+    echo "$(basename $0) caught error on line : $1 command was: $2" >> "$TEMP_DIR/preinstall.txt"
     exit -1
 }
 
 ###############################################################################
 # Stop the service
 ###############################################################################
-if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
-    echo "Stop service: Started..." >> /tmp/preinstall.txt
-#    /bin/launchctl unload "/Library/LaunchDaemons/com.saltstack.salt.minion.plist"
-    launchctl disable system/com.saltstack.salt.minion
-    launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
-    echo "Stop service: Successful" >> /tmp/preinstall.txt
+stop_service_maverick() {
+    echo "Service: Using old (< 10.10) launchctl interface" >> "$TEMP_DIR/preinstall.txt"
+    if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
+        echo "Service: Unloading..." >> "$TEMP_DIR/preinstall.txt"
+        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.api.plist
+        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.master.plist
+        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
+        echo "Service: Unloaded Successfully" >> "$TEMP_DIR/preinstall.txt"
+    fi
+}
+
+stop_service_yosemite_and_later() {
+    echo "Service: Using new (>= 10.10) launchctl interface" >> "$TEMP_DIR/preinstall.txt"
+    if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
+        echo "Service: Stopping..." >> "$TEMP_DIR/preinstall.txt"
+        launchctl disable system/com.saltstack.salt.minion
+        launchctl disable system/com.saltstack.salt.master
+        launchctl disable system/com.saltstack.salt.syndic
+        launchctl disable system/com.saltstack.salt.api
+        launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+        launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.master.plist
+        launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
+        launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.api.plist
+        echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
+    fi
+}
+
+echo "Service: Configuring..." >> "$TEMP_DIR/preinstall.txt"
+case $MINOR in
+        9 )
+                stop_service_maverick;
+                ;;
+        * )
+                stop_service_yosemite_and_later;
+                ;;
+esac
+echo "Service: Configured Successfully" >> "$TEMP_DIR/preinstall.txt"
+
+###############################################################################
+# Remove the Symlink to salt-config.sh
+###############################################################################
+if [ -L "$SBIN_DIR/salt-config" ]; then
+    echo "Cleanup: Removing Symlink $BIN_DIR/salt-config" >> "$TEMP_DIR/preinstall.txt"
+    rm "$SBIN_DIR/salt-config"
+    echo "Cleanup: Removed Successfully" >> "$TEMP_DIR/preinstall.txt"
 fi
 
-echo "Preinstall Completed Successfully" >> /tmp/preinstall.txt
+###############################################################################
+# Remove the $BIN_DIR directory
+###############################################################################
+if [ -d "$BIN_DIR" ]; then
+    echo "Cleanup: Removing $BIN_DIR" >> "$TEMP_DIR/preinstall.txt"
+    rm -rf "$BIN_DIR"
+    echo "Cleanup: Removed Successfully" >> "$TEMP_DIR/preinstall.txt"
+fi
+
+echo "Preinstall Completed Successfully on:" >> "$TEMP_DIR/preinstall.txt"
+date "+%Y/%m/%d %H:%m:%S" >> "$TEMP_DIR/preinstall.txt"
 
 exit 0
