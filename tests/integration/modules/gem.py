@@ -18,9 +18,9 @@ import salt.utils.http
 
 GEM = 'tidy'
 GEM_VER = '1.1.2'
-OLD_GEM = 'test'
-OLD_VERSION = '0.2.0'
-NEW_VERSION = '1.0.0'
+OLD_GEM = 'brass'
+OLD_VERSION = '1.0.0'
+NEW_VERSION = '1.2.1'
 GEM_LIST = [GEM, OLD_GEM]
 
 
