@@ -269,7 +269,7 @@ def start(token,
                                         try:
                                            ret[key]=collections.OrderedDict([(k,ud[k]) for k in sorted(ud,key=lambda k: ud[k].get('__run_num__', 0))])
                                         except:
-                                            pass
+                                            log.debug('Key "__run_num__" not found, return the dict as is')
                                     return_text = json.dumps(ret, sort_keys=False, indent=1)
                                     ts = time.time()
                                     st = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S%f')
