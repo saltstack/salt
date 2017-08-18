@@ -48,11 +48,23 @@ quit_on_error() {
 stop_service_maverick() {
     echo "Service: Using old (< 10.10) launchctl interface" >> "$TEMP_DIR/preinstall.txt"
     if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
-        echo "Service: Unloading..." >> "$TEMP_DIR/preinstall.txt"
+        echo "Service: Unloading minion..." >> "$TEMP_DIR/preinstall.txt"
         launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist
-        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.api.plist
+        echo "Service: Unloaded Successfully" >> "$TEMP_DIR/preinstall.txt"
+    fi
+    if /bin/launchctl list "com.saltstack.salt.master" &> /dev/null; then
+        echo "Service: Unloading master..." >> "$TEMP_DIR/preinstall.txt"
         launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.master.plist
+        echo "Service: Unloaded Successfully" >> "$TEMP_DIR/preinstall.txt"
+    fi
+    if /bin/launchctl list "com.saltstack.salt.syndic" &> /dev/null; then
+        echo "Service: Unloading syndic..." >> "$TEMP_DIR/preinstall.txt"
         launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
+        echo "Service: Unloaded Successfully" >> "$TEMP_DIR/preinstall.txt"
+    fi
+    if /bin/launchctl list "com.saltstack.salt.api" &> /dev/null; then
+        echo "Service: Unloading api..." >> "$TEMP_DIR/preinstall.txt"
+        launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.api.plist
         echo "Service: Unloaded Successfully" >> "$TEMP_DIR/preinstall.txt"
     fi
 }
@@ -60,14 +72,26 @@ stop_service_maverick() {
 stop_service_yosemite_and_later() {
     echo "Service: Using new (>= 10.10) launchctl interface" >> "$TEMP_DIR/preinstall.txt"
     if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
-        echo "Service: Stopping..." >> "$TEMP_DIR/preinstall.txt"
+        echo "Service: Stopping minion..." >> "$TEMP_DIR/preinstall.txt"
         launchctl disable system/com.saltstack.salt.minion
-        launchctl disable system/com.saltstack.salt.master
-        launchctl disable system/com.saltstack.salt.syndic
-        launchctl disable system/com.saltstack.salt.api
         launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+        echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
+    fi
+    if /bin/launchctl list "com.saltstack.salt.master" &> /dev/null; then
+        echo "Service: Stopping master..." >> "$TEMP_DIR/preinstall.txt"
+        launchctl disable system/com.saltstack.salt.master
         launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.master.plist
+        echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
+    fi
+    if /bin/launchctl list "com.saltstack.salt.syndic" &> /dev/null; then
+        echo "Service: Stopping syndic..." >> "$TEMP_DIR/preinstall.txt"
+        launchctl disable system/com.saltstack.salt.syndic
         launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
+        echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
+    fi
+    if /bin/launchctl list "com.saltstack.salt.api" &> /dev/null; then
+        echo "Service: Stopping api..." >> "$TEMP_DIR/preinstall.txt"
+        launchctl disable system/com.saltstack.salt.api
         launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.api.plist
         echo "Service: Stopped Successfully" >> "$TEMP_DIR/preinstall.txt"
     fi
