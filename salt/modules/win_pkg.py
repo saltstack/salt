@@ -1285,6 +1285,18 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         #Compute msiexec string
         use_msiexec, msiexec = _get_msiexec(pkginfo[version_num].get('msiexec', False))
 
+        # Build cmd and arguments
+        # cmd and arguments must be seperated for use with the task scheduler
+        if use_msiexec:
+            cmd = msiexec
+            arguments = ['/i', cached_pkg]
+            if pkginfo['version_num'].get('allusers', True):
+                arguments.append('ALLUSERS="1"')
+            arguments.extend(salt.utils.shlex_split(install_flags))
+        else:
+            cmd = cached_pkg
+            arguments = salt.utils.shlex_split(install_flags)
+
         # Install the software
         # Check Use Scheduler Option
         if pkginfo[version_num].get('use_scheduler', False):
@@ -1313,21 +1325,43 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                                          start_time='01:00',
                                          ac_only=False,
                                          stop_if_on_batteries=False)
+
             # Run Scheduled Task
-            if not __salt__['task.run_wait'](name='update-salt-software'):
-                log.error('Failed to install {0}'.format(pkg_name))
-                log.error('Scheduled Task failed to run')
-                ret[pkg_name] = {'install status': 'failed'}
-        else:
-            # Build the install command
-            cmd = []
-            if use_msiexec:
-                cmd.extend([msiexec, '/i', cached_pkg])
-                if pkginfo[version_num].get('allusers', True):
-                    cmd.append('ALLUSERS="1"')
+            # Special handling for installing salt
+            if pkg_name in ['salt-minion', 'salt-minion-py3']:
+                ret[pkg_name] = {'install status': 'task started'}
+                if not __salt__['task.run'](name='update-salt-software'):
+                    log.error('Failed to install {0}'.format(pkg_name))
+                    log.error('Scheduled Task failed to run')
+                    ret[pkg_name] = {'install status': 'failed'}
+                else:
+
+                    # Make sure the task is running, try for 5 secs
+                    from time import time
+                    t_end = time() + 5
+                    while time() < t_end:
+                        task_running = __salt__['task.status'](
+                                'update-salt-software') == 'Running'
+                        if task_running:
+                            break
+
+                    if not task_running:
+                        log.error(
+                            'Failed to install {0}'.format(pkg_name))
+                        log.error('Scheduled Task failed to run')
+                        ret[pkg_name] = {'install status': 'failed'}
+
+            # All other packages run with task scheduler
             else:
-                cmd.append(cached_pkg)
-            cmd.extend(salt.utils.args.shlex_split(install_flags))
+                if not __salt__['task.run_wait'](name='update-salt-software'):
+                    log.error('Failed to install {0}'.format(pkg_name))
+                    log.error('Scheduled Task failed to run')
+                    ret[pkg_name] = {'install status': 'failed'}
+        else:
+
+            # Combine cmd and arguments
+            cmd = [cmd].extend(arguments)
+
             # Launch the command
             result = __salt__['cmd.run_all'](cmd,
                                              cache_path,
