@@ -1930,6 +1930,8 @@ class Minion(MinionBase):
             self.beacons.disable_beacon(name)
         elif func == u'list':
             self.beacons.list_beacons()
+        elif func == u'validate_beacon':
+            self.beacons.validate_beacon(name, beacon_data)
 
     def environ_setenv(self, tag, data):
         '''

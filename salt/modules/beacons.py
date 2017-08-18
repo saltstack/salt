@@ -97,6 +97,12 @@ def add(name, beacon_data, **kwargs):
     else:
         # Attempt to load the beacon module so we have access to the validate function
         try:
+            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            res = __salt__['event.fire']({'name': name, 'func': 'available_beacons'}, 'manage_beacons')
+            if res:
+                event_ret = eventer.get_event(tag='/salt/minion/minion_available_beacons', wait=30)
+                log.debug('=== event_ret {} ==='.format(event_ret))
+
             beacon_module = __import__('salt.beacons.' + name, fromlist=['validate'])
             log.debug('Successfully imported beacon.')
         except ImportError:
