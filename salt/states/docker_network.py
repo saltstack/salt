@@ -34,6 +34,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+from salt.ext import six
 import salt.utils
 
 # Enable proper logging
@@ -277,7 +278,7 @@ def present(name,
     result = True
     reconnected_containers = []
     connected_containers = []
-    for container_id, container in containers_to_connect.iteritems():
+    for container_id, container in six.iteritems(containers_to_connect):
         if container_id not in network['Containers']:
             try:
                 connect_result = __salt__['docker.connect_container_to_network'](container_id, name)
@@ -306,7 +307,7 @@ def present(name,
     # Figure out if we removed any containers as a result of replacing the network and then not re-connecting the
     # containers, because they weren't specified in the state.
     disconnected_containers = []
-    for container_id, container in containers_disconnected.iteritems():
+    for container_id, container in six.iteritems(containers_disconnected):
         if container_id not in containers_to_connect:
             disconnected_containers.append(container['Name'])
 
