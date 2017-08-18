@@ -16,6 +16,7 @@ import json
 import logging
 import numbers
 import os
+import os.path
 import posixpath
 import random
 import re
@@ -32,6 +33,7 @@ import warnings
 import string
 import subprocess
 import getpass
+import urllib
 
 # Import 3rd-party libs
 from salt.ext import six
