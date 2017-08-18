@@ -118,11 +118,11 @@ if [ -L "$SBIN_DIR/salt-config" ]; then
 fi
 
 ###############################################################################
-# Remove the $BIN_DIR directory
+# Remove the $INSTALL_DIR directory
 ###############################################################################
-if [ -d "$BIN_DIR" ]; then
-    echo "Cleanup: Removing $BIN_DIR" >> "$TEMP_DIR/preinstall.txt"
-    rm -rf "$BIN_DIR"
+if [ -d "$INSTALL_DIR" ]; then
+    echo "Cleanup: Removing $INSTALL_DIR" >> "$TEMP_DIR/preinstall.txt"
+    rm -rf "$INSTALL_DIR"
     echo "Cleanup: Removed Successfully" >> "$TEMP_DIR/preinstall.txt"
 fi
 
