@@ -63,6 +63,7 @@ import time
 import re
 import yaml
 import ast
+import collections
 
 try:
     import slackclient
@@ -78,7 +79,6 @@ import salt.utils
 import salt.utils.event
 import salt.utils.http
 import salt.utils.slack
-
 
 def __virtual__():
     return HAS_SLACKCLIENT
@@ -247,7 +247,7 @@ def start(token,
                                     tgt_type = kwargs['tgt_type']
                                     del kwargs['tgt_type']
 
-                                # Check for pillar string representation of dict and convert it to dict
+                                # Check for pillar dict
                                 if 'pillar' in kwargs:
                                     kwargs.update(pillar=ast.literal_eval(kwargs['pillar']))
 
@@ -263,7 +263,14 @@ def start(token,
                                     ret = local.cmd('{0}'.format(target), cmd, arg=args, kwarg=kwargs, tgt_type='{0}'.format(tgt_type))
 
                                 if ret:
-                                    return_text = json.dumps(ret, sort_keys=True, indent=1)
+                                    ret_keys=[k for k in ret.viewkeys()]
+                                    for key in ret_keys:
+                                        ud=ret[key]
+                                        try:
+                                           ret[key]=collections.OrderedDict([(k,ud[k]) for k in sorted(ud,key=lambda k: ud[k].get('__run_num__', 0))])
+                                        except:
+                                            pass
+                                    return_text = json.dumps(ret, sort_keys=False, indent=1)
                                     ts = time.time()
                                     st = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S%f')
                                     filename = 'salt-results-{0}.yaml'.format(st)
