@@ -247,7 +247,7 @@ def start(token,
                                     tgt_type = kwargs['tgt_type']
                                     del kwargs['tgt_type']
 
-                                # Check for pillar dict
+                                # Check for pillar string representation of dict and convert it to dict
                                 if 'pillar' in kwargs:
                                     kwargs.update(pillar=ast.literal_eval(kwargs['pillar']))
 
