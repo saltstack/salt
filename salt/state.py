@@ -25,7 +25,7 @@ import traceback
 import re
 import time
 import random
-from urllib import quote
+from urllib
 
 # Import salt libs
 import salt.utils
@@ -150,7 +150,7 @@ def _clean_tag(tag):
     '''
       urllib safe quote the tag value to avoid invalid chars in the filename
     '''
-    return quote(tag, safe='')
+    return urllib.quote(tag.encode('utf8'), safe='')
 
 def _l_tag(name, id_):
     low = {'name': 'listen_{0}'.format(name),
