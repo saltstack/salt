@@ -37,7 +37,6 @@ Run the salt proxy via the following command:
 '''
 from __future__ import absolute_import
 
-# Import python libs
 import logging
 
 # Import 3rd-party libs
@@ -47,6 +46,10 @@ try:
     import jnpr.junos.utils
     import jnpr.junos.utils.config
     import jnpr.junos.utils.sw
+    from jnpr.junos.exception import RpcTimeoutError
+    from jnpr.junos.exception import ConnectClosedError
+    from jnpr.junos.exception import RpcError
+    from jnpr.junos.exception import ConnectError
 except ImportError:
     HAS_JUNOS = False
 
@@ -118,10 +121,13 @@ def conn():
 
 def alive(opts):
     '''
-    Return the connection status with the remote device.
+    Validate and return the connection status with the remote device.
 
     .. versionadded:: Oxygen
     '''
+
+    thisproxy['conn'].connected = ping()
+
     return thisproxy['conn'].connected
 
 
@@ -150,6 +156,16 @@ def ping():
     '''
     Ping?  Pong!
     '''
+
+    try:
+        thisproxy['conn'].rpc.file_list(path='/dev/null', dev_timeout=2)
+
+    except RpcTimeoutError:
+        try:
+            thisproxy['conn'].close()
+        except (RpcError, ConnectError):
+            pass
+
     return thisproxy['conn'].connected
 
 
