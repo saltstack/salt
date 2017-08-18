@@ -42,7 +42,7 @@ class DockerNetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         docker_create_network = Mock(return_value='created')
         docker_connect_container_to_network = Mock(return_value='connected')
-        docker_inspect_container = Mock(return_value={'Id': 'abcd'})
+        docker_inspect_container = Mock(return_value={'Id': 'abcd', 'Name': 'container_bar'})
         # Get docker.networks to return a network with a name which is a superset of the name of
         # the network which is to be created, despite this network existing we should still expect
         # that the new network will be created.
@@ -75,7 +75,7 @@ class DockerNetworkTestCase(TestCase, LoaderModuleMockMixin):
                                                                  'network_foo')
         self.assertEqual(ret, {'name': 'network_foo',
                                'comment': '',
-                               'changes': {'connected': 'connected',
+                               'changes': {'connected': ['container_bar'],
                                            'created': 'created'},
                                'result': True})
 

@@ -232,71 +232,8 @@ def present(name,
             ret['changes']['updated'] = {name: {'old': original_config, 'new': new_config}}
             ret['comment'] = 'Network \'{0}\' was replaced with updated config'.format(name)
 
-        # Figure out the list of containers should now now be connected.
-        containers_to_connect = {}
-        # If no containers were specified in the state but we have disconnected some in the process of recreating the
-        # network, we should reconnect those containers.
-        if containers is None and containers_disconnected:
-            containers_to_connect = containers_disconnected
-        # If containers were specified in the state, regardless of what we've disconnected, we should now just connect
-        # the containers specified.
-        elif containers:
-            for container in containers:
-                containers_to_connect[container['Id']] = container
-
-        # At this point, if all the containers we want connected are already connected to the network, we can set our
-        # result and finish.
-        if all(c in network['Containers'] for c in containers_to_connect):
-            ret['result'] = True
-            return ret
-
-        # If we've not exited by this point it's because we have containers which we need to connect to the network.
-        result = True
-        reconnected_containers = []
-        connected_containers = []
-        for container_id, container in containers_to_connect.iteritems():
-            if container_id not in network['Containers']:
-                try:
-                    connect_result = __salt__['docker.connect_container_to_network'](container_id, name)
-                    log.trace(
-                        'docker.connect_container_to_network({0}, {1}) result: {2}'.
-                        format(container, name, connect_result)
-                    )
-                    # If this container was one we disconnected earlier, add it to the reconnected list.
-                    if container_id in containers_disconnected:
-                        reconnected_containers.append(container['Name'])
-                    # Otherwise add it to the connected list.
-                    else:
-                        connected_containers.append(container['Name'])
-
-                except Exception as exc:
-                    ret['comment'] = ('Failed to connect container \'{0}\' to network \'{1}\' {2}'.format(
-                        container['Name'], name, exc))
-                    result = False
-
-        # If we populated any of our container lists then add them to our list of changes.
-        if connected_containers:
-            ret['changes']['connected'] = connected_containers
-        if reconnected_containers:
-            ret['changes']['reconnected'] = reconnected_containers
-
-        # Figure out if we removed any containers as a result of replacing the network and then not re-connecting the
-        # containers, because they weren't specified in the state.
-        disconnected_containers = []
-        for container_id, container in containers_disconnected.iteritems():
-            if container_id not in containers_to_connect:
-                disconnected_containers.append(container['Name'])
-
-        if disconnected_containers:
-            ret['changes']['disconnected'] = disconnected_containers
-
-        ret['result'] = result
-
     # If the network does not yet exist, we create it
     else:
-        if containers is None:
-            containers = {}
-
         log.debug('The network \'{0}\' will be created'.format(name))
         if __opts__['test']:
             ret['result'] = None
@@ -314,16 +251,69 @@ def present(name,
         except Exception as exc:
             ret['comment'] = ('Failed to create network \'{0}\': {1}'
                               .format(name, exc))
-        result = True
+
+    # Finally, figure out the list of containers which should now be connected.
+    containers_to_connect = {}
+    # If no containers were specified in the state but we have disconnected some in the process of recreating the
+    # network, we should reconnect those containers.
+    if containers is None and containers_disconnected:
+        containers_to_connect = containers_disconnected
+    # If containers were specified in the state, regardless of what we've disconnected, we should now just connect
+    # the containers specified.
+    elif containers:
         for container in containers:
+            containers_to_connect[container['Id']] = container
+
+    if network is None:
+        network = {'Containers': {}}
+
+    # At this point, if all the containers we want connected are already connected to the network, we can set our
+    # result and finish.
+    if all(c in network['Containers'] for c in containers_to_connect):
+        ret['result'] = True
+        return ret
+
+    # If we've not exited by this point it's because we have containers which we need to connect to the network.
+    result = True
+    reconnected_containers = []
+    connected_containers = []
+    for container_id, container in containers_to_connect.iteritems():
+        if container_id not in network['Containers']:
             try:
-                ret['changes']['connected'] = __salt__['docker.connect_container_to_network'](
-                    container['Id'], name)
+                connect_result = __salt__['docker.connect_container_to_network'](container_id, name)
+                log.trace(
+                    'docker.connect_container_to_network({0}, {1}) result: {2}'.
+                    format(container, name, connect_result)
+                )
+                # If this container was one we disconnected earlier, add it to the reconnected list.
+                if container_id in containers_disconnected:
+                    reconnected_containers.append(container['Name'])
+                # Otherwise add it to the connected list.
+                else:
+                    connected_containers.append(container['Name'])
+
             except Exception as exc:
                 ret['comment'] = ('Failed to connect container \'{0}\' to network \'{1}\' {2}'.format(
-                    container['Id'], name, exc))
+                    container['Name'], name, exc))
                 result = False
-        ret['result'] = result
+
+    # If we populated any of our container lists then add them to our list of changes.
+    if connected_containers:
+        ret['changes']['connected'] = connected_containers
+    if reconnected_containers:
+        ret['changes']['reconnected'] = reconnected_containers
+
+    # Figure out if we removed any containers as a result of replacing the network and then not re-connecting the
+    # containers, because they weren't specified in the state.
+    disconnected_containers = []
+    for container_id, container in containers_disconnected.iteritems():
+        if container_id not in containers_to_connect:
+            disconnected_containers.append(container['Name'])
+
+    if disconnected_containers:
+        ret['changes']['disconnected'] = disconnected_containers
+
+    ret['result'] = result
     return ret
 
 
