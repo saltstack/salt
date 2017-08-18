@@ -16,7 +16,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.lxc as lxc
-import salt.utils
+import salt.utils.versions
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -246,7 +246,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
                'comment': comment,
                'changes': {}}
 
-        with patch.object(salt.utils, 'warn_until', MagicMock()):
+        with patch.object(salt.utils.versions, 'warn_until', MagicMock()):
             with patch.dict(lxc.__opts__, {'test': True}):
                 self.assertDictEqual(lxc.edited_conf(name), ret)
 

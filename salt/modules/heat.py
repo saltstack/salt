@@ -48,7 +48,7 @@ import logging
 import yaml
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.files
 from salt.exceptions import SaltInvocationError
 

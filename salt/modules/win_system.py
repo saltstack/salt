@@ -14,13 +14,20 @@ Support for reboot, shutdown, etc
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+import ctypes
 import logging
 import time
-import ctypes
 from datetime import datetime
 
-# Import 3rd Party Libs
+# Import salt libs
+import salt.utils
+import salt.utils.locales
+import salt.utils.platform
+from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party Libs
+from salt.ext import six
 try:
     import pythoncom
     import wmi
@@ -33,11 +40,6 @@ try:
 except ImportError:
     HAS_WIN32NET_MODS = False
 
-# Import salt libs
-import salt.utils
-import salt.utils.locales
-import salt.ext.six as six
-
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -49,7 +51,7 @@ def __virtual__():
     '''
     Only works on Windows Systems with Win32 Modules
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Module win_system: Requires Windows'
 
     if not HAS_WIN32NET_MODS:
@@ -273,7 +275,7 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
     if only_on_pending_reboot and not get_pending_reboot():
         return False
 
-    if message and not isinstance(message, str):
+    if message and not isinstance(message, six.string_types):
         message = message.decode('utf-8')
     try:
         win32api.InitiateSystemShutdown('127.0.0.1', message, timeout,
@@ -622,7 +624,11 @@ def join_domain(domain,
             .. versionadded:: 2015.8.2/2015.5.7
 
     Returns:
-        dict: Dictionary if successful, otherwise False
+        dict: Dictionary if successful
+
+    Raises:
+        CommandExecutionError: Raises an error if _join_domain returns anything
+            other than 0
 
     CLI Example:
 
@@ -651,10 +657,60 @@ def join_domain(domain,
         return 'Must specify a password if you pass a username'
 
     # remove any escape characters
-    if isinstance(account_ou, str):
+    if isinstance(account_ou, six.string_types):
         account_ou = account_ou.split('\\')
         account_ou = ''.join(account_ou)
 
+    err = _join_domain(domain=domain, username=username, password=password,
+                       account_ou=account_ou, account_exists=account_exists)
+
+    if not err:
+        ret = {'Domain': domain,
+               'Restart': False}
+        if restart:
+            ret['Restart'] = reboot()
+        return ret
+
+    raise CommandExecutionError(win32api.FormatMessage(err).rstrip())
+
+
+def _join_domain(domain,
+                 username=None,
+                 password=None,
+                 account_ou=None,
+                 account_exists=False):
+    '''
+    Helper function to join the domain.
+
+    Args:
+        domain (str): The domain to which the computer should be joined, e.g.
+            ``example.com``
+
+        username (str): Username of an account which is authorized to join
+            computers to the specified domain. Need to be either fully qualified
+            like ``user@domain.tld`` or simply ``user``
+
+        password (str): Password of the specified user
+
+        account_ou (str): The DN of the OU below which the account for this
+            computer should be created when joining the domain, e.g.
+            ``ou=computers,ou=departm_432,dc=my-company,dc=com``
+
+        account_exists (bool): If set to ``True`` the computer will only join
+            the domain if the account already exists. If set to ``False`` the
+            computer account will be created if it does not exist, otherwise it
+            will use the existing account. Default is False.
+
+    Returns:
+        int:
+
+    :param domain:
+    :param username:
+    :param password:
+    :param account_ou:
+    :param account_exists:
+    :return:
+    '''
     NETSETUP_JOIN_DOMAIN = 0x1  # pylint: disable=invalid-name
     NETSETUP_ACCOUNT_CREATE = 0x2  # pylint: disable=invalid-name
     NETSETUP_DOMAIN_JOIN_IF_JOINED = 0x20  # pylint: disable=invalid-name
@@ -670,23 +726,13 @@ def join_domain(domain,
     pythoncom.CoInitialize()
     conn = wmi.WMI()
     comp = conn.Win32_ComputerSystem()[0]
-    err = comp.JoinDomainOrWorkgroup(Name=domain,
-                                     Password=password,
-                                     UserName=username,
-                                     AccountOU=account_ou,
-                                     FJoinOptions=join_options)
 
-    # you have to do this because JoinDomainOrWorkgroup returns a strangely
-    # formatted value that looks like (0,)
-    if not err[0]:
-        ret = {'Domain': domain,
-               'Restart': False}
-        if restart:
-            ret['Restart'] = reboot()
-        return ret
-
-    log.error(win32api.FormatMessage(err[0]).rstrip())
-    return False
+    # Return the results of the command as an error
+    # JoinDomainOrWorkgroup returns a strangely formatted value that looks like
+    # (0,) so return the first item
+    return comp.JoinDomainOrWorkgroup(
+        Name=domain, Password=password, UserName=username, AccountOU=account_ou,
+        FJoinOptions=join_options)[0]
 
 
 def unjoin_domain(username=None,
@@ -919,7 +965,11 @@ def set_system_date_time(years=None,
         seconds (int): Seconds digit: 0 - 59
 
     Returns:
-        bool: True if successful, otherwise False.
+        bool: True if successful
+
+    Raises:
+        CommandExecutionError: Raises an error if ``SetLocalTime`` function
+            fails
 
     CLI Example:
 
@@ -972,12 +1022,15 @@ def set_system_date_time(years=None,
         system_time.wSecond = int(seconds)
         system_time_ptr = ctypes.pointer(system_time)
         succeeded = ctypes.windll.kernel32.SetLocalTime(system_time_ptr)
-        return succeeded is not 0
-    except OSError:
+        if succeeded is not 0:
+            return True
+        else:
+            log.error('Failed to set local time')
+            raise CommandExecutionError(
+                win32api.FormatMessage(succeeded).rstrip())
+    except OSError as err:
         log.error('Failed to set local time')
-        return False
-
-    return True
+        raise CommandExecutionError(err)
 
 
 def get_system_date():

@@ -14,25 +14,25 @@ keys make the engine interactive.
     .. code-block:: yaml
 
         engines:
-          - hipchat:
-              api_url: http://api.hipchat.myteam.com
-              token: 'XXXXXX'
-              room: 'salt'
-              control: True
-              valid_users:
-                 - SomeUser
-              valid_commands:
-                 - test.ping
-                 - cmd.run
-                 - list_jobs
-                 - list_commands
-              aliases:
-                 list_jobs:
-                     cmd: jobs.list_jobs
-                 list_commands:
-                     cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster tgt_type=list
-              max_rooms: 0
-              wait_time: 1
+            - hipchat:
+                api_url: http://api.hipchat.myteam.com
+                token: 'XXXXXX'
+                room: 'salt'
+                control: True
+                valid_users:
+                    - SomeUser
+                valid_commands:
+                    - test.ping
+                    - cmd.run
+                    - list_jobs
+                    - list_commands
+                aliases:
+                    list_jobs:
+                        cmd: jobs.list_jobs
+                    list_commands:
+                        cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster
+                max_rooms: 0
+                wait_time: 1
 '''
 
 from __future__ import absolute_import
@@ -48,7 +48,7 @@ try:
 except ImportError:
     HAS_HYPCHAT = False
 
-import salt.utils
+import salt.utils.args
 import salt.utils.event
 import salt.utils.files
 import salt.utils.http
@@ -56,7 +56,7 @@ import salt.runner
 import salt.client
 import salt.loader
 import salt.output
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():
@@ -341,13 +341,13 @@ def start(token,
             args = []
             kwargs = {}
 
-            cmdline = salt.utils.shlex_split(text)
+            cmdline = salt.utils.args.shlex_split(text)
             cmd = cmdline[0]
 
             # Evaluate aliases
             if aliases and isinstance(aliases, dict) and cmd in aliases.keys():
                 cmdline = aliases[cmd].get('cmd')
-                cmdline = salt.utils.shlex_split(cmdline)
+                cmdline = salt.utils.args.shlex_split(cmdline)
                 cmd = cmdline[0]
 
             # Parse args and kwargs

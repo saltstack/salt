@@ -105,7 +105,7 @@ from salt.exceptions import (
 )
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import map, range, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
 
@@ -1028,10 +1028,18 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return config.get_cloud_config_value(
+    ret = config.get_cloud_config_value(
         'ssh_interface', vm_, __opts__, default='public_ips',
         search_global=False
     )
+    if ret not in ('public_ips', 'private_ips'):
+        log.warning((
+            'Invalid ssh_interface: {0}. '
+            'Allowed options are ("public_ips", "private_ips"). '
+            'Defaulting to "public_ips".'
+        ).format(ret))
+        ret = 'public_ips'
+    return ret
 
 
 def get_ssh_gateway_config(vm_):
@@ -1044,7 +1052,7 @@ def get_ssh_gateway_config(vm_):
     )
 
     # Check to see if a SSH Gateway will be used.
-    if not isinstance(ssh_gateway, str):
+    if not isinstance(ssh_gateway, six.string_types):
         return None
 
     # Create dictionary of configuration items
@@ -1431,7 +1439,7 @@ def _create_eni_if_necessary(interface, vm_):
     )
 
     associate_public_ip = interface.get('AssociatePublicIpAddress', False)
-    if isinstance(associate_public_ip, str):
+    if isinstance(associate_public_ip, six.string_types):
         # Assume id of EIP as value
         _associate_eip_with_interface(eni_id, associate_public_ip, vm_=vm_)
 
@@ -2611,7 +2619,7 @@ def create(vm_=None, call=None):
         data, vm_ = request_instance(vm_, location)
 
         # If data is a str, it's an error
-        if isinstance(data, str):
+        if isinstance(data, six.string_types):
             log.error('Error requesting instance: {0}'.format(data))
             return {}
 
@@ -2644,7 +2652,7 @@ def create(vm_=None, call=None):
         )
 
     for value in six.itervalues(tags):
-        if not isinstance(value, str):
+        if not isinstance(value, six.string_types):
             raise SaltCloudConfigError(
                 '\'tag\' values must be strings. Try quoting the values. '
                 'e.g. "2013-09-19T20:09:46Z".'
@@ -2831,7 +2839,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     if 'instance_id' not in kwargs:
         kwargs['instance_id'] = _get_node(name)['instanceId']
 
-    if isinstance(kwargs['volumes'], str):
+    if isinstance(kwargs['volumes'], six.string_types):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']

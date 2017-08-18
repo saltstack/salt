@@ -169,14 +169,15 @@ import inspect
 from functools import wraps
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
-import salt.utils.vmware
+import salt.utils.args
+import salt.utils.dictupdate as dictupdate
 import salt.utils.http
-from salt.utils import dictupdate
+import salt.utils.path
+import salt.utils.vmware
 from salt.exceptions import CommandExecutionError, VMwareSaltError
 from salt.utils.decorators import depends, ignores_kwargs
-from salt.utils import clean_kwargs
 
 # Import Third Party Libs
 try:
@@ -185,7 +186,7 @@ try:
 except ImportError:
     HAS_PYVMOMI = False
 
-esx_cli = salt.utils.which('esxcli')
+esx_cli = salt.utils.path.which('esxcli')
 if esx_cli:
     HAS_ESX_CLI = True
 else:
@@ -194,7 +195,7 @@ else:
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'vsphere'
-__proxyenabled__ = ['esxi']
+__proxyenabled__ = ['esxi', 'esxdatacenter']
 
 
 def __virtual__():
@@ -226,6 +227,8 @@ def _get_proxy_connection_details():
     proxytype = get_proxy_type()
     if proxytype == 'esxi':
         details = __salt__['esxi.get_details']()
+    elif proxytype == 'esxdatacenter':
+        details = __salt__['esxdatacenter.get_details']()
     else:
         raise CommandExecutionError('\'{0}\' proxy is not supported'
                                     ''.format(proxytype))
@@ -253,7 +256,7 @@ def supports_proxies(*proxy_types):
                 raise CommandExecutionError(
                     '\'{0}\' proxy is not supported by function {1}'
                     ''.format(proxy_type, fn.__name__))
-            return fn(*args, **clean_kwargs(**kwargs))
+            return fn(*args, **salt.utils.args.clean_kwargs(**kwargs))
         return __supports_proxies
     return _supports_proxies
 
@@ -263,6 +266,8 @@ def gets_service_instance_via_proxy(fn):
     Decorator that connects to a target system (vCenter or ESXi host) using the
     proxy details and passes the connection (vim.ServiceInstance) to
     the decorated function.
+
+    Supported proxies: esxi, esxdatacenter.
 
     Notes:
         1. The decorated function must have a ``service_instance`` parameter
@@ -334,7 +339,7 @@ def gets_service_instance_via_proxy(fn):
                             *connection_details)
                 kwargs['service_instance'] = local_service_instance
         try:
-            ret = fn(*args, **clean_kwargs(**kwargs))
+            ret = fn(*args, **salt.utils.args.clean_kwargs(**kwargs))
             # Disconnect if connected in the decorator
             if local_service_instance:
                 salt.utils.vmware.disconnect(local_service_instance)
@@ -349,7 +354,7 @@ def gets_service_instance_via_proxy(fn):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi')
+@supports_proxies('esxi', 'esxdatacenter')
 def get_service_instance_via_proxy(service_instance=None):
     '''
     Returns a service instance to the proxied endpoint (vCenter/ESXi host).
@@ -368,7 +373,8 @@ def get_service_instance_via_proxy(service_instance=None):
     return salt.utils.vmware.get_service_instance(*connection_details)
 
 
-@supports_proxies('esxi')
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi', 'esxdatacenter')
 def disconnect(service_instance):
     '''
     Disconnects from a vCenter or ESXi host
@@ -1903,7 +1909,7 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi')
+@supports_proxies('esxi', 'esxdatacenter')
 @gets_service_instance_via_proxy
 def test_vcenter_connection(service_instance=None):
     '''
@@ -4278,3 +4284,13 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
                 raise
 
     return ret
+
+
+def _get_esxdatacenter_proxy_details():
+    '''
+    Returns the running esxdatacenter's proxy details
+    '''
+    det = __salt__['esxdatacenter.get_details']()
+    return det.get('vcenter'), det.get('username'), det.get('password'), \
+            det.get('protocol'), det.get('port'), det.get('mechanism'), \
+            det.get('principal'), det.get('domain'), det.get('datacenter')

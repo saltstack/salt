@@ -21,14 +21,15 @@ import re
 import string
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
 import salt.utils.files
 import salt.utils.url
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -573,11 +574,11 @@ def latest(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not remote:
@@ -1139,13 +1140,22 @@ def latest(name,
                                            password=password,
                                            https_user=https_user,
                                            https_pass=https_pass)
-                comments.append(
-                    'Remote \'{0}\' changed from {1} to {2}'.format(
-                        remote,
-                        salt.utils.url.redact_http_basic_auth(fetch_url),
-                        redacted_fetch_url
+                if fetch_url is None:
+                    comments.append(
+                        'Remote \'{0}\' set to {1}'.format(
+                            remote,
+                            redacted_fetch_url
+                        )
                     )
-                )
+                    ret['changes']['new'] = name + ' => ' + remote
+                else:
+                    comments.append(
+                        'Remote \'{0}\' changed from {1} to {2}'.format(
+                            remote,
+                            salt.utils.url.redact_http_basic_auth(fetch_url),
+                            redacted_fetch_url
+                        )
+                    )
 
             if remote_rev is not None:
                 if __opts__['test']:
@@ -2108,11 +2118,11 @@ def detached(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     ref = kwargs.pop('ref', None)
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if ref is not None:
@@ -2122,7 +2132,7 @@ def detached(name,
             'consistency. Please update your SLS to reflect this.'
         )
         ret.setdefault('warnings', []).append(deprecation_msg)
-        salt.utils.warn_until('Fluorine', deprecation_msg)
+        salt.utils.versions.warn_until('Fluorine', deprecation_msg)
 
     if not rev:
         return _fail(
@@ -2214,7 +2224,7 @@ def detached(name,
 
     # Determine if supplied ref is a hash
     remote_rev_type = 'ref'
-    if len(ref) <= 40 \
+    if len(rev) <= 40 \
             and all(x in string.hexdigits for x in rev):
         rev = rev.lower()
         remote_rev_type = 'hash'
@@ -2420,7 +2430,7 @@ def detached(name,
                 https_pass=https_pass,
                 ignore_retcode=False)
 
-            if 'refs/remotes/'+remote+'/'+ref in all_remote_refs:
+            if 'refs/remotes/'+remote+'/'+rev in all_remote_refs:
                 checkout_commit_id = all_remote_refs['refs/remotes/' + remote + '/' + rev]
             elif 'refs/tags/' + rev in all_remote_refs:
                 checkout_commit_id = all_remote_refs['refs/tags/' + rev]
@@ -2597,13 +2607,13 @@ def config_unset(name,
     # allows us to accept 'global' as an argument to this function without
     # shadowing global(), while also not allowing unwanted arguments to be
     # passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
     all_ = kwargs.pop('all', False)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not global_ and not repo:
@@ -2848,12 +2858,12 @@ def config_set(name,
     # allows us to accept 'global' as an argument to this function without
     # shadowing global(), while also not allowing unwanted arguments to be
     # passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not global_ and not repo:

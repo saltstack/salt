@@ -35,9 +35,10 @@ import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.url
+import salt.utils.versions
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -164,7 +165,7 @@ def file_hash(load, fnd):
     ret = {}
 
     if 'env' in load:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -234,7 +235,7 @@ def file_list(load):
     Return a list of all files on the file server in a specified environment
     '''
     if 'env' in load:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -318,7 +319,7 @@ def dir_list(load):
             - source-minion/absolute/path
     '''
     if 'env' in load:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '

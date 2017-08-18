@@ -5,7 +5,7 @@ Beacon to fire events at login of users as registered in the wtmp file
 .. code-block:: yaml
 
     beacons:
-      wtmp: {}
+      wtmp: []
 '''
 
 # Import Python libs
@@ -15,6 +15,9 @@ import struct
 
 # Import salt libs
 import salt.utils.files
+
+# Import 3rd-party libs
+from salt.ext import six
 
 __virtualname__ = 'wtmp'
 WTMP = '/var/log/wtmp'
@@ -52,13 +55,13 @@ def _get_loc():
         return __context__[LOC_KEY]
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
     # Configuration for wtmp beacon should be a list of dicts
-    if not isinstance(config, dict):
-        return False, ('Configuration for wtmp beacon must be a dictionary.')
+    if not isinstance(config, list):
+        return False, ('Configuration for wtmp beacon must be a list.')
     return True, 'Valid beacon configuration'
 
 
@@ -70,7 +73,7 @@ def beacon(config):
     .. code-block:: yaml
 
         beacons:
-          wtmp: {}
+          wtmp: []
     '''
     ret = []
     with salt.utils.files.fopen(WTMP, 'rb') as fp_:
@@ -90,7 +93,7 @@ def beacon(config):
             event = {}
             for ind, field in enumerate(FIELDS):
                 event[field] = pack[ind]
-                if isinstance(event[field], str):
+                if isinstance(event[field], six.string_types):
                     event[field] = event[field].strip('\x00')
             ret.append(event)
     return ret

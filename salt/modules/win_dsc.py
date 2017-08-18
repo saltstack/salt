@@ -17,13 +17,14 @@ the Minion.
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 import json
 import os
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Set up logging
@@ -38,7 +39,7 @@ def __virtual__():
     Set the system module of the kernel is Windows
     '''
     # Verify Windows
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         log.debug('Module DSC: Only available on Windows systems')
         return False, 'Module DSC: Only available on Windows systems'
 
@@ -49,7 +50,7 @@ def __virtual__():
         return False, 'Module DSC: Requires PowerShell'
 
     # Verify PowerShell 5.0 or greater
-    if salt.utils.compare_versions(powershell_info['version'], '<', '5.0'):
+    if salt.utils.versions.compare(powershell_info['version'], '<', '5.0'):
         log.debug('Module DSC: Requires PowerShell 5 or later')
         return False, 'Module DSC: Requires PowerShell 5 or later'
 
