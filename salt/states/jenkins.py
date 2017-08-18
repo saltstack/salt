@@ -36,6 +36,7 @@ def _elements_equal(e1, e2):
         return False
     return all(_elements_equal(c1, c2) for c1, c2 in zip(e1, e2))
 
+
 def _fail(ret, msg):
     ret['comment'] = msg
     ret['result'] = False
