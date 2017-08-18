@@ -314,17 +314,16 @@ def present(name,
         except Exception as exc:
             ret['comment'] = ('Failed to create network \'{0}\': {1}'
                               .format(name, exc))
-        else:
-            result = True
-            for container in containers:
-                try:
-                    ret['changes']['connected'] = __salt__['docker.connect_container_to_network'](
-                        container['Id'], name)
-                except Exception as exc:
-                    ret['comment'] = ('Failed to connect container \'{0}\' to network \'{1}\' {2}'.format(
-                        container['Id'], name, exc))
-                    result = False
-            ret['result'] = result
+        result = True
+        for container in containers:
+            try:
+                ret['changes']['connected'] = __salt__['docker.connect_container_to_network'](
+                    container['Id'], name)
+            except Exception as exc:
+                ret['comment'] = ('Failed to connect container \'{0}\' to network \'{1}\' {2}'.format(
+                    container['Id'], name, exc))
+                result = False
+        ret['result'] = result
     return ret
 
 
