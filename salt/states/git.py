@@ -1309,7 +1309,7 @@ def latest(name,
                         comments
                     )
                 remote_tags = set([
-                    x.split('/')[-1] for x in __salt__['git.ls_remote'](
+                    x.replace('refs/tags/', '') for x in __salt__['git.ls_remote'](
                         cwd=target,
                         remote=remote,
                         opts="--tags",
