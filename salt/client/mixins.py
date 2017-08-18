@@ -445,6 +445,7 @@ class SyncClientMixin(object):
                 _use_fnmatch = True
             else:
                 target_mod = arg + u'.' if not arg.endswith(u'.') else arg
+                _use_fnmatch = False
             if _use_fnmatch:
                 docs = [(fun, self.functions[fun].__doc__)
                         for fun in fnmatch.filter(self.functions, target_mod)]
