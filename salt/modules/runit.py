@@ -57,7 +57,7 @@ log = logging.getLogger(__name__)
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.files
 
 # Function alias to not shadow built-ins.
 __func_alias__ = {
@@ -605,7 +605,7 @@ def enable(name, start=False, **kwargs):
         log.trace('need a temporary file {0}'.format(down_file))
         if not os.path.exists(down_file):
             try:
-                salt.utils.fopen(down_file, "w").close()  # pylint: disable=resource-leakage
+                salt.utils.files.fopen(down_file, "w").close()  # pylint: disable=resource-leakage
             except IOError:
                 log.error('Unable to create file {0}'.format(down_file))
                 return False
@@ -680,7 +680,7 @@ def disable(name, stop=False, **kwargs):
 
     if not os.path.exists(down_file):
         try:
-            salt.utils.fopen(down_file, "w").close()  # pylint: disable=resource-leakage
+            salt.utils.files.fopen(down_file, "w").close()  # pylint: disable=resource-leakage
         except IOError:
             log.error('Unable to create file {0}'.format(down_file))
             return False

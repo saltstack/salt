@@ -26,23 +26,24 @@ import salt.runner
 import salt.auth
 import salt.wheel
 import salt.minion
-import salt.search
 import salt.key
 import salt.fileserver
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
-import salt.utils.verify
-import salt.utils.minions
+import salt.utils.files
+import salt.utils.gitfs
 import salt.utils.gzip_util
 import salt.utils.jid
+import salt.utils.minions
+import salt.utils.platform
+import salt.utils.verify
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
-from salt.utils.event import tagify
 from salt.exceptions import FileserverConfigError, SaltMasterError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     import pwd
@@ -155,7 +156,7 @@ def clean_expired_tokens(opts):
     for (dirpath, dirnames, filenames) in os.walk(opts['token_dir']):
         for token in filenames:
             token_path = os.path.join(dirpath, token)
-            with salt.utils.fopen(token_path, 'rb') as token_file:
+            with salt.utils.files.fopen(token_path, 'rb') as token_file:
                 try:
                     token_data = serializer.loads(token_file.read())
                 except msgpack.UnpackValueError:
@@ -204,7 +205,7 @@ def clean_old_jobs(opts):
 
 
 def mk_key(opts, user):
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         # The username may contain '\' if it is in Windows
         # 'DOMAIN\username' format. Fix this for the keyfile path.
         keyfile = os.path.join(
@@ -217,14 +218,14 @@ def mk_key(opts, user):
 
     if os.path.exists(keyfile):
         log.debug('Removing stale keyfile: {0}'.format(keyfile))
-        if salt.utils.is_windows() and not os.access(keyfile, os.W_OK):
+        if salt.utils.platform.is_windows() and not os.access(keyfile, os.W_OK):
             # Cannot delete read-only files on Windows.
             os.chmod(keyfile, stat.S_IRUSR | stat.S_IWUSR)
         os.unlink(keyfile)
 
     key = salt.crypt.Crypticle.generate_key_string()
     cumask = os.umask(191)
-    with salt.utils.fopen(keyfile, 'w+') as fp_:
+    with salt.utils.files.fopen(keyfile, 'w+') as fp_:
         fp_.write(key)
     os.umask(cumask)
     # 600 octal: Read and write access to the owner only.
@@ -304,7 +305,7 @@ class AutoKey(object):
         '''
         Check if the specified filename has correct permissions
         '''
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             return True
 
         # After we've ascertained we're not on windows
@@ -361,7 +362,7 @@ class AutoKey(object):
             log.warning(message.format(signing_file))
             return False
 
-        with salt.utils.fopen(signing_file, 'r') as fp_:
+        with salt.utils.files.fopen(signing_file, 'r') as fp_:
             for line in fp_:
                 line = line.strip()
                 if line.startswith('#'):
@@ -522,10 +523,9 @@ class RemoteFuncs(object):
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
 
-    def _ext_nodes(self, load, skip_verify=False):
+    def _master_tops(self, load, skip_verify=False):
         '''
-        Return the results from an external node classifier if one is
-        specified
+        Return the results from master_tops if configured
         '''
         if not skip_verify:
             if 'id' not in load:
@@ -695,7 +695,7 @@ class RemoteFuncs(object):
             mode = 'ab'
         else:
             mode = 'wb'
-        with salt.utils.fopen(cpath, mode) as fp_:
+        with salt.utils.files.fopen(cpath, mode) as fp_:
             if load['loc']:
                 fp_.seek(load['loc'])
             fp_.write(load['data'])
@@ -723,7 +723,7 @@ class RemoteFuncs(object):
             self.cache.store('minions/{0}'.format(load['id']),
                              'data',
                              {'grains': load['grains'], 'pillar': data})
-            self.event.fire_event('Minion data cache refresh', tagify(load['id'], 'refresh', 'minion'))
+            self.event.fire_event('Minion data cache refresh', salt.utils.event.tagify(load['id'], 'refresh', 'minion'))
         return data
 
     def _minion_event(self, load):
@@ -743,7 +743,7 @@ class RemoteFuncs(object):
                     event_data = event
                 self.event.fire_event(event_data, event['tag'])  # old dup event
                 if load.get('pretag') is not None:
-                    self.event.fire_event(event_data, tagify(event['tag'], base=load['pretag']))
+                    self.event.fire_event(event_data, salt.utils.event.tagify(event['tag'], base=load['pretag']))
         else:
             tag = load['tag']
             self.event.fire_event(load, tag)
@@ -769,7 +769,7 @@ class RemoteFuncs(object):
             self.mminion.returners[saveload_fstr](load['jid'], load)
         log.info('Got return from {id} for job {jid}'.format(**load))
         self.event.fire_event(load, load['jid'])  # old dup event
-        self.event.fire_event(load, tagify([load['jid'], 'ret', load['id']], 'job'))
+        self.event.fire_event(load, salt.utils.event.tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
@@ -860,7 +860,7 @@ class RemoteFuncs(object):
             if not os.path.isdir(auth_cache):
                 os.makedirs(auth_cache)
             jid_fn = os.path.join(auth_cache, load['jid'])
-            with salt.utils.fopen(jid_fn, 'r') as fp_:
+            with salt.utils.files.fopen(jid_fn, 'r') as fp_:
                 if not load['id'] == fp_.read():
                     return {}
 
@@ -917,7 +917,7 @@ class RemoteFuncs(object):
         if not os.path.isdir(auth_cache):
             os.makedirs(auth_cache)
         jid_fn = os.path.join(auth_cache, str(ret['jid']))
-        with salt.utils.fopen(jid_fn, 'w+') as fp_:
+        with salt.utils.files.fopen(jid_fn, 'w+') as fp_:
             fp_.write(load['id'])
         return ret
 
@@ -1135,17 +1135,17 @@ class LocalFuncs(object):
         # Authenticated. Do the job.
         jid = salt.utils.jid.gen_jid()
         fun = load.pop('fun')
-        tag = tagify(jid, prefix='wheel')
+        tag = salt.utils.event.tagify(jid, prefix='wheel')
         data = {'fun': "wheel.{0}".format(fun),
                 'jid': jid,
                 'tag': tag,
                 'user': username}
         try:
-            self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
+            self.event.fire_event(data, salt.utils.event.tagify([jid, 'new'], 'wheel'))
             ret = self.wheel_.call_func(fun, **load)
             data['return'] = ret
             data['success'] = True
-            self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+            self.event.fire_event(data, salt.utils.event.tagify([jid, 'ret'], 'wheel'))
             return {'tag': tag,
                     'data': data}
         except Exception as exc:
@@ -1157,7 +1157,7 @@ class LocalFuncs(object):
                                         exc,
                                         )
             data['success'] = False
-            self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
+            self.event.fire_event(data, salt.utils.event.tagify([jid, 'ret'], 'wheel'))
             return {'tag': tag,
                     'data': data}
 
@@ -1327,7 +1327,7 @@ class LocalFuncs(object):
 
         # Announce the job on the event bus
         self.event.fire_event(new_job_load, 'new_job')  # old dup event
-        self.event.fire_event(new_job_load, tagify([load['jid'], 'new'], 'job'))
+        self.event.fire_event(new_job_load, salt.utils.event.tagify([load['jid'], 'new'], 'job'))
 
         # Save the invocation information
         if self.opts['ext_job_cache']:

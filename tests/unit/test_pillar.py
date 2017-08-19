@@ -18,6 +18,7 @@ from tests.support.paths import TMP
 
 # Import salt libs
 import salt.pillar
+import salt.utils.stringutils
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -37,8 +38,14 @@ class PillarTestCase(TestCase):
                 'renderer_blacklist': [],
                 'renderer_whitelist': [],
                 'state_top': '',
-                'pillar_roots': ['dev', 'base'],
-                'file_roots': ['dev', 'base'],
+                'pillar_roots': {
+                    'dev': [],
+                    'base': []
+                },
+                'file_roots': {
+                    'dev': [],
+                    'base': []
+                },
                 'extension_modules': '',
                 'pillarenv_from_saltenv': True
             }
@@ -207,7 +214,7 @@ base:
         - ssh.minion
         - generic.minion
 '''.format(nodegroup_order=nodegroup_order, glob_order=glob_order)
-        self.top_file.write(salt.utils.to_bytes(s))
+        self.top_file.write(salt.utils.stringutils.to_bytes(s))
         self.top_file.flush()
         self.ssh_file = tempfile.NamedTemporaryFile(dir=TMP)
         self.ssh_file.write(b'''

@@ -150,6 +150,22 @@ starts at the root of the state tree or pillar.
 .. _`macro`: http://jinja.pocoo.org/docs/templates/#macros
 .. _`whitespace control`: http://jinja.pocoo.org/docs/templates/#whitespace-control
 
+Errors
+======
+
+Saltstack allows to raise custom errors using the ``raise`` jinja function.
+
+.. code-block:: jinja
+
+    {{ raise('Custom Error') }}
+
+When rendering the template containing the above statement, a ``TemplateError``
+exception is raised, causing the rendering to fail with the following message:
+
+.. code-block:: text
+
+    TemplateError: Custom Error
+
 Filters
 =======
 
@@ -812,12 +828,14 @@ Returns:
   08.03.2017 17:00
 
 
-.. jinja_ref:: str_to_num
+.. jinja_ref:: to_num
 
-``str_to_num``
---------------
+``to_num``
+----------
 
 .. versionadded:: 2017.7.0
+.. versionadded:: Oxygen
+    Renamed from ``str_to_num`` to ``to_num``.
 
 Converts a string to its numerical value.
 
@@ -825,7 +843,7 @@ Example:
 
 .. code-block:: jinja
 
-  {{ '5' | str_to_num }}
+  {{ '5' | to_num }}
 
 Returns:
 
@@ -901,10 +919,10 @@ Returns:
   {'a': 'b'}
 
 
-.. jinja_ref:: rand_str
+.. jinja_ref:: random_hash
 
-``rand_str``
-------------
+``random_hash``
+---------------
 
 .. versionadded:: 2017.7.0
 .. versionadded:: Oxygen
@@ -921,8 +939,8 @@ Example:
 .. code-block:: jinja
 
   {% set num_range = 99999999 %}
-  {{ num_range | rand_str }}
-  {{ num_range | rand_str('sha512') }}
+  {{ num_range | random_hash }}
+  {{ num_range | random_hash('sha512') }}
 
 Returns:
 
@@ -1524,7 +1542,75 @@ Returns:
 
   /usr/local/salt/virtualenv/bin/salt-master
 
-.. jinja_ref:: jinja-in-files
+
+Tests
+=====
+
+Saltstack extends `builtin tests`_ with these custom tests:
+
+.. _`builtin tests`: http://jinja.pocoo.org/docs/templates/#builtin-tests
+
+.. jinja_ref:: equalto
+
+``equalto``
+-----------
+
+Tests the equality between two values.
+
+Can be used in an ``if`` statement directly:
+
+.. code-block:: jinja
+
+    {% if 1 is equalto(1) %}
+        < statements >
+    {% endif %}
+
+If clause evaluates to ``True``
+
+or with the ``selectattr`` filter:
+
+.. code-block:: jinja
+
+    {{ [{'value': 1}, {'value': 2} , {'value': 3}] | selectattr('value', 'equalto', 3) | list }}
+
+Returns:
+
+.. code-block:: python
+
+    [{'value': 3}]
+
+.. jinja_ref:: match
+
+``match``
+---------
+
+Tests that a string matches the regex passed as an argument.
+
+Can be used in a ``if`` statement directly:
+
+.. code-block:: jinja
+
+    {% if 'a' is match('[a-b]') %}
+        < statements >
+    {% endif %}
+
+If clause evaluates to ``True``
+
+or with the ``selectattr`` filter:
+
+.. code-block:: jinja
+
+    {{ [{'value': 'a'}, {'value': 'b'}, {'value': 'c'}] | selectattr('value', 'match', '[b-e]') | list }}
+
+Returns:
+
+.. code-block:: python
+
+    [{'value': 'b'}, {'value': 'c'}]
+
+
+Test supports additional optional arguments: ``ignorecase``, ``multiline``
+
 
 Jinja in Files
 ==============
@@ -1664,6 +1750,23 @@ Will insert the following message in the minion logs:
     2017-02-01 01:24:40,728 [salt.module.logmod][ERROR   ][3779] testing jinja logging
 
 .. jinja_ref:: custom-execution-modules
+
+Python Methods
+====================
+
+A powerful feature of jinja that is only hinted at in the official jinja
+documentation is that you can use the native python methods of the
+variable type. Here is the python documentation for `string methods`_.
+
+.. code-block:: jinja
+
+  {% set hostname,domain = grains.id.partition('.')[::2] %}{{ hostname }}
+
+.. code-block:: jinja
+
+  {% set strings = grains.id.split('-') %}{{ strings[0] }}
+
+.. _`string methods`: https://docs.python.org/2/library/stdtypes.html#string-methods
 
 Custom Execution Modules
 ========================

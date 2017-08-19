@@ -29,13 +29,17 @@ import salt.config
 import salt.payload
 import salt.state
 import salt.utils
+import salt.utils.event
+import salt.utils.files
 import salt.utils.jid
+import salt.utils.platform
 import salt.utils.url
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.runners.state import orchestrate as _orchestrate
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 __proxyenabled__ = ['*']
 
@@ -393,7 +397,7 @@ def template(tem, queue=False, **kwargs):
         salt '*' state.template '<Path to template on the minion>'
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -406,10 +410,15 @@ def template(tem, queue=False, **kwargs):
         return conflict
 
     opts = _get_opts(**kwargs)
-
-    st_ = salt.state.HighState(opts,
-                               context=__context__,
-                               initial_pillar=_get_initial_pillar(opts))
+    try:
+        st_ = salt.state.HighState(opts,
+                                   context=__context__,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   context=__context__,
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -623,10 +632,10 @@ def request(mods=None,
         })
     cumask = os.umask(0o77)
     try:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # Make sure cache file isn't read-only
             __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-        with salt.utils.fopen(notify_path, 'w+b') as fp_:
+        with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
             serial.dump(req, fp_)
     except (IOError, OSError):
         msg = 'Unable to write state request file {0}. Check permission.'
@@ -650,7 +659,7 @@ def check_request(name=None):
     notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
     serial = salt.payload.Serial(__opts__)
     if os.path.isfile(notify_path):
-        with salt.utils.fopen(notify_path, 'rb') as fp_:
+        with salt.utils.files.fopen(notify_path, 'rb') as fp_:
             req = serial.load(fp_)
         if name:
             return req[name]
@@ -687,10 +696,10 @@ def clear_request(name=None):
             return False
         cumask = os.umask(0o77)
         try:
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Make sure cache file isn't read-only
                 __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-            with salt.utils.fopen(notify_path, 'w+b') as fp_:
+            with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
                 serial.dump(req, fp_)
         except (IOError, OSError):
             msg = 'Unable to write state request file {0}. Check permission.'
@@ -830,7 +839,7 @@ def highstate(test=None, queue=False, **kwargs):
     opts['test'] = _get_test_value(test, **kwargs)
 
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -997,7 +1006,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     '''
     concurrent = kwargs.get('concurrent', False)
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -1081,7 +1090,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     umask = os.umask(0o77)
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
-            with salt.utils.fopen(cfn, 'rb') as fp_:
+            with salt.utils.files.fopen(cfn, 'rb') as fp_:
                 high_ = serial.load(fp_)
                 return st_.state.call_high(high_, orchestration_jid)
     os.umask(umask)
@@ -1099,7 +1108,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
             return errors
 
         if exclude:
-            if isinstance(exclude, str):
+            if isinstance(exclude, six.string_types):
                 exclude = exclude.split(',')
             if '__exclude__' in high_:
                 high_['__exclude__'].extend(exclude)
@@ -1114,10 +1123,10 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
     cumask = os.umask(0o77)
     try:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # Make sure cache file isn't read-only
             __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
-        with salt.utils.fopen(cache_file, 'w+b') as fp_:
+        with salt.utils.files.fopen(cache_file, 'w+b') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):
         msg = 'Unable to write to SLS cache file {0}. Check permission.'
@@ -1128,7 +1137,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     __opts__['test'] = orig_test
 
     try:
-        with salt.utils.fopen(cfn, 'w+b') as fp_:
+        with salt.utils.files.fopen(cfn, 'w+b') as fp_:
             try:
                 serial.dump(high_, fp_)
             except TypeError:
@@ -1191,12 +1200,19 @@ def top(topfn, test=None, queue=False, **kwargs):
             'Pillar data must be formatted as a dictionary, unless pillar_enc '
             'is specified.'
         )
-
-    st_ = salt.state.HighState(opts,
-                               pillar_override,
-                               pillar_enc=pillar_enc,
-                               context=__context__,
-                               initial_pillar=_get_initial_pillar(opts))
+    try:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   context=__context__,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   context=__context__,
+                                   initial_pillar=_get_initial_pillar(opts))
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
@@ -1253,11 +1269,17 @@ def show_highstate(queue=False, **kwargs):
         )
 
     opts = _get_opts(**kwargs)
-
-    st_ = salt.state.HighState(opts,
-                               pillar_override,
-                               pillar_enc=pillar_enc,
-                               initial_pillar=_get_initial_pillar(opts))
+    try:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1289,9 +1311,13 @@ def show_lowstate(queue=False, **kwargs):
         return conflict
 
     opts = _get_opts(**kwargs)
-
-    st_ = salt.state.HighState(opts,
-                               initial_pillar=_get_initial_pillar(opts))
+    try:
+        st_ = salt.state.HighState(opts,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1452,7 +1478,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
         salt '*' state.show_low_sls foo saltenv=dev
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -1471,8 +1497,12 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
     # the 'base' saltenv if none is configured and none was passed.
     if opts['environment'] is None:
         opts['environment'] = 'base'
-
-    st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
+    try:
+        st_ = salt.state.HighState(opts,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1525,7 +1555,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
         salt '*' state.show_sls core,edit.vim dev
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -1556,10 +1586,17 @@ def show_sls(mods, test=None, queue=False, **kwargs):
             'is specified.'
         )
 
-    st_ = salt.state.HighState(opts,
-                               pillar_override,
-                               pillar_enc=pillar_enc,
-                               initial_pillar=_get_initial_pillar(opts))
+    try:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1594,7 +1631,7 @@ def show_top(queue=False, **kwargs):
         salt '*' state.show_top
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -1607,8 +1644,12 @@ def show_top(queue=False, **kwargs):
         return conflict
 
     opts = _get_opts(**kwargs)
-
-    st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
+    try:
+        st_ = salt.state.HighState(opts,
+                                   proxy=__proxy__,
+                                   initial_pillar=_get_initial_pillar(opts))
+    except NameError:
+        st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1685,7 +1726,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
 
     st_._mod_init(kwargs)
     snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
-    ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
+    ret = {u'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
@@ -1753,7 +1794,7 @@ def pkg(pkg_path,
     s_pkg.extractall(root)
     s_pkg.close()
     lowstate_json = os.path.join(root, 'lowstate.json')
-    with salt.utils.fopen(lowstate_json, 'r') as fp_:
+    with salt.utils.files.fopen(lowstate_json, 'r') as fp_:
         lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
     # Check for errors in the lowstate
     for chunk in lowstate:
@@ -1761,11 +1802,19 @@ def pkg(pkg_path,
             return lowstate
     pillar_json = os.path.join(root, 'pillar.json')
     if os.path.isfile(pillar_json):
-        with salt.utils.fopen(pillar_json, 'r') as fp_:
+        with salt.utils.files.fopen(pillar_json, 'r') as fp_:
             pillar_override = json.load(fp_)
     else:
         pillar_override = None
+
+    roster_grains_json = os.path.join(root, 'roster_grains.json')
+    if os.path.isfile(roster_grains_json):
+        with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
+            roster_grains = json.load(fp_, object_hook=salt.utils.decode_dict)
+
     popts = _get_opts(**kwargs)
+    if os.path.isfile(roster_grains_json):
+        popts['grains'] = roster_grains
     popts['fileclient'] = 'local'
     popts['file_roots'] = {}
     popts['test'] = _get_test_value(test, **kwargs)

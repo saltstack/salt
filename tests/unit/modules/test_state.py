@@ -21,6 +21,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils
 import salt.utils.odict
+import salt.utils.platform
 import salt.modules.state as state
 from salt.exceptions import SaltInvocationError
 
@@ -801,10 +802,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.state.salt.payload', MockSerial):
             mock = MagicMock(side_effect=[True, True, False])
             with patch.object(os.path, 'isfile', mock):
-                with patch('salt.utils.fopen', mock_open()):
+                with patch('salt.utils.files.fopen', mock_open()):
                     self.assertDictEqual(state.check_request(), {'A': 'B'})
 
-                with patch('salt.utils.fopen', mock_open()):
+                with patch('salt.utils.files.fopen', mock_open()):
                     self.assertEqual(state.check_request("A"), 'B')
 
                 self.assertDictEqual(state.check_request(), {})
@@ -824,9 +825,9 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(state, 'check_request', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'umask', mock):
-                        with patch.object(salt.utils, 'is_windows', mock):
+                        with patch.object(salt.utils.platform, 'is_windows', mock):
                             with patch.dict(state.__salt__, {'cmd.run': mock}):
-                                with patch('salt.utils.fopen', mock_open()):
+                                with patch('salt.utils.files.fopen', mock_open()):
                                     mock = MagicMock(return_value=True)
                                     with patch.object(os, 'umask', mock):
                                         self.assertTrue(state.request("A"))
@@ -893,7 +894,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                       'isfile',
                                                       mock):
                                         with patch(
-                                                   'salt.utils.fopen',
+                                                   'salt.utils.files.fopen',
                                                    mock_open()):
                                             self.assertTrue(
                                                             state.sls(arg,
@@ -935,13 +936,13 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(os.path, 'join', mock):
             with patch.object(os, 'umask', mock):
                 mock = MagicMock(return_value=False)
-                with patch.object(salt.utils, 'is_windows', mock):
+                with patch.object(salt.utils.platform, 'is_windows', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'umask', mock):
                         with patch.object(state, '_set_retcode', mock):
                             with patch.dict(state.__opts__,
                                             {"test": True}):
-                                with patch('salt.utils.fopen', mock_open()):
+                                with patch('salt.utils.files.fopen', mock_open()):
                                     self.assertTrue(state.sls("core,edit"
                                                               ".vim dev",
                                                               None,
@@ -952,7 +953,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         '''
             Test to execute a packaged state run
         '''
-        mock = MagicMock(side_effect=[False, True, True, True, True, True])
+        mock = MagicMock(side_effect=[False, True, True, True, True, True, True, True])
         with patch.object(os.path, 'isfile', mock), \
                 patch('salt.modules.state.tarfile', MockTarFile), \
                 patch('salt.modules.state.json', MockJson()):
@@ -968,7 +969,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                 MockTarFile.path = ""
                 MockJson.flag = True
-                with patch('salt.utils.fopen', mock_open()):
+                with patch('salt.utils.files.fopen', mock_open()):
                     self.assertListEqual(state.pkg("/tmp/state_pkg.tgz",
                                                    0,
                                                    "md5"),
@@ -976,6 +977,6 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                 MockTarFile.path = ""
                 MockJson.flag = False
-                with patch('salt.utils.fopen', mock_open()):
+                with patch('salt.utils.files.fopen', mock_open()):
                     self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
                                               0, "md5"))

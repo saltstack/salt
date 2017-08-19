@@ -55,7 +55,7 @@ import logging
 
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import boto3
     HAS_BOTO3 = True
@@ -97,7 +97,7 @@ def _get_conn(key=None,
     '''
     client = None
     if profile:
-        if isinstance(profile, str):
+        if isinstance(profile, six.string_types):
             if profile in __pillar__:
                 profile = __pillar__[profile]
             elif profile in __opts__:

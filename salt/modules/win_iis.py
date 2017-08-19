@@ -18,10 +18,10 @@ import os
 import decimal
 
 # Import salt libs
+import salt.utils.platform
 from salt.ext.six.moves import range
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext import six
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def __virtual__():
     Load only on Windows
     Requires PowerShell and the WebAdministration module
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Only available on Windows systems'
 
     powershell_info = __salt__['cmd.shell_info']('powershell', True)

@@ -42,7 +42,7 @@ import time
 from functools import cmp_to_key
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
@@ -50,8 +50,12 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.exceptions import (CommandExecutionError,
                              SaltInvocationError,
                              SaltRenderError)
-import salt.utils
+import salt.utils  # Can be removed once is_true, get_hash, compare_dicts are moved
+import salt.utils.args
+import salt.utils.files
 import salt.utils.pkg
+import salt.utils.platform
+import salt.utils.versions
 import salt.syspaths
 import salt.payload
 from salt.exceptions import MinionError
@@ -67,7 +71,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return __virtualname__
     return (False, "Module win_pkg: module only works on Windows systems")
 
@@ -146,7 +150,7 @@ def latest_version(*names, **kwargs):
 
             # check, whether latest available version
             # is newer than latest installed version
-            if salt.utils.compare_versions(ver1=str(latest_available),
+            if salt.utils.versions.compare(ver1=str(latest_available),
                                            oper='>',
                                            ver2=str(latest_installed)):
                 log.debug('Upgrade of {0} from {1} to {2} '
@@ -762,7 +766,7 @@ def genrepo(**kwargs):
                     )
     serial = salt.payload.Serial(__opts__)
     mode = 'w+' if six.PY2 else 'wb+'
-    with salt.utils.fopen(repo_details.winrepo_file, mode) as repo_cache:
+    with salt.utils.files.fopen(repo_details.winrepo_file, mode) as repo_cache:
         repo_cache.write(serial.dumps(ret))
     # save reading it back again. ! this breaks due to utf8 issues
     #__context__['winrepo.data'] = ret
@@ -1297,6 +1301,17 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         # Check Use Scheduler Option
         if pkginfo[version_num].get('use_scheduler', False):
 
+            # Build Scheduled Task Parameters
+            if use_msiexec:
+                cmd = msiexec
+                arguments = ['/i', cached_pkg]
+                if pkginfo['version_num'].get('allusers', True):
+                    arguments.append('ALLUSERS="1"')
+                arguments.extend(salt.utils.args.shlex_split(install_flags))
+            else:
+                cmd = cached_pkg
+                arguments = salt.utils.args.shlex_split(install_flags)
+
             # Create Scheduled Task
             __salt__['task.create_task'](name='update-salt-software',
                                          user_name='System',
@@ -1617,10 +1632,10 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 if use_msiexec:
                     cmd = msiexec
                     arguments = ['/x']
-                    arguments.extend(salt.utils.shlex_split(uninstall_flags))
+                    arguments.extend(salt.utils.args.shlex_split(uninstall_flags))
                 else:
                     cmd = expanded_cached_pkg
-                    arguments = salt.utils.shlex_split(uninstall_flags)
+                    arguments = salt.utils.args.shlex_split(uninstall_flags)
 
                 # Create Scheduled Task
                 __salt__['task.create_task'](name='update-salt-software',
@@ -1647,7 +1662,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                     cmd.extend([msiexec, '/x', expanded_cached_pkg])
                 else:
                     cmd.append(expanded_cached_pkg)
-                cmd.extend(salt.utils.shlex_split(uninstall_flags))
+                cmd.extend(salt.utils.args.shlex_split(uninstall_flags))
                 # Launch the command
                 result = __salt__['cmd.run_all'](
                         cmd,
@@ -1761,7 +1776,7 @@ def get_repo_data(saltenv='base'):
 
     try:
         serial = salt.payload.Serial(__opts__)
-        with salt.utils.fopen(repo_details.winrepo_file, 'rb') as repofile:
+        with salt.utils.files.fopen(repo_details.winrepo_file, 'rb') as repofile:
             try:
                 repodata = serial.loads(repofile.read()) or {}
                 __context__['winrepo.data'] = repodata
@@ -1835,4 +1850,4 @@ def compare_versions(ver1='', oper='==', ver2=''):
 
         salt '*' pkg.compare_versions 1.2 >= 1.3
     '''
-    return salt.utils.compare_versions(ver1, oper, ver2)
+    return salt.utils.versions.compare(ver1, oper, ver2)

@@ -10,7 +10,7 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -201,7 +201,7 @@ def mod_list(only_persist=False):
         conf = _get_modules_conf()
         if os.path.exists(conf):
             try:
-                with salt.utils.fopen(conf, 'r') as modules_file:
+                with salt.utils.files.fopen(conf, 'r') as modules_file:
                     for line in modules_file:
                         line = line.strip()
                         mod_name = _strip_module_name(line)

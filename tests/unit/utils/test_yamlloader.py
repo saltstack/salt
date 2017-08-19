@@ -10,7 +10,7 @@ import textwrap
 # Import Salt Libs
 from yaml.constructor import ConstructorError
 from salt.utils.yamlloader import SaltYamlSafeLoader
-import salt.utils
+import salt.utils.files
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -29,8 +29,8 @@ class YamlLoaderTestCase(TestCase):
         Takes a YAML string, puts it into a mock file, passes that to the YAML
         SaltYamlSafeLoader and then returns the rendered/parsed YAML data
         '''
-        with patch('salt.utils.fopen', mock_open(read_data=data)) as mocked_file:
-            with salt.utils.fopen(mocked_file) as mocked_stream:
+        with patch('salt.utils.files.fopen', mock_open(read_data=data)) as mocked_file:
+            with salt.utils.files.fopen(mocked_file) as mocked_stream:
                 return SaltYamlSafeLoader(mocked_stream).get_data()
 
     def test_yaml_basics(self):

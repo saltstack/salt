@@ -8,14 +8,14 @@ Generate chronos proxy minion grains.
 from __future__ import absolute_import
 
 
-import salt.utils
 import salt.utils.http
+import salt.utils.platform
 __proxyenabled__ = ['chronos']
 __virtualname__ = 'chronos'
 
 
 def __virtual__():
-    if not salt.utils.is_proxy() or 'proxy' not in __opts__:
+    if not salt.utils.platform.is_proxy() or 'proxy' not in __opts__:
         return False
     else:
         return __virtualname__

@@ -6,6 +6,7 @@ Render the pillar data
 # Import python libs
 from __future__ import absolute_import
 import copy
+import fnmatch
 import os
 import collections
 import logging
@@ -29,7 +30,7 @@ from salt.utils.odict import OrderedDict
 from salt.version import __version__
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -276,6 +277,7 @@ class Pillar(object):
         self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, pillarenv=pillarenv)
         self.saltenv = saltenv
         self.client = salt.fileclient.get_file_client(self.opts, True)
+        self.avail = self.__gather_avail()
 
         if opts.get('file_client', '') == 'local':
             opts['grains'] = grains
@@ -343,6 +345,15 @@ class Pillar(object):
             )
             return False
         return True
+
+    def __gather_avail(self):
+        '''
+        Gather the lists of available sls data from the master
+        '''
+        avail = {}
+        for saltenv in self._get_envs():
+            avail[saltenv] = self.client.list_states(saltenv)
+        return avail
 
     def __gen_opts(self, opts_in, grains, saltenv=None, ext=None, pillarenv=None):
         '''
@@ -556,7 +567,7 @@ class Pillar(object):
             merged_tops = self.merge_tops(tops)
         except TypeError as err:
             merged_tops = OrderedDict()
-            errors.append('Error encountered while render pillar top file.')
+            errors.append('Error encountered while rendering pillar top file.')
         return merged_tops, errors
 
     def top_matches(self, top):
@@ -707,8 +718,23 @@ class Pillar(object):
         if errors is None:
             errors = []
         for saltenv, pstates in six.iteritems(matches):
+            pstatefiles = []
             mods = set()
-            for sls in pstates:
+            for sls_match in pstates:
+                matched_pstates = []
+                try:
+                    matched_pstates = fnmatch.filter(self.avail[saltenv], sls_match)
+                except KeyError:
+                    errors.extend(
+                        ['No matching pillar environment for environment '
+                         '\'{0}\' found'.format(saltenv)]
+                    )
+                if matched_pstates:
+                    pstatefiles.extend(matched_pstates)
+                else:
+                    pstatefiles.append(sls_match)
+
+            for sls in pstatefiles:
                 pstate, mods, err = self.render_pstate(sls, saltenv, mods)
 
                 if err:

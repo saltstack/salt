@@ -5,7 +5,7 @@ Template render systems
 
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import codecs
 import os
 import logging
@@ -13,10 +13,10 @@ import tempfile
 import traceback
 import sys
 
-# Import third party libs
+# Import 3rd-party libs
 import jinja2
 import jinja2.ext
-import salt.ext.six as six
+from salt.ext import six
 
 if sys.version_info[:2] >= (3, 5):
     import importlib.machinery  # pylint: disable=no-name-in-module,import-error
@@ -26,10 +26,11 @@ else:
     import imp
     USE_IMPORTLIB = False
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
 import salt.utils.http
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.yamlencoding
 import salt.utils.locales
 import salt.utils.hashutils
@@ -39,6 +40,7 @@ from salt.exceptions import (
 import salt.utils.jinja
 import salt.utils.network
 from salt.utils.odict import OrderedDict
+from salt.utils.decorators.jinja import JinjaFilter, JinjaTest, JinjaGlobal
 from salt import __path__ as saltpath
 
 log = logging.getLogger(__name__)
@@ -167,7 +169,7 @@ def wrap_tmpl_func(render_str):
             output = render_str(tmplstr, context, tmplpath)
             if six.PY2:
                 output = output.encode(SLS_ENCODING)
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
 
@@ -271,7 +273,7 @@ def _get_jinja_error(trace, context=None):
     if add_log:
         if template_path:
             out = '\n{0}\n'.format(msg.splitlines()[0])
-            with salt.utils.fopen(template_path) as fp_:
+            with salt.utils.files.fopen(template_path) as fp_:
                 template_contents = fp_.read()
             out += salt.utils.get_context(
                 template_contents,
@@ -329,69 +331,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined,
                                        **env_args)
 
-    jinja_env.filters['strftime'] = salt.utils.date_format
-    jinja_env.filters['sequence'] = salt.utils.jinja.ensure_sequence_filter
-    jinja_env.filters['http_query'] = salt.utils.http.query
-    jinja_env.filters['to_bool'] = salt.utils.jinja.to_bool
-    jinja_env.filters['exactly_n_true'] = salt.utils.exactly_n
-    jinja_env.filters['exactly_one_true'] = salt.utils.exactly_one
-    jinja_env.filters['quote'] = salt.utils.jinja.quote
-    jinja_env.filters['regex_search'] = salt.utils.jinja.regex_search
-    jinja_env.filters['regex_match'] = salt.utils.jinja.regex_match
-    jinja_env.filters['regex_replace'] = salt.utils.jinja.regex_replace
-    jinja_env.filters['uuid'] = salt.utils.jinja.uuid_
-    jinja_env.filters['min'] = salt.utils.jinja.lst_min
-    jinja_env.filters['max'] = salt.utils.jinja.lst_max
-    jinja_env.filters['avg'] = salt.utils.jinja.lst_avg
-    jinja_env.filters['union'] = salt.utils.jinja.union
-    jinja_env.filters['intersect'] = salt.utils.jinja.intersect
-    jinja_env.filters['difference'] = salt.utils.jinja.difference
-    jinja_env.filters['symmetric_difference'] = salt.utils.jinja.symmetric_difference
-    jinja_env.filters['md5'] = salt.utils.hashutils.md5_digest
-    jinja_env.filters['sha256'] = salt.utils.hashutils.sha256_digest
-    jinja_env.filters['sha512'] = salt.utils.hashutils.sha512_digest
-    jinja_env.filters['hmac'] = salt.utils.hashutils.hmac_signature
-    jinja_env.filters['is_sorted'] = salt.utils.isorted
-    jinja_env.filters['is_text_file'] = salt.utils.istextfile
-    jinja_env.filters['is_empty_file'] = salt.utils.is_empty
-    jinja_env.filters['is_binary_file'] = salt.utils.is_bin_file
-    jinja_env.filters['file_hashsum'] = salt.utils.get_hash
-    jinja_env.filters['is_hex'] = salt.utils.is_hex
-    jinja_env.filters['path_join'] = salt.utils.path_join
-    jinja_env.filters['dns_check'] = salt.utils.dns_check
-    jinja_env.filters['list_files'] = salt.utils.list_files
-    jinja_env.filters['which'] = salt.utils.which
-    jinja_env.filters['random_str'] = salt.utils.rand_str
-    jinja_env.filters['get_uid'] = salt.utils.get_uid
-    jinja_env.filters['mysql_to_dict'] = salt.utils.mysql_to_dict
-    jinja_env.filters['contains_whitespace'] = salt.utils.contains_whitespace
-    jinja_env.filters['str_to_num'] = salt.utils.str_to_num
-    jinja_env.filters['check_whitelist_blacklist'] = salt.utils.check_whitelist_blacklist
-    jinja_env.filters['mac_str_to_bytes'] = salt.utils.mac_str_to_bytes
-    jinja_env.filters['date_format'] = salt.utils.date_format
-    jinja_env.filters['compare_dicts'] = salt.utils.compare_dicts
-    jinja_env.filters['compare_lists'] = salt.utils.compare_lists
-    jinja_env.filters['json_decode_list'] = salt.utils.decode_list
-    jinja_env.filters['json_decode_dict'] = salt.utils.decode_dict
-    jinja_env.filters['is_list'] = salt.utils.is_list
-    jinja_env.filters['is_iter'] = salt.utils.is_iter
-    jinja_env.filters['to_bytes'] = salt.utils.to_bytes
-    jinja_env.filters['substring_in_list'] = salt.utils.substr_in_list
-    jinja_env.filters['base64_encode'] = salt.utils.hashutils.base64_b64encode
-    jinja_env.filters['base64_decode'] = salt.utils.hashutils.base64_b64decode
-    jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
-    jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
-    jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
-    jinja_env.filters['gen_mac'] = salt.utils.gen_mac
-    jinja_env.filters['is_ip'] = salt.utils.network.is_ip_filter  # check if valid IP address
-    jinja_env.filters['is_ipv4'] = salt.utils.network.is_ipv4_filter  # check if valid IPv4 address
-    jinja_env.filters['is_ipv6'] = salt.utils.network.is_ipv6_filter  # check if valid IPv6 address
-    jinja_env.filters['ipaddr'] = salt.utils.network.ipaddr  # filter IP addresses
-    jinja_env.filters['ipv4'] = salt.utils.network.ipv4  # filter IPv4-only addresses
-    jinja_env.filters['ipv6'] = salt.utils.network.ipv6  # filter IPv6-only addresses
-    jinja_env.filters['ip_host'] = salt.utils.network.ip_host  # return the network interface IP
-    jinja_env.filters['network_hosts'] = salt.utils.network.network_hosts  # return the hosts within a network
-    jinja_env.filters['network_size'] = salt.utils.network.network_size  # return the network size
+    jinja_env.tests.update(JinjaTest.salt_jinja_tests)
+    jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
+    jinja_env.globals.update(JinjaGlobal.salt_jinja_globals)
 
     # globals
     jinja_env.globals['odict'] = OrderedDict
@@ -416,9 +358,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
-        raise SaltRenderError('Jinja syntax error: {0}{1}'.format(exc, out),
-                              line,
-                              tmplstr)
+        raise SaltRenderError(
+            'Jinja syntax error: {0}{1}'.format(exc, out),
+            line,
+            tmplstr)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         out = _get_jinja_error(trace, context=decoded_context)[1]
@@ -586,7 +529,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             return {'result': True,
                     'data': data}
         tgt = salt.utils.files.mkstemp()
-        with salt.utils.fopen(tgt, 'w+') as target:
+        with salt.utils.files.fopen(tgt, 'w+') as target:
             target.write(data)
         return {'result': True,
                 'data': tgt}

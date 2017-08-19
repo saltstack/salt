@@ -19,12 +19,13 @@ from tests.support.paths import TMP_CONF_DIR
 
 # Import salt libs
 import salt.config
-import salt.ext.six as six
+from salt.ext import six
 import salt.loader
-import salt.utils
+import salt.utils.files
+from salt.utils import get_context
 from salt.exceptions import SaltRenderError
 from salt.ext.six.moves import builtins
-from salt.utils import get_context
+from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import (
     SaltCacheLoader,
     SerializerExtension,
@@ -164,8 +165,7 @@ class TestGetTemplate(TestCase):
                 os.path.dirname(os.path.abspath(__file__)),
                 'extmods'),
         }
-        self.local_salt = {
-        }
+        self.local_salt = {}
 
     def test_fallback(self):
         '''
@@ -173,10 +173,14 @@ class TestGetTemplate(TestCase):
         if the file is not contained in the searchpath
         '''
         fn_ = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_simple')
-        with salt.utils.fopen(fn_) as fp_:
+        with salt.utils.files.fopen(fn_) as fp_:
             out = render_jinja_tmpl(
                 fp_.read(),
-                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+                dict(
+                    opts=self.local_opts,
+                    saltenv='test',
+                    salt=self.local_salt
+                ))
         self.assertEqual(out, 'world\n')
 
     def test_fallback_noloader(self):
@@ -185,10 +189,14 @@ class TestGetTemplate(TestCase):
         if the file is not contained in the searchpath
         '''
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
-        with salt.utils.fopen(filename) as fp_:
+        with salt.utils.files.fopen(filename) as fp_:
             out = render_jinja_tmpl(
                 fp_.read(),
-                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+                dict(
+                    opts=self.local_opts,
+                    saltenv='test',
+                    salt=self.local_salt
+                ))
         self.assertEqual(out, 'Hey world !a b !\n')
 
     def test_saltenv(self):
@@ -201,7 +209,7 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
                     fp_.read(),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
@@ -227,7 +235,7 @@ class TestGetTemplate(TestCase):
                                 'files', 'test', 'hello_import_generalerror')
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename) as fp_:
                 self.assertRaisesRegex(
                     SaltRenderError,
                     expected,
@@ -251,7 +259,7 @@ class TestGetTemplate(TestCase):
                                 'files', 'test', 'hello_import_undefined')
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename) as fp_:
                 self.assertRaisesRegex(
                     SaltRenderError,
                     expected,
@@ -275,7 +283,7 @@ class TestGetTemplate(TestCase):
                                 'files', 'test', 'hello_import_error')
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename) as fp_:
                 self.assertRaisesRegex(
                     SaltRenderError,
                     expected,
@@ -287,7 +295,7 @@ class TestGetTemplate(TestCase):
         fc = MockFileClient()
         with patch.object(SaltCacheLoader, 'file_client', MagicMock(return_value=fc)):
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
                     fp_.read(),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
@@ -298,7 +306,7 @@ class TestGetTemplate(TestCase):
             self.assertEqual(fc.requests[0]['path'], 'salt://macro')
 
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
-            with salt.utils.fopen(filename) as fp_:
+            with salt.utils.files.fopen(filename) as fp_:
                 out = render_jinja_tmpl(
                     fp_.read(),
                     dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
@@ -310,8 +318,13 @@ class TestGetTemplate(TestCase):
 
     @skipIf(HAS_TIMELIB is False, 'The `timelib` library is not installed.')
     def test_strftime(self):
-        response = render_jinja_tmpl('{{ "2002/12/25"|strftime }}',
-                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        response = render_jinja_tmpl(
+            '{{ "2002/12/25"|strftime }}',
+            dict(
+                opts=self.local_opts,
+                saltenv='test',
+                salt=self.local_salt
+            ))
         self.assertEqual(response, '2002-12-25')
 
         objects = (
@@ -322,22 +335,45 @@ class TestGetTemplate(TestCase):
         )
 
         for object in objects:
-            response = render_jinja_tmpl('{{ object|strftime }}',
-                    dict(object=object, opts=self.local_opts, saltenv='test', salt=self.local_salt))
+            response = render_jinja_tmpl(
+                '{{ object|strftime }}',
+                dict(
+                    object=object,
+                    opts=self.local_opts,
+                    saltenv='test',
+                    salt=self.local_salt
+                ))
             self.assertEqual(response, '2002-12-25')
 
-            response = render_jinja_tmpl('{{ object|strftime("%b %d, %Y") }}',
-                    dict(object=object, opts=self.local_opts, saltenv='test', salt=self.local_salt))
+            response = render_jinja_tmpl(
+                '{{ object|strftime("%b %d, %Y") }}',
+                dict(
+                    object=object,
+                    opts=self.local_opts,
+                    saltenv='test',
+                    salt=self.local_salt
+                ))
             self.assertEqual(response, 'Dec 25, 2002')
 
-            response = render_jinja_tmpl('{{ object|strftime("%y") }}',
-                    dict(object=object, opts=self.local_opts, saltenv='test', salt=self.local_salt))
+            response = render_jinja_tmpl(
+                '{{ object|strftime("%y") }}',
+                dict(
+                    object=object,
+                    opts=self.local_opts,
+                    saltenv='test',
+                    salt=self.local_salt
+                ))
             self.assertEqual(response, '02')
 
     def test_non_ascii(self):
         fn = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
-        out = JINJA(fn, opts=self.local_opts, saltenv='test')
-        with salt.utils.fopen(out['data']) as fp:
+        out = JINJA(
+            fn,
+            opts=self.local_opts,
+            saltenv='test',
+            salt=self.local_salt
+        )
+        with salt.utils.files.fopen(out['data']) as fp:
             result = fp.read()
             if six.PY2:
                 result = result.decode('utf-8')
@@ -477,6 +513,7 @@ class TestCustomExtensions(TestCase):
     def test_regex_escape(self):
         dataset = 'foo?:.*/\\bar'
         env = Environment(extensions=[SerializerExtension])
+        env.filters.update(JinjaFilter.salt_jinja_filters)
         rendered = env.from_string('{{ dataset|regex_escape }}').render(dataset=dataset)
         self.assertEqual(rendered, re.escape(dataset))
 
@@ -484,6 +521,7 @@ class TestCustomExtensions(TestCase):
         dataset = 'foo'
         unique = set(dataset)
         env = Environment(extensions=[SerializerExtension])
+        env.filters.update(JinjaFilter.salt_jinja_filters)
         if six.PY3:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'{}").split("', '")
             self.assertEqual(sorted(rendered), sorted(list(unique)))
@@ -495,6 +533,7 @@ class TestCustomExtensions(TestCase):
         dataset = ('foo', 'foo', 'bar')
         unique = set(dataset)
         env = Environment(extensions=[SerializerExtension])
+        env.filters.update(JinjaFilter.salt_jinja_filters)
         if six.PY3:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'{}").split("', '")
             self.assertEqual(sorted(rendered), sorted(list(unique)))
@@ -506,6 +545,7 @@ class TestCustomExtensions(TestCase):
         dataset = ['foo', 'foo', 'bar']
         unique = ['foo', 'bar']
         env = Environment(extensions=[SerializerExtension])
+        env.filters.update(JinjaFilter.salt_jinja_filters)
         if six.PY3:
             rendered = env.from_string('{{ dataset|unique }}').render(dataset=dataset).strip("'[]").split("', '")
             self.assertEqual(rendered, unique)

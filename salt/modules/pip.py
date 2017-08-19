@@ -82,12 +82,15 @@ import re
 import shutil
 import logging
 import sys
-
-# Import salt libs
-import salt.utils
 import tempfile
+
+# Import Salt libs
+import salt.utils  # Can be removed once compare_dicts is moved
+import salt.utils.files
 import salt.utils.locales
+import salt.utils.platform
 import salt.utils.url
+import salt.utils.versions
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -124,7 +127,7 @@ def _get_pip_bin(bin_env):
              'pip{0}'.format(sys.version_info[0]),
              'pip', 'pip-python']
         )
-        if salt.utils.is_windows() and six.PY2:
+        if salt.utils.platform.is_windows() and six.PY2:
             which_result.encode('string-escape')
         if which_result is None:
             raise CommandNotFoundError('Could not find a `pip` binary')
@@ -132,7 +135,7 @@ def _get_pip_bin(bin_env):
 
     # try to get pip bin from virtualenv, bin_env
     if os.path.isdir(bin_env):
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             if six.PY2:
                 pip_bin = os.path.join(
                     bin_env, 'Scripts', 'pip.exe').encode('string-escape')
@@ -191,7 +194,7 @@ def _get_env_activate(bin_env):
         raise CommandNotFoundError('Could not find a `activate` binary')
 
     if os.path.isdir(bin_env):
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             activate_bin = os.path.join(bin_env, 'Scripts', 'activate.bat')
         else:
             activate_bin = os.path.join(bin_env, 'bin', 'activate')
@@ -204,7 +207,7 @@ def _find_req(link):
 
     logger.info('_find_req -- link = %s', str(link))
 
-    with salt.utils.fopen(link) as fh_link:
+    with salt.utils.files.fopen(link) as fh_link:
         child_links = rex_pip_chain_read.findall(fh_link.read())
 
     base_path = os.path.dirname(link)
@@ -575,7 +578,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if use_wheel:
         min_version = '1.4'
         cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+        if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             logger.error(
                 ('The --use-wheel option is only supported in pip {0} and '
@@ -588,7 +591,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if no_use_wheel:
         min_version = '1.4'
         cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+        if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             logger.error(
                 ('The --no-use-wheel option is only supported in pip {0} and '
@@ -661,7 +664,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if mirrors:
         # https://github.com/pypa/pip/pull/2641/files#diff-3ef137fb9ffdd400f117a565cd94c188L216
         pip_version = version(pip_bin)
-        if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='7.0.0'):
+        if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='7.0.0'):
             raise CommandExecutionError(
                     'pip >= 7.0.0 does not support mirror argument:'
                     ' use index_url and/or extra_index_url instead'
@@ -688,7 +691,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         cmd.extend(['--download', download])
 
     if download_cache or cache_dir:
-        cmd.extend(['--cache-dir' if salt.utils.compare_versions(
+        cmd.extend(['--cache-dir' if salt.utils.versions.compare(
             ver1=version(bin_env), oper='>=', ver2='6.0'
         ) else '--download-cache', download_cache or cache_dir])
 
@@ -729,7 +732,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         pip_version = version(pip_bin)
 
         # From pip v1.4 the --pre flag is available
-        if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='1.4'):
+        if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='1.4'):
             cmd.append('--pre')
 
     if cert:
@@ -936,7 +939,7 @@ def uninstall(pkgs=None,
             pkgs = [p.strip() for p in pkgs.split(',')]
         if requirements:
             for requirement in requirements:
-                with salt.utils.fopen(requirement) as rq_:
+                with salt.utils.files.fopen(requirement) as rq_:
                     for req in rq_:
                         try:
                             req_pkg, _ = req.split('==')
@@ -1005,7 +1008,7 @@ def freeze(bin_env=None,
     # Include pip, setuptools, distribute, wheel
     min_version = '8.0.3'
     cur_version = version(bin_env)
-    if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+    if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
                                        ver2=min_version):
         logger.warning(
             ('The version of pip installed is {0}, which is older than {1}. '
@@ -1105,7 +1108,7 @@ def version(bin_env=None):
     '''
     pip_bin = _get_pip_bin(bin_env)
 
-    output = __salt__['cmd.run'](
+    output = __salt__['cmd.run_stdout'](
         '{0} --version'.format(pip_bin), python_shell=False)
     try:
         return re.match(r'^pip (\S+)', output).group(1)

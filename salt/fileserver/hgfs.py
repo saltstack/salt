@@ -49,7 +49,7 @@ VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
 PER_REMOTE_OVERRIDES = ('base', 'branch_method', 'mountpoint', 'root')
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 try:
     import hglib
@@ -60,7 +60,10 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
+import salt.utils.gzip_util
 import salt.utils.url
+import salt.utils.versions
 import salt.fileserver
 from salt.utils.event import tagify
 
@@ -295,7 +298,7 @@ def init():
         if not refs:
             # Write an hgrc defining the remote URL
             hgconfpath = os.path.join(rp_, '.hg', 'hgrc')
-            with salt.utils.fopen(hgconfpath, 'w+') as hgconfig:
+            with salt.utils.files.fopen(hgconfpath, 'w+') as hgconfig:
                 hgconfig.write('[paths]\n')
                 hgconfig.write('default = {0}\n'.format(repo_url))
 
@@ -314,7 +317,7 @@ def init():
     if new_remote:
         remote_map = os.path.join(__opts__['cachedir'], 'hgfs/remote_map.txt')
         try:
-            with salt.utils.fopen(remote_map, 'w+') as fp_:
+            with salt.utils.files.fopen(remote_map, 'w+') as fp_:
                 timestamp = datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
                 fp_.write('# hgfs_remote map as of {0}\n'.format(timestamp))
                 for repo in repos:
@@ -453,7 +456,7 @@ def lock(remote=None):
         failed = []
         if not os.path.exists(repo['lockfile']):
             try:
-                with salt.utils.fopen(repo['lockfile'], 'w+') as fp_:
+                with salt.utils.files.fopen(repo['lockfile'], 'w+') as fp_:
                     fp_.write('')
             except (IOError, OSError) as exc:
                 msg = ('Unable to set update lock for {0} ({1}): {2} '
@@ -538,7 +541,7 @@ def update():
             os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
         serial = salt.payload.Serial(__opts__)
-        with salt.utils.fopen(env_cache, 'wb+') as fp_:
+        with salt.utils.files.fopen(env_cache, 'wb+') as fp_:
             fp_.write(serial.dumps(new_envs))
             log.trace('Wrote env cache data to {0}'.format(env_cache))
 
@@ -566,10 +569,30 @@ def _env_is_exposed(env):
     Check if an environment is exposed by comparing it against a whitelist and
     blacklist.
     '''
+    if __opts__['hgfs_env_whitelist']:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The hgfs_env_whitelist config option has been renamed to '
+            'hgfs_saltenv_whitelist. Please update your configuration.'
+        )
+        whitelist = __opts__['hgfs_env_whitelist']
+    else:
+        whitelist = __opts__['hgfs_saltenv_whitelist']
+
+    if __opts__['hgfs_env_blacklist']:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The hgfs_env_blacklist config option has been renamed to '
+            'hgfs_saltenv_blacklist. Please update your configuration.'
+        )
+        blacklist = __opts__['hgfs_env_blacklist']
+    else:
+        blacklist = __opts__['hgfs_saltenv_blacklist']
+
     return salt.utils.check_whitelist_blacklist(
         env,
-        whitelist=__opts__['hgfs_env_whitelist'],
-        blacklist=__opts__['hgfs_env_blacklist']
+        whitelist=whitelist,
+        blacklist=blacklist,
     )
 
 
@@ -658,7 +681,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             continue
         salt.fileserver.wait_lock(lk_fn, dest)
         if os.path.isfile(blobshadest) and os.path.isfile(dest):
-            with salt.utils.fopen(blobshadest, 'r') as fp_:
+            with salt.utils.files.fopen(blobshadest, 'r') as fp_:
                 sha = fp_.read()
                 if sha == ref[2]:
                     fnd['rel'] = path
@@ -672,14 +695,14 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
         except hglib.error.CommandError:
             repo['repo'].close()
             continue
-        with salt.utils.fopen(lk_fn, 'w+') as fp_:
+        with salt.utils.files.fopen(lk_fn, 'w+') as fp_:
             fp_.write('')
         for filename in glob.glob(hashes_glob):
             try:
                 os.remove(filename)
             except Exception:
                 pass
-        with salt.utils.fopen(blobshadest, 'w+') as fp_:
+        with salt.utils.files.fopen(blobshadest, 'w+') as fp_:
             fp_.write(ref[2])
         try:
             os.remove(lk_fn)
@@ -713,7 +736,7 @@ def serve_file(load, fnd):
     Return a chunk from a file based on the data received
     '''
     if 'env' in load:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -730,7 +753,7 @@ def serve_file(load, fnd):
     ret['dest'] = fnd['rel']
     gzip = load.get('gzip', None)
     fpath = os.path.normpath(fnd['path'])
-    with salt.utils.fopen(fpath, 'rb') as fp_:
+    with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
         if data and six.PY3 and not salt.utils.is_bin_file(fpath):
@@ -747,7 +770,7 @@ def file_hash(load, fnd):
     Return a file hash, the hash type is set in the master config file
     '''
     if 'env' in load:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -767,11 +790,11 @@ def file_hash(load, fnd):
                                                   __opts__['hash_type']))
     if not os.path.isfile(hashdest):
         ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
-        with salt.utils.fopen(hashdest, 'w+') as fp_:
+        with salt.utils.files.fopen(hashdest, 'w+') as fp_:
             fp_.write(ret['hsum'])
         return ret
     else:
-        with salt.utils.fopen(hashdest, 'rb') as fp_:
+        with salt.utils.files.fopen(hashdest, 'rb') as fp_:
             ret['hsum'] = fp_.read()
         return ret
 
@@ -781,7 +804,7 @@ def _file_lists(load, form):
     Return a dict containing the file lists for files and dirs
     '''
     if 'env' in load:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -829,7 +852,7 @@ def _get_file_list(load):
     Get a list of all files on the file server in a specified environment
     '''
     if 'env' in load:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -874,7 +897,7 @@ def _get_dir_list(load):
     Get a list of all directories on the master
     '''
     if 'env' in load:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '

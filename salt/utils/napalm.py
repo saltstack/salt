@@ -14,18 +14,18 @@ Utils for the NAPALM modules and proxy.
 
 .. versionadded:: 2017.7.0
 '''
-
+# Import Python libs
 from __future__ import absolute_import
-
 import traceback
 import logging
 import importlib
 from functools import wraps
-log = logging.getLogger(__file__)
 
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
-# Import third party lib
+# Import 3rd-party libs
+from salt.ext import six
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
@@ -45,14 +45,14 @@ try:
 except ImportError:
     HAS_CONN_CLOSED_EXC_CLASS = False
 
-from salt.ext import six as six
+log = logging.getLogger(__file__)
 
 
 def is_proxy(opts):
     '''
     Is this a NAPALM proxy?
     '''
-    return salt.utils.is_proxy() and opts.get('proxy', {}).get('proxytype') == 'napalm'
+    return salt.utils.platform.is_proxy() and opts.get('proxy', {}).get('proxytype') == 'napalm'
 
 
 def is_always_alive(opts):
@@ -73,7 +73,7 @@ def is_minion(opts):
     '''
     Is this a NAPALM straight minion?
     '''
-    return not salt.utils.is_proxy() and 'napalm' in opts
+    return not salt.utils.platform.is_proxy() and 'napalm' in opts
 
 
 def virtual(opts, virtualname, filename):
@@ -354,11 +354,11 @@ def proxy_napalm_wrap(func):
         # the execution modules will make use of this variable from now on
         # previously they were accessing the device properties through the __proxy__ object
         always_alive = opts.get('proxy', {}).get('always_alive', True)
-        if salt.utils.is_proxy() and always_alive:
+        if salt.utils.platform.is_proxy() and always_alive:
             # if it is running in a proxy and it's using the default always alive behaviour,
             # will get the cached copy of the network device
             wrapped_global_namespace['napalm_device'] = proxy['napalm.get_device']()
-        elif salt.utils.is_proxy() and not always_alive:
+        elif salt.utils.platform.is_proxy() and not always_alive:
             # if still proxy, but the user does not want the SSH session always alive
             # get a new device instance
             # which establishes a new connection

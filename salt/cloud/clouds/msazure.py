@@ -52,6 +52,7 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
 
 # Import 3rd-party libs
+from salt.ext import six
 HAS_LIBS = False
 try:
     import azure
@@ -709,7 +710,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     if kwargs is None:
         kwargs = {}
 
-    if isinstance(kwargs['volumes'], str):
+    if isinstance(kwargs['volumes'], six.string_types):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
@@ -803,7 +804,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     if kwargs is None:
         kwargs = {}
 
-    if isinstance(kwargs['volumes'], str):
+    if isinstance(kwargs['volumes'], six.string_types):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
@@ -3384,14 +3385,6 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         search_global=False,
         default='management.core.windows.net'
     )
-    requests_lib = config.get_cloud_config_value(
-        'requests_lib',
-        get_configured_provider(), __opts__, search_global=False
-    )
-    if requests_lib is not None:
-        salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
-                                        'please change your config')
-
     backend = config.get_cloud_config_value(
         'backend',
         get_configured_provider(), __opts__, search_global=False
@@ -3416,7 +3409,6 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         port=443,
         text=True,
         cert=certificate_path,
-        requests_lib=requests_lib,
         backend=backend,
         decode=decode,
         decode_type='xml',

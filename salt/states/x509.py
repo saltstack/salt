@@ -166,7 +166,7 @@ import salt.exceptions
 import salt.utils
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     from M2Crypto.RSA import RSAError

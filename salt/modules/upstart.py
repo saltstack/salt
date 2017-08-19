@@ -55,6 +55,7 @@ import fnmatch
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.modules.cmdmod
 import salt.utils.systemd
 
@@ -109,7 +110,7 @@ def _default_runlevel():
     # Try to get the "main" default.  If this fails, throw up our
     # hands and just guess "2", because things are horribly broken
     try:
-        with salt.utils.fopen('/etc/init/rc-sysinit.conf') as fp_:
+        with salt.utils.files.fopen('/etc/init/rc-sysinit.conf') as fp_:
             for line in fp_:
                 if line.startswith('env DEFAULT_RUNLEVEL'):
                     runlevel = line.split('=')[-1].strip()
@@ -118,7 +119,7 @@ def _default_runlevel():
 
     # Look for an optional "legacy" override in /etc/inittab
     try:
-        with salt.utils.fopen('/etc/inittab') as fp_:
+        with salt.utils.files.fopen('/etc/inittab') as fp_:
             for line in fp_:
                 if not line.startswith('#') and 'initdefault' in line:
                     runlevel = line.split(':')[1]
@@ -130,7 +131,7 @@ def _default_runlevel():
     try:
         valid_strings = set(
             ('0', '1', '2', '3', '4', '5', '6', 's', 'S', '-s', 'single'))
-        with salt.utils.fopen('/proc/cmdline') as fp_:
+        with salt.utils.files.fopen('/proc/cmdline') as fp_:
             for line in fp_:
                 for arg in line.strip().split():
                     if arg in valid_strings:
@@ -182,7 +183,7 @@ def _upstart_is_disabled(name):
     '''
     files = ['/etc/init/{0}.conf'.format(name), '/etc/init/{0}.override'.format(name)]
     for file_name in itertools.ifilter(os.path.isfile, files):
-        with salt.utils.fopen(file_name) as fp_:
+        with salt.utils.files.fopen(file_name) as fp_:
             if re.search(r'^\s*manual', fp_.read(), re.MULTILINE):
                 return True
     return False
@@ -426,28 +427,53 @@ def force_reload(name):
 
 def status(name, sig=None):
     '''
-    Return the status for a service, returns a bool whether the service is
-    running.
+    Return the status for a service.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
+
+    .. versionchanged:: Oxygen
+        The service name can now be a glob (e.g. ``salt*``)
+
+    Args:
+        name (str): The name of the service to check
+        sig (str): Signature to use to find the service via ps
+
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service name>
+        salt '*' service.status <service name> [service signature]
     '''
     if sig:
         return bool(__salt__['status.pid'](sig))
-    cmd = ['service', name, 'status']
-    if _service_is_upstart(name):
-        # decide result base on cmd output, thus ignore retcode,
-        # which makes cmd output not at error lvl even when cmd fail.
-        return 'start/running' in __salt__['cmd.run'](cmd, python_shell=False,
-                                                      ignore_retcode=True)
-    # decide result base on retcode, thus ignore output (set quite)
-    # because there is no way to avoid logging at error lvl when
-    # service is not running - retcode != 0 (which is totally relevant).
-    return not bool(__salt__['cmd.retcode'](cmd, python_shell=False,
-                                            quite=True))
+
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(get_all(), name)
+    else:
+        services = [name]
+    results = {}
+    for service in services:
+        cmd = ['service', service, 'status']
+        if _service_is_upstart(service):
+            # decide result base on cmd output, thus ignore retcode,
+            # which makes cmd output not at error lvl even when cmd fail.
+            results[service] = 'start/running' in __salt__['cmd.run'](cmd, python_shell=False,
+                                                                      ignore_retcode=True)
+        else:
+            # decide result base on retcode, thus ignore output (set quite)
+            # because there is no way to avoid logging at error lvl when
+            # service is not running - retcode != 0 (which is totally relevant).
+            results[service] = not bool(__salt__['cmd.retcode'](cmd, python_shell=False,
+                                                                ignore_retcode=True,
+                                                                quite=True))
+    if contains_globbing:
+        return results
+    return results[name]
 
 
 def _get_service_exec():
@@ -467,7 +493,7 @@ def _upstart_disable(name):
     if _upstart_is_disabled(name):
         return _upstart_is_disabled(name)
     override = '/etc/init/{0}.override'.format(name)
-    with salt.utils.fopen(override, 'a') as ofile:
+    with salt.utils.files.fopen(override, 'a') as ofile:
         ofile.write('manual\n')
     return _upstart_is_disabled(name)
 
@@ -481,7 +507,7 @@ def _upstart_enable(name):
     override = '/etc/init/{0}.override'.format(name)
     files = ['/etc/init/{0}.conf'.format(name), override]
     for file_name in itertools.ifilter(os.path.isfile, files):
-        with salt.utils.fopen(file_name, 'r+') as fp_:
+        with salt.utils.files.fopen(file_name, 'r+') as fp_:
             new_text = re.sub(r'^\s*manual\n?', '', fp_.read(), 0, re.MULTILINE)
             fp_.seek(0)
             fp_.write(new_text)

@@ -14,14 +14,16 @@ import logging
 # Import salt libs
 import salt.payload
 import salt.utils
+import salt.utils.files
+import salt.utils.network
+import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltCacheError
 import salt.auth.ldap
 import salt.cache
-import salt.ext.six as six
+from salt.ext import six
 
 # Import 3rd-party libs
-import salt.ext.six as six
 if six.PY3:
     import ipaddress
 else:
@@ -227,7 +229,7 @@ class CkMinions(object):
         try:
             if self.opts['key_cache'] and os.path.exists(pki_cache_fn):
                 log.debug('Returning cached minion list')
-                with salt.utils.fopen(pki_cache_fn) as fn_:
+                with salt.utils.files.fopen(pki_cache_fn) as fn_:
                     return self.serial.load(fn_)
             else:
                 for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
@@ -680,7 +682,7 @@ class CkMinions(object):
         # remember to remove the expr_form argument from this function when
         # performing the cleanup on this deprecation.
         if expr_form is not None:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'the target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -705,7 +707,7 @@ class CkMinions(object):
         functions
         '''
         vals = []
-        if isinstance(fun, str):
+        if isinstance(fun, six.string_types):
             fun = [fun]
         for func in fun:
             try:

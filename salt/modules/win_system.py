@@ -14,13 +14,20 @@ Support for reboot, shutdown, etc
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
+import ctypes
 import logging
 import time
-import ctypes
 from datetime import datetime
 
-# Import 3rd Party Libs
+# Import salt libs
+import salt.utils
+import salt.utils.locales
+import salt.utils.platform
+from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party Libs
+from salt.ext import six
 try:
     import pythoncom
     import wmi
@@ -33,12 +40,6 @@ try:
 except ImportError:
     HAS_WIN32NET_MODS = False
 
-# Import salt libs
-import salt.utils
-import salt.utils.locales
-import salt.ext.six as six
-from salt.exceptions import CommandExecutionError
-
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ def __virtual__():
     '''
     Only works on Windows Systems with Win32 Modules
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Module win_system: Requires Windows'
 
     if not HAS_WIN32NET_MODS:
@@ -274,7 +275,7 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
     if only_on_pending_reboot and not get_pending_reboot():
         return False
 
-    if message and not isinstance(message, str):
+    if message and not isinstance(message, six.string_types):
         message = message.decode('utf-8')
     try:
         win32api.InitiateSystemShutdown('127.0.0.1', message, timeout,
@@ -656,7 +657,7 @@ def join_domain(domain,
         return 'Must specify a password if you pass a username'
 
     # remove any escape characters
-    if isinstance(account_ou, str):
+    if isinstance(account_ou, six.string_types):
         account_ou = account_ou.split('\\')
         account_ou = ''.join(account_ou)
 

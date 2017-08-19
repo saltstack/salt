@@ -25,7 +25,7 @@ import logging
 import os
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ def returner(ret):
     changes = False
     errors = False
     job_minion_id = ret['id']
-    host = job_minion_id.split('.')[0]
+    host = job_minion_id
 
     if type(ret['return']) is dict:
         for state, item in six.iteritems(ret['return']):

@@ -4,21 +4,24 @@ Used to manage the outputter system. This package is the modular system used
 for managing outputters.
 '''
 
-# Import python libs
-from __future__ import print_function
+# Import Python libs
 from __future__ import absolute_import
-import re
-import os
-import sys
+from __future__ import print_function
 import errno
 import logging
+import os
+import re
+import sys
 import traceback
 
-# Import salt libs
+# Import Salt libs
 import salt.loader
 import salt.utils
-import salt.ext.six as six
-from salt.utils import print_cli
+import salt.utils.files
+import salt.utils.platform
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # Are you really sure !!!
 # dealing with unicode is not as simple as setting defaultencoding
@@ -97,7 +100,7 @@ def display_output(data, out=None, opts=None, **kwargs):
         # output filename can be either '' or None
         if output_filename:
             if not hasattr(output_filename, 'write'):
-                ofh = salt.utils.fopen(output_filename, 'a')  # pylint: disable=resource-leakage
+                ofh = salt.utils.files.fopen(output_filename, 'a')  # pylint: disable=resource-leakage
                 fh_opened = True
             else:
                 # Filehandle/file-like object
@@ -124,7 +127,7 @@ def display_output(data, out=None, opts=None, **kwargs):
                     ofh.close()
             return
         if display_data:
-            print_cli(display_data)
+            salt.utils.print_cli(display_data)
     except IOError as exc:
         # Only raise if it's NOT a broken pipe
         if exc.errno != errno.EPIPE:
@@ -164,14 +167,14 @@ def get_printout(out, opts=None, **kwargs):
 
         if opts.get('force_color', False):
             opts['color'] = True
-        elif opts.get('no_color', False) or is_pipe() or salt.utils.is_windows():
+        elif opts.get('no_color', False) or is_pipe() or salt.utils.platform.is_windows():
             opts['color'] = False
         else:
             opts['color'] = True
     else:
         if opts.get('force_color', False):
             opts['color'] = True
-        elif opts.get('no_color', False) or salt.utils.is_windows():
+        elif opts.get('no_color', False) or salt.utils.platform.is_windows():
             opts['color'] = False
         else:
             pass

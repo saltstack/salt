@@ -14,8 +14,8 @@ import os
 import yaml
 
 # Import Salt libs
-import salt.utils
 import salt.utils.event
+import salt.utils.files
 from salt.ext.six.moves import map
 
 # Get logging started
@@ -81,7 +81,7 @@ def add(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacons.add ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
+        salt '*' beacons.add ps "[{'salt-master': 'stopped', 'apache2': 'stopped'}]"
 
     '''
     ret = {'comment': 'Failed to add beacon {0}.'.format(name),
@@ -125,6 +125,7 @@ def add(name, beacon_data, **kwargs):
             res = __salt__['event.fire']({'name': name, 'beacon_data': beacon_data, 'func': 'add'}, 'manage_beacons')
             if res:
                 event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_add_complete', wait=30)
+                log.debug('=== event_ret {} ==='.format(event_ret))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     if name in beacons and beacons[name] == beacon_data:
@@ -149,7 +150,7 @@ def modify(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacons.modify ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
+        salt '*' beacons.modify ps "[{'salt-master': 'stopped', 'apache2': 'stopped'}]"
     '''
 
     ret = {'comment': '',
@@ -252,6 +253,7 @@ def delete(name, **kwargs):
             if res:
                 event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_delete_complete', wait=30)
                 if event_ret and event_ret['complete']:
+                    log.debug('== event_ret {} =='.format(event_ret))
                     beacons = event_ret['beacons']
                     if name not in beacons:
                         ret['result'] = True
@@ -291,7 +293,7 @@ def save():
         yaml_out = ''
 
     try:
-        with salt.utils.fopen(sfn, 'w+') as fp_:
+        with salt.utils.files.fopen(sfn, 'w+') as fp_:
             fp_.write(yaml_out)
         ret['comment'] = 'Beacons saved to {0}.'.format(sfn)
     except (IOError, OSError):

@@ -9,7 +9,7 @@ import os
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def _parse(contents=None, file_name=None):
     if contents:
         pass
     elif file_name and os.path.exists(file_name):
-        with salt.utils.fopen(file_name, 'r') as ifile:
+        with salt.utils.files.fopen(file_name, 'r') as ifile:
             contents = ifile.read()
     else:
         log.error('File "{0}" does not exist'.format(file_name))

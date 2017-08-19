@@ -67,6 +67,29 @@ host: ``localhost``
 port: ``6379``
     The Redis server port.
 
+cluster_mode: ``False``
+    Whether cluster_mode is enabled or not
+
+cluster.startup_nodes:
+    A list of host, port dictionaries pointing to cluster members. At least one is required
+    but multiple nodes are better
+
+    .. code-block::yaml
+
+        cache.redis.cluster.startup_nodes
+          - host: redis-member-1
+            port: 6379
+          - host: redis-member-2
+            port: 6379
+
+cluster.skip_full_coverage_check: ``False``
+    Some cluster providers restrict certain redis commands such as CONFIG for enhanced security.
+    Set this option to true to skip checks that required advanced privileges.
+
+    .. note::
+
+        Most cloud hosted redis clusters will require this to be set to ``True``
+
 db: ``'0'``
     The database index.
 
@@ -89,6 +112,24 @@ Configuration Example:
     cache.redis.bank_keys_prefix: #BANKEYS
     cache.redis.key_prefix: #KEY
     cache.redis.separator: '@'
+
+Cluster Configuration Example:
+
+.. code-block::yaml
+
+    cache.redis.cluster_mode: true
+    cache.redis.cluster.skip_full_coverage_check: true
+    cache.redis.cluster.startup_nodes:
+      - host: redis-member-1
+        port: 6379
+      - host: redis-member-2
+        port: 6379
+    cache.redis.db: '0'
+    cache.redis.password: my pass
+    cache.redis.bank_prefix: #BANK
+    cache.redis.bank_keys_prefix: #BANKEYS
+    cache.redis.key_prefix: #KEY
+    cache.redis.separator: '@'
 '''
 
 from __future__ import absolute_import
@@ -104,6 +145,12 @@ try:
     HAS_REDIS = True
 except ImportError:
     HAS_REDIS = False
+
+try:
+    from rediscluster import StrictRedisCluster
+    HAS_REDIS_CLUSTER = True
+except ImportError:
+    HAS_REDIS_CLUSTER = False
 
 # Import salt
 from salt.ext.six.moves import range
@@ -135,9 +182,13 @@ REDIS_SERVER = None
 def __virtual__():
     '''
     The redis library must be installed for this module to work.
+
+    The redis redis cluster library must be installed if cluster_mode is True
     '''
     if not HAS_REDIS:
         return (False, "Please install the python-redis package.")
+    if not HAS_REDIS_CLUSTER and _get_redis_cache_opts()['cluster_mode']:
+        return (False, "Please install the redis-py-cluster package.")
     return __virtualname__
 
 
@@ -157,7 +208,10 @@ def _get_redis_cache_opts():
         'host': __opts__.get('cache.redis.host', 'localhost'),
         'port': __opts__.get('cache.redis.port', 6379),
         'db': __opts__.get('cache.redis.db', '0'),
-        'password': __opts__.get('cache.redis.password', '')
+        'password': __opts__.get('cache.redis.password', ''),
+        'cluster_mode': __opts__.get('cache.redis.cluster_mode', False),
+        'startup_nodes': __opts__.get('cache.redis.cluster.startup_nodes', {}),
+        'skip_full_coverage_check': __opts__.get('cache.redis.cluster.skip_full_coverage_check', False),
     }
 
 
@@ -171,10 +225,16 @@ def _get_redis_server(opts=None):
         return REDIS_SERVER
     if not opts:
         opts = _get_redis_cache_opts()
-    REDIS_SERVER = redis.Redis(opts['host'],
-                               opts['port'],
-                               db=opts['db'],
-                               password=opts['password'])
+
+    if opts['cluster_mode']:
+        REDIS_SERVER = StrictRedisCluster(startup_nodes=opts['startup_nodes'],
+                                          skip_full_coverage_check=opts['skip_full_coverage_check'],
+                                          decode_responses=True)
+    else:
+        REDIS_SERVER = redis.StrictRedis(opts['host'],
+                                   opts['port'],
+                                   db=opts['db'],
+                                   password=opts['password'])
     return REDIS_SERVER
 
 

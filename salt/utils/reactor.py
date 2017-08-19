@@ -12,12 +12,13 @@ import salt.state
 import salt.utils
 import salt.utils.cache
 import salt.utils.event
+import salt.utils.files
 import salt.utils.process
 import salt.defaults.exitcodes
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         reactors = []
         if isinstance(self.opts['reactor'], six.string_types):
             try:
-                with salt.utils.fopen(self.opts['reactor']) as fp_:
+                with salt.utils.files.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())
             except (OSError, IOError):
                 log.error(
@@ -126,7 +127,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         if isinstance(self.minion.opts['reactor'], six.string_types):
             log.debug('Reading reactors from yaml {0}'.format(self.opts['reactor']))
             try:
-                with salt.utils.fopen(self.opts['reactor']) as fp_:
+                with salt.utils.files.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())
             except (OSError, IOError):
                 log.error(
@@ -355,10 +356,11 @@ class ReactWrap(object):
         '''
         log.debug("in caller with fun {0} args {1} kwargs {2}".format(fun, args, kwargs))
         args = kwargs.get('args', [])
+        kwargs = kwargs.get('kwargs', {})
         if 'caller' not in self.client_cache:
             self.client_cache['caller'] = salt.client.Caller(self.opts['conf_file'])
         try:
-            self.client_cache['caller'].function(fun, *args)
+            self.client_cache['caller'].cmd(fun, *args, **kwargs)
         except SystemExit:
             log.warning('Attempt to exit reactor. Ignored.')
         except Exception as exc:

@@ -13,7 +13,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
-import salt
+import salt.utils.path
 import salt.modules.syslog_ng as syslog_ng
 
 _VERSION = "3.6.0alpha0"
@@ -261,7 +261,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
             function_args = {}
 
         installed = True
-        if not salt.utils.which("syslog-ng"):
+        if not salt.utils.path.which("syslog-ng"):
             installed = False
             if "syslog-ng-ctl" in mock_function_args:
                 expected_output = _SYSLOG_NG_CTL_NOT_INSTALLED_RETURN_VALUE

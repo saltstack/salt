@@ -206,7 +206,7 @@ import tornado.web
 import tornado.gen
 from tornado.concurrent import Future
 from zmq.eventloop import ioloop
-import salt.ext.six as six
+from salt.ext import six
 # pylint: enable=import-error
 
 # instantiate the zmq IOLoop (specialized poller)

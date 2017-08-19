@@ -28,7 +28,7 @@ import json
 # Import third party libs
 import yaml
 # pylint: disable=no-name-in-module,import-error,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.six.moves.urllib.error import HTTPError
 from salt.ext.six.moves.urllib.request import Request as _Request, urlopen as _urlopen
@@ -39,10 +39,14 @@ import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
+import salt.utils.args
+import salt.utils.files
 import salt.utils.itertools
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.pkg.deb
 import salt.utils.systemd
+import salt.utils.versions
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -249,7 +253,7 @@ def latest_version(*names, **kwargs):
 
     if 'repo' in kwargs:
         # Remember to kill _get_repo() too when removing this warning.
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Hydrogen',
             'The \'repo\' argument to apt.latest_version is deprecated, and '
             'will be removed in Salt {version}. Please use \'fromrepo\' '
@@ -316,7 +320,7 @@ def latest_version(*names, **kwargs):
             # to the install candidate, then the candidate is an upgrade, so
             # add it to the return dict
             if not any(
-                (salt.utils.compare_versions(ver1=x,
+                (salt.utils.versions.compare(ver1=x,
                                              oper='>=',
                                              ver2=candidate,
                                              cmp_func=version_cmp)
@@ -444,6 +448,7 @@ def install(name=None,
             pkgs=None,
             sources=None,
             reinstall=False,
+            ignore_epoch=False,
             **kwargs):
     '''
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
@@ -505,6 +510,10 @@ def install(name=None,
         Install a specific version of the package, e.g. 1.2.3~0ubuntu0. Ignored
         if "pkgs" or "sources" is passed.
 
+        .. versionchanged:: Oxygen
+            version can now contain comparison operators (e.g. ``>1.2.3``,
+            ``<=2.0``, etc.)
+
     reinstall : False
         Specifying reinstall=True will use ``apt-get install --reinstall``
         rather than simply ``apt-get install`` for requested packages that are
@@ -516,6 +525,13 @@ def install(name=None,
 
         .. versionadded:: 2015.8.0
 
+    ignore_epoch : False
+        Only used when the version of a package is specified using a comparison
+        operator (e.g. ``>4.1``). If set to ``True``, then the epoch will be
+        ignored when comparing the currently-installed version to the desired
+        version.
+
+        .. versionadded:: Oxygen
 
     Multiple Package Installation Options:
 
@@ -631,8 +647,14 @@ def install(name=None,
     targets = []
     downgrade = []
     to_reinstall = {}
+    errors = []
     if pkg_type == 'repository':
-        pkg_params_items = six.iteritems(pkg_params)
+        pkg_params_items = list(six.iteritems(pkg_params))
+        has_comparison = [x for x, y in pkg_params_items
+                          if y is not None
+                          and (y.startswith('<') or y.startswith('>'))]
+        _available = list_repo_pkgs(*has_comparison, byrepo=False, **kwargs) \
+            if has_comparison else {}
         # Build command prefix
         cmd_prefix.extend(['apt-get', '-q', '-y'])
         if kwargs.get('force_yes', False):
@@ -714,18 +736,41 @@ def install(name=None,
             # not None, since the only way version_num is not None is if DEB
             # metadata parsing was successful.
             if pkg_type == 'repository':
+                # Remove leading equals sign(s) to keep from building a pkgstr
+                # with multiple equals (which would be invalid)
+                version_num = version_num.lstrip('=')
+                if pkgname in has_comparison:
+                    candidates = _available.get(pkgname, [])
+                    target = salt.utils.pkg.match_version(
+                        version_num,
+                        candidates,
+                        cmp_func=version_cmp,
+                        ignore_epoch=ignore_epoch,
+                    )
+                    if target is None:
+                        errors.append(
+                            'No version matching \'{0}{1}\' could be found '
+                            '(available: {2})'.format(
+                                pkgname,
+                                version_num,
+                                ', '.join(candidates) if candidates else None
+                            )
+                        )
+                        continue
+                    else:
+                        version_num = target
                 pkgstr = '{0}={1}'.format(pkgname, version_num)
             else:
                 pkgstr = pkgpath
 
             cver = old.get(pkgname, '')
             if reinstall and cver \
-                    and salt.utils.compare_versions(ver1=version_num,
+                    and salt.utils.versions.compare(ver1=version_num,
                                                     oper='==',
                                                     ver2=cver,
                                                     cmp_func=version_cmp):
                 to_reinstall[pkgname] = pkgstr
-            elif not cver or salt.utils.compare_versions(ver1=version_num,
+            elif not cver or salt.utils.versions.compare(ver1=version_num,
                                                          oper='>=',
                                                          ver2=cver,
                                                          cmp_func=version_cmp):
@@ -761,45 +806,44 @@ def install(name=None,
         cmds.append(cmd)
 
     if not cmds:
-        return {}
+        ret = {}
+    else:
+        cache_valid_time = kwargs.pop('cache_valid_time', 0)
+        if _refresh_db:
+            refresh_db(cache_valid_time)
 
-    cache_valid_time = kwargs.pop('cache_valid_time', 0)
-    if _refresh_db:
-        refresh_db(cache_valid_time)
+        env = _parse_env(kwargs.get('env'))
+        env.update(DPKG_ENV_VARS.copy())
 
-    env = _parse_env(kwargs.get('env'))
-    env.update(DPKG_ENV_VARS.copy())
+        hold_pkgs = get_selections(state='hold').get('hold', [])
+        # all_pkgs contains the argument to be passed to apt-get install, which
+        # when a specific version is requested will be in the format
+        # name=version.  Strip off the '=' if present so we can compare the
+        # held package names against the pacakges we are trying to install.
+        targeted_names = [x.split('=')[0] for x in all_pkgs]
+        to_unhold = [x for x in hold_pkgs if x in targeted_names]
 
-    hold_pkgs = get_selections(state='hold').get('hold', [])
-    # all_pkgs contains the argument to be passed to apt-get install, which
-    # when a specific version is requested will be in the format name=version.
-    # Strip off the '=' if present so we can compare the held package names
-    # against the pacakges we are trying to install.
-    targeted_names = [x.split('=')[0] for x in all_pkgs]
-    to_unhold = [x for x in hold_pkgs if x in targeted_names]
+        if to_unhold:
+            unhold(pkgs=to_unhold)
 
-    if to_unhold:
-        unhold(pkgs=to_unhold)
+        for cmd in cmds:
+            out = __salt__['cmd.run_all'](cmd,
+                                          output_loglevel='trace',
+                                          python_shell=False)
+            if out['retcode'] != 0 and out['stderr']:
+                errors.append(out['stderr'])
 
-    errors = []
-    for cmd in cmds:
-        out = __salt__['cmd.run_all'](cmd,
-                                      output_loglevel='trace',
-                                      python_shell=False)
-        if out['retcode'] != 0 and out['stderr']:
-            errors.append(out['stderr'])
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret = salt.utils.compare_dicts(old, new)
 
-    __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+        for pkgname in to_reinstall:
+            if pkgname not in ret or pkgname in old:
+                ret.update({pkgname: {'old': old.get(pkgname, ''),
+                                      'new': new.get(pkgname, '')}})
 
-    for pkgname in to_reinstall:
-        if pkgname not in ret or pkgname in old:
-            ret.update({pkgname: {'old': old.get(pkgname, ''),
-                                  'new': new.get(pkgname, '')}})
-
-    if to_unhold:
-        hold(pkgs=to_unhold)
+        if to_unhold:
+            hold(pkgs=to_unhold)
 
     if errors:
         raise CommandExecutionError(
@@ -1053,6 +1097,11 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
+    download_only
+        Only donwload the packages, don't unpack or install them
+
+        .. versionadded:: Oxygen
+
     force_conf_new
         Always install the new version of any configuration files.
 
@@ -1086,6 +1135,8 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         cmd.append('--force-yes')
     if kwargs.get('skip_verify', False):
         cmd.append('--allow-unauthenticated')
+    if kwargs.get('download_only', False):
+        cmd.append('--download-only')
 
     cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
 
@@ -2150,7 +2201,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
             # secure PPAs cannot be supported as of the time of this code
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
-            if salt.utils.which('apt-add-repository') \
+            if salt.utils.path.which('apt-add-repository') \
                     and 'ppa_auth' not in kwargs:
                 repo_info = get_repo(repo)
                 if repo_info:
@@ -2615,7 +2666,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
 
     if path:
         path = __salt__['cp.cache_file'](path, saltenv)
-        with salt.utils.fopen(path, 'r') as ifile:
+        with salt.utils.files.fopen(path, 'r') as ifile:
             content = ifile.readlines()
         selection = _parse_selections(content)
 
@@ -2765,10 +2816,10 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
         salt '*' pkg.info_installed <package1> failhard=false
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     failhard = kwargs.pop('failhard', True)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     ret = dict()
     for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():

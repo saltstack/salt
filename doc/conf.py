@@ -258,8 +258,8 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'latest'  # latest, previous, develop, next
-release = latest_release # version, latest_release, previous_release
+build_type = 'develop'  # latest, previous, develop, next
+release = version  # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
@@ -515,6 +515,7 @@ epub_copyright = copyright
 epub_scheme = 'URL'
 epub_identifier = 'http://saltstack.com/'
 
+epub_tocdup = False
 #epub_tocdepth = 3
 
 

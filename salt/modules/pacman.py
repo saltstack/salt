@@ -15,11 +15,11 @@ from __future__ import absolute_import
 import copy
 import fnmatch
 import logging
-import re
 import os.path
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 import salt.utils.pkg
 import salt.utils.itertools
 import salt.utils.systemd
@@ -27,7 +27,7 @@ from salt.exceptions import CommandExecutionError, MinionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -555,29 +555,20 @@ def install(name=None,
             if version_num is None:
                 targets.append(param)
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
-                if match:
-                    gt_lt, eq, verstr = match.groups()
-                    prefix = gt_lt or ''
-                    prefix += eq or ''
-                    # If no prefix characters were supplied, use '='
-                    prefix = prefix or '='
-                    if '*' in verstr:
-                        if prefix == '=':
-                            wildcards.append((param, verstr))
-                        else:
-                            errors.append(
-                                'Invalid wildcard for {0}{1}{2}'.format(
-                                    param, prefix, verstr
-                                )
+                prefix, verstr = salt.utils.pkg.split_comparison(version_num)
+                if not prefix:
+                    prefix = '='
+                if '*' in verstr:
+                    if prefix == '=':
+                        wildcards.append((param, verstr))
+                    else:
+                        errors.append(
+                            'Invalid wildcard for {0}{1}{2}'.format(
+                                param, prefix, verstr
                             )
-                        continue
-                    targets.append('{0}{1}{2}'.format(param, prefix, verstr))
-                else:
-                    errors.append(
-                        'Invalid version string \'{0}\' for package '
-                        '\'{1}\''.format(version_num, name)
-                    )
+                        )
+                    continue
+                targets.append('{0}{1}{2}'.format(param, prefix, verstr))
 
         if wildcards:
             # Resolve wildcard matches
@@ -1001,12 +992,12 @@ def list_repo_pkgs(*args, **kwargs):
         salt '*' pkg.list_repo_pkgs 'samba4*' fromrepo=base,updates
         salt '*' pkg.list_repo_pkgs 'python2-*' byrepo=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     fromrepo = kwargs.pop('fromrepo', '') or ''
     byrepo = kwargs.pop('byrepo', False)
     refresh = kwargs.pop('refresh', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if fromrepo:
         try:

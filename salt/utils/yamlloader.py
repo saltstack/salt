@@ -37,7 +37,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
     to make things like sls file more intuitive.
     '''
     def __init__(self, stream, dictclass=dict):
-        yaml.SafeLoader.__init__(self, stream)
+        super(SaltYamlSafeLoader, self).__init__(stream)
         if dictclass is not dict:
             # then assume ordered dict and use it for both !map and !omap
             self.add_constructor(

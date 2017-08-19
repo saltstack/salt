@@ -11,9 +11,11 @@ import hmac
 
 # Import Salt libs
 import salt.exceptions
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
+import salt.utils.files
 import salt.utils.hashutils
+import salt.utils.stringutils
 
 if six.PY2:
     import StringIO
@@ -72,7 +74,7 @@ def digest_file(infile, checksum='md5'):
         raise salt.exceptions.CommandExecutionError(
                 "File path '{0}' not found.".format(infile))
 
-    with salt.utils.fopen(infile, 'rb') as f:
+    with salt.utils.files.fopen(infile, 'rb') as f:
         file_hash = __salt__['hashutil.digest'](f.read(), checksum)
 
     return file_hash
@@ -156,7 +158,7 @@ def base64_encodefile(fname):
     '''
     encoded_f = StringIO.StringIO()
 
-    with salt.utils.fopen(fname, 'rb') as f:
+    with salt.utils.files.fopen(fname, 'rb') as f:
         base64.encode(f, encoded_f)
 
     encoded_f.seek(0)
@@ -193,7 +195,7 @@ def base64_decodefile(instr, outfile):
     '''
     encoded_f = StringIO.StringIO(instr)
 
-    with salt.utils.fopen(outfile, 'wb') as f:
+    with salt.utils.files.fopen(outfile, 'wb') as f:
         base64.decode(encoded_f, f)
 
     return True
@@ -280,7 +282,7 @@ def github_signature(string, shared_secret, challenge_hmac):
     key = shared_secret
     hashtype, challenge = challenge_hmac.split('=')
     if six.PY3:
-        msg = salt.utils.to_bytes(msg)
-        key = salt.utils.to_bytes(key)
+        msg = salt.utils.stringutils.to_bytes(msg)
+        key = salt.utils.stringutils.to_bytes(key)
     hmac_hash = hmac.new(key, msg, getattr(hashlib, hashtype))
     return hmac_hash.hexdigest() == challenge
