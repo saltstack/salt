@@ -177,8 +177,9 @@ def safe_filename_leaf(file_basename):
         return urllib.quote(re_obj.group(0), safe=u'')
     if not isinstance(file_basename, six.text_type):
         # the following string is not prefixed with u
-	return re.sub('[\\\/:*?"<>|]',
-                      _replace,six.text_type(file_basename, 'utf8').encode('ascii', 'backslashreplace'))
+        return re.sub('[\\\/:*?"<>|]',
+                      _replace,
+                      six.text_type(file_basename, 'utf8').encode('ascii', 'backslashreplace'))
     # the following string is prefixed with u
     return re.sub(u'[\\\/:*?"<>|]', _replace, file_basename, flags=re.UNICODE)
 
@@ -188,7 +189,7 @@ def safe_filepath(file_path_name):
     input the full path and filename, splits on directory separator and calls safe_filename_leaf for
     each part of the path.
     '''
-    (drive,path) = os.path.splitdrive(file_path_name)
+    (drive, path) = os.path.splitdrive(file_path_name)
     path = os.sep.join([safe_filename_leaf(file_section) for file_section in file_path_name.rsplit(os.sep)])
     if drive:
         return os.sep.join([drive, path])
