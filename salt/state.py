@@ -836,6 +836,20 @@ class State(object):
                      'return: {0}'
                      ).format(','.join(bad)))
 
+    @staticmethod
+    def munge_ret_for_export(ret):
+        '''
+        Process raw state return data to make it suitable for export,
+        to ensure consistency of the data format seen by external systems
+        '''
+        # We support lists of strings for ret['comment'] internal
+        # to the state system for improved ergonomics.
+        # However, to maintain backwards compatability with external tools,
+        # the list representation is not allowed to leave the state system,
+        # and should be converted like this at external boundaries.
+        if isinstance(ret['comment'], list):
+            ret['comment'] = '\n'.join(ret['comment'])
+
     def verify_data(self, data):
         '''
         Verify the data, return an error statement if something is wrong
@@ -1592,6 +1606,7 @@ class State(object):
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
             self.verify_ret(ret)
+            self.munge_ret_for_export(ret)
         except Exception:
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
