@@ -171,7 +171,7 @@ def safe_filename_leaf(file_basename):
     i.e. only the required characters are converted by urllib.quote
     If the input is a PY2 String, output a PY2 String. If input is Unicode output Unicode.
     For consistency all platforms are treated the same. Hard coded to utf8 as its ascii compatible
-    windows is \ / : * ? " < > | posix is /
+    windows is \\ / : * ? " < > | posix is /
     '''
     def _replace(re_obj):
         return urllib.quote(re_obj.group(0), safe=u'')
