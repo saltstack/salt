@@ -177,11 +177,11 @@ def safe_filename_leaf(file_basename):
         return urllib.quote(re_obj.group(0), safe=u'')
     if not isinstance(file_basename, six.text_type):
         # the following string is not prefixed with u
-        return re.sub('[\\\/:*?"<>|]',
+        return re.sub('[\\\\:/*?"<>|]',
                       _replace,
                       six.text_type(file_basename, 'utf8').encode('ascii', 'backslashreplace'))
     # the following string is prefixed with u
-    return re.sub(u'[\\\/:*?"<>|]', _replace, file_basename, flags=re.UNICODE)
+    return re.sub(u'[\\\\:/*?"<>|]', _replace, file_basename, flags=re.UNICODE)
 
 
 def safe_filepath(file_path_name):
