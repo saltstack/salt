@@ -541,8 +541,8 @@ class StateTestLoader(object):
         loads in one test file
         '''
         try:
-            # with salt.utils.files.fopen(filepath, 'r') as myfile:
-            with open(filepath, 'r') as myfile:
+            with salt.utils.files.fopen(filepath, 'r') as myfile:
+                # with open(filepath, 'r') as myfile:
                 contents_yaml = yaml.load(myfile)
                 for key, value in contents_yaml.items():
                     self.test_dict[key] = value
