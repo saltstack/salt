@@ -113,9 +113,7 @@ def create_target_group(name, protocol, port, vpc_id,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    tg = __salt__['boto_elbv2.target_group_exists'](name, region, key, keyid, profile)
-
-    if tg:
+    if __salt__['boto_elbv2.target_group_exists'](name, region, key, keyid, profile):
         ret['result'] = True
         ret['comment'] = 'Target Group {0} already exists'.format(name)
         return ret
@@ -128,20 +126,26 @@ def create_target_group(name, protocol, port, vpc_id,
                                                        protocol,
                                                        port,
                                                        vpc_id,
-                                                       region,
-                                                       key,
-                                                       keyid,
-                                                       profile)
+                                                       region=region,
+                                                       key=key,
+                                                       keyid=keyid,
+                                                       profile=profile,
+                                                       health_check_protocol=health_check_protocol,
+                                                       health_check_port=health_check_port,
+                                                       health_check_path=health_check_path,
+                                                       health_check_interval_seconds=health_check_interval_seconds,
+                                                       health_check_timeout_seconds=health_check_timeout_seconds,
+                                                       healthy_threshold_count=healthy_threshold_count,
+                                                       unhealthy_threshold_count=unhealthy_threshold_count,
+                                                       **kwargs)
 
     if state:
-        changes = True
         ret['changes']['target_group'] = name
         ret['result'] = True
         ret['comment'] = 'Target Group {0} created'.format(name)
     else:
         ret['result'] = False
         ret['comment'] = 'Target Group {0} creation failed'.format(name)
-        failure = True
     return ret
 
 
@@ -168,9 +172,7 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    tg = __salt__['boto_elbv2.target_group_exists'](name, region, key, keyid, profile)
-
-    if not tg:
+    if not __salt__['boto_elbv2.target_group_exists'](name, region, key, keyid, profile):
         ret['result'] = True
         ret['comment'] = 'Target Group {0} does not exists'.format(name)
         return ret
@@ -180,10 +182,10 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
         return ret
 
     state = __salt__['boto_elbv2.delete_target_group'](name,
-                                                       region,
-                                                       key,
-                                                       keyid,
-                                                       profile)
+                                                       region=region,
+                                                       key=key,
+                                                       keyid=keyid,
+                                                       profile=profile)
 
     if state:
         ret['result'] = True
@@ -192,7 +194,6 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
     else:
         ret['result'] = False
         ret['comment'] = 'Target Group {0} deletion failed'.format(name)
-        failure = True
     return ret
 
 def targets_registered(name, targets, region=None, key=None, keyid=None,
@@ -219,10 +220,13 @@ def targets_registered(name, targets, region=None, key=None, keyid=None,
               - instance-id2
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    tg = __salt__['boto_elbv2.target_group_exists'](name, region, key, keyid, profile)
 
-    if tg:
-        health = __salt__['boto_elbv2.describe_target_health'](name, region=region, key=key, keyid=keyid, profile=profile)
+    if __salt__['boto_elbv2.target_group_exists'](name, region, key, keyid, profile):
+        health = __salt__['boto_elbv2.describe_target_health'](name,
+                                                               region=region,
+                                                               key=key,
+                                                               keyid=keyid,
+                                                               profile=profile)
         failure = False
         changes = False
         newhealth_mock = copy.copy(health)
@@ -241,10 +245,10 @@ def targets_registered(name, targets, region=None, key=None, keyid=None,
                 else:
                     state = __salt__['boto_elbv2.register_targets'](name,
                                                                     targets,
-                                                                    region,
-                                                                    key,
-                                                                    keyid,
-                                                                    profile)
+                                                                    region=region,
+                                                                    key=key,
+                                                                    keyid=keyid,
+                                                                    profile=profile)
                     if state:
                         changes = True
                         ret['result'] = True
@@ -261,7 +265,11 @@ def targets_registered(name, targets, region=None, key=None, keyid=None,
                 ret['changes']['new'] = newhealth_mock
             else:
                 ret['comment'] = 'Target Group {0} has been changed'.format(name)
-                newhealth = __salt__['boto_elbv2.describe_target_health'](name, region=region, key=key, keyid=keyid, profile=profile)
+                newhealth = __salt__['boto_elbv2.describe_target_health'](name,
+                                                                          region=region,
+                                                                          key=key,
+                                                                          keyid=keyid,
+                                                                          profile=profile)
                 ret['changes']['new'] = newhealth
         return ret
     else:
@@ -270,7 +278,7 @@ def targets_registered(name, targets, region=None, key=None, keyid=None,
 
 
 def targets_deregistered(name, targets, region=None, key=None, keyid=None,
-                       profile=None, **kwargs):
+                         profile=None, **kwargs):
     '''
     Remove targets to an Application Load Balancer target group.
 
@@ -292,9 +300,12 @@ def targets_deregistered(name, targets, region=None, key=None, keyid=None,
               - instance-id2
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    tg = __salt__['boto_elbv2.target_group_exists'](name, region, key, keyid, profile)
-    if tg:
-        health = __salt__['boto_elbv2.describe_target_health'](name, region=region, key=key, keyid=keyid, profile=profile)
+    if __salt__['boto_elbv2.target_group_exists'](name, region, key, keyid, profile):
+        health = __salt__['boto_elbv2.describe_target_health'](name,
+                                                               region=region,
+                                                               key=key,
+                                                               keyid=keyid,
+                                                               profile=profile)
         failure = False
         changes = False
         newhealth_mock = copy.copy(health)
@@ -310,11 +321,11 @@ def targets_deregistered(name, targets, region=None, key=None, keyid=None,
                     newhealth_mock.update({target: "draining"})
                 else:
                     state = __salt__['boto_elbv2.deregister_targets'](name,
-                                                                    targets,
-                                                                    region,
-                                                                    key,
-                                                                    keyid,
-                                                                    profile)
+                                                                      targets,
+                                                                      region=region,
+                                                                      key=key,
+                                                                      keyid=keyid,
+                                                                      profile=profile)
                     if state:
                         changes = True
                         ret['result'] = True
@@ -331,7 +342,11 @@ def targets_deregistered(name, targets, region=None, key=None, keyid=None,
                 ret['changes']['new'] = newhealth_mock
             else:
                 ret['comment'] = 'Target Group {0} has been changed'.format(name)
-                newhealth = __salt__['boto_elbv2.describe_target_health'](name, region, key, keyid, profile)
+                newhealth = __salt__['boto_elbv2.describe_target_health'](name,
+                                                                          region,
+                                                                          key,
+                                                                          keyid,
+                                                                          profile)
                 ret['changes']['new'] = newhealth
         return ret
     else:
