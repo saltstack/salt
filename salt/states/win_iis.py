@@ -549,7 +549,7 @@ def container_setting(name, container, settings=None):
         ret['changes'] = ret_settings
         return ret
 
-    __salt__['win_iisV2.set_container_setting'](name=name, container=container,
+    __salt__['win_iis.set_container_setting'](name=name, container=container,
                                               settings=settings)
     new_settings = __salt__['win_iis.get_container_setting'](name=name,
                                                              container=container,
