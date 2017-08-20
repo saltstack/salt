@@ -343,10 +343,10 @@ def targets_deregistered(name, targets, region=None, key=None, keyid=None,
             else:
                 ret['comment'] = 'Target Group {0} has been changed'.format(name)
                 newhealth = __salt__['boto_elbv2.describe_target_health'](name,
-                                                                          region,
-                                                                          key,
-                                                                          keyid,
-                                                                          profile)
+                                                                          region=region,
+                                                                          key=key,
+                                                                          keyid=keyid,
+                                                                          profile=profile)
                 ret['changes']['new'] = newhealth
         return ret
     else:
