@@ -72,11 +72,20 @@ def __virtual__():
     return True
 
 
-def create_target_group(name, protocol, port, vpc_id,
-                        region=None, key=None, keyid=None, profile=None,
-                        health_check_protocol='HTTP', health_check_port='traffic-port',
-                        health_check_path='/', health_check_interval_seconds=30,
-                        health_check_timeout_seconds=5, healthy_threshold_count=5,
+def create_target_group(name,
+                        protocol,
+                        port,
+                        vpc_id,
+                        region=None,
+                        key=None,
+                        keyid=None,
+                        profile=None,
+                        health_check_protocol='HTTP',
+                        health_check_port='traffic-port',
+                        health_check_path='/',
+                        health_check_interval_seconds=30,
+                        health_check_timeout_seconds=5,
+                        healthy_threshold_count=5,
                         unhealthy_threshold_count=2):
     '''
     Create target group if not present.
@@ -125,31 +134,35 @@ def create_target_group(name, protocol, port, vpc_id,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if target_group_exists(name, region, key, keyid, profile):
         return True
-    else:
-        try:
-            lb = conn.create_target_group(Name=name, Protocol=protocol, Port=port,
-                                        VpcId=vpc_id, HealthCheckProtocol=health_check_protocol,
-                                        HealthCheckPort=health_check_port,
-                                        HealthCheckPath=health_check_path,
-                                        HealthCheckIntervalSeconds=health_check_interval_seconds,
-                                        HealthCheckTimeoutSeconds=health_check_timeout_seconds,
-                                        HealthyThresholdCount=healthy_threshold_count,
-                                        UnhealthyThresholdCount=unhealthy_threshold_count)
-            if lb:
-                log.info('Created ALB {0}: {1}'.format(name,
-                                        lb['TargetGroups'][0]['TargetGroupArn']))
-                return True
-            else:
-                log.error('Failed to create ALB {0}'.format(name))
-                return False
-        except ClientError as error:
-            log.debug(error)
-            log.error('Failed to create ALB {0}: {1}: {2}'.format(name,
-                                            error.response['Error']['Code'],
-                                            error.response['Error']['Message']))
+
+    try:
+        alb = conn.create_target_group(Name=name, Protocol=protocol, Port=port,
+                                       VpcId=vpc_id, HealthCheckProtocol=health_check_protocol,
+                                       HealthCheckPort=health_check_port,
+                                       HealthCheckPath=health_check_path,
+                                       HealthCheckIntervalSeconds=health_check_interval_seconds,
+                                       HealthCheckTimeoutSeconds=health_check_timeout_seconds,
+                                       HealthyThresholdCount=healthy_threshold_count,
+                                       UnhealthyThresholdCount=unhealthy_threshold_count)
+        if alb:
+            log.info('Created ALB {0}: {1}'.format(name,
+                                                   alb['TargetGroups'][0]['TargetGroupArn']))
+            return True
+        else:
+            log.error('Failed to create ALB {0}'.format(name))
+            return False
+    except ClientError as error:
+        log.debug(error)
+        log.error('Failed to create ALB {0}: {1}: {2}'.format(name,
+                                                              error.response['Error']['Code'],
+                                                              error.response['Error']['Message']))
 
 
-def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
+def delete_target_group(name,
+                        region=None,
+                        key=None,
+                        keyid=None,
+                        profile=None):
     '''
     Delete target group.
 
@@ -166,9 +179,8 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_elbv2.delete_target_group arn:aws:elasticloadbalancing:us-west-2:644138682826:targetgroup/learn1give1-api/414788a16b5cf163
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    tg = target_group_exists(name, region, key, keyid, profile)
 
-    if not tg:
+    if not target_group_exists(name, region, key, keyid, profile):
         return True
 
     try:
@@ -189,7 +201,11 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def target_group_exists(name, region=None, key=None, keyid=None, profile=None):
+def target_group_exists(name,
+                        region=None,
+                        key=None,
+                        keyid=None,
+                        profile=None):
     '''
     Check to see if an target group exists.
 
@@ -212,11 +228,16 @@ def target_group_exists(name, region=None, key=None, keyid=None, profile=None):
             log.warning('The target group does not exist in region {0}'.format(region))
             return False
     except ClientError as error:
-        log.warning('target_group_exists check for {0} returned: {1}'.format(name,error))
+        log.warning('target_group_exists check for {0} returned: {1}'.format(name, error))
         return False
 
 
-def describe_target_health(name, targets=None, region=None, key=None, keyid=None, profile=None):
+def describe_target_health(name,
+                           targets=None,
+                           region=None,
+                           key=None,
+                           keyid=None,
+                           profile=None):
     '''
     Get the curret health check status for targets in a target group.
 
@@ -246,8 +267,12 @@ def describe_target_health(name, targets=None, region=None, key=None, keyid=None
         return {}
 
 
-def register_targets(name, targets, region=None, key=None, keyid=None,
-                       profile=None):
+def register_targets(name,
+                     targets,
+                     region=None,
+                     key=None,
+                     keyid=None,
+                     profile=None):
     '''
     Register targets to a target froup of an ALB. ``targets`` is either a
     instance id string or a list of instance id's.
@@ -276,15 +301,18 @@ def register_targets(name, targets, region=None, key=None, keyid=None,
         registered_targets = conn.register_targets(TargetGroupArn=name, Targets=targetsdict)
         if registered_targets:
             return True
-        else:
-            return False
+        return False
     except ClientError as error:
         log.warning(error)
         return False
 
 
-def deregister_targets(name, targets, region=None, key=None, keyid=None,
-                         profile=None):
+def deregister_targets(name,
+                       targets,
+                       region=None,
+                       key=None,
+                       keyid=None,
+                       profile=None):
     '''
     Deregister targets to a target froup of an ALB. ``targets`` is either a
     instance id string or a list of instance id's.
@@ -313,8 +341,7 @@ def deregister_targets(name, targets, region=None, key=None, keyid=None,
         registered_targets = conn.deregister_targets(TargetGroupArn=name, Targets=targetsdict)
         if registered_targets:
             return True
-        else:
-            return False
+        return False
     except ClientError as error:
         log.warning(error)
         return False
