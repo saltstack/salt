@@ -154,7 +154,7 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
     Delete target group.
 
     name
-        (string) - The Amazon Resource Name (ARN) of the resource.
+        (string) - Target Group Name or Amazon Resource Name (ARN).
 
     returns
         (bool) - True on success, False on failure.
@@ -166,10 +166,22 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_elbv2.delete_target_group arn:aws:elasticloadbalancing:us-west-2:644138682826:targetgroup/learn1give1-api/414788a16b5cf163
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    tg = target_group_exists(name, region, key, keyid, profile)
+
+    if not tg:
+        return True
 
     try:
-        conn.delete_target_group(TargetGroupArn=name)
-        log.info('Deleted target group {0}'.format(name))
+        if name.startswith('arn:aws:elasticloadbalancing'):
+            conn.delete_target_group(TargetGroupArn=name)
+            log.info('Deleted target group {0}'.format(name))
+        else:
+            tg_info = conn.describe_target_groups(Names=[name])
+            if len(tg_info['TargetGroups']) != 1:
+                return False
+            arn = tg_info['TargetGroups'][0]['TargetGroupArn']
+            conn.delete_target_group(TargetGroupArn=arn)
+            log.info('Deleted target group {0} ARN {1}'.format(name, arn))
         return True
     except ClientError as error:
         log.debug(error)
@@ -200,7 +212,7 @@ def target_group_exists(name, region=None, key=None, keyid=None, profile=None):
             log.warning('The target group does not exist in region {0}'.format(region))
             return False
     except ClientError as error:
-        log.warning(error)
+        log.warning('target_group_exists check for {0} returned: {1}'.format(name,error))
         return False
 
 

@@ -52,10 +52,148 @@ def __virtual__():
     '''
     if 'boto_elbv2.target_group_exists' in __salt__:
         return 'boto_elbv2'
-    else
-        return (False, "The boto_elbv2 module cannot be loaded: boto3 library not found")
+    return (False, "The boto_elbv2 module cannot be loaded: boto3 library not found")
+
+def create_target_group(name, protocol, port, vpc_id,
+                        region=None, key=None, keyid=None, profile=None,
+                        health_check_protocol='HTTP', health_check_port='traffic-port',
+                        health_check_path='/', health_check_interval_seconds=30,
+                        health_check_timeout_seconds=5, healthy_threshold_count=5,
+                        unhealthy_threshold_count=2, **kwargs):
+
+    '''
+    .. versionadded:: 2017.11.0
+
+    Create target group if not present.
+
+    name
+        (string) - The name of the target group.
+    protocol
+        (string) - The protocol to use for routing traffic to the targets
+    port
+        (int) - The port on which the targets receive traffic. This port is used unless
+        you specify a port override when registering the traffic.
+    vpc_id
+        (string) - The identifier of the virtual private cloud (VPC).
+    health_check_protocol
+        (string) - The protocol the load balancer uses when performing health check on
+        targets. The default is the HTTP protocol.
+    health_check_port
+        (string) - The port the load balancer uses when performing health checks on
+        targets. The default is 'traffic-port', which indicates the port on which each
+        target receives traffic from the load balancer.
+    health_check_path
+        (string) - The ping path that is the destination on the targets for health
+        checks. The default is /.
+    health_check_interval_seconds
+        (integer) - The approximate amount of time, in seconds, between health checks
+        of an individual target. The default is 30 seconds.
+    health_check_timeout_seconds
+        (integer) - The amount of time, in seconds, during which no response from a
+        target means a failed health check. The default is 5 seconds.
+    healthy_threshold_count
+        (integer) - The number of consecutive health checks successes required before
+        considering an unhealthy target healthy. The default is 5.
+    unhealthy_threshold_count
+        (integer) - The number of consecutive health check failures required before
+        considering a target unhealthy. The default is 2.
+
+    returns
+        (bool) - True on success, False on failure.
+
+    CLI example:
+    .. code-block:: yaml
+
+        create-target:
+          boto_elb2.create_targets_group:
+            - name: myALB
+            - protocol: https
+            - port: 443
+            - vpc_id: myVPC
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    tg = __salt__['boto_elbv2.target_group_exists'](name, region, key, keyid, profile)
+
+    if tg:
+        ret['result'] = True
+        ret['comment'] = 'Target Group {0} already exists'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'Target Group {0} will be created'.format(name)
+        return ret
+
+    state = __salt__['boto_elbv2.create_target_group'](name,
+                                                       protocol,
+                                                       port,
+                                                       vpc_id,
+                                                       region,
+                                                       key,
+                                                       keyid,
+                                                       profile)
+
+    if state:
+        changes = True
+        ret['changes']['target_group'] = name
+        ret['result'] = True
+        ret['comment'] = 'Target Group {0} created'.format(name)
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Target Group {0} creation failed'.format(name)
+        failure = True
+    return ret
 
 
+def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete target group.
+
+    name
+        (string) - The Amazon Resource Name (ARN) of the resource.
+
+    returns
+        (bool) - True on success, False on failure.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        check-target:
+          boto_elb2.delete_targets_group:
+            - name: myALB
+            - protocol: https
+            - port: 443
+            - vpc_id: myVPC
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    tg = __salt__['boto_elbv2.target_group_exists'](name, region, key, keyid, profile)
+
+    if not tg:
+        ret['result'] = True
+        ret['comment'] = 'Target Group {0} does not exists'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'Target Group {0} will be deleted'.format(name)
+        return ret
+
+    state = __salt__['boto_elbv2.delete_target_group'](name,
+                                                       region,
+                                                       key,
+                                                       keyid,
+                                                       profile)
+
+    if state:
+        ret['result'] = True
+        ret['changes']['target_group'] = name
+        ret['comment'] = 'Target Group {0} deleted'.format(name)
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Target Group {0} deletion failed'.format(name)
+        failure = True
+    return ret
 
 def targets_registered(name, targets, region=None, key=None, keyid=None,
                        profile=None, **kwargs):
