@@ -19,9 +19,9 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import Salt libs
-import salt.utils
 import salt.utils.platform
 import salt.utils.powershell
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def __virtual__():
     if not salt.utils.platform.is_windows():
         return False
 
-    if salt.utils.version_cmp(__grains__['osversion'], '6.1.7600') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '6.1.7600') == -1:
         return False, 'Failed to load win_servermanager module: ' \
                       'Requires Remote Server Administration Tools which ' \
                       'is only available on Windows 2008 R2 and later.'
@@ -194,7 +194,7 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
     # with old behavior.
     command = 'Add-WindowsFeature'
     management_tools = ''
-    if salt.utils.version_cmp(__grains__['osversion'], '6.2') >= 0:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '6.2') >= 0:
         command = 'Install-WindowsFeature'
         management_tools = '-IncludeManagementTools'
 
@@ -328,7 +328,7 @@ def remove(feature, remove_payload=False, restart=False):
     command = 'Remove-WindowsFeature'
     management_tools = ''
     _remove_payload = ''
-    if salt.utils.version_cmp(__grains__['osversion'], '6.2') >= 0:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '6.2') >= 0:
         command = 'Uninstall-WindowsFeature'
         management_tools = '-IncludeManagementTools'
 
