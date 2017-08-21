@@ -37,7 +37,7 @@ log = logging.getLogger(__name__)
 
 
 def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
-               pillar_override=None, pillarenv=None):
+               pillar_override=None, pillarenv=None, extra_minion_data=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
@@ -56,12 +56,14 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
         return PillarCache(opts, grains, minion_id, saltenv, ext=ext, functions=funcs,
                 pillar_override=pillar_override, pillarenv=pillarenv)
     return ptype(opts, grains, minion_id, saltenv, ext, functions=funcs,
-                 pillar_override=pillar_override, pillarenv=pillarenv)
+                 pillar_override=pillar_override, pillarenv=pillarenv,
+                 extra_minion_data=extra_minion_data)
 
 
 # TODO: migrate everyone to this one!
 def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
-               pillar_override=None, pillarenv=None):
+                     pillar_override=None, pillarenv=None,
+                     extra_minion_data=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
@@ -253,7 +255,7 @@ class PillarCache(object):
     '''
     # TODO ABC?
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-            pillar_override=None, pillarenv=None):
+                 pillar_override=None, pillarenv=None, extra_minion_data=None):
         # Yes, we need all of these because we need to route to the Pillar object
         # if we have no cache. This is another refactor target.
 
@@ -331,7 +333,7 @@ class Pillar(object):
     Read over the pillar top files and render the pillar data
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar_override=None, pillarenv=None):
+                 pillar_override=None, pillarenv=None, extra_minion_data=None):
         self.minion_id = minion_id
         self.ext = ext
         if pillarenv is None:
@@ -377,6 +379,10 @@ class Pillar(object):
         if not isinstance(self.pillar_override, dict):
             self.pillar_override = {}
             log.error('Pillar data must be a dictionary')
+        self.extra_minion_data = extra_minion_data or {}
+        if not isinstance(self.extra_minion_data, dict):
+            self.extra_minion_data = {}
+            log.error('Extra minion data must be a dictionary')
 
     def __valid_on_demand_ext_pillar(self, opts):
         '''
@@ -836,15 +842,31 @@ class Pillar(object):
         ext = None
 
         if isinstance(val, dict):
-            ext = self.ext_pillars[key](self.minion_id, pillar, **val)
+            if self.extra_minion_data:
+                ext = self.ext_pillars[key](self.minion_id, pillar,
+                                            self.extra_minion_data, **val)
+            else:
+                ext = self.ext_pillars[key](self.minion_id, pillar, **val)
         elif isinstance(val, list):
-            ext = self.ext_pillars[key](self.minion_id,
-                                        pillar,
-                                        *val)
+            if self.extra_minion_data:
+                ext = self.ext_pillars[key](
+                    self.minion_id, pillar, *val,
+                    extra_minion_data=self.extra_minion_data)
+            else:
+                ext = self.ext_pillars[key](self.minion_id,
+                                            pillar,
+                                            *val)
         else:
-            ext = self.ext_pillars[key](self.minion_id,
-                                        pillar,
-                                        val)
+            if self.extra_minion_data:
+                ext = self.ext_pillars[key](
+                    self.minion_id,
+                    pillar,
+                    val,
+                    extra_minion_data=self.extra_minion_data)
+            else:
+                ext = self.ext_pillars[key](self.minion_id,
+                                            pillar,
+                                            val)
         return ext
 
     def ext_pillar(self, pillar, errors=None):
