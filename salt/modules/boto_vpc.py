@@ -2699,11 +2699,11 @@ def request_vpc_peering_connection(requester_vpc_id=None, requester_vpc_name=Non
         Name tag of the requesting VPC.  Exclusive with requester_vpc_id.
 
     peer_vpc_id
-        ID of the VPC tp crete VPC peering connection with. This can be a VPC in
+        ID of the VPC to create VPC peering connection with. This can be a VPC in
         another account. Exclusive with peer_vpc_name.
 
     peer_vpc_name
-        Name tag of the VPC tp crete VPC peering connection with. This can only
+        Name tag of the VPC to create VPC peering connection with. This can only
         be a VPC in the same account, else resolving it into a vpc ID will almost
         certainly fail. Exclusive with peer_vpc_id.
 
