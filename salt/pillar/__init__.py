@@ -120,15 +120,15 @@ class RemotePillarMixin(object):
                                              recursive_update=True,
                                              merge_lists=True)
         log.trace('ext_pillar_extra_data = {0}'.format(extra_data))
-        return pillar_override
+        return extra_data
 
 
-class AsyncRemotePillar(object):
+class AsyncRemotePillar(RemotePillarMixin):
     '''
     Get the pillar from the master
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar_override=None, pillarenv=None):
+                 pillar_override=None, pillarenv=None, extra_minion_data=None):
         self.opts = opts
         self.opts['environment'] = saltenv
         self.ext = ext
@@ -141,6 +141,14 @@ class AsyncRemotePillar(object):
         if not isinstance(self.pillar_override, dict):
             self.pillar_override = {}
             log.error('Pillar data must be a dictionary')
+        self.extra_minion_data = extra_minion_data or {}
+        if not isinstance(self.extra_minion_data, dict):
+            self.extra_minion_data = {}
+            log.error('Extra minion data must be a dictionary')
+        salt.utils.dictupdate.update(self.extra_minion_data,
+                                     self.get_ext_pillar_extra_minion_data(opts),
+                                     recursive_update=True,
+                                     merge_lists=True)
 
     @tornado.gen.coroutine
     def compile_pillar(self):
@@ -152,6 +160,7 @@ class AsyncRemotePillar(object):
                 'saltenv': self.opts['environment'],
                 'pillarenv': self.opts['pillarenv'],
                 'pillar_override': self.pillar_override,
+                'extra_minion_data': self.extra_minion_data,
                 'ver': '2',
                 'cmd': '_pillar'}
         if self.ext:
@@ -174,12 +183,12 @@ class AsyncRemotePillar(object):
         raise tornado.gen.Return(ret_pillar)
 
 
-class RemotePillar(object):
+class RemotePillar(RemotePillarMixin):
     '''
     Get the pillar from the master
     '''
     def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
-                 pillar_override=None, pillarenv=None):
+                 pillar_override=None, pillarenv=None, extra_minion_data=None):
         self.opts = opts
         self.opts['environment'] = saltenv
         self.ext = ext
@@ -192,6 +201,14 @@ class RemotePillar(object):
         if not isinstance(self.pillar_override, dict):
             self.pillar_override = {}
             log.error('Pillar data must be a dictionary')
+        self.extra_minion_data = extra_minion_data or {}
+        if not isinstance(self.extra_minion_data, dict):
+            self.extra_minion_data = {}
+            log.error('Extra minion data must be a dictionary')
+        salt.utils.dictupdate.update(self.extra_minion_data,
+                                     self.get_ext_pillar_extra_minion_data(opts),
+                                     recursive_update=True,
+                                     merge_lists=True)
 
     def compile_pillar(self):
         '''
@@ -202,6 +219,7 @@ class RemotePillar(object):
                 'saltenv': self.opts['environment'],
                 'pillarenv': self.opts['pillarenv'],
                 'pillar_override': self.pillar_override,
+                'extra_minion_data': self.extra_minion_data,
                 'ver': '2',
                 'cmd': '_pillar'}
         if self.ext:
