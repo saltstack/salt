@@ -104,7 +104,7 @@ def _retrieve_config_xml(config_xml, saltenv):
 
 def run(script):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2017.7.0
 
     Execute a groovy script on the jenkins master
 
