@@ -25,7 +25,7 @@ import traceback
 import re
 import time
 import random
-from urllib
+import urllib
 
 # Import salt libs
 import salt.utils
