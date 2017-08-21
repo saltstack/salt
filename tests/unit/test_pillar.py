@@ -58,6 +58,244 @@ class PillarTestCase(TestCase):
             self.assertEqual(pillar.opts['environment'], 'dev')
             self.assertEqual(pillar.opts['pillarenv'], 'dev')
 
+    def test_ext_pillar_no_extra_minion_data_val_dict(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {
+                'dev': [],
+                'base': []
+            },
+            'file_roots': {
+                'dev': [],
+                'base': []
+            },
+            'extension_modules': '',
+            'pillarenv_from_saltenv': True
+        }
+        mock_ext_pillar_func = MagicMock()
+        with patch('salt.loader.pillars',
+                   MagicMock(return_value={'fake_ext_pillar':
+                                           mock_ext_pillar_func})):
+            pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'dev')
+        # ext pillar function doesn't have the extra_minion_data arg
+        with patch('inspect.getargspec',
+                   MagicMock(return_value=MagicMock(args=[]))):
+            pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
+                                         'fake_pillar_dirs', 'fake_ext_pillar')
+        mock_ext_pillar_func.assert_called_once_with('mocked-minion',
+                                                     'fake_pillar',
+                                                     arg='foo')
+        # ext pillar function has the extra_minion_data arg
+        mock_ext_pillar_func.reset_mock()
+        with patch('inspect.getargspec',
+                   MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
+            pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
+                                         'fake_pillar_dirs', 'fake_ext_pillar')
+        mock_ext_pillar_func.assert_called_once_with('mocked-minion',
+                                                     'fake_pillar',
+                                                     arg='foo')
+
+    def test_ext_pillar_no_extra_minion_data_val_list(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {
+                'dev': [],
+                'base': []
+            },
+            'file_roots': {
+                'dev': [],
+                'base': []
+            },
+            'extension_modules': '',
+            'pillarenv_from_saltenv': True
+        }
+        mock_ext_pillar_func = MagicMock()
+        with patch('salt.loader.pillars',
+                   MagicMock(return_value={'fake_ext_pillar':
+                                           mock_ext_pillar_func})):
+            pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'dev')
+        # ext pillar function doesn't have the extra_minion_data arg
+        with patch('inspect.getargspec',
+                   MagicMock(return_value=MagicMock(args=[]))):
+            pillar._external_pillar_data('fake_pillar', ['foo'],
+                                         'fake_pillar_dirs', 'fake_ext_pillar')
+        mock_ext_pillar_func.assert_called_once_with('mocked-minion',
+                                                     'fake_pillar',
+                                                     'foo')
+        # ext pillar function has the extra_minion_data arg
+        mock_ext_pillar_func.reset_mock()
+        with patch('inspect.getargspec',
+                   MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
+            pillar._external_pillar_data('fake_pillar', ['foo'],
+                                         'fake_pillar_dirs', 'fake_ext_pillar')
+        mock_ext_pillar_func.assert_called_once_with('mocked-minion',
+                                                     'fake_pillar',
+                                                     'foo')
+
+    def test_ext_pillar_no_extra_minion_data_val_elem(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {
+                'dev': [],
+                'base': []
+            },
+            'file_roots': {
+                'dev': [],
+                'base': []
+            },
+            'extension_modules': '',
+            'pillarenv_from_saltenv': True
+        }
+        mock_ext_pillar_func = MagicMock()
+        with patch('salt.loader.pillars',
+                   MagicMock(return_value={'fake_ext_pillar':
+                                           mock_ext_pillar_func})):
+            pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'dev')
+        # ext pillar function doesn't have the extra_minion_data arg
+        with patch('inspect.getargspec',
+                   MagicMock(return_value=MagicMock(args=[]))):
+            pillar._external_pillar_data('fake_pillar', 'fake_val',
+                                         'fake_pillar_dirs', 'fake_ext_pillar')
+        mock_ext_pillar_func.assert_called_once_with('mocked-minion',
+                                                     'fake_pillar', 'fake_val')
+        # ext pillar function has the extra_minion_data arg
+        mock_ext_pillar_func.reset_mock()
+        with patch('inspect.getargspec',
+                   MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
+            pillar._external_pillar_data('fake_pillar', 'fake_val',
+                                         'fake_pillar_dirs', 'fake_ext_pillar')
+        mock_ext_pillar_func.assert_called_once_with('mocked-minion',
+                                                     'fake_pillar', 'fake_val')
+
+    def test_ext_pillar_with_extra_minion_data_val_dict(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {
+                'dev': [],
+                'base': []
+            },
+            'file_roots': {
+                'dev': [],
+                'base': []
+            },
+            'extension_modules': '',
+            'pillarenv_from_saltenv': True
+        }
+        mock_ext_pillar_func = MagicMock()
+        with patch('salt.loader.pillars',
+                   MagicMock(return_value={'fake_ext_pillar':
+                                           mock_ext_pillar_func})):
+            pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'dev',
+                                        extra_minion_data={'fake_key': 'foo'})
+        # ext pillar function doesn't have the extra_minion_data arg
+        with patch('inspect.getargspec',
+                   MagicMock(return_value=MagicMock(args=[]))):
+            pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
+                                         'fake_pillar_dirs', 'fake_ext_pillar')
+        mock_ext_pillar_func.assert_called_once_with(
+            'mocked-minion', 'fake_pillar', arg='foo')
+        # ext pillar function has the extra_minion_data arg
+        mock_ext_pillar_func.reset_mock()
+        with patch('inspect.getargspec',
+                   MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
+            pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
+                                         'fake_pillar_dirs', 'fake_ext_pillar')
+        mock_ext_pillar_func.assert_called_once_with(
+            'mocked-minion', 'fake_pillar', arg='foo',
+            extra_minion_data={'fake_key': 'foo'})
+
+    def test_ext_pillar_with_extra_minion_data_val_list(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {
+                'dev': [],
+                'base': []
+            },
+            'file_roots': {
+                'dev': [],
+                'base': []
+            },
+            'extension_modules': '',
+            'pillarenv_from_saltenv': True
+        }
+        mock_ext_pillar_func = MagicMock()
+        with patch('salt.loader.pillars',
+                   MagicMock(return_value={'fake_ext_pillar':
+                                           mock_ext_pillar_func})):
+            pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'dev',
+                                        extra_minion_data={'fake_key': 'foo'})
+        # ext pillar function doesn't have the extra_minion_data arg
+        with patch('inspect.getargspec',
+                   MagicMock(return_value=MagicMock(args=[]))):
+            pillar._external_pillar_data('fake_pillar', ['bar'],
+                                         'fake_pillar_dirs', 'fake_ext_pillar')
+        mock_ext_pillar_func.assert_called_once_with(
+            'mocked-minion', 'fake_pillar', 'bar')
+        # ext pillar function has the extra_minion_data arg
+        mock_ext_pillar_func.reset_mock()
+        with patch('inspect.getargspec',
+                   MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
+            pillar._external_pillar_data('fake_pillar', ['bar'],
+                                         'fake_pillar_dirs', 'fake_ext_pillar')
+        mock_ext_pillar_func.assert_called_once_with(
+            'mocked-minion', 'fake_pillar', 'bar',
+            extra_minion_data={'fake_key': 'foo'})
+
+    def test_ext_pillar_with_extra_minion_data_val_elem(self):
+        opts = {
+            'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': {
+                'dev': [],
+                'base': []
+            },
+            'file_roots': {
+                'dev': [],
+                'base': []
+            },
+            'extension_modules': '',
+            'pillarenv_from_saltenv': True
+        }
+        mock_ext_pillar_func = MagicMock()
+        with patch('salt.loader.pillars',
+                   MagicMock(return_value={'fake_ext_pillar':
+                                           mock_ext_pillar_func})):
+            pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'dev',
+                                        extra_minion_data={'fake_key': 'foo'})
+        # ext pillar function doesn't have the extra_minion_data arg
+        with patch('inspect.getargspec',
+                   MagicMock(return_value=MagicMock(args=[]))):
+            pillar._external_pillar_data('fake_pillar', 'bar',
+                                         'fake_pillar_dirs', 'fake_ext_pillar')
+        mock_ext_pillar_func.assert_called_once_with(
+            'mocked-minion', 'fake_pillar', 'bar')
+        # ext pillar function has the extra_minion_data arg
+        mock_ext_pillar_func.reset_mock()
+        with patch('inspect.getargspec',
+                   MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
+            pillar._external_pillar_data('fake_pillar', 'bar',
+                                         'fake_pillar_dirs', 'fake_ext_pillar')
+        mock_ext_pillar_func.assert_called_once_with(
+            'mocked-minion', 'fake_pillar', 'bar',
+            extra_minion_data={'fake_key': 'foo'})
+
     def test_malformed_pillar_sls(self):
         with patch('salt.pillar.compile_template') as compile_template:
             opts = {
