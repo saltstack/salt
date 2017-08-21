@@ -13,6 +13,7 @@ import logging
 import tornado.gen
 import sys
 import traceback
+import inspect
 
 # Import salt libs
 import salt.loader
@@ -840,15 +841,17 @@ class Pillar(object):
         Builds actual pillar data structure and updates the ``pillar`` variable
         '''
         ext = None
+        args = inspect.getargspec(self.ext_pillars[key]).args
 
         if isinstance(val, dict):
-            if self.extra_minion_data:
-                ext = self.ext_pillars[key](self.minion_id, pillar,
-                                            self.extra_minion_data, **val)
+            if ('extra_minion_data' in args) and self.extra_minion_data:
+                ext = self.ext_pillars[key](
+                    self.minion_id, pillar,
+                    extra_minion_data=self.extra_minion_data, **val)
             else:
                 ext = self.ext_pillars[key](self.minion_id, pillar, **val)
         elif isinstance(val, list):
-            if self.extra_minion_data:
+            if ('extra_minion_data' in args) and self.extra_minion_data:
                 ext = self.ext_pillars[key](
                     self.minion_id, pillar, *val,
                     extra_minion_data=self.extra_minion_data)
@@ -857,7 +860,7 @@ class Pillar(object):
                                             pillar,
                                             *val)
         else:
-            if self.extra_minion_data:
+            if ('extra_minion_data' in args) and self.extra_minion_data:
                 ext = self.ext_pillars[key](
                     self.minion_id,
                     pillar,
