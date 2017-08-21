@@ -135,19 +135,23 @@ A State Module must return a dict containing the following keys/values:
   ``test=True``, and changes would have been made if the state was not run in
   test mode.
 
-  +--------------------+-----------+-----------+
-  |                    | live mode | test mode |
-  +====================+===========+===========+
-  | no changes         | ``True``  | ``True``  |
-  +--------------------+-----------+-----------+
-  | successful changes | ``True``  | ``None``  |
-  +--------------------+-----------+-----------+
-  | failed changes     | ``False`` | ``None``  |
-  +--------------------+-----------+-----------+
+  +--------------------+-----------+------------------------+
+  |                    | live mode | test mode              |
+  +====================+===========+========================+
+  | no changes         | ``True``  | ``True``               |
+  +--------------------+-----------+------------------------+
+  | successful changes | ``True``  | ``None``               |
+  +--------------------+-----------+------------------------+
+  | failed changes     | ``False`` | ``False`` or ``None``  |
+  +--------------------+-----------+------------------------+
 
   .. note::
 
-      Test mode does not predict if the changes will be successful or not.
+      Test mode does not predict if the changes will be successful or not,
+      and hence the result for pending changes is usually ``None``.
+
+      However, if a state is going to fail and this can be determined
+      in test mode without applying the change, ``False`` can be returned.
 
 - **comment:** A string containing a summary of the result.
 

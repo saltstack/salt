@@ -38,7 +38,7 @@ except ImportError:
     HAS_YUM = False
 # pylint: enable=import-error,redefined-builtin
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
 import salt.utils.args
 import salt.utils.decorators.path
@@ -48,6 +48,7 @@ import salt.utils.lazy
 import salt.utils.pkg
 import salt.utils.pkg.rpm
 import salt.utils.systemd
+import salt.utils.versions
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -488,7 +489,7 @@ def latest_version(*names, **kwargs):
                 # If any installed version is greater than (or equal to) the
                 # one found by yum/dnf list available, then it is not an
                 # upgrade.
-                if salt.utils.compare_versions(ver1=installed_version,
+                if salt.utils.versions.compare(ver1=installed_version,
                                                oper='>=',
                                                ver2=pkg.version,
                                                cmp_func=version_cmp):
@@ -1494,7 +1495,7 @@ def install(name=None,
             if reinstall and cver:
                 for ver in cver:
                     ver = norm_epoch(ver, version_num)
-                    if salt.utils.compare_versions(ver1=version_num,
+                    if salt.utils.versions.compare(ver1=version_num,
                                                    oper='==',
                                                    ver2=ver,
                                                    cmp_func=version_cmp):
@@ -1508,7 +1509,7 @@ def install(name=None,
                 else:
                     for ver in cver:
                         ver = norm_epoch(ver, version_num)
-                        if salt.utils.compare_versions(ver1=version_num,
+                        if salt.utils.versions.compare(ver1=version_num,
                                                        oper='>=',
                                                        ver2=ver,
                                                        cmp_func=version_cmp):

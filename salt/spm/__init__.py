@@ -358,6 +358,7 @@ class SPMClient(object):
 
         # First we download everything, then we install
         for package in dl_list:
+            out_file = dl_list[package]['dest_file']
             # Kick off the install
             self._install_indv_pkg(package, out_file)
         return
