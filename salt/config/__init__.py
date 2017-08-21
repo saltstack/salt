@@ -1663,7 +1663,8 @@ DEFAULT_PROXY_MINION_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': True,
-    'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include'],
+    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'proxy', 'extmods'),
+    'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include', 'extension_modules'],
     'default_include': 'proxy.d/*.conf',
 
     # By default, proxies will preserve the connection.
