@@ -16,28 +16,28 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2, mock_elb
+    from moto import mock_ec2_deprecated, mock_elb_deprecated
     HAS_MOTO = True
 except ImportError:
     HAS_MOTO = False
 
-    def mock_ec2(self):
+    def mock_ec2_deprecated(self):
         '''
-        if the mock_ec2 function is not available due to import failure
+        if the mock_ec2_deprecated function is not available due to import failure
         this replaces the decorated function with stub_function.
-        Allows boto_vpc unit tests to use the @mock_ec2 decorator
-        without a "NameError: name 'mock_ec2' is not defined" error.
+        Allows boto_elb unit tests to use the @mock_ec2_deprecated decorator
+        without a "NameError: name 'mock_ec2_deprecated' is not defined" error.
         '''
         def stub_function(self):
             pass
         return stub_function
 
-    def mock_elb(self):
+    def mock_elb_deprecated(self):
         '''
-        if the mock_ec2 function is not available due to import failure
+        if the mock_elb_deprecated function is not available due to import failure
         this replaces the decorated function with stub_function.
-        Allows boto_vpc unit tests to use the @mock_ec2 decorator
-        without a "NameError: name 'mock_ec2' is not defined" error.
+        Allows boto_elb unit tests to use the @mock_elb_deprecated decorator
+        without a "NameError: name 'mock_elb_deprecated' is not defined" error.
         '''
         def stub_function(self):
             pass
@@ -114,8 +114,8 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         # __virtual__ must be caller in order for _get_conn to be injected
         boto_elb.__virtual__()
 
-    @mock_ec2
-    @mock_elb
+    @mock_ec2_deprecated
+    @mock_elb_deprecated
     def test_register_instances_valid_id_result_true(self):
         '''
         tests that given a valid instance id and valid ELB that
@@ -133,8 +133,8 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
                                                       **conn_parameters)
         self.assertEqual(True, register_result)
 
-    @mock_ec2
-    @mock_elb
+    @mock_ec2_deprecated
+    @mock_elb_deprecated
     def test_register_instances_valid_id_string(self):
         '''
         tests that given a string containing a instance id and valid ELB that
@@ -156,8 +156,8 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         log.debug(load_balancer_refreshed.instances)
         self.assertEqual([reservations.instances[0].id], registered_instance_ids)
 
-    @mock_ec2
-    @mock_elb
+    @mock_ec2_deprecated
+    @mock_elb_deprecated
     def test_deregister_instances_valid_id_result_true(self):
         '''
         tests that given an valid id the boto_elb deregister_instances method
@@ -177,8 +177,8 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
                                                           **conn_parameters)
         self.assertEqual(True, deregister_result)
 
-    @mock_ec2
-    @mock_elb
+    @mock_ec2_deprecated
+    @mock_elb_deprecated
     def test_deregister_instances_valid_id_string(self):
         '''
         tests that given an valid id the boto_elb deregister_instances method
@@ -203,8 +203,8 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
                             load_balancer_refreshed.instances]
         self.assertEqual(actual_instances, expected_instances)
 
-    @mock_ec2
-    @mock_elb
+    @mock_ec2_deprecated
+    @mock_elb_deprecated
     def test_deregister_instances_valid_id_list(self):
         '''
         tests that given an valid ids in the form of a list that the boto_elb

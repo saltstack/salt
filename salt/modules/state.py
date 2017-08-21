@@ -34,6 +34,7 @@ import salt.utils.files
 import salt.utils.jid
 import salt.utils.platform
 import salt.utils.url
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.runners.state import orchestrate as _orchestrate
 
@@ -396,7 +397,7 @@ def template(tem, queue=False, **kwargs):
         salt '*' state.template '<Path to template on the minion>'
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -838,7 +839,7 @@ def highstate(test=None, queue=False, **kwargs):
     opts['test'] = _get_test_value(test, **kwargs)
 
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -1005,7 +1006,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     '''
     concurrent = kwargs.get('concurrent', False)
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -1488,7 +1489,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
         salt '*' state.show_low_sls foo saltenv=dev
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -1579,7 +1580,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
         salt '*' state.show_sls core,edit.vim dev
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -1655,7 +1656,7 @@ def show_top(queue=False, **kwargs):
         salt '*' state.show_top
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'env\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '

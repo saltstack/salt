@@ -33,6 +33,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
+import salt.utils.versions
 from salt.utils.locales import sdecode
 from salt.utils.openstack.swift import SaltSwift
 
@@ -639,6 +640,13 @@ class Client(object):
 
             def on_header(hdr):
                 if write_body[1] is not False and write_body[2] is None:
+                    if not hdr.strip() and 'Content-Type' not in write_body[1]:
+                        # We've reached the end of the headers and not yet
+                        # found the Content-Type. Reset the values we're
+                        # tracking so that we properly follow the redirect.
+                        write_body[0] = None
+                        write_body[1] = False
+                        return
                     # Try to find out what content type encoding is used if
                     # this is a text file
                     write_body[1].parse_line(hdr)  # pylint: disable=no-member
@@ -736,7 +744,7 @@ class Client(object):
         Cache a file then process it as a template
         '''
         if u'env' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Oxygen',
                 u'Parameter \'env\' has been detected in the argument list.  This '
                 u'parameter is no longer used and has been replaced by \'saltenv\' '
@@ -1286,7 +1294,7 @@ class RemoteClient(Client):
                     u'specified file %s is not present to generate hash: %s',
                     path, err
                 )
-                return {}
+                return {}, None
             else:
                 ret = {}
                 hash_type = self.opts.get(u'hash_type', u'md5')

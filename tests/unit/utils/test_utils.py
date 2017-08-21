@@ -939,19 +939,3 @@ class UtilsTestCase(TestCase):
 
         with patch('salt.utils.path.which', return_value=False):
             self.assertRaises(CommandNotFoundError, salt.utils.check_or_die, 'FAKE COMMAND')
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_compare_versions(self):
-        ret = salt.utils.compare_versions('1.0', '==', '1.0')
-        self.assertTrue(ret)
-
-        ret = salt.utils.compare_versions('1.0', '!=', '1.0')
-        self.assertFalse(ret)
-
-        with patch('salt.utils.log') as log_mock:
-            ret = salt.utils.compare_versions('1.0', 'HAH I AM NOT A COMP OPERATOR! I AM YOUR FATHER!', '1.0')
-            self.assertTrue(log_mock.error.called)
-
-    def test_kwargs_warn_until(self):
-        # Test invalid version arg
-        self.assertRaises(RuntimeError, salt.utils.kwargs_warn_until, {}, [])

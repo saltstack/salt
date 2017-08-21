@@ -35,8 +35,6 @@ def useradd(pwfile, user, password, opts='', runas=None):
     Add a user to htpasswd file using the htpasswd command. If the htpasswd
     file does not exist, it will be created.
 
-    .. deprecated:: 2016.3.0
-
     pwfile
         Path to htpasswd file
 
