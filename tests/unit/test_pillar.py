@@ -439,3 +439,56 @@ class RemotePillarTestCase(TestCase):
              'pillar_override': {},
              'extra_minion_data': {'path_to_add': 'fake_data'}},
             dictkey='pillar')
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch('salt.transport.client.AsyncReqChannel.factory', MagicMock())
+class AsyncRemotePillarTestCase(TestCase):
+    '''
+    Tests for instantiating a AsyncRemotePillar in salt.pillar
+    '''
+    def setUp(self):
+        self.grains = {}
+
+    def tearDown(self):
+        for attr in ('grains',):
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                continue
+
+    def test_get_opts_in_pillar_override_call(self):
+        mock_get_extra_minion_data = MagicMock(return_value={})
+        with patch(
+            'salt.pillar.RemotePillarMixin.get_ext_pillar_extra_minion_data',
+            mock_get_extra_minion_data):
+
+            salt.pillar.RemotePillar({}, self.grains, 'mocked-minion', 'dev')
+        mock_get_extra_minion_data.assert_called_once_with(
+            {'environment': 'dev'})
+
+    def test_pillar_send_extra_minion_data_from_config(self):
+        opts = {
+            'renderer': 'json',
+            'pillarenv': 'fake_pillar_env',
+            'path_to_add': 'fake_data',
+            'path_to_add2': {'fake_data5': 'fake_data6',
+                             'fake_data2': ['fake_data3', 'fake_data4']},
+            'pass_to_ext_pillars': ['path_to_add']}
+        mock_channel = MagicMock(
+            crypted_transfer_decode_dictentry=MagicMock(return_value={}))
+        with patch('salt.transport.client.AsyncReqChannel.factory',
+                   MagicMock(return_value=mock_channel)):
+            pillar = salt.pillar.RemotePillar(opts, self.grains,
+                                              'mocked_minion', 'fake_env')
+
+        ret = pillar.compile_pillar()
+        mock_channel.crypted_transfer_decode_dictentry.assert_called_once_with(
+            {'cmd': '_pillar', 'ver': '2',
+             'id': 'mocked_minion',
+             'grains': {},
+             'saltenv': 'fake_env',
+             'pillarenv': 'fake_pillar_env',
+             'pillar_override': {},
+             'extra_minion_data': {'path_to_add': 'fake_data'}},
+            dictkey='pillar')
