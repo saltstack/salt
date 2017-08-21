@@ -84,13 +84,13 @@ else:
 # We list un-supported functions here. These will be removed from the loaded.
 #  TODO:  remove the need for this cross-module code. Maybe use NotImplemented
 LIBCLOUD_FUNCS_NOT_SUPPORTED = (
-    'parallels.avail_sizes',
-    'parallels.avail_locations',
-    'proxmox.avail_sizes',
-    'rackspace.reboot',
-    'openstack.list_locations',
-    'rackspace.list_locations'
-    )
+    u'parallels.avail_sizes',
+    u'parallels.avail_locations',
+    u'proxmox.avail_sizes',
+    u'rackspace.reboot',
+    u'openstack.list_locations',
+    u'rackspace.list_locations'
+)
 
 # Will be set to pyximport module at runtime if cython is enabled in config.
 pyximport = None
