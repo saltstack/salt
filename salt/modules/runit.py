@@ -80,7 +80,8 @@ for service_dir in VALID_SERVICE_DIRS:
 AVAIL_SVR_DIRS = []
 
 # Define the module's virtual name
-__virtualname__ = 'service'
+__virtualname__ = 'runit'
+__virtual_aliases__ = ('runit',)
 
 
 def __virtual__():
@@ -91,8 +92,12 @@ def __virtual__():
     if __grains__.get('init') == 'runit':
         if __grains__['os'] == 'Void':
             add_svc_avail_path('/etc/sv')
+        global __virtualname__
+        __virtualname__ = 'service'
         return __virtualname__
-    return False
+    if salt.utils.which('sv'):
+        return __virtualname__
+    return (False, 'Runit not available.  Please install sv')
 
 
 def _service_path(name):
