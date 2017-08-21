@@ -252,7 +252,7 @@ def _gen_xml(name,
         # TODO: make bus and model parameterized, this works for 64-bit Linux
         context['controller_model'] = 'lsilogic'
 
-    if kwargs.get('enable_vnc', True):
+    if 'enable_vnc' in kwargs:
         context['enable_vnc'] = True
     else:
         context['enable_vnc'] = False
