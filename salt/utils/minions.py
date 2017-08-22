@@ -16,6 +16,7 @@ import salt.payload
 import salt.utils
 import salt.utils.files
 import salt.utils.network
+import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltCacheError
 import salt.auth.ldap
@@ -76,7 +77,7 @@ def get_minion_data(minion, opts):
     if opts.get('minion_data_cache', False):
         cache = salt.cache.factory(opts)
         if minion is None:
-            for id_ in cache.ls('minions'):
+            for id_ in cache.list('minions'):
                 data = cache.fetch('minions/{0}'.format(id_), 'data')
                 if data is None:
                     continue
@@ -343,13 +344,13 @@ class CkMinions(object):
         if greedy:
             minions = self._pki_minions()
         elif cache_enabled:
-            minions = self.cache.ls('minions')
+            minions = self.cache.list('minions')
         else:
             return []
 
         if cache_enabled:
             if greedy:
-                cminions = self.cache.ls('minions')
+                cminions = self.cache.list('minions')
             else:
                 cminions = minions
             if cminions is None:
@@ -413,7 +414,7 @@ class CkMinions(object):
                         mlist.append(fn_)
                 return mlist
             elif cache_enabled:
-                return self.cache.ls('minions')
+                return self.cache.list('minions')
             else:
                 return list()
 
@@ -575,7 +576,7 @@ class CkMinions(object):
         '''
         minions = set()
         if self.opts.get('minion_data_cache', False):
-            search = self.cache.ls('minions')
+            search = self.cache.list('minions')
             if search is None:
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts['publish_port']))
@@ -681,7 +682,7 @@ class CkMinions(object):
         # remember to remove the expr_form argument from this function when
         # performing the cleanup on this deprecation.
         if expr_form is not None:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'the target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -732,6 +733,7 @@ class CkMinions(object):
         return self.spec_check(
                 auth_list,
                 fun,
+                arg,
                 form)
 
     def auth_check_expanded(self,
@@ -901,73 +903,15 @@ class CkMinions(object):
                             tgt_type,
                             minions=minions):
                             # Minions are allowed, verify function in allowed list
-                            if isinstance(ind[valid], six.string_types):
-                                if self.match_check(ind[valid], fun):
-                                    return True
-                            elif isinstance(ind[valid], list):
-                                for cond in ind[valid]:
-                                    # Function name match
-                                    if isinstance(cond, six.string_types):
-                                        if self.match_check(cond, fun):
-                                            return True
-                                    # Function and args match
-                                    elif isinstance(cond, dict):
-                                        if len(cond) != 1:
-                                            # Invalid argument
-                                            continue
-                                        fcond = next(six.iterkeys(cond))
-                                        # cond: {
-                                        #   'mod.func': {
-                                        #       'args': [
-                                        #           'one.*', 'two\\|three'],
-                                        #       'kwargs': {
-                                        #           'functioin': 'teach\\|feed',
-                                        #           'user': 'mother\\|father'
-                                        #           }
-                                        #       }
-                                        #   }
-                                        if self.match_check(fcond,
-                                                            fun):  # check key that is function name match
-                                            acond = cond[fcond]
-                                            if not isinstance(acond, dict):
-                                                # Invalid argument
-                                                continue
-                                            # whitelist args, kwargs
-                                            arg_list = args[num]
-                                            cond_args = acond.get('args', [])
-                                            good = True
-                                            for i, cond_arg in enumerate(cond_args):
-                                                if len(arg_list) <= i:
-                                                    good = False
-                                                    break
-                                                if cond_arg is None:  # None == '.*' i.e. allow any
-                                                    continue
-                                                if not self.match_check(cond_arg,
-                                                                        arg_list[i]):
-                                                    good = False
-                                                    break
-                                            if not good:
-                                                continue
-                                            # Check kwargs
-                                            cond_kwargs = acond.get('kwargs', {})
-                                            arg_kwargs = {}
-                                            for a in arg_list:
-                                                if isinstance(a,
-                                                              dict) and '__kwarg__' in a:
-                                                    arg_kwargs = a
-                                                    break
-                                            for k, v in six.iteritems(cond_kwargs):
-                                                if k not in arg_kwargs:
-                                                    good = False
-                                                    break
-                                                if v is None:  # None == '.*' i.e. allow any
-                                                    continue
-                                                if not self.match_check(v,
-                                                                        arg_kwargs[k]):
-                                                    good = False
-                                                    break
-                                            if good:
-                                                return True
+                            fun_args = args[num]
+                            fun_kwargs = fun_args[-1] if fun_args else None
+                            if isinstance(fun_kwargs, dict) and '__kwarg__' in fun_kwargs:
+                                fun_args = list(fun_args)  # copy on modify
+                                del fun_args[-1]
+                            else:
+                                fun_kwargs = None
+                            if self.__fun_check(ind[valid], fun, fun_args, fun_kwargs):
+                                return True
         except TypeError:
             return False
         return False
@@ -986,69 +930,19 @@ class CkMinions(object):
                         auth_list.append(matcher)
         return auth_list
 
-    def wheel_check(self, auth_list, fun):
+    def wheel_check(self, auth_list, fun, args):
         '''
         Check special API permissions
         '''
-        comps = fun.split('.')
-        if len(comps) != 2:
-            return False
-        mod = comps[0]
-        fun = comps[1]
-        for ind in auth_list:
-            if isinstance(ind, six.string_types):
-                if ind.startswith('@') and ind[1:] == mod:
-                    return True
-                if ind == '@wheel':
-                    return True
-                if ind == '@wheels':
-                    return True
-            elif isinstance(ind, dict):
-                if len(ind) != 1:
-                    continue
-                valid = next(six.iterkeys(ind))
-                if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], six.string_types):
-                        if self.match_check(ind[valid], fun):
-                            return True
-                    elif isinstance(ind[valid], list):
-                        for regex in ind[valid]:
-                            if self.match_check(regex, fun):
-                                return True
-        return False
+        return self.spec_check(auth_list, fun, args, 'wheel')
 
-    def runner_check(self, auth_list, fun):
+    def runner_check(self, auth_list, fun, args):
         '''
         Check special API permissions
         '''
-        comps = fun.split('.')
-        if len(comps) != 2:
-            return False
-        mod = comps[0]
-        fun = comps[1]
-        for ind in auth_list:
-            if isinstance(ind, six.string_types):
-                if ind.startswith('@') and ind[1:] == mod:
-                    return True
-                if ind == '@runners':
-                    return True
-                if ind == '@runner':
-                    return True
-            elif isinstance(ind, dict):
-                if len(ind) != 1:
-                    continue
-                valid = next(six.iterkeys(ind))
-                if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], six.string_types):
-                        if self.match_check(ind[valid], fun):
-                            return True
-                    elif isinstance(ind[valid], list):
-                        for regex in ind[valid]:
-                            if self.match_check(regex, fun):
-                                return True
-        return False
+        return self.spec_check(auth_list, fun, args, 'runner')
 
-    def spec_check(self, auth_list, fun, form):
+    def spec_check(self, auth_list, fun, args, form):
         '''
         Check special API permissions
         '''
@@ -1056,30 +950,87 @@ class CkMinions(object):
             comps = fun.split('.')
             if len(comps) != 2:
                 return False
-            mod = comps[0]
-            fun = comps[1]
+            mod_name = comps[0]
+            fun_name = comps[1]
         else:
-            mod = fun
+            fun_name = mod_name = fun
         for ind in auth_list:
             if isinstance(ind, six.string_types):
-                if ind.startswith('@') and ind[1:] == mod:
-                    return True
-                if ind == '@{0}'.format(form):
-                    return True
-                if ind == '@{0}s'.format(form):
-                    return True
+                if ind[0] == '@':
+                    if ind[1:] == mod_name or ind[1:] == form or ind == '@{0}s'.format(form):
+                        return True
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
                 valid = next(six.iterkeys(ind))
-                if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], six.string_types):
-                        if self.match_check(ind[valid], fun):
+                if valid[0] == '@':
+                    if valid[1:] == mod_name:
+                        if self.__fun_check(ind[valid], fun_name, args.get('arg'), args.get('kwarg')):
                             return True
-                    elif isinstance(ind[valid], list):
-                        for regex in ind[valid]:
-                            if self.match_check(regex, fun):
-                                return True
+                    if valid[1:] == form or valid == '@{0}s'.format(form):
+                        if self.__fun_check(ind[valid], fun, args.get('arg'), args.get('kwarg')):
+                            return True
+        return False
+
+    def __fun_check(self, valid, fun, args=None, kwargs=None):
+        '''
+        Check the given function name (fun) and its arguments (args) against the list of conditions.
+        '''
+        if not isinstance(valid, list):
+            valid = [valid]
+        for cond in valid:
+            # Function name match
+            if isinstance(cond, six.string_types):
+                if self.match_check(cond, fun):
+                    return True
+            # Function and args match
+            elif isinstance(cond, dict):
+                if len(cond) != 1:
+                    # Invalid argument
+                    continue
+                fname_cond = next(six.iterkeys(cond))
+                if self.match_check(fname_cond, fun):  # check key that is function name match
+                    if self.__args_check(cond[fname_cond], args, kwargs):
+                        return True
+        return False
+
+    def __args_check(self, valid, args=None, kwargs=None):
+        '''
+        valid is a dicts: {'args': [...], 'kwargs': {...}} or a list of such dicts.
+        '''
+        if not isinstance(valid, list):
+            valid = [valid]
+        for cond in valid:
+            if not isinstance(cond, dict):
+                # Invalid argument
+                continue
+            # whitelist args, kwargs
+            cond_args = cond.get('args', [])
+            good = True
+            for i, cond_arg in enumerate(cond_args):
+                if args is None or len(args) <= i:
+                    good = False
+                    break
+                if cond_arg is None:  # None == '.*' i.e. allow any
+                    continue
+                if not self.match_check(cond_arg, str(args[i])):
+                    good = False
+                    break
+            if not good:
+                continue
+            # Check kwargs
+            cond_kwargs = cond.get('kwargs', {})
+            for k, v in six.iteritems(cond_kwargs):
+                if kwargs is None or k not in kwargs:
+                    good = False
+                    break
+                if v is None:  # None == '.*' i.e. allow any
+                    continue
+                if not self.match_check(v, str(kwargs[k])):
+                    good = False
+                    break
+            if good:
+                return True
         return False
 
 

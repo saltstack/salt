@@ -68,7 +68,7 @@ def present(dbname, name,
         'db_password': db_password,
         'db_host': db_host,
         'db_port': db_port,
-        'runas': user
+        'user': user
     }
 
     # check if schema exists
@@ -144,7 +144,7 @@ def absent(dbname, name, user=None,
         'db_password': db_password,
         'db_host': db_host,
         'db_port': db_port,
-        'runas': user
+        'user': user
         }
 
     # check if schema exists and remove it

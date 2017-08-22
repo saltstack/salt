@@ -2200,9 +2200,17 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
     def _mixin_setup(self):
         file_opts_group = optparse.OptionGroup(self, 'File Options')
         file_opts_group.add_option(
+            '-C', '--chunked',
+            default=False,
+            dest='chunked',
+            action='store_true',
+            help='Use chunked files transfer. Supports big files, recursive '
+                 'lookup and directories creation.'
+        )
+        file_opts_group.add_option(
             '-n', '--no-compression',
             default=True,
-            dest='compression',
+            dest='gzip',
             action='store_false',
             help='Disable gzip compression.'
         )
@@ -2223,7 +2231,6 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
             self.config['tgt'] = self.args[0]
         self.config['src'] = [os.path.realpath(x) for x in self.args[1:-1]]
         self.config['dest'] = self.args[-1]
-        self.config['gzip'] = True
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())

@@ -46,6 +46,11 @@ noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
 
+New NaCl Renderer
+-----------------
+
+A new renderer has been added for encrypted data.
+
 New GitFS Features
 ------------------
 
@@ -105,6 +110,497 @@ Support has been added to the ``virtual`` grain for detecting Solaris LDOMs
 running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is 
 populated as a list of domain roles.
 
+
+Beacon configuration changes
+----------------------------------------
+
+In order to remain consistent and to align with other Salt components such as states,
+support for configuring beacons using dictionary based configuration has been deprecated
+in favor of list based configuration.  All beacons have a validation function which will 
+check the configuration for the correct format and only load if the validation passes.
+
+- ``avahi_announce`` beacon
+
+    Old behavior:
+    ```
+    beacons:
+      avahi_announce:
+        run_once: True
+        servicetype: _demo._tcp
+        port: 1234
+        txt:
+          ProdName: grains.productname
+          SerialNo: grains.serialnumber
+          Comments: 'this is a test'
+    ```
+
+    New behavior:
+    ```
+    beacons:
+      avahi_announce:
+        - run_once: True
+        - servicetype: _demo._tcp
+        - port: 1234
+        - txt:
+            ProdName: grains.productname
+            SerialNo: grains.serialnumber
+            Comments: 'this is a test'
+    ```
+
+ - ``bonjour_announce`` beacon
+
+    Old behavior:
+    ```
+    beacons:
+      bonjour_announce:
+        run_once: True
+        servicetype: _demo._tcp
+        port: 1234
+        txt:
+          ProdName: grains.productname
+          SerialNo: grains.serialnumber
+          Comments: 'this is a test'
+    ```
+
+    New behavior:
+    ```
+    beacons:
+      bonjour_announce:
+        - run_once: True
+        - servicetype: _demo._tcp
+        - port: 1234
+        - txt:
+            ProdName: grains.productname
+            SerialNo: grains.serialnumber
+            Comments: 'this is a test'
+    ```
+
+- ``btmp`` beacon
+
+    Old behavior:
+    ```
+    beacons:
+      btmp: {}
+    ```
+
+    New behavior:
+    ```
+    beacons:
+      btmp: []
+
+    ```
+
+- ``glxinfo`` beacon
+
+    Old behavior:
+    ```
+    beacons:
+      glxinfo:
+        user: frank
+        screen_event: True
+    ```
+
+    New behavior:
+    ```
+    beacons:
+      glxinfo:
+        - user: frank
+        - screen_event: True
+    ```
+
+- ``haproxy`` beacon
+
+    Old behavior:
+    ```
+    beacons:
+        haproxy:
+            - www-backend:
+                threshold: 45
+                servers:
+                    - web1
+                    - web2
+            - interval: 120
+    ```
+
+    New behavior:
+    ```
+    beacons:
+      haproxy:
+        - backends:
+            www-backend:
+              threshold: 45
+              servers:
+                - web1
+                - web2
+        - interval: 120
+    ```
+
+- ``inotify`` beacon
+
+    Old behavior:
+    ```
+    beacons:
+      inotify:
+        /path/to/file/or/dir:
+            mask:
+              - open
+              - create
+              - close_write
+            recurse: True
+            auto_add: True
+            exclude:
+              - /path/to/file/or/dir/exclude1
+              - /path/to/file/or/dir/exclude2
+              - /path/to/file/or/dir/regex[a-m]*$:
+            regex: True
+        coalesce: True
+    ```
+
+    New behavior:
+    ```
+    beacons:
+      inotify:
+        - files:
+            /path/to/file/or/dir:
+              mask:
+                - open
+                - create
+                - close_write
+              recurse: True
+              auto_add: True
+              exclude:
+                - /path/to/file/or/dir/exclude1
+                - /path/to/file/or/dir/exclude2
+                - /path/to/file/or/dir/regex[a-m]*$:
+              regex: True
+        - coalesce: True
+```
+
+- ``journald`` beacon
+
+    Old behavior:
+    ```
+    beacons:
+      journald:
+        sshd:
+          SYSLOG_IDENTIFIER: sshd
+          PRIORITY: 6
+    ```
+
+    New behavior:
+    ```
+    beacons:
+      journald:
+        - services:
+            sshd:
+              SYSLOG_IDENTIFIER: sshd
+              PRIORITY: 6
+    ```
+
+- ``load`` beacon
+
+    Old behavior:
+    ```
+        beacons:
+          load:
+            1m:
+              - 0.0
+              - 2.0
+            5m:
+              - 0.0
+              - 1.5
+            15m:
+              - 0.1
+              - 1.0
+            emitatstartup: True
+            onchangeonly: False
+    ```
+
+    New behavior:
+    ```
+    beacons:
+      load:
+        - averages:
+            1m:
+              - 0.0
+              - 2.0
+            5m:
+              - 0.0
+              - 1.5
+            15m:
+              - 0.1
+              - 1.0
+        - emitatstartup: True
+        - onchangeonly: False
+    ```
+
+- ``log`` beacon
+
+    Old behavior:
+    ```
+    beacons:
+        log:
+          file: <path>
+          <tag>:
+            regex: <pattern>
+    ```
+
+    New behavior:
+    ```
+    beacons:
+        log:
+          - file: <path>
+          - tags:
+              <tag>:
+                regex: <pattern>
+    ```
+
+- ``network_info`` beacon
+
+    Old behavior:
+        ```
+        beacons:
+          network_info:
+            - eth0:
+                type: equal
+                bytes_sent: 100000
+                bytes_recv: 100000
+                packets_sent: 100000
+                packets_recv: 100000
+                errin: 100
+                errout: 100
+                dropin: 100
+                dropout: 100
+        ```
+
+    New behavior:
+        ```
+        beacons:
+          network_info:
+            - interfaces:
+                eth0:
+                  type: equal
+                  bytes_sent: 100000
+                  bytes_recv: 100000
+                  packets_sent: 100000
+                  packets_recv: 100000
+                  errin: 100
+                  errout: 100
+                  dropin: 100
+                  dropout: 100
+        ```
+
+- ``network_settings`` beacon
+
+    Old behavior:
+        ```
+        beacons:
+          network_settings:
+            eth0:
+              ipaddr:
+              promiscuity:
+                onvalue: 1
+            eth1:
+              linkmode:
+        ```
+
+    New behavior:
+        ```
+        beacons:
+          network_settings:
+            - interfaces:
+                - eth0:
+                    ipaddr:
+                    promiscuity:
+                      onvalue: 1
+                - eth1:
+                    linkmode:
+        ```
+
+- ``proxy_example`` beacon
+
+    Old behavior:
+        ```
+        beacons:
+          proxy_example:
+            endpoint: beacon
+        ```
+
+    New behavior:
+        ```
+        beacons:
+          proxy_example:
+            - endpoint: beacon
+        ```
+
+- ``ps`` beacon
+
+    Old behavior:
+        ```
+        beacons:
+          ps:
+            - salt-master: running
+            - mysql: stopped
+        ```
+
+    New behavior:
+        ```
+        beacons:
+          ps:
+            - processes:
+                salt-master: running
+                mysql: stopped
+        ```
+
+- ``salt_proxy`` beacon
+
+    Old behavior:
+        ```
+        beacons:
+          salt_proxy:
+            - p8000: {}
+            - p8001: {}
+        ```
+
+    New behavior:
+        ```
+        beacons:
+          salt_proxy:
+            - proxies:
+                p8000: {}
+                p8001: {}
+        ```
+
+- ``sensehat`` beacon
+
+    Old behavior:
+        ```
+        beacons:
+          sensehat:
+            humidity: 70%
+            temperature: [20, 40]
+            temperature_from_pressure: 40
+            pressure: 1500
+        ```
+
+    New behavior:
+        ```
+        beacons:
+          sensehat:
+            - sensors:
+                humidity: 70%
+                temperature: [20, 40]
+                temperature_from_pressure: 40
+                pressure: 1500
+        ```
+
+- ``service`` beacon
+
+    Old behavior:
+        ```
+        beacons:
+          service:
+            salt-master:
+            mysql:
+
+        ```
+
+    New behavior:
+        ```
+        beacons:
+          service:
+            - services:
+                nginx:
+                    onchangeonly: True
+                    delay: 30
+                    uncleanshutdown: /run/nginx.pid
+        ```
+
+- ``sh`` beacon
+
+    Old behavior:
+        ```
+        beacons:
+          sh: {}
+        ```
+
+    New behavior:
+        ```
+        beacons:
+          sh: []
+        ```
+
+- ``status`` beacon
+
+    Old behavior:
+        ```
+        beacons:
+          status: {}
+        ```
+
+    New behavior:
+        ```
+        beacons:
+          status: []
+        ```
+
+- ``telegram_bot_msg`` beacon
+
+    Old behavior:
+        ```
+        beacons:
+          telegram_bot_msg:
+            token: "<bot access token>"
+            accept_from:
+              - "<valid username>"
+            interval: 10
+        ```
+
+    New behavior:
+        ```
+        beacons:
+          telegram_bot_msg:
+            - token: "<bot access token>"
+            - accept_from:
+              - "<valid username>"
+            - interval: 10
+        ```
+
+- ``twilio_txt_msg`` beacon
+
+    Old behavior:
+        ```
+        beacons:
+          twilio_txt_msg:
+            account_sid: "<account sid>"
+            auth_token: "<auth token>"
+            twilio_number: "+15555555555"
+            interval: 10
+        ```
+
+    New behavior:
+        ```
+        beacons:
+          twilio_txt_msg:
+            - account_sid: "<account sid>"
+            - auth_token: "<auth token>"
+            - twilio_number: "+15555555555"
+            - interval: 10
+        ```
+
+- ``wtmp`` beacon
+
+    Old behavior:
+        ```
+        beacons:
+          wtmp: {}
+        ```
+
+    New behavior:
+        ```
+        beacons:
+          wtmp: []
+        ```
 
 Deprecations
 ------------
@@ -199,6 +695,18 @@ For ``smartos`` some grains have been deprecated. These grains will be removed i
 
 - The ``hypervisor_uuid`` has been replaced with ``mdata:sdc:server_uuid`` grain.
 - The ``datacenter`` has been replaced with ``mdata:sdc:datacenter_name`` grain.
+
+Minion Blackout
+---------------
+
+During a blackout, minions will not execute any remote execution commands,
+except for :mod:`saltutil.refresh_pillar <salt.modules.saltutil.refresh_pillar>`.
+Previously, support was added so that blackouts are enabled using a special
+pillar key, ``minion_blackout`` set to ``True`` and an optional pillar key
+``minion_blackout_whitelist`` to specify additional functions that are permitted
+during blackout. This release adds support for using this feature in the grains
+as well, by using special grains keys ``minion_blackout`` and
+``minion_blackout_whitelist``.
 
 Utils Deprecations
 ==================

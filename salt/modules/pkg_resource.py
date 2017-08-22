@@ -17,6 +17,7 @@ from salt.ext import six
 
 # Import salt libs
 import salt.utils
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -105,7 +106,7 @@ def parse_targets(name=None,
         salt '*' pkg_resource.parse_targets
     '''
     if '__env__' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Oxygen',
             'Parameter \'__env__\' has been detected in the argument list.  This '
             'parameter is no longer used and has been replaced by \'saltenv\' '

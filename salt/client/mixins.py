@@ -25,6 +25,7 @@ import salt.utils.job
 import salt.utils.lazy
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.versions
 import salt.transport
 import salt.log.setup
 from salt.ext import six
@@ -253,7 +254,7 @@ class SyncClientMixin(object):
             low[u'kwarg'] = low.pop(u'kwargs')
 
         if msg:
-            salt.utils.warn_until(u'Oxygen', u' '.join(msg))
+            salt.utils.versions.warn_until(u'Oxygen', u' '.join(msg))
 
         return self._low(fun, low, print_event=print_event, full_return=full_return)
 
@@ -444,6 +445,7 @@ class SyncClientMixin(object):
                 _use_fnmatch = True
             else:
                 target_mod = arg + u'.' if not arg.endswith(u'.') else arg
+                _use_fnmatch = False
             if _use_fnmatch:
                 docs = [(fun, self.functions[fun].__doc__)
                         for fun in fnmatch.filter(self.functions, target_mod)]

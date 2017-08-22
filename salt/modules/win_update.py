@@ -75,9 +75,9 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import Salt libs
-import salt.utils
 import salt.utils.platform
 import salt.utils.locales
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ def __virtual__():
     Only works on Windows systems
     '''
     if salt.utils.platform.is_windows() and HAS_DEPENDENCIES:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The \'win_update\' module is being deprecated and will be removed '
             'in Salt {version}. Please use the \'win_wua\' module instead.'

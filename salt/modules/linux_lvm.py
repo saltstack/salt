@@ -430,7 +430,7 @@ def lvcreate(lvname,
         cmd.extend(extra_arguments)
 
     if force:
-        cmd.append('-yes')
+        cmd.append('--yes')
 
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     lvdev = '/dev/{0}/{1}'.format(vgname, lvname)
