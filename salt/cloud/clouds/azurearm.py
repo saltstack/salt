@@ -73,6 +73,7 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
 )
 from salt.ext.six.moves import filter
+from distutils.version import LooseVersion
 
 # Import 3rd-party libs
 HAS_LIBS = False
@@ -115,7 +116,8 @@ try:
     from azure.mgmt.web import WebSiteManagementClient
     from msrestazure.azure_exceptions import CloudError
     from azure.multiapi.storage.v2016_05_31 import CloudStorageAccount
-    HAS_LIBS = True
+    from azure.cli import core
+    HAS_LIBS = LooseVersion(core.__version__) >= LooseVersion("2.0.12")
 except ImportError:
     pass
 # pylint: enable=wrong-import-position,wrong-import-order
