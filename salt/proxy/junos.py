@@ -157,16 +157,18 @@ def ping():
     Ping?  Pong!
     '''
 
-    try:
-        thisproxy['conn'].rpc.file_list(path='/dev/null', dev_timeout=2)
-
-    except RpcTimeoutError:
+    dev = conn()
+    # call rpc only if ncclient queue is empty. If not empty that means other
+    # rpc call is going on.
+    if hasattr(dev, '_session') and not dev._session._q.empty():
         try:
-            thisproxy['conn'].close()
-        except (RpcError, ConnectError):
-            pass
-
-    return thisproxy['conn'].connected
+            dev.rpc.file_list(path='/dev/null', dev_timeout=2)
+        except RpcTimeoutError:
+            try:
+                dev.close()
+            except (RpcError, ConnectError):
+                pass
+    return dev.connected
 
 
 def shutdown(opts):
