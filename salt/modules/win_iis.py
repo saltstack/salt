@@ -837,6 +837,11 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
         # IIS 7.5 and earlier have different syntax for associating a certificate with a site
         # Modify IP spec to IIS 7.5 format
         iis7path = binding_path.replace(r"\*!", "\\0.0.0.0!")
+        
+        # win 2008 uses the following format: ip!port and not ip!port!
+        if iis7path.endswith("!"):
+            iis7path = iis7path[:-1]
+        
 
         ps_cmd = ['New-Item',
                   '-Path', "'{0}'".format(iis7path),
