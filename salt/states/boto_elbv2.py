@@ -54,6 +54,7 @@ def __virtual__():
         return 'boto_elbv2'
     return (False, "The boto_elbv2 module cannot be loaded: boto3 library not found")
 
+
 def create_target_group(name, protocol, port, vpc_id,
                         region=None, key=None, keyid=None, profile=None,
                         health_check_protocol='HTTP', health_check_port='traffic-port',
@@ -195,6 +196,7 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
         ret['result'] = False
         ret['comment'] = 'Target Group {0} deletion failed'.format(name)
     return ret
+
 
 def targets_registered(name, targets, region=None, key=None, keyid=None,
                        profile=None, **kwargs):
