@@ -1684,7 +1684,7 @@ class ClearFuncs(object):
                 clear_load[u'username'] = token[u'name']
                 auth_list = self.loadauth.get_auth_list(clear_load)
 
-            if not self.ckminions.runner_check(auth_list, clear_load[u'fun'], clear_load[u'kwarg']):
+            if not self.ckminions.runner_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
                 return dict(error=dict(name=u'TokenAuthenticationError',
                                        message=(u'Authentication failure of type "token" occurred for '
                                                 u'user {0}.').format(token[u'name'])))
@@ -1697,7 +1697,7 @@ class ClearFuncs(object):
                                                 u'user {0}.').format(clear_load.get(u'username', u'UNKNOWN'))))
 
             auth_list = self.loadauth.get_auth_list(clear_load)
-            if not self.ckminions.runner_check(auth_list, clear_load[u'fun'], clear_load[u'kwarg']):
+            if not self.ckminions.runner_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
                 return dict(error=dict(name=u'EauthAuthenticationError',
                                        message=(u'Authentication failure of type "eauth" occurred for '
                                                 u'user {0}.').format(clear_load.get(u'username', u'UNKNOWN'))))
@@ -1751,7 +1751,7 @@ class ClearFuncs(object):
                 clear_load[u'eauth'] = token[u'eauth']
                 clear_load[u'username'] = token[u'name']
                 auth_list = self.loadauth.get_auth_list(clear_load)
-            if not self.ckminions.wheel_check(auth_list, clear_load[u'fun'], clear_load[u'kwarg']):
+            if not self.ckminions.wheel_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
                 return dict(error=dict(name=u'TokenAuthenticationError',
                                        message=(u'Authentication failure of type "token" occurred for '
                                                 u'user {0}.').format(token[u'name'])))
@@ -1764,7 +1764,7 @@ class ClearFuncs(object):
                                                 u'user {0}.').format(clear_load.get(u'username', u'UNKNOWN'))))
 
             auth_list = self.loadauth.get_auth_list(clear_load)
-            if not self.ckminions.wheel_check(auth_list, clear_load[u'fun'], clear_load[u'kwarg']):
+            if not self.ckminions.wheel_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
                 return dict(error=dict(name=u'EauthAuthenticationError',
                                        message=(u'Authentication failure of type "eauth" occurred for '
                                                 u'user {0}.').format(clear_load.get(u'username', u'UNKNOWN'))))
