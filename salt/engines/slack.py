@@ -92,6 +92,7 @@ In addition, other groups are being loaded from pillars.
 
 # Import python libraries
 from __future__ import absolute_import
+import ast
 import datetime
 import json
 import itertools
@@ -291,10 +292,8 @@ class SlackClient(object):
         """
         log.info("{} wants to run {} with groups {}".format(user, command, groups))
         for key, val in groups.items():
-            log.debug('==== key {} val {} ===='.format(key, val))
             if user not in val['users']:
                 if '*' not in val['users']:
-                    log.debug('==== user validation failed ====')
                     continue  # this doesn't grant permissions, pass
             if (command not in val['commands']) and (command not in val.get('aliases', {}).keys()):
                 if '*' not in val['commands']:
@@ -415,7 +414,14 @@ class SlackClient(object):
 
         def just_data(m_data):
             """Always try to return the user and channel anyway"""
-            user_id = m_data.get('user')
+            if 'user' not in m_data:
+                if 'message' in m_data and 'user' in m_data['message']:
+                    log.debug('Message was edited, '
+                              'so we look for user in '
+                              'the original message.')
+                    user_id = m_data['message']['user']
+            else:
+                user_id = m_data.get('user')
             channel_id = m_data.get('channel')
             if channel_id.startswith('D'):  # private chate with bot user
                 channel_name = "private chat"
@@ -423,6 +429,7 @@ class SlackClient(object):
                 channel_name = all_slack_channels.get(channel_id)
             data = {
                 "message_data": m_data,
+                "user_id": user_id,
                 "user_name": all_slack_users.get(user_id),
                 "channel_name": channel_name
             }
@@ -460,7 +467,6 @@ class SlackClient(object):
                 data = just_data(m_data)
                 if msg_text.startswith(trigger_string):
                     loaded_groups = self.get_config_groups(groups, groups_pillar_name)
-                    user_id = m_data.get('user')  # slack user ID, e.g. 'U11011'
                     if not data.get('user_name'):
                         log.error("The user {} can't be looked up via slack.  What has happened here?".format(
                             m_data.get('user')))
@@ -475,8 +481,8 @@ class SlackClient(object):
                         yield {
                             "message_data": m_data,
                             "channel": m_data['channel'],
-                            "user": user_id,
-                            "user_name": all_slack_users[user_id],
+                            "user": data['user_id'],
+                            "user_name": data['user_name'],
                             "cmdline": cmdline,
                             "target": target
                         }
@@ -648,7 +654,7 @@ class SlackClient(object):
                 # The message_generator yields dicts.  Leave this loop
                 # on a dict that looks like {"done": True} or when we've done it
                 # 10 times without taking a break.
-                log.debug("Got a message from the generator: {}".format(msg.keys()))
+                log.trace("Got a message from the generator: {}".format(msg.keys()))
                 if count > 10:
                     log.warn("Breaking in getting messages because count is exceeded")
                     break
@@ -657,7 +663,7 @@ class SlackClient(object):
                     log.warn("len(msg) is zero")
                     continue  # This one is a dud, get the next message
                 if msg.get("done"):
-                    log.debug("msg is done")
+                    log.trace("msg is done")
                     break
                 if fire_all:
                     log.debug("Firing message to the bus with tag: {}".format(tag))
@@ -719,6 +725,11 @@ class SlackClient(object):
         cmd = msg['cmdline'][0]
 
         args, kwargs = self.parse_args_and_kwargs(msg['cmdline'])
+
+        # Check for pillar string representation of dict and convert it to dict
+        if 'pillar' in kwargs:
+            kwargs.update(pillar=ast.literal_eval(kwargs['pillar']))
+
         # Check for target. Otherwise assume None
         target = msg["target"]["target"]
         # Check for tgt_type. Otherwise assume glob
@@ -739,7 +750,7 @@ class SlackClient(object):
             log.debug("Command {} will run via local.cmd_async, targeting {}".format(cmd, target))
             log.debug("Running {}, {}, {}, {}, {}".format(str(target), cmd, args, kwargs, str(tgt_type)))
             # according to https://github.com/saltstack/salt-api/issues/164, tgt_type has changed to expr_form
-            job_id = local.cmd_async(str(target), cmd, arg=args, kwargs=kwargs, tgt_type=str(tgt_type))
+            job_id = local.cmd_async(str(target), cmd, arg=args, kwarg=kwargs, tgt_type=str(tgt_type))
             log.info("ret from local.cmd_async is {}".format(job_id))
         return job_id
 
