@@ -62,10 +62,13 @@ def notify_systemd():
                 # Handle abstract namespace socket
                 if notify_socket.startswith('@'):
                     notify_socket = '\0{0}'.format(notify_socket[1:])
-                sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-                sock.connect(notify_socket)
-                sock.sendall('READY=1'.encode())
-                sock.close()
+                try:
+                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+                    sock.connect(notify_socket)
+                    sock.sendall('READY=1'.encode())
+                    sock.close()
+                except socket.error:
+                    return systemd_notify_call('--ready')
                 return True
         return False
 
