@@ -46,6 +46,11 @@ noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
 
+New NaCl Renderer
+-----------------
+
+A new renderer has been added for encrypted data.
+
 New GitFS Features
 ------------------
 
