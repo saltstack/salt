@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 Management of user groups
 =========================
 
@@ -100,7 +100,7 @@ def present(name,
             addusers=None,
             delusers=None,
             members=None):
-    '''
+    r'''
     Ensure that a group is present
 
     Args:
