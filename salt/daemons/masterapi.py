@@ -12,7 +12,6 @@ import os
 import re
 import time
 import stat
-import msgpack
 
 # Import salt libs
 import salt.crypt
@@ -155,7 +154,7 @@ def clean_expired_tokens(opts):
     loadauth = salt.auth.LoadAuth(opts)
     for tok in loadauth.list_tokens():
         token_data = loadauth.get_tok(tok)
-        if 'expire' not in token_data or token_Data.get('expire', 0) < time.time():
+        if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
             loadauth.rm_token(tok)
 
 
