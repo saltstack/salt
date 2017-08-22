@@ -69,22 +69,22 @@ Profile configuration example:
 
     # /etc/salt/cloud.profiles.d/vagrant.conf
 
-    salt-this-machine:
-      ssh_host: 12.34.56.78
-      ssh_username: root  # the username on the client
-      key_filename: '/etc/salt/mysshkey.pem'
+    vagrant-machine:
+      host: my-vhost  # the Salt id of the virtual machine's host computer.
       provider: my-vagrant-config
-      runas: my-username  # the username who defined the Vagrantbox on the hose
+      cwd: /srv/machines  # the path to your Virtualbox file.
+      runas: my-username  # the username who defined the Vagrantbox on the host
+      vagrant_up_timeout: 180 # timeout for cmd.run of the "vagrant up" command (seconds)
 
 
 The machine can now be created and configured with the following command:
 
 .. code-block:: bash
 
-    salt-cloud -p salt-this-machine my-machine
+    salt-cloud -p vagrant-machine my-machine
 
 This will create the machine specified by the cloud profile,
-``salt-this-machine``, and will give the machine the minion id of
+``vagrant-machine``, and will give the machine the minion id of
 ``my-machine``. If the command was executed on the salt-master, its Salt
 key will automatically be signed on the master.
 
@@ -114,8 +114,8 @@ simple installation.
       cwd: '/projects/my_project' # the path (on vbox_host) of the Vagrantfile
       ssh_username: vagrant  # a user name which has passwordless sudo
       password: vagrant      # on the target machine you are creating.
-      provider: my_vagrant_provider
-      runas: my_linux_name  # owner of Vagrantbox on your workstation
+      runas: my_linux_name  # owner of Vagrant box files on your workstation
+      provider: my_vagrant_provider  # name of entry in provider.conf file
 
 .. code-block:: yaml
 
