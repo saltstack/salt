@@ -848,7 +848,7 @@ def list_policies(vhost="/", runas=None):
     return ret
 
 
-def set_policy(vhost, name, pattern, definition, apply_to=None, priority=None, runas=None):
+def set_policy(vhost, name, pattern, definition, priority=None, apply_to=None, runas=None):
     '''
     Set a policy based on rabbitmqctl set_policy.
 
