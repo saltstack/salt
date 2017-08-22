@@ -199,12 +199,15 @@ import subprocess
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 import salt.utils
+import salt.utils.args
 import salt.utils.decorators
 import salt.utils.docker
 import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.thin
 import salt.pillar
 import salt.exceptions
@@ -230,7 +233,7 @@ except ImportError:
     HAS_LZMA = False
 # pylint: enable=import-error
 
-HAS_NSENTER = bool(salt.utils.which('nsenter'))
+HAS_NSENTER = bool(salt.utils.path.which('nsenter'))
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -343,7 +346,7 @@ def _get_client(timeout=NOTSET, **kwargs):
             python_shell=False)
         try:
             docker_machine_json = \
-                json.loads(salt.utils.to_str(docker_machine_json))
+                json.loads(salt.utils.stringutils.to_str(docker_machine_json))
             docker_machine_tls = \
                 docker_machine_json['HostOptions']['AuthOptions']
             docker_machine_ip = docker_machine_json['Driver']['IPAddress']
@@ -389,7 +392,7 @@ def _docker_client(wrapped):
         '''
         Ensure that the client is present
         '''
-        kwargs = salt.utils.clean_kwargs(**kwargs)
+        kwargs = salt.utils.args.clean_kwargs(**kwargs)
         timeout = kwargs.pop('client_timeout', NOTSET)
         if 'docker.client' not in __context__ \
                 or not hasattr(__context__['docker.client'], 'timeout'):
@@ -421,7 +424,7 @@ def _ensure_exists(wrapped):
             raise CommandExecutionError(
                 'Container \'{0}\' does not exist'.format(name)
             )
-        return wrapped(name, *args, **salt.utils.clean_kwargs(**kwargs))
+        return wrapped(name, *args, **salt.utils.args.clean_kwargs(**kwargs))
     return wrapper
 
 
@@ -434,7 +437,7 @@ def _refresh_mine_cache(wrapped):
         '''
         refresh salt mine on exit.
         '''
-        returned = wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
+        returned = wrapped(*args, **salt.utils.args.clean_kwargs(**kwargs))
         __salt__['mine.send']('docker.ps', verbose=True, all=True, host=True)
         return returned
     return wrapper
@@ -559,6 +562,21 @@ def _prep_pull():
     __context__['docker._pull_status'] = [x[:12] for x in images(all=True)]
 
 
+def _scrub_links(links, name):
+    '''
+    Remove container name from HostConfig:Links values to enable comparing
+    container configurations correctly.
+    '''
+    if isinstance(links, list):
+        ret = []
+        for l in links:
+            ret.append(l.replace('/{0}/'.format(name), '/', 1))
+    else:
+        ret = links
+
+    return ret
+
+
 def _size_fmt(num):
     '''
     Format bytes as human-readable file sizes
@@ -619,7 +637,7 @@ def _client_wrapper(attr, *args, **kwargs):
             api_events = []
             try:
                 for event in ret:
-                    api_events.append(json.loads(salt.utils.to_str(event)))
+                    api_events.append(json.loads(salt.utils.stringutils.to_str(event)))
             except Exception as exc:
                 raise CommandExecutionError(
                     'Unable to interpret API event: \'{0}\''.format(event),
@@ -783,7 +801,7 @@ def get_client_args():
 
         salt myminion docker.get_client_args
     '''
-    return salt.utils.docker.get_client_args()
+    return __utils__['docker.get_client_args']()
 
 
 def _get_create_kwargs(image,
@@ -884,8 +902,15 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict][item]
             val2 = result2[conf_dict].get(item)
-            if val1 != val2:
-                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            if item in ('OomKillDisable',):
+                if bool(val1) != bool(val2):
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            else:
+                if item == 'Links':
+                    val1 = _scrub_links(val1, first)
+                    val2 = _scrub_links(val2, second)
+                if val1 != val2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
         # and not the first.
         for item in result2[conf_dict]:
@@ -895,8 +920,15 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict].get(item)
             val2 = result2[conf_dict][item]
-            if val1 != val2:
-                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            if item in ('OomKillDisable',):
+                if bool(val1) != bool(val2):
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            else:
+                if item == 'Links':
+                    val1 = _scrub_links(val1, first)
+                    val2 = _scrub_links(val2, second)
+                if val1 != val2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
     return ret
 
 
@@ -978,6 +1010,10 @@ def login(*registries):
             cmd = ['docker', 'login', '-u', username, '-p', password]
             if registry.lower() != 'hub':
                 cmd.append(registry)
+            log.debug(
+                'Attempting to login to docker registry \'%s\' as user \'%s\'',
+                registry, username
+            )
             login_cmd = __salt__['cmd.run_all'](
                 cmd,
                 python_shell=False,
@@ -1803,7 +1839,7 @@ def create(image,
         generate one for you (it will be included in the return data).
 
     skip_translate
-        This function translates Salt CLI input into the format which
+        This function translates Salt CLI or SLS input into the format which
         docker-py_ expects. However, in the event that Salt's translation logic
         fails (due to potential changes in the Docker Remote API, or to bugs in
         the translation code), this argument can be used to exert granular
@@ -2071,9 +2107,9 @@ def create(image,
         - ``dns_search="[foo1.domain.tld, foo2.domain.tld]"``
 
     domainname
-        Set custom DNS search domains
+        The domain name to use for the container
 
-        Example: ``domainname=domain.tld,domain2.tld``
+        Example: ``domainname=domain.tld``
 
     entrypoint
         Entrypoint for the container. Either a string (e.g. ``"mycmd --arg1
@@ -2942,10 +2978,10 @@ def rm_(name, force=False, volumes=False, **kwargs):
         salt myminion docker.rm mycontainer
         salt myminion docker.rm mycontainer force=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     stop_ = kwargs.pop('stop', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if state(name) == 'running' and not (force or stop_):
         raise CommandExecutionError(
@@ -3094,7 +3130,7 @@ def build(path=None,
     stream_data = []
     for line in response:
         stream_data.extend(
-            json.loads(salt.utils.to_str(line), cls=DockerJSONDecoder)
+            json.loads(salt.utils.stringutils.to_str(line), cls=DockerJSONDecoder)
         )
     errors = []
     # Iterate through API response and collect information
@@ -3812,7 +3848,6 @@ def save(name,
     if os.path.exists(path) and not overwrite:
         raise CommandExecutionError('{0} already exists'.format(path))
 
-    compression = kwargs.get('compression')
     if compression is None:
         if path.endswith('.tar.gz') or path.endswith('.tgz'):
             compression = 'gzip'
@@ -3918,7 +3953,7 @@ def save(name,
     ret['Size_Human'] = _size_fmt(ret['Size'])
 
     # Process push
-    if kwargs.get(push, False):
+    if kwargs.get('push', False):
         ret['Push'] = __salt__['cp.push'](path)
 
     return ret
@@ -5396,7 +5431,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         salt myminion docker.sls_build imgname base=mybase mods=rails,web
 
     '''
-    create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    create_kwargs = salt.utils.args.clean_kwargs(**copy.deepcopy(kwargs))
     for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
         try:
             del create_kwargs[key]

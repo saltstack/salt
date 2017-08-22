@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ def __virtual__():
     '''
     Only work on Gentoo systems with eselect installed
     '''
-    if __grains__['os'] == 'Gentoo' and salt.utils.which('eselect'):
+    if __grains__['os'] == 'Gentoo' and salt.utils.path.which('eselect'):
         return 'eselect'
     return (False, 'The eselect execution module cannot be loaded: either the system is not Gentoo or the eselect binary is not in the path.')
 

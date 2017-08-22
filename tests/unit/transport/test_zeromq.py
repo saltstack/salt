@@ -25,7 +25,7 @@ import tornado.gen
 
 # Import Salt libs
 import salt.config
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
 import salt.transport.server
 import salt.transport.client

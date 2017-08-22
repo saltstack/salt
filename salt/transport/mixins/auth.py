@@ -17,10 +17,13 @@ import salt.master
 import salt.transport.frame
 import salt.utils.event
 import salt.utils.files
-import salt.ext.six as six
+import salt.utils.minions
+import salt.utils.stringutils
+import salt.utils.verify
 from salt.utils.cache import CacheCli
 
 # Import Third Party Libs
+from salt.ext import six
 import tornado.gen
 try:
     from Cryptodome.Cipher import PKCS1_OAEP
@@ -125,7 +128,7 @@ class AESReqServerMixin(object):
         if six.PY2:
             pret['key'] = cipher.encrypt(key)
         else:
-            pret['key'] = cipher.encrypt(salt.utils.to_bytes(key))
+            pret['key'] = cipher.encrypt(salt.utils.stringutils.to_bytes(key))
         pret[dictkey] = pcrypt.dumps(
             ret if ret is not False else {}
         )
@@ -441,9 +444,13 @@ class AESReqServerMixin(object):
             else:
                 # the master has its own signing-keypair, compute the master.pub's
                 # signature and append that to the auth-reply
+
+                # get the key_pass for the signing key
+                key_pass = salt.utils.sdb.sdb_get(self.opts['signing_key_pass'], self.opts)
+
                 log.debug("Signing master public key before sending")
                 pub_sign = salt.crypt.sign_message(self.master_key.get_sign_paths()[1],
-                                                   ret['pub_key'])
+                                                   ret['pub_key'], key_pass)
                 ret.update({'pub_sig': binascii.b2a_base64(pub_sign)})
 
         mcipher = PKCS1_OAEP.new(self.master_key.key)

@@ -19,7 +19,9 @@ from salt.utils.timeout import wait_for
 log = logging.getLogger(__name__)
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import range
+
 # Import virtualbox libs
 HAS_LIBS = False
 try:
@@ -598,7 +600,7 @@ def vb_machinestate_to_tuple(machinestate):
     '''
     if isinstance(machinestate, int):
         return MACHINE_STATES_ENUM.get(machinestate, UNKNOWN_MACHINE_STATE)
-    elif isinstance(machinestate, str):
+    elif isinstance(machinestate, six.string_types):
         return MACHINE_STATES.get(machinestate, UNKNOWN_MACHINE_STATE)
     else:
         return UNKNOWN_MACHINE_STATE
@@ -625,9 +627,9 @@ def vb_machine_exists(name):
         vbox.findMachine(name)
         return True
     except Exception as e:
-        if isinstance(e.message, str):
+        if isinstance(e.message, six.string_types):
             message = e.message
-        elif hasattr(e, 'msg') and isinstance(getattr(e, 'msg'), str):
+        elif hasattr(e, 'msg') and isinstance(getattr(e, 'msg'), six.string_types):
             message = getattr(e, 'msg')
         else:
             message = ''

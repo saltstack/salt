@@ -154,7 +154,7 @@ import salt.utils.jid
 import salt.exceptions
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import MySQLdb
     HAS_MYSQL = True

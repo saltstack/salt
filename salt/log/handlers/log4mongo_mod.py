@@ -40,7 +40,7 @@ import socket
 import logging
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.log.mixins import NewStyleClassMixIn
 from salt.log.setup import LOG_LEVELS
 

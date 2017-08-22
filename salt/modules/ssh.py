@@ -19,17 +19,19 @@ import re
 import subprocess
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
+import salt.utils.decorators.path
 import salt.utils.files
-import salt.utils.decorators as decorators
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
 )
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ if six.PY3:
 
 def __virtual__():
     # TODO: This could work on windows with some love
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The module cannot be loaded on windows.')
     return True
 
@@ -734,7 +736,7 @@ def set_auth_key(
                 os.chown(dpath, uinfo['uid'], uinfo['gid'])
             os.chmod(dpath, 448)
             # If SELINUX is available run a restorecon on the file
-            rcon = salt.utils.which('restorecon')
+            rcon = salt.utils.path.which('restorecon')
             if rcon:
                 cmd = [rcon, dpath]
                 subprocess.call(cmd)
@@ -764,7 +766,7 @@ def set_auth_key(
                 os.chown(fconfig, uinfo['uid'], uinfo['gid'])
             os.chmod(fconfig, 384)
             # If SELINUX is available run a restorecon on the file
-            rcon = salt.utils.which('restorecon')
+            rcon = salt.utils.path.which('restorecon')
             if rcon:
                 cmd = [rcon, fconfig]
                 subprocess.call(cmd)
@@ -791,7 +793,7 @@ def _parse_openssh_output(lines, fingerprint_hash_type=None):
                'fingerprint': fingerprint}
 
 
-@decorators.which('ssh-keygen')
+@salt.utils.decorators.path.which('ssh-keygen')
 def get_known_host(user,
                    hostname,
                    config=None,
@@ -824,7 +826,7 @@ def get_known_host(user,
     return known_hosts[0] if known_hosts else None
 
 
-@decorators.which('ssh-keyscan')
+@salt.utils.decorators.path.which('ssh-keyscan')
 def recv_known_host(hostname,
                     enc=None,
                     port=None,
@@ -1243,7 +1245,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
     return _keys
 
 
-@decorators.which('ssh-keygen')
+@salt.utils.decorators.path.which('ssh-keygen')
 def hash_known_hosts(user=None, config=None):
     '''
 

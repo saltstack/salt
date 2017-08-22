@@ -21,16 +21,17 @@ Dependencies
 
 from __future__ import absolute_import
 
-# Import python lib
+# Import Python lib
 import logging
 log = logging.getLogger(__name__)
 
-# salt libs
-from salt.ext import six
+# Import Salt libs
 import salt.utils.files
-import salt.utils.templates
 import salt.utils.napalm
-from salt.utils.napalm import proxy_napalm_wrap
+import salt.utils.templates
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -221,7 +222,7 @@ def _config_logic(napalm_device,
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def connected(**kwarvs):  # pylint: disable=unused-argument
     '''
     Specifies if the connection to the device succeeded.
@@ -238,7 +239,7 @@ def connected(**kwarvs):  # pylint: disable=unused-argument
     }
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def facts(**kwargs):  # pylint: disable=unused-argument
     '''
     Returns characteristics of the network device.
@@ -293,7 +294,7 @@ def facts(**kwargs):  # pylint: disable=unused-argument
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def environment(**kwargs):  # pylint: disable=unused-argument
     '''
     Returns the environment of the device.
@@ -360,20 +361,141 @@ def environment(**kwargs):  # pylint: disable=unused-argument
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def cli(*commands, **kwargs):  # pylint: disable=unused-argument
-
     '''
     Returns a dictionary with the raw output of all commands passed as arguments.
 
-    :param commands: list of commands to be executed on the device
-    :return: a dictionary with the mapping between each command and its raw output
+    commands
+        List of commands to be executed on the device.
+
+    textfsm_parse: ``False``
+        Try parsing the outputs using the TextFSM templates.
+
+        .. versionadded:: Oxygen
+
+        .. note::
+            This option can be also specified in the minion configuration
+            file or pillar as ``napalm_cli_textfsm_parse``.
+
+    textfsm_path
+        The path where the TextFSM templates can be found. This option implies
+        the usage of the TextFSM index file.
+        ``textfsm_path`` can be either absolute path on the server,
+        either specified using the following URL mschemes: ``file://``,
+        ``salt://``, ``http://``, ``https://``, ``ftp://``,
+        ``s3://``, ``swift://``.
+
+        .. versionadded:: Oxygen
+
+        .. note::
+            This needs to be a directory with a flat structure, having an
+            index file (whose name can be specified using the ``index_file`` option)
+            and a number of TextFSM templates.
+
+        .. note::
+            This option can be also specified in the minion configuration
+            file or pillar as ``textfsm_path``.
+
+    textfsm_template
+        The path to a certain the TextFSM template.
+        This can be specified using the absolute path
+        to the file, or using one of the following URL schemes:
+
+        - ``salt://``, to fetch the template from the Salt fileserver.
+        - ``http://`` or ``https://``
+        - ``ftp://``
+        - ``s3://``
+        - ``swift://``
+
+        .. versionadded:: Oxygen
+
+    textfsm_template_dict
+        A dictionary with the mapping between a command
+        and the corresponding TextFSM path to use to extract the data.
+        The TextFSM paths can be specified as in ``textfsm_template``.
+
+        .. versionadded:: Oxygen
+
+        .. note::
+            This option can be also specified in the minion configuration
+            file or pillar as ``napalm_cli_textfsm_template_dict``.
+
+    platform_grain_name: ``os``
+        The name of the grain used to identify the platform name
+        in the TextFSM index file. Default: ``os``.
+
+        .. versionadded:: Oxygen
+
+        .. note::
+            This option can be also specified in the minion configuration
+            file or pillar as ``textfsm_platform_grain``.
+
+    platform_column_name: ``Platform``
+        The column name used to identify the platform,
+        exactly as specified in the TextFSM index file.
+        Default: ``Platform``.
+
+        .. versionadded:: Oxygen
+
+        .. note::
+            This is field is case sensitive, make sure
+            to assign the correct value to this option,
+            exactly as defined in the index file.
+
+        .. note::
+            This option can be also specified in the minion configuration
+            file or pillar as ``textfsm_platform_column_name``.
+
+    index_file: ``index``
+        The name of the TextFSM index file, under the ``textfsm_path``. Default: ``index``.
+
+        .. versionadded:: Oxygen
+
+        .. note::
+            This option can be also specified in the minion configuration
+            file or pillar as ``textfsm_index_file``.
+
+    saltenv: ``base``
+        Salt fileserver envrionment from which to retrieve the file.
+        Ignored if ``textfsm_path`` is not a ``salt://`` URL.
+
+        .. versionadded:: Oxygen
+
+    include_empty: ``False``
+        Include empty files under the ``textfsm_path``.
+
+        .. versionadded:: Oxygen
+
+    include_pat
+        Glob or regex to narrow down the files cached from the given path.
+        If matching with a regex, the regex must be prefixed with ``E@``,
+        otherwise the expression will be interpreted as a glob.
+
+        .. versionadded:: Oxygen
+
+    exclude_pat
+        Glob or regex to exclude certain files from being cached from the given path.
+        If matching with a regex, the regex must be prefixed with ``E@``,
+        otherwise the expression will be interpreted as a glob.
+
+        .. versionadded:: Oxygen
+
+        .. note::
+            If used with ``include_pat``, files matching this pattern will be
+            excluded from the subset of files defined by ``include_pat``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' net.cli "show version" "show chassis fan"
+
+    CLI Example with TextFSM template:
+
+    .. code-block::
+
+        salt '*' net.cli textfsm_parse=True textfsm_path=salt://textfsm/
 
     Example output:
 
@@ -396,9 +518,31 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                                       Bottom Front Fan          OK       3840    Spinning at intermediate-speed
                                      '
         }
-    '''
 
-    return salt.utils.napalm.call(
+    Example output with TextFSM parsing:
+
+    .. code-block:: json
+
+        {
+          "comment": "",
+          "result": true,
+          "out": {
+            "sh ver": [
+              {
+                "kernel": "9.1S3.5",
+                "documentation": "9.1S3.5",
+                "boot": "9.1S3.5",
+                "crypto": "9.1S3.5",
+                "chassis": "",
+                "routing": "9.1S3.5",
+                "base": "9.1S3.5",
+                "model": "mx960"
+              }
+            ]
+          }
+        }
+    '''
+    raw_cli_outputs = salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         'cli',
         **{
@@ -407,9 +551,110 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     )
     # thus we can display the output as is
     # in case of errors, they'll be catched in the proxy
+    if not raw_cli_outputs['result']:
+        # Error -> dispaly the output as-is.
+        return raw_cli_outputs
+    textfsm_parse = kwargs.get('textfsm_parse') or __opts__.get('napalm_cli_textfsm_parse') or\
+                    __pillar__.get('napalm_cli_textfsm_parse', False)
+    if not textfsm_parse:
+        # No TextFSM parsing required, return raw commands.
+        log.debug('No TextFSM parsing requested.')
+        return raw_cli_outputs
+    if 'textfsm.extract' not in __salt__ or 'textfsm.index' not in __salt__:
+        raw_cli_outputs['comment'] += 'Unable to process: is TextFSM installed?'
+        log.error(raw_cli_outputs['comment'])
+        return raw_cli_outputs
+    textfsm_template = kwargs.get('textfsm_template')
+    log.debug('textfsm_template: {}'.format(textfsm_template))
+    textfsm_path = kwargs.get('textfsm_path') or __opts__.get('textfsm_path') or\
+                   __pillar__.get('textfsm_path')
+    log.debug('textfsm_path: {}'.format(textfsm_path))
+    textfsm_template_dict = kwargs.get('textfsm_template_dict') or __opts__.get('napalm_cli_textfsm_template_dict') or\
+                            __pillar__.get('napalm_cli_textfsm_template_dict', {})
+    log.debug('TextFSM command-template mapping: {}'.format(textfsm_template_dict))
+    index_file = kwargs.get('index_file') or __opts__.get('textfsm_index_file') or\
+                 __pillar__.get('textfsm_index_file')
+    log.debug('index_file: {}'.format(index_file))
+    platform_grain_name = kwargs.get('platform_grain_name') or __opts__.get('textfsm_platform_grain') or\
+                          __pillar__.get('textfsm_platform_grain', 'os')
+    log.debug('platform_grain_name: {}'.format(platform_grain_name))
+    platform_column_name = kwargs.get('platform_column_name') or __opts__.get('textfsm_platform_column_name') or\
+                           __pillar__.get('textfsm_platform_column_name', 'Platform')
+    log.debug('platform_column_name: {}'.format(platform_column_name))
+    saltenv = kwargs.get('saltenv', 'base')
+    include_empty = kwargs.get('include_empty', False)
+    include_pat = kwargs.get('include_pat')
+    exclude_pat = kwargs.get('exclude_pat')
+    processed_cli_outputs = {
+        'comment': raw_cli_outputs.get('comment', ''),
+        'result': raw_cli_outputs['result'],
+        'out': {}
+    }
+    log.debug('Starting to analyse the raw outputs')
+    for command in list(commands):
+        command_output = raw_cli_outputs['out'][command]
+        log.debug('Output from command: {}'.format(command))
+        log.debug(command_output)
+        processed_command_output = None
+        if textfsm_path:
+            log.debug('Using the templates under {}'.format(textfsm_path))
+            processed_cli_output = __salt__['textfsm.index'](command,
+                                                             platform_grain_name=platform_grain_name,
+                                                             platform_column_name=platform_column_name,
+                                                             output=command_output.strip(),
+                                                             textfsm_path=textfsm_path,
+                                                             saltenv=saltenv,
+                                                             include_empty=include_empty,
+                                                             include_pat=include_pat,
+                                                             exclude_pat=exclude_pat)
+            log.debug('Processed CLI output:')
+            log.debug(processed_cli_output)
+            if not processed_cli_output['result']:
+                log.debug('Apparently this didnt work, returnin the raw output')
+                processed_command_output = command_output
+                processed_cli_outputs['comment'] += '\nUnable to process the output from {0}: {1}.'.format(command,
+                    processed_cli_output['comment'])
+                log.error(processed_cli_outputs['comment'])
+            elif processed_cli_output['out']:
+                log.debug('All good, {} has a nice output!'.format(command))
+                processed_command_output = processed_cli_output['out']
+            else:
+                comment = '''\nProcessing "{}" didn't fail, but didn't return anything either. Dumping raw.'''.format(
+                    command)
+                processed_cli_outputs['comment'] += comment
+                log.error(comment)
+                processed_command_output = command_output
+        elif textfsm_template or command in textfsm_template_dict:
+            if command in textfsm_template_dict:
+                textfsm_template = textfsm_template_dict[command]
+            log.debug('Using {0} to process the command: {1}'.format(textfsm_template, command))
+            processed_cli_output = __salt__['textfsm.extract'](textfsm_template,
+                                                               raw_text=command_output,
+                                                               saltenv=saltenv)
+            log.debug('Processed CLI output:')
+            log.debug(processed_cli_output)
+            if not processed_cli_output['result']:
+                log.debug('Apparently this didnt work, returnin the raw output')
+                processed_command_output = command_output
+                processed_cli_outputs['comment'] += '\nUnable to process the output from {0}: {1}'.format(command,
+                    processed_cli_output['comment'])
+                log.error(processed_cli_outputs['comment'])
+            elif processed_cli_output['out']:
+                log.debug('All good, {} has a nice output!'.format(command))
+                processed_command_output = processed_cli_output['out']
+            else:
+                log.debug('Processing {} didnt fail, but didnt return anything either. Dumping raw.'.format(command))
+                processed_command_output = command_output
+        else:
+            log.error('No TextFSM template specified, or no TextFSM path defined')
+            processed_command_output = command_output
+            processed_cli_outputs['comment'] += '\nUnable to process the output from {}.'.format(command)
+        processed_cli_outputs['out'][command] = processed_command_output
+    processed_cli_outputs['comment'] = processed_cli_outputs['comment'].strip()
+    return processed_cli_outputs
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def traceroute(destination, source=None, ttl=None, timeout=None, vrf=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -454,7 +699,7 @@ def traceroute(destination, source=None, ttl=None, timeout=None, vrf=None, **kwa
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def ping(destination, source=None, ttl=None, timeout=None, size=None, count=None, vrf=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -507,7 +752,7 @@ def ping(destination, source=None, ttl=None, timeout=None, size=None, count=None
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def arp(interface='', ipaddr='', macaddr='', **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -573,7 +818,7 @@ def arp(interface='', ipaddr='', macaddr='', **kwargs):  # pylint: disable=unuse
     return proxy_output
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def ipaddrs(**kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -633,7 +878,7 @@ def ipaddrs(**kwargs):  # pylint: disable=unused-argument
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def interfaces(**kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -680,7 +925,7 @@ def interfaces(**kwargs):  # pylint: disable=unused-argument
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def lldp(interface='', **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -742,7 +987,7 @@ def lldp(interface='', **kwargs):  # pylint: disable=unused-argument
     return proxy_output
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def mac(address='', interface='', vlan=0, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -815,7 +1060,7 @@ def mac(address='', interface='', vlan=0, **kwargs):  # pylint: disable=unused-a
     return proxy_output
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def config(source=None, **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionadded:: 2017.7.0
@@ -868,7 +1113,7 @@ def config(source=None, **kwargs):  # pylint: disable=unused-argument
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def optics(**kwargs):  # pylint: disable=unused-argument
     '''
     .. versionadded:: 2017.7.0
@@ -918,7 +1163,7 @@ def optics(**kwargs):  # pylint: disable=unused-argument
 # ----- Configuration specific functions ------------------------------------------------------------------------------>
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def load_config(filename=None,
                 text=None,
                 test=False,
@@ -1028,7 +1273,7 @@ def load_config(filename=None,
                          loaded_config=loaded_config)
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def load_template(template_name,
                   template_source=None,
                   template_path=None,
@@ -1427,7 +1672,7 @@ def load_template(template_name,
                          loaded_config=loaded_config)
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def commit(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -1447,7 +1692,7 @@ def commit(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argu
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def discard_config(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
 
     """
@@ -1467,7 +1712,7 @@ def discard_config(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def compare_config(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -1487,7 +1732,7 @@ def compare_config(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def rollback(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -1507,7 +1752,7 @@ def rollback(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-ar
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def config_changed(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -1538,7 +1783,7 @@ def config_changed(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
     return is_config_changed, reason
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def config_control(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
 
     '''

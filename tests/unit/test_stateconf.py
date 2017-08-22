@@ -17,7 +17,7 @@ from salt.exceptions import SaltRenderError
 from salt.ext.six.moves import StringIO
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
@@ -102,8 +102,9 @@ test:
     - name: echo sls_dir={{sls_dir}}
     - cwd: /
 ''', sls='path.to.sls')
-        self.assertEqual(result['test']['cmd.run'][0]['name'],
-                         'echo sls_dir=path/to')
+        self.assertEqual(
+            result['test']['cmd.run'][0]['name'],
+            'echo sls_dir=path{0}to'.format(os.sep))
 
     def test_states_declared_with_shorthand_no_args(self):
         result = self._render_sls('''

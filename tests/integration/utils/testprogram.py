@@ -25,7 +25,7 @@ import salt.utils.files
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
 import salt.defaults.exitcodes as exitcodes
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 from tests.support.unit import TestCase

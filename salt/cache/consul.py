@@ -61,7 +61,7 @@ api = None
 # Define the module's virtual name
 __virtualname__ = 'consul'
 
-__func_alias__ = {'list': 'ls'}
+__func_alias__ = {'list_': 'list'}
 
 
 def __virtual__():
@@ -139,7 +139,7 @@ def flush(bank, key=None):
         )
 
 
-def ls(bank):
+def list_(bank):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''

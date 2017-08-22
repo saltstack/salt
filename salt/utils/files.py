@@ -14,15 +14,15 @@ import tempfile
 import time
 
 # Import Salt libs
-import salt.utils
+import salt.utils  # Can be removed when backup_minion is moved
+import salt.utils.path
+import salt.utils.platform
 import salt.modules.selinux
-import salt.ext.six as six
 from salt.exceptions import CommandExecutionError, FileLockError, MinionError
-from salt.utils.decorators import jinja_filter
+from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd-party libs
-from stat import S_IMODE
-
+from salt.ext import six
 try:
     import fcntl
     HAS_FCNTL = True
@@ -78,7 +78,7 @@ def recursive_copy(source, dest):
     (identical to cp -r on a unix machine)
     '''
     for root, _, files in os.walk(source):
-        path_from_source = root.replace(source, '').lstrip('/')
+        path_from_source = root.replace(source, '').lstrip(os.sep)
         target_directory = os.path.join(dest, path_from_source)
         if not os.path.exists(target_directory):
             os.makedirs(target_directory)
@@ -117,7 +117,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     # Get current file stats to they can be replicated after the new file is
     # moved to the destination path.
     fstat = None
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         try:
             fstat = os.stat(dest)
         except OSError:
@@ -127,7 +127,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         os.chown(dest, fstat.st_uid, fstat.st_gid)
         os.chmod(dest, fstat.st_mode)
     # If SELINUX is available run a restorecon on the file
-    rcon = salt.utils.which('restorecon')
+    rcon = salt.utils.path.which('restorecon')
     if rcon:
         policy = False
         try:
@@ -270,7 +270,7 @@ def set_umask(mask):
     '''
     Temporarily set the umask and restore once the contextmanager exits
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         # Don't attempt on Windows
         yield
     else:
@@ -296,7 +296,7 @@ def fopen(*args, **kwargs):
     '''
     binary = None
     # ensure 'binary' mode is always used on Windows in Python 2
-    if ((six.PY2 and salt.utils.is_windows() and 'binary' not in kwargs) or
+    if ((six.PY2 and salt.utils.platform.is_windows() and 'binary' not in kwargs) or
             kwargs.pop('binary', False)):
         if len(args) > 1:
             args = list(args)
@@ -393,7 +393,7 @@ def fpopen(*args, **kwargs):
                 os.chown(path, uid, gid)
 
         if mode is not None:
-            mode_part = S_IMODE(d_stat.st_mode)
+            mode_part = stat.S_IMODE(d_stat.st_mode)
             if mode_part != mode:
                 os.chmod(path, (d_stat.st_mode ^ mode_part) | mode)
 
@@ -426,7 +426,7 @@ def rm_rf(path):
 
         Usage : `shutil.rmtree(path, onerror=onerror)`
         '''
-        if salt.utils.is_windows() and not os.access(path, os.W_OK):
+        if salt.utils.platform.is_windows() and not os.access(path, os.W_OK):
             # Is the error an access error ?
             os.chmod(path, stat.S_IWUSR)
             func(path)
@@ -457,6 +457,6 @@ def is_fcntl_available(check_sunos=False):
     If ``check_sunos`` is passed as ``True`` an additional check to see if host is
     SunOS is also made. For additional information see: http://goo.gl/159FF8
     '''
-    if check_sunos and salt.utils.is_sunos():
+    if check_sunos and salt.utils.platform.is_sunos():
         return False
     return HAS_FCNTL

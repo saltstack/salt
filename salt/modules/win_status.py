@@ -18,8 +18,9 @@ import subprocess
 log = logging.getLogger(__name__)
 
 # Import Salt Libs
-import salt.utils
 import salt.utils.event
+import salt.utils.platform
+import salt.utils.stringutils
 from salt.utils.network import host_to_ips as _host_to_ips
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -31,7 +32,7 @@ import copy
 
 # Import 3rd Party Libs
 try:
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         import wmi
         import salt.utils.winapi
         HAS_WMI = True
@@ -41,7 +42,7 @@ except ImportError:
     HAS_WMI = False
 
 HAS_PSUTIL = False
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     import psutil
     HAS_PSUTIL = True
 
@@ -53,7 +54,7 @@ def __virtual__():
     '''
     Only works on Windows systems with WMI and WinAPI
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'win_status.py: Requires Windows'
 
     if not HAS_WMI:
@@ -215,8 +216,8 @@ def _get_process_info(proc):
     '''
     Return  process information
     '''
-    cmd = salt.utils.to_str(proc.CommandLine or '')
-    name = salt.utils.to_str(proc.Name)
+    cmd = salt.utils.stringutils.to_str(proc.CommandLine or '')
+    name = salt.utils.stringutils.to_str(proc.Name)
     info = dict(
         cmd=cmd,
         name=name,
@@ -230,13 +231,13 @@ def _get_process_owner(process):
     domain, error_code, user = None, None, None
     try:
         domain, error_code, user = process.GetOwner()
-        owner['user'] = salt.utils.to_str(user)
-        owner['user_domain'] = salt.utils.to_str(domain)
+        owner['user'] = salt.utils.stringutils.to_str(user)
+        owner['user_domain'] = salt.utils.stringutils.to_str(domain)
     except Exception as exc:
         pass
     if not error_code and all((user, domain)):
-        owner['user'] = salt.utils.to_str(user)
-        owner['user_domain'] = salt.utils.to_str(domain)
+        owner['user'] = salt.utils.stringutils.to_str(user)
+        owner['user_domain'] = salt.utils.stringutils.to_str(domain)
     elif process.ProcessId in [0, 4] and error_code == 2:
         # Access Denied for System Idle Process and System
         owner['user'] = 'SYSTEM'
@@ -303,7 +304,7 @@ def master(master=None, connected=True):
             log.error('Failed netstat')
             raise
 
-        lines = salt.utils.to_str(data).split('\n')
+        lines = salt.utils.stringutils.to_str(data).split('\n')
         for line in lines:
             if 'ESTABLISHED' not in line:
                 continue

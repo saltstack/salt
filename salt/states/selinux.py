@@ -171,8 +171,14 @@ def boolean(name, value, persist=False):
                 name, rvalue)
         return ret
 
-    if __salt__['selinux.setsebool'](name, rvalue, persist):
+    ret['result'] = __salt__['selinux.setsebool'](name, rvalue, persist)
+    if ret['result']:
         ret['comment'] = 'Boolean {0} has been set to {1}'.format(name, rvalue)
+        ret['changes'].update({'State': {'old': bools[name]['State'],
+                                         'new': rvalue}})
+        if persist and not default:
+            ret['changes'].update({'Default': {'old': bools[name]['Default'],
+                                               'new': rvalue}})
         return ret
     ret['comment'] = 'Failed to set the boolean {0} to {1}'.format(name, rvalue)
     return ret
