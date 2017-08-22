@@ -114,16 +114,16 @@ class GroupAddTestCase(TestCase):
         '''
         os_version_list = [
             {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
-             'cmd': ('gpasswd', '-a', 'root', 'test')},
+             'cmd': ['gpasswd', '-a', 'root', 'test']},
 
             {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': '11'},
-             'cmd': ('usermod', '-A', 'test', 'root')},
+             'cmd': ['usermod', '-A', 'test', 'root']},
 
             {'grains': {'kernel': 'Linux'},
-             'cmd': ('gpasswd', '--add', 'root', 'test')},
+             'cmd': ['gpasswd', '--add', 'root', 'test']},
 
             {'grains': {'kernel': 'OTHERKERNEL'},
-             'cmd': ('usermod', '-G', 'test', 'root')},
+             'cmd': ['usermod', '-G', 'test', 'root']},
         ]
 
         for os_version in os_version_list:
@@ -141,16 +141,16 @@ class GroupAddTestCase(TestCase):
         '''
         os_version_list = [
             {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
-             'cmd': ('gpasswd', '-d', 'root', 'test')},
+             'cmd': ['gpasswd', '-d', 'root', 'test']},
 
             {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': '11'},
-             'cmd': ('usermod', '-R', 'test', 'root')},
+             'cmd': ['usermod', '-R', 'test', 'root']},
 
             {'grains': {'kernel': 'Linux'},
-             'cmd': ('gpasswd', '--del', 'root', 'test')},
+             'cmd': ['gpasswd', '--del', 'root', 'test']},
 
             {'grains': {'kernel': 'OpenBSD'},
-             'cmd': 'usermod -S foo root'},
+             'cmd': ['usermod', '-S', 'foo', 'root']},
         ]
 
         for os_version in os_version_list:
@@ -176,16 +176,16 @@ class GroupAddTestCase(TestCase):
         '''
         os_version_list = [
             {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
-             'cmd': ('gpasswd', '-M', 'foo', 'test')},
+             'cmd': ['gpasswd', '-M', 'foo', 'test']},
 
             {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osmajorrelease': '11'},
-             'cmd': ('groupmod', '-A', 'foo', 'test')},
+             'cmd': ['groupmod', '-A', 'foo', 'test']},
 
             {'grains': {'kernel': 'Linux'},
-             'cmd': ('gpasswd', '--members', 'foo', 'test')},
+             'cmd': ['gpasswd', '--members', 'foo', 'test']},
 
             {'grains': {'kernel': 'OpenBSD'},
-             'cmd': 'usermod -G test foo'},
+             'cmd': ['usermod', '-G', 'test', 'foo']},
         ]
 
         for os_version in os_version_list:
