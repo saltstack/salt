@@ -24,6 +24,8 @@ import salt.utils.kickstart
 import salt.syspaths
 from salt.exceptions import SaltInvocationError
 
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -178,9 +180,13 @@ def bootstrap(
 
     if pkgs is None:
         pkgs = []
+    elif isinstance(pkgs, six.string_types):
+        pkgs = pkgs.split(',')
 
     if exclude_pkgs is None:
         exclude_pkgs = []
+    elif isinstance(exclude_pkgs, six.string_types):
+        exclude_pkgs = exclude_pkgs.split(',')
 
     if platform in ('rpm', 'yum'):
         _bootstrap_yum(
@@ -393,15 +399,22 @@ def _bootstrap_deb(
     if repo_url is None:
         repo_url = 'http://ftp.debian.org/debian/'
 
+    if not salt.utils.which('debootstrap'):
+        log.error('Required tool debootstrap is not installed.')
+        return False
+
     deb_args = [
         'debootstrap',
         '--foreign',
         '--arch',
-        _cmd_quote(arch),
-        '--include',
-    ] + pkgs + [
-        '--exclude',
-    ] + exclude_pkgs + [
+        _cmd_quote(arch)]
+
+    if pkgs:
+        deb_args += ['--include'] + pkgs
+    if exclude_pkgs:
+        deb_args += ['--exclude'] + exclude_pkgs
+
+    deb_args += [
         _cmd_quote(flavor),
         _cmd_quote(root),
         _cmd_quote(repo_url),
