@@ -80,7 +80,7 @@ def add(name, **kwargs):
     return ret
 
 
-def delete(name):
+def delete(name, **kwargs):
     '''
     Remove the named group
 
@@ -213,7 +213,7 @@ def getent(refresh=False):
     return ret
 
 
-def adduser(name, username):
+def adduser(name, username, **kwargs):
     '''
     Add a user to a group
 
@@ -272,7 +272,7 @@ def adduser(name, username):
     return ret
 
 
-def deluser(name, username):
+def deluser(name, username, **kwargs):
     '''
     Remove a user from a group
 
@@ -331,7 +331,7 @@ def deluser(name, username):
     return ret
 
 
-def members(name, members_list):
+def members(name, members_list, **kwargs):
     '''
     Ensure a group contains only the members in the list
 
