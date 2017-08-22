@@ -51,6 +51,7 @@ def get_invalid_docs():
     allow_failure = (
         'cmd.win_runas',
         'cp.recv',
+        'cp.recv_chunked',
         'glance.warn_until',
         'ipset.long_range',
         'libcloud_compute.get_driver',
