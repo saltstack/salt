@@ -82,14 +82,11 @@ else:
 # which simplifies code readability, it adds some unsupported functions into
 # the driver's module scope.
 # We list un-supported functions here. These will be removed from the loaded.
+#  TODO:  remove the need for this cross-module code. Maybe use NotImplemented
 LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     u'parallels.avail_sizes',
     u'parallels.avail_locations',
     u'proxmox.avail_sizes',
-    u'saltify.destroy',
-    u'saltify.avail_sizes',
-    u'saltify.avail_images',
-    u'saltify.avail_locations',
     u'rackspace.reboot',
     u'openstack.list_locations',
     u'rackspace.list_locations'
