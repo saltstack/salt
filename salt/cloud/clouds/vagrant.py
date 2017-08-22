@@ -50,7 +50,6 @@ def _get_connection_info():
                     'password', vm_, __opts__, default=None),
                'eauth': config.get_cloud_config_value(
                     'eauth', vm_, __opts__, default=''),
-               'vm': vm_,
                }
     except IndexError:
         raise SaltCloudException(
