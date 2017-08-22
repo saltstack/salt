@@ -2381,7 +2381,7 @@ def _zpool_data(grains):
         return {}
 
     # quickly return if NetBSD (ZFS still under development)
-    if salt.utils.is_netbsd():
+    if salt.utils.platform.is_netbsd():
         return {}
 
     # quickly return if no zpool and zfs command

@@ -9,6 +9,7 @@ import random
 
 # Import Salt libs
 import salt.config
+import salt.utils.versions
 import salt.syspaths as syspaths
 from salt.exceptions import SaltClientError  # Temporary
 
@@ -52,7 +53,7 @@ class SSHClient(object):
         Prepare the arguments
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -88,7 +89,7 @@ class SSHClient(object):
         .. versionadded:: 2015.5.0
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -122,7 +123,7 @@ class SSHClient(object):
         .. versionadded:: 2015.5.0
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -226,7 +227,7 @@ class SSHClient(object):
         .. versionadded:: 2017.7.0
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '

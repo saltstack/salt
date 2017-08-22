@@ -219,7 +219,7 @@ def uptime():
         with salt.utils.files.fopen(ut_path) as rfh:
             seconds = int(float(rfh.read().split()[0]))
     elif salt.utils.platform.is_sunos():
-        # note: some flavors/vesions report the host uptime inside a zone
+        # note: some flavors/versions report the host uptime inside a zone
         #       https://support.oracle.com/epmos/faces/BugDisplay?id=15611584
         res = __salt__['cmd.run_all']('kstat -p unix:0:system_misc:boot_time')
         if res['retcode'] > 0:

@@ -26,9 +26,9 @@ from tests.support.helpers import (
     skip_if_not_root
 )
 # Import salt libs
-import salt.utils  # Can be removed once compare_versions is moved
 import salt.utils.files
 import salt.utils.path
+import salt.utils.versions
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
@@ -239,7 +239,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             )
         except (AssertionError, CommandExecutionError):
             pip_version = self.run_function('pip.version', [venv_dir])
-            if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='7.0.0'):
+            if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='7.0.0'):
                 self.skipTest('the --mirrors arg has been deprecated and removed in pip==7.0.0')
         finally:
             if os.path.isdir(venv_dir):

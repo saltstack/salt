@@ -21,10 +21,10 @@ import re
 import string
 
 # Import salt libs
-import salt.utils  # Can be removed when warn_until is moved
 import salt.utils.args
 import salt.utils.files
 import salt.utils.url
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -1140,13 +1140,22 @@ def latest(name,
                                            password=password,
                                            https_user=https_user,
                                            https_pass=https_pass)
-                comments.append(
-                    'Remote \'{0}\' changed from {1} to {2}'.format(
-                        remote,
-                        salt.utils.url.redact_http_basic_auth(fetch_url),
-                        redacted_fetch_url
+                if fetch_url is None:
+                    comments.append(
+                        'Remote \'{0}\' set to {1}'.format(
+                            remote,
+                            redacted_fetch_url
+                        )
                     )
-                )
+                    ret['changes']['new'] = name + ' => ' + remote
+                else:
+                    comments.append(
+                        'Remote \'{0}\' changed from {1} to {2}'.format(
+                            remote,
+                            salt.utils.url.redact_http_basic_auth(fetch_url),
+                            redacted_fetch_url
+                        )
+                    )
 
             if remote_rev is not None:
                 if __opts__['test']:
@@ -2123,7 +2132,7 @@ def detached(name,
             'consistency. Please update your SLS to reflect this.'
         )
         ret.setdefault('warnings', []).append(deprecation_msg)
-        salt.utils.warn_until('Fluorine', deprecation_msg)
+        salt.utils.versions.warn_until('Fluorine', deprecation_msg)
 
     if not rev:
         return _fail(

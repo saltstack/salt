@@ -25,6 +25,7 @@ import salt.utils.job
 import salt.utils.lazy
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.versions
 import salt.transport
 import salt.log.setup
 from salt.ext import six
@@ -253,7 +254,7 @@ class SyncClientMixin(object):
             low[u'kwarg'] = low.pop(u'kwargs')
 
         if msg:
-            salt.utils.warn_until(u'Oxygen', u' '.join(msg))
+            salt.utils.versions.warn_until(u'Oxygen', u' '.join(msg))
 
         return self._low(fun, low, print_event=print_event, full_return=full_return)
 
@@ -407,8 +408,6 @@ class SyncClientMixin(object):
                     )
             data[u'success'] = False
 
-        namespaced_event.fire_event(data, u'ret')
-
         if self.store_job:
             try:
                 salt.utils.job.store_job(
@@ -425,6 +424,9 @@ class SyncClientMixin(object):
             except salt.exceptions.SaltCacheError:
                 log.error(u'Could not store job cache info. '
                           u'Job details for this run may be unavailable.')
+
+        # Outputters _can_ mutate data so write to the job cache first!
+        namespaced_event.fire_event(data, u'ret')
 
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
@@ -443,6 +445,7 @@ class SyncClientMixin(object):
                 _use_fnmatch = True
             else:
                 target_mod = arg + u'.' if not arg.endswith(u'.') else arg
+                _use_fnmatch = False
             if _use_fnmatch:
                 docs = [(fun, self.functions[fun].__doc__)
                         for fun in fnmatch.filter(self.functions, target_mod)]
