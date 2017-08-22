@@ -398,14 +398,21 @@ def _bootstrap_deb(
         '--foreign',
         '--arch',
         _cmd_quote(arch),
-        '--include',
-    ] + pkgs + [
-        '--exclude',
-    ] + exclude_pkgs + [
+    ]
+
+    if pkgs:
+        deb_args.append('--include')
+        deb_args.extend(pkgs)
+
+    if exclude_pkgs:
+        deb_args.append('--exclude')
+        deb_args.extend(exclude_pkgs)
+
+    deb_args.extend([
         _cmd_quote(flavor),
         _cmd_quote(root),
         _cmd_quote(repo_url),
-    ]
+    ])
 
     __salt__['cmd.run'](deb_args, python_shell=False)
 
