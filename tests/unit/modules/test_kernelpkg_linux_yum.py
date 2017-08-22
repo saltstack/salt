@@ -87,7 +87,6 @@ class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
             with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
                 with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
                     result = self._kernelpkg.remove(release=self.KERNEL_LIST[0])
-                    self._kernelpkg.__salt__['cmd.run_all'].assert_called_once()
                     self.assertIn('removed', result)
                     target = '{0}-{1}'.format(self._kernelpkg._package_name(), self.KERNEL_LIST[0])  # pylint: disable=protected-access
                     self.assertListEqual(result['removed'], [target])
@@ -101,4 +100,3 @@ class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
             with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
                 with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
                     self.assertRaises(CommandExecutionError, self._kernelpkg.remove, release=self.KERNEL_LIST[0])
-                    self._kernelpkg.__salt__['cmd.run_all'].assert_called_once()
