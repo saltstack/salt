@@ -252,6 +252,7 @@ def present(name,
         except Exception as exc:
             ret['comment'] = ('Failed to create network \'{0}\': {1}'
                               .format(name, exc))
+            return ret
 
     # Finally, figure out the list of containers which should now be connected.
     containers_to_connect = {}
