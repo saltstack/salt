@@ -236,9 +236,21 @@ class LoadAuth(object):
         if tdata.get('expire', '0') < time.time():
             rm_tok = True
         if rm_tok:
-            self.tokens["{0}.rm_token".format(self.opts['eauth_tokens'])](self.opts, tok)
+            self.rm_token(tok)
 
         return tdata
+
+    def list_tokens(self):
+        '''
+        List all tokens in eauth_tokn storage.
+        '''
+        return self.tokens["{0}.list_tokens".format(self.opts['eauth_tokens'])](self.opts)
+
+    def rm_token(self, tok):
+        '''
+        Remove the given token from token storage.
+        '''
+        self.tokens["{0}.rm_token".format(self.opts['eauth_tokens'])](self.opts, tok)
 
     def authenticate_token(self, load):
         '''
