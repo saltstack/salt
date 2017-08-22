@@ -1456,8 +1456,6 @@ def latest(name,
                                                         user=user,
                                                         password=password,
                                                         ignore_retcode=True):
-                            merge_rev = remote_rev if rev == 'HEAD' \
-                                else desired_upstream
 
                             if git_ver >= _LooseVersion('1.8.1.6'):
                                 # --ff-only added in version 1.8.1.6. It's not
@@ -1474,7 +1472,7 @@ def latest(name,
 
                             __salt__['git.merge'](
                                 target,
-                                rev=merge_rev,
+                                rev=remote_rev,
                                 opts=merge_opts,
                                 user=user,
                                 password=password)
