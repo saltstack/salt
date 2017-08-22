@@ -44,6 +44,12 @@ Functions to interact with Hashicorp Vault.
            osenv:
              driver: env
 
+
+        And then export the VAULT_TOKEN variable in your OS:
+
+        .. code-block: bash
+           export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
+
     policies
         Policies that are assigned to minions when requesting a token. These can
         either be static, eg saltstack/minions, or templated, eg
