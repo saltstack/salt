@@ -12,7 +12,6 @@ import os
 import re
 import time
 import stat
-import msgpack
 
 # Import salt libs
 import salt.crypt
@@ -152,22 +151,11 @@ def clean_expired_tokens(opts):
     '''
     Clean expired tokens from the master
     '''
-    serializer = salt.payload.Serial(opts)
-    for (dirpath, dirnames, filenames) in os.walk(opts['token_dir']):
-        for token in filenames:
-            token_path = os.path.join(dirpath, token)
-            with salt.utils.files.fopen(token_path, 'rb') as token_file:
-                try:
-                    token_data = serializer.loads(token_file.read())
-                except msgpack.UnpackValueError:
-                    # Bad token file or empty. Remove.
-                    os.remove(token_path)
-                    return
-                if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
-                    try:
-                        os.remove(token_path)
-                    except (IOError, OSError):
-                        pass
+    loadauth = salt.auth.LoadAuth(opts)
+    for tok in loadauth.list_tokens():
+        token_data = loadauth.get_tok(tok)
+        if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
+            loadauth.rm_token(tok)
 
 
 def clean_pub_auth(opts):
@@ -1071,7 +1059,7 @@ class LocalFuncs(object):
                                                 'for user {0}.').format(username)))
             auth_list = self.loadauth.get_auth_list(load)
 
-        if not self.ckminions.runner_check(auth_list, load['fun']):
+        if not self.ckminions.runner_check(auth_list, load['fun'], load['kwarg']):
             return dict(error=dict(name=err_name,
                                    message=('Authentication failure of type "{0}" occurred '
                                             'for user {1}.').format(auth_type, username)))
@@ -1127,7 +1115,7 @@ class LocalFuncs(object):
                                                 'user {0}.').format(username)))
 
         if auth_type != 'user':
-            if not self.ckminions.wheel_check(auth_list, load['fun']):
+            if not self.ckminions.wheel_check(auth_list, load['fun'], load['kwarg']):
                 return dict(error=dict(name=err_name,
                                        message=('Authentication failure of type "{0}" occurred for '
                                                 'user {1}.').format(auth_type, username)))
