@@ -234,6 +234,7 @@ Valid options:
   - clouds
   - tops
   - roster
+  - tokens
 
 .. conf_master:: module_dirs
 
@@ -1729,6 +1730,22 @@ Set additional directories to search for runner modules.
 
     runner_dirs:
       - /var/lib/salt/runners
+
+.. conf_master:: utils_dirs
+
+``utils_dirs``
+---------------
+
+.. versionadded:: Oxygen
+
+Default: ``[]``
+
+Set additional directories to search for util modules.
+
+.. code-block:: yaml
+
+    utils_dirs:
+      - /var/lib/salt/utils
 
 .. conf_master:: cython_enable
 

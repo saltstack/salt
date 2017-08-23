@@ -533,6 +533,9 @@
 # Add any additional locations to look for master runners:
 #runner_dirs: []
 
+# Add any additional locations to look for master utils:
+#utils_dirs: []
+
 # Enable Cython for master side modules:
 #cython_enable: False
 
