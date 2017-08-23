@@ -41,6 +41,7 @@ import logging
 # Import salt libs
 import salt.utils.docker
 import salt.utils.args
+from salt.ext.six.moves import zip
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -206,7 +207,7 @@ def present(name,
         # get the functions default value and args
         argspec = salt.utils.args.get_function_argspec(__salt__['docker.build'])
         # Map any if existing args from kwargs into the build_args dictionary
-        build_args = dict(zip(argspec.args, argspec.defaults))
+        build_args = dict(list(zip(argspec.args, argspec.defaults)))
         for k, v in build_args.items():
             if k in kwargs.get('kwargs', {}):
                 build_args[k] = kwargs.get('kwargs', {}).get(k)
