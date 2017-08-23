@@ -264,7 +264,6 @@ class SlackClient(object):
         else:
             __salt__['event.send'](tag, msg)
 
-
     def can_user_run(self, user, command, groups):
         """
         Break out the permissions into the folowing:
