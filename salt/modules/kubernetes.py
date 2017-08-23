@@ -51,19 +51,17 @@ try:
     import kubernetes.client
     from kubernetes.client.rest import ApiException
     from urllib3.exceptions import HTTPError
+    try:
+        # There is an API change in Kubernetes >= 2.0.0.
+        from kubernetes.client import V1beta1Deployment as AppsV1beta1Deployment
+        from kubernetes.client import V1beta1DeploymentSpec as AppsV1beta1DeploymentSpec
+    except ImportError:
+        from kubernetes.client import AppsV1beta1Deployment
+        from kubernetes.client import AppsV1beta1DeploymentSpec
 
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
-
-try:
-    # There is an API change in Kubernetes >= 2.0.0.
-    from kubernetes.client import V1beta1Deployment as AppsV1beta1Deployment
-    from kubernetes.client import V1beta1DeploymentSpec as AppsV1beta1DeploymentSpec
-except ImportError:
-    from kubernetes.client import AppsV1beta1Deployment
-    from kubernetes.client import AppsV1beta1DeploymentSpec
-
 
 log = logging.getLogger(__name__)
 
