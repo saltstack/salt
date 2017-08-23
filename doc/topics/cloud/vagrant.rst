@@ -15,7 +15,7 @@ The machine which will host the VagrantBox must be an already existing minion
 of the cloud server's Salt master.
 It must have Vagrant_ installed, and a Vagrant-compatible virtual machine engine,
 such as VirtualBox_.
-(The Vagrant driver does not depend on the VirtualBox driver in any way.)
+(Note: The Vagrant driver does not depend on the salt-cloud VirtualBox driver in any way.)
 
 .. _Vagrant: https://www.vagrantup.com/
 .. _VirtualBox: https://www.virtualbox.org/
@@ -104,7 +104,7 @@ Provisioning salt-api
 =====================
 
 In order to query or control minions it created, the driver needs to send commands
-to the salt master.  It does that using the network interface to salt-api.
+to the salt master.  It does that using the network interface of salt-api.
 
 The salt-api is not enabled by default. The following example will provide a
 simple installation.
@@ -149,7 +149,7 @@ simple installation.
     # file /etc/salt/master.d/api.conf
     # see https://docs.saltstack.com/en/latest/ref/netapi/all/salt.netapi.rest_cherrypy.html
     rest_cherrypy:
-      host: localhost
+      host: 0.0.0.0
       port: 8000
       ssl_crt: /etc/pki/tls/certs/localhost.crt
       ssl_key: /etc/pki/tls/certs/localhost.key

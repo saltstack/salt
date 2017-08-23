@@ -316,6 +316,10 @@ def destroy(name, call=None):
         sock_dir=opts['sock_dir'],
         transport=opts['transport']
     )
+
+    if opts.get('update_cachedir', False) is True:
+        __utils__['cloud.delete_minion_cachedir'](name, __active_provider_name__.split(':')[0], opts)
+
     return {'Destroyed': '{0} was destroyed.'.format(name)}
 
 
