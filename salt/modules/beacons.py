@@ -242,11 +242,11 @@ def modify(name, beacon_data, **kwargs):
         _current_lines = []
         for _item in _current:
             _current_lines.extend(['{0}:{1}\n'.format(key, value)
-                                  for (key, value) in six.iteritems(_current[0])])
+                                  for (key, value) in six.iteritems(_item)])
         _new_lines = []
         for _item in _new:
             _new_lines.extend(['{0}:{1}\n'.format(key, value)
-                              for (key, value) in six.iteritems(_new[0])])
+                              for (key, value) in six.iteritems(_item)])
         _diff = difflib.unified_diff(_current_lines, _new_lines)
 
         ret['changes'] = {}
