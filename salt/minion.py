@@ -21,6 +21,7 @@ import multiprocessing
 from random import randint, shuffle
 from stat import S_IMODE
 import salt.serializers.msgpack
+from binascii import crc32
 
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -443,13 +444,30 @@ class MinionBase(object):
             if opts[u'master_type'] == u'func':
                 eval_master_func(opts)
 
-            # if failover is set, master has to be of type list
-            elif opts[u'master_type'] == u'failover':
+            # if failover or distributed is set, master has to be of type list
+            elif opts[u'master_type'] in (u'failover', u'distributed'):
                 if isinstance(opts[u'master'], list):
                     log.info(
                         u'Got list of available master addresses: %s',
                         opts[u'master']
                     )
+
+                    if opts[u'master_type'] == u'distributed':
+                        master_len = len(opts[u'master'])
+                        if master_len > 1:
+                            secondary_masters = opts[u'master'][1:]
+                            master_idx = crc32(opts[u'id']) % master_len
+                            try:
+                                preferred_masters = opts[u'master']
+                                preferred_masters[0] = opts[u'master'][master_idx]
+                                preferred_masters[1:] = [m for m in opts[u'master'] if m != preferred_masters[0]]
+                                opts[u'master'] = preferred_masters
+                                log.info(u'Distributed to the master at \'{0}\'.'.format(opts[u'master'][0]))
+                            except (KeyError, AttributeError, TypeError):
+                                log.warning(u'Failed to distribute to a specific master.')
+                        else:
+                            log.warning(u'master_type = distributed needs more than 1 master.')
+
                     if opts[u'master_shuffle']:
                         if opts[u'master_failback']:
                             secondary_masters = opts[u'master'][1:]
@@ -497,7 +515,7 @@ class MinionBase(object):
                     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
                 # If failover is set, minion have to failover on DNS errors instead of retry DNS resolve.
                 # See issue 21082 for details
-                if opts[u'retry_dns']:
+                if opts[u'retry_dns'] and opts[u'master_type'] == u'failover':
                     msg = (u'\'master_type\' set to \'failover\' but \'retry_dns\' is not 0. '
                            u'Setting \'retry_dns\' to 0 to failover to the next master on DNS errors.')
                     log.critical(msg)
@@ -845,7 +863,7 @@ class MinionManager(MinionBase):
         Spawn all the coroutines which will sign in to masters
         '''
         masters = self.opts[u'master']
-        if self.opts[u'master_type'] == u'failover' or not isinstance(self.opts[u'master'], list):
+        if (self.opts[u'master_type'] in (u'failover', u'distributed')) or not isinstance(self.opts[u'master'], list):
             masters = [masters]
 
         for master in masters:
