@@ -4026,14 +4026,14 @@ def _write_regpol_data(data_to_write,
         reg_pol_header = u'\u5250\u6765\x01\x00'
         if not os.path.exists(policy_file_path):
             ret = __salt__['file.makedirs'](policy_file_path)
-        with salt.utils.files.fopen(policy_file_path, 'wb') as pol_file:
+        with salt.utils.fopen(policy_file_path, 'wb') as pol_file:
             if not data_to_write.startswith(reg_pol_header):
                 pol_file.write(reg_pol_header.encode('utf-16-le'))
             pol_file.write(data_to_write.encode('utf-16-le'))
         try:
             gpt_ini_data = ''
             if os.path.exists(gpt_ini_path):
-                with salt.utils.files.fopen(gpt_ini_path, 'rb') as gpt_file:
+                with salt.utils.fopen(gpt_ini_path, 'rb') as gpt_file:
                     gpt_ini_data = gpt_file.read()
             if not _regexSearchRegPolData(r'\[General\]\r\n', gpt_ini_data):
                 gpt_ini_data = '[General]\r\n' + gpt_ini_data
@@ -4088,7 +4088,7 @@ def _write_regpol_data(data_to_write,
                         int("{0}{1}".format(str(version_nums[0]).zfill(4), str(version_nums[1]).zfill(4)), 16),
                         gpt_ini_data[general_location.end():])
             if gpt_ini_data:
-                with salt.utils.files.fopen(gpt_ini_path, 'wb') as gpt_file:
+                with salt.utils.fopen(gpt_ini_path, 'wb') as gpt_file:
                     gpt_file.write(gpt_ini_data)
         except Exception as e:
             msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
