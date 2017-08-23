@@ -214,26 +214,42 @@ class Beacon(object):
 
         return True
 
+    def list_available_beacons(self):
+        '''
+        List the available beacons
+        '''
+        _beacons = ['{0}'.format(_beacon.replace('.beacon', ''))
+                    for _beacon in list(self.beacons) if '.beacon' in _beacon]
+
+        # Fire the complete event back along with the list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'beacons': _beacons},
+                       tag='/salt/minion/minion_beacons_list_available_complete')
+
+        return True
+
     def validate_beacon(self, name, beacon_data):
         '''
         Return available beacon functions
         '''
-        validate_str = '{}.validate'
+        validate_str = '{}.validate'.format(name)
         # Run the validate function if it's available,
         # otherwise there is a warning about it being missing
         if validate_str in self.beacons:
-            valid, vcomment = self.beacons[validate_str](b_config[mod])
-
-            if not valid:
-                log.info('Beacon %s configuration invalid, '
-                         'not running.\n%s', mod, vcomment)
-                continue
+            if 'enabled' in beacon_data:
+                del beacon_data['enabled']
+            valid, vcomment = self.beacons[validate_str](beacon_data)
+        else:
+            log.info('Beacon {0} does not have a validate'
+                     ' function,  skipping validation.'.format(name))
+            valid = True
 
         # Fire the complete event back along with the list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
-        log.debug('=== self.beacons {} ==='.format(list(self.beacons)))
-        evt.fire_event({'complete': True, 'beacons': list(self.beacons)},
-                       tag='/salt/minion/minion_available_beacons')
+        evt.fire_event({'complete': True,
+                        'vcomment': vcomment,
+                        'valid': valid},
+                       tag='/salt/minion/minion_beacon_validation_complete')
 
         return True
 
