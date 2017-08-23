@@ -225,7 +225,6 @@ class SlackClient(object):
         log.debug("Got the groups: {}".format(ret_groups))
         return ret_groups
 
-
     def _groups_from_pillar(self, pillar_name):
         """pillar_prefix is the pillar.get syntax for the pillar to be queried.
         Group name is gotten via the equivalent of using
@@ -246,7 +245,6 @@ class SlackClient(object):
             return pillar_groups
         else:
             return {}
-
 
     def fire(self, tag, msg):
         """
@@ -303,7 +301,6 @@ class SlackClient(object):
         log.info("Slack user {} denied trying to run {}".format(user, command))
         return ()
 
-
     def commandline_to_list(self, cmdline_str, trigger_string):
         """
         cmdline_str is the string of the command line
@@ -323,7 +320,6 @@ class SlackClient(object):
             else:
                 cmdlist.append(cmditem)
         return cmdlist
-
 
 # m_data -> m_data, _text -> test, all_slack_users -> all_slack_users,
     def control_message_target(self, slack_user_name, text, loaded_groups, trigger_string):
@@ -384,7 +380,6 @@ class SlackClient(object):
             raise ValueError("_text has no value")
         return _text
 
-
     def generate_triggered_messages(self, token, trigger_string, groups, groups_pillar_name):
         """slack_token = string
         trigger_string = string
@@ -424,23 +419,23 @@ class SlackClient(object):
                 user_id = m_data.get('user')
             channel_id = m_data.get('channel')
             if channel_id.startswith('D'):  # private chate with bot user
-                channel_name = "private chat"
+                channel_name = 'private chat'
             else:
                 channel_name = all_slack_channels.get(channel_id)
             data = {
-                "message_data": m_data,
-                "user_id": user_id,
-                "user_name": all_slack_users.get(user_id),
-                "channel_name": channel_name
+                'message_data': m_data,
+                'user_id': user_id,
+                'user_name': all_slack_users.get(user_id),
+                'channel_name': channel_name
             }
-            if not data["user_name"]:
+            if not data['user_name']:
                 all_slack_users.clear()
                 all_slack_users.update(self.get_slack_users(token))
-                data["user_name"] = all_slack_users.get(user_id)
-            if not data["channel_name"]:
+                data['user_name'] = all_slack_users.get(user_id)
+            if not data['channel_name']:
                 all_slack_channels.clear()
                 all_slack_channels.update(self.get_slack_channels(token))
-                data["channel_name"] = all_slack_channels.get(channel_id)
+                data['channel_name'] = all_slack_channels.get(channel_id)
             return data
 
         for sleeps in (5, 10, 30, 60):
@@ -471,7 +466,7 @@ class SlackClient(object):
                         log.error("The user {} can't be looked up via slack.  What has happened here?".format(
                             m_data.get('user')))
                         channel.send_message("The user {} can't be looked up via slack.  Not running {}".format(
-                            user_id, msg_text))
+                            data['user_id'], msg_text))
                         yield {"message_data": m_data}
                         continue
                     (allowed, target, cmdline) = self.control_message_target(
@@ -479,24 +474,23 @@ class SlackClient(object):
                     log.debug("Got target: {}, cmdline: {}".format(target, cmdline))
                     if allowed:
                         yield {
-                            "message_data": m_data,
-                            "channel": m_data['channel'],
-                            "user": data['user_id'],
-                            "user_name": data['user_name'],
-                            "cmdline": cmdline,
-                            "target": target
+                            'message_data': m_data,
+                            'channel': m_data['channel'],
+                            'user': data['user_id'],
+                            'user_name': data['user_name'],
+                            'cmdline': cmdline,
+                            'target': target
                         }
                         continue
                     else:
-                        channel.send_message('{} is not allowed to use command {}.'.format(
-                            all_slack_users[user_id], cmdline))
+                        channel.send_message('{0} is not allowed to use command {1}.'.format(
+                            data['user_name'], cmdline))
                         yield data
                         continue
                 else:
                     yield data
                     continue
-            yield {"done": True}
-
+            yield {'done': True}
 
     def get_target(self, permitted_group, cmdline, alias_cmdline):
         """When we are permitted to run a command on a target, look to see
@@ -585,7 +579,6 @@ class SlackClient(object):
                 exc, pprint.pformat(data)))
             return "Got an error trying to serialze/clean up the response"
 
-
     def parse_args_and_kwargs(self, cmdline):
         """
         cmdline: list
@@ -604,7 +597,6 @@ class SlackClient(object):
                 else:
                     args.append(item)
         return (args, kwargs)
-
 
     def get_jobs_from_runner(self, outstanding_jids):
         """
@@ -635,7 +627,6 @@ class SlackClient(object):
                 results[jid] = yaml.load(job_data)
 
         return results
-
 
     def run_commands_from_slack_async(self, message_generator, fire_all, tag, control, interval=1):
         """Pull any pending messages from the message_generator, sending each
@@ -701,7 +692,6 @@ class SlackClient(object):
                     if 'ok' in resp and resp['ok'] is False:
                         this_job['channel'].send_message('Error: {0}'.format(resp['error']))
                     del outstanding[jid]
-
 
     def run_command_async(self, msg):
 
