@@ -2179,7 +2179,7 @@ def replace(path,
         if not_found_content is None:
             not_found_content = repl
         if prepend_if_not_found:
-            new_file.insert(0, not_found_content + salt.utils.to_bytes(os.linesep))
+            new_file.insert(0, not_found_content + os.linesep)
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
@@ -2199,7 +2199,7 @@ def replace(path,
             try:
                 fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
                 for line in new_file:
-                    fh_.write(salt.utils.to_str(line))
+                    fh_.write(salt.utils.to_bytes(line))
             finally:
                 fh_.close()
 
@@ -2372,6 +2372,7 @@ def blockreplace(path,
                     bufsize=1, mode='rb')
         for line in fi_file:
 
+            line = salt.utils.to_str(line)
             result = line
 
             if marker_start in line:
@@ -2386,12 +2387,12 @@ def blockreplace(path,
 
                         # Check for multi-line '\n' terminated content as split will
                         # introduce an unwanted additional new line.
-                        if content and content[-1] == salt.utils.to_bytes(os.linesep):
+                        if content and content[-1] == os.linesep:
                             content = content[:-1]
 
                         # push new block content in file
-                        for cline in content.split(salt.utils.to_bytes(os.linesep)):
-                            new_file.append(cline + salt.utils.to_bytes(os.linesep))
+                        for cline in content.split(os.linesep):
+                            new_file.append(cline + os.linesep)
 
                         done = True
 
@@ -2419,25 +2420,25 @@ def blockreplace(path,
     if not done:
         if prepend_if_not_found:
             # add the markers and content at the beginning of file
-            new_file.insert(0, marker_end + salt.utils.to_bytes(os.linesep))
+            new_file.insert(0, marker_end + os.linesep)
             if append_newline is True:
-                new_file.insert(0, content + salt.utils.to_bytes(os.linesep))
+                new_file.insert(0, content + os.linesep)
             else:
                 new_file.insert(0, content)
-            new_file.insert(0, marker_start + salt.utils.to_bytes(os.linesep))
+            new_file.insert(0, marker_start + os.linesep)
             done = True
         elif append_if_not_found:
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith(salt.utils.to_bytes(os.linesep)):
+                if not new_file[-1].endswith(os.linesep):
                     new_file[-1] += os.linesep
             # add the markers and content at the end of file
-            new_file.append(marker_start + salt.utils.to_bytes(os.linesep))
+            new_file.append(marker_start + os.linesep)
             if append_newline is True:
-                new_file.append(content + salt.utils.to_bytes(os.linesep))
+                new_file.append(content + os.linesep)
             else:
                 new_file.append(content)
-            new_file.append(marker_end + salt.utils.to_bytes(os.linesep))
+            new_file.append(marker_end + os.linesep)
             done = True
         else:
             raise CommandExecutionError(
@@ -2470,7 +2471,7 @@ def blockreplace(path,
             try:
                 fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
                 for line in new_file:
-                    fh_.write(line)
+                    fh_.write(salt.utils.to_bytes(line))
             finally:
                 fh_.close()
 
