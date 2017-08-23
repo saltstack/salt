@@ -40,7 +40,7 @@ import logging
 
 # Import salt libs
 import salt.utils.docker
-import salt.utils
+import salt.utils.args
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
