@@ -52,7 +52,7 @@ def _syno_manage_group(action, group, name):
                       and x[0] in string.digits)
     getattr(group_users, action)(name)
     cmd = ['synogroup', '--member', group, ' '.join(group_users)]
-    return __salt__['cmd.retcode'](cmd, python_shell=False)
+    return cmd
 
 
 def add(name, gid=None, system=False, root=None):
@@ -93,8 +93,10 @@ def delete(name, root=None):
 
         salt '*' group.delete foo
     '''
-    if __grains__['os_family'] == 'Synology':
-        cmd = ('synogroup', '--del', name)
+    on_synology = __grains__.get('os_family') == 'Synology'
+    
+    if on_synology:
+        cmd = ['synogroup', '--del', name]
     else:
         cmd = ('groupdel', name)
 
@@ -164,11 +166,13 @@ def chgid(name, gid, root=None):
 
         salt '*' group.chgid foo 4376
     '''
+    on_synology = __grains__.get('os_family') == 'Synology'
+    
     pre_gid = __salt__['file.group_to_gid'](name)
     if gid == pre_gid:
         return True
 
-    if __grains__['os_family'] == 'Synology':
+    if on_synology:
         log.error('group.chgid is not yet supported on this platform')
         return False
 
@@ -199,17 +203,19 @@ def adduser(name, username, root=None):
     '''
     on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
     on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osmajorrelease') == '11'
+    on_synology = __grains__.get('os_family') == 'Synology'
 
-    if __grains__['os_family'] == 'Synology':
-        if username not in __salt__['user.list_users']():
-            return False
-        return not _syno_manage_group('add', name, username)
-
-    elif __grains__['kernel'] == 'Linux':
+    if __grains__['kernel'] == 'Linux':
         if on_redhat_5:
             cmd = ('gpasswd', '-a', username, name)
         elif on_suse_11:
             cmd = ('usermod', '-A', name, username)
+        elif on_synology:
+            info = __salt__['group.info'](name)
+            cmd = ['synogroup', '--member', name]
+            cmd.extend(set([member 
+                        for member 
+                        in info['members']] + [username]))
         else:
             cmd = ('gpasswd', '--add', username, name)
         if root is not None:
@@ -239,9 +245,7 @@ def deluser(name, username, root=None):
     '''
     on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
     on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osmajorrelease') == '11'
-
-    if __grains__['os_family'] == 'Synology':
-        return not _syno_manage_group('remove', name, username)
+    on_synology = __grains__.get('os_family') == 'Synology'
 
     grp_info = __salt__['group.info'](name)
     try:
@@ -251,6 +255,13 @@ def deluser(name, username, root=None):
                     cmd = ('gpasswd', '-d', username, name)
                 elif on_suse_11:
                     cmd = ('usermod', '-R', name, username)
+                elif on_synology:
+                    info = __salt__['group.info'](name)
+                    cmd = ['synogroup', '--member', name]
+                    cmd.extend([member 
+                                for member 
+                                in info['members']
+                                if member != username])
                 else:
                     cmd = ('gpasswd', '--del', username, name)
                 if root is not None:
@@ -286,20 +297,18 @@ def members(name, members_list, root=None):
     '''
     on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
     on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osmajorrelease') == '11'
+    on_synology = __grains__.get('os_family') == 'Synology'
 
-    if __grains__['os_family'] == 'Synology':
-        cmd = ['synogroup', '--member', name]
-        cmd.extend(members_list.split(','))
-
-        retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
-
-    elif __grains__['kernel'] == 'Linux':
+    if __grains__['kernel'] == 'Linux':
         if on_redhat_5:
             cmd = ('gpasswd', '-M', members_list, name)
         elif on_suse_11:
             for old_member in __salt__['group.info'](name).get('members'):
                 __salt__['cmd.run']('groupmod -R {0} {1}'.format(old_member, name), python_shell=False)
             cmd = ('groupmod', '-A', members_list, name)
+        elif on_synology:
+            cmd = ['synogroup', '--member', name]
+            cmd.extend(members_list.split(','))
         else:
             cmd = ('gpasswd', '--members', members_list, name)
         if root is not None:
