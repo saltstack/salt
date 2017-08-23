@@ -11,10 +11,10 @@ from __future__ import absolute_import
 import difflib
 import logging
 import os
-import six
 import yaml
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils.event
 import salt.utils.files
 from salt.ext.six.moves import map
