@@ -267,12 +267,14 @@ For example:
 # Import python libs
 from __future__ import absolute_import
 import difflib
+import errno
 import itertools
 import logging
 import os
 import posixpath
 import re
 import shutil
+import stat
 import sys
 import time
 import traceback
@@ -1192,6 +1194,207 @@ def _shortcut_check(name,
                           .format(name, target)), pchanges
         return False, ('Link or directory exists where the shortcut "{0}" '
                        'should be. Did you mean to use force?'.format(name)), pchanges
+
+
+def _fsentrytype(path):
+    '''
+    Given a path, returns a human-readable string for the type of file.
+    The string will be lowercased; use `.capitalize()` on the result if needed.
+    Returns None if the path does not exist.
+
+    Meant as a helper for creating state return comments.
+    '''
+    try:
+        mode = os.lstat(path).st_mode & stat.S_IFMT
+    except OSError as e:
+        if e.errno == errno.ENOENT:
+            return None
+        raise e
+    return {
+        stat.S_IFSOCK: 'socket',
+        stat.S_IFLNK: 'symlink',
+        stat.S_IFREG: 'file',
+        stat.S_IFBLK: 'block device',
+        stat.S_IFDIR: 'directory',
+        stat.S_IFCHR: 'character device',
+        stat.S_IFIFO: 'named pipe',
+    }[mode]
+
+
+def link(
+        name,
+        target,
+        force=None,
+        backupname=None,
+        makedirs=False,
+        user=None,
+        group=None,
+        dir_mode=None
+):
+    '''
+    Create a hard link
+
+    If the file already exists and is not a hard link to the target,
+    then the state will return False.
+    Pass force: True to replace an existing file;
+    alternatively, pass a backupname to rename an existing file.
+
+    Note that the user, group, and mode of the hard link cannot be configured
+    because these are properties of a filesystem inode,
+    whereas creating a hard link only creates a new file system name name,
+    not a new inode.
+    The user, group and dir_mode parameters to this function only apply to
+    directories created with makedirs=True.
+
+    This state is currently not supported in Windows.
+
+    name
+        The location of the hard link to create
+
+    target
+        The location that the hard link points to
+
+    force
+        If the name of the hard link exists and force is set to False,
+        the state will fail.
+        If force is set to True, the file or directory in the way of the hard
+        link will be deleted to make room for the hard link,
+        unless backupname is set, in which case it will be renamed.
+
+    backupname
+        If the name of the hard link exists,
+        it will be renamed to the backupname.
+        If the backupname already exists and force is False,
+        the state will fail.
+        Otherwise, the backupname will be removed first.
+
+    makedirs
+        If the location of the hard link does not already have a parent
+        directory then the state will fail.
+        Set makedirs to True to allow Salt to create the parent directory.
+
+    user
+        The user to own any directories created via makedirs=True.
+        This defaults to the user salt is running as on the minion.
+
+    group
+        The group to own any directories created via makedirs=True.
+        This defaults to the group salt is running as on the minion.
+
+    dir_mode
+        The permissions mode to set on any directories created.
+
+        The default mode for new files and directories corresponds
+        with the umask of the salt minion process.
+        This is not enforced for existing files or directories.
+    '''
+    ret = {
+        'name': name,
+        'comment': '',
+        'changes': {},
+    }
+
+    if salt.utils.is_windows():
+        return _error(ret, 'The file.link state is not supported on Windows')
+
+    name = os.path.expanduser(name)
+    target = os.path.expanduser(target)
+    if not os.lexists(target):
+        return _error(ret, 'Target {0} does not exist')
+
+    # Check for parent directory of name
+    if not __opts__['test']:  # Don't do parent dir check in test mode
+        if not os.path.isdir(os.path.dirname(name)):
+            if not makedirs:
+                msg = 'Directory {0} for hard link is not present'
+                return _error(ret, msg.format(os.path.dirname(name))
+            __salt__['file.makedirs'](
+                name,
+                user=user,
+                group=group,
+                mode=dir_mode,
+            )
+
+    # Check if name already exists, and backup and/or remove if so
+    existing_type = _fsentrytype(name)
+    if existing_type:
+        existing_type = existing_type.capitalize()
+    # Only set changes or pchanges if no errors occur
+    changes = {
+        'old': existing_type,
+        'new': 'Hard link to {0}'.format(target),
+    }
+
+    if os.path.lexists(name):
+        name_stat = os.lstat(name)
+        target_stat = os.lstat(target)
+        same_device = name_stat.st_dev == target_stat.st_dev
+        same_inode = name_stat.st_ino == target_stat.st_ino
+        if same_device and same_inode:
+            ret['result'] = True
+            ret['comment'] = 'Hardlink {0} is present'.format(name)
+            return ret
+
+
+        if __opts__['test']:
+            ret['result'] = None
+            if backupname is not None or force:
+                ret['comment'] = (
+                    '{0} {1} is set for force removal to make way for '
+                    'a new hard link targeting {2}'
+                ).format(existing_type, name, target)
+                ret['pchanges'] = {name: changes}
+            else:
+                ret['comment'] = (
+                    '{0} exists where the hard link {1} should be. '
+                    'Did you mean to use backupname or force?'
+                ).format(existing_type, name)
+                # TODO: pchanges here?
+            return ret
+
+        if backupname is not None:
+            # Make a backup first
+            if os.path.lexists(backupname):
+                if not force:
+                    return _error(ret, (
+                        '{0} exists where the backup target {1} should go'
+                    ).format(existing_type, backupname))
+                else:
+                    __salt__['file.remove'](backupname)
+                    msg = '{0} {1} was forcibly removed for backup target'
+                    log.info(msg.format(existing_type, name))
+            os.rename(name, backupname)
+        elif force:
+            # Remove whatever is in the way
+            __salt__['file.remove'](name)
+            msg = '{0} {1} was forcibly removed for new hard link'
+            log.info(msg.format(existing_type, name))
+        else:
+            return _error(ret, (
+                '{0} exists where the hard link {1} should be'
+            ).format(existing_type, name))
+    else:
+        existing_type = None
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = (
+                'Hard link from {0} to {1} is set for creation'.format(
+                    name, target,
+                )
+            )
+            ret['pchanges'] = {name: changes}
+            return ret
+
+    # Link does not exist, create it
+    try:
+        __salt__['file.link'](target, name)
+        os.link(target, name)
+    except CommandExecutionError as e:
+        return _error(ret, str(e))
+    ret['result'] = True
+    ret['comment'] = 'Created new hard link {0} -> {1}'.format(name, target)
+    ret['changes'][name] = changes
+    return ret
 
 
 def symlink(
