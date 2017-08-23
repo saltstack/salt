@@ -52,7 +52,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only make these states available if a pkg provider has been detected or
+    Only make these states available if a kernelpkg provider has been detected or
     assigned for this minion
     '''
     return 'kernelpkg.upgrade' in __salt__
@@ -67,8 +67,8 @@ def latest_installed(name, **kwargs):  # pylint: disable=unused-argument
 
         This state only installs the kernel, but does not activate it.
         The new kernel should become active at the next reboot.
-        See :mod:`kernelpkg.needs_reboot <salt.modules.kernelpkg.needs_reboot>` for details on
-        how to detect this condition, :mod:`kernelpkg.latest_active <salt.states.kernelpkg.latest_active>`
+        See :py:func:`kernelpkg.needs_reboot <salt.modules.kernelpkg_linux_yum.needs_reboot>` for details on
+        how to detect this condition, and :py:func:`~salt.states.kernelpkg.latest_active`
         to initiale a reboot when needed.
 
     name
@@ -113,8 +113,9 @@ def latest_active(name, at_time=None, **kwargs):  # pylint: disable=unused-argum
         system. If the running version is not the latest one installed, this
         state will reboot the system.
 
-        See :mod:`kernelpkg.upgrade <salt.modules.kernelpkg.upgrade>` and
-        :mod:`kernelpkg.latest_installed <salt.states.kernelpkg.latest_installed>` for ways to install new kernel packages.
+        See :py:func:`kernelpkg.upgrade <salt.modules.kernelpkg_linux_yum.upgrade>` and
+        :py:func:`~salt.states.kernelpkg.latest_installed`
+        for ways to install new kernel packages.
 
         This module does not attempt to understand or manage boot loader configurations
         it is possible to have a new kernel installed, but a boot loader configuration
@@ -122,7 +123,8 @@ def latest_active(name, at_time=None, **kwargs):  # pylint: disable=unused-argum
         schedule this state to run automatically.
 
         Because this state function may cause the system to reboot, it may be preferable
-        to move it to the very end of the state run. See :mod:`kernelpkg.latest_wait <salt.states.kernelpkg.latest_wait>`
+        to move it to the very end of the state run.
+        See :py:func:`~salt.states.kernelpkg.latest_wait`
         for a waitable state that can be called with the `listen` requesite.
 
     name
@@ -168,7 +170,7 @@ def latest_active(name, at_time=None, **kwargs):  # pylint: disable=unused-argum
 def latest_wait(name, at_time=None, **kwargs):  # pylint: disable=unused-argument
     '''
     Initiate a reboot if the running kernel is not the latest one installed. This is the
-    waitable version of :mod:`kernelpkg.latest_active <salt.states.kernelpkg.latest_active>` and
+    waitable version of :py:func:`~salt.states.kernelpkg.latest_active` and
     will not take any action unless triggered by a watch or listen requesite.
 
     .. note::
