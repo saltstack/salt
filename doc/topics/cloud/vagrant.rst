@@ -11,10 +11,14 @@ Dependencies
 ============
 The Vagrant driver itself has no external dependencies.
 
-The machine which will host the VagrantBox must be an existing Salt minion
-and have Vagrant_ installed, and a Vagrant-compatible virtual machine engine.
+The machine which will host the VagrantBox must be an already existing minion
+of the cloud server's Salt master.
+It must have Vagrant_ installed, and a Vagrant-compatible virtual machine engine,
+such as VirtualBox_.
+(The Vagrant driver does not depend on the VirtualBox driver in any way.)
 
 .. _Vagrant: https://www.vagrantup.com/
+.. _VirtualBox: https://www.virtualbox.org/
 
 Salt-api must be installed and configured on the salt master.
 
@@ -111,10 +115,10 @@ simple installation.
     prof1:
       host: vbox_host  # the Salt id of your virtual machine host
       machine: mach1   # a machine name in the Vagrantfile (if not primary)
-      cwd: '/projects/my_project' # the path (on vbox_host) of the Vagrantfile
       ssh_username: vagrant  # a user name which has passwordless sudo
       password: vagrant      # on the target machine you are creating.
       runas: my_linux_name  # owner of Vagrant box files on your workstation
+      cwd: '/projects/my_project' # the path (on vbox_host) of the Vagrantfile
       provider: my_vagrant_provider  # name of entry in provider.conf file
 
 .. code-block:: yaml
@@ -155,6 +159,7 @@ simple installation.
 .. code-block:: yaml
 
     # file /srv/salt/salt_api.sls
+    # . . . install the salt_api server . . .
     salt-api:
       pkg.installed:
         - unless:

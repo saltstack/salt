@@ -316,7 +316,6 @@ def destroy(name, call=None):
         sock_dir=opts['sock_dir'],
         transport=opts['transport']
     )
-
     return {'Destroyed': '{0} was destroyed.'.format(name)}
 
 
