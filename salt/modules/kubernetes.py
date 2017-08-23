@@ -40,6 +40,7 @@ import base64
 import logging
 import yaml
 import tempfile
+from time import sleep
 
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
@@ -692,7 +693,12 @@ def delete_deployment(name, namespace='default', **kwargs):
             name=name,
             namespace=namespace,
             body=body)
-        return api_response.to_dict()
+        mutable_api_response = api_response.to_dict()
+        while show_deployment(name, namespace) is not None:
+            sleep(0.5)
+        else:
+            mutable_api_response['code'] = 200
+        return mutable_api_response
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
