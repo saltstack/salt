@@ -44,9 +44,9 @@ and supply credentials to use it. (See `Provisioning salt-api`_ below.)
         master: 111.222.333.444
       provider: vagrant
       # following is the authorization for the salt-api engine on the salt master
-      eauth: pam
-      username: genericadminuser
-      password: insecurepassword1
+      api_eauth: pam
+      api_username: genericadminuser
+      api_password: insecurepassword1
 
 
 Profiles
@@ -122,9 +122,9 @@ simple installation.
     # file /etc/salt/cloud.providers.d/vagrant_provider.conf
     my_vagrant_provider:
       driver: vagrant
-      eauth: pam
-      username: vagrant  # supply some sudo-group-member's name
-      password: vagrant  # and password on the salt master
+      api_eauth: pam
+      api_username: vagrant  # supply some sudo-group-member's name
+      api_password: vagrant  # and password on the salt master
       minion:
         master: 10.100.9.5  # the hard address of the master
 
