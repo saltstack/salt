@@ -1290,7 +1290,7 @@ def set_container_setting(name, container, settings):
             value = "'{0}'".format(settings[setting])
 
         # Map to numeric to support server 2008
-        if (setting == 'processModel.identityType' and settings[setting] in identityType_map2numeric.keys()):
+        if setting == 'processModel.identityType' and settings[setting] in identityType_map2numeric.keys():
             value = identityType_map2numeric[settings[setting]]
 
         ps_cmd.extend(['Set-ItemProperty',
@@ -1313,7 +1313,7 @@ def set_container_setting(name, container, settings):
 
     for setting in settings:
         # map identity type from numeric to string for comparing
-        if (setting == 'processModel.identityType' and settings[setting] in identityType_map2string.keys()):
+        if setting == 'processModel.identityType' and settings[setting] in identityType_map2string.keys():
             settings[setting] = identityType_map2string[settings[setting]]
 
         if str(settings[setting]) != str(new_settings[setting]):
