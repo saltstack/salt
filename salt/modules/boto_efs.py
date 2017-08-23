@@ -131,11 +131,11 @@ def _get_conn(key=None,
 
 def create_file_system(name,
                        performance_mode='generalPurpose',
-                       creation_token=None,
                        keyid=None,
                        key=None,
                        profile=None,
                        region=None,
+                       creation_token=None,
                        **kwargs):
     '''
     Creates a new, empty file system.
@@ -361,11 +361,11 @@ def delete_tags(filesystemid,
 
 
 def get_file_systems(filesystemid=None,
-                     creation_token=None,
                      keyid=None,
                      key=None,
                      profile=None,
                      region=None,
+                     creation_token=None,
                      **kwargs):
     '''
     Get all EFS properties or a specific instance property
