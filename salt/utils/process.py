@@ -15,6 +15,7 @@ import contextlib
 import subprocess
 import multiprocessing
 import multiprocessing.util
+import socket
 
 
 # Import salt libs
@@ -55,7 +56,20 @@ def notify_systemd():
         import systemd.daemon
     except ImportError:
         if salt.utils.which('systemd-notify') and systemd_notify_call('--booted'):
-            return systemd_notify_call('--ready')
+            # Notify systemd synchronously
+            notify_socket = os.getenv('NOTIFY_SOCKET')
+            if notify_socket:
+                # Handle abstract namespace socket
+                if notify_socket.startswith('@'):
+                    notify_socket = '\0{0}'.format(notify_socket[1:])
+                try:
+                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+                    sock.connect(notify_socket)
+                    sock.sendall('READY=1'.encode())
+                    sock.close()
+                except socket.error:
+                    return systemd_notify_call('--ready')
+                return True
         return False
 
     if systemd.daemon.booted():
