@@ -2179,7 +2179,7 @@ def replace(path,
         if not_found_content is None:
             not_found_content = repl
         if prepend_if_not_found:
-            new_file.insert(0, not_found_content + os.linesep)
+            new_file.insert(0, not_found_content + salt.utils.to_bytes(os.linesep))
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
