@@ -149,9 +149,9 @@ def _gen_tag(low):
 
 def _clean_tag(tag):
     '''
-      urllib safe quote the tag value to avoid invalid chars in the filename
+    Make tag name safe for filenames
     '''
-    return urllib.quote(tag.encode('utf8'), safe='')
+    return salt.utils.safe_filename_leaf(tag)
 
 
 def _l_tag(name, id_):
