@@ -161,9 +161,7 @@ from salt.exceptions import SaltCacheError
 # -----------------------------------------------------------------------------
 
 __virtualname__ = 'redis'
-__func_alias__ = {
-    'ls': 'list'
-}
+__func_alias__ = {'list_': 'list'}
 
 log = logging.getLogger(__file__)
 
@@ -478,7 +476,7 @@ def flush(bank, key=None):
     return True
 
 
-def ls(bank):
+def list_(bank):
     '''
     Lists entries stored in the specified bank.
     '''

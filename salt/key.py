@@ -503,7 +503,7 @@ class Key(object):
                     if minion not in minions and minion not in preserve_minions:
                         shutil.rmtree(os.path.join(m_cache, minion))
             cache = salt.cache.factory(self.opts)
-            clist = cache.ls(self.ACC)
+            clist = cache.list(self.ACC)
             if clist:
                 for minion in clist:
                     if minion not in minions and minion not in preserve_minions:
@@ -981,7 +981,7 @@ class RaetKey(Key):
                 if minion not in minions:
                     shutil.rmtree(os.path.join(m_cache, minion))
             cache = salt.cache.factory(self.opts)
-            clist = cache.ls(self.ACC)
+            clist = cache.list(self.ACC)
             if clist:
                 for minion in clist:
                     if minion not in minions and minion not in preserve_minions:

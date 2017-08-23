@@ -136,10 +136,11 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(docker_mod.__salt__,
                                 {'mine.send': mine_send,
                                  'container_resource.run': MagicMock(),
-                                 'cp.cache_file': MagicMock(return_value=False),
-                                 'docker.get_client_args': client_args_mock}):
-                    with patch.object(docker_mod, '_get_client', client):
-                        command('container', *args)
+                                 'cp.cache_file': MagicMock(return_value=False)}):
+                    with patch.dict(docker_mod.__utils__,
+                                    {'docker.get_client_args': client_args_mock}):
+                        with patch.object(docker_mod, '_get_client', client):
+                            command('container', *args)
                 mine_send.assert_called_with('docker.ps', verbose=True, all=True,
                                              host=True)
 
