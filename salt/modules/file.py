@@ -2385,14 +2385,22 @@ def blockreplace(path,
                         # end of block detected
                         in_block = False
 
-                        # Check for multi-line '\n' terminated content as split will
-                        # introduce an unwanted additional new line.
-                        if content and content[-1] == os.linesep:
-                            content = content[:-1]
+                        # Separate the content into lines. Account for Windows
+                        # style line endings using os.linesep, then by linux
+                        # style line endings
+                        split_content = []
+                        for linesep_line in content.split(os.linesep):
+                            for content_line in linesep_line.split('\n'):
+                                split_content.append(content_line)
+
+                        # Trim any trailing new lines to avoid unwanted
+                        # additional new lines
+                        while not split_content[-1]:
+                            split_content.pop()
 
                         # push new block content in file
-                        for cline in content.split(os.linesep):
-                            new_file.append(cline + os.linesep)
+                        for content_line in split_content:
+                            new_file.append(content_line + os.linesep)
 
                         done = True
 
