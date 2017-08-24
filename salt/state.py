@@ -702,6 +702,7 @@ class State(object):
         self.instance_id = str(id(self))
         self.inject_globals = {}
         self.mocked = mocked
+        self.guards = salt.loader.guards(self.opts)
 
     def _gather_pillar(self):
         '''
@@ -988,7 +989,8 @@ class State(object):
 
     def verify_data(self, data):
         '''
-        Verify the data, return an error statement if something is wrong
+        Verify the data and run any user-configured preflight checks,
+        and return a list of errors found
         '''
         errors = []
         if u'state' not in data:
@@ -1074,11 +1076,65 @@ class State(object):
                                    req,
                                    data[u'__id__'])
                         errors.append(err)
+        errors += self.run_guards(data, guard_type='state')
+        return errors
+
+    def run_guards(self, data, guard_type=None):
+        '''
+        Run any user-specified preflight checks on one or multiple chunks
+        '''
+        guard_types = ['state', 'chunks']
+        if guard_type not in guard_types:
+            raise SaltException(u'Unknown guard_type {0}'.format(guard_type))
+
+        errors = []
+        # TODO: Allow adding (but not disabling) more guards via pillar
+        # TODO: Allow specifying a dict instead of just a string,
+        # in order to pass configuration to the guard
+        for guard in self.opts.get('guards', []):
+            full = u'{0}.check_{1}'.format(guard, guard_type)
+            if full not in self.guards:
+                # TODO: make it possible to only implement needed funcs
+                # instead of having to implement all of them
+                reason = self.guards.missing_fun_string(full)
+                msg = u'{0} guard \'{1}\' was not found.\nReason: {2}'
+                errors.append(msg.format(
+                    guard_type.capitalize(),
+                    guard,
+                    reason,
+                ))
+                continue
+
+            guard_fun = self.guards[full]
+            try:
+                guard_errors = guard_fun(data)
+            except Exception as e:
+                msg = u'{0} guard \'{1}\' raised an exception:'.format(
+                    guard_type.capitalize(),
+                    guard,
+                )
+                log.exception(msg)
+                errors.append('{0} {1}'.format(msg, e))
+                continue
+            if not isinstance(guard_errors, list):
+                msg = (
+                    u'{0} guard \'{1}\' did not return a list, '
+                    u'actual return value was: {2}'
+                )
+                errors.append(msg.format(
+                    guard_type.capitalize(),
+                    guard,
+                    repr(guard_errors),
+                ))
+                continue
+
+            errors += guard_errors
         return errors
 
     def verify_high(self, high):
         '''
-        Verify that the high data is viable and follows the data structure
+        Verify that the high data is viable and follows the data structure,
+        and also run any user-configured preflight checks
         '''
         errors = []
         if not isinstance(high, dict):
@@ -2514,11 +2570,12 @@ class State(object):
             return errors
         # Compile and verify the raw chunks
         chunks = self.compile_high_data(high, orchestration_jid)
+        errors = self.run_guards(chunks, guard_type='chunks')
+        if errors:
+            return errors
 
         # If there are extensions in the highstate, process them and update
         # the low data chunks
-        if errors:
-            return errors
         ret = self.call_chunks(chunks)
         ret = self.call_listen(chunks, ret)
 

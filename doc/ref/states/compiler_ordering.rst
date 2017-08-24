@@ -1,3 +1,5 @@
+.. _state-tutorial:
+
 =====================================
 Understanding State Compiler Ordering
 =====================================

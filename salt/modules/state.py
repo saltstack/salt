@@ -1826,6 +1826,7 @@ def pkg(pkg_path,
         popts['file_roots'][fn_] = [full]
     st_ = salt.state.State(popts, pillar_override=pillar_override)
     snapper_pre = _snapper_pre(popts, kwargs.get('__pub_jid', 'called localy'))
+    # TODO: run chunks guard here?
     ret = st_.call_chunks(lowstate)
     ret = st_.call_listen(lowstate, ret)
     try:

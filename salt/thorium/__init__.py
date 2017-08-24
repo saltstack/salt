@@ -174,6 +174,7 @@ class ThorState(salt.state.HighState):
                 continue
             start = time.time()
             self.state.inject_globals['__events__'] = events
+            # TODO: run check_guards here?
             self.state.call_chunks(chunks)
             elapsed = time.time() - start
             left = interval - elapsed
