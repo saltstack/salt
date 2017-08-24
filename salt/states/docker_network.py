@@ -144,8 +144,7 @@ def present(name,
             ret['changes']['created'] = __salt__['docker.create_network'](
                 name,
                 driver=driver,
-                driver_opts=driver_opts,
-                check_duplicate=True)
+                driver_opts=driver_opts)
 
         except Exception as exc:
             ret['comment'] = ('Failed to create network \'{0}\': {1}'
