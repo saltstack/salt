@@ -435,10 +435,8 @@ def default_ret(name):
 def loaded_ret(ret, loaded, test, debug):
     '''
     Return the final state output.
-
     ret
         The initial state output structure.
-
     loaded
         The loaded dictionary.
     '''
@@ -447,9 +445,6 @@ def loaded_ret(ret, loaded, test, debug):
         'comment': loaded.get('comment', '')
     })
     pchanges = {}
-    if not loaded.get('result', False):
-        # Failure of some sort
-        return ret
     if debug:
         # Always check for debug
         pchanges.update({
@@ -458,6 +453,15 @@ def loaded_ret(ret, loaded, test, debug):
         ret.update({
             "pchanges": pchanges
         })
+    if not loaded.get('result', False):
+        # Failure of some sort
+        if debug:
+            ret['comment'] = '{base_err}\n\nLoaded config:\n\n{loaded_cfg}'.format(base_err=ret['comment'],
+                                                                                   loaded_cfg=loaded['loaded_config'])
+            if loaded.get('diff'):
+                ret['comment'] = '{comment_base}\n\nConfiguration diff:\n\n{diff}'.format(comment_base=ret['comment'],
+                                                                                          diff=loaded['diff'])
+        return ret
     if not loaded.get('already_configured', True):
         # We're making changes
         pchanges.update({
@@ -484,6 +488,7 @@ def loaded_ret(ret, loaded, test, debug):
         return ret
     # No changes
     ret.update({
-        'result': True
+        'result': True,
+        'changes': {}
     })
     return ret
