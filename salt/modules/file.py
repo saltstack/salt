@@ -3586,7 +3586,6 @@ def source_list(source, source_hash, saltenv):
     if contextkey in __context__:
         return __context__[contextkey]
 
-
     # get the master file list
     if isinstance(source, list):
         mfiles = [(f, saltenv) for f in __salt__['cp.list_master'](saltenv)]
@@ -3638,7 +3637,7 @@ def source_list(source, source_hash, saltenv):
                              urlparsed_single_src.path))):
                     ret = (single_src, single_hash)
                     break
-                elif single_src.startswith(os.linesep) and os.path.exists(single_src):
+                elif single_src.startswith(os.sep) and os.path.exists(single_src):
                     ret = (single_src, single_hash)
                     break
             elif isinstance(single, six.string_types):
@@ -3668,7 +3667,7 @@ def source_list(source, source_hash, saltenv):
                 elif proto.startswith('http') or proto == 'ftp':
                     ret = (single, source_hash)
                     break
-                elif single.startswith(os.linesep) and os.path.exists(single):
+                elif single.startswith(os.sep) and os.path.exists(single):
                     ret = (single, source_hash)
                     break
         if ret is None:
