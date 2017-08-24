@@ -705,9 +705,9 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         def _inspect_container_effect(id_):
             return {
                 'container1': {'Config': {'Image': 'realimage:latest'},
-                               'HostConfig':{}},
+                               'HostConfig': {}},
                 'container2': {'Config': {'Image': 'image_id'},
-                               'HostConfig':{}},
+                               'HostConfig': {}},
             }[id_]
 
         def _inspect_image_effect(id_):
