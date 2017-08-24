@@ -26,7 +26,7 @@ Salt-api must be installed and configured on the salt master.
 Configuration
 =============
 
-Configuration of the client virtual machine (using virtualbox, VMware, etc)
+Configuration of the client virtual machine (using VirtualBox, VMware, etc)
 will be done by Vagrant as specified in the Vagrantfile on the host machine.
 
 Salt-cloud will push the commands to install and provision a salt minion on
@@ -60,7 +60,7 @@ Vagrant requires a profile to be configured for each machine that needs Salt
 installed. The initial profile can be set up at ``/etc/salt/cloud.profiles``
 or in the ``/etc/salt/cloud.profiles.d/`` directory.
 
-Each profile requires a ``vagrantfile``parameter. If the Vagrantfile has
+Each profile requires a ``vagrantfile`` parameter. If the Vagrantfile has
 definitions for `multiple machines`_ then you need a ``machine`` parameter,
 
 .. _`multiple machines`: https://www.vagrantup.com/docs/multi-machine/
@@ -87,10 +87,10 @@ The machine can now be created and configured with the following command:
 
     salt-cloud -p vagrant-machine my-machine
 
-This will create the machine specified by the cloud profile,
+This will create the machine specified by the cloud profile
 ``vagrant-machine``, and will give the machine the minion id of
 ``my-machine``. If the command was executed on the salt-master, its Salt
-key will automatically be signed on the master.
+key will automatically be accepted on the master.
 
 Once a salt-minion has been successfully installed on the instance, connectivity
 to it can be verified with Salt:
@@ -100,41 +100,55 @@ to it can be verified with Salt:
     salt my-machine test.ping
 
 
-Provisioning salt-api
-=====================
+Provisioning salt-api (example)
+===============================
 
 In order to query or control minions it created, the driver needs to send commands
 to the salt master.  It does that using the network interface of salt-api.
 
-The salt-api is not enabled by default. The following example will provide a
+The salt-api is not enabled by default. The following example shows a
 simple installation.
+
+.. code-block:: ruby
+
+    # -*- mode: ruby -*-
+    # file /projects/bevy_master/Vagrantfile on host computer "my_laptop"
+    BEVY = "bevy1"
+    DOMAIN = BEVY + ".test"  # .test is an ICANN reserved non-public TLD
+    Vagrant.configure(2) do |config|
+      config.ssh.forward_agent = true  # so you can use git ssh://...
+      config.vm.network "public_network"  # add a bridged network interface
+      # . . . . . . . . . . . . Define machine QUAIL1 . . . . . . . . . . . . . .
+      config.vm.define "quail1", primary: true do |quail_config|
+        quail_config.vm.box = "boxesio/xenial64-standard"  # a public VMware & Virtualbox box
+        quail_config.vm.hostname = "quail1." + DOMAIN
+      end
+    end
 
 .. code-block:: yaml
 
-    # file /etc/salt/cloud.profiles.d/my_vagrant_profiles.conf
-    prof1:
-      host: vbox_host  # the Salt id of your virtual machine host
-      machine: mach1   # a machine name in the Vagrantfile (if not primary)
-      ssh_username: vagrant  # a user name which has passwordless sudo
-      password: vagrant      # on the target machine you are creating.
-      runas: my_linux_name  # owner of Vagrant box files on your workstation
-      cwd: '/projects/my_project' # the path (on vbox_host) of the Vagrantfile
+    # file /etc/salt/cloud.profiles.d/my_vagrant_profiles.conf on bevy_master
+    q1:
+      host: my_laptop  # the Salt id of your virtual machine host
+      machine: quail1   # a machine name in the Vagrantfile (if not primary)
+      runas: my_username  # owner of Vagrant box files on "my_laptop"
+      cwd: '/projects/bevy_master' # the path (on "my_laptop") of the Vagrantfile
       provider: my_vagrant_provider  # name of entry in provider.conf file
 
 .. code-block:: yaml
 
-    # file /etc/salt/cloud.providers.d/vagrant_provider.conf
+    # file /etc/salt/cloud.providers.d/vagrant_provider.conf on bevy_master
     my_vagrant_provider:
       driver: vagrant
       api_eauth: pam
-      api_username: vagrant  # supply some sudo-group-member's name
+      api_username: vagrant  # supply some sudo-group member's name
       api_password: vagrant  # and password on the salt master
       minion:
-        master: 10.100.9.5  # the hard address of the master
+        master: 10.124.29.190  # the hard address of the master
 
 .. code-block:: yaml
 
-    # file /etc/salt/master.d/auth.conf
+    # file /etc/salt/master.d/auth.conf on bevy_master
     #  using salt-api ... members of the 'sudo' group can do anything ...
     external_auth:
       pam:
@@ -146,11 +160,11 @@ simple installation.
 
 .. code-block:: yaml
 
-    # file /etc/salt/master.d/api.conf
+    # file /etc/salt/master.d/api.conf on bevy_master
     # see https://docs.saltstack.com/en/latest/ref/netapi/all/salt.netapi.rest_cherrypy.html
     rest_cherrypy:
       host: 0.0.0.0
-      port: 8000
+      port: 4507  # why not use one near Salt master?
       ssl_crt: /etc/pki/tls/certs/localhost.crt
       ssl_key: /etc/pki/tls/certs/localhost.key
       thread_pool: 30
@@ -158,7 +172,7 @@ simple installation.
 
 .. code-block:: yaml
 
-    # file /srv/salt/salt_api.sls
+    # file /srv/salt/salt_api.sls on your Salt master
     # . . . install the salt_api server . . .
     salt-api:
       pkg.installed:
@@ -184,9 +198,36 @@ simple installation.
           - pkg: salt-api
 
 
-Create your target machine as a Salt minion named "v1" by:
+Create and use your new Salt minion
+-----------------------------------
+
+- Typing on the Salt master computer (assuming it is also bevy_master)...
 
 .. code-block:: bash
 
-    $ sudo salt-call --local state.apply salt_api
-    $ sudo salt-cloud -p prof1 v1
+    sudo salt-call state.apply salt_api
+    sudo salt-cloud -p q1 v1
+    sudo salt v1 network.ip_addrs
+      [ you get a list of ip addresses, including the bridged one ]
+
+- logged in to your laptop (or some computer known to github)...
+
+.. code-block:: bash
+
+    ssh -A vagrant@< the bridged network address >
+      [ or perhaps ]
+    vagrant ssh quail1
+
+- then typing on your new node "v1" (a.k.a. quail1.bevy1.test)...
+
+.. code-block:: bash
+
+    password: vagrant
+      [ stuff types out ... ]
+    ls -al /vagrant
+      [ should be shared /home/my_username from my_laptop ]
+    sudo apt update
+    sudo apt install git
+    git clone ssh://git@github.com/yourID/your_project
+    # etc...
+
