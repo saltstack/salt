@@ -66,14 +66,14 @@ class GenesisTestCase(TestCase):
 
             {'params': {'pkgs': 'vim'},
              'commandlines': [
-                 ['debootstrap', '--foreign', '--arch', 'amd64', 
+                 ['debootstrap', '--foreign', '--arch', 'amd64',
                   '--include', 'vim',
                   'stable', 'root', 'http://ftp.debian.org/debian/'],
             ]},
 
             {'params': {'pkgs': 'vim,emacs'},
              'commandlines': [
-                 ['debootstrap', '--foreign', '--arch', 'amd64', 
+                 ['debootstrap', '--foreign', '--arch', 'amd64',
                   '--include', 'vim,emacs',
                   'stable', 'root', 'http://ftp.debian.org/debian/'],
             ]},
