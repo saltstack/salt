@@ -60,31 +60,31 @@ class GenesisTestCase(TestCase):
 
             {'params': {},
              'cmd': ['debootstrap', '--foreign', '--arch', 'amd64',
-                              'stable', 'root', 'http://ftp.debian.org/debian/']
+                     'stable', 'root', 'http://ftp.debian.org/debian/']
              },
 
             {'params': {'pkgs': 'vim'},
              'cmd': ['debootstrap', '--foreign', '--arch', 'amd64',
-                              '--include', 'vim',
-                              'stable', 'root', 'http://ftp.debian.org/debian/']
+                     '--include', 'vim',
+                     'stable', 'root', 'http://ftp.debian.org/debian/']
              },
 
             {'params': {'pkgs': 'vim,emacs'},
              'cmd': ['debootstrap', '--foreign', '--arch', 'amd64',
-                              '--include', 'vim,emacs',
-                              'stable', 'root', 'http://ftp.debian.org/debian/']
+                     '--include', 'vim,emacs',
+                     'stable', 'root', 'http://ftp.debian.org/debian/']
              },
 
             {'params': {'pkgs': ['vim', 'emacs']},
              'cmd': ['debootstrap', '--foreign', '--arch', 'amd64',
-                              '--include', 'vim,emacs',
-                              'stable', 'root', 'http://ftp.debian.org/debian/']
+                     '--include', 'vim,emacs',
+                     'stable', 'root', 'http://ftp.debian.org/debian/']
              },
 
             {'params': {'pkgs': ['vim', 'emacs'], 'exclude_pkgs': ['vim', 'foo']},
              'cmd': ['debootstrap', '--foreign', '--arch', 'amd64',
-                              '--include', 'vim,emacs', '--exclude', 'vim,foo',
-                              'stable', 'root', 'http://ftp.debian.org/debian/']
+                     '--include', 'vim,emacs', '--exclude', 'vim,foo',
+                     'stable', 'root', 'http://ftp.debian.org/debian/']
              },
 
         ]
