@@ -180,13 +180,9 @@ def bootstrap(
 
     if pkgs is None:
         pkgs = []
-    elif isinstance(pkgs, six.string_types):
-        pkgs = pkgs.split(',')
 
     if exclude_pkgs is None:
         exclude_pkgs = []
-    elif isinstance(exclude_pkgs, six.string_types):
-        exclude_pkgs = exclude_pkgs.split(',')
 
     if platform in ('rpm', 'yum'):
         _bootstrap_yum(
@@ -331,6 +327,8 @@ def _bootstrap_yum(
     '''
     if pkgs is None:
         pkgs = []
+    elif isinstance(pkgs, six.string_types):
+        pkgs = pkgs.split(',')
 
     default_pkgs = ('yum', 'centos-release', 'iputils')
     for pkg in default_pkgs:
@@ -339,6 +337,8 @@ def _bootstrap_yum(
 
     if exclude_pkgs is None:
         exclude_pkgs = []
+    elif isinstance(exclude_pkgs, six.string_types):
+        exclude_pkgs = exclude_pkgs.split(',')
 
     for pkg in exclude_pkgs:
         pkgs.remove(pkg)
@@ -403,6 +403,11 @@ def _bootstrap_deb(
         log.error('Required tool debootstrap is not installed.')
         return False
 
+    if isinstance(pkgs, (list, tuple)):
+        pkgs = ','.join(pkgs)
+    if isinstance(exclude_pkgs, (list, tuple)):
+        exclude_pkgs = ','.join(exclude_pkgs)
+
     deb_args = [
         'debootstrap',
         '--foreign',
@@ -410,9 +415,9 @@ def _bootstrap_deb(
         _cmd_quote(arch)]
 
     if pkgs:
-        deb_args += ['--include'] + pkgs
+        deb_args += ['--include', _cmd_quote(pkgs)]
     if exclude_pkgs:
-        deb_args += ['--exclude'] + exclude_pkgs
+        deb_args += ['--exclude', _cmd_quote(exclude_pkgs)]
 
     deb_args += [
         _cmd_quote(flavor),
@@ -482,6 +487,8 @@ def _bootstrap_pacman(
 
     if pkgs is None:
         pkgs = []
+    elif isinstance(pkgs, six.string_types):
+        pkgs = pkgs.split(',')
 
     default_pkgs = ('pacman', 'linux', 'systemd-sysvcompat', 'grub')
     for pkg in default_pkgs:
@@ -490,6 +497,8 @@ def _bootstrap_pacman(
 
     if exclude_pkgs is None:
         exclude_pkgs = []
+    elif isinstance(exclude_pkgs, six.string_types):
+        exclude_pkgs = exclude_pkgs.split(',')
 
     for pkg in exclude_pkgs:
         pkgs.remove(pkg)
