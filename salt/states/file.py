@@ -6430,3 +6430,49 @@ def shortcut(
                 ret['comment'] += (', but was unable to set ownership to '
                                    '{0}'.format(user))
     return ret
+
+
+def read(name, binary=False):
+    '''
+    Returns the contents of the file.
+
+    .. versionadded:: Oxygen
+
+    name
+        The location of the file to read.
+
+    binary: ``False``
+        Use the binary access mode.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        read_my_managed_file:
+          file.read:
+            - name: /tmp/__salt_{{ opts.id }}.txt
+    '''
+    ret = {
+        'name': name,
+        'result': True,
+        'comment': '',
+        'changes': {}
+    }
+    if __opts__['test']:
+        ret.update({
+            'result': None,
+            'comment': 'It would read {name}'.format(name=name)
+        })
+        return ret
+    try:
+        file_contents = __salt__['file.read'](name, binary=binary)
+    except IOError as ioerr:
+        ret.update({
+            'result': False,
+            'comment': ioerr
+        })
+        return ret
+    ret['changes'] = {
+        'contents': file_contents
+    }
+    return ret
