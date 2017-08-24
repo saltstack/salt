@@ -161,6 +161,8 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_elb.exists myelb region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    wait = 60
+    orig_wait = wait
 
     while True:
         try:
@@ -204,9 +206,13 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
             return ret
         except boto.exception.BotoServerError as error:
             if getattr(error, 'error_code', '') == 'Throttling':
-                log.info('Throttled by AWS API, will retry in 5 seconds.')
-                time.sleep(5)
-                continue
+                if wait > 0:
+                    sleep = wait if wait % 5 == wait else 5
+                    log.info('Throttled by AWS API, will retry in 5 seconds.')
+                    time.sleep(sleep)
+                    wait -= sleep
+                    continue
+            log.error('API still throttling us after {0} seconds!'.format(orig_wait))
             log.error(error)
             return {}
 
