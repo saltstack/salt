@@ -373,17 +373,18 @@ class AsyncAuth(object):
         loop_instance_map = AsyncAuth.instance_map[io_loop]
 
         key = cls.__key(opts)
-        if key not in loop_instance_map:
+        auth = loop_instance_map.get(key)
+        if auth is None:
             log.debug('Initializing new AsyncAuth for {0}'.format(key))
             # we need to make a local variable for this, as we are going to store
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
-            new_auth = object.__new__(cls)
-            new_auth.__singleton_init__(opts, io_loop=io_loop)
-            loop_instance_map[key] = new_auth
+            auth = object.__new__(cls)
+            auth.__singleton_init__(opts, io_loop=io_loop)
+            loop_instance_map[key] = auth
         else:
             log.debug('Re-using AsyncAuth for {0}'.format(key))
-        return loop_instance_map[key]
+        return auth
 
     @classmethod
     def __key(cls, opts, io_loop=None):
@@ -1009,14 +1010,15 @@ class SAuth(AsyncAuth):
         Only create one instance of SAuth per __key()
         '''
         key = cls.__key(opts)
-        if key not in SAuth.instances:
+        auth = SAuth.instances.get(key)
+        if auth is None:
             log.debug('Initializing new SAuth for {0}'.format(key))
-            new_auth = object.__new__(cls)
-            new_auth.__singleton_init__(opts)
-            SAuth.instances[key] = new_auth
+            auth = object.__new__(cls)
+            auth.__singleton_init__(opts)
+            SAuth.instances[key] = auth
         else:
             log.debug('Re-using SAuth for {0}'.format(key))
-        return SAuth.instances[key]
+        return auth
 
     @classmethod
     def __key(cls, opts, io_loop=None):

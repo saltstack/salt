@@ -168,6 +168,13 @@ def get_printout(out, opts=None, **kwargs):
             opts['color'] = False
         else:
             opts['color'] = True
+    else:
+        if opts.get('force_color', False):
+            opts['color'] = True
+        elif opts.get('no_color', False) or salt.utils.is_windows():
+            opts['color'] = False
+        else:
+            pass
 
     outputters = salt.loader.outputters(opts)
     if out not in outputters:

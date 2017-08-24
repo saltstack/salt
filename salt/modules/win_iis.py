@@ -856,7 +856,7 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
 
     new_cert_bindings = list_cert_bindings(site)
 
-    if binding_info not in new_cert_bindings(site):
+    if binding_info not in new_cert_bindings:
         log.error('Binding not present: {0}'.format(binding_info))
         return False
 

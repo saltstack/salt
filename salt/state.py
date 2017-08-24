@@ -97,6 +97,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'reload_grains',
     'reload_pillar',
     'runas',
+    'runas_password',
     'fire_event',
     'saltenv',
     'use',
@@ -1752,6 +1753,11 @@ class State(object):
 
         self.state_con['runas'] = low.get('runas', None)
 
+        if low['state'] == 'cmd' and 'password' in low:
+            self.state_con['runas_password'] = low['password']
+        else:
+            self.state_con['runas_password'] = low.get('runas_password', None)
+
         if not low.get('__prereq__'):
             log.info(
                 'Executing state {0}.{1} for [{2}]'.format(
@@ -1863,6 +1869,9 @@ class State(object):
             if low.get('__prereq__'):
                 sys.modules[self.states[cdata['full']].__module__].__opts__[
                     'test'] = test
+
+            self.state_con.pop('runas')
+            self.state_con.pop('runas_password')
 
         # If format_call got any warnings, let's show them to the user
         if 'warnings' in cdata:

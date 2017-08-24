@@ -262,6 +262,7 @@ def run(**kwargs):
     missing = []
     tests = []
     for func in functions:
+        func = func.split(':')[0]
         if func not in __salt__:
             missing.append(func)
         elif __opts__['test']:
@@ -284,8 +285,9 @@ def run(**kwargs):
         failures = []
         success = []
         for func in functions:
+            _func = func.split(':')[0]
             try:
-                func_ret = _call_function(func, returner=kwargs.get('returner'),
+                func_ret = _call_function(_func, returner=kwargs.get('returner'),
                                           func_args=kwargs.get(func))
                 if not _get_result(func_ret, ret['changes'].get('ret', {})):
                     if isinstance(func_ret, dict):
@@ -313,22 +315,35 @@ def _call_function(name, returner=None, **kwargs):
     '''
     argspec = salt.utils.args.get_function_argspec(__salt__[name])
     func_kw = dict(zip(argspec.args[-len(argspec.defaults or []):],  # pylint: disable=incompatible-py3-code
-                       argspec.defaults or []))
-    func_args = []
-    for funcset in kwargs.get('func_args') or {}:
-        if isinstance(funcset, dict):
-            func_kw.update(funcset)
+                   argspec.defaults or []))
+    arg_type, na_type, kw_type = [], {}, False
+    for funcset in reversed(kwargs.get('func_args') or []):
+        if not isinstance(funcset, dict):
+            kw_type = True
+        if kw_type:
+            if isinstance(funcset, dict):
+                arg_type += funcset.values()
+                na_type.update(funcset)
+            else:
+                arg_type.append(funcset)
         else:
-            func_args.append(funcset)
+            func_kw.update(funcset)
+    arg_type.reverse()
 
+    _exp_prm = len(argspec.args or []) - len(argspec.defaults or [])
+    _passed_prm = len(arg_type)
     missing = []
-    for arg in argspec.args:
-        if arg not in func_kw:
-            missing.append(arg)
+    if na_type and _exp_prm > _passed_prm:
+        for arg in argspec.args:
+            if arg not in func_kw:
+                missing.append(arg)
     if missing:
         raise SaltInvocationError('Missing arguments: {0}'.format(', '.join(missing)))
+    elif _exp_prm > _passed_prm:
+        raise SaltInvocationError('Function expects {0} parameters, got only {1}'.format(
+            _exp_prm, _passed_prm))
 
-    mret = __salt__[name](*func_args, **func_kw)
+    mret = __salt__[name](*arg_type, **func_kw)
     if returner is not None:
         returners = salt.loader.returners(__opts__, __salt__)
         if returner in returners:

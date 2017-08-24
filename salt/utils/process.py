@@ -130,8 +130,10 @@ def get_pidfile(pidfile):
     '''
     with salt.utils.fopen(pidfile) as pdf:
         pid = pdf.read()
-
-    return int(pid)
+    if pid:
+        return int(pid)
+    else:
+        return
 
 
 def clean_proc(proc, wait_for_kill=10):

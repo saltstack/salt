@@ -12,44 +12,43 @@ prefaced with a ``!``.
     .. code-block:: yaml
 
         engines:
-            slack:
-               token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
-               control: True
-               valid_users:
-                   - garethgreenaway
-               valid_commands:
-                   - test.ping
-                   - cmd.run
-                   - list_jobs
-                   - list_commands
-               aliases:
-                   list_jobs:
-                       cmd: jobs.list_jobs
-                   list_commands:
-                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
+            - slack:
+                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
+                control: True
+                valid_users:
+                    - garethgreenaway
+                valid_commands:
+                    - test.ping
+                    - cmd.run
+                    - list_jobs
+                    - list_commands
+                aliases:
+                    list_jobs:
+                        cmd: jobs.list_jobs
+                    list_commands:
+                        cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
 
     :configuration: Example configuration using groups
     .. versionadded: 2017.7.0
 
         engines:
-            slack:
-               token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
-               control: True
-               groups:
-                 gods:
-                   users:
-                     - garethgreenaway
-                   commands:
-                     - test.ping
-                     - cmd.run
-                     - list_jobs
-                     - list_commands
-               aliases:
+            - slack:
+                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
+                control: True
+                groups:
+                    gods:
+                        users:
+                            - garethgreenaway
+                        commands:
+                            - test.ping
+                            - cmd.run
+                            - list_jobs
+                            - list_commands
+                aliases:
                    list_jobs:
-                       cmd: jobs.list_jobs
+                        cmd: jobs.list_jobs
                    list_commands:
-                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
-
+                        cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
 
 :depends: slackclient
 '''
@@ -62,6 +61,7 @@ import logging
 import time
 import re
 import yaml
+import ast
 
 try:
     import slackclient
@@ -246,6 +246,10 @@ def start(token,
                                     tgt_type = kwargs['tgt_type']
                                     del kwargs['tgt_type']
 
+                                # Check for pillar string representation of dict and convert it to dict
+                                if 'pillar' in kwargs:
+                                    kwargs.update(pillar=ast.literal_eval(kwargs['pillar']))
+
                                 ret = {}
 
                                 if cmd in runner_functions:
@@ -255,7 +259,7 @@ def start(token,
                                 # Default to trying to run as a client module.
                                 else:
                                     local = salt.client.LocalClient()
-                                    ret = local.cmd('{0}'.format(target), cmd, args, kwargs, tgt_type='{0}'.format(tgt_type))
+                                    ret = local.cmd('{0}'.format(target), cmd, arg=args, kwarg=kwargs, tgt_type='{0}'.format(tgt_type))
 
                                 if ret:
                                     return_text = json.dumps(ret, sort_keys=True, indent=1)
