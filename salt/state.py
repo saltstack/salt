@@ -1234,15 +1234,6 @@ class State(object):
                         )
         return errors
 
-    def verify_chunks(self, chunks):
-        '''
-        Verify the chunks in a list of low data structures
-        '''
-        err = []
-        for chunk in chunks:
-            err += self.verify_data(chunk)
-        return err
-
     def order_chunks(self, chunks):
         '''
         Sort the chunk list verifying that the chunks follow the order
