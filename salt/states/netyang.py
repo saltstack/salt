@@ -38,6 +38,7 @@ except ImportError:
     HAS_NAPALM_YANG = False
 
 # Import salt modules
+import salt.output
 from salt.utils import fopen
 import salt.utils.napalm
 
@@ -140,6 +141,7 @@ def managed(name,
     debug = kwargs.get('debug', False) or __opts__.get('debug', False)
     commit = kwargs.get('commit', True) or __opts__.get('commit', True)
     replace = kwargs.get('replace', False) or __opts__.get('replace', False)
+    return_compliance_report = kwargs.get('compliance_report', False) or __opts__.get('compliance_report', False)
     profiles = kwargs.get('profiles', [])
     temp_file = __salt__['temp.file']()
     log.debug('Creating temp file: {0}'.format(temp_file))
@@ -180,7 +182,13 @@ def managed(name,
     log.debug('Loaded config result:')
     log.debug(loaded_changes)
     __salt__['file.remove'](temp_file)
-    return salt.utils.napalm.loaded_ret(ret, loaded_changes, test, debug)
+    loaded_changes['compliance_report'] = compliance_report
+    return salt.utils.napalm.loaded_ret(ret,
+                                        loaded_changes,
+                                        test,
+                                        debug,
+                                        opts=__opts__,
+                                        compliance_report=return_compliance_report)
 
 
 def configured(name,

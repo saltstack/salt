@@ -432,7 +432,7 @@ def default_ret(name):
     return ret
 
 
-def loaded_ret(ret, loaded, test, debug):
+def loaded_ret(ret, loaded, test, debug, compliance_report=False, opts=None):
     '''
     Return the final state output.
     ret
@@ -445,6 +445,8 @@ def loaded_ret(ret, loaded, test, debug):
         'comment': loaded.get('comment', '')
     })
     pchanges = {}
+    if 'compliance_report' in loaded:
+        pchanges['compliance_report'] = loaded['compliance_report']
     if debug:
         # Always check for debug
         pchanges.update({
@@ -471,10 +473,17 @@ def loaded_ret(ret, loaded, test, debug):
             'pchanges': pchanges
         })
         if test:
-            for k, v in pchanges.items():
-                ret.update({
-                    "comment": "{}:\n{}\n\n{}".format(k, v, ret.get("comment", ''))
-                })
+            if pchanges.get('diff'):
+                ret['comment'] = '{comment_base}\n\nConfiguration diff:\n\n{diff}'.format(comment_base=ret['comment'],
+                                                                                          diff=pchanges['diff'])
+            if pchanges.get('loaded_config'):
+                ret['comment'] = '{comment_base}\n\nLoaded config:\n\n{loaded_cfg}'.format(
+                    comment_base=ret['comment'],
+                    loaded_cfg=pchanges['loaded_config'])
+            if compliance_report and pchanges.get('compliance_report'):
+                ret['comment'] = '{comment_base}\n\nCompliance report:\n\n{compliance}'.format(
+                    comment_base=ret['comment'],
+                    compliance=salt.output.string_format(pchanges['compliance_report'], 'nested', opts=opts))
             ret.update({
                 'result': None,
             })
