@@ -88,24 +88,12 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests the gid for a named group was changed
         '''
-        os_version_list = [
-            {'grains': {},
-             'cmd': ('groupmod', '-g', 500, 'test')},
-
-            {'grains': {'kernel': 'Linux', 'os_family': 'Synology'},
-             'cmd': None},
-        ]
-
-        for os_version in os_version_list:
-            with patch.dict(groupadd.__grains__, os_version['grains']):
-                mock_pre_gid = MagicMock(return_value=0)
-                mock_cmdrun = MagicMock(return_value=0)
-                with patch.dict(groupadd.__salt__,
-                                {'file.group_to_gid': mock_pre_gid}):
-                    with patch.dict(groupadd.__salt__, {'cmd.run': mock_cmdrun}):
-                        self.assertFalse(groupadd.chgid('test', 500))
-                        if os_version['cmd']:
-                            groupadd.__salt__['cmd.run'].assert_called_once_with(os_version['cmd'], python_shell=False)
+        mock_pre_gid = MagicMock(return_value=0)
+        mock_cmdrun = MagicMock(return_value=0)
+        with patch.dict(groupadd.__salt__,
+                        {'file.group_to_gid': mock_pre_gid}):
+            with patch.dict(groupadd.__salt__, {'cmd.run': mock_cmdrun}):
+                self.assertFalse(groupadd.chgid('test', 500))
 
     # 'delete' function tests: 1
 
@@ -113,20 +101,9 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if the specified group was deleted
         '''
-        os_version_list = [
-            {'grains': {},
-             'cmd': ('groupdel', 'test')},
-
-            {'grains': {'kernel': 'Linux', 'os_family': 'Synology'},
-             'cmd': ['synogroup', '--del', 'test']},
-        ]
-
-        for os_version in os_version_list:
-            mock_ret = MagicMock(return_value={'retcode': 0})
-            with patch.dict(groupadd.__grains__, os_version['grains']):
-                with patch.dict(groupadd.__salt__, {'cmd.run_all': mock_ret}):
-                    self.assertTrue(groupadd.delete('test'))
-                    groupadd.__salt__['cmd.run_all'].assert_called_once_with(os_version['cmd'], python_shell=False)
+        mock_ret = MagicMock(return_value={'retcode': 0})
+        with patch.dict(groupadd.__salt__, {'cmd.run_all': mock_ret}):
+            self.assertTrue(groupadd.delete('test'))
 
     # 'adduser' function tests: 1
 
@@ -146,21 +123,12 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
             {'grains': {'kernel': 'OTHERKERNEL'},
              'cmd': ('usermod', '-G', 'test', 'root')},
-
-            {'grains': {'kernel': 'Linux', 'os_family': 'Synology'},
-             'cmd': ['synogroup', '--member', 'test', 'root']},
-
         ]
 
         for os_version in os_version_list:
             mock = MagicMock(return_value={'retcode': 0})
-            mock_info = MagicMock(return_value={'passwd': '*',
-                                                'gid': 0,
-                                                'name': 'test',
-                                                'members': ['root']})
             with patch.dict(groupadd.__grains__, os_version['grains']):
-                with patch.dict(groupadd.__salt__, {'cmd.retcode': mock,
-                                                    'group.info': mock_info}):
+                with patch.dict(groupadd.__salt__, {'cmd.retcode': mock}):
                     self.assertFalse(groupadd.adduser('test', 'root'))
                     groupadd.__salt__['cmd.retcode'].assert_called_once_with(os_version['cmd'], python_shell=False)
 
@@ -182,9 +150,6 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
             {'grains': {'kernel': 'OpenBSD'},
              'cmd': 'usermod -S foo root'},
-
-            {'grains': {'kernel': 'Linux', 'os_family': 'Synology'},
-             'cmd': ['synogroup', '--member', 'test']},
         ]
 
         for os_version in os_version_list:
@@ -220,9 +185,6 @@ class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
 
             {'grains': {'kernel': 'OpenBSD'},
              'cmd': 'usermod -G test foo'},
-
-            {'grains': {'kernel': 'Linux', 'os_family': 'Synology'},
-             'cmd': ['synogroup', '--member', 'test', 'foo']},
         ]
 
         for os_version in os_version_list:

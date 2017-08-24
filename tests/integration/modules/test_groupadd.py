@@ -7,7 +7,7 @@ import random
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root, requires_system_grains
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range
@@ -31,10 +31,11 @@ class GroupModuleTest(ModuleCase):
         self._no_group = self.__random_string()
         self._gid = 64989
         self._new_gid = 64998
-        os_grain = self.run_function('grains.item', ['kernel'])
-        if os_grain['kernel'] not in 'Linux':
+        os_grain = self.run_function('grains.item', ['kernel', 'os_family'])
+        if any(os_grain['kernel'] is not 'Linux',
+               os_grain['os_family'] is 'Synology'):
             self.skipTest(
-                'Test not applicable to \'{kernel}\' kernel'.format(
+                'Test not applicable to \'{kernel}\' kernel on \'{os_family}\' family'.format(
                     **os_grain
                 )
             )
@@ -58,18 +59,16 @@ class GroupModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @requires_system_grains
-    def test_add(self, grains):
+    def test_add(self):
         '''
         Test the add group function
         '''
-        # add a new group
+        #add a new group
         self.assertTrue(self.run_function('group.add', [self._group, self._gid]))
         group_info = self.run_function('group.info', [self._group])
         self.assertEqual(group_info['name'], self._group)
-        if grains['os_family'] not in ('Synology', ):
-            self.assertEqual(group_info['gid'], self._gid)
-        # try adding the group again
+        self.assertEqual(group_info['gid'], self._gid)
+        #try adding the group again
         self.assertFalse(self.run_function('group.add', [self._group, self._gid]))
 
     @destructiveTest
@@ -79,15 +78,14 @@ class GroupModuleTest(ModuleCase):
         '''
         self.assertTrue(self.run_function('group.add', [self._group]))
 
-        # correct functionality
+        #correct functionality
         self.assertTrue(self.run_function('group.delete', [self._group]))
 
-        # group does not exist
+        #group does not exist
         self.assertFalse(self.run_function('group.delete', [self._no_group]))
 
     @destructiveTest
-    @requires_system_grains
-    def test_info(self, grains):
+    def test_info(self):
         '''
         Test the info group function
         '''
@@ -97,18 +95,14 @@ class GroupModuleTest(ModuleCase):
         group_info = self.run_function('group.info', [self._group])
 
         self.assertEqual(group_info['name'], self._group)
-        if grains['os_family'] not in ('Synology', ):
-            self.assertEqual(group_info['gid'], self._gid)
+        self.assertEqual(group_info['gid'], self._gid)
         self.assertIn(self._user, group_info['members'])
 
     @destructiveTest
-    @requires_system_grains
-    def test_chgid(self, grains):
+    def test_chgid(self):
         '''
         Test the change gid function
         '''
-        if grains['os_family'] in ('Synology', ):
-            return
         self.run_function('group.add', [self._group, self._gid])
         self.assertTrue(self.run_function('group.chgid', [self._group, self._new_gid]))
         group_info = self.run_function('group.info', [self._group])
@@ -124,11 +118,11 @@ class GroupModuleTest(ModuleCase):
         self.assertTrue(self.run_function('group.adduser', [self._group, self._user]))
         group_info = self.run_function('group.info', [self._group])
         self.assertIn(self._user, group_info['members'])
-        # try add a non existing user
+        #try add a non existing user
         self.assertFalse(self.run_function('group.adduser', [self._group, self._no_user]))
-        # try add a user to non existing group
+        #try add a user to non existing group
         self.assertFalse(self.run_function('group.adduser', [self._no_group, self._user]))
-        # try add a non existing user to a non existing group
+        #try add a non existing user to a non existing group
         self.assertFalse(self.run_function('group.adduser', [self._no_group, self._no_user]))
 
     @destructiveTest

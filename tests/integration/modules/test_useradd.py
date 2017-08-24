@@ -28,10 +28,11 @@ class UseraddModuleTestLinux(ModuleCase):
 
     def setUp(self):
         super(UseraddModuleTestLinux, self).setUp()
-        os_grain = self.run_function('grains.item', ['kernel'])
-        if os_grain['kernel'] not in ('Linux', 'Darwin'):
+        os_grain = self.run_function('grains.item', ['kernel', 'os_family'])
+        if any(os_grain['kernel'] not in ('Linux', 'Darwin'),
+               os_grain['os_family'] is 'Synology'):
             self.skipTest(
-                'Test not applicable to \'{kernel}\' kernel'.format(
+                'Test not applicable to \'{kernel}\' kernel on \'{os_family}\' family'.format(
                     **os_grain
                 )
             )
@@ -54,7 +55,7 @@ class UseraddModuleTestLinux(ModuleCase):
 
         try:
             uinfo = self.run_function('user.info', [uname])
-            if grains['os_family'] in ('Suse', 'Synology'):
+            if grains['os_family'] in ('Suse',):
                 self.assertIn('users', uinfo['groups'])
             else:
                 self.assertIn(uname, uinfo['groups'])
@@ -72,21 +73,18 @@ class UseraddModuleTestLinux(ModuleCase):
 
             ginfo = self.run_function('group.info', [gname])
 
-            if grains['os_family'] not in ('Synology', ):
-                # And create the user with that gid
-                if self.run_function('user.add', [uname, uid, ginfo['gid']]) is False:
-                    # Skip because creating is not what we're testing here
-                    self.run_function('user.delete', [uname, True, True])
-                    self.skipTest('Failed to create user')
+            # And create the user with that gid
+            if self.run_function('user.add', [uname, uid, ginfo['gid']]) is False:
+                # Skip because creating is not what we're testing here
+                self.run_function('user.delete', [uname, True, True])
+                self.skipTest('Failed to create user')
 
-                uinfo = self.run_function('user.info', [uname])
-                self.assertIn(gname, uinfo['groups'])
+            uinfo = self.run_function('user.info', [uname])
+            self.assertIn(gname, uinfo['groups'])
 
         except AssertionError:
             self.run_function('user.delete', [uname, True, True])
             raise
-
-        self.run_function('group.delete', [gname, True, True])
 
     def test_user_primary_group(self):
         '''
@@ -106,10 +104,8 @@ class UseraddModuleTestLinux(ModuleCase):
             self.assertIn(primary_group, uid_info['groups'])
 
         except:
-            raise
-
-        finally:
             self.run_function('user.delete', [name])
+            raise
 
 
 @destructiveTest

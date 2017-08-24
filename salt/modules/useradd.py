@@ -9,8 +9,6 @@ Manage users with the useradd command
     <module-provider-override>`.
 '''
 from __future__ import absolute_import
-import uuid
-import string
 
 try:
     import pwd
@@ -41,7 +39,9 @@ def __virtual__():
     Set the user module if the kernel is Linux, OpenBSD, NetBSD or AIX
     '''
 
-    if HAS_PWD and __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD', 'AIX'):
+    if all(HAS_PWD,
+           __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD', 'AIX'),
+           __grains__['os_family'] is not 'Synology'):
         return __virtualname__
     return (False, 'useradd execution module not loaded: either pwd python library not available or system not one of Linux, OpenBSD, NetBSD or AIX')
 
@@ -76,27 +76,9 @@ def _build_gecos(gecos_dict):
     and returns a full GECOS comment string, to be used with usermod.
     '''
     return u'{0},{1},{2},{3}'.format(gecos_dict.get('fullname', ''),
-                                     gecos_dict.get('roomnumber', ''),
-                                     gecos_dict.get('workphone', ''),
-                                     gecos_dict.get('homephone', ''))
-
-
-def _syno_get_user(name):
-    '''
-    Parse Synology user informations and return them
-    in dictionary form.
-    '''
-    def _c(s):
-        return s.strip('[] ').lower()
-    cmd = ['synouser', '--get', name]
-    user = __salt__['cmd.run_stdout'](cmd, python_shell=False)
-    out = dict(map(_c, s.split(':')) for s in user.split('\n') if ':' in s)
-    groups = [s.split()[1] for s in user.split('\n') if s.startswith('(')]
-    out['expired'] = out['expired'] != 'false'
-    out['member of'] = groups
-    for int_value in ('alloc size', 'primary gid', 'user uid'):
-        out[int_value] = int(out[int_value])
-    return out
+                                    gecos_dict.get('roomnumber', ''),
+                                    gecos_dict.get('workphone', ''),
+                                    gecos_dict.get('homephone', ''))
 
 
 def _update_gecos(name, key, value, root=None):
@@ -115,17 +97,10 @@ def _update_gecos(name, key, value, root=None):
     gecos_data = copy.deepcopy(pre_info)
     gecos_data[key] = value
 
-    if __grains__['os_family'] == 'Synology':
-        user_info = _syno_get_user(name)
-        cmd = ['synouser', '--modify', name,
-               _build_gecos(gecos_data),
-               int(user_info['expired']),
-               user_info['user mail']]
-    else:
-        cmd = ['usermod', '-c', _build_gecos(gecos_data), name]
+    cmd = ['usermod', '-c', _build_gecos(gecos_data), name]
 
-        if root is not None and __grains__['kernel'] != 'AIX':
-            cmd.extend(('-R', root))
+    if root is not None and __grains__['kernel'] != 'AIX':
+        cmd.extend(('-R', root))
 
     __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
@@ -157,89 +132,80 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    if __grains__['os_family'] == 'Synology':
-        if gid:
-            log.error('specifying user primary group is not supported on this platform')
-            return False
-        cmd = ['synouser', '--add',
-               name, uuid.uuid4(),
-               fullname, '0', 'user@localhost', '0'
-               ]
-    else:
-        cmd = ['useradd']
-        if shell:
-            cmd.extend(['-s', shell])
-        if uid not in (None, ''):
-            cmd.extend(['-u', str(uid)])
-        if gid not in (None, ''):
-            cmd.extend(['-g', str(gid)])
-        elif groups is not None and name in groups:
-            defs_file = '/etc/login.defs'
-            if __grains__['kernel'] != 'OpenBSD':
-                try:
-                    with salt.utils.files.fopen(defs_file) as fp_:
-                        for line in fp_:
-                            if 'USERGROUPS_ENAB' not in line[:15]:
-                                continue
+    cmd = ['useradd']
+    if shell:
+        cmd.extend(['-s', shell])
+    if uid not in (None, ''):
+        cmd.extend(['-u', str(uid)])
+    if gid not in (None, ''):
+        cmd.extend(['-g', str(gid)])
+    elif groups is not None and name in groups:
+        defs_file = '/etc/login.defs'
+        if __grains__['kernel'] != 'OpenBSD':
+            try:
+                with salt.utils.files.fopen(defs_file) as fp_:
+                    for line in fp_:
+                        if 'USERGROUPS_ENAB' not in line[:15]:
+                            continue
 
-                            if 'yes' in line:
-                                cmd.extend([
-                                    '-g', str(__salt__['file.group_to_gid'](name))
-                                ])
-
-                            # We found what we wanted, let's break out of the loop
-                            break
-                except OSError:
-                    log.debug(
-                        'Error reading ' + defs_file,
-                        exc_info_on_loglevel=logging.DEBUG
-                    )
-            else:
-                usermgmt_file = '/etc/usermgmt.conf'
-                try:
-                    with salt.utils.files.fopen(usermgmt_file) as fp_:
-                        for line in fp_:
-                            if 'group' not in line[:5]:
-                                continue
-
+                        if 'yes' in line:
                             cmd.extend([
-                                '-g', str(line.split()[-1])
+                                '-g', str(__salt__['file.group_to_gid'](name))
                             ])
 
-                            # We found what we wanted, let's break out of the loop
-                            break
-                except OSError:
-                    # /etc/usermgmt.conf not present: defaults will be used
-                    pass
+                        # We found what we wanted, let's break out of the loop
+                        break
+            except OSError:
+                log.debug(
+                    'Error reading ' + defs_file,
+                    exc_info_on_loglevel=logging.DEBUG
+                )
+        else:
+            usermgmt_file = '/etc/usermgmt.conf'
+            try:
+                with salt.utils.files.fopen(usermgmt_file) as fp_:
+                    for line in fp_:
+                        if 'group' not in line[:5]:
+                            continue
 
-        if createhome:
-            cmd.append('-m')
-        elif (__grains__['kernel'] != 'NetBSD'
-                and __grains__['kernel'] != 'OpenBSD'):
-            cmd.append('-M')
+                        cmd.extend([
+                            '-g', str(line.split()[-1])
+                        ])
 
-        if nologinit:
-            cmd.append('-l')
+                        # We found what we wanted, let's break out of the loop
+                        break
+            except OSError:
+                # /etc/usermgmt.conf not present: defaults will be used
+                pass
 
-        if home is not None:
-            cmd.extend(['-d', home])
+    if createhome:
+        cmd.append('-m')
+    elif (__grains__['kernel'] != 'NetBSD'
+            and __grains__['kernel'] != 'OpenBSD'):
+        cmd.append('-M')
 
-        if not unique and __grains__['kernel'] != 'AIX':
-            cmd.append('-o')
+    if nologinit:
+        cmd.append('-l')
 
-        if (system
-            and __grains__['kernel'] != 'NetBSD'
-                and __grains__['kernel'] != 'OpenBSD'):
-            cmd.append('-r')
+    if home is not None:
+        cmd.extend(['-d', home])
 
-        if __grains__['kernel'] == 'OpenBSD':
-            if loginclass is not None:
-                cmd.extend(['-L', loginclass])
+    if not unique and __grains__['kernel'] != 'AIX':
+        cmd.append('-o')
 
-        cmd.append(name)
+    if (system
+        and __grains__['kernel'] != 'NetBSD'
+        and __grains__['kernel'] != 'OpenBSD'):
+        cmd.append('-r')
 
-        if root is not None and __grains__['kernel'] != 'AIX':
-            cmd.extend(('-R', root))
+    if __grains__['kernel'] == 'OpenBSD':
+        if loginclass is not None:
+            cmd.extend(['-L', loginclass])
+
+    cmd.append(name)
+
+    if root is not None and __grains__['kernel'] != 'AIX':
+        cmd.extend(('-R', root))
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -277,30 +243,18 @@ def delete(name, remove=False, force=False, root=None):
 
         salt '*' user.delete name remove=True force=True
     '''
-    if __grains__['os_family'] == 'Synology':
-        if remove:
-            cmd = ['synouser', '--del', name]
-        else:
-            # XXX: rename user ?
-            user_info = _syno_get_user(name)
-            gecos_data = _get_gecos(name)
-            cmd = ['synouser', '--modify', name,
-                   _build_gecos(gecos_data),
-                   1,
-                   user_info['user mail']]
-    else:
-        cmd = ['userdel']
+    cmd = ['userdel']
 
-        if remove:
-            cmd.append('-r')
+    if remove:
+        cmd.append('-r')
 
-        if force and __grains__['kernel'] != 'OpenBSD' and __grains__['kernel'] != 'AIX':
-            cmd.append('-f')
+    if force and __grains__['kernel'] != 'OpenBSD' and __grains__['kernel'] != 'AIX':
+        cmd.append('-f')
 
-        cmd.append(name)
+    cmd.append(name)
 
-        if root is not None and __grains__['kernel'] != 'AIX':
-            cmd.extend(('-R', root))
+    if root is not None and __grains__['kernel'] != 'AIX':
+        cmd.extend(('-R', root))
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -359,11 +313,6 @@ def chuid(name, uid):
     pre_info = info(name)
     if uid == pre_info['uid']:
         return True
-
-    if __grains__['os_family'] == 'Synology':
-        log.error('user.chuid is not yet supported on this platform')
-        return False
-
     cmd = ['usermod', '-u', '{0}'.format(uid), name]
     __salt__['cmd.run'](cmd, python_shell=False)
     return info(name).get('uid') == uid
@@ -382,11 +331,6 @@ def chgid(name, gid, root=None):
     pre_info = info(name)
     if gid == pre_info['gid']:
         return True
-
-    if __grains__['os_family'] == 'Synology':
-        log.error('user.chgid is not yet supported on this platform')
-        return False
-
     cmd = ['usermod', '-g', '{0}'.format(gid), name]
 
     if root is not None and __grains__['kernel'] != 'AIX':
@@ -409,11 +353,6 @@ def chshell(name, shell, root=None):
     pre_info = info(name)
     if shell == pre_info['shell']:
         return True
-
-    if __grains__['os_family'] == 'Synology':
-        log.error('user.chshell is not yet supported on this platform')
-        return False
-
     cmd = ['usermod', '-s', shell, name]
 
     if root is not None and __grains__['kernel'] != 'AIX':
@@ -437,11 +376,6 @@ def chhome(name, home, persist=False, root=None):
     pre_info = info(name)
     if home == pre_info['home']:
         return True
-
-    if __grains__['os_family'] == 'Synology':
-        log.error('user.chhome is not yet supported on this platform')
-        return False
-
     cmd = ['usermod', '-d', '{0}'.format(home)]
 
     if root is not None and __grains__['kernel'] != 'AIX':
@@ -452,26 +386,6 @@ def chhome(name, home, persist=False, root=None):
     cmd.append(name)
     __salt__['cmd.run'](cmd, python_shell=False)
     return info(name).get('home') == home
-
-
-def _syno_manage_group(action, group, name):
-    '''
-    Modify group membership on a Synology NAS
-
-    :param action: either `remove` or `add`
-    :param group: group name we are changing
-    :param name: username to add/remove
-    '''
-    cmd = ['synogroup', '--get', group]
-    ret = __salt__['cmd.run_stdout'](cmd, python_shell=False)
-    group_users = set(x.split(':')[1].strip('[]')
-                      for x
-                      in ret.split('\n')
-                      if x
-                      and x[0] in string.digits)
-    getattr(group_users, action)(name)
-    cmd = ['synogroup', '--member', group, ' '.join(group_users)]
-    return __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def chgroups(name, groups, append=False, root=None):
@@ -500,21 +414,6 @@ def chgroups(name, groups, append=False, root=None):
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
         return True
-
-    if __grains__['os_family'] == 'Synology':
-
-        rets = []
-        groups = set(groups)
-
-        if not append:
-            for group in ugrps - groups:
-                rets += _syno_manage_group('remove', group, name)
-
-        for group in groups - ugrps:
-            rets += _syno_manage_group('add', group, name)
-
-        return not any(rets)
-
     cmd = ['usermod']
 
     if __grains__['kernel'] != 'OpenBSD':
