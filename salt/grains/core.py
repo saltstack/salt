@@ -2423,4 +2423,33 @@ def get_master():
     #   master
     return {'master': __opts__.get('master', '')}
 
+
+def default_gateway():
+    '''
+    Populates grains which describe whether a server has a default gateway
+    configured or not. Uses `ip -4 route show` and `ip -6 route show` and greps
+    for a `default` at the beginning of any line.
+
+    If the `ip` command is unavailable, no grains will be populated.
+
+    List of grains:
+
+        ip4_gw: True  # True/False if default ipv4 gateway
+        ip6_gw: True  # True/False if default ipv6 gateway
+        ip_gw: True    # True if either of the above is True, False otherwise
+    '''
+    grains = {}
+    if not salt.utils.which('ip'):
+        return {}
+    grains['ip_gw'] = False
+    grains['ip4_gw'] = False
+    grains['ip6_gw'] = False
+    if __salt__['cmd.run']('ip -4 route show | grep "^default"', python_shell=True):
+        grains['ip_gw'] = True
+        grains['ip4_gw'] = True
+    if __salt__['cmd.run']('ip -6 route show | grep "^default"', python_shell=True):
+        grains['ip_gw'] = True
+        grains['ip6_gw'] = True
+    return grains
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
