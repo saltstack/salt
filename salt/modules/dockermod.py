@@ -902,6 +902,11 @@ def compare_container(first, second, ignore=None):
             if item in ('OomKillDisable',):
                 if bool(val1) != bool(val2):
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            elif item == 'Image':
+                image1 = inspect_image(val1)['Id']
+                image2 = inspect_image(val2)['Id']
+                if image1 != image2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
             else:
                 if item == 'Links':
                     val1 = _scrub_links(val1, first)
@@ -920,6 +925,11 @@ def compare_container(first, second, ignore=None):
             if item in ('OomKillDisable',):
                 if bool(val1) != bool(val2):
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            elif item == 'Image':
+                image1 = inspect_image(val1)['Id']
+                image2 = inspect_image(val2)['Id']
+                if image1 != image2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
             else:
                 if item == 'Links':
                     val1 = _scrub_links(val1, first)
