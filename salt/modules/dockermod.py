@@ -899,7 +899,7 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict][item]
             val2 = result2[conf_dict].get(item)
-            if item in ('OomKillDisable',):
+            if item in ('OomKillDisable',) or (val1 is None or val2 is None):
                 if bool(val1) != bool(val2):
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
             else:
@@ -917,7 +917,7 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict].get(item)
             val2 = result2[conf_dict][item]
-            if item in ('OomKillDisable',):
+            if item in ('OomKillDisable',) or (val1 is None or val2 is None):
                 if bool(val1) != bool(val2):
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
             else:
