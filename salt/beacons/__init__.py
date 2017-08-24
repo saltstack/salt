@@ -59,7 +59,7 @@ class Beacon(object):
 
             if 'enabled' in current_beacon_config:
                 if not current_beacon_config['enabled']:
-                    log.trace('Beacon {0} disabled'.format(mod))
+                    log.trace('Beacon %s disabled', mod)
                     continue
                 else:
                     # remove 'enabled' item before processing the beacon
@@ -68,7 +68,7 @@ class Beacon(object):
                     else:
                         self._remove_list_item(config[mod], 'enabled')
 
-            log.trace('Beacon processing: {0}'.format(mod))
+            log.trace('Beacon processing: %s', mod)
             fun_str = '{0}.beacon'.format(mod)
             validate_str = '{0}.validate'.format(mod)
             if fun_str in self.beacons:
@@ -77,10 +77,10 @@ class Beacon(object):
                 if interval:
                     b_config = self._trim_config(b_config, mod, 'interval')
                     if not self._process_interval(mod, interval):
-                        log.trace('Skipping beacon {0}. Interval not reached.'.format(mod))
+                        log.trace('Skipping beacon %s. Interval not reached.', mod)
                         continue
                 if self._determine_beacon_config(current_beacon_config, 'disable_during_state_run'):
-                    log.trace('Evaluting if beacon {0} should be skipped due to a state run.'.format(mod))
+                    log.trace('Evaluting if beacon %s should be skipped due to a state run.', mod)
                     b_config = self._trim_config(b_config, mod, 'disable_during_state_run')
                     is_running = False
                     running_jobs = salt.utils.minion.running(self.opts)
@@ -90,10 +90,10 @@ class Beacon(object):
                     if is_running:
                         close_str = '{0}.close'.format(mod)
                         if close_str in self.beacons:
-                            log.info('Closing beacon {0}. State run in progress.'.format(mod))
+                            log.info('Closing beacon %s. State run in progress.', mod)
                             self.beacons[close_str](b_config[mod])
                         else:
-                            log.info('Skipping beacon {0}. State run in progress.'.format(mod))
+                            log.info('Skipping beacon %s. State run in progress.', mod)
                         continue
                 # Update __grains__ on the beacon
                 self.beacons[fun_str].__globals__['__grains__'] = grains
@@ -120,7 +120,7 @@ class Beacon(object):
                 if runonce:
                     self.disable_beacon(mod)
             else:
-                log.warning('Unable to process beacon {0}'.format(mod))
+                log.warning('Unable to process beacon %s', mod)
         return ret
 
     def _trim_config(self, b_config, mod, key):
@@ -149,19 +149,19 @@ class Beacon(object):
         Process beacons with intervals
         Return True if a beacon should be run on this loop
         '''
-        log.trace('Processing interval {0} for beacon mod {1}'.format(interval, mod))
+        log.trace('Processing interval %s for beacon mod %s', interval, mod)
         loop_interval = self.opts['loop_interval']
         if mod in self.interval_map:
             log.trace('Processing interval in map')
             counter = self.interval_map[mod]
-            log.trace('Interval counter: {0}'.format(counter))
+            log.trace('Interval counter: %s', counter)
             if counter * loop_interval >= interval:
                 self.interval_map[mod] = 1
                 return True
             else:
                 self.interval_map[mod] += 1
         else:
-            log.trace('Interval process inserting mod: {0}'.format(mod))
+            log.trace('Interval process inserting mod: %s', mod)
             self.interval_map[mod] = 1
         return False
 
@@ -219,7 +219,7 @@ class Beacon(object):
         List the available beacons
         '''
         _beacons = ['{0}'.format(_beacon.replace('.beacon', ''))
-                    for _beacon in list(self.beacons) if '.beacon' in _beacon]
+                    for _beacon in self.beacons if '.beacon' in _beacon]
 
         # Fire the complete event back along with the list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
@@ -240,8 +240,8 @@ class Beacon(object):
                 del beacon_data['enabled']
             valid, vcomment = self.beacons[validate_str](beacon_data)
         else:
-            log.info('Beacon {0} does not have a validate'
-                     ' function,  skipping validation.'.format(name))
+            log.info('Beacon %s does not have a validate'
+                     ' function,  skipping validation.', name)
             valid = True
 
         # Fire the complete event back along with the list of beacons
@@ -263,9 +263,9 @@ class Beacon(object):
 
         if name in self.opts['beacons']:
             log.info('Updating settings for beacon '
-                     'item: {0}'.format(name))
+                     'item: %s', name)
         else:
-            log.info('Added new beacon item {0}'.format(name))
+            log.info('Added new beacon item %s', name)
         self.opts['beacons'].update(data)
 
         # Fire the complete event back along with updated list of beacons
@@ -284,7 +284,7 @@ class Beacon(object):
         data[name] = beacon_data
 
         log.info('Updating settings for beacon '
-                 'item: {0}'.format(name))
+                 'item: %s', name)
         self.opts['beacons'].update(data)
 
         # Fire the complete event back along with updated list of beacons
@@ -300,7 +300,7 @@ class Beacon(object):
         '''
 
         if name in self.opts['beacons']:
-            log.info('Deleting beacon item {0}'.format(name))
+            log.info('Deleting beacon item %s', name)
             del self.opts['beacons'][name]
 
         # Fire the complete event back along with updated list of beacons
