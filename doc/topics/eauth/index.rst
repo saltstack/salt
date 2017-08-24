@@ -93,6 +93,26 @@ By user, by minion:
           <minion compound target>:
             - <regex to match function>
 
+By user, by runner/wheel:
+
+.. code-block:: yaml
+
+    external_auth:
+      <eauth backend>:
+        <user or group%>:
+          <@runner or @wheel>:
+            - <regex to match function>
+
+By user, by runner+wheel module:
+
+.. code-block:: yaml
+
+    external_auth:
+      <eauth backend>:
+        <user or group%>:
+          <@module_name>:
+            - <regex to match function without module_name>
+
 Groups
 ------
 
@@ -121,6 +141,14 @@ Positional arguments or keyword arguments to functions can also be whitelisted.
         my_user:
           - '*':
             - 'my_mod.*':
+                args:
+                - 'a.*'
+                - 'b.*'
+                kwargs:
+                  'kwa': 'kwa.*'
+                  'kwb': 'kwb'
+          - '@runner':
+            - 'runner_mod.*':
                 args:
                 - 'a.*'
                 - 'b.*'

@@ -2135,11 +2135,14 @@ class State(object):
                                 reqs[r_state].append(chunk)
                             continue
                         try:
-                            if (fnmatch.fnmatch(chunk[u'name'], req_val) or
-                                fnmatch.fnmatch(chunk[u'__id__'], req_val)):
-                                if req_key == u'id' or chunk[u'state'] == req_key:
-                                    found = True
-                                    reqs[r_state].append(chunk)
+                            if isinstance(req_val, six.string_types):
+                                if (fnmatch.fnmatch(chunk[u'name'], req_val) or
+                                    fnmatch.fnmatch(chunk[u'__id__'], req_val)):
+                                    if req_key == u'id' or chunk[u'state'] == req_key:
+                                        found = True
+                                        reqs[r_state].append(chunk)
+                            else:
+                                raise KeyError
                         except KeyError as exc:
                             raise SaltRenderError(
                                 u'Could not locate requisite of [{0}] present in state with name [{1}]'.format(
@@ -2317,13 +2320,17 @@ class State(object):
                         req_val = lreq[req_key]
                         comment += \
                             u'{0}{1}: {2}\n'.format(u' ' * 23, req_key, req_val)
-                running[tag] = {u'changes': {},
-                                u'result': False,
-                                u'comment': comment,
-                                u'__run_num__': self.__run_num,
-                                u'__sls__': low[u'__sls__']}
+                if low.get('__prereq__'):
+                    run_dict = self.pre
+                else:
+                    run_dict = running
+                run_dict[tag] = {u'changes': {},
+                                 u'result': False,
+                                 u'comment': comment,
+                                 u'__run_num__': self.__run_num,
+                                 u'__sls__': low[u'__sls__']}
                 self.__run_num += 1
-                self.event(running[tag], len(chunks), fire_event=low.get(u'fire_event'))
+                self.event(run_dict[tag], len(chunks), fire_event=low.get(u'fire_event'))
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
