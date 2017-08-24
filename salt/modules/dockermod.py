@@ -3880,8 +3880,9 @@ def save(name,
         saved_path = salt.utils.files.mkstemp()
     else:
         saved_path = path
-
-    cmd = ['docker', 'save', '-o', saved_path, inspect_image(name)['Id']]
+    # use the image name if its valid if not use the image id
+    image_to_save = name if name in inspect_image(name)['RepoTags'] else inspect_image(name)['Id']
+    cmd = ['docker', 'save', '-o', saved_path, image_to_save]
     time_started = time.time()
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     if result['retcode'] != 0:
