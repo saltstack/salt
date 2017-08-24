@@ -801,7 +801,7 @@ def get_client_args():
 
         salt myminion docker.get_client_args
     '''
-    return salt.utils.docker.get_client_args()
+    return __utils__['docker.get_client_args']()
 
 
 def _get_create_kwargs(image,
@@ -3848,7 +3848,6 @@ def save(name,
     if os.path.exists(path) and not overwrite:
         raise CommandExecutionError('{0} already exists'.format(path))
 
-    compression = kwargs.get('compression')
     if compression is None:
         if path.endswith('.tar.gz') or path.endswith('.tgz'):
             compression = 'gzip'
@@ -3954,7 +3953,7 @@ def save(name,
     ret['Size_Human'] = _size_fmt(ret['Size'])
 
     # Process push
-    if kwargs.get(push, False):
+    if kwargs.get('push', False):
         ret['Push'] = __salt__['cp.push'](path)
 
     return ret

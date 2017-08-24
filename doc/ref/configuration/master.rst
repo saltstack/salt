@@ -234,6 +234,7 @@ Valid options:
   - clouds
   - tops
   - roster
+  - tokens
 
 .. conf_master:: module_dirs
 
@@ -1729,6 +1730,22 @@ Set additional directories to search for runner modules.
 
     runner_dirs:
       - /var/lib/salt/runners
+
+.. conf_master:: utils_dirs
+
+``utils_dirs``
+---------------
+
+.. versionadded:: Oxygen
+
+Default: ``[]``
+
+Set additional directories to search for util modules.
+
+.. code-block:: yaml
+
+    utils_dirs:
+      - /var/lib/salt/utils
 
 .. conf_master:: cython_enable
 
@@ -3770,7 +3787,7 @@ they were created by a different master.
 Default: ``True``
 
 Normally, when processing :ref:`git_pillar remotes
-<git-pillar-2015-8-0-and-later>`, if more than one repo under the same ``git``
+<git-pillar-configuration>`, if more than one repo under the same ``git``
 section in the ``ext_pillar`` configuration refers to the same pillar
 environment, then each repo in a given environment will have access to the
 other repos' files to be referenced in their top files. However, it may be

@@ -189,15 +189,14 @@ class LocalClient(object):
             key_user = key_user.replace(u'\\', u'_')
         keyfile = os.path.join(self.opts[u'cachedir'],
                                u'.{0}_key'.format(key_user))
-        # Make sure all key parent directories are accessible
-        salt.utils.verify.check_path_traversal(self.opts[u'cachedir'],
-                                               key_user,
-                                               self.skip_perm_errors)
-
         try:
+            # Make sure all key parent directories are accessible
+            salt.utils.verify.check_path_traversal(self.opts[u'cachedir'],
+                                                   key_user,
+                                                   self.skip_perm_errors)
             with salt.utils.files.fopen(keyfile, u'r') as key:
                 return key.read()
-        except (OSError, IOError):
+        except (OSError, IOError, SaltClientError):
             # Fall back to eauth
             return u''
 

@@ -900,7 +900,7 @@ def mod_watch(name,
     try:
         result = func(name, **func_kwargs)
     except CommandExecutionError as exc:
-        ret['result'] = True
+        ret['result'] = False
         ret['comment'] = exc.strerror
         return ret
 

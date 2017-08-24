@@ -46,6 +46,11 @@ noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
 
+New NaCl Renderer
+-----------------
+
+A new renderer has been added for encrypted data.
+
 New GitFS Features
 ------------------
 
@@ -690,6 +695,25 @@ For ``smartos`` some grains have been deprecated. These grains will be removed i
 
 - The ``hypervisor_uuid`` has been replaced with ``mdata:sdc:server_uuid`` grain.
 - The ``datacenter`` has been replaced with ``mdata:sdc:datacenter_name`` grain.
+
+Minion Blackout
+---------------
+
+During a blackout, minions will not execute any remote execution commands,
+except for :mod:`saltutil.refresh_pillar <salt.modules.saltutil.refresh_pillar>`.
+Previously, support was added so that blackouts are enabled using a special
+pillar key, ``minion_blackout`` set to ``True`` and an optional pillar key
+``minion_blackout_whitelist`` to specify additional functions that are permitted
+during blackout. This release adds support for using this feature in the grains
+as well, by using special grains keys ``minion_blackout`` and
+``minion_blackout_whitelist``.
+
+Pillar Deprecations
+-------------------
+
+The legacy configuration for ``git_pillar`` has been removed. Please use the new
+configuration for ``git_pillar``, which is documented in the external pillar module
+for :mod:`git_pillar <salt.pillar.git_pillar>`.
 
 Utils Deprecations
 ==================

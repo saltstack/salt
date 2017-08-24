@@ -1050,17 +1050,17 @@ class GitPython(GitProvider):
             else:
                 new = True
 
-        try:
-            ssl_verify = self.repo.git.config('--get', 'http.sslVerify')
-        except git.exc.GitCommandError:
-            ssl_verify = ''
-        desired_ssl_verify = str(self.ssl_verify).lower()
-        if ssl_verify != desired_ssl_verify:
-            self.repo.git.config('http.sslVerify', desired_ssl_verify)
+            try:
+                ssl_verify = self.repo.git.config('--get', 'http.sslVerify')
+            except git.exc.GitCommandError:
+                ssl_verify = ''
+            desired_ssl_verify = str(self.ssl_verify).lower()
+            if ssl_verify != desired_ssl_verify:
+                self.repo.git.config('http.sslVerify', desired_ssl_verify)
 
-        # Ensure that refspecs for the "origin" remote are set up as configured
-        if hasattr(self, 'refspecs'):
-            self.configure_refspecs()
+            # Ensure that refspecs for the "origin" remote are set up as configured
+            if hasattr(self, 'refspecs'):
+                self.configure_refspecs()
 
         return new
 
@@ -1528,18 +1528,18 @@ class Pygit2(GitProvider):
             else:
                 new = True
 
-        try:
-            ssl_verify = self.repo.config.get_bool('http.sslVerify')
-        except KeyError:
-            ssl_verify = None
-        if ssl_verify != self.ssl_verify:
-            self.repo.config.set_multivar('http.sslVerify',
-                                          '',
-                                          str(self.ssl_verify).lower())
+            try:
+                ssl_verify = self.repo.config.get_bool('http.sslVerify')
+            except KeyError:
+                ssl_verify = None
+            if ssl_verify != self.ssl_verify:
+                self.repo.config.set_multivar('http.sslVerify',
+                                            '',
+                                            str(self.ssl_verify).lower())
 
-        # Ensure that refspecs for the "origin" remote are set up as configured
-        if hasattr(self, 'refspecs'):
-            self.configure_refspecs()
+            # Ensure that refspecs for the "origin" remote are set up as configured
+            if hasattr(self, 'refspecs'):
+                self.configure_refspecs()
 
         return new
 
@@ -2893,18 +2893,6 @@ class GitPillar(GitBase):
                     )
                     return False
         return True
-
-    def update(self):
-        '''
-        Execute a git fetch on all of the repos. In this case, simply execute
-        self.fetch_remotes() from the parent class.
-
-        This function only exists to make the git_pillar update code in
-        master.py (salt.master.Maintenance.handle_git_pillar) less complicated,
-        once the legacy git_pillar code is purged we can remove this function
-        and just run pillar.fetch_remotes() there.
-        '''
-        return self.fetch_remotes()
 
 
 class WinRepo(GitBase):

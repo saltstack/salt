@@ -78,6 +78,7 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                                                                            maintenance_db=None,
                                                                            login=None,
                                                                            password=None,
+                                                                           valid_until=None,
                                                                            createdb=None)
 
     def test_present__update(self):
@@ -126,6 +127,7 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                                                                            maintenance_db=None,
                                                                            login=True,
                                                                            password=None,
+                                                                           valid_until=None,
                                                                            createdb=None)
 
     def test_present__no_update(self):
