@@ -37,6 +37,7 @@ import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.url
 import salt.utils.process
+import salt.utils.files
 import salt.syspaths as syspaths
 from salt.utils import immutabletypes
 from salt.template import compile_template, compile_template_str
@@ -150,7 +151,7 @@ def _clean_tag(tag):
     '''
     Make tag name safe for filenames
     '''
-    return salt.utils.safe_filename_leaf(tag)
+    return salt.utils.files.safe_filename_leaf(tag)
 
 
 def _l_tag(name, id_):
