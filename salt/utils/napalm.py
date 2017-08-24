@@ -24,6 +24,7 @@ from functools import wraps
 log = logging.getLogger(__file__)
 
 import salt.utils
+import salt.output
 
 # Import third party lib
 try:
@@ -454,10 +455,10 @@ def loaded_ret(ret, loaded, test, debug, compliance_report=False, opts=None):
     if debug and 'loaded_config' in loaded:
         changes['loaded_config'] = loaded['loaded_config']
         pchanges['loaded_config'] = loaded['loaded_config']
-    ret['pchanges']= pchanges
+    ret['pchanges'] = pchanges
     if changes.get('diff'):
         ret['comment'] = '{comment_base}\n\nConfiguration diff:\n\n{diff}'.format(comment_base=ret['comment'],
-                                                                                  diff=pchanges['diff'])
+                                                                                  diff=changes['diff'])
     if changes.get('loaded_config'):
         ret['comment'] = '{comment_base}\n\nLoaded config:\n\n{loaded_cfg}'.format(
             comment_base=ret['comment'],

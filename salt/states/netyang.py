@@ -38,7 +38,6 @@ except ImportError:
     HAS_NAPALM_YANG = False
 
 # Import salt modules
-import salt.output
 from salt.utils import fopen
 import salt.utils.napalm
 
