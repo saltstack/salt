@@ -700,7 +700,8 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_compare_container_image_id_resolution(self):
         '''
-        Compare
+        Test comparing two containers when one's inspect output is an ID and
+        not formatted in image:tag notation.
         '''
         def _inspect_container_effect(id_):
             return {
