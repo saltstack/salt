@@ -93,6 +93,13 @@ def managed(name,
         Use certain profiles to generate the config.
         If not specified, will use the platform default profile(s).
 
+    compliance_report: ``False``
+        Return the compliance report in the comment.
+        The compliance report structured object can be found however
+        in the ``pchanges`` field of the output (not displayed on the CLI).
+
+        .. versionadded:: 2017.7.3
+
     test: ``False``
         Dry run? If set as ``True``, will apply the config, discard
         and return the changes. Default: ``False`` and will commit
