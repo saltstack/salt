@@ -13,15 +13,16 @@ Manage groups on Synology DSM
 from __future__ import absolute_import
 import logging
 
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
+# Import 3rd-party libs
+from salt.ext import six  # pylint: disable=import-error
+from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
 
 try:
+    # module is available on Unix only
     import grp
+    HAS_GRP = True
 except ImportError:
-    pass
+    HAS_GRP = False
 
 log = logging.getLogger(__name__)
 
@@ -33,109 +34,11 @@ def __virtual__():
     '''
     Set the user module if we are on Synology
     '''
-    if __grains__['os_family'] == 'Synology':
+    if all(HAS_GRP,
+           __grains__['os_family'] == 'Synology'):
         return __virtualname__
     return (False, 'The synology_group execution module cannot be loaded: '
-            ' only available on Synology DSM platform')
-
-
-def add(name, description=None, **kwargs):  # pylint: disable=unused-argument
-    '''
-    Add the specified group.
-
-    name
-        Group name
-
-    description : ''
-        Group description
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' group.add foo
-        salt '*' group.add foo 'a simple group'
-    '''
-    ginfo = info(name)
-    if ginfo:
-        log.error('group {} already exists'.format(name))
-        return False
-
-    cmd = ['synogroup', '--add', _cmd_quote(name)]
-
-    out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    ret = not out['retcode']
-
-    if description:
-        ret = ret and set_description(name, description)
-
-    return ret
-
-
-def set_description(name, description):
-    '''
-    Set specified group description.
-
-    name
-        Group name
-
-    description
-        Group description
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' group.set_description foo 'a simple group'
-    '''
-
-    cmd = ['synogroup', '--descset',
-           _cmd_quote(name), _cmd_quote(description)]
-
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    return not ret['retcode']
-
-
-def delete(name):
-    '''
-    Remove the named group
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' group.delete foo
-    '''
-
-    ginfo = info(name)
-    if not ginfo:
-        log.error('Group {} does not exist.'.format(name))
-        return False
-
-    cmd = ['synogroup', '--del', name]
-
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-
-    return not ret['retcode']
-
-
-def info(name):
-    '''
-    Return information about a group
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' group.info foo
-    '''
-    try:
-        grinfo = grp.getgrnam(name)
-    except KeyError:
-        return {}
-    else:
-        description = _get_description(name)
-        return _format_info(grinfo, description)
+            ' only available on Synology DSM unix platforms')
 
 
 def _get_description(name):
@@ -159,24 +62,39 @@ def _format_info(data, description):
             'description': description}
 
 
-def getent(refresh=False):
+def add(name, description=None, **kwargs):
     '''
-    Return info on all groups
+    Add the specified group.
 
-    CLI Example:
+    name
+        Group name
+
+    description : ''
+        Group description
+
+    CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' group.getent
+        salt '*' group.add foo
+        salt '*' group.add foo 'a simple group'
     '''
-    if 'group.getent' in __context__ and not refresh:
-        return __context__['group.getent']
+    for arg in six.iterkeys(kwargs):
+        log.info("Ignoring unsupported '{}' argument to group.add".format(arg))
 
-    ret = []
-    for grinfo in grp.getgrall():
-        description = _get_description(grinfo.gr_name)
-        ret.append(_format_info(grinfo, description))
-    __context__['group.getent'] = ret
+    ginfo = info(name)
+    if ginfo:
+        log.error('group {} already exists'.format(name))
+        return False
+
+    cmd = ['synogroup', '--add', _cmd_quote(name)]
+
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    ret = not out['retcode']
+
+    if description:
+        ret = ret and set_description(name, description)
+
     return ret
 
 
@@ -217,6 +135,29 @@ def adduser(name, username):
     return not ret['retcode']
 
 
+def delete(name):
+    '''
+    Remove the named group
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' group.delete foo
+    '''
+
+    ginfo = info(name)
+    if not ginfo:
+        log.error('Group {} does not exist.'.format(name))
+        return False
+
+    cmd = ['synogroup', '--del', name]
+
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    return not ret['retcode']
+
+
 def deluser(name, username, _root=None):
     '''
     Remove a user from the group.
@@ -249,6 +190,46 @@ def deluser(name, username, _root=None):
     return not ret['retcode']
 
 
+def getent(refresh=False):
+    '''
+    Return info on all groups
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' group.getent
+    '''
+    if 'group.getent' in __context__ and not refresh:
+        return __context__['group.getent']
+
+    ret = []
+    for grinfo in grp.getgrall():
+        description = _get_description(grinfo.gr_name)
+        ret.append(_format_info(grinfo, description))
+    __context__['group.getent'] = ret
+    return ret
+
+
+def info(name):
+    '''
+    Return information about a group
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' group.info foo
+    '''
+    try:
+        grinfo = grp.getgrnam(name)
+    except KeyError:
+        return {}
+    else:
+        description = _get_description(name)
+        return _format_info(grinfo, description)
+
+
 def members(name, members_list, _root=None):
     '''
     Replaces members of the group with a provided list.
@@ -270,4 +251,28 @@ def members(name, members_list, _root=None):
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
+    return not ret['retcode']
+
+
+def set_description(name, description):
+    '''
+    Set specified group description.
+
+    name
+        Group name
+
+    description
+        Group description
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' group.set_description foo 'a simple group'
+    '''
+
+    cmd = ['synogroup', '--descset',
+           _cmd_quote(name), _cmd_quote(description)]
+
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     return not ret['retcode']
