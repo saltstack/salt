@@ -2123,9 +2123,9 @@ external pillar functions.
 
 Suboptions can be specified using the ':' notation (i.e. ``option:suboption``)
 
-The values are are merged and included in the ``extra_minion_data`` optional
+The values are merged and included in the ``extra_minion_data`` optional
 parameter of the external pillar function.  The ``extra_minion_data`` parameter
-is passed only to the external pillars functions that have it explicitly
+is passed only to the external pillar functions that have it explicitly
 specified in their definition.
 
 If the config contains
@@ -2137,7 +2137,7 @@ If the config contains
       subopt1: value2
       subopt2: value3
 
-    add_to_pillar:
+    pass_to_ext_pillars:
       - opt1
       - opt2: subopt1
 
