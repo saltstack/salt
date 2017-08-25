@@ -84,7 +84,7 @@ class PillarTestCase(TestCase):
         with patch('inspect.getargspec',
                    MagicMock(return_value=MagicMock(args=[]))):
             pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
-                                         'fake_pillar_dirs', 'fake_ext_pillar')
+                                         'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with('mocked-minion',
                                                      'fake_pillar',
                                                      arg='foo')
@@ -93,7 +93,7 @@ class PillarTestCase(TestCase):
         with patch('inspect.getargspec',
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
-                                         'fake_pillar_dirs', 'fake_ext_pillar')
+                                         'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with('mocked-minion',
                                                      'fake_pillar',
                                                      arg='foo')
@@ -124,7 +124,7 @@ class PillarTestCase(TestCase):
         with patch('inspect.getargspec',
                    MagicMock(return_value=MagicMock(args=[]))):
             pillar._external_pillar_data('fake_pillar', ['foo'],
-                                         'fake_pillar_dirs', 'fake_ext_pillar')
+                                         'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with('mocked-minion',
                                                      'fake_pillar',
                                                      'foo')
@@ -133,7 +133,7 @@ class PillarTestCase(TestCase):
         with patch('inspect.getargspec',
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', ['foo'],
-                                         'fake_pillar_dirs', 'fake_ext_pillar')
+                                         'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with('mocked-minion',
                                                      'fake_pillar',
                                                      'foo')
@@ -164,7 +164,7 @@ class PillarTestCase(TestCase):
         with patch('inspect.getargspec',
                    MagicMock(return_value=MagicMock(args=[]))):
             pillar._external_pillar_data('fake_pillar', 'fake_val',
-                                         'fake_pillar_dirs', 'fake_ext_pillar')
+                                         'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with('mocked-minion',
                                                      'fake_pillar', 'fake_val')
         # ext pillar function has the extra_minion_data arg
@@ -172,7 +172,7 @@ class PillarTestCase(TestCase):
         with patch('inspect.getargspec',
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', 'fake_val',
-                                         'fake_pillar_dirs', 'fake_ext_pillar')
+                                         'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with('mocked-minion',
                                                      'fake_pillar', 'fake_val')
 
@@ -203,7 +203,7 @@ class PillarTestCase(TestCase):
         with patch('inspect.getargspec',
                    MagicMock(return_value=MagicMock(args=[]))):
             pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
-                                         'fake_pillar_dirs', 'fake_ext_pillar')
+                                         'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with(
             'mocked-minion', 'fake_pillar', arg='foo')
         # ext pillar function has the extra_minion_data arg
@@ -211,7 +211,7 @@ class PillarTestCase(TestCase):
         with patch('inspect.getargspec',
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
-                                         'fake_pillar_dirs', 'fake_ext_pillar')
+                                         'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with(
             'mocked-minion', 'fake_pillar', arg='foo',
             extra_minion_data={'fake_key': 'foo'})
@@ -243,7 +243,7 @@ class PillarTestCase(TestCase):
         with patch('inspect.getargspec',
                    MagicMock(return_value=MagicMock(args=[]))):
             pillar._external_pillar_data('fake_pillar', ['bar'],
-                                         'fake_pillar_dirs', 'fake_ext_pillar')
+                                         'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with(
             'mocked-minion', 'fake_pillar', 'bar')
         # ext pillar function has the extra_minion_data arg
@@ -251,7 +251,7 @@ class PillarTestCase(TestCase):
         with patch('inspect.getargspec',
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', ['bar'],
-                                         'fake_pillar_dirs', 'fake_ext_pillar')
+                                         'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with(
             'mocked-minion', 'fake_pillar', 'bar',
             extra_minion_data={'fake_key': 'foo'})
@@ -283,7 +283,7 @@ class PillarTestCase(TestCase):
         with patch('inspect.getargspec',
                    MagicMock(return_value=MagicMock(args=[]))):
             pillar._external_pillar_data('fake_pillar', 'bar',
-                                         'fake_pillar_dirs', 'fake_ext_pillar')
+                                         'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with(
             'mocked-minion', 'fake_pillar', 'bar')
         # ext pillar function has the extra_minion_data arg
@@ -291,7 +291,7 @@ class PillarTestCase(TestCase):
         with patch('inspect.getargspec',
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', 'bar',
-                                         'fake_pillar_dirs', 'fake_ext_pillar')
+                                         'fake_ext_pillar')
         mock_ext_pillar_func.assert_called_once_with(
             'mocked-minion', 'fake_pillar', 'bar',
             extra_minion_data={'fake_key': 'foo'})
@@ -624,7 +624,6 @@ class RemotePillarTestCase(TestCase):
         pillar = salt.pillar.RemotePillar(opts, self.grains,
                                           'mocked-minion', 'dev')
         self.assertEqual(pillar.pillar_override, {})
-
 
     def test_non_existent_intermediate_opt_in_add_to_pillar(self):
         opts = {
