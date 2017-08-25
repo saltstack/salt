@@ -22,6 +22,10 @@ import salt.utils.decorators as decorators
 from salt.utils.decorators import depends
 from salt.exceptions import CommandExecutionError
 
+__func_alias__ = {
+    'format_': 'format'
+}
+
 log = logging.getLogger(__name__)
 
 HAS_HDPARM = salt.utils.which('hdparm') is not None
