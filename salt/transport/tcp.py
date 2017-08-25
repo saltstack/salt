@@ -623,6 +623,17 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                     'payload and load must be a dict', header=header))
                 raise tornado.gen.Return()
 
+            try:
+                id_ = payload['load'].get('id', '')
+                if '\0' in id_:
+                    log.error('Payload contains an id with a null byte: %s', payload)
+                    stream.send(self.serial.dumps('bad load: id contains a null byte'))
+                    raise tornado.gen.Return()
+            except TypeError:
+                log.error('Payload contains non-string id: %s', payload)
+                stream.send(self.serial.dumps('bad load: id {0} is not a string'.format(id_)))
+                raise tornado.gen.Return()
+
             # intercept the "_auth" commands, since the main daemon shouldn't know
             # anything about our key auth
             if payload['enc'] == 'clear' and payload.get('load', {}).get('cmd') == '_auth':
