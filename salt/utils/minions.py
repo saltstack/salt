@@ -956,7 +956,11 @@ class CkMinions(object):
         if form != 'cloud':
             comps = fun.split('.')
             if len(comps) != 2:
-                return False
+                # Hint at a syntax error when command is passed improperly,
+                # rather than returning an authentication error of some kind.
+                # See Issue #21969 for more information.
+                return {'error': {'name': 'SaltInvocationError',
+                                  'message': 'A command invocation error occurred: Check syntax.'}}
             mod_name = comps[0]
             fun_name = comps[1]
         else:
