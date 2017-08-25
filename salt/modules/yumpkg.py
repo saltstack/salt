@@ -616,7 +616,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': [{'version' : 'version', 'arch' : 'arch'}]}
 
-        Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
 
         If ``all`` is specified, all valid attributes will be returned.
 
@@ -652,7 +653,16 @@ def list_pkgs(versions_as_list=False, **kwargs):
             osarch=__grains__['osarch']
         )
         if pkginfo is not None:
-            all_attr = {'version': pkginfo.version, 'arch': pkginfo.arch, 'install_date': pkginfo.install_date,
+            # see rpm version string rules available at https://goo.gl/UGKPNd
+            pkgver = pkginfo.version
+            epoch = ''
+            release = ''
+            if ':' in pkgver:
+                epoch, pkgver = pkgver.split(":", 1)
+            if '-' in pkgver:
+                pkgver, release = pkgver.split("-", 1)
+            all_attr = {'epoch': epoch, 'version': pkgver, 'release': release,
+                        'arch': pkginfo.arch, 'install_date': pkginfo.install_date,
                         'install_date_time_t': pkginfo.install_date_time_t}
             __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, all_attr)
 
@@ -1284,7 +1294,8 @@ def install(name=None,
                     'version': '<new-version>',
                     'arch': '<new-arch>'}}}
 
-        Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
 
         If ``all`` is specified, all valid attributes will be returned.
 
