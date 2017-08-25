@@ -100,14 +100,28 @@ to it can be verified with Salt:
     salt my-machine test.ping
 
 
-Provisioning salt-api (example)
-===============================
+Provisioning using salt-api (example)
+=====================================
 
 In order to query or control minions it created, the driver needs to send commands
-to the salt master.  It does that using the network interface of salt-api.
+to the VM host computer via the salt master.
+It does that using the network interface of salt-api.
 
 The salt-api is not enabled by default. The following example shows a
 simple installation.
+
+This example assumes:
+
+- your Salt master's Salt id is "bevymaster"
+- it will also be your salt-cloud controller
+- it is at hardware address 10.124.29.190
+- it has an administrative user named "vagrant"
+- the password for user "vagrant" is "vagrant"
+- it is running a recent Debian family OS (like Ubuntu server)
+- your workstation is a Salt minion of bevymaster
+- your workstation's minion id is "my_laptop"
+- the VM you want to start is on "my_laptop" at "/projects/bevy_master/Vagrantfile"
+- a user named "my_username" owns the Vagrant box files
 
 .. code-block:: ruby
 
@@ -115,9 +129,26 @@ simple installation.
     # file /projects/bevy_master/Vagrantfile on host computer "my_laptop"
     BEVY = "bevy1"
     DOMAIN = BEVY + ".test"  # .test is an ICANN reserved non-public TLD
+
+    # must supply a list of names to avoid Vagrant asking for interactive input
+    def get_good_ifc()   # try to find a working Ubuntu network adapter name
+      addr_infos = Socket.getifaddrs
+      addr_infos.each do |info|
+        a = info.addr
+        if a and a.ip? and not a.ip_address.start_with?("127.")
+         return info.name
+         end
+      end
+      return "eth0"  # fall back to an old reliable name
+    end
+
     Vagrant.configure(2) do |config|
       config.ssh.forward_agent = true  # so you can use git ssh://...
-      config.vm.network "public_network"  # add a bridged network interface
+
+      # add a bridged network interface, guess MacOS names first
+      interface_guesses = ['en0: Ethernet', 'en1: Wi-Fi (AirPort)', get_good_ifc()]
+      config.vm.network "public_network", bridge: interface_guesses
+
       # . . . . . . . . . . . . Define machine QUAIL1 . . . . . . . . . . . . . .
       config.vm.define "quail1", primary: true do |quail_config|
         quail_config.vm.box = "boxesio/xenial64-standard"  # a public VMware & Virtualbox box
@@ -179,8 +210,12 @@ simple installation.
         - unless:
           - salt-api --version
     #
+    python-pip:
+      pkg.installed
     cherrypy:
       pip.installed:
+        - require:
+          - pkg: python-pip
     #
     create-cert:
       module.run:
@@ -201,7 +236,7 @@ simple installation.
 Create and use your new Salt minion
 -----------------------------------
 
-- Typing on the Salt master computer (assuming it is also bevy_master)...
+- Typing on the Salt master computer...
 
 .. code-block:: bash
 
