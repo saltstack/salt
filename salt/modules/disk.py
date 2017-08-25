@@ -446,7 +446,7 @@ def format_(device,
 
     .. code-block:: bash
 
-        salt '*' disk.format /dev/sdX1
+        salt '*' disk.format_ /dev/sdX1
     '''
     cmd = ['mkfs', '-t', str(fs_type)]
     if inode_size is not None:
