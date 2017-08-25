@@ -4181,8 +4181,6 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
     existing_data = ''
     base_policy_settings = {}
     policy_data = _policy_info()
-    #//{0}:policy[@displayName = "{1}" and (@class = "Both" or @class = "{2}") ]
-    #policySearchXpath = etree.XPath('//*[@ns1:id = $id or @ns1:name = $id]')
     policySearchXpath = '//ns1:*[@id = "{0}" or @name = "{0}"]'
     try:
         if admx_policy_definitions is None or adml_policy_resources is None:
@@ -4213,8 +4211,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                 this_valuename = None
                 if str(base_policy_settings[adm_namespace][admPolicy]).lower() == 'disabled':
                     log.debug('time to disable {0}'.format(admPolicy))
-                    #this_policy = policySearchXpath(admx_policy_definitions, id=admPolicy, namespaces={'ns1': adm_namespace})
-                    this_policy = admx_policy_definitions.xpath(policySearchXpath.format('ns1', admPolicy), namespaces={'ns1': adm_namespace})
+                    this_policy = admx_policy_definitions.xpath(policySearchXpath.format(admPolicy), namespaces={'ns1': adm_namespace})
                     if this_policy:
                         this_policy = this_policy[0]
                         if 'class' in this_policy.attrib:
@@ -4325,7 +4322,6 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                             log.error(msg.format(this_policy.attrib))
                 else:
                     log.debug('time to enable and set the policy "{0}"'.format(admPolicy))
-                    #this_policy = policySearchXpath(admx_policy_definitions, id=admPolicy, namespaces={'ns1': adm_namespace})
                     this_policy = admx_policy_definitions.xpath(policySearchXpath.format(admPolicy), namespaces={'ns1': adm_namespace})
                     log.debug('found this_policy == {0}'.format(this_policy))
                     if this_policy:
