@@ -2236,13 +2236,18 @@ def detached(name,
 
         local_commit_id = _get_local_rev_and_branch(target, user, password)[0]
 
-        if remote_rev_type is 'hash' \
-                and __salt__['git.describe'](target,
-                                             rev,
-                                             user=user,
-                                             password=password):
-            # The rev is a hash and it exists locally so skip to checkout
-            hash_exists_locally = True
+        if remote_rev_type is 'hash':
+            try:
+                __salt__['git.describe'](target,
+                                         rev,
+                                         user=user,
+                                         password=password,
+                                         ignore_retcode=True)
+            except CommandExecutionError:
+                hash_exists_locally = False
+            else:
+                # The rev is a hash and it exists locally so skip to checkout
+                hash_exists_locally = True
         else:
             # Check that remote is present and set to correct url
             remotes = __salt__['git.remotes'](target,
