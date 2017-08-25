@@ -2894,18 +2894,6 @@ class GitPillar(GitBase):
                     return False
         return True
 
-    def update(self):
-        '''
-        Execute a git fetch on all of the repos. In this case, simply execute
-        self.fetch_remotes() from the parent class.
-
-        This function only exists to make the git_pillar update code in
-        master.py (salt.master.Maintenance.handle_git_pillar) less complicated,
-        once the legacy git_pillar code is purged we can remove this function
-        and just run pillar.fetch_remotes() there.
-        '''
-        return self.fetch_remotes()
-
 
 class WinRepo(GitBase):
     '''

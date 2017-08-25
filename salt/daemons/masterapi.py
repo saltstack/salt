@@ -32,6 +32,8 @@ import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gitfs
+import salt.utils.verify
+import salt.utils.minions
 import salt.utils.gzip_util
 import salt.utils.jid
 import salt.utils.minions
@@ -64,44 +66,19 @@ def init_git_pillar(opts):
     ret = []
     for opts_dict in [x for x in opts.get('ext_pillar', [])]:
         if 'git' in opts_dict:
-            if isinstance(opts_dict['git'], six.string_types):
-                # Legacy git pillar code
-                try:
-                    import git
-                except ImportError:
-                    return ret
-                parts = opts_dict['git'].strip().split()
-                try:
-                    br = parts[0]
-                    loc = parts[1]
-                except IndexError:
-                    log.critical(
-                        'Unable to extract external pillar data: {0}'
-                        .format(opts_dict['git'])
-                    )
+            try:
+                pillar = salt.utils.gitfs.GitPillar(opts)
+                pillar.init_remotes(
+                    opts_dict['git'],
+                    git_pillar.PER_REMOTE_OVERRIDES,
+                    git_pillar.PER_REMOTE_ONLY
+                )
+                ret.append(pillar)
+            except FileserverConfigError:
+                if opts.get('git_pillar_verify_config', True):
+                    raise
                 else:
-                    ret.append(
-                        git_pillar._LegacyGitPillar(
-                            br,
-                            loc,
-                            opts
-                        )
-                    )
-            else:
-                # New git_pillar code
-                try:
-                    pillar = salt.utils.gitfs.GitPillar(opts)
-                    pillar.init_remotes(
-                        opts_dict['git'],
-                        git_pillar.PER_REMOTE_OVERRIDES,
-                        git_pillar.PER_REMOTE_ONLY
-                    )
-                    ret.append(pillar)
-                except FileserverConfigError:
-                    if opts.get('git_pillar_verify_config', True):
-                        raise
-                    else:
-                        log.critical('Could not initialize git_pillar')
+                    log.critical('Could not initialize git_pillar')
     return ret
 
 
@@ -705,8 +682,7 @@ class RemoteFuncs(object):
                 load.get('ext'),
                 self.mminion.functions,
                 pillar_override=load.get('pillar_override', {}))
-        pillar_dirs = {}
-        data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
+        data = pillar.compile_pillar()
         if self.opts.get('minion_data_cache', False):
             self.cache.store('minions/{0}'.format(load['id']),
                              'data',
