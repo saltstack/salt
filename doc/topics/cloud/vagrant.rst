@@ -20,11 +20,11 @@ such as VirtualBox_.
 .. _Vagrant: https://www.vagrantup.com/
 .. _VirtualBox: https://www.virtualbox.org/
 
-\[Caution: The version of Vagrant packaged for `apt install` in Ubuntu 16.04 will not connect a bridged
+\[Caution: The version of Vagrant packaged for ``apt install`` in Ubuntu 16.04 will not connect a bridged
 network adapter correctly. Use a version downloaded directly from the web site.\]
 
 Include the Vagrant guest editions plugin:
-`vagrant plugin install vagrant-vbguest`.
+``vagrant plugin install vagrant-vbguest``.
 
 Salt-api must be installed and configured on the salt master.
 
