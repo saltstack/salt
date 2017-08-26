@@ -20,6 +20,12 @@ such as VirtualBox_.
 .. _Vagrant: https://www.vagrantup.com/
 .. _VirtualBox: https://www.virtualbox.org/
 
+\[Caution: The version of Vagrant packaged for `apt install` in Ubuntu 16.04 will not connect a bridged
+network adapter correctly. Use a version downloaded directly from the web site.\]
+
+Include the Vagrant guest editions plugin:
+`vagrant plugin install vagrant-vbguest`.
+
 Salt-api must be installed and configured on the salt master.
 
 
@@ -114,19 +120,21 @@ This example assumes:
 
 - your Salt master's Salt id is "bevymaster"
 - it will also be your salt-cloud controller
-- it is at hardware address 10.124.29.190
-- it has an administrative user named "vagrant"
-- the password for user "vagrant" is "vagrant"
-- it is running a recent Debian family OS (like Ubuntu server)
+- it is at hardware address 10.124.30.7
+- it has an administrative user named "pi"
+- the password for user "pi" is "raspberry"
+- it is running a recent Debian family Linux
 - your workstation is a Salt minion of bevymaster
 - your workstation's minion id is "my_laptop"
-- the VM you want to start is on "my_laptop" at "/projects/bevy_master/Vagrantfile"
-- a user named "my_username" owns the Vagrant box files
+- VirtualBox has been installed on "my_laptop" (apt install is okay)
+- Vagrant was installed from vagrantup.com. (not the 16.04 Ubuntu apt)
+- "my_laptop" has done "vagrant plugin install vagrant-vbguest"
+- the VM you want to start is on "my_laptop" at "/home/my_username/Vagrantfile"
 
 .. code-block:: ruby
 
     # -*- mode: ruby -*-
-    # file /projects/bevy_master/Vagrantfile on host computer "my_laptop"
+    # file /home/my_username/Vagrantfile on host computer "my_laptop"
     BEVY = "bevy1"
     DOMAIN = BEVY + ".test"  # .test is an ICANN reserved non-public TLD
 
@@ -145,10 +153,12 @@ This example assumes:
     Vagrant.configure(2) do |config|
       config.ssh.forward_agent = true  # so you can use git ssh://...
 
-      # add a bridged network interface, guess MacOS names first
-      interface_guesses = ['en0: Ethernet', 'en1: Wi-Fi (AirPort)', get_good_ifc()]
+      # add a bridged network interface, guess MacOS names too
+      interface_guesses = [get_good_ifc(), 'en0: Ethernet', 'en1: Wi-Fi (AirPort)']
       config.vm.network "public_network", bridge: interface_guesses
-
+      if ARGV[0] == "up"
+        puts "Trying bridge network using interfaces: #{interface_guesses}"
+      end
       # . . . . . . . . . . . . Define machine QUAIL1 . . . . . . . . . . . . . .
       config.vm.define "quail1", primary: true do |quail_config|
         quail_config.vm.box = "boxesio/xenial64-standard"  # a public VMware & Virtualbox box
@@ -163,7 +173,7 @@ This example assumes:
       host: my_laptop  # the Salt id of your virtual machine host
       machine: quail1   # a machine name in the Vagrantfile (if not primary)
       runas: my_username  # owner of Vagrant box files on "my_laptop"
-      cwd: '/projects/bevy_master' # the path (on "my_laptop") of the Vagrantfile
+      cwd: '/home/my_username' # the path (on "my_laptop") of the Vagrantfile
       provider: my_vagrant_provider  # name of entry in provider.conf file
 
 .. code-block:: yaml
@@ -172,10 +182,10 @@ This example assumes:
     my_vagrant_provider:
       driver: vagrant
       api_eauth: pam
-      api_username: vagrant  # supply some sudo-group member's name
-      api_password: vagrant  # and password on the salt master
+      api_username: pi  # supply some sudo-group member's name
+      api_password: raspberry  # and password on the salt master
       minion:
-        master: 10.124.29.190  # the hard address of the master
+        master: 10.124.30.7  # the hard address of the master
 
 .. code-block:: yaml
 
@@ -241,6 +251,8 @@ Create and use your new Salt minion
 .. code-block:: bash
 
     sudo salt-call state.apply salt_api
+    sudo systemctl restart salt-master
+    sudo systemctl restart salt-minion
     sudo salt-cloud -p q1 v1
     sudo salt v1 network.ip_addrs
       [ you get a list of ip addresses, including the bridged one ]
