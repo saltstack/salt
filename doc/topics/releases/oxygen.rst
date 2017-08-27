@@ -46,6 +46,11 @@ noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
 
+New NaCl Renderer
+-----------------
+
+A new renderer has been added for encrypted data.
+
 New GitFS Features
 ------------------
 
@@ -702,6 +707,13 @@ pillar key, ``minion_blackout`` set to ``True`` and an optional pillar key
 during blackout. This release adds support for using this feature in the grains
 as well, by using special grains keys ``minion_blackout`` and
 ``minion_blackout_whitelist``.
+
+Pillar Deprecations
+-------------------
+
+The legacy configuration for ``git_pillar`` has been removed. Please use the new
+configuration for ``git_pillar``, which is documented in the external pillar module
+for :mod:`git_pillar <salt.pillar.git_pillar>`.
 
 Utils Deprecations
 ==================
