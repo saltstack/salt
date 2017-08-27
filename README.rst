@@ -67,10 +67,11 @@ Engage SaltStack
 
 `SaltConf`_, **User Groups and Meetups** - SaltStack has a vibrant and `global
 community`_ of customers, users, developers and enthusiasts. Connect with other
-Salted folks in your area of the world, or join `SaltConf16`_, the SaltStack
-annual user conference, April 19-21 in Salt Lake City. Please let us know if
-you would like to start a user group or if we should add your existing
-SaltStack user group to this list by emailing: info@saltstack.com
+Salted folks in your area of the world, or join `SaltConf`_, the SaltStack
+annual user conference held in Salt Lake City. Please visit the `SaltConf`_ site
+for details of our next conference. Also, please let us know if you would like
+to start a user group or if we should add your existing SaltStack user group to
+this list by emailing: info@saltstack.com
 
 **SaltStack Training** - Get access to proprietary `SaltStack education
 offerings`_ through instructor-led training offered on-site, virtually or at
@@ -89,9 +90,8 @@ services`_ offerings.
 * LinkedIn Group - `<https://www.linkedin.com/groups/4877160>`_
 * Google+ - `<https://plus.google.com/b/112856352920437801867/+SaltStackInc/posts>`_
 
-.. _SaltConf: http://www.youtube.com/user/saltstack
 .. _global community: http://www.meetup.com/pro/saltstack/
-.. _SaltConf16: http://saltconf.com/
+.. _SaltConf: http://saltconf.com/
 .. _SaltStack education offerings: http://saltstack.com/training/
 .. _SaltStack Certified Engineer (SSCE): http://saltstack.com/certification/
 .. _SaltStack professional services: http://saltstack.com/services/
