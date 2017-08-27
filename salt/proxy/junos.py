@@ -127,9 +127,21 @@ def alive(opts):
     .. versionadded:: Oxygen
     '''
 
-    thisproxy['conn'].connected = ping()
-
-    return thisproxy['conn'].connected
+    dev = conn()
+    # call rpc only if ncclient queue is empty. If not empty that means other
+    # rpc call is going on.
+    if hasattr(dev._conn, '_session'):
+        if dev._conn._session._transport.is_active():
+            # there is no on going rpc call.
+            if dev._conn._session._q.empty():
+                thisproxy['conn'].connected = ping()
+        else:
+            # ssh connection is lost
+            dev.connected = False
+    else:
+        # other connection modes, like telnet
+        thisproxy['conn'].connected = ping()
+    return dev.connected
 
 
 def proxytype():
@@ -159,17 +171,14 @@ def ping():
     '''
 
     dev = conn()
-    # call rpc only if ncclient queue is empty. If not empty that means other
-    # rpc call is going on.
-    if hasattr(dev._conn, '_session') and dev._conn._session._q.empty():
+    try:
+        dev.rpc.file_list(path='/dev/null', dev_timeout=2)
+        return True
+    except (RpcTimeoutError, ConnectClosedError):
         try:
-            dev.rpc.file_list(path='/dev/null', dev_timeout=2)
-        except (RpcTimeoutError, ConnectClosedError):
-            try:
-                dev.close()
-            except (RpcError, ConnectError, TimeoutExpiredError):
-                dev.connected = False
-    return dev.connected
+            dev.close()
+        except (RpcError, ConnectError, TimeoutExpiredError):
+            return False
 
 
 def shutdown(opts):
