@@ -50,6 +50,7 @@ try:
     from jnpr.junos.exception import ConnectClosedError
     from jnpr.junos.exception import RpcError
     from jnpr.junos.exception import ConnectError
+    from ncclient.operations.errors import TimeoutExpiredError
 except ImportError:
     HAS_JUNOS = False
 
@@ -160,14 +161,14 @@ def ping():
     dev = conn()
     # call rpc only if ncclient queue is empty. If not empty that means other
     # rpc call is going on.
-    if hasattr(dev, '_session') and not dev._session._q.empty():
+    if hasattr(dev._conn, '_session') and dev._conn._session._q.empty():
         try:
             dev.rpc.file_list(path='/dev/null', dev_timeout=2)
-        except RpcTimeoutError:
+        except (RpcTimeoutError, ConnectClosedError):
             try:
                 dev.close()
-            except (RpcError, ConnectError):
-                pass
+            except (RpcError, ConnectError, TimeoutExpiredError):
+                dev.connected = False
     return dev.connected
 
 
