@@ -9,8 +9,12 @@ import os
 import shutil
 import tempfile
 import textwrap
-import pwd
 import logging
+import stat
+try:
+    import pwd
+except ImportError:
+    pass
 
 # Import 3rd-party libs
 import yaml
@@ -189,7 +193,6 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
         self.integration_base_files = os.path.join(FILES, 'file', 'base')
 
         # Create the dir if it doesn't already exist
-
         try:
             shutil.copytree(self.integration_base_files, self.tmp_repo_dir + '/')
         except OSError:
@@ -203,7 +206,11 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
 
         if 'USERNAME' not in os.environ:
             try:
-                os.environ['USERNAME'] = pwd.getpwuid(os.geteuid()).pw_name
+                if salt.utils.is_windows():
+                    import salt.utils.win_functions
+                    os.environ['USERNAME'] = salt.utils.win_functions.get_current_user()
+                else:
+                    os.environ['USERNAME'] = pwd.getpwuid(os.geteuid()).pw_name
             except AttributeError:
                 log.error('Unable to get effective username, falling back to '
                           '\'root\'.')
@@ -219,13 +226,17 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
         Remove the temporary git repository and gitfs cache directory to ensure
         a clean environment for each test.
         '''
-        shutil.rmtree(self.tmp_repo_dir)
-        shutil.rmtree(self.tmp_cachedir)
-        shutil.rmtree(self.tmp_sock_dir)
+        shutil.rmtree(self.tmp_repo_dir, onerror=self._rmtree_error)
+        shutil.rmtree(self.tmp_cachedir, onerror=self._rmtree_error)
+        shutil.rmtree(self.tmp_sock_dir, onerror=self._rmtree_error)
         del self.tmp_repo_dir
         del self.tmp_cachedir
         del self.tmp_sock_dir
         del self.integration_base_files
+
+    def _rmtree_error(self, func, path, excinfo):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
 
     def test_file_list(self):
         ret = gitfs.file_list(LOAD)
