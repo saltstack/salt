@@ -903,7 +903,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 # Version is ignored
                 salt '*' pkg.install pkgs="['foo', 'bar']" version=1.2.3
 
-            If passed with a comma seperated list in the ``name`` parameter, the
+            If passed with a comma separated list in the ``name`` parameter, the
             version will apply to all packages in the list.
 
             CLI Example:
