@@ -40,7 +40,9 @@ import base64
 import logging
 import yaml
 import tempfile
+import signal
 from time import sleep
+from contextlib import contextmanager
 
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
@@ -68,6 +70,9 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'kubernetes'
 
+_polling_time_limit = 20
+
+
 
 def __virtual__():
     '''
@@ -78,6 +83,21 @@ def __virtual__():
 
     return False, 'python kubernetes library not found'
 
+
+class TimeoutException(Exception):
+    pass
+
+
+@contextmanager
+def _time_limit(seconds):
+    def signal_handler(signum, frame):
+        raise TimeoutException, "Timed out!"
+    signal.signal(signal.SIGALRM, signal_handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
 
 # pylint: disable=no-member
 def _setup_conn(**kwargs):
@@ -694,10 +714,14 @@ def delete_deployment(name, namespace='default', **kwargs):
             namespace=namespace,
             body=body)
         mutable_api_response = api_response.to_dict()
-        while show_deployment(name, namespace) is not None:
-            sleep(0.5)
-        else:
-            mutable_api_response['code'] = 200
+        try:
+            with _time_limit(_polling_time_limit):
+                while show_deployment(name, namespace) is not None:
+                    sleep(1)
+                else:
+                    mutable_api_response['code'] = 200
+        except TimeoutException:
+            pass
         return mutable_api_response
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
