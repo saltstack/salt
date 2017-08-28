@@ -88,7 +88,6 @@ from __future__ import absolute_import
 from uuid import uuid4 as _uuid
 
 # Import salt libs
-import salt.utils.versions
 from salt.utils.odict import OrderedDict
 from salt.state import HighState
 
