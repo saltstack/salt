@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     Mock,
@@ -17,16 +18,20 @@ from tests.support.mock import (
 
 from salt.modules import kubernetes
 
-kubernetes.__salt__ = {}
-kubernetes.__grains__ = {}
-kubernetes.__context__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class KubernetesTestCase(TestCase):
+class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.kubernetes
     '''
+
+    def setup_loader_modules(self):
+        return {
+            kubernetes: {
+                '__salt__': {},
+            }
+        }
+
     def test_nodes(self):
         '''
         Test node listing.
@@ -82,7 +87,8 @@ class KubernetesTestCase(TestCase):
                         {'items': [{'metadata': {'name': 'mock_pod_name'}}]}}
                 )
                 self.assertEqual(kubernetes.pods(), ['mock_pod_name'])
-                self.assertTrue(kubernetes.kubernetes.client.CoreV1Api().list_namespaced_pod().to_dict.called)
+                self.assertTrue(kubernetes.kubernetes.client.CoreV1Api().
+                                list_namespaced_pod().to_dict.called)
 
     def test_delete_deployments(self):
         '''
@@ -97,7 +103,8 @@ class KubernetesTestCase(TestCase):
                 )
                 self.assertEqual(kubernetes.delete_deployment("test"), {})
                 self.assertTrue(
-                    kubernetes.kubernetes.client.ExtensionsV1beta1Api().delete_namespaced_deployment().to_dict.called)
+                    kubernetes.kubernetes.client.ExtensionsV1beta1Api().
+                    delete_namespaced_deployment().to_dict.called)
 
     def test_create_deployments(self):
         '''
@@ -109,6 +116,8 @@ class KubernetesTestCase(TestCase):
                 mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
                     **{"create_namespaced_deployment.return_value.to_dict.return_value": {}}
                 )
-                self.assertEqual(kubernetes.create_deployment("test", "default", {}, {}, None, None, None), {})
+                self.assertEqual(kubernetes.create_deployment("test", "default", {}, {},
+                                                              None, None, None), {})
                 self.assertTrue(
-                    kubernetes.kubernetes.client.ExtensionsV1beta1Api().create_namespaced_deployment().to_dict.called)
+                    kubernetes.kubernetes.client.ExtensionsV1beta1Api().
+                    create_namespaced_deployment().to_dict.called)
