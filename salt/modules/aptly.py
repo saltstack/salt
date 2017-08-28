@@ -145,14 +145,15 @@ def get_config(config_path=_DEFAULT_CONFIG_PATH):
     return json.loads(cmd_ret)
 
 
-def list_repos(config_path=_DEFAULT_CONFIG_PATH):
+def list_repos(config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
     '''
-    Get a list of all the repos.
+    List all of the repos.
 
     :param str config_path: The path to the configuration file for the aptly instance.
+    :param bool with_packages: Return a list of packages in the repo.
 
-    :return: A list of the repository names.
-    :rtype: list
+    :return: A dictionary of the repositories.
+    :rtype: dict
 
     CLI Example:
 
@@ -162,13 +163,17 @@ def list_repos(config_path=_DEFAULT_CONFIG_PATH):
     '''
     _validate_config(config_path)
 
+    ret = dict()
     cmd = ['repo', 'list', '-config={}'.format(config_path), '-raw=true']
 
     cmd_ret = _cmd_run(cmd)
+    repos = [line.strip() for line in cmd_ret.splitlines()]
 
-    ret = [line.strip() for line in cmd_ret.splitlines()]
+    _LOG.debug('Found repositories: %s', len(repos))
 
-    _LOG.debug('Found repositories: %s', len(ret))
+    for name in repos:
+        ret[name] = get_repo(name=name, config_path=config_path,
+                             with_packages=with_packages)
     return ret
 
 
@@ -397,7 +402,6 @@ def list_mirrors(config_path=_DEFAULT_CONFIG_PATH):
     cmd = ['mirror', 'list', '-config={}'.format(config_path), '-raw=true']
 
     cmd_ret = _cmd_run(cmd)
-
     ret = [line.strip() for line in cmd_ret.splitlines()]
 
     _LOG.debug('Found mirrors: %s', len(ret))
@@ -424,7 +428,6 @@ def list_published(config_path=_DEFAULT_CONFIG_PATH):
     cmd = ['publish', 'list', '-config={}'.format(config_path), '-raw=true']
 
     cmd_ret = _cmd_run(cmd)
-
     ret = [line.strip() for line in cmd_ret.splitlines()]
 
     _LOG.debug('Found published repositories: %s', len(ret))
@@ -457,7 +460,6 @@ def list_snapshots(config_path=_DEFAULT_CONFIG_PATH, sort_by_time=False):
         cmd.append('-sort=name')
 
     cmd_ret = _cmd_run(cmd)
-
     ret = [line.strip() for line in cmd_ret.splitlines()]
 
     _LOG.debug('Found snapshots: %s', len(ret))
