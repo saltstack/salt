@@ -140,12 +140,7 @@ class Sls(object):
 
     def include(self, *sls_names, **kws):
         if 'env' in kws:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             kws.pop('env')
 
         saltenv = kws.get('saltenv', self.saltenv)

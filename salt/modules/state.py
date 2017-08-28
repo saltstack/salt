@@ -397,12 +397,7 @@ def template(tem, queue=False, **kwargs):
         salt '*' state.template '<Path to template on the minion>'
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     conflict = _check_queue(queue, kwargs)
@@ -839,12 +834,7 @@ def highstate(test=None, queue=False, **kwargs):
     opts['test'] = _get_test_value(test, **kwargs)
 
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     if 'saltenv' in kwargs:
@@ -1006,12 +996,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     '''
     concurrent = kwargs.get('concurrent', False)
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     # Modification to __opts__ lost after this if-else
@@ -1489,12 +1474,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
         salt '*' state.show_low_sls foo saltenv=dev
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     conflict = _check_queue(queue, kwargs)
@@ -1580,12 +1560,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
         salt '*' state.show_sls core,edit.vim dev
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     conflict = _check_queue(queue, kwargs)
@@ -1656,12 +1631,7 @@ def show_top(queue=False, **kwargs):
         salt '*' state.show_top
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     conflict = _check_queue(queue, kwargs)

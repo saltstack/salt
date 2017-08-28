@@ -2075,12 +2075,7 @@ def managed(name,
             - win_inheritance: False
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     name = os.path.expanduser(name)
@@ -3208,12 +3203,7 @@ def recurse(name,
         option is usually not needed except in special circumstances.
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     name = os.path.expanduser(sdecode(name))
@@ -5029,12 +5019,7 @@ def patch(name,
     hash_ = kwargs.pop('hash', None)
 
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     name = os.path.expanduser(name)
@@ -5687,12 +5672,7 @@ def serialize(name,
         }
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     name = os.path.expanduser(name)
