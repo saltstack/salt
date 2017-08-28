@@ -70,8 +70,12 @@ Each profile requires a ``vagrantfile`` parameter. If the Vagrantfile has
 definitions for `multiple machines`_ then you need a ``machine`` parameter,
 
 .. _`multiple machines`: https://www.vagrantup.com/docs/multi-machine/
-as well as either
-an ``key_filename`` or a ``password``.
+
+Salt-cloud uses ssh to provision the minion. Usually, you will want to use the
+address of a bridged network adapter for ssh. This address is not known until
+DHCP assigns it. If you include an ``ifconfig`` command in the
+Vagranfile provision script, the driver can read the address from the output
+of the ``vagrant up`` command.
 
 Profile configuration example:
 
@@ -84,8 +88,8 @@ Profile configuration example:
       provider: my-vagrant-config
       cwd: /srv/machines  # the path to your Virtualbox file.
       runas: my-username  # the username who defined the Vagrantbox on the host
-      vagrant_up_timeout: 180 # timeout for cmd.run of the "vagrant up" command (seconds)
-
+      # vagrant_up_timeout: 180 # timeout for cmd.run of the "vagrant up" command (seconds)
+      # ssh_host: None  # "None" means find the routable ip address in "vagrant up" response
 
 The machine can now be created and configured with the following command:
 
@@ -153,12 +157,16 @@ This example assumes:
     Vagrant.configure(2) do |config|
       config.ssh.forward_agent = true  # so you can use git ssh://...
 
-      # add a bridged network interface, guess MacOS names too
+      # add a bridged network interface, try to detect name, then guess MacOS names, too
       interface_guesses = [get_good_ifc(), 'en0: Ethernet', 'en1: Wi-Fi (AirPort)']
       config.vm.network "public_network", bridge: interface_guesses
       if ARGV[0] == "up"
         puts "Trying bridge network using interfaces: #{interface_guesses}"
       end
+      # report your bridged ip address to salt-cloud for provisioning ...
+      # [Note: "8.8.8.8" is the default for bridged_ip_address_detect]
+      config.vm.provision "shell", inline: "ifconfig", run: "always"
+
       # . . . . . . . . . . . . Define machine QUAIL1 . . . . . . . . . . . . . .
       config.vm.define "quail1", primary: true do |quail_config|
         quail_config.vm.box = "boxesio/xenial64-standard"  # a public VMware & Virtualbox box
