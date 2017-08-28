@@ -1212,7 +1212,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         use_msiexec, msiexec = _get_msiexec(pkginfo[version_num].get('msiexec', False))
 
         # Build cmd and arguments
-        # cmd and arguments must be seperated for use with the task scheduler
+        # cmd and arguments must be separated for use with the task scheduler
         if use_msiexec:
             cmd = msiexec
             arguments = ['/i', cached_pkg]
@@ -1275,7 +1275,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         else:
 
             # Combine cmd and arguments
-            cmd = [cmd].extend(arguments)
+            cmd = [cmd]
+            cmd.extend(arguments)
 
             # Launch the command
             result = __salt__['cmd.run_all'](cmd,
