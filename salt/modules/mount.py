@@ -14,6 +14,7 @@ import salt.utils  # Can be removed once test_mode is moved
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.mount
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
 # Import 3rd-party libs
@@ -1262,3 +1263,58 @@ def is_mounted(name):
         return True
     else:
         return False
+
+
+def read_mount_cache(name):
+    '''
+    .. versionadded:: Oxygen
+
+    Provide information if the path is mounted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.read_mount_cache /mnt/share
+    '''
+    cache = salt.utils.mount.read_cache(__opts__)
+    if cache:
+        if 'mounts' in cache and cache['mounts']:
+            if name in cache['mounts']:
+                return cache['mounts'][name]
+    return {}
+
+
+def write_mount_cache(real_name,
+                      device,
+                      mkmnt,
+                      fstype,
+                      opts):
+    '''
+    .. versionadded:: Oxygen
+
+    Provide information if the path is mounted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.write_mount_cache /mnt/share
+    '''
+    cache = salt.utils.mount.read_cache(__opts__)
+
+    if 'mounts' in cache:
+        cache['mounts'][real_name] = {'device': device,
+                                      'fstype': fstype,
+                                      'mkmnt': mkmnt,
+                                      'opts': opts}
+    else:
+        cache['mounts'] = {}
+        cache['mounts'][real_name] = {'device': device,
+                                      'fstype': fstype,
+                                      'mkmnt': mkmnt,
+                                      'opts': opts}
+
+    log.debug('=== cache {} ==='.format(cache))
+    cache = salt.utils.mount.write_cache(cache, __opts__)
+    return True
