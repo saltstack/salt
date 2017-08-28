@@ -2832,7 +2832,8 @@ def _findOptionValueInSeceditFile(option):
             _reader = codecs.open(_tfile, 'r', encoding='utf-16')
             _secdata = _reader.readlines()
             _reader.close()
-            _ret = __salt__['file.remove'](_tfile)
+            if __salt__['file.file_exists'](_tfile):
+                _ret = __salt__['file.remove'](_tfile)
             for _line in _secdata:
                 if _line.startswith(option):
                     return True, _line.split('=')[1].strip()
@@ -2853,16 +2854,20 @@ def _importSeceditConfig(infdata):
         _tInfFile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'),
                                       'salt-secedit-config-{0}.inf'.format(_d))
         # make sure our temp files don't already exist
-        _ret = __salt__['file.remove'](_tSdbfile)
-        _ret = __salt__['file.remove'](_tInfFile)
+        if __salt__['file.file_exists'](_tSdbfile):
+            _ret = __salt__['file.remove'](_tSdbfile)
+        if __salt__['file.file_exists'](_tInfFile):
+            _ret = __salt__['file.remove'](_tInfFile)
         # add the inf data to the file, win_file sure could use the write() function
         _ret = __salt__['file.touch'](_tInfFile)
         _ret = __salt__['file.append'](_tInfFile, infdata)
         # run secedit to make the change
         _ret = __salt__['cmd.run']('secedit /configure /db {0} /cfg {1}'.format(_tSdbfile, _tInfFile))
         # cleanup our temp files
-        _ret = __salt__['file.remove'](_tSdbfile)
-        _ret = __salt__['file.remove'](_tInfFile)
+        if __salt__['file.file_exists'](_tSdbfile):
+            _ret = __salt__['file.remove'](_tSdbfile)
+        if __salt__['file.file_exists'](_tInfFile):
+            _ret = __salt__['file.remove'](_tInfFile)
         return True
     except Exception as e:
         log.debug('error occurred while trying to import secedit data')
