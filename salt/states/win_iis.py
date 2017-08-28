@@ -494,8 +494,8 @@ def container_setting(name, container, settings=None):
                     processModel.maxProcesses: 1
                     processModel.userName: TestUser
                     processModel.password: TestPassword
-                    processModel.identityType: SpecificUser  
-    
+                    processModel.identityType: SpecificUser
+
     Example of usage for the ``Sites`` container:
 
     .. code-block:: yaml
@@ -509,9 +509,8 @@ def container_setting(name, container, settings=None):
                     logFile.period: Daily
                     limits.maxUrlSegments: 32
     '''
-    
+
     identityType_map2string = {0: 'LocalSystem', 1: 'LocalService', 2: 'NetworkService', 3: 'SpecificUser', 4: 'ApplicationPoolIdentity'}
-    
     ret = {'name': name,
            'changes': {},
            'comment': str(),
