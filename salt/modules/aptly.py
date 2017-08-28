@@ -14,7 +14,7 @@ import re
 # Import salt libs
 from salt.exceptions import SaltInvocationError
 import salt.utils.path
-
+import salt.utils.stringutils as stringutils
 
 _DEFAULT_CONFIG_PATH = '/etc/aptly.conf'
 _LOG = logging.getLogger(__name__)
@@ -30,25 +30,6 @@ def __virtual__():
     if salt.utils.path.which('aptly'):
         return __virtualname__
     return (False, 'The aptly binaries required cannot be found or are not installed.')
-
-
-def _cast_if_numeric(value):
-    '''
-    Determine if the provided value is numeric.
-
-    :return: The converted or passed value.
-    :rtype: float|int|str
-    '''
-    try:
-        float_value = float(str(value))
-    except ValueError:
-        if value:
-            return str(value)
-        return None
-
-    if float_value.is_integer():
-        return int(float_value)
-    return float_value
 
 
 def _cmd_run(cmd):
@@ -204,7 +185,7 @@ def get_repo(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
             items = line.split(':')
             key = items[0].lower().replace('default', '').strip()
             key = ' '.join(key.split()).replace(' ', '_')
-            ret[key] = _cast_if_numeric(items[1].strip())
+            ret[key] = stringutils.to_none(stringutils.to_num(items[1].strip()))
         except (AttributeError, IndexError):
             # If the line doesn't have the separator or is otherwise invalid, skip it.
             _LOG.debug('Skipping line: %s', line)
