@@ -1243,7 +1243,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
             # Run Scheduled Task
             # Special handling for installing salt
-            if pkg_name in ['salt-minion', 'salt-minion-py3']:
+            if re.search(r'salt[\s-]*minion', pkg_name, flags=re.IGNORECASE+re.UNICODE) is not None:
                 ret[pkg_name] = {'install status': 'task started'}
                 if not __salt__['task.run'](name='update-salt-software'):
                     log.error('Failed to install {0}'.format(pkg_name))
