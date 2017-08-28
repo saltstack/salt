@@ -91,13 +91,14 @@ class TimeoutException(Exception):
 @contextmanager
 def _time_limit(seconds):
     def signal_handler(signum, frame):
-        raise TimeoutException, "Timed out!"
+        raise(TimeoutException, "Timed out!")
     signal.signal(signal.SIGALRM, signal_handler)
     signal.alarm(seconds)
     try:
         yield
     finally:
         signal.alarm(0)
+
 
 # pylint: disable=no-member
 def _setup_conn(**kwargs):
