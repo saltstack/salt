@@ -640,6 +640,7 @@ def mounted(name,
                                                   match_on=match_on)
 
         if update_mount_cache:
+            log.debug('=== opts {} ==='.format(opts))
             cache_result = __salt__['mount.write_mount_cache'](real_name,
                                                                device,
                                                                mkmnt=mkmnt,
@@ -785,6 +786,8 @@ def unmounted(name,
            'result': True,
            'comment': ''}
 
+    update_mount_cache = False
+
     # Get the active data
     active = __salt__['mount.active'](extended=True)
     if name not in active:
@@ -799,8 +802,10 @@ def unmounted(name,
             return ret
         if device:
             out = __salt__['mount.umount'](name, device, user=user)
+            update_mount_cache = True
         else:
             out = __salt__['mount.umount'](name, user=user)
+            update_mount_cache = True
         if isinstance(out, string_types):
             # Failed to umount, the state has failed!
             ret['comment'] = out
@@ -812,6 +817,9 @@ def unmounted(name,
         else:
             ret['comment'] = 'Execute set to False, Target was not unmounted'
             ret['result'] = True
+
+    if update_mount_cache:
+        cache_result = __salt__['mount.delete_mount_cache'](name)
 
     if persist:
         # Override default for Mac OS

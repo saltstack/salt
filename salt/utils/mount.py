@@ -65,7 +65,6 @@ def write_cache(cache, opts):
                         Dumper=SafeOrderedDumper
                     )
                 )
-        log.debug('=== cache {} ==='.format(_cache))
         with salt.utils.files.fopen(cache_file, 'wb+') as fp_:
             fp_.write(_cache)
     except (IOError, OSError):

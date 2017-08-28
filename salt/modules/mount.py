@@ -1315,6 +1315,26 @@ def write_mount_cache(real_name,
                                       'mkmnt': mkmnt,
                                       'opts': opts}
 
-    log.debug('=== cache {} ==='.format(cache))
     cache = salt.utils.mount.write_cache(cache, __opts__)
+    return True
+
+
+def delete_mount_cache(real_name):
+    '''
+    .. versionadded:: Oxygen
+
+    Provide information if the path is mounted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.delete_mount_cache /mnt/share
+    '''
+    cache = salt.utils.mount.read_cache(__opts__)
+
+    if 'mounts' in cache:
+        if real_name in cache['mounts']:
+            del cache['mounts'][real_name]
+            cache = salt.utils.mount.write_cache(cache, __opts__)
     return True
