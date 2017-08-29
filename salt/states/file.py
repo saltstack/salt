@@ -622,7 +622,11 @@ def _clean_dir(root, keep, exclude_pat):
             while True:
                 fn_ = os.path.dirname(fn_)
                 real_keep.add(fn_)
-                if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\\\'])]:
+                if fn_ in [
+                           os.sep,
+                           ''.join([os.path.splitdrive(fn_)[0], os.sep]),
+                           ''.join([os.path.splitdrive(fn_)[0], os.sep, os.sep])
+                          ]:
                     break
 
     def _delete_not_kept(nfn):

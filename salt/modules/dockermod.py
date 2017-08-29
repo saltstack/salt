@@ -899,9 +899,14 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict][item]
             val2 = result2[conf_dict].get(item)
-            if item in ('OomKillDisable',):
+            if item in ('OomKillDisable',) or (val1 is None or val2 is None):
                 if bool(val1) != bool(val2):
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            elif item == 'Image':
+                image1 = inspect_image(val1)['Id']
+                image2 = inspect_image(val2)['Id']
+                if image1 != image2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
             else:
                 if item == 'Links':
                     val1 = _scrub_links(val1, first)
@@ -917,9 +922,14 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict].get(item)
             val2 = result2[conf_dict][item]
-            if item in ('OomKillDisable',):
+            if item in ('OomKillDisable',) or (val1 is None or val2 is None):
                 if bool(val1) != bool(val2):
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            elif item == 'Image':
+                image1 = inspect_image(val1)['Id']
+                image2 = inspect_image(val2)['Id']
+                if image1 != image2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
             else:
                 if item == 'Links':
                     val1 = _scrub_links(val1, first)
@@ -3880,8 +3890,9 @@ def save(name,
         saved_path = salt.utils.files.mkstemp()
     else:
         saved_path = path
-
-    cmd = ['docker', 'save', '-o', saved_path, inspect_image(name)['Id']]
+    # use the image name if its valid if not use the image id
+    image_to_save = name if name in inspect_image(name)['RepoTags'] else inspect_image(name)['Id']
+    cmd = ['docker', 'save', '-o', saved_path, image_to_save]
     time_started = time.time()
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     if result['retcode'] != 0:

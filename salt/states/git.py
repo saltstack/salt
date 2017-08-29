@@ -1301,6 +1301,23 @@ def latest(name,
                         'if it does not already exist).',
                         comments
                     )
+                remote_tags = set([
+                    x.replace('refs/tags/', '') for x in __salt__['git.ls_remote'](
+                        cwd=target,
+                        remote=remote,
+                        opts="--tags",
+                        user=user,
+                        password=password,
+                        identity=identity,
+                        saltenv=__env__,
+                        ignore_retcode=True,
+                    ).keys() if '^{}' not in x
+                ])
+                if set(all_local_tags) != remote_tags:
+                    has_remote_rev = False
+                    ret['changes']['new_tags'] = list(remote_tags.symmetric_difference(
+                        all_local_tags
+                    ))
 
                 if not has_remote_rev:
                     try:
@@ -1456,8 +1473,6 @@ def latest(name,
                                                         user=user,
                                                         password=password,
                                                         ignore_retcode=True):
-                            merge_rev = remote_rev if rev == 'HEAD' \
-                                else desired_upstream
 
                             if git_ver >= _LooseVersion('1.8.1.6'):
                                 # --ff-only added in version 1.8.1.6. It's not
@@ -1474,7 +1489,7 @@ def latest(name,
 
                             __salt__['git.merge'](
                                 target,
-                                rev=merge_rev,
+                                rev=remote_rev,
                                 opts=merge_opts,
                                 user=user,
                                 password=password)
@@ -2238,13 +2253,18 @@ def detached(name,
 
         local_commit_id = _get_local_rev_and_branch(target, user, password)[0]
 
-        if remote_rev_type is 'hash' \
-                and __salt__['git.describe'](target,
-                                             rev,
-                                             user=user,
-                                             password=password):
-            # The rev is a hash and it exists locally so skip to checkout
-            hash_exists_locally = True
+        if remote_rev_type is 'hash':
+            try:
+                __salt__['git.describe'](target,
+                                         rev,
+                                         user=user,
+                                         password=password,
+                                         ignore_retcode=True)
+            except CommandExecutionError:
+                hash_exists_locally = False
+            else:
+                # The rev is a hash and it exists locally so skip to checkout
+                hash_exists_locally = True
         else:
             # Check that remote is present and set to correct url
             remotes = __salt__['git.remotes'](target,
