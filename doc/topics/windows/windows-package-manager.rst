@@ -140,7 +140,7 @@ packages:
 - 2015.8.0 and later minions: https://github.com/saltstack/salt-winrepo-ng
 - Earlier releases: https://github.com/saltstack/salt-winrepo
 
-By default, these repositories are mirrored to ``/srv/salt/win/repo_ng``
+By default, these repositories are mirrored to ``/srv/salt/win/repo-ng``
 and ``/srv/salt/win/repo``.
 
 This location can be changed in the master config file by setting the

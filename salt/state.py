@@ -547,7 +547,7 @@ class Compiler(object):
                 continue
             for state, run in six.iteritems(body):
                 funcs = set()
-                names = set()
+                names = []
                 if state.startswith('__'):
                     continue
                 chunk = {'state': state,
@@ -564,7 +564,9 @@ class Compiler(object):
                     if isinstance(arg, dict):
                         for key, val in six.iteritems(arg):
                             if key == 'names':
-                                names.update(val)
+                                for _name in val:
+                                    if _name not in names:
+                                        names.append(_name)
                                 continue
                             else:
                                 chunk.update(arg)
@@ -635,19 +637,20 @@ class State(object):
     def __init__(
             self,
             opts,
-            pillar=None,
+            pillar_override=None,
             jid=None,
             pillar_enc=None,
             proxy=None,
             context=None,
             mocked=False,
-            loader='states'):
+            loader='states',
+            initial_pillar=None):
         self.states_loader = loader
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
         self.proxy = proxy
-        self._pillar_override = pillar
+        self._pillar_override = pillar_override
         if pillar_enc is not None:
             try:
                 pillar_enc = pillar_enc.lower()
@@ -659,7 +662,17 @@ class State(object):
                     .format(', '.join(VALID_PILLAR_ENC))
                 )
         self._pillar_enc = pillar_enc
-        self.opts['pillar'] = self._gather_pillar()
+        if initial_pillar is not None:
+            self.opts['pillar'] = initial_pillar
+            if self._pillar_override:
+                self.opts['pillar'] = salt.utils.dictupdate.merge(
+                    self.opts['pillar'],
+                    self._pillar_override,
+                    self.opts.get('pillar_source_merging_strategy', 'smart'),
+                    self.opts.get('renderer', 'yaml'),
+                    self.opts.get('pillar_merge_lists', False))
+        else:
+            self.opts['pillar'] = self._gather_pillar()
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
@@ -698,7 +711,7 @@ class State(object):
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
-                pillar=self._pillar_override,
+                pillar_override=self._pillar_override,
                 pillarenv=self.opts.get('pillarenv')
                 )
         ret = pillar.compile_pillar()
@@ -764,7 +777,7 @@ class State(object):
             agg_opt = low['aggregate']
         if agg_opt is True:
             agg_opt = [low['state']]
-        else:
+        elif not isinstance(agg_opt, list):
             return low
         if low['state'] in agg_opt and not low.get('__agg__'):
             agg_fun = '{0}.mod_aggregate'.format(low['state'])
@@ -1276,7 +1289,7 @@ class State(object):
                 continue
             for state, run in six.iteritems(body):
                 funcs = set()
-                names = set()
+                names = []
                 if state.startswith('__'):
                     continue
                 chunk = {'state': state,
@@ -1295,7 +1308,9 @@ class State(object):
                     if isinstance(arg, dict):
                         for key, val in six.iteritems(arg):
                             if key == 'names':
-                                names.update(val)
+                                for _name in val:
+                                    if _name not in names:
+                                        names.append(_name)
                             elif key == 'state':
                                 # Don't pass down a state override
                                 continue
@@ -2056,13 +2071,17 @@ class State(object):
                         req_val = lreq[req_key]
                         comment += \
                             '{0}{1}: {2}\n'.format(' ' * 23, req_key, req_val)
-                running[tag] = {'changes': {},
-                                'result': False,
-                                'comment': comment,
-                                '__run_num__': self.__run_num,
-                                '__sls__': low['__sls__']}
+                if low.get('__prereq__'):
+                    run_dict = self.pre
+                else:
+                    run_dict = running
+                run_dict[tag] = {'changes': {},
+                                 'result': False,
+                                 'comment': comment,
+                                 '__run_num__': self.__run_num,
+                                 '__sls__': low['__sls__']}
                 self.__run_num += 1
-                self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
+                self.event(run_dict[tag], len(chunks), fire_event=low.get('fire_event'))
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -3514,25 +3533,26 @@ class HighState(BaseHighState):
     def __init__(
             self,
             opts,
-            pillar=None,
+            pillar_override=None,
             jid=None,
             pillar_enc=None,
             proxy=None,
             context=None,
             mocked=False,
-            loader='states'):
+            loader='states',
+            initial_pillar=None):
         self.opts = opts
         self.client = salt.fileclient.get_file_client(self.opts)
         BaseHighState.__init__(self, opts)
-        self.state = State(
-                           self.opts,
-                           pillar,
+        self.state = State(self.opts,
+                           pillar_override,
                            jid,
                            pillar_enc,
                            proxy=proxy,
                            context=context,
                            mocked=mocked,
-                           loader=loader)
+                           loader=loader,
+                           initial_pillar=initial_pillar)
         self.matcher = salt.minion.Matcher(self.opts)
         self.proxy = proxy
 

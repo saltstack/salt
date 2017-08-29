@@ -91,64 +91,6 @@ The user to run the Salt processes
 
     user: root
 
-.. conf_master:: max_open_files
-
-``max_open_files``
-------------------
-
-Default: ``100000``
-
-Each minion connecting to the master uses AT LEAST one file descriptor, the
-master subscription connection. If enough minions connect you might start
-seeing on the console(and then salt-master crashes):
-
-.. code-block:: bash
-
-    Too many open files (tcp_listener.cpp:335)
-    Aborted (core dumped)
-
-.. code-block:: yaml
-
-    max_open_files: 100000
-
-By default this value will be the one of `ulimit -Hn`, i.e., the hard limit for
-max open files.
-
-To set a different value than the default one, uncomment, and configure this
-setting. Remember that this value CANNOT be higher than the hard limit. Raising
-the hard limit depends on the OS and/or distribution, a good way to find the
-limit is to search the internet for something like this:
-
-.. code-block:: text
-
-    raise max open files hard limit debian
-
-.. conf_master:: worker_threads
-
-``worker_threads``
-------------------
-
-Default: ``5``
-
-The number of threads to start for receiving commands and replies from minions.
-If minions are stalling on replies because you have many minions, raise the
-worker_threads value.
-
-Worker threads should not be put below 3 when using the peer system, but can
-drop down to 1 worker otherwise.
-
-.. note::
-    When the master daemon starts, it is expected behaviour to see
-    multiple salt-master processes, even if 'worker_threads' is set to '1'. At
-    a minimum, a controlling process will start along with a Publisher, an
-    EventPublisher, and a number of MWorker processes will be started. The
-    number of MWorker processes is tuneable by the 'worker_threads'
-    configuration value while the others are not.
-
-.. code-block:: yaml
-
-    worker_threads: 5
-
 .. conf_master:: ret_port
 
 ``ret_port``
@@ -238,8 +180,8 @@ The directory to store the pki authentication keys.
 
 Directory for custom modules. This directory can contain subdirectories for
 each of Salt's module types such as ``runners``, ``output``, ``wheel``,
-``modules``, ``states``, ``returners``, ``engines``, etc. This path is appended to
-:conf_master:`root_dir`.
+``modules``, ``states``, ``returners``, ``engines``, ``utils``, etc.
+This path is appended to :conf_master:`root_dir`.
 
 .. code-block:: yaml
 
@@ -850,6 +792,94 @@ what you are doing! Transports are explained in :ref:`Salt Transports
         ret_port: 4606
       zeromq: []
 
+``sock_pool_size``
+------------------
+
+Default: 1
+
+To avoid blocking waiting while writing a data to a socket, we support
+socket pool for Salt applications. For example, a job with a large number
+of target host list can cause long period blocking waiting. The option
+is used by ZMQ and TCP transports, and the other transport methods don't
+need the socket pool by definition. Most of Salt tools, including CLI,
+are enough to use a single bucket of socket pool. On the other hands,
+it is highly recommended to set the size of socket pool larger than 1
+for other Salt applications, especially Salt API, which must write data
+to socket concurrently.
+
+.. code-block:: yaml
+
+    sock_pool_size: 15
+
+.. conf_master:: ipc_mode
+
+``ipc_mode``
+------------
+
+Default: ``ipc``
+
+The ipc strategy. (i.e., sockets versus tcp, etc.) Windows platforms lack
+POSIX IPC and must rely on TCP based inter-process communications. ``ipc_mode``
+is set to ``tcp`` by default on Windows.
+
+.. code-block:: yaml
+
+    ipc_mode: ipc
+
+.. conf_master::
+
+``tcp_master_pub_port``
+-----------------------
+
+Default: ``4512``
+
+The TCP port on which events for the master should be published if ``ipc_mode`` is TCP.
+
+.. code-block:: yaml
+
+    tcp_master_pub_port: 4512
+
+.. conf_master:: tcp_master_pull_port
+
+``tcp_master_pull_port``
+------------------------
+
+Default: ``4513``
+
+The TCP port on which events for the master should be pulled if ``ipc_mode`` is TCP.
+
+.. code-block:: yaml
+
+    tcp_master_pull_port: 4513
+
+.. conf_master:: tcp_master_publish_pull
+
+``tcp_master_publish_pull``
+---------------------------
+
+Default: ``4514``
+
+The TCP port on which events for the master should be pulled fom and then republished onto
+the event bus on the master.
+
+.. code-block:: yaml
+
+    tcp_master_publish_pull: 4514
+
+.. conf_master:: tcp_master_workers
+
+``tcp_master_workers``
+----------------------
+
+Default: ``4515``
+
+The TCP port for ``mworkers`` to connect to on the master.
+
+.. code-block:: yaml
+
+    tcp_master_workers: 4515
+
+
 Salt-SSH Configuration
 ======================
 
@@ -1083,6 +1113,19 @@ public keys from minions.
 
     auto_accept: False
 
+.. conf_master:: keysize
+
+``keysize``
+-----------
+
+Default: ``2048``
+
+The size of key that should be generated when creating new keys.
+
+.. code-block:: yaml
+
+    keysize: 2048
+
 .. conf_master:: autosign_timeout
 
 ``autosign_timeout``
@@ -1127,6 +1170,24 @@ minion IDs for which keys will automatically be rejected. Will override both
 membership in the :conf_master:`autosign_file` and the
 :conf_master:`auto_accept` setting.
 
+.. conf_master:: permissive_pki_access
+
+``permissive_pki_access``
+-------------------------
+
+Default: ``False``
+
+Enable permissive access to the salt keys. This allows you to run the
+master or minion as root, but have a non-root group be given access to
+your pki_dir. To make the access explicit, root must belong to the group
+you've given access to. This is potentially quite insecure. If an autosign_file
+is specified, enabling permissive_pki_access will allow group access to that
+specific file.
+
+.. code-block:: yaml
+
+    permissive_pki_access: False
+
 .. conf_master:: publisher_acl
 
 ``publisher_acl``
@@ -1170,6 +1231,20 @@ This is completely disabled by default.
       modules:
         - cmd.*
         - test.echo
+
+.. conf_master:: sudo_acl
+
+``sudo_acl``
+------------
+
+Default: ``False``
+
+Enforce ``publisher_acl`` and ``publisher_acl_blacklist`` when users have sudo
+access to the salt command.
+
+.. code-block:: yaml
+
+    sudo_acl: False
 
 .. conf_master:: external_auth
 
@@ -1327,6 +1402,18 @@ Do not disable this unless it is absolutely clear what this does.
 
     rotate_aes_key: True
 
+.. conf_master:: publish_session
+
+``publish_session``
+-------------------
+
+Default: ``86400``
+
+The number of seconds between AES key rotations on the master.
+
+.. code-block:: yaml
+
+    publish_session: Default: 86400
 
 .. conf_master:: ssl
 
@@ -1358,6 +1445,24 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
 ``allow_minion_key_revoke``
 ---------------------------
 
+Default: ``False``
+
+By default, the master deletes its cache of minion data when the key for that
+minion is removed. To preserve the cache after key deletion, set
+``preserve_minion_cache`` to True.
+
+WARNING: This may have security implications if compromised minions auth with
+a previous deleted minion ID.
+
+.. code-block:: yaml
+
+    preserve_minion_cache: False
+
+.. conf_master:: allow_minion_key_revoke
+
+``allow_minion_key_revoke``
+---------------------------
+
 Default: ``True``
 
 Controls whether a minion can request its own key revocation.  When True
@@ -1368,6 +1473,128 @@ the master will drop the request and the minion's key will remain accepted.
 .. code-block:: yaml
 
     rotate_aes_key: True
+
+
+Master Large Scale Tuning Settings
+==================================
+
+.. conf_master:: max_open_files
+
+``max_open_files``
+------------------
+
+Default: ``100000``
+
+Each minion connecting to the master uses AT LEAST one file descriptor, the
+master subscription connection. If enough minions connect you might start
+seeing on the console(and then salt-master crashes):
+
+.. code-block:: bash
+
+    Too many open files (tcp_listener.cpp:335)
+    Aborted (core dumped)
+
+.. code-block:: yaml
+
+    max_open_files: 100000
+
+By default this value will be the one of `ulimit -Hn`, i.e., the hard limit for
+max open files.
+
+To set a different value than the default one, uncomment, and configure this
+setting. Remember that this value CANNOT be higher than the hard limit. Raising
+the hard limit depends on the OS and/or distribution, a good way to find the
+limit is to search the internet for something like this:
+
+.. code-block:: text
+
+    raise max open files hard limit debian
+
+.. conf_master:: worker_threads
+
+``worker_threads``
+------------------
+
+Default: ``5``
+
+The number of threads to start for receiving commands and replies from minions.
+If minions are stalling on replies because you have many minions, raise the
+worker_threads value.
+
+Worker threads should not be put below 3 when using the peer system, but can
+drop down to 1 worker otherwise.
+
+.. note::
+    When the master daemon starts, it is expected behaviour to see
+    multiple salt-master processes, even if 'worker_threads' is set to '1'. At
+    a minimum, a controlling process will start along with a Publisher, an
+    EventPublisher, and a number of MWorker processes will be started. The
+    number of MWorker processes is tuneable by the 'worker_threads'
+    configuration value while the others are not.
+
+.. code-block:: yaml
+
+    worker_threads: 5
+
+.. conf_master:: pub_hwm
+
+``pub_hwm``
+-----------
+
+Default: ``1000``
+
+The zeromq high water mark on the publisher interface.
+
+.. code-block:: yaml
+
+    pub_hwm: 1000
+
+.. conf_master:: zmq_backlog
+
+``zmq_backlog``
+---------------
+
+Default: ``1000``
+
+The listen queue size of the ZeroMQ backlog.
+
+.. code-block:: yaml
+
+    zmq_backlog: 1000
+
+.. conf_master:: salt_event_pub_hwm
+.. conf_master:: event_publisher_pub_hwm
+
+``salt_event_pub_hwm`` and ``event_publisher_pub_hwm``
+------------------------------------------------------
+
+These two ZeroMQ High Water Mark settings, ``salt_event_pub_hwm`` and
+``event_publisher_pub_hwm`` are significant for masters with thousands of
+minions. When these are insufficiently high it will manifest in random
+responses missing in the CLI and even missing from the job cache. Masters
+that have fast CPUs and many cores with appropriate ``worker_threads``
+will not need these set as high.
+
+The ZeroMQ high-water-mark for the ``SaltEvent`` pub socket default is:
+
+.. code-block:: yaml
+
+    salt_event_pub_hwm: 20000
+
+The ZeroMQ high-water-mark for the ``EventPublisher`` pub socket default is:
+
+.. code-block:: yaml
+
+    event_publisher_pub_hwm: 10000
+
+As an example, on single master deployment with 8,000 minions, 2.4GHz CPUs,
+24 cores, and 32GiB memory has these settings:
+
+.. code-block:: yaml
+
+    salt_event_pub_hwm: 128000
+    event_publisher_pub_hwm: 64000
+
 
 Master Module Management
 ========================
@@ -2922,6 +3149,26 @@ configuration.
 
     pillar_opts: False
 
+.. conf_master:: pillar_safe_render_error
+
+``pillar_safe_render_error``
+----------------------------
+
+Default: ``True``
+
+The pillar_safe_render_error option prevents the master from passing pillar
+render errors to the minion. This is set on by default because the error could
+contain templating data which would give that minion information it shouldn't
+have, like a password! When set ``True`` the error message will only show:
+
+.. code-block:: shell
+
+    Rendering SLS 'my.sls' failed. Please see master log for details.
+
+.. code-block:: yaml
+
+    pillar_safe_render_error: True
+
 .. _master-configuration-ext-pillar:
 
 .. conf_master:: ext_pillar
@@ -3505,6 +3752,63 @@ can be utilized:
 
     pillar_cache_backend: disk
 
+
+Master Reactor Settings
+=======================
+
+.. conf_master:: reactor
+
+``reactor``
+-----------
+
+Default: ``[]``
+
+Defines a salt reactor. See the :ref:`Reactor <reactor>` documentation for more
+information.
+
+.. code-block:: yaml
+
+    reactor: []
+
+.. conf_master:: reactor_refresh_interval
+
+``reactor_refresh_interval``
+----------------------------
+
+Default: ``60``
+
+The TTL for the cache of the reactor configuration.
+
+.. code-block:: yaml
+
+    reactor_refresh_interval: 60
+
+.. conf_master:: reactor_worker_threads
+
+``reactor_worker_threads``
+--------------------------
+
+Default: ``10``
+
+The number of workers for the runner/wheel in the reactor.
+
+.. code-block:: yaml
+    reactor_worker_threads: 10
+
+.. conf_master:: reactor_worker_hwm
+
+``reactor_worker_hwm``
+----------------------
+
+Default: ``10000``
+
+The queue size for workers in the reactor.
+
+.. code-block:: yaml
+
+    reactor_worker_hwm: 10000
+
+
 Syndic Server Settings
 ======================
 
@@ -3950,6 +4254,64 @@ option then the master will log a warning message.
       - master.d/*
       - /etc/roles/webserver
 
+
+Keepalive Settings
+==================
+
+.. conf_master:: tcp_keepalive
+
+``tcp_keepalive``
+-----------------
+
+Default: ``True``
+
+The tcp keepalive interval to set on TCP ports. This setting can be used to tune Salt
+connectivity issues in messy network environments with misbehaving firewalls.
+
+.. code-block:: yaml
+
+    tcp_keepalive: True
+
+.. conf_master:: tcp_keepalive_cnt
+
+``tcp_keepalive_cnt``
+---------------------
+
+Default: ``-1``
+
+Sets the ZeroMQ TCP keepalive count. May be used to tune issues with minion disconnects.
+
+.. code-block:: yaml
+
+    tcp_keepalive_cnt: -1
+
+.. conf_master:: tcp_keepalive_idle
+
+``tcp_keepalive_idle``
+----------------------
+
+Default: ``300``
+
+Sets ZeroMQ TCP keepalive idle. May be used to tune issues with minion disconnects.
+
+.. code-block:: yaml
+
+    tcp_keepalive_idle: 300
+
+.. conf_master:: tcp_keepalive_intvl
+
+``tcp_keepalive_intvl``
+-----------------------
+
+Default: ``-1``
+
+Sets ZeroMQ TCP keepalive interval. May be used to tune issues with minion disconnects.
+
+.. code-block:: yaml
+
+    tcp_keepalive_intvl': -1
+
+
 .. _winrepo-master-config-opts:
 
 Windows Software Repo Settings
@@ -4088,7 +4450,7 @@ URL of the repository:
 
 .. code-block:: yaml
 
-    winrepo_remotes:
+    winrepo_remotes_ng:
       - '<commit_id> https://github.com/saltstack/salt-winrepo-ng.git'
 
 Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit

@@ -285,7 +285,7 @@ def install_semod(module_path):
 
         salt '*' selinux.install_semod [salt://]path/to/module.pp
 
-    .. versionadded:: develop
+    .. versionadded:: 2016.11.6
     '''
     if module_path.find('salt://') == 0:
         module_path = __salt__['cp.cache_file'](module_path)
@@ -303,7 +303,7 @@ def remove_semod(module):
 
         salt '*' selinux.remove_semod module_name
 
-    .. versionadded:: develop
+    .. versionadded:: 2016.11.6
     '''
     cmd = 'semodule -r {0}'.format(module)
     return not __salt__['cmd.retcode'](cmd)

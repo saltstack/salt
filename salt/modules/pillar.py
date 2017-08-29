@@ -110,7 +110,7 @@ def get(key,
             default = ''
     opt_merge_lists = __opts__.get('pillar_merge_lists', False) if \
         merge_nested_lists is None else merge_nested_lists
-    pillar_dict = __pillar__ if saltenv is None else items(saltenv=saltenv)
+    pillar_dict = __pillar__ if saltenv is None else items(pillarenv=saltenv)
 
     if merge:
         if isinstance(default, dict):
@@ -203,7 +203,7 @@ def items(*args, **kwargs):
         __opts__,
         __grains__,
         __opts__['id'],
-        pillar=kwargs.get('pillar'),
+        pillar_override=kwargs.get('pillar'),
         pillarenv=kwargs.get('pillarenv') or __opts__['pillarenv'])
 
     return pillar.compile_pillar()
@@ -411,7 +411,7 @@ def ext(external, pillar=None):
         __opts__['id'],
         __opts__['environment'],
         ext=external,
-        pillar=pillar)
+        pillar_override=pillar)
 
     ret = pillar_obj.compile_pillar()
 

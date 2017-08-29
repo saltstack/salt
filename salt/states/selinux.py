@@ -262,7 +262,7 @@ def module_install(name):
     name
         Path to file with module to install
 
-    .. versionadded:: develop
+    .. versionadded:: 2016.11.6
     '''
     ret = {'name': name,
            'result': True,
@@ -283,7 +283,7 @@ def module_remove(name):
     name
         The name of the module to remove
 
-    .. versionadded:: develop
+    .. versionadded:: 2016.11.6
     '''
     ret = {'name': name,
            'result': True,

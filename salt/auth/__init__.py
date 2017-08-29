@@ -31,6 +31,7 @@ import salt.config
 import salt.loader
 import salt.transport.client
 import salt.utils
+import salt.utils.files
 import salt.utils.minions
 import salt.payload
 
@@ -193,8 +194,13 @@ class LoadAuth(object):
         if 'groups' in load:
             tdata['groups'] = load['groups']
 
-        with salt.utils.fopen(t_path, 'w+b') as fp_:
-            fp_.write(self.serial.dumps(tdata))
+        try:
+            with salt.utils.files.set_umask(0o177):
+                with salt.utils.fopen(t_path, 'w+b') as fp_:
+                    fp_.write(self.serial.dumps(tdata))
+        except (IOError, OSError):
+            log.warning('Authentication failure: can not write token file "{0}".'.format(t_path))
+            return {}
         return tdata
 
     def get_tok(self, tok):
@@ -473,14 +479,12 @@ class Resolver(object):
         tdata = self._send_token_request(load)
         if 'token' not in tdata:
             return tdata
-        oldmask = os.umask(0o177)
         try:
-            with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
-                fp_.write(tdata['token'])
+            with salt.utils.files.set_umask(0o177):
+                with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
+                    fp_.write(tdata['token'])
         except (IOError, OSError):
             pass
-        finally:
-            os.umask(oldmask)
         return tdata
 
     def mk_token(self, load):

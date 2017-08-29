@@ -52,6 +52,17 @@ class RabbitmqTestCase(TestCase):
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
             self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
 
+    # 'list_users_rabbitmq4' function tests: 1
+
+    def test_list_users_rabbitmq4(self):
+        '''
+        Test if it return a list of users based off of rabbitmqctl user_list.
+        Output changed in rabbitmq-server version 3.6.10
+        '''
+        mock_run = MagicMock(return_value='Listing users\nguest\t[administrator user]\n')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
+
     # 'list_users_with_warning_rabbitmq2' function tests: 1
 
     def test_list_users_with_warning_rabbitmq2(self):
@@ -216,6 +227,19 @@ class RabbitmqTestCase(TestCase):
         via rabbitmqctl list_user_permissions.
         '''
         mock_run = MagicMock(return_value='Listing stuff ...\nsaltstack\tsaltstack\n...done')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(rabbitmq.list_user_permissions('myuser'),
+                                 {'saltstack': ['saltstack']})
+
+    # 'list_user_permissions2' function tests: 1
+
+    def test_list_user_permissions2(self):
+        '''
+        Test if it list permissions for a user
+        via rabbitmqctl list_user_permissions.
+        Output changed in rabbitmq-server version 3.6.10
+        '''
+        mock_run = MagicMock(return_value='Listing stuff\nsaltstack\tsaltstack\n...done')
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
             self.assertDictEqual(rabbitmq.list_user_permissions('myuser'),
                                  {'saltstack': ['saltstack']})

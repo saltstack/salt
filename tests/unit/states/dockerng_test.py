@@ -698,10 +698,18 @@ class DockerngTestCase(TestCase):
         dockerng_create_network = Mock(return_value='created')
         dockerng_connect_container_to_network = Mock(return_value='connected')
         dockerng_inspect_container = Mock(return_value={'Id': 'abcd'})
+        # Get dockerng.networks to return a network with a name which is a superset of the name of
+        # the network which is to be created, despite this network existing we should still expect
+        # that the new network will be created.
+        # Regression test for #41982.
+        dockerng_networks = Mock(return_value=[{
+            'Name': 'network_foobar',
+            'Containers': {'container': {}}
+        }])
         __salt__ = {'dockerng.create_network': dockerng_create_network,
                     'dockerng.inspect_container': dockerng_inspect_container,
                     'dockerng.connect_container_to_network': dockerng_connect_container_to_network,
-                    'dockerng.networks': Mock(return_value=[]),
+                    'dockerng.networks': dockerng_networks,
                     }
         with patch.dict(dockerng_state.__dict__,
                         {'__salt__': __salt__}):
@@ -724,9 +732,13 @@ class DockerngTestCase(TestCase):
         '''
         dockerng_remove_network = Mock(return_value='removed')
         dockerng_disconnect_container_from_network = Mock(return_value='disconnected')
+        dockerng_networks = Mock(return_value=[{
+            'Name': 'network_foo',
+            'Containers': {'container': {}}
+        }])
         __salt__ = {'dockerng.remove_network': dockerng_remove_network,
                     'dockerng.disconnect_container_from_network': dockerng_disconnect_container_from_network,
-                    'dockerng.networks': Mock(return_value=[{'Containers': {'container': {}}}]),
+                    'dockerng.networks': dockerng_networks,
                     }
         with patch.dict(dockerng_state.__dict__,
                         {'__salt__': __salt__}):
@@ -740,6 +752,36 @@ class DockerngTestCase(TestCase):
                                'comment': '',
                                'changes': {'disconnected': 'disconnected',
                                            'removed': 'removed'},
+                               'result': True})
+
+    def test_network_absent_with_matching_network(self):
+        '''
+        Test dockerng.network_absent when the specified network does not exist,
+        but another network with a name which is a superset of the specified
+        name does exist.  In this case we expect there to be no attempt to remove
+        any network.
+        Regression test for #41982.
+        '''
+        dockerng_remove_network = Mock(return_value='removed')
+        dockerng_disconnect_container_from_network = Mock(return_value='disconnected')
+        dockerng_networks = Mock(return_value=[{
+            'Name': 'network_foobar',
+            'Containers': {'container': {}}
+        }])
+        __salt__ = {'dockerng.remove_network': dockerng_remove_network,
+                    'dockerng.disconnect_container_from_network': dockerng_disconnect_container_from_network,
+                    'dockerng.networks': dockerng_networks,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.network_absent(
+                'network_foo',
+                )
+        dockerng_disconnect_container_from_network.assert_not_called()
+        dockerng_remove_network.assert_not_called()
+        self.assertEqual(ret, {'name': 'network_foo',
+                               'comment': 'Network \'network_foo\' already absent',
+                               'changes': {},
                                'result': True})
 
     def test_volume_present(self):

@@ -72,6 +72,7 @@ def _safe_output(line):
     '''
     return not any([
         line.startswith('Listing') and line.endswith('...'),
+        line.startswith('Listing') and '\t' not in line,
         '...done' in line,
         line.startswith('WARNING:')
     ])
@@ -471,11 +472,11 @@ def set_user_tags(name, tags, runas=None):
     if runas is None:
         runas = salt.utils.get_user()
 
-    if tags and isinstance(tags, (list, tuple)):
-        tags = ' '.join(tags)
+    if not isinstance(tags, (list, tuple)):
+        tags = [tags]
 
     res = __salt__['cmd.run'](
-        ['rabbitmqctl', 'set_user_tags', name, tags],
+        ['rabbitmqctl', 'set_user_tags', name] + list(tags),
         runas=runas,
         python_shell=False)
     msg = "Tag(s) set"

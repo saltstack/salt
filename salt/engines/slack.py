@@ -12,21 +12,21 @@ prefaced with a ``!``.
     .. code-block:: yaml
 
         engines:
-            slack:
-               token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
-               control: True
-               valid_users:
-                   - garethgreenaway
-               valid_commands:
-                   - test.ping
-                   - cmd.run
-                   - list_jobs
-                   - list_commands
-               aliases:
-                   list_jobs:
-                       cmd: jobs.list_jobs
-                   list_commands:
-                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster
+            - slack:
+                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
+                control: True
+                valid_users:
+                    - garethgreenaway
+                valid_commands:
+                    - test.ping
+                    - cmd.run
+                    - list_jobs
+                    - list_commands
+                aliases:
+                    list_jobs:
+                        cmd: jobs.list_jobs
+                    list_commands:
+                        cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster
 
 :depends: slackclient
 '''
@@ -202,7 +202,7 @@ def start(token,
                                 # Default to trying to run as a client module.
                                 else:
                                     local = salt.client.LocalClient()
-                                    ret = local.cmd('{0}'.format(target), cmd, args, kwargs)
+                                    ret = local.cmd('{0}'.format(target), cmd, arg=args, kwarg=kwargs)
 
                                 if ret:
                                     return_text = json.dumps(ret, sort_keys=True, indent=1)

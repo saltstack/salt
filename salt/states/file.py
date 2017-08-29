@@ -446,7 +446,11 @@ def _clean_dir(root, keep, exclude_pat):
             while True:
                 fn_ = os.path.dirname(fn_)
                 real_keep.add(fn_)
-                if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\\\'])]:
+                if fn_ in [
+                           os.sep,
+                           ''.join([os.path.splitdrive(fn_)[0], os.sep]),
+                           ''.join([os.path.splitdrive(fn_)[0], os.sep, os.sep])
+                          ]:
                     break
 
     def _delete_not_kept(nfn):
@@ -1040,7 +1044,10 @@ def absent(name):
             ret['comment'] = 'File {0} is set for removal'.format(name)
             return ret
         try:
-            __salt__['file.remove'](name)
+            if salt.utils.is_windows():
+                __salt__['file.remove'](name, force=True)
+            else:
+                __salt__['file.remove'](name)
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -3261,7 +3268,8 @@ def replace(name,
             not_found_content=None,
             backup='.bak',
             show_changes=True,
-            ignore_if_missing=False):
+            ignore_if_missing=False,
+            backslash_literal=False):
     r'''
     Maintain an edit in a file.
 
@@ -3351,6 +3359,14 @@ def replace(name,
         state will display an error raised by the execution module. If set to
         ``True``, the state will simply report no changes.
 
+    backslash_literal : False
+        .. versionadded:: 2016.11.7
+
+        Interpret backslashes as literal backslashes for the repl and not
+        escape characters.  This will help when using append/prepend so that
+        the backslashes are not interpreted for the repl on the second run of
+        the state.
+
     For complex regex patterns, it can be useful to avoid the need for complex
     quoting and escape sequences by making use of YAML's multiline string
     syntax.
@@ -3399,7 +3415,8 @@ def replace(name,
                                        backup=backup,
                                        dry_run=__opts__['test'],
                                        show_changes=show_changes,
-                                       ignore_if_missing=ignore_if_missing)
+                                       ignore_if_missing=ignore_if_missing,
+                                       backslash_literal=backslash_literal)
 
     if changes:
         ret['pchanges']['diff'] = changes

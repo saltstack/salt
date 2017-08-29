@@ -2242,8 +2242,20 @@ def network_present(name, driver=None, containers=None):
     # map containers to container's Ids.
     containers = [__salt__['dockerng.inspect_container'](c)['Id'] for c in containers]
     networks = __salt__['dockerng.networks'](names=[name])
+    log.trace(
+        'dockerng.network_present: current networks: {0}'.format(networks)
+    )
+
+    # networks will contain all Docker networks which partially match 'name'.
+    # We need to loop through to find the matching network, if there is one.
+    network = None
     if networks:
-        network = networks[0]  # we expect network's name to be unique
+        for network_iter in networks:
+            if network_iter['Name'] == name:
+                network = network_iter
+                break
+
+    if network is not None:
         if all(c in network['Containers'] for c in containers):
             ret['result'] = True
             ret['comment'] = 'Network \'{0}\' already exists.'.format(name)
@@ -2261,6 +2273,11 @@ def network_present(name, driver=None, containers=None):
             ret['result'] = result
 
     else:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = ('The network \'{0}\' will be created'.format(name))
+            return ret
+
         try:
             ret['changes']['created'] = __salt__['dockerng.create_network'](
                 name, driver=driver)
@@ -2302,9 +2319,27 @@ def network_absent(name, driver=None):
            'comment': ''}
 
     networks = __salt__['dockerng.networks'](names=[name])
-    if not networks:
+    log.trace(
+        'dockerng.network_present: current networks: {0}'.format(networks)
+    )
+
+    # networks will contain all Docker networks which partially match 'name'.
+    # We need to loop through to find the matching network, if there is one.
+    network = None
+    if networks:
+        for network_iter in networks:
+            if network_iter['Name'] == name:
+                network = network_iter
+                break
+
+    if network is None:
         ret['result'] = True
         ret['comment'] = 'Network \'{0}\' already absent'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('The network \'{0}\' will be removed'.format(name))
         return ret
 
     for container in networks[0]['Containers']:
@@ -2442,7 +2477,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
                 ret['result'] = result
                 return ret
 
-    ret['result'] = None if __opts__['test'] else True
+    ret['result'] = True
     ret['comment'] = 'Volume \'{0}\' already exists.'.format(name)
     return ret
 

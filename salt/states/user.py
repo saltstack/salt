@@ -126,12 +126,14 @@ def _changes(name,
     if shell and lusr['shell'] != shell:
         change['shell'] = shell
     if 'shadow.info' in __salt__ and 'shadow.default_hash' in __salt__:
-        if password:
+        if password and not empty_password:
             default_hash = __salt__['shadow.default_hash']()
             if lshad['passwd'] == default_hash \
                     or lshad['passwd'] != default_hash and enforce_password:
                 if lshad['passwd'] != password:
                     change['passwd'] = password
+        if empty_password and lshad['passwd'] != '':
+            change['empty_password'] = True
         if date and date is not 0 and lshad['lstchg'] != date:
             change['date'] = date
         if mindays and mindays is not 0 and lshad['min'] != mindays:
@@ -444,9 +446,6 @@ def present(name,
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
 
-    if empty_password:
-        __salt__['shadow.del_password'](name)
-
     changes = _changes(name,
                        uid,
                        gid,
@@ -496,6 +495,12 @@ def present(name,
         for key, val in iteritems(changes):
             if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
+                continue
+            if key == 'passwd' and empty_password:
+                log.warning("No password will be set when empty_password=True")
+                continue
+            if key == 'empty_password' and val:
+                __salt__['shadow.del_password'](name)
                 continue
             if key == 'date':
                 __salt__['shadow.set_date'](name, date)
@@ -662,6 +667,14 @@ def present(name,
                                          ' {1}'.format(name, 'XXX-REDACTED-XXX')
                         ret['result'] = False
                     ret['changes']['password'] = 'XXX-REDACTED-XXX'
+                if empty_password and not password:
+                    __salt__['shadow.del_password'](name)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['passwd'] != '':
+                        ret['comment'] = 'User {0} created but failed to ' \
+                                         'empty password'.format(name)
+                        ret['result'] = False
+                    ret['changes']['password'] = ''
                 if date:
                     __salt__['shadow.set_date'](name, date)
                     spost = __salt__['shadow.info'](name)

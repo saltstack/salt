@@ -28,7 +28,9 @@ from salt.modules import state
 # Globals
 state.__salt__ = {}
 state.__context__ = {}
-state.__opts__ = {'cachedir': '/D'}
+state.__opts__ = {'cachedir': '/D',
+                  'environment': None,
+                  '__cli': 'salt'}
 state.__pillar__ = {}
 
 
@@ -45,7 +47,11 @@ class MockState(object):
         '''
         flag = None
 
-        def __init__(self, opts, pillar=False, pillar_enc=None):
+        def __init__(self,
+                     opts,
+                     pillar_override=False,
+                     pillar_enc=None,
+                     initial_pillar=None):
             pass
 
         def verify_data(self, data):
@@ -134,9 +140,9 @@ class MockState(object):
         opts = {'state_top': '',
                 'pillar': {}}
 
-        def __init__(self, opts, pillar=None, *args, **kwargs):
+        def __init__(self, opts, pillar_override=None, *args, **kwargs):
             self.state = MockState.State(opts,
-                                         pillar=pillar)
+                                         pillar_override=pillar_override)
 
         def render_state(self, sls, saltenv, mods, matches, local=False):
             '''
@@ -576,7 +582,10 @@ class StateTestCase(TestCase):
             self.assertEqual(state.sls_id("apache", "http"), "A")
 
             with patch.dict(state.__opts__, {"test": "A"}):
-                mock = MagicMock(return_value={'test': True})
+                mock = MagicMock(
+                    return_value={'test': True,
+                                  'environment': None}
+                )
                 with patch.object(state, '_get_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
@@ -600,7 +609,10 @@ class StateTestCase(TestCase):
             self.assertEqual(state.show_low_sls("foo"), "A")
 
             with patch.dict(state.__opts__, {"test": "A"}):
-                mock = MagicMock(return_value={'test': True})
+                mock = MagicMock(
+                    return_value={'test': True,
+                                  'environment': None}
+                )
                 with patch.object(state, '_get_opts', mock):
                     MockState.State.flag = True
                     MockState.HighState.flag = True
@@ -619,7 +631,10 @@ class StateTestCase(TestCase):
             self.assertEqual(state.show_sls("foo"), "A")
 
             with patch.dict(state.__opts__, {"test": "A"}):
-                mock = MagicMock(return_value={'test': True})
+                mock = MagicMock(
+                    return_value={'test': True,
+                                  'environment': None}
+                )
                 with patch.object(state, '_get_opts', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(salt.utils, 'test_mode', mock):
@@ -800,7 +815,6 @@ class StateTestCase(TestCase):
                                      state.sls("core,edit.vim dev",
                                                None,
                                                None,
-                                               None,
                                                True),
                                      ["A"])
 
@@ -815,11 +829,11 @@ class StateTestCase(TestCase):
                             self.assertListEqual(state.sls("core,edit.vim dev",
                                                            None,
                                                            None,
-                                                           None,
                                                            True), ret)
 
                     with patch.dict(state.__opts__, {"test": None}):
-                        mock = MagicMock(return_value={"test": ""})
+                        mock = MagicMock(return_value={"test": "",
+                                                       "environment": None})
                         with patch.object(state, '_get_opts', mock):
                             mock = MagicMock(return_value=True)
                             with patch.object(salt.utils,
@@ -829,7 +843,6 @@ class StateTestCase(TestCase):
                                                   SaltInvocationError,
                                                   state.sls,
                                                   "core,edit.vim dev",
-                                                  None,
                                                   None,
                                                   None,
                                                   True,
@@ -850,7 +863,6 @@ class StateTestCase(TestCase):
                                                             state.sls(arg,
                                                                       None,
                                                                       None,
-                                                                      None,
                                                                       True,
                                                                       cache
                                                                       =True
@@ -860,7 +872,6 @@ class StateTestCase(TestCase):
                                     MockState.HighState.flag = True
                                     self.assertTrue(state.sls("core,edit"
                                                               ".vim dev",
-                                                              None,
                                                               None,
                                                               None,
                                                               True)
@@ -897,7 +908,6 @@ class StateTestCase(TestCase):
                                 with patch('salt.utils.fopen', mock_open()):
                                     self.assertTrue(state.sls("core,edit"
                                                               ".vim dev",
-                                                              None,
                                                               None,
                                                               None,
                                                               True))
