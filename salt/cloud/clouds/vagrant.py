@@ -14,6 +14,8 @@ files as described in the
 # Import python libs
 from __future__ import absolute_import
 import logging
+import os
+import tempfile
 
 # Import salt libs
 import salt.utils
