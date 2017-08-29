@@ -75,7 +75,8 @@ def mounted(name,
             extra_mount_invisible_keys=None,
             extra_mount_ignore_fs_keys=None,
             extra_mount_translate_options=None,
-            hidden_opts=None):
+            hidden_opts=None,
+            **kwargs):
     '''
     Verify that a device is mounted
 
