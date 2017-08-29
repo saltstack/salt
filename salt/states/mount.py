@@ -699,7 +699,8 @@ def unmounted(name,
               device=None,
               config='/etc/fstab',
               persist=False,
-              user=None):
+              user=None,
+              **kwargs):
     '''
     .. versionadded:: 0.17.0
 
