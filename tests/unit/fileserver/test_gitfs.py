@@ -206,6 +206,7 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
 
         if 'USERNAME' not in os.environ:
             try:
+                import salt.utils
                 if salt.utils.is_windows():
                     import salt.utils.win_functions
                     os.environ['USERNAME'] = salt.utils.win_functions.get_current_user()
