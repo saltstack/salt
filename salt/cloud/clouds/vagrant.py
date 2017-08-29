@@ -206,7 +206,7 @@ def create(vm_):
     local = salt.netapi.NetapiClient(__opts__)
 
     args = ['vagrant up {}'.format(machine)]
-    kwargs = {'cwd': cwd, 'runas': runas, 'timeout': up_timeout, 'use_vt': True}
+    kwargs = {'cwd': cwd, 'runas': runas, 'timeout': up_timeout}
 
     cmd = {'client': 'local',
            'tgt': host,
@@ -226,7 +226,6 @@ def create(vm_):
     if not 'ssh_host' in vm_:
         for line in ret[host].split('\n'):
             try:
-                found_address = ''
                 tokens = line.strip().split()
                 # the lines we are looking for appear like:
                 #   "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
