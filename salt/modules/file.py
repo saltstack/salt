@@ -2385,9 +2385,11 @@ def blockreplace(path,
                         # end of block detected
                         in_block = False
 
-                        # Separate the content into lines. Account for Windows
-                        # style line endings using os.linesep, then by linux
-                        # style line endings
+                        # Handle situations where there may be multiple types
+                        # of line endings in the same file. Separate the content
+                        # into lines. Account for Windows-style line endings
+                        # using os.linesep, then by linux-style line endings
+                        # using '\n'
                         split_content = []
                         for linesep_line in content.split(os.linesep):
                             for content_line in linesep_line.split('\n'):
