@@ -126,8 +126,8 @@ def _binary_replace(old, new):
     This function should only be run AFTER it has been determined that the
     files differ.
     '''
-    old_isbin = not salt.utils.istextfile(old)
-    new_isbin = not salt.utils.istextfile(new)
+    old_isbin = not salt.utils.files.is_text_file(old)
+    new_isbin = not salt.utils.files.is_text_file(new)
     if any((old_isbin, new_isbin)):
         if all((old_isbin, new_isbin)):
             return u'Replace binary file'
@@ -1436,7 +1436,7 @@ def comment_line(path,
         raise SaltInvocationError('File not found: {0}'.format(path))
 
     # Make sure it is a text file
-    if not salt.utils.istextfile(path):
+    if not salt.utils.files.is_text_file(path):
         raise SaltInvocationError(
             'Cannot perform string replacements on a binary file: {0}'.format(path))
 
@@ -2180,7 +2180,7 @@ def replace(path,
         else:
             raise SaltInvocationError('File not found: {0}'.format(path))
 
-    if not salt.utils.istextfile(path):
+    if not salt.utils.files.is_text_file(path):
         raise SaltInvocationError(
             'Cannot perform string replacements on a binary file: {0}'
             .format(path)
@@ -2497,7 +2497,7 @@ def blockreplace(path,
             'Only one of append and prepend_if_not_found is permitted'
         )
 
-    if not salt.utils.istextfile(path):
+    if not salt.utils.files.is_text_file(path):
         raise SaltInvocationError(
             'Cannot perform string replacements on a binary file: {0}'
             .format(path)
