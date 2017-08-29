@@ -194,12 +194,18 @@ def create(vm_):
         'host', vm_, __opts__, default=NotImplemented)
     cwd = config.get_cloud_config_value(
         'cwd', vm_, __opts__, default='/')
+    runas = config.get_cloud_config_value(
+        'runas', vm_, __opts__, default=os.getenv('SUDO_USER'))
+    up_timeout = config.get_cloud_config_value(
+        'vagrant_up_timeout', vm_, __opts__, default=180)
+
     log.info('sending \'vagrant up %s\' command to %s', machine, host)
 
     local = salt.netapi.NetapiClient(__opts__)
 
     args = ['vagrant up {}'.format(machine)]
-    kwargs = {'cwd': cwd}
+    kwargs = {'cwd': cwd, 'runas': runas, 'timeout': up_timeout, 'use_vt': True}
+
     cmd = {'client': 'local',
            'tgt': host,
            'fun': 'cmd.run',
@@ -208,8 +214,9 @@ def create(vm_):
            'tgt_type': 'glob',
            }
     cmd.update(_get_connection_info())
+    log.debug('Vagrant driver sending netapi command=%s',repr(cmd))
     ret = local.run(cmd)
-    log.debug(repr(ret))
+    log.debug('response ==> %s', repr(ret))
 
     # NOTE: the minion's Vagrantfile is expected to contain a line like...
     #  config.vm.provision "shell", inline: "ifconfig", run: "always"
@@ -253,7 +260,7 @@ def create(vm_):
 
     log.info('requesting vagrant ssh-config for %s', machine)
     cmd['arg'] = ['vagrant ssh-config {}'.format(machine)]
-    ret = local.run(cmd)
+    ret = local.run(cmd)  # ask Vagrant about the configuration it just created
     log.debug('response ==> %s', repr(ret))
     reply = ret[host]
 
@@ -262,14 +269,30 @@ def create(vm_):
         if len(tokens) == 2:
             ssh_config[tokens[0]] = tokens[1]
     log.debug('ssh_config=%s', repr(ssh_config))
-    vm_.setdefault('key_filename', ssh_config['IdentityFile'])
-    vm_.setdefault('ssh_username', ssh_config['User'])
-    if not 'ssh_host' in vm_:  # do not use Vagrant automatic ssh port if user has defined a host name
-        vm_['ssh_host'] = ssh_config['HostName']
-        vm_.setdefault('ssh_port', ssh_config['Port'])
 
-    log.info('Provisioning machine %s as node %s', machine, vm_['name'])
-    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
+    # retrieve the Vagrant private key from the host
+    identity_file_name = ssh_config['IdentityFile']
+    cmd['arg'] = ['cat {}'.format(identity_file_name)]
+    cmd['kwarg'] = {'output': 'json'}
+    log.info('retrieving Vagrant private key from %s', host)
+    ret = local.run(cmd)
+    log.trace('response ==> %s', ret)
+    private_key = ret[host]
+    with tempfile.NamedTemporaryFile() as pks:
+        pks.write(private_key)
+        pks.flush()
+        log.trace('wrote private key %s to %s', private_key, pks.name)
+        vm_.setdefault('key_filename', pks.name)
+        vm_.setdefault('ssh_username', ssh_config['User'])
+        if not 'ssh_host' in vm_:
+            if ssh_config['bridged_address']:
+                vm_['ssh_host'] = ssh_config['bridged_address']
+            else: # do not use Vagrant's detected ssh port if probe worked
+                vm_['ssh_host'] = ssh_config['HostName']
+                vm_.setdefault('ssh_port', ssh_config['Port'])
+
+        log.info('Provisioning machine %s as node %s', machine, vm_['name'])
+        ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     return ret
 
@@ -278,18 +301,26 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    return config.is_provider_configured(
+    ret = config.is_provider_configured(
         __opts__,
         __active_provider_name__ or 'vagrant',
-        ()
+        ('api_username', 'api_password', 'api_eauth')
     )
+    try:
+        # configure return dictionary as appropriate for salt-api call
+        ret['username'] = ret['api_username']
+        ret['password'] = ret['api_password']
+        ret['eauth'] = ret['api_eauth']
+    except (KeyError, TypeError):
+        raise SaltCloudException('Required configuration parameter missing.')
+    return ret
 
 
 # noinspection PyTypeChecker
 def destroy(name, call=None):
     ''' Destroy a node.
 
-    .. versionadded:: xxx
+    .. versionadded:: Oxygen
 
     CLI Example:
     .. code-block:: bash
@@ -320,23 +351,19 @@ def destroy(name, call=None):
            'arg': ['salt-cloud'],
            }
     cmd.update(_get_connection_info())
-    vm_ = cmd['vm']
     my_info = local.run(cmd)
-    try:
-        vm_.update(my_info[name])  # get profile name to get config value
-    except (IndexError, TypeError):
-        pass
     profile_name = my_info[name]['profile']
-    profile = vm_['profiles'][profile_name]
+    profile = opts['profiles'][profile_name]
     machine = profile['machine']
     host = profile['host']
     cwd = profile['cwd']
+    runas = profile['runas']
     log.info('sending \'vagrant destroy %s\' command to %s', machine, host)
 
     local = salt.netapi.NetapiClient(opts)
 
     args = ['vagrant destroy {} -f'.format(machine)]
-    kwargs = {'cwd': cwd}
+    kwargs = {'cwd': cwd, 'runas': runas}
     cmd = {'client': 'local',
            'tgt': host,
            'fun': 'cmd.run',
@@ -368,7 +395,7 @@ def reboot(name, call=None):
     '''
     Reboot a vagrant minion.
 
-    .. versionadded:: xxx
+    .. versionadded:: Oxygen
 
     name
         The name of the VM to reboot.
@@ -401,12 +428,15 @@ def reboot(name, call=None):
     profile = vm_['profiles'][profile_name]
     machine = profile['machine']
     host = profile['host']
-    cwd = profile['cwd']
+    cwd = config.get_cloud_config_value(
+        'cwd', vm_, __opts__, default='/')
+    runas = config.get_cloud_config_value(
+        'runas', vm_, __opts__, default=os.getenv('SUDO_USER'))
 
     log.info('sending \'vagrant reload %s\' command to %s', machine, host)
 
     args = ['vagrant reload {}'.format(machine)]
-    kwargs = {'cwd': cwd}
+    kwargs = {'cwd': cwd, 'runas': runas}
     cmd['tgt'] = host
     cmd['fun'] = 'cmd.run'
     cmd['arg'] = args
