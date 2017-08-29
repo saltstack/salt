@@ -1419,7 +1419,7 @@ class AESFuncs(object):
         '''
         loads = load.get(u'load')
         if not isinstance(loads, list):
-            loads = [loads]
+            loads = [load]  # support old syndics not aggregating returns
         for load in loads:
             # Verify the load
             if any(key not in load for key in (u'return', u'jid', u'id')):
