@@ -156,7 +156,7 @@ def _list_nodes_full(call=None):
            }
     cmd.update(_get_connection_info())
 
-    log.debug('Vagrant driver sending netapi command=', repr(cmd))
+    log.debug('Vagrant driver sending netapi command=%s', repr(cmd))
     return local.run(cmd)
 
 
