@@ -16,10 +16,15 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-from salt.modules import kubernetes
+try:
+    from salt.modules import kubernetes
+except ImportError:
+    kubernetes = False
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(kubernetes is False, "Probably Kubernetes client lib is not installed. \
+                              Skipping test_kubernetes.py")
 class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.kubernetes
