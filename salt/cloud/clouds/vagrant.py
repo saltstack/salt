@@ -211,12 +211,52 @@ def create(vm_):
     ret = local.run(cmd)
     log.debug(repr(ret))
 
-    log.info('requesting ssh-config from %s', machine)
+    # NOTE: the minion's Vagrantfile is expected to contain a line like...
+    #  config.vm.provision "shell", inline: "ifconfig", run: "always"
+    ssh_config = {'bridged_address': None}  # define a default value in a new {}
+    if not 'ssh_host' in vm_:
+        for line in ret[host].split('\n'):
+            try:
+                found_address = ''
+                tokens = line.strip().split()
+                # the lines we are looking for appear like:
+                #   "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
+                # theoretically, the last such address we find should be the right one
+                if "inet" in tokens:
+                    net = tokens.index("inet") + 1
+                    splits = tokens[net].split(":")
+                    if splits[0] == "addr":
+                        found_address = splits[1]
+                    else:
+                        #  inet 10.2.156.13  netmask 255.255.255.254  broadcast 10.255.255.255
+                        found_address = tokens[net]
+                    if found_address.startswith('127.'):
+                        continue
+                    ssh_config['bridged_address'] = found_address
+                elif "inet6" in tokens:
+                    net = tokens.index("inet6") + 1
+                    if tokens[net] == "addr:":
+                        # inet6 addr: fe80::a00:27ff:fe04:7aac/64 Scope:Link
+                        found_address = tokens[net + 1].split('/')[0]
+                    else:
+                        # inet6 2001:bc8:4400:2100::22:c0d  prefixlen 127  scopeid 0x0<global>
+                        found_address =  tokens[net]
+                    if found_address.startswith('fe80:'):
+                        continue
+                    if found_address.startswith('::1'):
+                        continue
+                    ssh_config['bridged_address'] = found_address
+                        # NOTE: IPv6 address will be used if both 6 and 4 appear
+            except (IndexError, AttributeError):
+                pass
+        log.info('Network bridge address detected as: %s', ssh_config['bridged_address'])
+
+    log.info('requesting vagrant ssh-config for %s', machine)
     cmd['arg'] = ['vagrant ssh-config {}'.format(machine)]
     ret = local.run(cmd)
     log.debug('response ==> %s', repr(ret))
     reply = ret[host]
-    ssh_config = {}
+
     for line in reply.split('\n'):  # build a dictionary of the text reply
         tokens = line.strip().split()
         if len(tokens) == 2:
