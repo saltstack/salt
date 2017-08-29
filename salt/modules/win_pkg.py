@@ -1313,7 +1313,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
             # Run Scheduled Task
             # Special handling for installing salt
-            if re.search(r'salt[\s-]*minion',
+            if re.search(r'salt[\s-_]*minion',
                          pkg_name,
                          flags=re.IGNORECASE + re.UNICODE) is not None:
                 ret[pkg_name] = {'install status': 'task started'}
