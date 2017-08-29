@@ -41,6 +41,7 @@ import logging
 import yaml
 import tempfile
 import signal
+from sys import platform
 from time import sleep
 from contextlib import contextmanager
 
@@ -70,9 +71,6 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'kubernetes'
 
-_polling_time_limit = 20
-
-
 
 def __virtual__():
     '''
@@ -88,16 +86,19 @@ class TimeoutException(Exception):
     pass
 
 
-@contextmanager
-def _time_limit(seconds):
-    def signal_handler(signum, frame):
-        raise(TimeoutException, "Timed out!")
-    signal.signal(signal.SIGALRM, signal_handler)
-    signal.alarm(seconds)
-    try:
-        yield
-    finally:
-        signal.alarm(0)
+if not platform.startswith("win"):
+    @contextmanager
+    def _time_limit(seconds):
+        def signal_handler(signum, frame):
+            raise(TimeoutException, "Timed out!")
+        signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
+
+    _polling_time_limit = 30
 
 
 # pylint: disable=no-member
@@ -715,14 +716,24 @@ def delete_deployment(name, namespace='default', **kwargs):
             namespace=namespace,
             body=body)
         mutable_api_response = api_response.to_dict()
-        try:
-            with _time_limit(_polling_time_limit):
-                while show_deployment(name, namespace) is not None:
-                    sleep(1)
-                else:
+        if not platform.startswith("win"):
+            try:
+                with _time_limit(_polling_time_limit):
+                    while show_deployment(name, namespace) is not None:
+                        sleep(1)
+                    else:
+                        mutable_api_response['code'] = 200
+            except TimeoutException:
+                pass
+        else:
+            # Windows has not signal.alarm implementation, so we are just falling
+            # back to loop-counting.
+            for i in range(60):
+                if show_deployment(name, namespace) is None:
                     mutable_api_response['code'] = 200
-        except TimeoutException:
-            pass
+                    break
+                else:
+                    sleep(1)
         return mutable_api_response
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
