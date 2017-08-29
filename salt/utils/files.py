@@ -25,6 +25,7 @@ from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves import range
 try:
     import fcntl
     HAS_FCNTL = True
