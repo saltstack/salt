@@ -90,7 +90,7 @@ if not platform.startswith("win"):
     @contextmanager
     def _time_limit(seconds):
         def signal_handler(signum, frame):
-            raise(TimeoutException, "Timed out!")
+            raise TimeoutException
         signal.signal(signal.SIGALRM, signal_handler)
         signal.alarm(seconds)
         try:
@@ -719,7 +719,7 @@ def delete_deployment(name, namespace='default', **kwargs):
         if not platform.startswith("win"):
             try:
                 with _time_limit(_polling_time_limit):
-                    while show_deployment(name, namespace) is not None:
+                    while show_deployment(name, namespace) is not None:  # pylint: disable=useless-else-on-loop
                         sleep(1)
                     else:
                         mutable_api_response['code'] = 200
