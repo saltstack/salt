@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Some of the utils used by salt
+
+NOTE: The dev team is working on splitting up this file for the Oxygen release.
+Please do not add any new functions to this file. New functions should be
+organized in other files under salt/utils/. Please consult the dev team if you
+are unsure where a new function should go.
 '''
 
 # Import python libs
@@ -16,7 +21,6 @@ import json
 import logging
 import numbers
 import os
-import os.path
 import posixpath
 import random
 import re
@@ -33,7 +37,6 @@ import warnings
 import string
 import subprocess
 import getpass
-import urllib
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -163,38 +166,6 @@ def is_empty(filename):
     except OSError:
         # Non-existent file or permission denied to the parent dir
         return False
-
-
-def safe_filename_leaf(file_basename):
-    '''
-    input the basename of a file, without the directory tree, and returns a safe name to use
-    i.e. only the required characters are converted by urllib.quote
-    If the input is a PY2 String, output a PY2 String. If input is Unicode output Unicode.
-    For consistency all platforms are treated the same. Hard coded to utf8 as its ascii compatible
-    windows is \\ / : * ? " < > | posix is /
-    '''
-    def _replace(re_obj):
-        return urllib.quote(re_obj.group(0), safe=u'')
-    if not isinstance(file_basename, six.text_type):
-        # the following string is not prefixed with u
-        return re.sub('[\\\\:/*?"<>|]',
-                      _replace,
-                      six.text_type(file_basename, 'utf8').encode('ascii', 'backslashreplace'))
-    # the following string is prefixed with u
-    return re.sub(u'[\\\\:/*?"<>|]', _replace, file_basename, flags=re.UNICODE)
-
-
-def safe_filepath(file_path_name):
-    '''
-    input the full path and filename, splits on directory separator and calls safe_filename_leaf for
-    each part of the path.
-    '''
-    (drive, path) = os.path.splitdrive(file_path_name)
-    path = os.sep.join([safe_filename_leaf(file_section) for file_section in file_path_name.rsplit(os.sep)])
-    if drive:
-        return os.sep.join([drive, path])
-    else:
-        return path
 
 
 def is_hex(value):
