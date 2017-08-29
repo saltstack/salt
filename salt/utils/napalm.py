@@ -22,6 +22,7 @@ import importlib
 from functools import wraps
 
 # Import Salt libs
+import salt.output
 import salt.utils.platform
 
 # Import 3rd-party libs
@@ -432,58 +433,58 @@ def default_ret(name):
     return ret
 
 
-def loaded_ret(ret, loaded, test, debug):
+def loaded_ret(ret, loaded, test, debug, compliance_report=False, opts=None):
     '''
     Return the final state output.
-
     ret
         The initial state output structure.
-
     loaded
         The loaded dictionary.
     '''
     # Always get the comment
-    ret.update({
-        'comment': loaded.get('comment', '')
-    })
+    changes = {}
     pchanges = {}
+    ret['comment'] = loaded['comment']
+    if 'diff' in loaded:
+        changes['diff'] = loaded['diff']
+        pchanges['diff'] = loaded['diff']
+    if 'compliance_report' in loaded:
+        if compliance_report:
+            changes['compliance_report'] = loaded['compliance_report']
+        pchanges['compliance_report'] = loaded['compliance_report']
+    if debug and 'loaded_config' in loaded:
+        changes['loaded_config'] = loaded['loaded_config']
+        pchanges['loaded_config'] = loaded['loaded_config']
+    ret['pchanges'] = pchanges
+    if changes.get('diff'):
+        ret['comment'] = '{comment_base}\n\nConfiguration diff:\n\n{diff}'.format(comment_base=ret['comment'],
+                                                                                  diff=changes['diff'])
+    if changes.get('loaded_config'):
+        ret['comment'] = '{comment_base}\n\nLoaded config:\n\n{loaded_cfg}'.format(
+            comment_base=ret['comment'],
+            loaded_cfg=changes['loaded_config'])
+    if changes.get('compliance_report'):
+        ret['comment'] = '{comment_base}\n\nCompliance report:\n\n{compliance}'.format(
+            comment_base=ret['comment'],
+            compliance=salt.output.string_format(changes['compliance_report'], 'nested', opts=opts))
     if not loaded.get('result', False):
         # Failure of some sort
         return ret
-    if debug:
-        # Always check for debug
-        pchanges.update({
-            'loaded_config': loaded.get('loaded_config', '')
-        })
-        ret.update({
-            "pchanges": pchanges
-        })
     if not loaded.get('already_configured', True):
         # We're making changes
-        pchanges.update({
-            "diff": loaded.get('diff', '')
-        })
-        ret.update({
-            'pchanges': pchanges
-        })
         if test:
-            for k, v in pchanges.items():
-                ret.update({
-                    "comment": "{}:\n{}\n\n{}".format(k, v, ret.get("comment", ''))
-                })
-            ret.update({
-                'result': None,
-            })
+            ret['result'] = None
             return ret
         # Not test, changes were applied
         ret.update({
             'result': True,
-            'changes': pchanges,
-            'comment': "Configuration changed!\n{}".format(ret.get('comment', ''))
+            'changes': changes,
+            'comment': "Configuration changed!\n{}".format(loaded['comment'])
         })
         return ret
     # No changes
     ret.update({
-        'result': True
+        'result': True,
+        'changes': {}
     })
     return ret
