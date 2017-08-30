@@ -189,7 +189,7 @@ class TestDaemon(object):
 
     def __init__(self, parser):
         self.parser = parser
-        self.colors = salt.utils.color.get_colors (self.parser.options.no_colors is False)
+        self.colors = salt.utils.color.get_colors(self.parser.options.no_colors is False)
         if salt.utils.platform.is_windows():
             # There's no shell color support on windows...
             for key in self.colors:
