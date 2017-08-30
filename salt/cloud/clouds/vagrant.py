@@ -201,12 +201,14 @@ def create(vm_):
         'runas', vm_, __opts__, default=os.getenv('SUDO_USER'))
     up_timeout = config.get_cloud_config_value(
         'vagrant_up_timeout', vm_, __opts__, default=300)
+    up_options = config.get_cloud_config_value(
+        'vagrant_up_options', vm_, __opts__, default='')
 
     log.info('sending \'vagrant up %s\' command to %s', machine, host)
 
     local = salt.netapi.NetapiClient(__opts__)
 
-    args = ['vagrant up {}'.format(machine)]
+    args = ['vagrant up {} {}'.format(machine, up_options)]
     kwargs = {'cwd': cwd, 'runas': runas, 'timeout': up_timeout}
 
     cmd = {'client': 'local',
@@ -396,7 +398,6 @@ def destroy(name, call=None):
            }
     cmd.update(_get_connection_info())
     ret = local.run(cmd)
-    log.debug('response ==>%s', ret)
     log.info(ret[host])
 
     __utils__['cloud.fire_event'](
@@ -442,21 +443,13 @@ def reboot(name, call=None):
            'arg': ['salt-cloud'],
            }
     cmd.update(_get_connection_info())
-    vm_ = cmd['vm']
     my_info = local.run(cmd)
-    try:
-        vm_.update(my_info[name])  # get profile name to get config value
-    except (IndexError, TypeError):
-        pass
     profile_name = my_info[name]['profile']
-    profile = vm_['profiles'][profile_name]
+    profile = __opts__['profiles'][profile_name]
     machine = profile['machine']
     host = profile['host']
-    cwd = config.get_cloud_config_value(
-        'cwd', vm_, __opts__, default='/')
-    runas = config.get_cloud_config_value(
-        'runas', vm_, __opts__, default=os.getenv('SUDO_USER'))
-
+    cwd = profile['cwd']
+    runas = profile['runas']
     log.info('sending \'vagrant reload %s\' command to %s', machine, host)
 
     args = ['vagrant reload {}'.format(machine)]
@@ -466,6 +459,6 @@ def reboot(name, call=None):
     cmd['arg'] = args
     cmd['kwarg'] = kwargs
     ret = local.run(cmd)
-    log.debug('response ==>%s', ret)
+    log.info(ret[host])
 
     return ret

@@ -71,11 +71,12 @@ definitions for `multiple machines`_ then you need a ``machine`` parameter,
 
 .. _`multiple machines`: https://www.vagrantup.com/docs/multi-machine/
 
-Salt-cloud uses ssh to provision the minion. Usually, you will want to use the
-address of a bridged network adapter for ssh. This address is not known until
-DHCP assigns it. If you include an ``ifconfig`` command in the
-Vagranfile provision script, the driver can read the address from the output
-of the ``vagrant up`` command.
+Salt-cloud uses ssh to provision the minion. There must be a routable path
+from the cloud master to the VM. Usually, you will want to use
+a bridged network adapter for ssh. The address will not be known until
+DHCP assigns it. If the configuration setting ``ssh_host`` is not defined,
+the driver will attempt to read the address from the output
+of an ``ifconfig`` command.
 
 Profile configuration example:
 
@@ -88,8 +89,9 @@ Profile configuration example:
       provider: my-vagrant-config
       cwd: /srv/machines  # the path to your Virtualbox file.
       runas: my-username  # the username who defined the Vagrantbox on the host
-      # vagrant_up_timeout: 300 # timeout for cmd.run of the "vagrant up" command (seconds)
-      # ssh_host: None  # "None" means find the routable ip address in "vagrant up" response
+      # vagrant_up_timeout: 300 # (seconds) timeout for cmd.run of the "vagrant up" command
+      # vagrant_up_options: '' # options for "vagrant up" like: "--provider vmware_fusion"
+      # ssh_host: None  # "None" means try to find the routable ip address from "ifconfig"
 
 The machine can now be created and configured with the following command:
 
@@ -99,7 +101,7 @@ The machine can now be created and configured with the following command:
 
 This will create the machine specified by the cloud profile
 ``vagrant-machine``, and will give the machine the minion id of
-``my-machine``. If the command was executed on the salt-master, its Salt
+``my-machine``. If the cloud master is also the salt-master, its Salt
 key will automatically be accepted on the master.
 
 Once a salt-minion has been successfully installed on the instance, connectivity
@@ -163,9 +165,7 @@ This example assumes:
       if ARGV[0] == "up"
         puts "Trying bridge network using interfaces: #{interface_guesses}"
       end
-      # report your bridged ip address to salt-cloud for provisioning ...
-      # [Note: "8.8.8.8" is the default for bridged_ip_address_detect]
-      config.vm.provision "shell", inline: "ifconfig", run: "always"
+      config.vm.provision "shell", inline: "ip address", run: "always"  # what did we get?
 
       # . . . . . . . . . . . . Define machine QUAIL1 . . . . . . . . . . . . . .
       config.vm.define "quail1", primary: true do |quail_config|
