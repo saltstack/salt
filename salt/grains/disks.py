@@ -148,7 +148,7 @@ def _linux_disks():
 
 
 def _windows_disks():
-    wmic = salt.utils.which('wmic')
+    wmic = salt.utils.path.which('wmic')
 
     namespace = r'\\root\microsoft\windows\storage'
     path = 'MSFT_PhysicalDisk'

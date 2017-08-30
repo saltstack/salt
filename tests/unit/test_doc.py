@@ -14,7 +14,7 @@ from tests.support.unit import TestCase
 # Import Salt libs
 import tests.integration as integration
 import salt.modules.cmdmod
-import salt.utils
+import salt.utils.platform
 
 
 class DocTestCase(TestCase):
@@ -35,7 +35,7 @@ class DocTestCase(TestCase):
         '''
         salt_dir = integration.CODE_DIR
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # No grep in Windows, use findstr
             # findstr in windows doesn't prepend 'Binary` to binary files, so
             # use the '/P' switch to skip files with unprintable characters
@@ -52,7 +52,7 @@ class DocTestCase(TestCase):
             if line.startswith('Binary'):
                 continue
 
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Need the space after the colon so it doesn't split the drive
                 # letter
                 key, val = line.split(': ', 1)
