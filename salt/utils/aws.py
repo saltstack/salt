@@ -392,7 +392,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
     service_url = prov_dict.get('service_url', 'amazonaws.com')
 
     if not location:
-        location = get_location(opts, provider)
+        location = get_location(opts, prov_dict)
 
     if endpoint is None:
         if not requesturl:
