@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salt.utils import is_linux
+import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 
@@ -19,7 +19,7 @@ except ImportError:
     HAS_SHADOW = False
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 _PASSWORD = 'lamepassword'
@@ -41,7 +41,7 @@ _HASHES = dict(
 )
 
 
-@skipIf(not is_linux(), 'minion is not Linux')
+@skipIf(not salt.utils.platform.is_linux(), 'minion is not Linux')
 class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

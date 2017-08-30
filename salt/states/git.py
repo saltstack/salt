@@ -21,14 +21,15 @@ import re
 import string
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
 import salt.utils.files
 import salt.utils.url
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -573,11 +574,11 @@ def latest(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not remote:
@@ -1139,13 +1140,22 @@ def latest(name,
                                            password=password,
                                            https_user=https_user,
                                            https_pass=https_pass)
-                comments.append(
-                    'Remote \'{0}\' changed from {1} to {2}'.format(
-                        remote,
-                        salt.utils.url.redact_http_basic_auth(fetch_url),
-                        redacted_fetch_url
+                if fetch_url is None:
+                    comments.append(
+                        'Remote \'{0}\' set to {1}'.format(
+                            remote,
+                            redacted_fetch_url
+                        )
                     )
-                )
+                    ret['changes']['new'] = name + ' => ' + remote
+                else:
+                    comments.append(
+                        'Remote \'{0}\' changed from {1} to {2}'.format(
+                            remote,
+                            salt.utils.url.redact_http_basic_auth(fetch_url),
+                            redacted_fetch_url
+                        )
+                    )
 
             if remote_rev is not None:
                 if __opts__['test']:
@@ -1448,8 +1458,6 @@ def latest(name,
                                                         user=user,
                                                         password=password,
                                                         ignore_retcode=True):
-                            merge_rev = remote_rev if rev == 'HEAD' \
-                                else desired_upstream
 
                             if git_ver >= _LooseVersion('1.8.1.6'):
                                 # --ff-only added in version 1.8.1.6. It's not
@@ -1466,7 +1474,7 @@ def latest(name,
 
                             __salt__['git.merge'](
                                 target,
-                                rev=merge_rev,
+                                rev=remote_rev,
                                 opts=merge_opts,
                                 user=user,
                                 password=password)
@@ -2108,11 +2116,11 @@ def detached(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     ref = kwargs.pop('ref', None)
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if ref is not None:
@@ -2122,7 +2130,7 @@ def detached(name,
             'consistency. Please update your SLS to reflect this.'
         )
         ret.setdefault('warnings', []).append(deprecation_msg)
-        salt.utils.warn_until('Fluorine', deprecation_msg)
+        salt.utils.versions.warn_until('Fluorine', deprecation_msg)
 
     if not rev:
         return _fail(
@@ -2230,13 +2238,18 @@ def detached(name,
 
         local_commit_id = _get_local_rev_and_branch(target, user, password)[0]
 
-        if remote_rev_type is 'hash' \
-                and __salt__['git.describe'](target,
-                                             rev,
-                                             user=user,
-                                             password=password):
-            # The rev is a hash and it exists locally so skip to checkout
-            hash_exists_locally = True
+        if remote_rev_type is 'hash':
+            try:
+                __salt__['git.describe'](target,
+                                         rev,
+                                         user=user,
+                                         password=password,
+                                         ignore_retcode=True)
+            except CommandExecutionError:
+                hash_exists_locally = False
+            else:
+                # The rev is a hash and it exists locally so skip to checkout
+                hash_exists_locally = True
         else:
             # Check that remote is present and set to correct url
             remotes = __salt__['git.remotes'](target,
@@ -2597,13 +2610,13 @@ def config_unset(name,
     # allows us to accept 'global' as an argument to this function without
     # shadowing global(), while also not allowing unwanted arguments to be
     # passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
     all_ = kwargs.pop('all', False)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not global_ and not repo:
@@ -2848,12 +2861,12 @@ def config_set(name,
     # allows us to accept 'global' as an argument to this function without
     # shadowing global(), while also not allowing unwanted arguments to be
     # passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not global_ and not repo:

@@ -19,8 +19,9 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed when is_true is moved
 import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 try:
     import salt.utils.pycrypto
@@ -291,7 +292,7 @@ def set_password(name, password, use_usermod=False):
         lines = []
         with salt.utils.files.fopen(s_file, 'rb') as fp_:
             for line in fp_:
-                line = salt.utils.to_str(line)
+                line = salt.utils.stringutils.to_str(line)
                 comps = line.strip().split(':')
                 if comps[0] != name:
                     lines.append(line)

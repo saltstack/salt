@@ -12,11 +12,11 @@ import tempfile
 
 # Import salt libs
 import salt.utils.files
-from salt.utils import which as _which
+import salt.utils.path
 from salt.exceptions import SaltInvocationError
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 __outputter__ = {
     'rm_alias': 'txt',
@@ -97,7 +97,7 @@ def __write_aliases_file(lines):
     os.rename(out.name, afn)
 
     # Search $PATH for the newalises command
-    newaliases = _which('newaliases')
+    newaliases = salt.utils.path.which('newaliases')
     if newaliases is not None:
         __salt__['cmd.run'](newaliases)
 

@@ -828,12 +828,14 @@ Returns:
   08.03.2017 17:00
 
 
-.. jinja_ref:: str_to_num
+.. jinja_ref:: to_num
 
-``str_to_num``
---------------
+``to_num``
+----------
 
 .. versionadded:: 2017.7.0
+.. versionadded:: Oxygen
+    Renamed from ``str_to_num`` to ``to_num``.
 
 Converts a string to its numerical value.
 
@@ -841,7 +843,7 @@ Example:
 
 .. code-block:: jinja
 
-  {{ '5' | str_to_num }}
+  {{ '5' | to_num }}
 
 Returns:
 
@@ -917,10 +919,10 @@ Returns:
   {'a': 'b'}
 
 
-.. jinja_ref:: rand_str
+.. jinja_ref:: random_hash
 
-``rand_str``
-------------
+``random_hash``
+---------------
 
 .. versionadded:: 2017.7.0
 .. versionadded:: Oxygen
@@ -937,8 +939,8 @@ Example:
 .. code-block:: jinja
 
   {% set num_range = 99999999 %}
-  {{ num_range | rand_str }}
-  {{ num_range | rand_str('sha512') }}
+  {{ num_range | random_hash }}
+  {{ num_range | random_hash('sha512') }}
 
 Returns:
 

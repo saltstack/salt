@@ -10,7 +10,7 @@ import os
 import re
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.files
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError

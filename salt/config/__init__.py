@@ -14,19 +14,12 @@ import getpass
 import time
 import codecs
 import logging
-from copy import deepcopy
 import types
-
-# Import third party libs
 import yaml
-try:
-    yaml.Loader = yaml.CLoader
-    yaml.Dumper = yaml.CDumper
-except Exception:
-    pass
+from copy import deepcopy
 
 # pylint: disable=import-error,no-name-in-module
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse
 # pylint: enable=import-error,no-name-in-module
 
@@ -35,9 +28,13 @@ import salt.utils
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.network
-import salt.syspaths
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.validate.path
 import salt.utils.xdg
+import salt.utils.yamlloader as yamlloader
+import salt.syspaths
 import salt.exceptions
 from salt.utils.locales import sdecode
 import salt.defaults.exitcodes
@@ -60,7 +57,7 @@ _DFLT_LOG_FMT_LOGFILE = (
 )
 _DFLT_REFSPECS = ['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']
 
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     # Since an 'ipc_mode' of 'ipc' will never work on Windows due to lack of
     # support in ZeroMQ, we want the default to be something that has a
     # chance of working.
@@ -721,6 +718,10 @@ VALID_OPTS = {
     # Auth subsystem module to use to get authorized access list for a user. By default it's the
     # same module used for external authentication.
     'eauth_acl_module': str,
+
+    # Subsystem to use to maintain eauth tokens. By default, tokens are stored on the local
+    # filesystem
+    'eauth_tokens': str,
 
     # The number of open files a daemon is allowed to have open. Frequently needs to be increased
     # higher than the system default in order to account for the way zeromq consumes file handles.
@@ -1472,8 +1473,9 @@ DEFAULT_MASTER_OPTS = {
     'syndic_forward_all_events': False,
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
-    'runner_dirs': [],
     'outputter_dirs': [],
+    'runner_dirs': [],
+    'utils_dirs': [],
     'client_acl_verify': True,
     'publisher_acl': {},
     'publisher_acl_blacklist': {},
@@ -1483,6 +1485,7 @@ DEFAULT_MASTER_OPTS = {
     'token_expire_user_override': False,
     'keep_acl_in_token': False,
     'eauth_acl_module': '',
+    'eauth_tokens': 'localfs',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
     'file_recv': False,
     'file_recv_max_size': 100,
@@ -1666,7 +1669,8 @@ DEFAULT_PROXY_MINION_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': True,
-    'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include'],
+    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'proxy', 'extmods'),
+    'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include', 'extension_modules'],
     'default_include': 'proxy.d/*.conf',
 
     # By default, proxies will preserve the connection.
@@ -1843,7 +1847,7 @@ def _validate_opts(opts):
 
             # We don't know what data type sdb will return at run-time so we
             # simply cannot check it for correctness here at start-time.
-            if isinstance(val, str) and val.startswith('sdb://'):
+            if isinstance(val, six.string_types) and val.startswith('sdb://'):
                 continue
 
             if hasattr(VALID_OPTS[key], '__call__'):
@@ -1887,7 +1891,7 @@ def _validate_opts(opts):
     # sock_dirs must start with '\\.\mailslot\' and not contain any colons.
     # We don't expect the user to know this, so we will fix up their path for
     # them if it isn't compliant.
-    if (salt.utils.is_windows() and opts.get('transport') == 'raet' and
+    if (salt.utils.platform.is_windows() and opts.get('transport') == 'raet' and
             'sock_dir' in opts and
             not opts['sock_dir'].startswith('\\\\.\\mailslot\\')):
         opts['sock_dir'] = (
@@ -1943,7 +1947,10 @@ def _read_conf_file(path):
     log.debug('Reading configuration from {0}'.format(path))
     with salt.utils.files.fopen(path, 'r') as conf_file:
         try:
-            conf_opts = yaml.safe_load(conf_file.read()) or {}
+            conf_opts = yamlloader.load(
+                conf_file.read(),
+                Loader=yamlloader.SaltYamlSafeLoader,
+            ) or {}
         except yaml.YAMLError as err:
             message = 'Error parsing configuration file: {0} - {1}'.format(path, err)
             log.error(message)
@@ -2151,7 +2158,7 @@ def prepend_root_dir(opts, path_options):
                 # No prepending required
                 continue
             # Prepending the root dir
-            opts[path_option] = salt.utils.path_join(root_dir, path)
+            opts[path_option] = salt.utils.path.join(root_dir, path)
 
 
 def insert_system_path(opts, paths):
@@ -2334,7 +2341,7 @@ def syndic_config(master_config_path,
         'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir'
     ]
-    for config_key in ('syndic_log_file', 'log_file', 'key_logfile'):
+    for config_key in ('log_file', 'key_logfile', 'syndic_log_file'):
         # If this is not a URI and instead a local path
         if urlparse(opts.get(config_key, '')).scheme == '':
             prepend_root_dirs.append(config_key)
@@ -3225,12 +3232,12 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['nova', 'virtualbox', 'libvirt', 'softlayer']
+    non_image_drivers = ['nova', 'virtualbox', 'libvirt', 'softlayer', 'oneandone']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
                         'softlayer', 'softlayer_hw', 'vmware', 'vsphere',
-                        'virtualbox', 'profitbricks', 'libvirt']
+                        'virtualbox', 'profitbricks', 'libvirt', 'oneandone']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
@@ -3357,9 +3364,9 @@ def get_id(opts, cache_minion_id=False):
         try:
             with salt.utils.files.fopen(id_cache) as idf:
                 name = idf.readline().strip()
-                bname = salt.utils.to_bytes(name)
+                bname = salt.utils.stringutils.to_bytes(name)
                 if bname.startswith(codecs.BOM):  # Remove BOM if exists
-                    name = salt.utils.to_str(bname.replace(codecs.BOM, '', 1))
+                    name = salt.utils.stringutils.to_str(bname.replace(codecs.BOM, '', 1))
             if name and name != 'localhost':
                 log.debug('Using cached minion ID from {0}: {1}'.format(id_cache, name))
                 return name, False
@@ -3595,12 +3602,23 @@ def apply_master_config(overrides=None, defaults=None):
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
+    opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
+    opts['syndic_dir'] = os.path.join(opts['cachedir'], 'syndics')
+    # Make sure ext_mods gets set if it is an untrue value
+    # (here to catch older bad configs)
     opts['extension_modules'] = (
         opts.get('extension_modules') or
         os.path.join(opts['cachedir'], 'extmods')
     )
-    opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
-    opts['syndic_dir'] = os.path.join(opts['cachedir'], 'syndics')
+    # Set up the utils_dirs location from the extension_modules location
+    opts['utils_dirs'] = (
+        opts.get('utils_dirs') or
+        [os.path.join(opts['extension_modules'], 'utils')]
+    )
+
+    # Insert all 'utils_dirs' directories to the system path
+    insert_system_path(opts, opts['utils_dirs'])
+
     if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
@@ -3647,7 +3665,7 @@ def apply_master_config(overrides=None, defaults=None):
     if opts['file_ignore_regex']:
         # If file_ignore_regex was given, make sure it's wrapped in a list.
         # Only keep valid regex entries for improved performance later on.
-        if isinstance(opts['file_ignore_regex'], str):
+        if isinstance(opts['file_ignore_regex'], six.string_types):
             ignore_regex = [opts['file_ignore_regex']]
         elif isinstance(opts['file_ignore_regex'], list):
             ignore_regex = opts['file_ignore_regex']
@@ -3668,7 +3686,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     if opts['file_ignore_glob']:
         # If file_ignore_glob was given, make sure it's wrapped in a list.
-        if isinstance(opts['file_ignore_glob'], str):
+        if isinstance(opts['file_ignore_glob'], six.string_types):
             opts['file_ignore_glob'] = [opts['file_ignore_glob']]
 
     # Let's make sure `worker_threads` does not drop below 3 which has proven

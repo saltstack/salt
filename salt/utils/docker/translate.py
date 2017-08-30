@@ -14,7 +14,7 @@ import salt.utils.network
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range, zip  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -387,7 +387,7 @@ def dns(val, **kwargs):
 
 
 def domainname(val, **kwargs):  # pylint: disable=unused-argument
-    return _translate_stringlist(val)
+    return _translate_str(val)
 
 
 def entrypoint(val, **kwargs):  # pylint: disable=unused-argument

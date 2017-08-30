@@ -245,7 +245,7 @@ import re
 import salt.utils.dictupdate as dictupdate
 from salt.utils import exactly_one
 from salt.exceptions import SaltInvocationError
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -1312,7 +1312,7 @@ def _tags_present(name, tags, region, key, keyid, profile):
         tags_to_add = tags
         tags_to_update = {}
         tags_to_remove = []
-        if lb['tags']:
+        if lb.get('tags'):
             for _tag in lb['tags']:
                 if _tag not in tags.keys():
                     if _tag not in tags_to_remove:

@@ -28,7 +28,9 @@ Dependencies
 from __future__ import absolute_import
 
 import logging
-log = logging.getLogger(__name__)
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # import NAPALM utils
 import salt.utils.napalm
@@ -51,6 +53,8 @@ except ImportError:
 # ----------------------------------------------------------------------------------------------------------------------
 
 __virtualname__ = 'netntp'
+
+log = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # global variables
@@ -105,7 +109,7 @@ def _check(peers):
         return False
 
     for peer in peers:
-        if not isinstance(peer, str):
+        if not isinstance(peer, six.string_types):
             return False
 
     if not HAS_NETADDR:  # if does not have this lib installed, will simply try to load what user specified

@@ -50,19 +50,19 @@ Group Policy using the ``lgpo`` module.
 :depends:
         - salt.utils.win_update
 '''
-
 # Import Python libs
 from __future__ import absolute_import
 from __future__ import unicode_literals
 import logging
 
 # Import Salt libs
-from salt.ext import six
-import salt.utils
+import salt.utils.platform
+import salt.utils.versions
 import salt.utils.win_update
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
+from salt.ext import six
 try:
     import pythoncom
     import win32com.client
@@ -77,7 +77,7 @@ def __virtual__():
     '''
     Only works on Windows systems with PyWin32
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'WUA: Only available on Window systems'
 
     if not HAS_PYWIN32:
@@ -303,7 +303,7 @@ def list_update(name, download=False, install=False):
         # Not all updates have an associated KB
         salt '*' win_wua.list_update 'Microsoft Camera Codec Pack'
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'This function is replaced by \'get\' as of Salt 2017.7.0. This'
         'warning will be removed in Salt Fluorine.')
@@ -530,7 +530,7 @@ def list_updates(software=True,
         # A summary of all Feature Packs and Windows 8.1 Updates
         salt '*' win_wua.list_updates categories=['Feature Packs','Windows 8.1'] summary=True
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'This function is replaced by \'list\' as of Salt 2017.7.0. This'
         'warning will be removed in Salt Fluorine.')
@@ -718,7 +718,7 @@ def download_update(name):
 
         salt '*' win_wua.download_update KB12312321
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'This function is replaced by \'download\' as of Salt 2017.7.0. This'
         'warning will be removed in Salt Fluorine.')
@@ -750,7 +750,7 @@ def download_updates(names):
         # Normal Usage
         salt '*' win_wua.download_updates guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB2131233']
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'This function is replaced by \'download\' as of Salt 2017.7.0. This'
         'warning will be removed in Salt Fluorine.')
@@ -838,7 +838,7 @@ def install_update(name):
 
         salt '*' win_wua.install_update KB12312231
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'This function is replaced by \'install\' as of Salt 2017.7.0. This'
         'warning will be removed in Salt Fluorine.')
@@ -869,7 +869,7 @@ def install_updates(names):
         # Normal Usage
         salt '*' win_wua.install_updates guid=['12345678-abcd-1234-abcd-1234567890ab', 'KB12323211']
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'This function is replaced by \'install\' as of Salt 2017.7.0. This'
         'warning will be removed in Salt Fluorine.')

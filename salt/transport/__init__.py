@@ -6,7 +6,7 @@ from __future__ import absolute_import
 import logging
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)

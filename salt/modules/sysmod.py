@@ -18,7 +18,7 @@ from salt.utils.doc import strip_rst as _strip_rst
 from salt.ext.six.moves import zip
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

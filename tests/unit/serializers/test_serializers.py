@@ -9,7 +9,7 @@ from tests.support.unit import skipIf, TestCase
 
 # Import 3rd party libs
 import jinja2
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
 import salt.serializers.configparser as configparser
