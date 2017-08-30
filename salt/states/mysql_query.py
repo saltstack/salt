@@ -29,7 +29,7 @@ import os.path
 import salt.utils.files
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():

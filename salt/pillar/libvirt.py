@@ -15,12 +15,12 @@ import os
 import subprocess
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 
 
 def __virtual__():
-    return salt.utils.which('certtool') is not None
+    return salt.utils.path.which('certtool') is not None
 
 
 def ext_pillar(minion_id,

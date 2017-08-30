@@ -17,7 +17,7 @@ from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
 
 from salt.serializers import DeserializationError, SerializationError
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.odict import OrderedDict
 
 __all__ = ['deserialize', 'serialize', 'available']

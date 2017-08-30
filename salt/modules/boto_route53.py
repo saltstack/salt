@@ -53,6 +53,7 @@ import time
 
 # Import salt libs
 import salt.utils.compat
+import salt.utils.versions
 import salt.utils.odict as odict
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -255,7 +256,7 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Neon',
             'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
             'have been deprecated in favor of \'retry_on_errors\' and '
@@ -387,7 +388,7 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Neon',
             'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
             'have been deprecated in favor of \'retry_on_errors\' and '
@@ -468,7 +469,7 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Neon',
             'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
             'have been deprecated in favor of \'retry_on_errors\' and '
@@ -555,7 +556,7 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
     _type = record_type.upper()
 
     if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Neon',
             'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
             'have been deprecated in favor of \'retry_on_errors\' and '
@@ -617,7 +618,7 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
     _type = record_type.upper()
 
     if retry_on_rate_limit or rate_limit_retries is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Neon',
             'The \'retry_on_rate_limit\' and \'rate_limit_retries\' arguments '
             'have been deprecated in favor of \'retry_on_errors\' and '

@@ -98,7 +98,7 @@ from copy import deepcopy
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import filter
 from salt.ext.six.moves.urllib.parse import quote as _quote
 # pylint: enable=import-error,no-name-in-module,redefined-builtin

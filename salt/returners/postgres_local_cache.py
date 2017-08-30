@@ -117,7 +117,7 @@ import sys
 # Import salt libs
 import salt.utils
 import salt.utils.jid
-import salt.ext.six as six
+from salt.ext import six
 
 # Import third party libs
 try:

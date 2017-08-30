@@ -137,6 +137,7 @@ import random
 import salt.utils.boto
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -150,7 +151,7 @@ ACTIVE = 'active'
 log = logging.getLogger(__name__)
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error
 # pylint: disable=import-error
 try:
@@ -2456,9 +2457,10 @@ def describe_route_table(route_table_id=None, route_table_name=None,
 
     '''
 
-    salt.utils.warn_until('Oxygen',
-         'The \'describe_route_table\' method has been deprecated and '
-         'replaced by \'describe_route_tables\'.'
+    salt.utils.versions.warn_until(
+        'Oxygen',
+        'The \'describe_route_table\' method has been deprecated and '
+        'replaced by \'describe_route_tables\'.'
     )
     if not any((route_table_id, route_table_name, tags)):
         raise SaltInvocationError('At least one of the following must be specified: '
@@ -2697,11 +2699,11 @@ def request_vpc_peering_connection(requester_vpc_id=None, requester_vpc_name=Non
         Name tag of the requesting VPC.  Exclusive with requester_vpc_id.
 
     peer_vpc_id
-        ID of the VPC tp crete VPC peering connection with. This can be a VPC in
+        ID of the VPC to create VPC peering connection with. This can be a VPC in
         another account. Exclusive with peer_vpc_name.
 
     peer_vpc_name
-        Name tag of the VPC tp crete VPC peering connection with. This can only
+        Name tag of the VPC to create VPC peering connection with. This can only
         be a VPC in the same account, else resolving it into a vpc ID will almost
         certainly fail. Exclusive with peer_vpc_id.
 
