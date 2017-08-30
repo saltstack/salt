@@ -31,6 +31,7 @@ import salt.transport.client
 import salt.utils
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.versions
 import salt.payload
 
 log = logging.getLogger(__name__)
@@ -410,6 +411,13 @@ class Authorize(object):
     The authorization engine used by EAUTH
     '''
     def __init__(self, opts, load, loadauth=None):
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'Authorize\' class has been deprecated. Please use the '
+            '\'LoadAuth\', \'Reslover\', or \'AuthUser\' classes instead. '
+            'Support for the \'Authorze\' class will be removed in Salt '
+            '{version}.'
+        )
         self.opts = salt.config.master_config(opts['conf_file'])
         self.load = load
         self.ckminions = salt.utils.minions.CkMinions(opts)

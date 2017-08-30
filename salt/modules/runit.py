@@ -58,6 +58,7 @@ log = logging.getLogger(__name__)
 # Import salt libs
 from salt.exceptions import CommandExecutionError
 import salt.utils.files
+import salt.utils.path
 
 # Function alias to not shadow built-ins.
 __func_alias__ = {
@@ -95,7 +96,7 @@ def __virtual__():
         global __virtualname__
         __virtualname__ = 'service'
         return __virtualname__
-    if salt.utils.which('sv'):
+    if salt.utils.path.which('sv'):
         return __virtualname__
     return (False, 'Runit not available.  Please install sv')
 

@@ -80,7 +80,7 @@ def recv(files, dest):
             return 'Destination unavailable'
 
         try:
-            with salt.utils.fopen(final, 'w+') as fp_:
+            with salt.utils.files.fopen(final, 'w+') as fp_:
                 fp_.write(data)
             ret[final] = True
         except IOError:
