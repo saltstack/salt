@@ -33,6 +33,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.platform
+import salt.utils.state
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -98,7 +99,7 @@ def _set_retcode(ret, highstate=None):
     if isinstance(ret, list):
         __context__['retcode'] = 1
         return
-    if not salt.utils.check_state_result(ret, highstate=highstate):
+    if not salt.utils.state.check_state_result(ret, highstate=highstate):
 
         __context__['retcode'] = 2
 
@@ -316,7 +317,7 @@ def low(data, queue=False, **kwargs):
     ret = st_.call(data)
     if isinstance(ret, list):
         __context__['retcode'] = 1
-    if salt.utils.check_state_result(ret):
+    if salt.utils.state.check_state_result(ret):
         __context__['retcode'] = 2
     return ret
 

@@ -194,7 +194,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
 from __future__ import absolute_import
 
 # Import salt libs
-import salt.utils
+import salt.utils.state
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 
@@ -810,7 +810,7 @@ def mod_aggregate(low, chunks, running):
     if low.get('fun') not in agg_enabled:
         return low
     for chunk in chunks:
-        tag = salt.utils.gen_state_tag(chunk)
+        tag = salt.utils.state.gen_state_tag(chunk)
         if tag in running:
             # Already ran the iptables state, skip aggregation
             continue
