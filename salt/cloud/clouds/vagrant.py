@@ -230,7 +230,7 @@ def create(vm_):
 
     log.info('requesting vagrant ssh-config for %s', machine)
     cmd['arg'] = ['vagrant ssh-config {}'.format(machine)]
-    cmd['kwarg'] = {'output': 'json'}
+    kwargs['output'] = 'json'
     ret = local.run(cmd)  # ask Vagrant about the configuration it just created
     log.debug('response ==> %s', repr(ret))
     reply = ret[host]
