@@ -306,14 +306,16 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
         else:
             string_kwarg = salt.utils.args.parse_input([arg], condition=False)[1]  # pylint: disable=W0632
             if string_kwarg:
-                log.critical(
-                    'String kwarg(s) %s passed to '
-                    'salt.minion.load_args_and_kwargs(). This is no longer '
-                    'supported, so the kwarg(s) will be ignored. Arguments '
-                    'passed to salt.minion.load_args_and_kwargs() should be '
-                    'passed to salt.utils.args.parse_input() first to load '
-                    'and condition them properly.', string_kwarg
-                )
+                if argspec.keywords or next(six.iterkeys(string_kwarg)) in argspec.args:
+                    # Function supports **kwargs or is a positional argument to
+                    # the function.
+                    _kwargs.update(string_kwarg)
+                else:
+                    # **kwargs not in argspec and parsed argument name not in
+                    # list of positional arguments. This keyword argument is
+                    # invalid.
+                    for key, val in six.iteritems(string_kwarg):
+                        invalid_kwargs.append('{0}={1}'.format(key, val))
             else:
                 _args.append(arg)
 
@@ -1249,7 +1251,7 @@ class Minion(MinionBase):
         ret = yield channel.send(load, timeout=timeout)
         raise tornado.gen.Return(ret)
 
-    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True):
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True, timeout_handler=None):
         '''
         Fire an event on the master, or drop message if unable to send.
         '''
@@ -1268,10 +1270,6 @@ class Minion(MinionBase):
         else:
             return
 
-        def timeout_handler(*_):
-            log.info('fire_master failed: master could not be contacted. Request timed out.')
-            return True
-
         if sync:
             try:
                 self._send_req_sync(load, timeout)
@@ -1282,6 +1280,12 @@ class Minion(MinionBase):
                 log.info('fire_master failed: {0}'.format(traceback.format_exc()))
                 return False
         else:
+            if timeout_handler is None:
+                def handle_timeout(*_):
+                    log.info('fire_master failed: master could not be contacted. Request timed out.')
+                    return True
+                timeout_handler = handle_timeout
+
             with tornado.stack_context.ExceptionStackContext(timeout_handler):
                 self._send_req_async(load, timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
         return True
@@ -1983,8 +1987,9 @@ class Minion(MinionBase):
         elif tag.startswith('_minion_mine'):
             self._mine_send(tag, data)
         elif tag.startswith('fire_master'):
-            log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
-            self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+            if self.connected:
+                log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
+                self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
         elif tag.startswith(master_event(type='disconnected')) or tag.startswith(master_event(type='failback')):
             # if the master disconnect event is for a different master, raise an exception
             if tag.startswith(master_event(type='disconnected')) and data['master'] != self.opts['master']:
@@ -2203,13 +2208,15 @@ class Minion(MinionBase):
         if ping_interval > 0 and self.connected:
             def ping_master():
                 try:
-                    if not self._fire_master('ping', 'minion_ping'):
+                    def ping_timeout_handler(*_):
                         if not self.opts.get('auth_safemode', True):
                             log.error('** Master Ping failed. Attempting to restart minion**')
                             delay = self.opts.get('random_reauth_delay', 5)
                             log.info('delaying random_reauth_delay {0}s'.format(delay))
                             # regular sys.exit raises an exception -- which isn't sufficient in a thread
                             os._exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+
+                    self._fire_master('ping', 'minion_ping', sync=False, timeout_handler=ping_timeout_handler)
                 except Exception:
                     log.warning('Attempt to ping master failed.', exc_on_loglevel=logging.DEBUG)
             self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
@@ -2224,7 +2231,7 @@ class Minion(MinionBase):
             except Exception:
                 log.critical('The beacon errored: ', exc_info=True)
             if beacons and self.connected:
-                self._fire_master(events=beacons)
+                self._fire_master(events=beacons, sync=False)
 
         self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
 

@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Compendium of generic DNS utilities
+Compendium of generic DNS utilities.
+
+.. note::
+
+    Some functions in the ``dnsutil`` execution module depend on ``dig``.
 '''
 from __future__ import absolute_import
 
@@ -232,7 +236,7 @@ def check_ip(ip_addr):
 
     .. code-block:: bash
 
-        salt ns1 dig.check_ip 127.0.0.1
+        salt ns1 dnsutil.check_ip 127.0.0.1
     '''
     if _has_dig():
         return __salt__['dig.check_ip'](ip_addr)
@@ -242,7 +246,7 @@ def check_ip(ip_addr):
 
 def A(host, nameserver=None):
     '''
-    Return the A record(s) for `host`.
+    Return the A record(s) for ``host``.
 
     Always returns a list.
 
@@ -267,7 +271,7 @@ def A(host, nameserver=None):
 
 def AAAA(host, nameserver=None):
     '''
-    Return the AAAA record(s) for `host`.
+    Return the AAAA record(s) for ``host``.
 
     Always returns a list.
 
@@ -302,7 +306,7 @@ def NS(domain, resolve=True, nameserver=None):
 
     .. code-block:: bash
 
-        salt ns1 dig.NS google.com
+        salt ns1 dnsutil.NS google.com
 
     '''
     if _has_dig():
@@ -323,7 +327,7 @@ def SPF(domain, record='SPF', nameserver=None):
 
     .. code-block:: bash
 
-        salt ns1 dig.SPF google.com
+        salt ns1 dnsutil.SPF google.com
     '''
     if _has_dig():
         return __salt__['dig.SPF'](domain, record, nameserver)
@@ -346,7 +350,7 @@ def MX(domain, resolve=False, nameserver=None):
 
     .. code-block:: bash
 
-        salt ns1 dig.MX google.com
+        salt ns1 dnsutil.MX google.com
     '''
     if _has_dig():
         return __salt__['dig.MX'](domain, resolve, nameserver)

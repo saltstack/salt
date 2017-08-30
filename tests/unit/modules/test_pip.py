@@ -10,6 +10,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
+import salt.utils
 import salt.modules.pip as pip
 from salt.exceptions import CommandExecutionError
 
@@ -289,17 +290,23 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             mock_path.isdir.return_value = True
 
             pkg = 'mock'
-            venv_path = '/test_env'
 
             def join(*args):
-                return '/'.join(args)
+                return os.sep.join(args)
+
             mock_path.join = join
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                if salt.utils.is_windows():
+                    venv_path = 'c:\\test_env'
+                    bin_path = os.path.join(venv_path, 'Scripts', 'pip.exe').encode('string-escape')
+                else:
+                    venv_path = '/test_env'
+                    bin_path = os.path.join(venv_path, 'bin', 'pip')
                 pip.install(pkg, bin_env=venv_path)
                 mock.assert_called_once_with(
-                    [os.path.join(venv_path, 'bin', 'pip'), 'install', pkg],
-                    env={'VIRTUAL_ENV': '/test_env'},
+                    [bin_path, 'install', pkg],
+                    env={'VIRTUAL_ENV': venv_path},
                     saltenv='base',
                     runas=None,
                     use_vt=False,

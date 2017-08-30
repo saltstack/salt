@@ -19,10 +19,12 @@ from __future__ import absolute_import
 
 import traceback
 import logging
+import importlib
 from functools import wraps
 log = logging.getLogger(__file__)
 
 import salt.utils
+import salt.output
 
 # Import third party lib
 try:
@@ -242,6 +244,11 @@ def get_device_opts(opts, salt_obj=None):
     network_device = {}
     # by default, look in the proxy config details
     device_dict = opts.get('proxy', {}) or opts.get('napalm', {})
+    if opts.get('proxy') or opts.get('napalm'):
+        opts['multiprocessing'] = device_dict.get('multiprocessing', False)
+        # Most NAPALM drivers are SSH-based, so multiprocessing should default to False.
+        # But the user can be allows to have a different value for the multiprocessing, which will
+        #   override the opts.
     if salt_obj and not device_dict:
         # get the connection details from the opts
         device_dict = salt_obj['config.merge']('napalm')
@@ -264,6 +271,7 @@ def get_device_opts(opts, salt_obj=None):
     network_device['TIMEOUT'] = device_dict.get('timeout', 60)
     network_device['OPTIONAL_ARGS'] = device_dict.get('optional_args', {})
     network_device['ALWAYS_ALIVE'] = device_dict.get('always_alive', True)
+    network_device['PROVIDER'] = device_dict.get('provider')
     network_device['UP'] = False
     # get driver object form NAPALM
     if 'config_lock' not in network_device['OPTIONAL_ARGS']:
@@ -281,7 +289,24 @@ def get_device(opts, salt_obj=None):
     '''
     log.debug('Setting up NAPALM connection')
     network_device = get_device_opts(opts, salt_obj=salt_obj)
-    _driver_ = napalm_base.get_network_driver(network_device.get('DRIVER_NAME'))
+    provider_lib = napalm_base
+    if network_device.get('PROVIDER'):
+        # In case the user requires a different provider library,
+        #   other than napalm-base.
+        # For example, if napalm-base does not satisfy the requirements
+        #   and needs to be enahanced with more specific features,
+        #   we may need to define a custom library on top of napalm-base
+        #   with the constraint that it still needs to provide the
+        #   `get_network_driver` function. However, even this can be
+        #   extended later, if really needed.
+        # Configuration example:
+        #   provider: napalm_base_example
+        try:
+            provider_lib = importlib.import_module(network_device.get('PROVIDER'))
+        except ImportError as ierr:
+            log.error('Unable to import {0}'.format(network_device.get('PROVIDER')), exc_info=True)
+            log.error('Falling back to napalm-base')
+    _driver_ = provider_lib.get_network_driver(network_device.get('DRIVER_NAME'))
     try:
         network_device['DRIVER'] = _driver_(
             network_device.get('HOSTNAME', ''),
@@ -408,58 +433,58 @@ def default_ret(name):
     return ret
 
 
-def loaded_ret(ret, loaded, test, debug):
+def loaded_ret(ret, loaded, test, debug, compliance_report=False, opts=None):
     '''
     Return the final state output.
-
     ret
         The initial state output structure.
-
     loaded
         The loaded dictionary.
     '''
     # Always get the comment
-    ret.update({
-        'comment': loaded.get('comment', '')
-    })
+    changes = {}
     pchanges = {}
+    ret['comment'] = loaded['comment']
+    if 'diff' in loaded:
+        changes['diff'] = loaded['diff']
+        pchanges['diff'] = loaded['diff']
+    if 'compliance_report' in loaded:
+        if compliance_report:
+            changes['compliance_report'] = loaded['compliance_report']
+        pchanges['compliance_report'] = loaded['compliance_report']
+    if debug and 'loaded_config' in loaded:
+        changes['loaded_config'] = loaded['loaded_config']
+        pchanges['loaded_config'] = loaded['loaded_config']
+    ret['pchanges'] = pchanges
+    if changes.get('diff'):
+        ret['comment'] = '{comment_base}\n\nConfiguration diff:\n\n{diff}'.format(comment_base=ret['comment'],
+                                                                                  diff=changes['diff'])
+    if changes.get('loaded_config'):
+        ret['comment'] = '{comment_base}\n\nLoaded config:\n\n{loaded_cfg}'.format(
+            comment_base=ret['comment'],
+            loaded_cfg=changes['loaded_config'])
+    if changes.get('compliance_report'):
+        ret['comment'] = '{comment_base}\n\nCompliance report:\n\n{compliance}'.format(
+            comment_base=ret['comment'],
+            compliance=salt.output.string_format(changes['compliance_report'], 'nested', opts=opts))
     if not loaded.get('result', False):
         # Failure of some sort
         return ret
-    if debug:
-        # Always check for debug
-        pchanges.update({
-            'loaded_config': loaded.get('loaded_config', '')
-        })
-        ret.update({
-            "pchanges": pchanges
-        })
     if not loaded.get('already_configured', True):
         # We're making changes
-        pchanges.update({
-            "diff": loaded.get('diff', '')
-        })
-        ret.update({
-            'pchanges': pchanges
-        })
         if test:
-            for k, v in pchanges.items():
-                ret.update({
-                    "comment": "{}:\n{}\n\n{}".format(k, v, ret.get("comment", ''))
-                })
-            ret.update({
-                'result': None,
-            })
+            ret['result'] = None
             return ret
         # Not test, changes were applied
         ret.update({
             'result': True,
-            'changes': pchanges,
-            'comment': "Configuration changed!\n{}".format(ret.get('comment', ''))
+            'changes': changes,
+            'comment': "Configuration changed!\n{}".format(loaded['comment'])
         })
         return ret
     # No changes
     ret.update({
-        'result': True
+        'result': True,
+        'changes': {}
     })
     return ret

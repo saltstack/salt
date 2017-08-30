@@ -5,7 +5,10 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import grp
+try:
+    import grp
+except ImportError:
+    pass
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -13,10 +16,12 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
+import salt.utils
 import salt.modules.groupadd as groupadd
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(salt.utils.is_windows(), "Module not available on Windows")
 class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.groupadd

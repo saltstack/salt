@@ -333,6 +333,7 @@ import logging
 import errno
 import random
 import yaml
+import copy
 
 # Import Salt libs
 import salt.config
@@ -841,9 +842,15 @@ class Schedule(object):
             if argspec.keywords:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in six.iteritems(ret):
-                    kwargs['__pub_{0}'.format(key)] = val
+                    kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
 
             ret['return'] = self.functions[func](*args, **kwargs)
+
+            # runners do not provide retcode
+            if 'retcode' in self.functions.pack['__context__']:
+                ret['retcode'] = self.functions.pack['__context__']['retcode']
+
+            ret['success'] = True
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
@@ -861,7 +868,6 @@ class Schedule(object):
                 for returner in OrderedDict.fromkeys(rets):
                     ret_str = '{0}.returner'.format(returner)
                     if ret_str in self.returners:
-                        ret['success'] = True
                         self.returners[ret_str](ret)
                     else:
                         log.info(
@@ -870,11 +876,6 @@ class Schedule(object):
                             )
                         )
 
-            # runners do not provide retcode
-            if 'retcode' in self.functions.pack['__context__']:
-                ret['retcode'] = self.functions.pack['__context__']['retcode']
-
-            ret['success'] = True
         except Exception:
             log.exception("Unhandled exception running {0}".format(ret['fun']))
             # Although catch-all exception handlers are bad, the exception here
@@ -1129,21 +1130,28 @@ class Schedule(object):
                                 log.error('Invalid date string {0}. '
                                           'Ignoring job {1}.'.format(i, job))
                                 continue
-                        when = int(time.mktime(when__.timetuple()))
-                        if when >= now:
-                            _when.append(when)
+                        _when.append(int(time.mktime(when__.timetuple())))
 
                     if data['_splay']:
                         _when.append(data['_splay'])
 
+                    # Sort the list of "whens" from earlier to later schedules
                     _when.sort()
+
+                    for i in _when:
+                        if i < now and len(_when) > 1:
+                            # Remove all missed schedules except the latest one.
+                            # We need it to detect if it was triggered previously.
+                            _when.remove(i)
+
                     if _when:
-                        # Grab the first element
-                        # which is the next run time
+                        # Grab the first element, which is the next run time or
+                        # last scheduled time in the past.
                         when = _when[0]
 
                         if '_run' not in data:
-                            data['_run'] = True
+                            # Prevent run of jobs from the past
+                            data['_run'] = bool(when >= now)
 
                         if not data['_next_fire_time']:
                             data['_next_fire_time'] = when

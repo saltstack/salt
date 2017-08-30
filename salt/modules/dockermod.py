@@ -559,6 +559,21 @@ def _prep_pull():
     __context__['docker._pull_status'] = [x[:12] for x in images(all=True)]
 
 
+def _scrub_links(links, name):
+    '''
+    Remove container name from HostConfig:Links values to enable comparing
+    container configurations correctly.
+    '''
+    if isinstance(links, list):
+        ret = []
+        for l in links:
+            ret.append(l.replace('/{0}/'.format(name), '/', 1))
+    else:
+        ret = links
+
+    return ret
+
+
 def _size_fmt(num):
     '''
     Format bytes as human-readable file sizes
@@ -619,7 +634,7 @@ def _client_wrapper(attr, *args, **kwargs):
             api_events = []
             try:
                 for event in ret:
-                    api_events.append(json.loads(event))
+                    api_events.append(json.loads(salt.utils.to_str(event)))
             except Exception as exc:
                 raise CommandExecutionError(
                     'Unable to interpret API event: \'{0}\''.format(event),
@@ -783,7 +798,7 @@ def get_client_args():
 
         salt myminion docker.get_client_args
     '''
-    return salt.utils.docker.get_client_args()
+    return __utils__['docker.get_client_args']()
 
 
 def _get_create_kwargs(image,
@@ -884,8 +899,20 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict][item]
             val2 = result2[conf_dict].get(item)
-            if val1 != val2:
-                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            if item in ('OomKillDisable',) or (val1 is None or val2 is None):
+                if bool(val1) != bool(val2):
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            elif item == 'Image':
+                image1 = inspect_image(val1)['Id']
+                image2 = inspect_image(val2)['Id']
+                if image1 != image2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
+            else:
+                if item == 'Links':
+                    val1 = _scrub_links(val1, first)
+                    val2 = _scrub_links(val2, second)
+                if val1 != val2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
         # and not the first.
         for item in result2[conf_dict]:
@@ -895,8 +922,20 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict].get(item)
             val2 = result2[conf_dict][item]
-            if val1 != val2:
-                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            if item in ('OomKillDisable',) or (val1 is None or val2 is None):
+                if bool(val1) != bool(val2):
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            elif item == 'Image':
+                image1 = inspect_image(val1)['Id']
+                image2 = inspect_image(val2)['Id']
+                if image1 != image2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
+            else:
+                if item == 'Links':
+                    val1 = _scrub_links(val1, first)
+                    val2 = _scrub_links(val2, second)
+                if val1 != val2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
     return ret
 
 
@@ -978,6 +1017,10 @@ def login(*registries):
             cmd = ['docker', 'login', '-u', username, '-p', password]
             if registry.lower() != 'hub':
                 cmd.append(registry)
+            log.debug(
+                'Attempting to login to docker registry \'%s\' as user \'%s\'',
+                registry, username
+            )
             login_cmd = __salt__['cmd.run_all'](
                 cmd,
                 python_shell=False,
@@ -1803,7 +1846,7 @@ def create(image,
         generate one for you (it will be included in the return data).
 
     skip_translate
-        This function translates Salt CLI input into the format which
+        This function translates Salt CLI or SLS input into the format which
         docker-py_ expects. However, in the event that Salt's translation logic
         fails (due to potential changes in the Docker Remote API, or to bugs in
         the translation code), this argument can be used to exert granular
@@ -2071,9 +2114,9 @@ def create(image,
         - ``dns_search="[foo1.domain.tld, foo2.domain.tld]"``
 
     domainname
-        Set custom DNS search domains
+        The domain name to use for the container
 
-        Example: ``domainname=domain.tld,domain2.tld``
+        Example: ``domainname=domain.tld``
 
     entrypoint
         Entrypoint for the container. Either a string (e.g. ``"mycmd --arg1
@@ -3091,7 +3134,9 @@ def build(path=None,
 
     stream_data = []
     for line in response:
-        stream_data.extend(json.loads(line, cls=DockerJSONDecoder))
+        stream_data.extend(
+            json.loads(salt.utils.to_str(line), cls=DockerJSONDecoder)
+        )
     errors = []
     # Iterate through API response and collect information
     for item in stream_data:
@@ -3808,7 +3853,6 @@ def save(name,
     if os.path.exists(path) and not overwrite:
         raise CommandExecutionError('{0} already exists'.format(path))
 
-    compression = kwargs.get('compression')
     if compression is None:
         if path.endswith('.tar.gz') or path.endswith('.tgz'):
             compression = 'gzip'
@@ -3846,8 +3890,9 @@ def save(name,
         saved_path = salt.utils.files.mkstemp()
     else:
         saved_path = path
-
-    cmd = ['docker', 'save', '-o', saved_path, inspect_image(name)['Id']]
+    # use the image name if its valid if not use the image id
+    image_to_save = name if name in inspect_image(name)['RepoTags'] else inspect_image(name)['Id']
+    cmd = ['docker', 'save', '-o', saved_path, image_to_save]
     time_started = time.time()
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     if result['retcode'] != 0:
@@ -3914,7 +3959,7 @@ def save(name,
     ret['Size_Human'] = _size_fmt(ret['Size'])
 
     # Process push
-    if kwargs.get(push, False):
+    if kwargs.get('push', False):
         ret['Push'] = __salt__['cp.push'](path)
 
     return ret

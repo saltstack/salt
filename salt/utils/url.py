@@ -60,15 +60,15 @@ def is_escaped(url):
     '''
     test whether `url` is escaped with `|`
     '''
-    if salt.utils.is_windows():
-        return False
-
     scheme = urlparse(url).scheme
     if not scheme:
         return url.startswith('|')
     elif scheme == 'salt':
         path, saltenv = parse(url)
-        return path.startswith('|')
+        if salt.utils.is_windows() and '|' in url:
+            return path.startswith('_')
+        else:
+            return path.startswith('|')
     else:
         return False
 
@@ -100,15 +100,15 @@ def unescape(url):
     '''
     remove escape character `|` from `url`
     '''
-    if salt.utils.is_windows():
-        return url
-
     scheme = urlparse(url).scheme
     if not scheme:
         return url.lstrip('|')
     elif scheme == 'salt':
         path, saltenv = parse(url)
-        return create(path.lstrip('|'), saltenv)
+        if salt.utils.is_windows() and '|' in url:
+            return create(path.lstrip('_'), saltenv)
+        else:
+            return create(path.lstrip('|'), saltenv)
     else:
         return url
 
