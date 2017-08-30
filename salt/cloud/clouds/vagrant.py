@@ -220,21 +220,39 @@ def create(vm_):
     log.debug('Vagrant driver sending netapi command=%s',repr(cmd))
     ret = local.run(cmd)
     log.debug('response ==> %s', repr(ret))
+    if not ret[host]:
+        # TODO: implement some kind of retry/timeout logic
+        log.error('Got empty return from API call to create "%s".'
+                  ' Machine "%s" on host "%s" may be booting too slowly.'
+                  ' Retry your command in a few minutes to connect.',
+                  vm_['name'], host, machine)
+        return {}
 
-    # NOTE: the minion's Vagrantfile is expected to contain a line like...
-    #  config.vm.provision "shell", inline: "ifconfig", run: "always"
+    log.info('requesting vagrant ssh-config for %s', machine)
+    cmd['arg'] = ['vagrant ssh-config {}'.format(machine)]
+    cmd['kwarg'] = {'output': 'json'}
+    ret = local.run(cmd)  # ask Vagrant about the configuration it just created
+    log.debug('response ==> %s', repr(ret))
+    reply = ret[host]
     ssh_config = {'bridged_address': None}  # define a default value in a new {}
-    # TODO: fix and document how to work with ssh gateway
+    for line in reply.split('\n'):  # build a dictionary of the text reply
+        tokens = line.strip().split()
+        if len(tokens) == 2:  # each two-token line becomes a key:value pair
+            ssh_config[tokens[0]] = tokens[1]
+    log.debug('ssh_config=%s', repr(ssh_config))
+
+    identity_file_name = ssh_config['IdentityFile']
+
     if not 'ssh_host' in vm_:
-        if not ret[host]:
-            # TODO: implement some kind of retry logic
-            log.critical('Got empty return from API call to create "%s".'
-                        ' Machine "%s" on host "%s" may be booting too slowly.'
-                        ' Retry your command in a few minutes to connect.',
-                         vm_['name'], host, machine)
-            return {}
+        # ask the new VM to report its network address
+        command = 'ssh -i {} -p {} -oStrintHostKeyChecking=no {}@{} ifconfig'.format(
+            identity_file_name, ssh_config['Port'], ssh_config['User'], ssh_config['HostName'])
+        cmd['arg'] = [command]
+        ret = local.run(cmd)
+        log.debug('response ==> %s', repr(ret))
+
         for line in ret[host].split('\n'):
-            try:
+            try:   # try to find a bridged network adapter
                 tokens = line.strip().split()
                 # the lines we are looking for appear like:
                 #   "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
@@ -267,26 +285,16 @@ def create(vm_):
             except (IndexError, AttributeError):
                 pass
         log.info('Network bridge address detected as: %s', ssh_config['bridged_address'])
+        # Note: a host-only network will show up here if a bridged network was not connected
+        #  that should work iff the cloud master is a VM of the same host.
         if not ssh_config['bridged_address']:
+            # TODO: find out how to work with ssh gateway if no bridge
             log.warning('Unable to find address of bridged network adapter on %s.'
                         ' Attempt to connect using ssh via host %s may fail.',
                         machine, host)
-    log.info('requesting vagrant ssh-config for %s', machine)
-    cmd['arg'] = ['vagrant ssh-config {}'.format(machine)]
-    ret = local.run(cmd)  # ask Vagrant about the configuration it just created
-    log.debug('response ==> %s', repr(ret))
-    reply = ret[host]
-
-    for line in reply.split('\n'):  # build a dictionary of the text reply
-        tokens = line.strip().split()
-        if len(tokens) == 2:
-            ssh_config[tokens[0]] = tokens[1]
-    log.debug('ssh_config=%s', repr(ssh_config))
 
     # retrieve the Vagrant private key from the host
-    identity_file_name = ssh_config['IdentityFile']
     cmd['arg'] = ['cat {}'.format(identity_file_name)]
-    cmd['kwarg'] = {'output': 'json'}
     log.info('retrieving Vagrant private key from %s', host)
     ret = local.run(cmd)
     log.trace('response ==> %s', ret)
@@ -294,7 +302,7 @@ def create(vm_):
     with tempfile.NamedTemporaryFile() as pks:
         pks.write(private_key)
         pks.flush()
-        log.trace('wrote private key %s to %s', private_key, pks.name)
+        log.trace('wrote private key to %s', pks.name)
         vm_.setdefault('key_filename', pks.name)
         vm_.setdefault('ssh_username', ssh_config['User'])
         if not 'ssh_host' in vm_:
@@ -304,7 +312,8 @@ def create(vm_):
                 vm_['ssh_host'] = ssh_config['HostName']
                 vm_.setdefault('ssh_port', ssh_config['Port'])
 
-        log.info('Provisioning machine %s as node %s', machine, vm_['name'])
+        log.info('Provisioning machine %s as node %s using ssh %s',
+                 machine, vm_['name'], vm_['ssh_host'])
         ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     return ret
