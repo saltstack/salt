@@ -245,7 +245,8 @@ def create(vm_):
 
     if not 'ssh_host' in vm_:
         # ask the new VM to report its network address
-        command = 'ssh -i {} -p {} -oStrintHostKeyChecking=no {}@{} ifconfig'.format(
+        command = 'ssh -i {} -p {} -oNoHostAuthenticationForLocalhost=yes ' \
+           '{}@{} ifconfig'.format(
             identity_file_name, ssh_config['Port'], ssh_config['User'], ssh_config['HostName'])
         cmd['arg'] = [command]
         ret = local.run(cmd)
@@ -396,6 +397,7 @@ def destroy(name, call=None):
     cmd.update(_get_connection_info())
     ret = local.run(cmd)
     log.debug('response ==>%s', ret)
+    log.info(ret[host])
 
     __utils__['cloud.fire_event'](
         'event',
