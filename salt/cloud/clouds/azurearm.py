@@ -65,6 +65,7 @@ import salt.config as config
 import salt.utils
 import salt.utils.cloud
 import salt.utils.files
+from salt.utils.versions import LooseVersion
 from salt.ext import six
 import salt.version
 from salt.exceptions import (
@@ -73,7 +74,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
 )
 from salt.ext.six.moves import filter
-from distutils.version import LooseVersion
 
 # Import 3rd-party libs
 HAS_LIBS = False
