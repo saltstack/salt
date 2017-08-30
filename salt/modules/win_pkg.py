@@ -903,7 +903,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 # Version is ignored
                 salt '*' pkg.install pkgs="['foo', 'bar']" version=1.2.3
 
-            If passed with a comma seperated list in the ``name`` parameter, the
+            If passed with a comma separated list in the ``name`` parameter, the
             version will apply to all packages in the list.
 
             CLI Example:
@@ -1212,7 +1212,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         use_msiexec, msiexec = _get_msiexec(pkginfo[version_num].get('msiexec', False))
 
         # Build cmd and arguments
-        # cmd and arguments must be seperated for use with the task scheduler
+        # cmd and arguments must be separated for use with the task scheduler
         if use_msiexec:
             cmd = msiexec
             arguments = ['/i', cached_pkg]
@@ -1243,7 +1243,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
             # Run Scheduled Task
             # Special handling for installing salt
-            if pkg_name in ['salt-minion', 'salt-minion-py3']:
+            if re.search(r'salt[\s_.-]*minion',
+                         pkg_name,
+                         flags=re.IGNORECASE+re.UNICODE) is not None:
                 ret[pkg_name] = {'install status': 'task started'}
                 if not __salt__['task.run'](name='update-salt-software'):
                     log.error('Failed to install {0}'.format(pkg_name))
@@ -1275,7 +1277,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         else:
 
             # Combine cmd and arguments
-            cmd = [cmd].extend(arguments)
+            cmd = [cmd]
+            cmd.extend(arguments)
 
             # Launch the command
             result = __salt__['cmd.run_all'](cmd,
