@@ -88,7 +88,7 @@ Profile configuration example:
       provider: my-vagrant-config
       cwd: /srv/machines  # the path to your Virtualbox file.
       runas: my-username  # the username who defined the Vagrantbox on the host
-      # vagrant_up_timeout: 180 # timeout for cmd.run of the "vagrant up" command (seconds)
+      # vagrant_up_timeout: 300 # timeout for cmd.run of the "vagrant up" command (seconds)
       # ssh_host: None  # "None" means find the routable ip address in "vagrant up" response
 
 The machine can now be created and configured with the following command:

@@ -182,7 +182,8 @@ def show_instance(name, call=None):
            }
     cmd.update(_get_connection_info())
     ret = local.run(cmd)
-    ret.update(_build_required_items(ret))
+    reqs = _build_required_items(ret)
+    ret[name].update(reqs[name])
     return ret
 
 
@@ -199,7 +200,7 @@ def create(vm_):
     runas = config.get_cloud_config_value(
         'runas', vm_, __opts__, default=os.getenv('SUDO_USER'))
     up_timeout = config.get_cloud_config_value(
-        'vagrant_up_timeout', vm_, __opts__, default=180)
+        'vagrant_up_timeout', vm_, __opts__, default=300)
 
     log.info('sending \'vagrant up %s\' command to %s', machine, host)
 
@@ -223,7 +224,15 @@ def create(vm_):
     # NOTE: the minion's Vagrantfile is expected to contain a line like...
     #  config.vm.provision "shell", inline: "ifconfig", run: "always"
     ssh_config = {'bridged_address': None}  # define a default value in a new {}
+    # TODO: fix and document how to work with ssh gateway
     if not 'ssh_host' in vm_:
+        if not ret[host]:
+            # TODO: implement some kind of retry logic
+            log.critical('Got empty return from API call to create "%s".'
+                        ' Machine "%s" on host "%s" may be booting too slowly.'
+                        ' Retry your command in a few minutes to connect.',
+                         vm_['name'], host, machine)
+            return {}
         for line in ret[host].split('\n'):
             try:
                 tokens = line.strip().split()
@@ -258,7 +267,10 @@ def create(vm_):
             except (IndexError, AttributeError):
                 pass
         log.info('Network bridge address detected as: %s', ssh_config['bridged_address'])
-
+        if not ssh_config['bridged_address']:
+            log.warning('Unable to find address of bridged network adapter on %s.'
+                        ' Attempt to connect using ssh via host %s may fail.',
+                        machine, host)
     log.info('requesting vagrant ssh-config for %s', machine)
     cmd['arg'] = ['vagrant ssh-config {}'.format(machine)]
     ret = local.run(cmd)  # ask Vagrant about the configuration it just created
