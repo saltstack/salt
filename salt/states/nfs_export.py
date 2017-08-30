@@ -177,9 +177,14 @@ def absent(name, exports='/etc/exports'):
             return ret
 
         __salt__['nfs3.del_export'](exports, path)
-        ret['comment']  = 'Export {0} removed'.format(path)
+        export_attempt = __salt__['nfs3.reload_exports']()
+        if not export_attempt['result']:
+            ret['comment'] = export_attempt['stdout'] + "\n" + export_attempt['stderr']
+        else:
+            ret['comment']  = 'Export {0} removed'.format(path)
+
+        ret['result'] = export_attempt['result']
         ret['changes'][path] = old[path]
-        ret['result']   = True
     else:
         ret['comment'] = 'Export {0} already absent'.format(path)
         ret['result']   = True
