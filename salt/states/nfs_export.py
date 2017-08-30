@@ -147,9 +147,11 @@ def present(name, clients=None, hosts=None, options=None, exports='/etc/exports'
     for export in clients:
         __salt__['nfs3.add_export'](exports, path, export['hosts'], export['options'])
 
-
-    ret['result'] = True
     ret['changes']['new'] = clients
+
+    export_attempt = __salt__['nfs3.reload_exports']()
+    ret['comment'] = export_attempt['stdout'] + "\n" + export_attempt['stderr']
+    ret['result'] = export_attempt['result']
     return ret
 
 def absent(name, exports='/etc/exports'):
