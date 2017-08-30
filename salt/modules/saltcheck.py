@@ -52,7 +52,7 @@ import os
 import time
 import yaml
 try:
-    # import salt.utils
+    import salt.utils
     import salt.client
     import salt.exceptions
 except ImportError:
