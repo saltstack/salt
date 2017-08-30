@@ -145,6 +145,8 @@ def reload_exports():
     output = __salt__['cmd.run_all'](command)
     ret['stdout'] = output['stdout']
     ret['stderr'] = output['stderr']
-    ret['result'] = not output['retcode']
+    # exportfs always returns 0, so retcode is useless
+    # We will consider it an error if stderr is nonempty
+    ret['result'] = output['stderr'] == ""
 
     return ret
