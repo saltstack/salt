@@ -1,28 +1,36 @@
 # -*- coding: utf-8 -*-
 '''Unit test for saltcheck execution module'''
 
-# Import python libs
-from __future__ import absolute_import, print_function
+# Import Python libs
+from __future__ import absolute_import
 
-# Import Salt Testing libs
-# from tests.support.mixins import LoaderModuleMockMixin
-# from tests.support.unit import skipIf, TestCase
 try:
-    from tests.support.unit import TestCase
-    from tests.support.mock import MagicMock, patch
     import salt.modules.saltcheck as saltcheck
-except ImportError as error:
-    raise ImportError('Unable to import modules: {}'.format(error))
+except:
+    raise
 
-saltcheck.__salt__ = {}
+# Import Salt Testing Libs
+try:
+    from tests.support.mixins import LoaderModuleMockMixin
+    from tests.support.unit import skipIf, TestCase
+    from tests.support.mock import (
+        MagicMock,
+        patch,
+        NO_MOCK,
+        NO_MOCK_REASON
+    )
+except:
+    raise
 
 
-class SaltCheckTestCase(TestCase):
-    ''' SaltCheckTestCase'''
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
+    '''
+    TestCase for salt.modules.saltcheck module
+    '''
 
-    def test_update_master_cache(self):
-        '''test master cache'''
-        self.assertTrue(saltcheck.update_master_cache)
+    def setup_loader_modules(self):
+        return {saltcheck: {}}
 
     def test_call_salt_command(self):
         '''test simple test.echo module'''
@@ -33,6 +41,10 @@ class SaltCheckTestCase(TestCase):
             sc_instance = saltcheck.SaltCheck()
             returned = sc_instance.call_salt_command(fun="test.echo", args=['hello'], kwargs=None)
             self.assertEqual(returned, 'hello')
+
+    def test_update_master_cache(self):
+        '''test master cache'''
+        self.assertTrue(saltcheck.update_master_cache)
 
     def test_call_salt_command2(self):
         '''test simple test.echo module again'''
