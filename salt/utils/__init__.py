@@ -1963,7 +1963,7 @@ def is_true(value=None):
         pass
 
     # Now check for truthiness
-    if isinstance(value, (int, float)):
+    if isinstance(value, (six.integer_types, float)):
         return value > 0
     elif isinstance(value, six.string_types):
         return str(value).lower() == 'true'
@@ -2735,7 +2735,7 @@ def repack_dictlist(data,
     if val_cb is None:
         val_cb = lambda x, y: y
 
-    valid_non_dict = (six.string_types, int, float)
+    valid_non_dict = (six.string_types, six.integer_types, float)
     if isinstance(data, list):
         for element in data:
             if isinstance(element, valid_non_dict):
