@@ -224,7 +224,7 @@ class Cache(object):
         fun = '{0}.flush'.format(self.driver)
         return self.modules[fun](bank, key=key, **self._kwargs)
 
-    def ls(self, bank):
+    def list(self, bank):
         '''
         Lists entries stored in the specified bank.
 
@@ -240,10 +240,8 @@ class Cache(object):
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
         '''
-        fun = '{0}.ls'.format(self.driver)
+        fun = '{0}.list'.format(self.driver)
         return self.modules[fun](bank, **self._kwargs)
-
-    list = ls
 
     def contains(self, bank, key=None):
         '''

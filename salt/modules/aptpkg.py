@@ -139,19 +139,6 @@ def _reconstruct_ppa_name(owner_name, ppa_name):
     return 'ppa:{0}/{1}'.format(owner_name, ppa_name)
 
 
-def _get_repo(**kwargs):
-    '''
-    Check the kwargs for either 'fromrepo' or 'repo' and return the value.
-    'fromrepo' takes precedence over 'repo'.
-    '''
-    for key in ('fromrepo', 'repo'):
-        try:
-            return kwargs[key]
-        except KeyError:
-            pass
-    return ''
-
-
 def _check_apt():
     '''
     Abort if python-apt is not installed
@@ -246,18 +233,11 @@ def latest_version(*names, **kwargs):
     '''
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
     show_installed = salt.utils.is_true(kwargs.pop('show_installed', False))
-
     if 'repo' in kwargs:
-        # Remember to kill _get_repo() too when removing this warning.
-        salt.utils.warn_until(
-            'Hydrogen',
-            'The \'repo\' argument to apt.latest_version is deprecated, and '
-            'will be removed in Salt {version}. Please use \'fromrepo\' '
-            'instead.'
+        raise SaltInvocationError(
+            'The \'repo\' argument is invalid, use \'fromrepo\' instead'
         )
-    fromrepo = _get_repo(**kwargs)
-    kwargs.pop('fromrepo', None)
-    kwargs.pop('repo', None)
+    fromrepo = kwargs.pop('fromrepo', None)
     cache_valid_time = kwargs.pop('cache_valid_time', 0)
 
     if len(names) == 0:
@@ -1402,9 +1382,10 @@ def _get_upgradable(dist_upgrade=True, **kwargs):
         cmd.append('dist-upgrade')
     else:
         cmd.append('upgrade')
-    fromrepo = _get_repo(**kwargs)
-    if fromrepo:
-        cmd.extend(['-o', 'APT::Default-Release={0}'.format(fromrepo)])
+    try:
+        cmd.extend(['-o', 'APT::Default-Release={0}'.format(kwargs['fromrepo'])])
+    except KeyError:
+        pass
 
     call = __salt__['cmd.run_all'](cmd,
                                    python_shell=False,

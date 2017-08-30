@@ -13,7 +13,6 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.paths import TMP
 
 # Import salt libs
-import salt.ext.six as six
 import salt.utils
 import salt.utils.find
 
@@ -121,19 +120,11 @@ class TestFind(TestCase):
 
         min_size, max_size = salt.utils.find._parse_size('+1m')
         self.assertEqual(min_size, 1048576)
-        # sys.maxint has been removed in Python3. Use maxsize instead.
-        if six.PY3:
-            self.assertEqual(max_size, sys.maxsize)
-        else:
-            self.assertEqual(max_size, sys.maxint)
+        self.assertEqual(max_size, sys.maxsize)
 
         min_size, max_size = salt.utils.find._parse_size('+1M')
         self.assertEqual(min_size, 1048576)
-        # sys.maxint has been removed in Python3. Use maxsize instead.
-        if six.PY3:
-            self.assertEqual(max_size, sys.maxsize)
-        else:
-            self.assertEqual(max_size, sys.maxint)
+        self.assertEqual(max_size, sys.maxsize)
 
     def test_option_requires(self):
         option = salt.utils.find.Option()
@@ -217,7 +208,7 @@ class TestFind(TestCase):
         option = salt.utils.find.TypeOption('type', 's')
         self.assertEqual(option.match('', '', [stat.S_IFSOCK]), True)
 
-    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
+    @skipIf(sys.platform.startswith('win'), 'pwd not available on Windows')
     def test_owner_option_requires(self):
         self.assertRaises(
             ValueError, salt.utils.find.OwnerOption, 'owner', 'notexist'
@@ -226,7 +217,7 @@ class TestFind(TestCase):
         option = salt.utils.find.OwnerOption('owner', 'root')
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
-    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
+    @skipIf(sys.platform.startswith('win'), 'pwd not available on Windows')
     def test_owner_option_match(self):
         option = salt.utils.find.OwnerOption('owner', 'root')
         self.assertEqual(option.match('', '', [0] * 5), True)
@@ -234,7 +225,7 @@ class TestFind(TestCase):
         option = salt.utils.find.OwnerOption('owner', '500')
         self.assertEqual(option.match('', '', [500] * 5), True)
 
-    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
+    @skipIf(sys.platform.startswith('win'), 'grp not available on Windows')
     def test_group_option_requires(self):
         self.assertRaises(
             ValueError, salt.utils.find.GroupOption, 'group', 'notexist'
@@ -247,7 +238,7 @@ class TestFind(TestCase):
         option = salt.utils.find.GroupOption('group', group_name)
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
-    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
+    @skipIf(sys.platform.startswith('win'), 'grp not available on Windows')
     def test_group_option_match(self):
         if sys.platform.startswith(('darwin', 'freebsd', 'openbsd')):
             group_name = 'wheel'
@@ -412,7 +403,7 @@ class TestPrintOption(TestCase):
             option.execute('test_name', [0] * 9), [0, 'test_name']
         )
 
-    @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
+    @skipIf(sys.platform.startswith('win'), "pwd not available on Windows")
     def test_print_user(self):
         option = salt.utils.find.PrintOption('print', 'user')
         self.assertEqual(option.execute('', [0] * 10), 'root')
@@ -420,7 +411,7 @@ class TestPrintOption(TestCase):
         option = salt.utils.find.PrintOption('print', 'user')
         self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
 
-    @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
+    @skipIf(sys.platform.startswith('win'), "grp not available on Windows")
     def test_print_group(self):
         option = salt.utils.find.PrintOption('print', 'group')
         if sys.platform.startswith(('darwin', 'freebsd', 'openbsd')):
@@ -433,7 +424,7 @@ class TestPrintOption(TestCase):
         #option = salt.utils.find.PrintOption('print', 'group')
         #self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
 
-    @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
+    @skipIf(sys.platform.startswith('win'), "no /dev/null on windows")
     def test_print_md5(self):
         option = salt.utils.find.PrintOption('print', 'md5')
         self.assertEqual(option.execute('/dev/null', os.stat('/dev/null')), '')
