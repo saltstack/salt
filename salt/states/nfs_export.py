@@ -144,8 +144,9 @@ def present(name, clients=None, hosts=None, options=None, exports='/etc/exports'
             ret['comment']  = 'Export {0} would be added'.format(path)
             return ret
 
-    for exp in clients:
-        __salt__['nfs3.add_export'](exports, path, exp['hosts'], exp['options'])
+    for export in clients:
+        __salt__['nfs3.add_export'](exports, path, export['hosts'], export['options'])
+
 
     ret['result'] = True
     ret['changes']['new'] = clients
@@ -169,6 +170,7 @@ def absent(name, exports='/etc/exports'):
     if path in old:
         if __opts__['test']:
             ret['comment']  = 'Export {0} would be removed'.format(path)
+            ret['changes'][path] = old[path]
             ret['result']   = None
             return ret
 
