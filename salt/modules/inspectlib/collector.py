@@ -29,6 +29,7 @@ from salt.modules.inspectlib.entities import (AllowedDir, IgnoredDir, Package,
                                               PayloadFile, PackageCfgFile)
 
 import salt.utils
+import salt.utils.path
 from salt.utils import fsutils
 from salt.utils import reinit_crypto
 from salt.exceptions import CommandExecutionError
@@ -311,7 +312,7 @@ class Inspector(EnvLoader):
                         continue
                 if not valid or not os.path.exists(obj) or not os.access(obj, os.R_OK):
                     continue
-                if os.path.islink(obj):
+                if salt.utils.path.islink(obj):
                     links.append(obj)
                 elif os.path.isdir(obj):
                     dirs.append(obj)
