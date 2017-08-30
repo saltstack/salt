@@ -56,7 +56,11 @@ To ensure an NFS export is absent:
 
 '''
 
-def present(name, clients=None, hosts=None, options=None, exports='/etc/exports'):
+def present(name,
+        clients=None,
+        hosts=None,
+        options=None,
+        exports='/etc/exports'):
     '''
     Ensure that the named export is present with the given options
 
@@ -114,8 +118,8 @@ def present(name, clients=None, hosts=None, options=None, exports='/etc/exports'
 
     if not clients:
         if not hosts:
-            ret['result']   = False
-            ret['comment']  = 'Either \'clients\' or \'hosts\' must be defined'
+            ret['result']  = False
+            ret['comment'] = 'Either \'clients\' or \'hosts\' must be defined'
             return ret
         # options being None is handled by add_export()
         clients = [{'hosts': hosts, 'options': options}]
@@ -123,15 +127,15 @@ def present(name, clients=None, hosts=None, options=None, exports='/etc/exports'
     old = __salt__['nfs3.list_exports'](exports)
     if path in old:
         if old[path] == clients:
-            ret['result']   = True
-            ret['comment']  = 'Export {0} already configured'.format(path)
+            ret['result']  = True
+            ret['comment'] = 'Export {0} already configured'.format(path)
             return ret
 
         ret['changes']['new'] = clients
         ret['changes']['old'] = old[path]
         if __opts__['test']:
             ret['result'] = None
-            ret['comment']  = 'Export {0} would be changed'.format(path)
+            ret['comment'] = 'Export {0} would be changed'.format(path)
             return ret
 
         __salt__['nfs3.del_export'](exports, path)
@@ -144,14 +148,15 @@ def present(name, clients=None, hosts=None, options=None, exports='/etc/exports'
             ret['comment']  = 'Export {0} would be added'.format(path)
             return ret
 
-    for export in clients:
-        __salt__['nfs3.add_export'](exports, path, export['hosts'], export['options'])
+    add_export = __salt__['nfs3.add_export']
+    for exp in clients:
+        add_export(exports, path, exp['hosts'], exp['options'])
 
     ret['changes']['new'] = clients
 
-    export_attempt = __salt__['nfs3.reload_exports']()
-    ret['comment'] = export_attempt['stdout'] + "\n" + export_attempt['stderr']
-    ret['result'] = export_attempt['result']
+    try_reload = __salt__['nfs3.reload_exports']()
+    ret['comment'] = try_reload['stderr']
+    ret['result'] = try_reload['result']
     return ret
 
 def absent(name, exports='/etc/exports'):
@@ -177,13 +182,13 @@ def absent(name, exports='/etc/exports'):
             return ret
 
         __salt__['nfs3.del_export'](exports, path)
-        export_attempt = __salt__['nfs3.reload_exports']()
-        if not export_attempt['result']:
-            ret['comment'] = export_attempt['stdout'] + "\n" + export_attempt['stderr']
+        try_reload = __salt__['nfs3.reload_exports']()
+        if not try_reload['result']:
+            ret['comment'] = try_reload['stderr']
         else:
             ret['comment']  = 'Export {0} removed'.format(path)
 
-        ret['result'] = export_attempt['result']
+        ret['result'] = try_reload['result']
         ret['changes'][path] = old[path]
     else:
         ret['comment'] = 'Export {0} already absent'.format(path)
