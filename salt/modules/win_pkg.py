@@ -1245,7 +1245,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             # Special handling for installing salt
             if re.search(r'salt[\s_.-]*minion',
                          pkg_name,
-                         flags=re.IGNORECASE+re.UNICODE) is not None:
+                         flags=re.IGNORECASE + re.UNICODE) is not None:
                 ret[pkg_name] = {'install status': 'task started'}
                 if not __salt__['task.run'](name='update-salt-software'):
                     log.error('Failed to install {0}'.format(pkg_name))
