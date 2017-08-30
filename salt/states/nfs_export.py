@@ -56,11 +56,12 @@ To ensure an NFS export is absent:
 
 '''
 
+
 def present(name,
-        clients=None,
-        hosts=None,
-        options=None,
-        exports='/etc/exports'):
+            clients=None,
+            hosts=None,
+            options=None,
+            exports='/etc/exports'):
     '''
     Ensure that the named export is present with the given options
 
@@ -118,7 +119,7 @@ def present(name,
 
     if not clients:
         if not hosts:
-            ret['result']  = False
+            ret['result'] = False
             ret['comment'] = 'Either \'clients\' or \'hosts\' must be defined'
             return ret
         # options being None is handled by add_export()
@@ -127,7 +128,7 @@ def present(name,
     old = __salt__['nfs3.list_exports'](exports)
     if path in old:
         if old[path] == clients:
-            ret['result']  = True
+            ret['result'] = True
             ret['comment'] = 'Export {0} already configured'.format(path)
             return ret
 
@@ -145,7 +146,7 @@ def present(name,
         ret['changes']['new'] = clients
         if __opts__['test']:
             ret['result'] = None
-            ret['comment']  = 'Export {0} would be added'.format(path)
+            ret['comment'] = 'Export {0} would be added'.format(path)
             return ret
 
     add_export = __salt__['nfs3.add_export']
@@ -158,6 +159,7 @@ def present(name,
     ret['comment'] = try_reload['stderr']
     ret['result'] = try_reload['result']
     return ret
+
 
 def absent(name, exports='/etc/exports'):
     '''
@@ -176,9 +178,9 @@ def absent(name, exports='/etc/exports'):
     old = __salt__['nfs3.list_exports'](exports)
     if path in old:
         if __opts__['test']:
-            ret['comment']  = 'Export {0} would be removed'.format(path)
+            ret['comment'] = 'Export {0} would be removed'.format(path)
             ret['changes'][path] = old[path]
-            ret['result']   = None
+            ret['result'] = None
             return ret
 
         __salt__['nfs3.del_export'](exports, path)
@@ -186,12 +188,12 @@ def absent(name, exports='/etc/exports'):
         if not try_reload['result']:
             ret['comment'] = try_reload['stderr']
         else:
-            ret['comment']  = 'Export {0} removed'.format(path)
+            ret['comment'] = 'Export {0} removed'.format(path)
 
         ret['result'] = try_reload['result']
         ret['changes'][path] = old[path]
     else:
         ret['comment'] = 'Export {0} already absent'.format(path)
-        ret['result']   = True
+        ret['result'] = True
 
     return ret
