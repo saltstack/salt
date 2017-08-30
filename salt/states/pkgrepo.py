@@ -97,6 +97,7 @@ import salt.utils
 import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
+import salt.utils.versions
 
 
 def __virtual__():
@@ -132,7 +133,7 @@ def managed(name, ppa=None, **kwargs):
 
     disabled : False
         Included to reduce confusion due to APT's use of the ``disabled``
-        argument. If this is passed for a yum/dnf/zypper-based distro, then the
+        argument. If this is passed for a YUM/DNF/Zypper-based distro, then the
         reverse will be passed as ``enabled``. For example passing
         ``disabled=True`` will assume ``enabled=False``.
 
@@ -151,7 +152,7 @@ def managed(name, ppa=None, **kwargs):
         enabled configuration. Anything supplied for this list will be saved
         in the repo configuration with a comment marker (#) in front.
 
-    Additional configuration values seen in yum repo files, such as ``gpgkey`` or
+    Additional configuration values seen in repo files, such as ``gpgkey`` or
     ``gpgcheck``, will be used directly as key-value pairs. For example:
 
     .. code-block:: yaml
@@ -258,29 +259,45 @@ def managed(name, ppa=None, **kwargs):
 
            Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
 
-    consolidate
-       If set to true, this will consolidate all sources definitions to
-       the sources.list file, cleanup the now unused files, consolidate
-       components (e.g. main) for the same URI, type, and architecture
-       to a single line, and finally remove comments from the sources.list
-       file.  The consolidate will run every time the state is processed. The
-       option only needs to be set on one repo managed by salt to take effect.
+    consolidate : False
+       If set to ``True``, this will consolidate all sources definitions to the
+       sources.list file, cleanup the now unused files, consolidate components
+       (e.g. main) for the same URI, type, and architecture to a single line,
+       and finally remove comments from the sources.list file.  The consolidate
+       will run every time the state is processed. The option only needs to be
+       set on one repo managed by salt to take effect.
 
-    clean_file
-       If set to true, empty file before config repo, dangerous if use
-       multiple sources in one file.
+    clean_file : False
+       If set to ``True``, empty the file before config repo
+
+       .. note::
+           Use with care. This can be dangerous if multiple sources are
+           configured in the same file.
 
        .. versionadded:: 2015.8.0
 
-    refresh_db
-       If set to false this will skip refreshing the apt package database on
-       debian based systems.
+    refresh : True
+       If set to ``False`` this will skip refreshing the apt package database
+       on debian based systems.
+
+    refresh_db : True
+       .. deprecated:: Oxygen
+           Use ``refresh`` instead.
 
     require_in
        Set this to a list of pkg.installed or pkg.latest to trigger the
        running of apt-get update prior to attempting to install these
-       packages. Setting a require in the pkg will not work for this.
+       packages. Setting a require in the pkg state will not work for this.
     '''
+    if 'refresh_db' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'refresh_db\' argument to \'pkg.mod_repo\' has been '
+            'renamed to \'refresh\'. Support for using \'refresh_db\' will be '
+            'removed in the Neon release of Salt.'
+        )
+        kwargs['refresh'] = kwargs.pop('refresh_db')
+
     ret = {'name': name,
            'changes': {},
            'result': None,

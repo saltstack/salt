@@ -15,6 +15,7 @@ import random
 # Import Salt libs
 import salt
 import salt.utils
+import salt.utils.args
 import salt.utils.hashutils
 import salt.utils.platform
 import salt.version
@@ -323,7 +324,7 @@ def arg_clean(*args, **kwargs):
 
         salt '*' test.arg_clean 1 "two" 3.1 txt="hello" wow='{a: 1, b: "hello"}'
     '''
-    return dict(args=args, kwargs=salt.utils.clean_kwargs(**kwargs))
+    return dict(args=args, kwargs=salt.utils.args.clean_kwargs(**kwargs))
 
 
 def fib(num):

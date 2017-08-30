@@ -60,7 +60,36 @@ def _gather_pillar(pillarenv, pillar_override):
     return ret
 
 
-def recv(dest, chunk, append=False, compressed=True, mode=None):
+def recv(files, dest):
+    '''
+    Used with salt-cp, pass the files dict, and the destination.
+
+    This function receives small fast copy files from the master via salt-cp.
+    It does not work via the CLI.
+    '''
+    ret = {}
+    for path, data in six.iteritems(files):
+        if os.path.basename(path) == os.path.basename(dest) \
+                and not os.path.isdir(dest):
+            final = dest
+        elif os.path.isdir(dest):
+            final = os.path.join(dest, os.path.basename(path))
+        elif os.path.isdir(os.path.dirname(dest)):
+            final = dest
+        else:
+            return 'Destination unavailable'
+
+        try:
+            with salt.utils.files.fopen(final, 'w+') as fp_:
+                fp_.write(data)
+            ret[final] = True
+        except IOError:
+            ret[final] = False
+
+    return ret
+
+
+def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
     '''
     This function receives files copied to the minion using ``salt-cp`` and is
     not intended to be used directly on the CLI.

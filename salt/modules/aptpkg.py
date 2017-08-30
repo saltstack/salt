@@ -143,19 +143,6 @@ def _reconstruct_ppa_name(owner_name, ppa_name):
     return 'ppa:{0}/{1}'.format(owner_name, ppa_name)
 
 
-def _get_repo(**kwargs):
-    '''
-    Check the kwargs for either 'fromrepo' or 'repo' and return the value.
-    'fromrepo' takes precedence over 'repo'.
-    '''
-    for key in ('fromrepo', 'repo'):
-        try:
-            return kwargs[key]
-        except KeyError:
-            pass
-    return ''
-
-
 def _check_apt():
     '''
     Abort if python-apt is not installed
@@ -250,18 +237,11 @@ def latest_version(*names, **kwargs):
     '''
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
     show_installed = salt.utils.is_true(kwargs.pop('show_installed', False))
-
     if 'repo' in kwargs:
-        # Remember to kill _get_repo() too when removing this warning.
-        salt.utils.versions.warn_until(
-            'Hydrogen',
-            'The \'repo\' argument to apt.latest_version is deprecated, and '
-            'will be removed in Salt {version}. Please use \'fromrepo\' '
-            'instead.'
+        raise SaltInvocationError(
+            'The \'repo\' argument is invalid, use \'fromrepo\' instead'
         )
-    fromrepo = _get_repo(**kwargs)
-    kwargs.pop('fromrepo', None)
-    kwargs.pop('repo', None)
+    fromrepo = kwargs.pop('fromrepo', None)
     cache_valid_time = kwargs.pop('cache_valid_time', 0)
 
     if len(names) == 0:
@@ -1453,9 +1433,10 @@ def _get_upgradable(dist_upgrade=True, **kwargs):
         cmd.append('dist-upgrade')
     else:
         cmd.append('upgrade')
-    fromrepo = _get_repo(**kwargs)
-    if fromrepo:
-        cmd.extend(['-o', 'APT::Default-Release={0}'.format(fromrepo)])
+    try:
+        cmd.extend(['-o', 'APT::Default-Release={0}'.format(kwargs['fromrepo'])])
+    except KeyError:
+        pass
 
     call = __salt__['cmd.run_all'](cmd,
                                    python_shell=False,
@@ -2147,44 +2128,44 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     The following options are available to modify a repo definition:
 
-        architectures
-            a comma separated list of supported architectures, e.g. ``amd64``
-            If this option is not set, all architectures (configured in the
-            system) will be used.
+    architectures
+        A comma-separated list of supported architectures, e.g. ``amd64`` If
+        this option is not set, all architectures (configured in the system)
+        will be used.
 
-        comps
-            a comma separated list of components for the repo, e.g. ``main``
+    comps
+        A comma separated list of components for the repo, e.g. ``main``
 
-        file
-            a file name to be used
+    file
+        A file name to be used
 
-        keyserver
-            keyserver to get gpg key from
+    keyserver
+        Keyserver to get gpg key from
 
-        keyid
-            key id to load with the keyserver argument
+    keyid
+        Key ID to load with the ``keyserver`` argument
 
-        key_url
-            URL to a GPG key to add to the APT GPG keyring
+    key_url
+        URL to a GPG key to add to the APT GPG keyring
 
-        key_text
-            GPG key in string form to add to the APT GPG keyring
+    key_text
+        GPG key in string form to add to the APT GPG keyring
 
-        consolidate
-            if ``True``, will attempt to de-dup and consolidate sources
+    consolidate : False
+        If ``True``, will attempt to de-duplicate and consolidate sources
 
-        comments
-            Sometimes you want to supply additional information, but not as
-            enabled configuration. All comments provided here will be joined
-            into a single string and appended to the repo configuration with a
-            comment marker (#) before it.
+    comments
+        Sometimes you want to supply additional information, but not as
+        enabled configuration. All comments provided here will be joined
+        into a single string and appended to the repo configuration with a
+        comment marker (#) before it.
 
-            .. versionadded:: 2015.8.9
+        .. versionadded:: 2015.8.9
 
-        .. note:: Due to the way keys are stored for APT, there is a known issue
-                where the key won't be updated unless another change is made
-                at the same time.  Keys should be properly added on initial
-                configuration.
+    .. note::
+        Due to the way keys are stored for APT, there is a known issue where
+        the key won't be updated unless another change is made at the same
+        time. Keys should be properly added on initial configuration.
 
     CLI Examples:
 
@@ -2193,6 +2174,17 @@ def mod_repo(repo, saltenv='base', **kwargs):
         salt '*' pkg.mod_repo 'myrepo definition' uri=http://new/uri
         salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
     '''
+    if 'refresh_db' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'refresh_db\' argument to \'pkg.mod_repo\' has been '
+            'renamed to \'refresh\'. Support for using \'refresh_db\' will be '
+            'removed in the Neon release of Salt.'
+        )
+        refresh = kwargs['refresh_db']
+    else:
+        refresh = kwargs.get('refresh', True)
+
     _check_apt()
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
@@ -2225,7 +2217,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
                             )
                         )
                     # explicit refresh when a repo is modified.
-                    if kwargs.get('refresh_db', True):
+                    if refresh:
                         refresh_db()
                     return {repo: out}
             else:
@@ -2429,7 +2421,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
             setattr(mod_source, key, kwargs[key])
     sources.save()
     # on changes, explicitly refresh
-    if kwargs.get('refresh_db', True):
+    if refresh:
         refresh_db()
     return {
         repo: {
