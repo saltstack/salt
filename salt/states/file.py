@@ -1154,7 +1154,7 @@ def managed(name,
     the salt master and potentially run through a templating system.
 
     name
-        The location of the file to manage
+        The location of the file to manage, as an absolute path.
 
     source
         The source file to download to the minion, this source file can be
@@ -2041,7 +2041,7 @@ def directory(name,
     Ensure that a named directory is present and has the right perms
 
     name
-        The location to create or manage a directory
+        The location to create or manage a directory, as an absolute path
 
     user
         The user to own the directory; this defaults to the user salt is
