@@ -109,12 +109,12 @@ def _get_policies(minion_id, config):
     '''
     Get the policies that should be applied to a token for minion_id
     '''
-    _, grains, _ = salt.utils.minions.get_minion_data(minion_id, __opts__)
+    _, grains, pillar = salt.utils.minions.get_minion_data(minion_id, __opts__)
     policy_patterns = config.get(
                                  'policies',
                                  ['saltstack/minion/{minion}', 'saltstack/minions']
                                 )
-    mappings = {'minion': minion_id, 'grains': grains or {}}
+    mappings = {'minion': minion_id, 'grains': grains or {}, 'pillar': pillar or {}}
 
     policies = []
     for pattern in policy_patterns:
