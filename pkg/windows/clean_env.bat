@@ -17,7 +17,7 @@ if %errorLevel%==0 (
 echo.
 
 if exist "\Python27" goto RemovePython2
-if exist "\Program Files\Python35" goto RemovePython3
+if exist "\Python35" goto RemovePython3
 goto eof
 
 :RemovePython2
@@ -53,13 +53,13 @@ goto eof
     :: 64 bit
     if exist "%LOCALAPPDATA%\Package Cache\{b94f45d6-8461-440c-aa4d-bf197b2c2499}" (
         echo %0 :: - 3.5.3 64bit
-        "%LOCALAPPDATA%\Package Cache\{b94f45d6-8461-440c-aa4d-bf197b2c2499}\python-3.5.3-amd64.exe" /uninstall
+        "%LOCALAPPDATA%\Package Cache\{b94f45d6-8461-440c-aa4d-bf197b2c2499}\python-3.5.3-amd64.exe" /uninstall /passive
     )
 
     :: 32 bit
     if exist "%LOCALAPPDATA%\Package Cache\{a10037e1-4247-47c9-935b-c5ca049d0299}" (
         echo %0 :: - 3.5.3 32bit
-        "%LOCALAPPDATA%\Package Cache\{a10037e1-4247-47c9-935b-c5ca049d0299}\python-3.5.3" /uninstall
+        "%LOCALAPPDATA%\Package Cache\{a10037e1-4247-47c9-935b-c5ca049d0299}\python-3.5.3" /uninstall /passive
     )
 
     rem wipe the Python directory
