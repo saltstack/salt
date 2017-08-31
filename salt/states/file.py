@@ -1324,13 +1324,15 @@ def managed(name,
 
     group
         The group ownership set for the file, this defaults to the group salt
-        is running as on the minion On Windows, this is ignored
+        is running as on the minion. On Windows, this is ignored
 
     mode
-        The permissions to set on this file, e.g. ``644``, ``0775``, or ``4664``.
+        The permissions to set on this file, e.g. ``644``, ``0775``, or
+        ``4664``.
 
-        The default mode for new files and directories corresponds umask of salt
-        process. For existing files and directories it's not enforced.
+        The default mode for new files and directories corresponds to the
+        umask of the salt process. The mode of existing files and directories
+        will only be changed if ``mode`` is specified.
 
         .. note::
             This option is **not** supported on Windows.
