@@ -179,6 +179,12 @@ This example assumes:
       config.vm.define "quail1", primary: true do |quail_config|
         quail_config.vm.box = "boxesio/xenial64-standard"  # a public VMware & Virtualbox box
         quail_config.vm.hostname = "quail1." + DOMAIN
+        quail_config.vm.provider "virtualbox" do |v|
+            v.memory = 1024       # limit memory for the virtual box
+            v.cpus = 1
+            v.linked_clone = true # make a soft copy of the base Vagrant box
+            v.customize ["modifyvm", :id, "--natnet1", "192.168.128.0/24"]  # do not use 10.0 network for NAT
+        end
       end
     end
 

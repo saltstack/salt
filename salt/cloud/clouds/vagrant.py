@@ -247,9 +247,13 @@ def create(vm_):
 
     if not 'ssh_host' in vm_:
         # ask the new VM to report its network address
-        command = 'ssh -i {} -p {} -oNoHostAuthenticationForLocalhost=yes ' \
-           '{}@{} ifconfig'.format(
+        command = 'ssh -i {} -p {} ' \
+                  '-oStrictHostKeyChecking=no ' \
+                  '-oUserKnownHostsFile={} ' \
+                  '-oControlPath=none ' \
+                  '{}@{} ifconfig'.format(
             identity_file_name, ssh_config['Port'],
+            ssh_config['UserKnownHostsFile'],
             ssh_config['User'], ssh_config['HostName'])
         cmd['arg'] = [command]
         log.info('Trying ssh connection from {} to {}@{}'.format(
