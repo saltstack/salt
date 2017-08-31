@@ -250,15 +250,16 @@ class IPCClient(object):
         # FIXME
         key = str(socket_path)
 
-        if key not in loop_instance_map:
+        client = loop_instance_map.get(key)
+        if client is None:
             log.debug('Initializing new IPCClient for path: {0}'.format(key))
-            new_client = object.__new__(cls)
+            client = object.__new__(cls)
             # FIXME
-            new_client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
-            loop_instance_map[key] = new_client
+            client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
+            loop_instance_map[key] = client
         else:
             log.debug('Re-using IPCClient for {0}'.format(key))
-        return loop_instance_map[key]
+        return client
 
     def __singleton_init__(self, socket_path, io_loop=None):
         '''

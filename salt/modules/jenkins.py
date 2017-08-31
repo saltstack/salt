@@ -37,7 +37,7 @@ import salt.utils
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
@@ -89,9 +89,22 @@ def _connect():
                            password=jenkins_password)
 
 
+def _retrieve_config_xml(config_xml, saltenv):
+    '''
+    Helper to cache the config XML and raise a CommandExecutionError if we fail
+    to do so. If we successfully cache the file, return the cached path.
+    '''
+    ret = __salt__['cp.cache_file'](config_xml, saltenv)
+
+    if not ret:
+        raise CommandExecutionError('Failed to retrieve {0}'.format(config_xml))
+
+    return ret
+
+
 def run(script):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: 2017.7.0
 
     Execute a groovy script on the jenkins master
 
@@ -166,7 +179,7 @@ def job_exists(name=None):
 
     '''
     if not name:
-        raise SaltInvocationError('Required parameter `name` is missing.')
+        raise SaltInvocationError('Required parameter \'name\' is missing')
 
     server = _connect()
     if server.job_exists(name):
@@ -190,12 +203,12 @@ def get_job_info(name=None):
 
     '''
     if not name:
-        raise SaltInvocationError('Required parameter `name` is missing.')
+        raise SaltInvocationError('Required parameter \'name\' is missing')
 
     server = _connect()
 
     if not job_exists(name):
-        raise SaltInvocationError('Job `{0}` does not exist.'.format(name))
+        raise CommandExecutionError('Job \'{0}\' does not exist'.format(name))
 
     job_info = server.get_job_info(name)
     if job_info:
@@ -219,17 +232,19 @@ def build_job(name=None, parameters=None):
 
     '''
     if not name:
-        raise SaltInvocationError('Required parameter `name` is missing.')
+        raise SaltInvocationError('Required parameter \'name\' is missing')
 
     server = _connect()
 
     if not job_exists(name):
-        raise SaltInvocationError('Job `{0}` does not exist.'.format(name))
+        raise CommandExecutionError('Job \'{0}\' does not exist.'.format(name))
 
     try:
         server.build_job(name, parameters)
     except jenkins.JenkinsException as err:
-        raise SaltInvocationError('Something went wrong {0}.'.format(err))
+        raise CommandExecutionError(
+            'Encountered error building job \'{0}\': {1}'.format(name, err)
+        )
     return True
 
 
@@ -254,15 +269,15 @@ def create_job(name=None,
 
     '''
     if not name:
-        raise SaltInvocationError('Required parameter `name` is missing.')
+        raise SaltInvocationError('Required parameter \'name\' is missing')
 
     if job_exists(name):
-        raise SaltInvocationError('Job `{0}` already exists.'.format(name))
+        raise CommandExecutionError('Job \'{0}\' already exists'.format(name))
 
     if not config_xml:
         config_xml = jenkins.EMPTY_CONFIG_XML
     else:
-        config_xml_file = __salt__['cp.cache_file'](config_xml, saltenv)
+        config_xml_file = _retrieve_config_xml(config_xml, saltenv)
 
         with salt.utils.fopen(config_xml_file) as _fp:
             config_xml = _fp.read()
@@ -271,7 +286,9 @@ def create_job(name=None,
     try:
         server.create_job(name, config_xml)
     except jenkins.JenkinsException as err:
-        raise SaltInvocationError('Something went wrong {0}.'.format(err))
+        raise CommandExecutionError(
+            'Encountered error creating job \'{0}\': {1}'.format(name, err)
+        )
     return config_xml
 
 
@@ -296,12 +313,12 @@ def update_job(name=None,
 
     '''
     if not name:
-        raise SaltInvocationError('Required parameter `name` is missing.')
+        raise SaltInvocationError('Required parameter \'name\' is missing')
 
     if not config_xml:
         config_xml = jenkins.EMPTY_CONFIG_XML
     else:
-        config_xml_file = __salt__['cp.cache_file'](config_xml, saltenv)
+        config_xml_file = _retrieve_config_xml(config_xml, saltenv)
 
         with salt.utils.fopen(config_xml_file) as _fp:
             config_xml = _fp.read()
@@ -310,7 +327,9 @@ def update_job(name=None,
     try:
         server.reconfig_job(name, config_xml)
     except jenkins.JenkinsException as err:
-        raise SaltInvocationError('Something went wrong {0}.'.format(err))
+        raise CommandExecutionError(
+            'Encountered error updating job \'{0}\': {1}'.format(name, err)
+        )
     return config_xml
 
 
@@ -329,17 +348,19 @@ def delete_job(name=None):
 
     '''
     if not name:
-        raise SaltInvocationError('Required parameter `name` is missing.')
+        raise SaltInvocationError('Required parameter \'name\' is missing')
 
     server = _connect()
 
     if not job_exists(name):
-        raise SaltInvocationError('Job `{0}` does not exists.'.format(name))
+        raise CommandExecutionError('Job \'{0}\' does not exist'.format(name))
 
     try:
         server.delete_job(name)
     except jenkins.JenkinsException as err:
-        raise SaltInvocationError('Something went wrong {0}.'.format(err))
+        raise CommandExecutionError(
+            'Encountered error deleting job \'{0}\': {1}'.format(name, err)
+        )
     return True
 
 
@@ -358,17 +379,19 @@ def enable_job(name=None):
 
     '''
     if not name:
-        raise SaltInvocationError('Required parameter `name` is missing.')
+        raise SaltInvocationError('Required parameter \'name\' is missing')
 
     server = _connect()
 
     if not job_exists(name):
-        raise SaltInvocationError('Job `{0}` does not exists.'.format(name))
+        raise CommandExecutionError('Job \'{0}\' does not exist'.format(name))
 
     try:
         server.enable_job(name)
     except jenkins.JenkinsException as err:
-        raise SaltInvocationError('Something went wrong {0}.'.format(err))
+        raise CommandExecutionError(
+            'Encountered error enabling job \'{0}\': {1}'.format(name, err)
+        )
     return True
 
 
@@ -388,17 +411,19 @@ def disable_job(name=None):
     '''
 
     if not name:
-        raise SaltInvocationError('Required parameter `name` is missing.')
+        raise SaltInvocationError('Required parameter \'name\' is missing')
 
     server = _connect()
 
     if not job_exists(name):
-        raise SaltInvocationError('Job `{0}` does not exists.'.format(name))
+        raise CommandExecutionError('Job \'{0}\' does not exist'.format(name))
 
     try:
         server.disable_job(name)
     except jenkins.JenkinsException as err:
-        raise SaltInvocationError('Something went wrong {0}.'.format(err))
+        raise CommandExecutionError(
+            'Encountered error disabling job \'{0}\': {1}'.format(name, err)
+        )
     return True
 
 
@@ -418,12 +443,12 @@ def job_status(name=None):
     '''
 
     if not name:
-        raise SaltInvocationError('Required parameter `name` is missing.')
+        raise SaltInvocationError('Required parameter \'name\' is missing')
 
     server = _connect()
 
     if not job_exists(name):
-        raise SaltInvocationError('Job `{0}` does not exists.'.format(name))
+        raise CommandExecutionError('Job \'{0}\' does not exist'.format(name))
 
     return server.get_job_info('empty')['buildable']
 
@@ -444,12 +469,12 @@ def get_job_config(name=None):
     '''
 
     if not name:
-        raise SaltInvocationError('Required parameter `name` is missing.')
+        raise SaltInvocationError('Required parameter \'name\' is missing')
 
     server = _connect()
 
     if not job_exists(name):
-        raise SaltInvocationError('Job `{0}` does not exists.'.format(name))
+        raise CommandExecutionError('Job \'{0}\' does not exist'.format(name))
 
     job_info = server.get_job_config(name)
     return job_info

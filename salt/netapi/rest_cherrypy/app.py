@@ -483,13 +483,22 @@ import signal
 import tarfile
 from multiprocessing import Process, Pipe
 
+logger = logging.getLogger(__name__)
+
 # Import third-party libs
-# pylint: disable=import-error
-import cherrypy  # pylint: disable=3rd-party-module-not-gated
+# pylint: disable=import-error, 3rd-party-module-not-gated
+import cherrypy
+try:
+    from cherrypy.lib import cpstats
+except ImportError:
+    cpstats = None
+    logger.warn('Import of cherrypy.cpstats failed. '
+        'Possible upstream bug: '
+        'https://github.com/cherrypy/cherrypy/issues/1444')
+
 import yaml
 import salt.ext.six as six
-# pylint: enable=import-error
-
+# pylint: enable=import-error, 3rd-party-module-not-gated
 
 # Import Salt libs
 import salt
@@ -499,8 +508,6 @@ import salt.utils.event
 
 # Import salt-api libs
 import salt.netapi
-
-logger = logging.getLogger(__name__)
 
 # Imports related to websocket
 try:
@@ -2616,13 +2623,6 @@ class Stats(object):
             :status 406: |406|
         '''
         if hasattr(logging, 'statistics'):
-            # Late import
-            try:
-                from cherrypy.lib import cpstats
-            except ImportError:
-                logger.error('Import of cherrypy.cpstats failed. Possible '
-                        'upstream bug here: https://github.com/cherrypy/cherrypy/issues/1444')
-                return {}
             return cpstats.extrapolate_statistics(logging.statistics)
 
         return {}
@@ -2742,12 +2742,13 @@ class API(object):
                 'tools.trailing_slash.on': True,
                 'tools.gzip.on': True,
 
-                'tools.cpstats.on': self.apiopts.get('collect_stats', False),
-
                 'tools.html_override.on': True,
                 'tools.cors_tool.on': True,
             },
         }
+
+        if cpstats and self.apiopts.get('collect_stats', False):
+            conf['/']['tools.cpstats.on'] = True
 
         if 'favicon' in self.apiopts:
             conf['/favicon.ico'] = {

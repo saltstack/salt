@@ -58,6 +58,7 @@ import salt.config
 import salt.loader
 import salt.template
 import salt.utils
+import salt.utils.compat
 import salt.utils.event
 from salt.utils import vt
 from salt.utils.nb_popen import NonBlockingPopen
@@ -311,6 +312,11 @@ def bootstrap(vm_, opts):
             }
         }
 
+    if vm_.get('driver') == 'saltify':
+        saltify_driver = True
+    else:
+        saltify_driver = False
+
     key_filename = salt.config.get_cloud_config_value(
         'key_filename', vm_, opts, search_global=False,
         default=salt.config.get_cloud_config_value(
@@ -475,6 +481,9 @@ def bootstrap(vm_, opts):
         'make_minion', vm_, opts, default=True
     )
 
+    if saltify_driver:
+        deploy_kwargs['wait_for_passwd_maxtries'] = 0  # No need to wait/retry with Saltify
+
     win_installer = salt.config.get_cloud_config_value(
         'win_installer', vm_, opts
     )
@@ -502,6 +511,8 @@ def bootstrap(vm_, opts):
         deploy_kwargs['winrm_use_ssl'] = salt.config.get_cloud_config_value(
         'winrm_use_ssl', vm_, opts, default=True
         )
+        if saltify_driver:
+            deploy_kwargs['port_timeout'] = 1  # No need to wait/retry with Saltify
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
@@ -809,21 +820,21 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
                 log.debug('winexe connected...')
                 return True
             log.debug('Return code was {0}'.format(ret_code))
-            time.sleep(1)
         except socket.error as exc:
             log.debug('Caught exception in wait_for_winexesvc: {0}'.format(exc))
-            time.sleep(1)
-            if time.time() - start > timeout:
-                log.error('winexe connection timed out: {0}'.format(timeout))
-                return False
-            log.debug(
-                'Retrying winexe connection to host {0} on port {1} '
-                '(try {2})'.format(
-                    host,
-                    port,
-                    try_count
-                )
+
+        if time.time() - start > timeout:
+            log.error('winexe connection timed out: {0}'.format(timeout))
+            return False
+        log.debug(
+            'Retrying winexe connection to host {0} on port {1} '
+            '(try {2})'.format(
+                host,
+                port,
+                try_count
             )
+        )
+        time.sleep(1)
 
 
 def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
@@ -852,19 +863,19 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
                 log.debug('WinRM session connected...')
                 return s
             log.debug('Return code was {0}'.format(r.status_code))
-            time.sleep(1)
         except WinRMTransportError as exc:
             log.debug('Caught exception in wait_for_winrm: {0}'.format(exc))
-            if time.time() - start > timeout:
-                log.error('WinRM connection timed out: {0}'.format(timeout))
-                return None
-            log.debug(
-                'Retrying WinRM connection to host {0} on port {1} '
-                '(try {2})'.format(
-                    host, port, trycount
-                )
+
+        if time.time() - start > timeout:
+            log.error('WinRM connection timed out: {0}'.format(timeout))
+            return None
+        log.debug(
+            'Retrying WinRM connection to host {0} on port {1} '
+            '(try {2})'.format(
+                host, port, trycount
             )
-            time.sleep(1)
+        )
+        time.sleep(1)
 
 
 def validate_windows_cred(host,
@@ -3041,7 +3052,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
     # Perform a simple diff between the old and the new data, and if it differs,
     # return both dicts.
     # TODO: Return an actual diff
-    diff = cmp(new_data, cache_data)
+    diff = salt.utils.compat.cmp(new_data, cache_data)
     if diff != 0:
         fire_event(
             'event',

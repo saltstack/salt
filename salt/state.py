@@ -97,6 +97,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'reload_grains',
     'reload_pillar',
     'runas',
+    'runas_password',
     'fire_event',
     'saltenv',
     'use',
@@ -677,8 +678,17 @@ class State(object):
             except AttributeError:
                 pillar_enc = str(pillar_enc).lower()
         self._pillar_enc = pillar_enc
-        self.opts['pillar'] = initial_pillar if initial_pillar is not None \
-            else self._gather_pillar()
+        if initial_pillar is not None:
+            self.opts['pillar'] = initial_pillar
+            if self._pillar_override:
+                self.opts['pillar'] = salt.utils.dictupdate.merge(
+                    self.opts['pillar'],
+                    self._pillar_override,
+                    self.opts.get('pillar_source_merging_strategy', 'smart'),
+                    self.opts.get('renderer', 'yaml'),
+                    self.opts.get('pillar_merge_lists', False))
+        else:
+            self.opts['pillar'] = self._gather_pillar()
         self.state_con = context or {}
         self.load_modules()
         self.active = set()
@@ -1743,6 +1753,11 @@ class State(object):
 
         self.state_con['runas'] = low.get('runas', None)
 
+        if low['state'] == 'cmd' and 'password' in low:
+            self.state_con['runas_password'] = low['password']
+        else:
+            self.state_con['runas_password'] = low.get('runas_password', None)
+
         if not low.get('__prereq__'):
             log.info(
                 'Executing state {0}.{1} for [{2}]'.format(
@@ -1854,6 +1869,9 @@ class State(object):
             if low.get('__prereq__'):
                 sys.modules[self.states[cdata['full']].__module__].__opts__[
                     'test'] = test
+
+            self.state_con.pop('runas')
+            self.state_con.pop('runas_password')
 
         # If format_call got any warnings, let's show them to the user
         if 'warnings' in cdata:
@@ -2104,11 +2122,14 @@ class State(object):
                                 reqs[r_state].append(chunk)
                             continue
                         try:
-                            if (fnmatch.fnmatch(chunk['name'], req_val) or
-                                fnmatch.fnmatch(chunk['__id__'], req_val)):
-                                if req_key == 'id' or chunk['state'] == req_key:
-                                    found = True
-                                    reqs[r_state].append(chunk)
+                            if isinstance(req_val, six.string_types):
+                                if (fnmatch.fnmatch(chunk['name'], req_val) or
+                                        fnmatch.fnmatch(chunk['__id__'], req_val)):
+                                    if req_key == 'id' or chunk['state'] == req_key:
+                                        found = True
+                                        reqs[r_state].append(chunk)
+                            else:
+                                raise KeyError
                         except KeyError as exc:
                             raise SaltRenderError(
                                 'Could not locate requisite of [{0}] present in state with name [{1}]'.format(
@@ -2284,13 +2305,17 @@ class State(object):
                         req_val = lreq[req_key]
                         comment += \
                             '{0}{1}: {2}\n'.format(' ' * 23, req_key, req_val)
-                running[tag] = {'changes': {},
-                                'result': False,
-                                'comment': comment,
-                                '__run_num__': self.__run_num,
-                                '__sls__': low['__sls__']}
+                if low.get('__prereq__'):
+                    run_dict = self.pre
+                else:
+                    run_dict = running
+                run_dict[tag] = {'changes': {},
+                                 'result': False,
+                                 'comment': comment,
+                                 '__run_num__': self.__run_num,
+                                 '__sls__': low['__sls__']}
                 self.__run_num += 1
-                self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
+                self.event(run_dict[tag], len(chunks), fire_event=low.get('fire_event'))
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if

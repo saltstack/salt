@@ -194,7 +194,7 @@ def minion_mods(
                             generated modules in __context__
 
     :param dict utils: Utility functions which should be made available to
-                            Salt modules in __utils__. See `utils_dir` in
+                            Salt modules in __utils__. See `utils_dirs` in
                             salt.config for additional information about
                             configuration.
 
@@ -1094,7 +1094,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             virtual_funcs = []
         self.virtual_funcs = virtual_funcs
 
-        self.disabled = set(self.opts.get('disable_{0}s'.format(self.tag), []))
+        self.disabled = set(self.opts.get('disable_{0}{1}'.format(
+            self.tag, '' if self.tag[-1] == 's' else 's'), []))
 
         self.refresh_file_mapping()
 
@@ -1365,12 +1366,21 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             (importlib.machinery.SourcelessFileLoader, importlib.machinery.BYTECODE_SUFFIXES),
                             (importlib.machinery.ExtensionFileLoader, importlib.machinery.EXTENSION_SUFFIXES),
                         ]
-                        file_finder = importlib.machinery.FileFinder(fpath, *loader_details)
+                        file_finder = importlib.machinery.FileFinder(
+                            fpath_dirname,
+                            *loader_details
+                        )
                         spec = file_finder.find_spec(mod_namespace)
                         if spec is None:
                             raise ImportError()
-                        mod = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
+                        # TODO: Get rid of load_module in favor of
+                        # exec_module below. load_module is deprecated, but
+                        # loading using exec_module has been causing odd things
+                        # with the magic dunders we pack into the loaded
+                        # modules, most notably with salt-ssh's __opts__.
+                        mod = spec.loader.load_module()
+                        # mod = importlib.util.module_from_spec(spec)
+                        # spec.loader.exec_module(mod)
                         # pylint: enable=no-member
                         sys.modules[mod_namespace] = mod
                     else:
@@ -1387,8 +1397,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         )
                         if spec is None:
                             raise ImportError()
-                        mod = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
+                        # TODO: Get rid of load_module in favor of
+                        # exec_module below. load_module is deprecated, but
+                        # loading using exec_module has been causing odd things
+                        # with the magic dunders we pack into the loaded
+                        # modules, most notably with salt-ssh's __opts__.
+                        mod = spec.loader.load_module()
+                        #mod = importlib.util.module_from_spec(spec)
+                        #spec.loader.exec_module(mod)
                         # pylint: enable=no-member
                         sys.modules[mod_namespace] = mod
                     else:

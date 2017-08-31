@@ -300,7 +300,7 @@ def install_semod(module_path):
 
         salt '*' selinux.install_semod [salt://]path/to/module.pp
 
-    .. versionadded:: develop
+    .. versionadded:: 2016.11.6
     '''
     if module_path.find('salt://') == 0:
         module_path = __salt__['cp.cache_file'](module_path)
@@ -318,7 +318,7 @@ def remove_semod(module):
 
         salt '*' selinux.remove_semod module_name
 
-    .. versionadded:: develop
+    .. versionadded:: 2016.11.6
     '''
     cmd = 'semodule -r {0}'.format(module)
     return not __salt__['cmd.retcode'](cmd)
@@ -403,7 +403,7 @@ def _context_string_to_dict(context):
     return ret
 
 
-def _filetype_id_to_string(filetype='a'):
+def filetype_id_to_string(filetype='a'):
     '''
     Translates SELinux filetype single-letter representation
     to a more human-readable version (which is also used in `semanage fcontext -l`).
@@ -444,7 +444,7 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
                   'sel_role': '[^:]+',  # se_role for file context is always object_r
                   'sel_type': sel_type or '[^:]+',
                   'sel_level': sel_level or '[^:]+'}
-    cmd_kwargs['filetype'] = '[[:alpha:] ]+' if filetype is None else _filetype_id_to_string(filetype)
+    cmd_kwargs['filetype'] = '[[:alpha:] ]+' if filetype is None else filetype_id_to_string(filetype)
     cmd = 'semanage fcontext -l | egrep ' + \
           "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}$'".format(**cmd_kwargs)
     current_entry_text = __salt__['cmd.shell'](cmd)

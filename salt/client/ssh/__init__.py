@@ -467,6 +467,8 @@ class SSH(object):
                 for default in self.defaults:
                     if default not in self.targets[host]:
                         self.targets[host][default] = self.defaults[default]
+                if 'host' not in self.targets[host]:
+                    self.targets[host]['host'] = host
                 args = (
                         que,
                         self.opts,

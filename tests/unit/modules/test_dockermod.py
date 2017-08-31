@@ -136,10 +136,11 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(docker_mod.__salt__,
                                 {'mine.send': mine_send,
                                  'container_resource.run': MagicMock(),
-                                 'cp.cache_file': MagicMock(return_value=False),
-                                 'docker.get_client_args': client_args_mock}):
-                    with patch.object(docker_mod, '_get_client', client):
-                        command('container', *args)
+                                 'cp.cache_file': MagicMock(return_value=False)}):
+                    with patch.dict(docker_mod.__utils__,
+                                    {'docker.get_client_args': client_args_mock}):
+                        with patch.object(docker_mod, '_get_client', client):
+                            command('container', *args)
                 mine_send.assert_called_with('docker.ps', verbose=True, all=True,
                                              host=True)
 
@@ -678,9 +679,9 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual({"retcode": 0, "comment": "container cmd"}, ret)
 
     def test_images_with_empty_tags(self):
-        """
+        '''
         docker 1.12 reports also images without tags with `null`.
-        """
+        '''
         client = Mock()
         client.api_version = '1.24'
         client.images = Mock(
@@ -696,3 +697,51 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             result = docker_mod.images()
         self.assertEqual(result,
                          {'sha256:abcdefg': {'RepoTags': ['image:latest']}})
+
+    def test_compare_container_image_id_resolution(self):
+        '''
+        Test comparing two containers when one's inspect output is an ID and
+        not formatted in image:tag notation.
+        '''
+        def _inspect_container_effect(id_):
+            return {
+                'container1': {'Config': {'Image': 'realimage:latest'},
+                               'HostConfig': {}},
+                'container2': {'Config': {'Image': 'image_id'},
+                               'HostConfig': {}},
+            }[id_]
+
+        def _inspect_image_effect(id_):
+            return {
+                'realimage:latest': {'Id': 'image_id'},
+                'image_id': {'Id': 'image_id'},
+            }[id_]
+
+        inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
+        inspect_image_mock = MagicMock(side_effect=_inspect_image_effect)
+
+        with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
+            with patch.object(docker_mod, 'inspect_image', inspect_image_mock):
+                ret = docker_mod.compare_container('container1', 'container2')
+                self.assertEqual(ret, {})
+
+    def test_resolve_tag(self):
+        '''
+        Test the resolve_tag function
+        '''
+        with_prefix = 'docker.io/foo:latest'
+        no_prefix = 'bar:latest'
+        with patch.object(docker_mod,
+                          'list_tags',
+                          MagicMock(return_value=[with_prefix])):
+            self.assertEqual(docker_mod.resolve_tag('foo'), with_prefix)
+            self.assertEqual(docker_mod.resolve_tag('foo:latest'), with_prefix)
+            self.assertEqual(docker_mod.resolve_tag(with_prefix), with_prefix)
+            self.assertEqual(docker_mod.resolve_tag('foo:bar'), False)
+
+        with patch.object(docker_mod,
+                          'list_tags',
+                          MagicMock(return_value=[no_prefix])):
+            self.assertEqual(docker_mod.resolve_tag('bar'), no_prefix)
+            self.assertEqual(docker_mod.resolve_tag(no_prefix), no_prefix)
+            self.assertEqual(docker_mod.resolve_tag('bar:baz'), False)

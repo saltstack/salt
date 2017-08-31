@@ -72,12 +72,12 @@ MOCK_MODULES = [
     'Crypto.Signature',
     'Crypto.Signature.PKCS1_v1_5',
     'M2Crypto',
+    'msgpack',
     'yaml',
     'yaml.constructor',
     'yaml.nodes',
     'yaml.parser',
     'yaml.scanner',
-    'salt.utils.yamlloader',
     'zmq',
     'zmq.eventloop',
     'zmq.eventloop.ioloop',
@@ -126,7 +126,6 @@ MOCK_MODULES = [
     'ClusterShell',
     'ClusterShell.NodeSet',
     'django',
-    'docker',
     'libvirt',
     'MySQLdb',
     'MySQLdb.cursors',
@@ -176,7 +175,7 @@ MOCK_MODULES = [
 
 for mod_name in MOCK_MODULES:
     if mod_name == 'psutil':
-        mock = Mock(mapping={'total': 0, 'version_info': (0, 6,0)})  # Otherwise it will crash Sphinx
+        mock = Mock(mapping={'total': 0})  # Otherwise it will crash Sphinx
     else:
         mock = Mock()
     sys.modules[mod_name] = mock
@@ -246,9 +245,9 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 
 version = salt.version.__version__
-latest_release = '2016.11.6'  # latest release
-previous_release = '2016.3.6'  # latest release from previous branch
-previous_release_dir = '2016.3'  # path on web server for previous branch
+latest_release = '2017.7.1'  # latest release
+previous_release = '2016.11.7'  # latest release from previous branch
+previous_release_dir = '2016.11'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
@@ -259,8 +258,8 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'develop'  # latest, previous, develop, next
-release = version  # version, latest_release, previous_release
+build_type = 'latest'  # latest, previous, develop, next
+release = latest_release # version, latest_release, previous_release
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
@@ -321,11 +320,21 @@ rst_prolog = """\
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
 .. |windownload| raw:: html
 
-     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>Python2 x86: <a
+     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-x86-Setup.exe.md5"><strong>md5</strong></a></p>
 
-     <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>Python2 AMD64: <a
+     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>Python3 x86: <a
+     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+
+     <p>Python3 AMD64: <a
+     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+
 
 .. |osxdownload| raw:: html
 

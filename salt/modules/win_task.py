@@ -1259,7 +1259,7 @@ def status(name, location='\\'):
     task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
-    # get the folder to delete the folder from
+    # get the folder where the task is defined
     task_folder = task_service.GetFolder(location)
     task = task_folder.GetTask(name)
 

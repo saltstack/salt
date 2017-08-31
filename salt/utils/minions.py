@@ -75,7 +75,7 @@ def get_minion_data(minion, opts):
     if opts.get('minion_data_cache', False):
         cache = salt.cache.factory(opts)
         if minion is None:
-            for id_ in cache.ls('minions'):
+            for id_ in cache.list('minions'):
                 data = cache.fetch('minions/{0}'.format(id_), 'data')
                 if data is None:
                     continue
@@ -342,13 +342,13 @@ class CkMinions(object):
         if greedy:
             minions = self._pki_minions()
         elif cache_enabled:
-            minions = self.cache.ls('minions')
+            minions = self.cache.list('minions')
         else:
             return []
 
         if cache_enabled:
             if greedy:
-                cminions = self.cache.ls('minions')
+                cminions = self.cache.list('minions')
             else:
                 cminions = minions
             if cminions is None:
@@ -412,7 +412,7 @@ class CkMinions(object):
                         mlist.append(fn_)
                 return mlist
             elif cache_enabled:
-                return self.cache.ls('minions')
+                return self.cache.list('minions')
             else:
                 return list()
 
@@ -574,7 +574,7 @@ class CkMinions(object):
         '''
         minions = set()
         if self.opts.get('minion_data_cache', False):
-            search = self.cache.ls('minions')
+            search = self.cache.list('minions')
             if search is None:
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts['publish_port']))

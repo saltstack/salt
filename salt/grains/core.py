@@ -21,6 +21,7 @@ import platform
 import logging
 import locale
 import uuid
+import datetime
 import salt.exceptions
 from salt.ext.six.moves import range
 
@@ -791,6 +792,8 @@ def _virtual(osdata):
                         grains['virtual_subtype'] = 'ovirt'
                     elif 'Google' in output:
                         grains['virtual'] = 'gce'
+                    elif 'BHYVE' in output:
+                        grains['virtual'] = 'bhyve'
             except IOError:
                 pass
     elif osdata['kernel'] == 'FreeBSD':
@@ -983,28 +986,20 @@ def _windows_platform_data():
 
         os_release = platform.release()
         info = salt.utils.win_osinfo.get_os_version_info()
+        server = {'Vista': '2008Server',
+                  '7': '2008ServerR2',
+                  '8': '2012Server',
+                  '8.1': '2012ServerR2',
+                  '10': '2016Server'}
 
         # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
         # started reporting the Desktop version instead of the Server version on
         # Server versions of Windows, so we need to look those up
-        # Check for Python >=2.7.12 or >=3.5.2
-        ver = pythonversion()['pythonversion']
-        if ((six.PY2 and
-                salt.utils.compare_versions(ver, '>=', [2, 7, 12, 'final', 0]))
-            or
-            (six.PY3 and
-                salt.utils.compare_versions(ver, '>=', [3, 5, 2, 'final', 0]))):
-            # (Product Type 1 is Desktop, Everything else is Server)
-            if info['ProductType'] > 1:
-                server = {'Vista': '2008Server',
-                          '7': '2008ServerR2',
-                          '8': '2012Server',
-                          '8.1': '2012ServerR2',
-                          '10': '2016Server'}
-                os_release = server.get(os_release,
-                                        'Grain not found. Update lookup table '
-                                        'in the `_windows_platform_data` '
-                                        'function in `grains\\core.py`')
+        # So, if you find a Server Platform that's a key in the server
+        # dictionary, then lookup the actual Server Release.
+        # (Product Type 1 is Desktop, Everything else is Server)
+        if info['ProductType'] > 1 and os_release in server:
+            os_release = server[os_release]
 
         service_pack = None
         if info['ServicePackMajor'] > 0:
@@ -1779,12 +1774,14 @@ def ip_fqdn():
             ret[key] = []
         else:
             try:
+                start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
             except socket.error:
-                if __opts__['__role'] == 'master':
-                    log.warning('Unable to find IPv{0} record for "{1}" causing a 10 second timeout when rendering grains. '
-                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn))
+                timediff = datetime.datetime.utcnow() - start_time
+                if timediff.seconds > 5 and __opts__['__role'] == 'master':
+                    log.warning('Unable to find IPv{0} record for "{1}" causing a {2} second timeout when rendering grains. '
+                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn, timediff))
                 ret[key] = []
 
     return ret
@@ -2354,6 +2351,10 @@ def _zpool_data(grains):
     '''
     # quickly return if windows or proxy
     if salt.utils.is_windows() or 'proxyminion' in __opts__:
+        return {}
+
+    # quickly return if NetBSD (ZFS still under development)
+    if salt.utils.is_netbsd():
         return {}
 
     # quickly return if no zpool and zfs command

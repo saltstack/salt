@@ -1927,7 +1927,7 @@ def list_policy_versions(policy_name,
         return ret.get('list_policy_versions_response', {}).get('list_policy_versions_result', {}).get('versions')
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to list {0} policy vesions.'
+        msg = 'Failed to list {0} policy versions.'
         log.error(msg.format(policy_name))
         return []
 

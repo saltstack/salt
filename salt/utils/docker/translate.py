@@ -387,7 +387,7 @@ def dns(val, **kwargs):
 
 
 def domainname(val, **kwargs):  # pylint: disable=unused-argument
-    return _translate_stringlist(val)
+    return _translate_str(val)
 
 
 def entrypoint(val, **kwargs):  # pylint: disable=unused-argument

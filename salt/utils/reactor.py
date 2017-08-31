@@ -273,12 +273,19 @@ class ReactWrap(object):
         try:
             f_call = salt.utils.format_call(l_fun, low)
             kwargs = f_call.get('kwargs', {})
+            if 'arg' not in kwargs:
+                kwargs['arg'] = []
+            if 'kwarg' not in kwargs:
+                kwargs['kwarg'] = {}
 
             # TODO: Setting the user doesn't seem to work for actual remote publishes
             if low['state'] in ('runner', 'wheel'):
                 # Update called function's low data with event user to
                 # segregate events fired by reactor and avoid reaction loops
                 kwargs['__user__'] = self.event_user
+                # Replace ``state`` kwarg which comes from high data compiler.
+                # It breaks some runner functions and seems unnecessary.
+                kwargs['__state__'] = kwargs.pop('state')
 
             l_fun(*f_call.get('args', ()), **kwargs)
         except Exception:
