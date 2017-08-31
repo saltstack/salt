@@ -200,7 +200,7 @@ class LoadAuth(object):
         '''
         if not self.authenticate_eauth(load):
             return {}
-        fstr = '{0}.auth'.format(load['eauth'])
+
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
         tok = str(hash_type(os.urandom(512)).hexdigest())
         t_path = os.path.join(self.opts['token_dir'], tok)
@@ -224,8 +224,9 @@ class LoadAuth(object):
             acl_ret = self.__get_acl(load)
             tdata['auth_list'] = acl_ret
 
-        if 'groups' in load:
-            tdata['groups'] = load['groups']
+        groups = self.get_groups(load)
+        if groups:
+            tdata['groups'] = groups
 
         try:
             with salt.utils.files.set_umask(0o177):
@@ -345,7 +346,7 @@ class LoadAuth(object):
                 return False
         return True
 
-    def get_auth_list(self, load):
+    def get_auth_list(self, load, token=None):
         '''
         Retrieve access list for the user specified in load.
         The list is built by eauth module or from master eauth configuration.
@@ -353,30 +354,37 @@ class LoadAuth(object):
         list if the user has no rights to execute anything on this master and returns non-empty list
         if user is allowed to execute particular functions.
         '''
+        # Get auth list from token
+        if token and self.opts['keep_acl_in_token'] and 'auth_list' in token:
+            return token['auth_list']
         # Get acl from eauth module.
         auth_list = self.__get_acl(load)
         if auth_list is not None:
             return auth_list
 
-        if load['eauth'] not in self.opts['external_auth']:
+        eauth = token['eauth'] if token else load['eauth']
+        if eauth not in self.opts['external_auth']:
             # No matching module is allowed in config
             log.warning('Authorization failure occurred.')
             return None
 
-        name = self.load_name(load)  # The username we are attempting to auth with
-        groups = self.get_groups(load)  # The groups this user belongs to
-        eauth_config = self.opts['external_auth'][load['eauth']]
-        if groups is None or groups is False:
+        if token:
+            name = token['name']
+            groups = token['groups']
+        else:
+            name = self.load_name(load)  # The username we are attempting to auth with
+            groups = self.get_groups(load)  # The groups this user belongs to
+        eauth_config = self.opts['external_auth'][eauth]
+        if not groups:
             groups = []
         group_perm_keys = [item for item in eauth_config if item.endswith('%')]  # The configured auth groups
 
         # First we need to know if the user is allowed to proceed via any of their group memberships.
         group_auth_match = False
         for group_config in group_perm_keys:
-            group_config = group_config.rstrip('%')
-            for group in groups:
-                if group == group_config:
-                    group_auth_match = True
+            if group_config.rstrip('%') in groups:
+                group_auth_match = True
+                break
         # If a group_auth_match is set it means only that we have a
         # user which matches at least one or more of the groups defined
         # in the configuration file.
