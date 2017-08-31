@@ -101,6 +101,7 @@ Profile configuration example:
       # vagrant_up_options: '' # options for "vagrant up" like: "--provider vmware_fusion"
       # ssh_host: None  # "None" means try to find the routable ip address from "ifconfig"
       # target_network: None  # Expected CIDR address of your bridged network
+      # force_minion_config: false  # Set "true" to re-purpose an existing VM
 
 The machine can now be created and configured with the following command:
 
@@ -206,9 +207,10 @@ This example assumes:
       api_eauth: pam
       api_username: pi  # supply some sudo-group member's name
       api_password: raspberry  # and password on the salt master
+      force_minion_config: true  # I want to change minion IDs etc
       minion:
         master: 10.124.30.7  # the hard address of the master
-
++
 .. code-block:: yaml
 
     # file /etc/salt/master.d/auth.conf on bevy_master

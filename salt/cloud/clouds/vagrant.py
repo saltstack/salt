@@ -380,10 +380,10 @@ def destroy(name, call=None):
     my_info = local.run(cmd)
     profile_name = my_info[name]['profile']
     profile = opts['profiles'][profile_name]
-    machine = profile['machine']
+    machine = profile.get('machine', '')
     host = profile['host']
     cwd = profile['cwd']
-    runas = profile['runas']
+    runas = profile.get('runas', '')
     log.info('sending \'vagrant destroy %s\' command to %s', machine, host)
 
     local = salt.netapi.NetapiClient(opts)
@@ -447,10 +447,10 @@ def reboot(name, call=None):
     my_info = local.run(cmd)
     profile_name = my_info[name]['profile']
     profile = __opts__['profiles'][profile_name]
-    machine = profile['machine']
+    machine = profile.get('machine', '')
     host = profile['host']
     cwd = profile['cwd']
-    runas = profile['runas']
+    runas = profile.get('runas', '')
     log.info('sending \'vagrant reload %s\' command to %s', machine, host)
 
     args = ['vagrant reload {}'.format(machine)]
