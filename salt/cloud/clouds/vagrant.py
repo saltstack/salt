@@ -278,7 +278,7 @@ def create(vm_):
                 if found_address:
                     if found_address.is_loopback or found_address.is_link_local:
                         continue
-                    ssh_config['bridged_address'] = found_address  # a candidate
+                    ssh_config['bridged_address'] = str(found_address)  # a candidate
                     if found_address in bridged_network:
                         break  # we have located a known good address
             except (IndexError, AttributeError, TypeError):

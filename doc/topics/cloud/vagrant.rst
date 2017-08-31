@@ -106,11 +106,11 @@ The machine can now be created and configured with the following command:
 
 .. code-block:: bash
 
-    salt-cloud -p vagrant-machine my-machine
+    salt-cloud -p vagrant-machine my-id
 
 This will create the machine specified by the cloud profile
 ``vagrant-machine``, and will give the machine the minion id of
-``my-machine``. If the cloud master is also the salt-master, its Salt
+``my-id``. If the cloud master is also the salt-master, its Salt
 key will automatically be accepted on the master.
 
 Once a salt-minion has been successfully installed on the instance, connectivity
@@ -118,7 +118,7 @@ to it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt my-machine test.ping
+    salt my-id test.ping
 
 Provisioning using salt-api (example)
 =====================================
