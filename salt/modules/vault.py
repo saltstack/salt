@@ -68,6 +68,8 @@ Functions to interact with Hashicorp Vault.
                     - web
                     - database
 
+        `pillar` can also be used.
+
         The minion will have the policies ``saltstack/by-role/web`` and
         ``saltstack/by-role/database``. Note however that list members which do
         not have simple string representations, such as dictionaries or objects,
