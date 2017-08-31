@@ -16,9 +16,10 @@ if %errorLevel%==0 (
 )
 echo.
 
+:CheckPython2
 if exist "\Python27" goto RemovePython2
-if exist "\Python35" goto RemovePython3
-goto eof
+
+goto CheckPython3
 
 :RemovePython2
     rem Uninstall Python 2.7
@@ -47,6 +48,11 @@ goto eof
 
     goto eof
 
+:CheckPython3
+if exist "\Python35" goto RemovePython3
+
+goto eof
+
 :RemovePython3
     echo %0 :: Uninstalling Python 3 ...
     echo ---------------------------------------------------------------------
@@ -63,9 +69,9 @@ goto eof
     )
 
     rem wipe the Python directory
-    echo %0 :: Removing the C:\Program Files\Python35 Directory ...
+    echo %0 :: Removing the C:\Python35 Directory ...
     echo ---------------------------------------------------------------------
-    rd /s /q "C:\Program Files\Python35"
+    rd /s /q "C:\Python35"
     if %errorLevel%==0 (
         echo Successful
     ) else (
