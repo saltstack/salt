@@ -248,6 +248,7 @@ Section -Post
 
   ExecWait "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
   ExecWait "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
+  ExecWait "nssm.exe set salt-minion AppNoConsole 1"
   RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
 
   Call updateMinionConfig
