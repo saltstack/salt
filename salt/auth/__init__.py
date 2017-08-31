@@ -370,7 +370,7 @@ class LoadAuth(object):
 
         if token:
             name = token['name']
-            groups = token['groups']
+            groups = token.get('groups')
         else:
             name = self.load_name(load)  # The username we are attempting to auth with
             groups = self.get_groups(load)  # The groups this user belongs to
