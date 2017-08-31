@@ -5,7 +5,7 @@ correct cloud modules
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function, generators
+from __future__ import absolute_import, print_function, generators, unicode_literals
 import os
 import copy
 import glob
