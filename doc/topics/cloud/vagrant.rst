@@ -73,10 +73,18 @@ definitions for `multiple machines`_ then you need a ``machine`` parameter,
 
 Salt-cloud uses ssh to provision the minion. There must be a routable path
 from the cloud master to the VM. Usually, you will want to use
-a bridged network adapter for ssh. The address will not be known until
+a bridged network adapter for ssh. The address may not be known until
 DHCP assigns it. If the configuration setting ``ssh_host`` is not defined,
 the driver will attempt to read the address from the output
 of an ``ifconfig`` command.
+
+The ``target_network`` setting should be used
+to identify the IP network your bridged adapter is expected to appear on.
+Use CIDR notation, like ``target_network: '2001:DB8::/32'``
+or ``target_network: '192.0.2.0/24'``. If ``target_network`` is ``None``,
+the driver will try to use the last routable (not local or link-local)
+network it sees. This might turn out to be a Vagrant host-only network,
+which will work only if the cloud master is running somewhere on the same host.
 
 Profile configuration example:
 
@@ -92,6 +100,7 @@ Profile configuration example:
       # vagrant_up_timeout: 300 # (seconds) timeout for cmd.run of the "vagrant up" command
       # vagrant_up_options: '' # options for "vagrant up" like: "--provider vmware_fusion"
       # ssh_host: None  # "None" means try to find the routable ip address from "ifconfig"
+      # target_network: None  # Expected CIDR address of your bridged network
 
 The machine can now be created and configured with the following command:
 
@@ -110,7 +119,6 @@ to it can be verified with Salt:
 .. code-block:: bash
 
     salt my-machine test.ping
-
 
 Provisioning using salt-api (example)
 =====================================

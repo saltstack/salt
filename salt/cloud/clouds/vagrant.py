@@ -221,7 +221,7 @@ def create(vm_):
     cmd.update(_get_connection_info())
     log.debug('Vagrant driver sending netapi command=%s',repr(cmd))
     ret = local.run(cmd)
-    log.debug('response ==> %s', repr(ret))
+    log.info('response ==> %s', ret[host])
     if not ret[host]:
         # TODO: implement some kind of retry/timeout logic
         log.error('Got empty return from API call to create "%s".'
@@ -249,50 +249,47 @@ def create(vm_):
         # ask the new VM to report its network address
         command = 'ssh -i {} -p {} -oNoHostAuthenticationForLocalhost=yes ' \
            '{}@{} ifconfig'.format(
-            identity_file_name, ssh_config['Port'], ssh_config['User'], ssh_config['HostName'])
+            identity_file_name, ssh_config['Port'],
+            ssh_config['User'], ssh_config['HostName'])
         cmd['arg'] = [command]
+        log.info('Trying ssh connection from {} to {}@{}'.format(
+            host, ssh_config['User'],ssh_config['HostName']))
         ret = local.run(cmd)
         log.debug('response ==> %s', repr(ret))
 
+        bridged_network = config.get_cloud_config_value(
+            'bridged_network', vm_, __opts__, default=None)
+        if bridged_network:  # convert to net mask
+            bridged_network = ipaddress.ip_network(bridged_network)
+
         for line in ret[host].split('\n'):
-            try:   # try to find a bridged network adapter
-                tokens = line.strip().split()
+            try:   # try to find a bridged network address
                 # the lines we are looking for appear like:
-                #   "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
-                # theoretically, the last such address we find should be the right one
+                #    "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
+                # or "inet6 addr: fe80::a00:27ff:fe04:7aac/64 Scope:Link"
+                tokens = line.replace('addr:','',1).split()
+                found_address = None
                 if "inet" in tokens:
-                    net = tokens.index("inet") + 1
-                    splits = tokens[net].split(":")
-                    if splits[0] == "addr":
-                        found_address = splits[1]
-                    else:
-                        #  inet 10.2.156.13  netmask 255.255.255.254  broadcast 10.255.255.255
-                        found_address = tokens[net]
-                    if found_address.startswith('127.'):
-                        continue
-                    ssh_config['bridged_address'] = found_address
+                    nxt = tokens.index("inet") + 1
+                    found_address = ipaddress.ip_address(tokens[nxt])
                 elif "inet6" in tokens:
-                    net = tokens.index("inet6") + 1
-                    if tokens[net] == "addr:":
-                        # inet6 addr: fe80::a00:27ff:fe04:7aac/64 Scope:Link
-                        found_address = tokens[net + 1].split('/')[0]
-                    else:
-                        # inet6 2001:bc8:4400:2100::22:c0d  prefixlen 127  scopeid 0x0<global>
-                        found_address =  tokens[net]
-                    if found_address.startswith('fe80:'):
+                    nxt = tokens.index("inet6") + 1
+                    found_address = ipaddress.ip_address(tokens[nxt].split('/')[0])
+                if found_address:
+                    if found_address.is_loopback or found_address.is_link_local:
                         continue
-                    if found_address.startswith('::1'):
-                        continue
-                    ssh_config['bridged_address'] = found_address
-                        # NOTE: IPv6 address will be used if both 6 and 4 appear
-            except (IndexError, AttributeError):
-                pass
+                    ssh_config['bridged_address'] = found_address  # a candidate
+                    if found_address in bridged_network:
+                        break  # we have located a known good address
+            except (IndexError, AttributeError, TypeError):
+                pass  # all syntax and type errors loop here
+            # falling out if the loop leaves us remembering the last candidate
         log.info('Network bridge address detected as: %s', ssh_config['bridged_address'])
         # Note: a host-only network will show up here if a bridged network was not connected
         #  that should work iff the cloud master is a VM of the same host.
         if not ssh_config['bridged_address']:
             # TODO: find out how to work with ssh gateway if no bridge
-            log.warning('Unable to find address of bridged network adapter on %s.'
+            log.warning('Unable to find address of a bridged network adapter on %s.'
                         ' Attempt to connect using ssh via host %s may fail.',
                         machine, host)
 
@@ -305,13 +302,13 @@ def create(vm_):
     with tempfile.NamedTemporaryFile() as pks:
         pks.write(private_key)
         pks.flush()
-        log.trace('wrote private key to %s', pks.name)
+        log.debug('wrote private key to %s', pks.name)
         vm_.setdefault('key_filename', pks.name)
         vm_.setdefault('ssh_username', ssh_config['User'])
         if not 'ssh_host' in vm_:
             if ssh_config['bridged_address']:
                 vm_['ssh_host'] = ssh_config['bridged_address']
-            else: # do not use Vagrant's detected ssh port if probe worked
+            else: # Vagrant's detected ssh address and port if probe failed
                 vm_['ssh_host'] = ssh_config['HostName']
                 vm_.setdefault('ssh_port', ssh_config['Port'])
 
