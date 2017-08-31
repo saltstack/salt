@@ -257,10 +257,10 @@ def create(vm_):
         ret = local.run(cmd)
         log.debug('response ==> %s', repr(ret))
 
-        bridged_network = config.get_cloud_config_value(
-            'bridged_network', vm_, __opts__, default=None)
-        if bridged_network:  # convert to net mask
-            bridged_network = ipaddress.ip_network(bridged_network)
+        target_network = config.get_cloud_config_value(
+            'target_network', vm_, __opts__, default=None)
+        if target_network:  # convert to net mask
+            target_network = ipaddress.ip_network(target_network)
 
         for line in ret[host].split('\n'):
             try:   # try to find a bridged network address
@@ -279,7 +279,7 @@ def create(vm_):
                     if found_address.is_loopback or found_address.is_link_local:
                         continue
                     ssh_config['bridged_address'] = str(found_address)  # a candidate
-                    if found_address in bridged_network:
+                    if found_address in target_network:
                         break  # we have located a known good address
             except (IndexError, AttributeError, TypeError):
                 pass  # all syntax and type errors loop here
