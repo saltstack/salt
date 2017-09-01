@@ -19,17 +19,17 @@ class StateUtilTestCase(TestCase):
     '''
     Test case for state util.
     '''
-    def test_check_state_result(self):
-        self.assertFalse(salt.utils.state.check_state_result(None),
+    def test_check_result(self):
+        self.assertFalse(salt.utils.state.check_result(None),
                          'Failed to handle None as an invalid data type.')
-        self.assertFalse(salt.utils.state.check_state_result([]),
+        self.assertFalse(salt.utils.state.check_result([]),
                          'Failed to handle an invalid data type.')
-        self.assertFalse(salt.utils.state.check_state_result({}),
+        self.assertFalse(salt.utils.state.check_result({}),
                          'Failed to handle an empty dictionary.')
-        self.assertFalse(salt.utils.state.check_state_result({'host1': []}),
+        self.assertFalse(salt.utils.state.check_result({'host1': []}),
                          'Failed to handle an invalid host data structure.')
         test_valid_state = {'host1': {'test_state': {'result': 'We have liftoff!'}}}
-        self.assertTrue(salt.utils.state.check_state_result(test_valid_state))
+        self.assertTrue(salt.utils.state.check_result(test_valid_state))
         test_valid_false_states = {
             'test1': salt.utils.odict.OrderedDict([
                 ('host1',
@@ -78,7 +78,7 @@ class StateUtilTestCase(TestCase):
         }
         for test, data in six.iteritems(test_valid_false_states):
             self.assertFalse(
-                salt.utils.state.check_state_result(data),
+                salt.utils.state.check_result(data),
                 msg='{0} failed'.format(test))
         test_valid_true_states = {
             'test1': salt.utils.odict.OrderedDict([
@@ -129,7 +129,7 @@ class StateUtilTestCase(TestCase):
         }
         for test, data in six.iteritems(test_valid_true_states):
             self.assertTrue(
-                salt.utils.state.check_state_result(data),
+                salt.utils.state.check_result(data),
                 msg='{0} failed'.format(test))
         test_invalid_true_ht_states = {
             'test_onfail_simple2': (
@@ -305,7 +305,7 @@ class StateUtilTestCase(TestCase):
                     t_ = t_.split('_|-')[1]
                 tdata['__id__'] = t_
             self.assertFalse(
-                salt.utils.state.check_state_result(data, highstate=ht),
+                salt.utils.state.check_result(data, highstate=ht),
                 msg='{0} failed'.format(test))
 
         test_valid_true_ht_states = {
@@ -439,7 +439,7 @@ class StateUtilTestCase(TestCase):
                     t_ = t_.split('_|-')[1]
                 tdata['__id__'] = t_
             self.assertTrue(
-                salt.utils.state.check_state_result(data, highstate=ht),
+                salt.utils.state.check_result(data, highstate=ht),
                 msg='{0} failed'.format(test))
         test_valid_false_state = {'host1': {'test_state': {'result': False}}}
-        self.assertFalse(salt.utils.check_state_result(test_valid_false_state))
+        self.assertFalse(salt.utils.state.check_result(test_valid_false_state))
