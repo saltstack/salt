@@ -241,4 +241,4 @@ def _read_link(name):
     Throws an OSError if the link does not exist
     '''
     alt_link_path = '/etc/alternatives/{0}'.format(name)
-    return os.readlink(alt_link_path)
+    return __salt__['file.readlink'](alt_link_path)
