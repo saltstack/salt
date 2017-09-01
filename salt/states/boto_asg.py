@@ -812,7 +812,8 @@ def _alarms_present(name, min_size_equals_max_size, alarms, alarms_from_pillar, 
         if not results['result']:
             merged_return_value['result'] = False
         if results.get('changes', {}) != {}:
-            merged_return_value['changes'][info['name']] = results['changes']
+            merged_return_value['changes'].setdefault('alarms', {})
+            merged_return_value['changes']['alarms'][info['name']] = results['changes']
         if 'comment' in results:
             merged_return_value['comment'] += results['comment']
     return merged_return_value
