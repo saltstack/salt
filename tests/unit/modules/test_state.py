@@ -19,6 +19,8 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.config
+import salt.loader
 import salt.utils
 import salt.utils.odict
 import salt.utils.platform
@@ -345,6 +347,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
+        utils = salt.loader.utils(
+            salt.config.DEFAULT_MINION_OPTS,
+            whitelist=['state']
+        )
         patcher = patch('salt.modules.state.salt.state', MockState())
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -355,6 +361,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     'environment': None,
                     '__cli': 'salt',
                 },
+                '__utils__': utils,
             },
         }
 
@@ -977,6 +984,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                 MockTarFile.path = ""
                 MockJson.flag = False
-                with patch('salt.utils.files.fopen', mock_open()):
+                with patch('salt.utils.files.fopen', mock_open()), \
+                        patch.dict(state.__utils__, {'state.check_result': MagicMock(return_value=True)}):
                     self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
                                               0, "md5"))
