@@ -40,6 +40,7 @@ Connection module for Amazon CloudWatch
             region: us-east-1
 
 :depends: boto
+:depends: boto3
 '''
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
@@ -57,11 +58,16 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    # pylint: disable=unused-import
     import boto
     import boto.ec2.cloudwatch
     import boto.ec2.cloudwatch.listelement
     import boto.ec2.cloudwatch.dimension
+    import botocore
+    import boto3
+    # pylint: enable=unused-import
     logging.getLogger('boto').setLevel(logging.CRITICAL)
+    logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -78,6 +84,12 @@ def __virtual__():
     __utils__['boto.assign_funcs'](__name__, 'cloudwatch',
                                    module='ec2.cloudwatch',
                                    pack=__salt__)
+    __utils__['boto3.assign_funcs'](
+        __name__,
+        'cloudwatch',
+        get_conn_funcname='_get_conn3',
+        cache_id_funcname='_cache_id3',
+    )
     return True
 
 
@@ -97,6 +109,33 @@ def get_alarm(name, region=None, key=None, keyid=None, profile=None):
     if len(alarms) > 1:
         log.error("multiple alarms matched name '{0}'".format(name))
     return _metric_alarm_to_dict(alarms[0])
+
+
+def get_alarms(names, region=None, key=None, keyid=None, profile=None):
+    '''
+    .. versionadded:: Oxygen
+
+    Get details (and check existence of) multiple Cloudwatch alarms
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudwatch.get_alarms '["myalarm","myalarm2"]' region=us-east-1
+    '''
+    conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+
+    alarms = {}
+    try:
+        paginator = conn.get_paginator('describe_alarms')
+        for alarms_page in paginator.paginate(AlarmNames=names):
+            for alarm in alarms_page['MetricAlarms']:
+                name = alarm.pop('AlarmName')
+                alarms[name] = alarm
+    except botocore.exceptions.ClientError as err:
+        return {'error': __utils__['boto3.get_error'](err)}
+
+    return {'result': alarms}
 
 
 def _safe_dump(data):
@@ -314,6 +353,28 @@ def delete_alarm(name, region=None, key=None, keyid=None, profile=None):
     conn.delete_alarms([name])
     log.info('Deleted alarm {0}'.format(name))
     return True
+
+
+def delete_alarms(names, region=None, key=None, keyid=None, profile=None):
+    '''
+    .. versionadded:: Oxygen
+
+    Delete multiple Cloudwatch alarms
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudwatch.delete_alarms '["myalarm","myalarm2"]' region=us-east-1
+    '''
+    conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        conn.delete_alarms(AlarmNames=names)
+    except botocore.exceptions.ClientError as err:
+        return {'error': __utils__['boto3.get_error'](err)}
+
+    return {'result': True}
 
 
 def _metric_alarm_to_dict(alarm):
