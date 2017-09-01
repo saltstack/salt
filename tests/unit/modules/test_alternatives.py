@@ -66,30 +66,28 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                 )
 
     def test_show_current(self):
-        with patch('os.readlink') as os_readlink_mock:
-            os_readlink_mock.return_value = '/etc/alternatives/salt'
+        mock = MagicMock(return_value='/etc/alternatives/salt')
+        with patch.dict(alternatives.__salt__, {'file.readlink': mock}):
             ret = alternatives.show_current('better-world')
             self.assertEqual('/etc/alternatives/salt', ret)
-            os_readlink_mock.assert_called_once_with(
-                '/etc/alternatives/better-world'
-            )
+            mock.assert_called_once_with('/etc/alternatives/better-world')
 
             with TestsLoggingHandler() as handler:
-                os_readlink_mock.side_effect = OSError('Hell was not found!!!')
+                mock.side_effect = OSError('Hell was not found!!!')
                 self.assertFalse(alternatives.show_current('hell'))
-                os_readlink_mock.assert_called_with('/etc/alternatives/hell')
+                mock.assert_called_with('/etc/alternatives/hell')
                 self.assertIn('ERROR:alternative: hell does not exist',
                               handler.messages)
 
     def test_check_installed(self):
-        with patch('os.readlink') as os_readlink_mock:
-            os_readlink_mock.return_value = '/etc/alternatives/salt'
+        mock = MagicMock(return_value='/etc/alternatives/salt')
+        with patch.dict(alternatives.__salt__, {'file.readlink': mock}):
             self.assertTrue(
                 alternatives.check_installed(
                     'better-world', '/etc/alternatives/salt'
                 )
             )
-            os_readlink_mock.return_value = False
+            mock.return_value = False
             self.assertFalse(
                 alternatives.check_installed(
                     'help', '/etc/alternatives/salt'
