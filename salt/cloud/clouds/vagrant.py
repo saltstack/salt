@@ -219,7 +219,7 @@ def create(vm_):
            'tgt_type': 'glob',
            }
     cmd.update(_get_connection_info())
-    log.debug('Vagrant driver sending netapi command=%s',repr(cmd))
+    log.debug('Vagrant driver sending netapi command=%s', repr(cmd))
     ret = local.run(cmd)
     log.info('response ==> %s', ret[host])
     if not ret[host]:
@@ -245,7 +245,7 @@ def create(vm_):
 
     identity_file_name = ssh_config['IdentityFile']
 
-    if not 'ssh_host' in vm_:
+    if 'ssh_host' not in vm_:
         # ask the new VM to report its network address
         command = 'ssh -i {} -p {} ' \
                   '-oStrictHostKeyChecking=no ' \
@@ -257,7 +257,7 @@ def create(vm_):
             ssh_config['User'], ssh_config['HostName'])
         cmd['arg'] = [command]
         log.info('Trying ssh connection from {} to {}@{}'.format(
-            host, ssh_config['User'],ssh_config['HostName']))
+            host, ssh_config['User'], ssh_config['HostName']))
         ret = local.run(cmd)
         log.debug('response ==> %s', repr(ret))
 
@@ -271,7 +271,7 @@ def create(vm_):
                 # the lines we are looking for appear like:
                 #    "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
                 # or "inet6 addr: fe80::a00:27ff:fe04:7aac/64 Scope:Link"
-                tokens = line.replace('addr:','',1).split()
+                tokens = line.replace('addr:', '', 1).split()
                 found_address = None
                 if "inet" in tokens:
                     nxt = tokens.index("inet") + 1
@@ -309,10 +309,10 @@ def create(vm_):
         log.debug('wrote private key to %s', pks.name)
         vm_.setdefault('key_filename', pks.name)
         vm_.setdefault('ssh_username', ssh_config['User'])
-        if not 'ssh_host' in vm_:
+        if 'ssh_host' not in vm_:
             if ssh_config['bridged_address']:
                 vm_['ssh_host'] = ssh_config['bridged_address']
-            else: # Vagrant's detected ssh address and port if probe failed
+            else: #  Vagrant's detected ssh address and port if probe failed
                 vm_['ssh_host'] = ssh_config['HostName']
                 vm_.setdefault('ssh_port', ssh_config['Port'])
 
