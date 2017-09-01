@@ -207,7 +207,6 @@ import salt.utils.decorators
 import salt.utils.docker
 import salt.utils.files
 import salt.utils.path
-import salt.utils.state
 import salt.utils.stringutils
 import salt.utils.thin
 import salt.pillar
@@ -5421,7 +5420,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
             )
     if not isinstance(ret, dict):
         __context__['retcode'] = 1
-    elif not salt.utils.state.check_state_result(ret):
+    elif not __utils__['state.check_result'](ret):
         __context__['retcode'] = 2
     else:
         __context__['retcode'] = 0
@@ -5495,7 +5494,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         # Now execute the state into the container
         ret = sls(id_, mods, saltenv, **kwargs)
         # fail if the state was not successful
-        if not dryrun and not salt.utils.state.check_state_result(ret):
+        if not dryrun and not __utils__['state.check_result'](ret):
             raise CommandExecutionError(ret)
         if dryrun is False:
             ret = commit(id_, name)
