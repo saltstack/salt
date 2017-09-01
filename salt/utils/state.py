@@ -15,7 +15,7 @@ import salt.state
 _empty = object()
 
 
-def gen_state_tag(low):
+def gen_tag(low):
     '''
     Generate the running dict tag string from the low data structure
     '''
@@ -121,7 +121,7 @@ def check_onfail_requisites(state_id, state_result, running, highstate):
     return nret
 
 
-def check_state_result(running, recurse=False, highstate=None):
+def check_result(running, recurse=False, highstate=None):
     '''
     Check the total return value of the run and determine if the running
     dict has any issues
@@ -142,7 +142,7 @@ def check_state_result(running, recurse=False, highstate=None):
                 ret = False
             # only override return value if we are not already failed
             elif result is _empty and isinstance(state_result, dict) and ret:
-                ret = check_state_result(
+                ret = check_result(
                     state_result, recurse=True, highstate=highstate)
         # if we detect a fail, check for onfail requisites
         if not ret:

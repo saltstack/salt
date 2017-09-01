@@ -3269,10 +3269,10 @@ def gen_state_tag(low):
     salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.gen_state_tag\' detected. This function has been '
-        'moved to \'salt.utils.state.gen_state_tag\' as of Salt Oxygen. This '
-        'warning will be removed in Salt Neon.'
+        'moved to \'salt.utils.state.gen_tag\' as of Salt Oxygen. This warning '
+        'will be removed in Salt Neon.'
     )
-    return salt.utils.state.gen_state_tag(low)
+    return salt.utils.state.gen_tag(low)
 
 
 def search_onfail_requisites(sid, highstate):
@@ -3335,9 +3335,9 @@ def check_state_result(running, recurse=False, highstate=None):
     salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.check_state_result\' detected. This function'
-        'has been moved to \'salt.utils.state.check_state_result\' as of '
+        'has been moved to \'salt.utils.state.check_result\' as of '
         'Salt Oxygen. This warning will be removed in Salt Neon.'
     )
-    return salt.utils.state.check_state_result(
+    return salt.utils.state.check_result(
         running, recurse=recurse, highstate=highstate
     )
