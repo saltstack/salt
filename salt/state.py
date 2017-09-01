@@ -2210,7 +2210,7 @@ class State(object):
                 else:
                     req_stats.add(u'met')
             if r_state.endswith(u'_any'):
-                if u'met' in req_stats:
+                if u'met' in req_stats or u'change' in req_stats:
                     if u'fail' in req_stats:
                         req_stats.remove(u'fail')
                 if u'onchangesmet' in req_stats:
