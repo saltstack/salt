@@ -312,7 +312,7 @@ def create(vm_):
         if 'ssh_host' not in vm_:
             if ssh_config['bridged_address']:
                 vm_['ssh_host'] = ssh_config['bridged_address']
-            else: #  Vagrant's detected ssh address and port if probe failed
+            else:  # if probe failed, use Vagrant's reported ssh info
                 vm_['ssh_host'] = ssh_config['HostName']
                 vm_.setdefault('ssh_port', ssh_config['Port'])
 
