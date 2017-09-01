@@ -674,7 +674,7 @@ Note these can be defined in the pillar for a minion as well.
 
 Default: ``60``
 
-The number of minutes between when a mine update runs.
+The number of minutes between mine updates.
 
 .. code-block:: yaml
 
