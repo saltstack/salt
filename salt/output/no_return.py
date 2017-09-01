@@ -15,7 +15,7 @@ Example output::
 from __future__ import absolute_import
 
 # Import salt libs
-import salt.utils
+import salt.utils.color
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -26,7 +26,7 @@ class NestDisplay(object):
     Create generator for nested output
     '''
     def __init__(self):
-        self.colors = salt.utils.get_colors(
+        self.colors = salt.utils.color.get_colors(
                 __opts__.get(u'color'),
                 __opts__.get(u'color_theme'))
 
