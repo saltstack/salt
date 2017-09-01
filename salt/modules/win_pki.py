@@ -170,7 +170,11 @@ def get_certs(context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
             if key not in blacklist_keys:
                 cert_info[key.lower()] = item[key]
 
-        cert_info['dnsnames'] = [name.get('Unicode') for name in item.get('DnsNameList', {})]
+        names = item.get('DnsNameList', None)
+        if isinstance(names, list):
+            cert_info['dnsnames'] = [name.get('Unicode') for name in names]
+        else:
+            cert_info['dnsnames'] = []
         ret[item['Thumbprint']] = cert_info
     return ret
 
