@@ -83,7 +83,6 @@ import re
 # Import Salt libs
 import salt.utils.pkg
 import salt.utils.platform
-import salt.utils.state
 import salt.utils.versions
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
@@ -3071,7 +3070,7 @@ def mod_aggregate(low, chunks, running):
     if low.get('fun') not in agg_enabled:
         return low
     for chunk in chunks:
-        tag = salt.utils.state.gen_state_tag(chunk)
+        tag = __utils__['state.gen_tag'](chunk)
         if tag in running:
             # Already ran the pkg state, skip aggregation
             continue

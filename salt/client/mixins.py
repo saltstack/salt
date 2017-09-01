@@ -398,7 +398,7 @@ class SyncClientMixin(object):
                 data[u'success'] = True
                 if isinstance(data[u'return'], dict) and u'data' in data[u'return']:
                     # some functions can return boolean values
-                    data[u'success'] = salt.utils.state.check_state_result(data[u'return'][u'data'])
+                    data[u'success'] = salt.utils.state.check_result(data[u'return'][u'data'])
         except (Exception, SystemExit) as ex:
             if isinstance(ex, salt.exceptions.NotImplemented):
                 data[u'return'] = str(ex)
