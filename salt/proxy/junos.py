@@ -128,6 +128,11 @@ def alive(opts):
     '''
 
     dev = conn()
+    
+    # Check that the underlying netconf connection still exists.
+    if dev._conn is None:
+        return False
+
     # call rpc only if ncclient queue is empty. If not empty that means other
     # rpc call is going on.
     if hasattr(dev._conn, '_session'):
