@@ -497,12 +497,10 @@ class SPMClient(object):
         import salt.utils
         if salt.utils.is_windows():
             import salt.utils.win_functions
-            cur_user = salt.utils.win_functions.get_current_user()
-            cur_user_sid = salt.utils.win_functions.get_sid_from_name(cur_user)
-            uid = self.opts.get('spm_uid', cur_user_sid)
-            gid = self.opts.get('spm_gid', cur_user_sid)
-            uname = cur_user
-            gname = cur_user
+            uname = gname = salt.utils.win_functions.get_current_user()
+            uname_sid = salt.utils.win_functions.get_sid_from_name(uname)
+            uid = self.opts.get('spm_uid', uname_sid)
+            gid = self.opts.get('spm_gid', uname_sid)
         else:
             uid = self.opts.get('spm_uid', os.getuid())
             gid = self.opts.get('spm_gid', os.getgid())
@@ -723,7 +721,7 @@ class SPMClient(object):
             raise SPMInvocationError('A path to a directory must be specified')
 
         if args[1] == '.':
-            repo_path = os.getcwd()
+            repo_path = os.getcwdu()
         else:
             repo_path = args[1]
 
