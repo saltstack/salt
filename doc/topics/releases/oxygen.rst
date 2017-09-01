@@ -675,8 +675,6 @@ Azure Cloud Updated Dependency
 The azure sdk used for the ``azurearm`` cloud driver now depends on ``azure-cli>=2.0.12``
 
 
- Module Deprecations
- ===================
 Module Deprecations
 ===================
 
