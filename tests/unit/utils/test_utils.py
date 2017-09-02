@@ -895,17 +895,6 @@ class UtilsTestCase(TestCase):
         ret = salt.utils.repack_dictlist(LOREM_IPSUM)
         self.assertDictEqual(ret, {})
 
-    def test_get_colors(self):
-        ret = salt.utils.get_colors()
-        self.assertEqual('\x1b[0;37m', str(ret['LIGHT_GRAY']))
-
-        ret = salt.utils.get_colors(use=False)
-        self.assertDictContainsSubset({'LIGHT_GRAY': ''}, ret)
-
-        ret = salt.utils.get_colors(use='LIGHT_GRAY')
-        # LIGHT_YELLOW now == LIGHT_GRAY
-        self.assertEqual(str(ret['LIGHT_YELLOW']), str(ret['LIGHT_GRAY']))
-
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_daemonize_if(self):
         # pylint: disable=assignment-from-none
