@@ -895,17 +895,6 @@ class UtilsTestCase(TestCase):
         ret = salt.utils.repack_dictlist(LOREM_IPSUM)
         self.assertDictEqual(ret, {})
 
-    def test_get_colors(self):
-        ret = salt.utils.get_colors()
-        self.assertEqual('\x1b[0;37m', str(ret['LIGHT_GRAY']))
-
-        ret = salt.utils.get_colors(use=False)
-        self.assertDictContainsSubset({'LIGHT_GRAY': ''}, ret)
-
-        ret = salt.utils.get_colors(use='LIGHT_GRAY')
-        # LIGHT_YELLOW now == LIGHT_GRAY
-        self.assertEqual(str(ret['LIGHT_YELLOW']), str(ret['LIGHT_GRAY']))
-
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_daemonize_if(self):
         # pylint: disable=assignment-from-none
@@ -939,19 +928,3 @@ class UtilsTestCase(TestCase):
 
         with patch('salt.utils.path.which', return_value=False):
             self.assertRaises(CommandNotFoundError, salt.utils.check_or_die, 'FAKE COMMAND')
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_compare_versions(self):
-        ret = salt.utils.compare_versions('1.0', '==', '1.0')
-        self.assertTrue(ret)
-
-        ret = salt.utils.compare_versions('1.0', '!=', '1.0')
-        self.assertFalse(ret)
-
-        with patch('salt.utils.log') as log_mock:
-            ret = salt.utils.compare_versions('1.0', 'HAH I AM NOT A COMP OPERATOR! I AM YOUR FATHER!', '1.0')
-            self.assertTrue(log_mock.error.called)
-
-    def test_kwargs_warn_until(self):
-        # Test invalid version arg
-        self.assertRaises(RuntimeError, salt.utils.kwargs_warn_until, {}, [])

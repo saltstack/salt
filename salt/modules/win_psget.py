@@ -16,8 +16,8 @@ import logging
 import json
 
 # Import Salt libs
-import salt.utils
 import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 
 # Set up logging
@@ -43,7 +43,7 @@ def __virtual__():
         return False, 'Module PSGet: Requires PowerShell'
 
     # Verify PowerShell 5.0 or greater
-    if salt.utils.compare_versions(powershell_info['version'], '<', '5.0'):
+    if salt.utils.versions.compare(powershell_info['version'], '<', '5.0'):
         log.debug('Module PSGet: Requires PowerShell 5 or newer')
         return False, 'Module PSGet: Requires PowerShell 5 or newer.'
 

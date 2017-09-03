@@ -16,8 +16,8 @@ from tests.support.paths import TMP
 # Import Salt libs
 import salt.loader
 import salt.config
-import salt.utils
 import salt.utils.files
+import salt.utils.versions
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 
@@ -91,7 +91,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
 
     def render_sls(self, content, sls='', saltenv='base', **kws):
         if 'env' in kws:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Oxygen',
                 'Parameter \'env\' has been detected in the argument list.  This '
                 'parameter is no longer used and has been replaced by \'saltenv\' '

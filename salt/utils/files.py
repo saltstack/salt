@@ -7,11 +7,13 @@ import contextlib
 import errno
 import logging
 import os
+import re
 import shutil
 import stat
 import subprocess
 import tempfile
 import time
+import urllib
 
 # Import Salt libs
 import salt.utils  # Can be removed when backup_minion is moved
@@ -78,7 +80,7 @@ def recursive_copy(source, dest):
     (identical to cp -r on a unix machine)
     '''
     for root, _, files in os.walk(source):
-        path_from_source = root.replace(source, '').lstrip('/')
+        path_from_source = root.replace(source, '').lstrip(os.sep)
         target_directory = os.path.join(dest, path_from_source)
         if not os.path.exists(target_directory):
             os.makedirs(target_directory)
@@ -460,3 +462,39 @@ def is_fcntl_available(check_sunos=False):
     if check_sunos and salt.utils.platform.is_sunos():
         return False
     return HAS_FCNTL
+
+
+def safe_filename_leaf(file_basename):
+    '''
+    Input the basename of a file, without the directory tree, and returns a safe name to use
+    i.e. only the required characters are converted by urllib.quote
+    If the input is a PY2 String, output a PY2 String. If input is Unicode output Unicode.
+    For consistency all platforms are treated the same. Hard coded to utf8 as its ascii compatible
+    windows is \\ / : * ? " < > | posix is /
+
+    .. versionadded:: 2017.7.2
+    '''
+    def _replace(re_obj):
+        return urllib.quote(re_obj.group(0), safe=u'')
+    if not isinstance(file_basename, six.text_type):
+        # the following string is not prefixed with u
+        return re.sub('[\\\\:/*?"<>|]',
+                      _replace,
+                      six.text_type(file_basename, 'utf8').encode('ascii', 'backslashreplace'))
+    # the following string is prefixed with u
+    return re.sub(u'[\\\\:/*?"<>|]', _replace, file_basename, flags=re.UNICODE)
+
+
+def safe_filepath(file_path_name):
+    '''
+    Input the full path and filename, splits on directory separator and calls safe_filename_leaf for
+    each part of the path.
+
+    .. versionadded:: 2017.7.2
+    '''
+    (drive, path) = os.path.splitdrive(file_path_name)
+    path = os.sep.join([safe_filename_leaf(file_section) for file_section in file_path_name.rsplit(os.sep)])
+    if drive:
+        return os.sep.join([drive, path])
+    else:
+        return path

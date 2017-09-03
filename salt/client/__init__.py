@@ -39,6 +39,7 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.platform
 import salt.utils.verify
+import salt.utils.versions
 import salt.utils.jid
 import salt.syspaths as syspaths
 from salt.exceptions import (
@@ -188,15 +189,14 @@ class LocalClient(object):
             key_user = key_user.replace(u'\\', u'_')
         keyfile = os.path.join(self.opts[u'cachedir'],
                                u'.{0}_key'.format(key_user))
-        # Make sure all key parent directories are accessible
-        salt.utils.verify.check_path_traversal(self.opts[u'cachedir'],
-                                               key_user,
-                                               self.skip_perm_errors)
-
         try:
+            # Make sure all key parent directories are accessible
+            salt.utils.verify.check_path_traversal(self.opts[u'cachedir'],
+                                                   key_user,
+                                                   self.skip_perm_errors)
             with salt.utils.files.fopen(keyfile, u'r') as key:
                 return key.read()
-        except (OSError, IOError):
+        except (OSError, IOError, SaltClientError):
             # Fall back to eauth
             return u''
 
@@ -314,7 +314,7 @@ class LocalClient(object):
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -378,7 +378,7 @@ class LocalClient(object):
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -435,7 +435,7 @@ class LocalClient(object):
             '20131219215921857715'
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -482,7 +482,7 @@ class LocalClient(object):
             {'jerry': True}
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -545,7 +545,7 @@ class LocalClient(object):
             {'stewart': {...}}
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -703,7 +703,7 @@ class LocalClient(object):
             function name.
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -772,7 +772,7 @@ class LocalClient(object):
         :returns: A generator
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -855,7 +855,7 @@ class LocalClient(object):
             {'stewart': {'ret': True}}
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -931,7 +931,7 @@ class LocalClient(object):
             {'stewart': {'ret': True}}
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -988,7 +988,7 @@ class LocalClient(object):
         Execute a salt command and return
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -1039,7 +1039,7 @@ class LocalClient(object):
         :returns: all of the information for the JID
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -1118,7 +1118,7 @@ class LocalClient(object):
         :returns: all of the information for the JID
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -1558,7 +1558,7 @@ class LocalClient(object):
         log.trace(u'func get_cli_event_returns()')
 
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -1750,7 +1750,7 @@ class LocalClient(object):
                 A set, the targets that the tgt passed should match.
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '
@@ -1858,7 +1858,7 @@ class LocalClient(object):
                 A set, the targets that the tgt passed should match.
         '''
         if u'expr_form' in kwargs:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 u'Fluorine',
                 u'The target type should be passed using the \'tgt_type\' '
                 u'argument instead of \'expr_form\'. Support for using '

@@ -210,6 +210,21 @@ def ip_to_host(ip):
 # pylint: enable=C0103
 
 
+def is_reachable_host(entity_name):
+    '''
+    Returns a bool telling if the entity name is a reachable host (IPv4/IPv6/FQDN/etc).
+    :param hostname:
+    :return:
+    '''
+    try:
+        assert type(socket.getaddrinfo(entity_name, 0, 0, 0, 0)) == list
+        ret = True
+    except socket.gaierror:
+        ret = False
+
+    return ret
+
+
 def is_ip(ip):
     '''
     Returns a bool telling if the passed IP is a valid IPv4 or IPv6 address.

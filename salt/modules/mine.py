@@ -15,8 +15,9 @@ import salt.crypt
 import salt.payload
 import salt.utils
 import salt.utils.args
-import salt.utils.network
 import salt.utils.event
+import salt.utils.network
+import salt.utils.versions
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
@@ -292,7 +293,7 @@ def get(tgt,
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '

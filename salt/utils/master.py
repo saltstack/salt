@@ -22,6 +22,8 @@ import salt.pillar
 import salt.utils
 import salt.utils.atomicfile
 import salt.utils.minions
+import salt.utils.verify
+import salt.utils.versions
 import salt.payload
 from salt.exceptions import SaltException
 import salt.config
@@ -78,7 +80,7 @@ class MasterPillarUtil(object):
         # remember to remove the expr_form argument from this function when
         # performing the cleanup on this deprecation.
         if expr_form is not None:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'the target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -122,7 +124,7 @@ class MasterPillarUtil(object):
                       'and enfore_mine_cache are both disabled.')
             return mine_data
         if not minion_ids:
-            minion_ids = self.cache.ls('minions')
+            minion_ids = self.cache.list('minions')
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
@@ -141,7 +143,7 @@ class MasterPillarUtil(object):
                       'enabled.')
             return grains, pillars
         if not minion_ids:
-            minion_ids = self.cache.ls('minions')
+            minion_ids = self.cache.list('minions')
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
@@ -364,7 +366,7 @@ class MasterPillarUtil(object):
             # in the same file, 'data.p'
             grains, pillars = self._get_cached_minion_data(*minion_ids)
         try:
-            c_minions = self.cache.ls('minions')
+            c_minions = self.cache.list('minions')
             for minion_id in minion_ids:
                 if not salt.utils.verify.valid_id(self.opts, minion_id):
                     continue
