@@ -21,10 +21,11 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: dis
 
 # Import salt libs
 import salt.key
-import salt.utils
 import salt.utils.compat
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.raetevent
+import salt.utils.versions
 import salt.client
 import salt.client.ssh
 import salt.wheel
@@ -87,7 +88,7 @@ def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, 
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
