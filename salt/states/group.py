@@ -42,7 +42,7 @@ import sys
 from salt.ext import six
 
 # Import Salt libs
-import salt.utils
+import salt.utils.platform
 import salt.utils.win_functions
 
 
@@ -61,7 +61,7 @@ def _changes(name,
 
     # User and Domain names are not case sensitive in Windows. Let's make them
     # all lower case so we can compare properly
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         if lgrp['members']:
             lgrp['members'] = [user.lower() for user in lgrp['members']]
         if members:

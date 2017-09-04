@@ -543,7 +543,7 @@ def _virtual(osdata):
             command = 'system_profiler'
             args = ['SPDisplaysDataType']
         elif osdata['kernel'] == 'SunOS':
-            virtinfo = salt.utils.which('virtinfo')
+            virtinfo = salt.utils.path.which('virtinfo')
             if virtinfo:
                 try:
                     ret = __salt__['cmd.run_all']('{0} -a'.format(virtinfo))

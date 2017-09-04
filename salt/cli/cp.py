@@ -20,6 +20,7 @@ import sys
 import salt.client
 import salt.output
 import salt.utils
+import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.itertools
 import salt.utils.minions
@@ -112,7 +113,7 @@ class SaltCP(object):
             err = 'The referenced file, {0} is not available.'.format(fn_)
             sys.stderr.write(err + '\n')
             sys.exit(42)
-        with salt.utils.fopen(fn_, 'r') as fp_:
+        with salt.utils.files.fopen(fn_, 'r') as fp_:
             data = fp_.read()
         return {fn_: data}
 

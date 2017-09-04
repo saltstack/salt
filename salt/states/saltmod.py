@@ -83,7 +83,8 @@ def state(name,
         batch=None,
         queue=False,
         subset=None,
-        orchestration_jid=None):
+        orchestration_jid=None,
+        **kwargs):
     '''
     Invoke a state run on a given target
 

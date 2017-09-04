@@ -617,6 +617,11 @@ Profitbricks Cloud Updated Dependency
 The minimum version of the ``profitbrick`` python package for the ``profitbricks``
 cloud driver has changed from 3.0.0 to 3.1.0.
 
+Azure Cloud Updated Dependency
+------------------------------
+
+The azure sdk used for the ``azurearm`` cloud driver now depends on ``azure-cli>=2.0.12``
+
 Module Deprecations
 ===================
 
