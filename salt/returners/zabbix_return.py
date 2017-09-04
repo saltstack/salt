@@ -54,9 +54,22 @@ def zbx():
         return False
 
 
-def zabbix_send(key, host, output):
-    cmd = zbx()['sender'] + " -c " + zbx()['config'] + " -s " + host + " -k " + key + " -o \"" + output +"\""
-    __salt__['cmd.shell'](cmd)
+def zabbix_send(key, host, output): 
+    f = open('/etc/zabbix/zabbix_agentd.conf','r') 
+    for line in f: 
+        if "ServerActive" in line: 
+            flag = "true" 
+            server = line.rsplit('=') 
+            server = server[1].rsplit(',') 
+            for s in server: 
+                cmd = zbx()['sender'] + " -z " + s.replace('\n','') + " -s " + host + " -k " + key + " -o \"" + output +"\"" 
+                __salt__['cmd.shell'](cmd) 
+            break 
+        else: 
+            flag = "false" 
+    if flag == 'false': 
+        cmd = zbx()['sender'] + " -c " + zbx()['config'] + " -s " + host + " -k " + key + " -o \"" + output +"\"" 
+    f.close()
 
 
 def returner(ret):
