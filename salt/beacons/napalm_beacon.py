@@ -1,35 +1,90 @@
 # -*- coding: utf-8 -*-
 '''
-Watch napalm function and fire events.
+NAPALM functions
+================
 
-:depends: - napalm_base Python module >= 0.9.5
+Watch napalm functions and fire events on specific triggers.
 
-:note: The ``napalm`` beacon only works on (proxy) minions.
+.. note::
+    The ``napalm`` beacon only work only when running under
+    a regular or a proxy minion.
+
+The configuration accepts a list of Salt functions to be
+invoked, and the corresponding output hierarchy that should
+be matched against. When we want to match on any element
+at a certain level, we can have ``*`` to match anything.
+
+To invoke a certain function with certain arguments,
+they can be specified using the ``_args`` key, or
+``_kwargs`` to configure more specific key-value arguments.
+
+The right operand can also accept mathematical comparisons
+when applicable (i.e., ``<``, ``<=``, ``!=``, ``>``, ``>=`` etc.).
+
+Configuration Example:
+
+.. code-block:: yaml
+
+    beacons:
+      napalm:
+        - net.interfaces:
+            # fire events when any interfaces is down
+            '*':
+              is_up: false
+        - net.interfaces:
+            # fire events only when the xe-0/0/0 interface is down
+            'xe-0/0/0':
+              is_up: false
+        - bgp.neighbors:
+            # fire events only when the 172.17.17.1 BGP neighbor is down
+            _args:
+              - 172.17.17.1
+            global:
+              '*':
+                up: false
+        - ntp.stats:
+            # fire when there's any NTP peer unsynchornized
+            synchronized: false
+        - ntp.stats:
+            # fire only when the synchronization
+            # with with the 172.17.17.2 NTP server is lost
+            _args:
+              - 172.17.17.2
+            synchronized: false
+        - ntp.stats:
+            # fire only when there's a NTP peer with
+            # synchronization stratum > 5
+            stratum: '> 5'
 '''
-# Import Python libs
 from __future__ import absolute_import
+
+# Import Python std lib
 import re
+import logging
 
-# Import salt libs
+# Import Salt modules
 from salt.ext import six
+import salt.utils.napalm
 
-# Import third party libs
-try:
-    import napalm_base
-    HAS_NAPALM_BASE = True
-except ImportError:
-    HAS_NAPALM_BASE = False
+log = logging.getLogger(__name__)
+_numeric_regex = re.compile('^(<|>|<=|>=|==|!=)\s*(\d+(\.\d+){0,1})$')
+_numeric_operand = {
+    '<': '__lt__',
+    '>': '__gt__',
+    '>=': '__ge__',
+    '<=': '__le__',
+    '==': '__eq__',
+    '!=': '__ne__',
+}
 
 __virtualname__ = 'napalm'
 
-import logging
-log = logging.getLogger(__name__)
-
 
 def __virtual__():
-    if HAS_NAPALM_BASE:
-        return __virtualname__
-    return False
+    '''
+    This beacon can only work when running under a regular or a proxy minion.
+    '''
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 
 def _compare(cur_cmp, cur_struct):
@@ -38,6 +93,7 @@ def _compare(cur_cmp, cur_struct):
     when there's a match.
     '''
     if isinstance(cur_cmp, dict) and isinstance(cur_struct, dict):
+        log.debug('Comparing dict to dict')
         for cmp_key, cmp_value in six.iteritems(cur_cmp):
             if cmp_key == '*':
                 # matches any key from the source dictionary
@@ -68,19 +124,43 @@ def _compare(cur_cmp, cur_struct):
                 else:
                     return _compare(cmp_value, cur_struct[cmp_key])
     elif isinstance(cur_cmp, (list, tuple)) and isinstance(cur_struct, (list, tuple)):
+        log.debug('Comparing list to list')
         found = False
         for cur_cmp_ele in cur_cmp:
             for cur_struct_ele in cur_struct:
                 found |= _compare(cur_cmp_ele, cur_struct_ele)
         return found
+    elif isinstance(cur_cmp, dict) and isinstance(cur_struct, (list, tuple)):
+        log.debug('Comparing dict to list (of dicts?)')
+        found = False
+        for cur_struct_ele in cur_struct:
+            found |= _compare(cur_cmp, cur_struct_ele)
+        return found
     elif isinstance(cur_cmp, bool) and isinstance(cur_struct, bool):
+        log.debug('Comparing booleans')
         return cur_cmp == cur_struct
     elif isinstance(cur_cmp, (six.string_types, six.text_type)) and \
          isinstance(cur_struct, (six.string_types, six.text_type)):
+        log.debug('Comparing strings (and regex?)')
+        # Trying literal match
         matched = re.match(cur_cmp, cur_struct, re.I)
         if matched:
             return True
-        # we can enhance this to allow mathematical operations
+        return False
+    elif isinstance(cur_cmp, (six.integer_types, float)) and \
+         isinstance(cur_struct, (six.integer_types, float)):
+        log.debug('Comparing numeric values')
+        # numeric compare
+        return cur_cmp == cur_struct
+    elif isinstance(cur_struct, (six.integer_types, float)) and \
+         isinstance(cur_cmp, (six.string_types, six.text_type)):
+        # Comapring the numerical value agains a presumably mathematical value
+        log.debug('Comparing a numeric value (%d) with a string (%s)', cur_struct, cur_cmp)
+        numeric_compare = _numeric_regex.match(cur_cmp)
+        # determine if the value to compare agains is a mathematical operand
+        if numeric_compare:
+            compare_value = numeric_compare.group(2)
+            return getattr(float(cur_struct), _numeric_operand[numeric_compare.group(1)])(float(compare_value))
         return False
     return False
 
@@ -88,22 +168,6 @@ def _compare(cur_cmp, cur_struct):
 def beacon(config):
     '''
     Watch napalm function and fire events.
-
-    Example Config
-
-    .. code-block:: yaml
-
-        beacons:
-          napalm:
-            - net.interfaces:
-                '*':
-                  is_up: False
-            - bgp.neighbors:
-                _args:
-                  - 172.17.17.1
-                global:
-                  '*':
-                    - up: False
     '''
     log.debug('Executing napalm beacon with config:')
     log.debug(config)
@@ -144,7 +208,7 @@ def beacon(config):
                 fun=fun,
                 cfg=fun_cfg
             ))
-            event['tag'] = '{fun}'.format(fun=fun)
+            event['tag'] = '{os}/{fun}'.format(os=__grains__['os'], fun=fun)
             event['fun'] = fun
             event['args'] = args
             event['kwargs'] = kwargs
