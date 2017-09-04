@@ -5,6 +5,8 @@ NAPALM functions
 
 Watch napalm functions and fire events on specific triggers.
 
+.. versionadded:: Oxygen
+
 .. note::
     The ``napalm`` beacon only work only when running under
     a regular or a proxy minion.
