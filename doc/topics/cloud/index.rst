@@ -119,6 +119,7 @@ Cloud Provider Specifics
         Getting Started With Libvirt <libvirt>
         Getting Started With Linode <linode>
         Getting Started With LXC <lxc>
+        Getting Started With OneAndOne <oneandone>
         Getting Started With OpenNebula <opennebula>
         Getting Started With OpenStack <openstack>
         Getting Started With Parallels <parallels>

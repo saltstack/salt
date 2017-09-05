@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 Management of user groups
 =========================
 
-The group module is used to create and manage unix group settings, groups
-can be either present or absent:
+The group module is used to create and manage group settings, groups can be
+either present or absent. User/Group names can be passed to the ``adduser``,
+``deluser``, and ``members`` parameters. ``adduser`` and ``deluser`` can be used
+together but not with ``members``.
+
+In Windows, if no domain is specified in the user or group name (ie:
+`DOMAIN\username``) the module will assume a local user or group.
 
 .. code-block:: yaml
 
@@ -34,7 +39,11 @@ from __future__ import absolute_import
 import sys
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
+
+# Import Salt libs
+import salt.utils.platform
+import salt.utils.win_functions
 
 
 def _changes(name,
@@ -50,6 +59,18 @@ def _changes(name,
     if not lgrp:
         return False
 
+    # User and Domain names are not case sensitive in Windows. Let's make them
+    # all lower case so we can compare properly
+    if salt.utils.platform.is_windows():
+        if lgrp['members']:
+            lgrp['members'] = [user.lower() for user in lgrp['members']]
+        if members:
+            members = [salt.utils.win_functions.get_sam_name(user) for user in members]
+        if addusers:
+            addusers = [salt.utils.win_functions.get_sam_name(user) for user in addusers]
+        if delusers:
+            delusers = [salt.utils.win_functions.get_sam_name(user) for user in delusers]
+
     change = {}
     if gid:
         if lgrp['gid'] != gid:
@@ -57,7 +78,7 @@ def _changes(name,
 
     if members:
         # -- if new member list if different than the current
-        if set(lgrp['members']) ^ set(members):
+        if set(lgrp['members']).symmetric_difference(members):
             change['members'] = members
 
     if addusers:
@@ -79,31 +100,58 @@ def present(name,
             addusers=None,
             delusers=None,
             members=None):
-    '''
+    r'''
     Ensure that a group is present
 
-    name
-        The name of the group to manage
+    Args:
 
-    gid
-        The group id to assign to the named group; if left empty, then the next
-        available group id will be assigned
+        name (str):
+            The name of the group to manage
 
-    system
-        Whether or not the named group is a system group.  This is essentially
-        the '-r' option of 'groupadd'.
+        gid (str):
+            The group id to assign to the named group; if left empty, then the
+            next available group id will be assigned. Ignored on Windows
 
-    addusers
-        List of additional users to be added as a group members.
+        system (bool):
+            Whether or not the named group is a system group.  This is essentially
+            the '-r' option of 'groupadd'. Ignored on Windows
 
-    delusers
-        Ensure these user are removed from the group membership.
+        addusers (list):
+            List of additional users to be added as a group members. Cannot
+            conflict with names in delusers. Cannot be used in conjunction with
+            members.
 
-    members
-        Replace existing group members with a list of new members.
+        delusers (list):
+            Ensure these user are removed from the group membership. Cannot
+            conflict with names in addusers. Cannot be used in conjunction with
+            members.
 
-    Note: Options 'members' and 'addusers/delusers' are mutually exclusive and
-          can not be used together.
+        members (list):
+            Replace existing group members with a list of new members. Cannot be
+            used in conjunction with addusers or delusers.
+
+    Example:
+
+    .. code-block:: yaml
+
+        # Adds DOMAIN\db_admins and Administrators to the local db_admin group
+        # Removes Users
+        db_admin:
+          group.present:
+            - addusers:
+              - DOMAIN\db_admins
+              - Administrators
+            - delusers:
+              - Users
+
+        # Ensures only DOMAIN\domain_admins and the local Administrator are
+        # members of the local Administrators group. All other users are
+        # removed
+        Administrators:
+          group.present:
+            - members:
+              - DOMAIN\domain_admins
+              - Administrator
     '''
     ret = {'name': name,
            'changes': {},
@@ -233,8 +281,17 @@ def absent(name):
     '''
     Ensure that the named group is absent
 
-    name
-        The name of the group to remove
+    Args:
+        name (str):
+            The name of the group to remove
+
+    Example:
+
+    .. code-block:: yaml
+
+        # Removes the local group `db_admin`
+        db_admin:
+          group.absent
     '''
     ret = {'name': name,
            'changes': {},

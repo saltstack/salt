@@ -124,3 +124,22 @@ def rm_token(opts, tok):
         return {}
     except Exception as err:
         log.warning("Could not remove token {0}: {1}".format(tok, err))
+
+
+def list_tokens(opts):
+    '''
+    List all tokens in the store.
+
+    :param opts: Salt master config options
+    :returns: List of dicts (token_data)
+    '''
+    ret = []
+    redis_client = _redis_client(opts)
+    if not redis_client:
+        return []
+    serial = salt.payload.Serial(opts)
+    try:
+        return [k.decode('utf8') for k in redis_client.keys()]
+    except Exception as err:
+        log.warning("Failed to list keys: {0}".format(err))
+        return []

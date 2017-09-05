@@ -30,10 +30,10 @@ import time
 
 # Import salt libs
 import salt.syspaths
-import salt.utils
+import salt.utils  # Can be removed once check_state_result is moved
 import salt.utils.event
-import salt.ext.six as six
-from salt.ext.six import string_types
+import salt.utils.versions
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +83,8 @@ def state(name,
         batch=None,
         queue=False,
         subset=None,
-        orchestration_jid=None):
+        orchestration_jid=None,
+        **kwargs):
     '''
     Invoke a state run on a given target
 
@@ -227,7 +228,7 @@ def state(name,
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -309,7 +310,7 @@ def state(name,
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, string_types):
+    elif isinstance(fail_minions, six.string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
         state_ret.setdefault('warnings', []).append(
@@ -466,7 +467,7 @@ def function(
            'result': True}
     if kwarg is None:
         kwarg = {}
-    if isinstance(arg, str):
+    if isinstance(arg, six.string_types):
         func_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
                            'Modifying in place, but please update SLS file '
                            'to remove this warning.']
@@ -477,7 +478,7 @@ def function(
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -527,7 +528,7 @@ def function(
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, string_types):
+    elif isinstance(fail_minions, six.string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
         func_ret.setdefault('warnings', []).append(

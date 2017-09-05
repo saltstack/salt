@@ -81,3 +81,17 @@ def rm_token(opts, tok):
         return {}
     except (IOError, OSError):
         log.warning('Could not remove token {0}'.format(tok))
+
+
+def list_tokens(opts):
+    '''
+    List all tokens in the store.
+
+    :param opts: Salt master config options
+    :returns: List of dicts (tokens)
+    '''
+    ret = []
+    for (dirpath, dirnames, filenames) in os.walk(opts['token_dir']):
+        for token in filenames:
+            ret.append(token)
+    return ret

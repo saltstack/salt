@@ -31,9 +31,9 @@ from tests.support.mock import (
 import yaml
 
 # Import salt libs
-import salt
 import salt.utils
 import salt.utils.files
+import salt.utils.platform
 import salt.states.file as filestate
 import salt.serializers.yaml as yamlserializer
 import salt.serializers.json as jsonserializer
@@ -140,7 +140,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         test_dir = '/tmp'
         user = 'salt'
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             group = 'salt'
         else:
             group = 'saltstack'
@@ -550,7 +550,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                               'G12', 'G12', 'G12', 'G12', 'G12'])
             mock_if = MagicMock(side_effect=[True, False, False, False, False,
                                              False, False, False])
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 mock_ret = MagicMock(return_value=ret)
             else:
                 mock_ret = MagicMock(return_value=(ret, None))
@@ -590,7 +590,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 # Group argument is ignored on Windows systems. Group is set to
                 # user
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     comt = ('User salt is not available Group salt'
                             ' is not available')
                 else:
@@ -732,7 +732,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             mock_perms = MagicMock(return_value=ret)
         else:
             mock_perms = MagicMock(return_value=(ret, ''))
@@ -754,7 +754,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
              patch('salt.utils.win_dacl.get_sid', mock_error), \
              patch('os.path.isdir', mock_t), \
              patch('salt.states.file._check_directory_win', mock_check):
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 comt = ('User salt is not available Group salt'
                         ' is not available')
             else:
@@ -803,7 +803,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 with patch.object(os.path, 'isfile', mock_f):
                     with patch.dict(filestate.__opts__, {'test': True}):
-                        if salt.utils.is_windows():
+                        if salt.utils.platform.is_windows():
                             comt = 'The directory "{0}" will be changed' \
                                    ''.format(name)
                             p_chg = {'directory': 'new'}
@@ -889,7 +889,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'cp.list_master': mock_l}):
 
             # Group argument is ignored on Windows systems. Group is set to user
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 comt = ('User salt is not available Group salt'
                         ' is not available')
             else:
@@ -1019,7 +1019,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         Test to comment out specified lines in a file.
         '''
         with patch.object(os.path, 'exists', MagicMock(return_value=True)):
-            name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
+            name = '/etc/aliases' if salt.utils.platform.is_darwin() else '/etc/fstab'
             regex = 'bind 127.0.0.1'
 
             ret = {'name': name,
@@ -1074,7 +1074,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         Test to uncomment specified commented lines in a file
         '''
         with patch.object(os.path, 'exists', MagicMock(return_value=True)):
-            name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
+            name = '/etc/aliases' if salt.utils.platform.is_darwin() else '/etc/fstab'
             regex = 'bind 127.0.0.1'
 
             ret = {'name': name,
@@ -1364,7 +1364,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                     # Group argument is ignored on Windows systems. Group is set
                     # to user
-                    if salt.utils.is_windows():
+                    if salt.utils.platform.is_windows():
                         comt = ('User salt is not available Group salt'
                                 ' is not available')
                     else:

@@ -33,7 +33,7 @@ from raet.road import estating, keeping, stacking
 from salt.key import RaetKey
 from salt.daemons import salting
 from salt import daemons
-from salt.utils import kinds
+import salt.utils.kinds as kinds
 
 def setUpModule():
     console.reinit(verbosity=console.Wordage.concise)

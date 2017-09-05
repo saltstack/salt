@@ -16,6 +16,8 @@ import random
 # Import salt libs
 import salt.utils
 import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 from salt.ext.six.moves import range
 from salt.utils.locales import sdecode
 
@@ -25,7 +27,7 @@ SALT_CRON_NO_IDENTIFIER = 'NO ID SET'
 
 
 def __virtual__():
-    if salt.utils.which('crontab'):
+    if salt.utils.path.which('crontab'):
         return True
     else:
         return (False, 'Cannot load cron module: crontab command not found')
@@ -33,7 +35,7 @@ def __virtual__():
 
 def _encode(string):
     try:
-        string = salt.utils.to_str(string)
+        string = salt.utils.stringutils.to_str(string)
     except TypeError:
         if not string:
             string = ''

@@ -9,5 +9,4 @@ Set Python=%SaltDir%\bin\python.exe
 Set Script=%SaltDir%\bin\Scripts\salt-minion
 
 :: Launch Script
-"%Python%" "%Script%" %*
-
+"%Python%" -E -s "%Script%" %*

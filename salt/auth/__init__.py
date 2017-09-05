@@ -31,6 +31,7 @@ import salt.transport.client
 import salt.utils
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.versions
 import salt.payload
 
 log = logging.getLogger(__name__)
@@ -236,9 +237,21 @@ class LoadAuth(object):
         if tdata.get('expire', '0') < time.time():
             rm_tok = True
         if rm_tok:
-            self.tokens["{0}.rm_token".format(self.opts['eauth_tokens'])](self.opts, tok)
+            self.rm_token(tok)
 
         return tdata
+
+    def list_tokens(self):
+        '''
+        List all tokens in eauth_tokn storage.
+        '''
+        return self.tokens["{0}.list_tokens".format(self.opts['eauth_tokens'])](self.opts)
+
+    def rm_token(self, tok):
+        '''
+        Remove the given token from token storage.
+        '''
+        self.tokens["{0}.rm_token".format(self.opts['eauth_tokens'])](self.opts, tok)
 
     def authenticate_token(self, load):
         '''
@@ -398,6 +411,13 @@ class Authorize(object):
     The authorization engine used by EAUTH
     '''
     def __init__(self, opts, load, loadauth=None):
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'Authorize\' class has been deprecated. Please use the '
+            '\'LoadAuth\', \'Reslover\', or \'AuthUser\' classes instead. '
+            'Support for the \'Authorze\' class will be removed in Salt '
+            '{version}.'
+        )
         self.opts = salt.config.master_config(opts['conf_file'])
         self.load = load
         self.ckminions = salt.utils.minions.CkMinions(opts)

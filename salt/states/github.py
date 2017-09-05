@@ -22,7 +22,7 @@ import datetime
 import logging
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import range
 

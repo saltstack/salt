@@ -49,9 +49,15 @@ class InspectorCollectorTestCase(TestCase):
 
         :return:
         '''
-        inspector = Inspector(cachedir='/foo/cache', piddir='/foo/pid', pidfilename='bar.pid')
-        self.assertEqual(inspector.dbfile, '/foo/cache/_minion_collector.db')
-        self.assertEqual(inspector.pidfile, '/foo/pid/bar.pid')
+        cachedir = os.sep + os.sep.join(['foo', 'cache'])
+        piddir = os.sep + os.sep.join(['foo', 'pid'])
+        inspector = Inspector(cachedir=cachedir, piddir=piddir, pidfilename='bar.pid')
+        self.assertEqual(
+            inspector.dbfile,
+            os.sep + os.sep.join(['foo', 'cache', '_minion_collector.db']))
+        self.assertEqual(
+            inspector.pidfile,
+            os.sep + os.sep.join(['foo', 'pid', 'bar.pid']))
 
     def test_file_tree(self):
         '''
@@ -60,12 +66,29 @@ class InspectorCollectorTestCase(TestCase):
         :return:
         '''
 
-        inspector = Inspector(cachedir='/test', piddir='/test', pidfilename='bar.pid')
+        inspector = Inspector(cachedir=os.sep + 'test',
+                              piddir=os.sep + 'test',
+                              pidfilename='bar.pid')
         tree_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inspectlib', 'tree_test')
-        expected_tree = (['/a/a/dummy.a', '/a/b/dummy.b', '/b/b.1', '/b/b.2', '/b/b.3'],
-                         ['/a', '/a/a', '/a/b', '/a/c', '/b', '/c'],
-                         ['/a/a/dummy.ln.a', '/a/b/dummy.ln.b', '/a/c/b.1', '/b/b.4',
-                          '/b/b.5', '/c/b.1', '/c/b.2', '/c/b.3'])
+        expected_tree = ([os.sep + os.sep.join(['a', 'a', 'dummy.a']),
+                          os.sep + os.sep.join(['a', 'b', 'dummy.b']),
+                          os.sep + os.sep.join(['b', 'b.1']),
+                          os.sep + os.sep.join(['b', 'b.2']),
+                          os.sep + os.sep.join(['b', 'b.3'])],
+                         [os.sep + 'a',
+                          os.sep + os.sep.join(['a', 'a']),
+                          os.sep + os.sep.join(['a', 'b']),
+                          os.sep + os.sep.join(['a', 'c']),
+                          os.sep + 'b',
+                          os.sep + 'c'],
+                         [os.sep + os.sep.join(['a', 'a', 'dummy.ln.a']),
+                          os.sep + os.sep.join(['a', 'b', 'dummy.ln.b']),
+                          os.sep + os.sep.join(['a', 'c', 'b.1']),
+                          os.sep + os.sep.join(['b', 'b.4']),
+                          os.sep + os.sep.join(['b', 'b.5']),
+                          os.sep + os.sep.join(['c', 'b.1']),
+                          os.sep + os.sep.join(['c', 'b.2']),
+                          os.sep + os.sep.join(['c', 'b.3'])])
         tree_result = []
         for chunk in inspector._get_all_files(tree_root):
             buff = []

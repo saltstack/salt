@@ -15,13 +15,13 @@ from tests.support.helpers import (
 )
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
-AVAILABLE_PYTHON_EXECUTABLE = salt.utils.which_bin([
+AVAILABLE_PYTHON_EXECUTABLE = salt.utils.path.which_bin([
     'python',
     'python2',
     'python2.6',
@@ -186,6 +186,34 @@ class CMDModuleTest(ModuleCase):
                                            [AVAILABLE_PYTHON_EXECUTABLE,
                                             code]).rstrip(),
                          'cheese')
+
+    def test_exec_code_with_single_arg(self):
+        '''
+        cmd.exec_code
+        '''
+        code = textwrap.dedent('''\
+               import sys
+               sys.stdout.write(sys.argv[1])''')
+        arg = 'cheese'
+        self.assertEqual(self.run_function('cmd.exec_code',
+                                           [AVAILABLE_PYTHON_EXECUTABLE,
+                                            code],
+                                           args=arg).rstrip(),
+                         arg)
+
+    def test_exec_code_with_multiple_args(self):
+        '''
+        cmd.exec_code
+        '''
+        code = textwrap.dedent('''\
+               import sys
+               sys.stdout.write(sys.argv[1])''')
+        arg = 'cheese'
+        self.assertEqual(self.run_function('cmd.exec_code',
+                                           [AVAILABLE_PYTHON_EXECUTABLE,
+                                            code],
+                                           args=[arg, 'test']).rstrip(),
+                         arg)
 
     def test_quotes(self):
         '''

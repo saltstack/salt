@@ -12,4 +12,6 @@
 
     :rm_token: remove the given token from storage
 
+    :list_tokens: list all tokens in storage
+
 '''

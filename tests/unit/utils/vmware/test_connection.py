@@ -21,7 +21,7 @@ import salt.exceptions as excs
 # Import Salt libraries
 import salt.utils.vmware
 # Import Third Party Libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     from pyVmomi import vim, vmodl
@@ -39,6 +39,11 @@ if sys.version_info[:3] > (2, 7, 8):
     SSL_VALIDATION = True
 else:
     SSL_VALIDATION = False
+
+if hasattr(ssl, '_create_unverified_context'):
+    ssl_context = 'ssl._create_unverified_context'
+else:
+    ssl_context = 'ssl._create_stdlib_context'
 
 # Get Logging Started
 log = logging.getLogger(__name__)
@@ -337,14 +342,14 @@ class PrivateGetServiceInstanceTestCase(TestCase):
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
     def test_second_attempt_successful_connection(self):
         with patch('ssl.SSLContext', MagicMock()), \
-                patch('ssl._create_unverified_context', MagicMock()):
+                patch(ssl_context, MagicMock()):
             exc = vim.fault.HostConnectFault()
             exc.msg = '[SSL: CERTIFICATE_VERIFY_FAILED]'
             mock_sc = MagicMock(side_effect=[exc, None])
             mock_ssl = MagicMock()
 
             with patch('salt.utils.vmware.SmartConnect', mock_sc):
-                with patch('ssl._create_unverified_context',
+                with patch(ssl_context,
                            mock_ssl):
 
                     salt.utils.vmware._get_service_instance(
@@ -378,7 +383,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
     def test_third_attempt_successful_connection(self):
         with patch('ssl.SSLContext', MagicMock()), \
-                patch('ssl._create_unverified_context', MagicMock()):
+                patch(ssl_context, MagicMock()):
             exc = vim.fault.HostConnectFault()
             exc.msg = '[SSL: CERTIFICATE_VERIFY_FAILED]'
             exc2 = Exception('certificate verify failed')
@@ -387,9 +392,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             mock_ssl_context = MagicMock()
 
             with patch('salt.utils.vmware.SmartConnect', mock_sc):
-                with patch('ssl._create_unverified_context',
-                           mock_ssl_unverif):
-
+                with patch(ssl_context, mock_ssl_unverif):
                     with patch('ssl.SSLContext', mock_ssl_context):
 
                         salt.utils.vmware._get_service_instance(
@@ -473,7 +476,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
     def test_second_attempt_unsuccsessful_connection_default_error(self):
         with patch('ssl.SSLContext', MagicMock()), \
-                patch('ssl._create_unverified_context', MagicMock()):
+                patch(ssl_context, MagicMock()):
             exc = vim.fault.HostConnectFault()
             exc.msg = '[SSL: CERTIFICATE_VERIFY_FAILED]'
             exc2 = Exception('Exception')
@@ -498,7 +501,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
     def test_second_attempt_unsuccsessful_connection_vim_fault(self):
         with patch('ssl.SSLContext', MagicMock()), \
-                patch('ssl._create_unverified_context', MagicMock()):
+                patch(ssl_context, MagicMock()):
             exc = vim.fault.HostConnectFault()
             exc.msg = '[SSL: CERTIFICATE_VERIFY_FAILED]'
             exc2 = vim.fault.VimFault()
@@ -523,7 +526,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
     def test_third_attempt_unsuccessful_connection_detault_error(self):
         with patch('ssl.SSLContext', MagicMock()), \
-                patch('ssl._create_unverified_context', MagicMock()):
+                patch(ssl_context, MagicMock()):
             exc = vim.fault.HostConnectFault()
             exc.msg = '[SSL: CERTIFICATE_VERIFY_FAILED]'
             exc2 = Exception('certificate verify failed')
@@ -548,7 +551,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
     def test_third_attempt_unsuccessful_connection_vim_fault(self):
         with patch('ssl.SSLContext', MagicMock()), \
-                patch('ssl._create_unverified_context', MagicMock()):
+                patch(ssl_context, MagicMock()):
             exc = vim.fault.HostConnectFault()
             exc.msg = '[SSL: CERTIFICATE_VERIFY_FAILED]'
             exc2 = Exception('certificate verify failed')
@@ -597,7 +600,7 @@ class GetServiceInstanceTestCase(TestCase):
                                                 None)
 
     def test_no_cached_service_instance_same_host_on_proxy(self):
-        with patch('salt.utils.is_proxy', MagicMock(return_value=True)):
+        with patch('salt.utils.platform.is_proxy', MagicMock(return_value=True)):
             # Service instance is uncached when using class default mock objs
             mock_get_si = MagicMock()
             with patch('salt.utils.vmware._get_service_instance', mock_get_si):

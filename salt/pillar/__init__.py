@@ -30,7 +30,7 @@ from salt.utils.odict import OrderedDict
 from salt.version import __version__
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -233,7 +233,7 @@ class PillarCache(object):
                               functions=self.functions,
                               pillar_override=self.pillar_override,
                               pillarenv=self.pillarenv)
-        return fresh_pillar.compile_pillar()  # FIXME We are not yet passing pillar_dirs in here
+        return fresh_pillar.compile_pillar()
 
     def compile_pillar(self, *args, **kwargs):  # Will likely just be pillar_dirs
         log.debug('Scanning pillar cache for information about minion {0} and saltenv {1}'.format(self.minion_id, self.saltenv))
@@ -763,7 +763,7 @@ class Pillar(object):
 
         return pillar, errors
 
-    def _external_pillar_data(self, pillar, val, pillar_dirs, key):
+    def _external_pillar_data(self, pillar, val, key):
         '''
         Builds actual pillar data structure and updates the ``pillar`` variable
         '''
@@ -772,26 +772,16 @@ class Pillar(object):
         if isinstance(val, dict):
             ext = self.ext_pillars[key](self.minion_id, pillar, **val)
         elif isinstance(val, list):
-            if key == 'git':
-                ext = self.ext_pillars[key](self.minion_id,
-                                            val,
-                                            pillar_dirs)
-            else:
-                ext = self.ext_pillars[key](self.minion_id,
-                                            pillar,
-                                            *val)
+            ext = self.ext_pillars[key](self.minion_id,
+                                        pillar,
+                                        *val)
         else:
-            if key == 'git':
-                ext = self.ext_pillars[key](self.minion_id,
-                                            val,
-                                            pillar_dirs)
-            else:
-                ext = self.ext_pillars[key](self.minion_id,
-                                            pillar,
-                                            val)
+            ext = self.ext_pillars[key](self.minion_id,
+                                        pillar,
+                                        val)
         return ext
 
-    def ext_pillar(self, pillar, pillar_dirs, errors=None):
+    def ext_pillar(self, pillar, errors=None):
         '''
         Render the external pillar data
         '''
@@ -843,9 +833,8 @@ class Pillar(object):
                     continue
                 try:
                     ext = self._external_pillar_data(pillar,
-                                                        val,
-                                                        pillar_dirs,
-                                                        key)
+                                                     val,
+                                                     key)
                 except Exception as exc:
                     errors.append(
                         'Failed to load ext_pillar {0}: {1}'.format(
@@ -867,16 +856,14 @@ class Pillar(object):
                 ext = None
         return pillar, errors
 
-    def compile_pillar(self, ext=True, pillar_dirs=None):
+    def compile_pillar(self, ext=True):
         '''
         Render the pillar data and return
         '''
         top, top_errors = self.get_top()
         if ext:
             if self.opts.get('ext_pillar_first', False):
-                self.opts['pillar'], errors = self.ext_pillar(
-                    self.pillar_override,
-                    pillar_dirs)
+                self.opts['pillar'], errors = self.ext_pillar(self.pillar_override)
                 self.rend = salt.loader.render(self.opts, self.functions)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)
@@ -888,8 +875,7 @@ class Pillar(object):
             else:
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)
-                pillar, errors = self.ext_pillar(
-                    pillar, pillar_dirs, errors=errors)
+                pillar, errors = self.ext_pillar(pillar, errors=errors)
         else:
             matches = self.top_matches(top)
             pillar, errors = self.render_pillar(matches)
@@ -984,6 +970,6 @@ class Pillar(object):
 # ext_pillar etc.
 class AsyncPillar(Pillar):
     @tornado.gen.coroutine
-    def compile_pillar(self, ext=True, pillar_dirs=None):
-        ret = super(AsyncPillar, self).compile_pillar(ext=ext, pillar_dirs=pillar_dirs)
+    def compile_pillar(self, ext=True):
+        ret = super(AsyncPillar, self).compile_pillar(ext=ext)
         raise tornado.gen.Return(ret)

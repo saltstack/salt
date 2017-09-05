@@ -21,6 +21,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils
 import salt.utils.odict
+import salt.utils.platform
 import salt.modules.state as state
 from salt.exceptions import SaltInvocationError
 
@@ -824,7 +825,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(state, 'check_request', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'umask', mock):
-                        with patch.object(salt.utils, 'is_windows', mock):
+                        with patch.object(salt.utils.platform, 'is_windows', mock):
                             with patch.dict(state.__salt__, {'cmd.run': mock}):
                                 with patch('salt.utils.files.fopen', mock_open()):
                                     mock = MagicMock(return_value=True)
@@ -935,7 +936,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(os.path, 'join', mock):
             with patch.object(os, 'umask', mock):
                 mock = MagicMock(return_value=False)
-                with patch.object(salt.utils, 'is_windows', mock):
+                with patch.object(salt.utils.platform, 'is_windows', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'umask', mock):
                         with patch.object(state, '_set_retcode', mock):

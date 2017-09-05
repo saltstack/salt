@@ -9,7 +9,7 @@ from __future__ import absolute_import, with_statement
 import logging
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 HAS_NEUTRON = False
 try:

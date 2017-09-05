@@ -18,7 +18,9 @@ from _socket import gaierror
 # Import salt libs
 import salt.daemons.masterapi
 import salt.utils.args
+import salt.utils.kinds as kinds
 import salt.utils.process
+import salt.utils.stringutils
 import salt.transport
 import salt.engines
 
@@ -32,7 +34,7 @@ from raet.lane.stacking import LaneStack
 from salt import daemons
 from salt.daemons import salting
 from salt.exceptions import SaltException
-from salt.utils import kinds, is_windows
+from salt.utils.platform import is_windows
 from salt.utils.event import tagify
 
 # Import ioflo libs
@@ -59,7 +61,7 @@ try:
 except ImportError:
     pass
 # pylint: disable=no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
@@ -865,7 +867,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         self.presence_req.value = deque()
         self.stats_req.value = deque()
         self.publish.value = deque()
-        self.worker_verify.value = salt.utils.rand_string()
+        self.worker_verify.value = salt.utils.stringutils.random()
         if self.opts.value.get('worker_threads'):
             worker_seed = []
             for index in range(self.opts.value['worker_threads']):

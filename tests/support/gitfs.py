@@ -18,8 +18,8 @@ import time
 import yaml
 
 # Import Salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 from salt.fileserver import gitfs
 from salt.pillar import git_pillar
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
@@ -342,7 +342,6 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             return git_pillar.ext_pillar(
                 'minion',
                 ext_pillar_opts['ext_pillar'][0]['git'],
-                {}
             )
 
     def make_repo(self, root_dir, user='root'):
@@ -501,7 +500,7 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         super(GitPillarSSHTestBase, self).setUp()
         self.sshd_proc = self.find_proc(name='sshd',
                                         search=self.sshd_config)
-        self.sshd_bin = salt.utils.which('sshd')
+        self.sshd_bin = salt.utils.path.which('sshd')
 
         if self.sshd_proc is None:
             self.spawn_server()

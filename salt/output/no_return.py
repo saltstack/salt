@@ -15,7 +15,10 @@ Example output::
 from __future__ import absolute_import
 
 # Import salt libs
-import salt.utils
+import salt.utils.color
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 class NestDisplay(object):
@@ -23,33 +26,33 @@ class NestDisplay(object):
     Create generator for nested output
     '''
     def __init__(self):
-        self.colors = salt.utils.get_colors(
-                __opts__.get('color'),
-                __opts__.get('color_theme'))
+        self.colors = salt.utils.color.get_colors(
+                __opts__.get(u'color'),
+                __opts__.get(u'color_theme'))
 
     def display(self, ret, indent, prefix, out):
         '''
         Recursively iterate down through data structures to determine output
         '''
-        if isinstance(ret, str):
-            lines = ret.split('\n')
+        if isinstance(ret, six.string_types):
+            lines = ret.split(u'\n')
             for line in lines:
-                out += '{0}{1}{2}{3}{4}\n'.format(
-                        self.colors['RED'],
-                        ' ' * indent,
+                out += u'{0}{1}{2}{3}{4}\n'.format(
+                        self.colors[u'RED'],
+                        u' ' * indent,
                         prefix,
                         line,
-                        self.colors['ENDC'])
+                        self.colors[u'ENDC'])
         elif isinstance(ret, dict):
             for key in sorted(ret):
                 val = ret[key]
-                out += '{0}{1}{2}{3}{4}:\n'.format(
-                        self.colors['CYAN'],
+                out += u'{0}{1}{2}{3}{4}:\n'.format(
+                        self.colors[u'CYAN'],
                         ' ' * indent,
                         prefix,
                         key,
-                        self.colors['ENDC'])
-                out = self.display(val, indent + 4, '', out)
+                        self.colors[u'ENDC'])
+                out = self.display(val, indent + 4, u'', out)
         return out
 
 
@@ -58,4 +61,4 @@ def output(ret, **kwargs):  # pylint: disable=unused-argument
     Display ret data
     '''
     nest = NestDisplay()
-    return nest.display(ret, 0, '', '')
+    return nest.display(ret, 0, u'', u'')
