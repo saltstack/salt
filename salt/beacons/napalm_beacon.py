@@ -3,25 +3,104 @@
 NAPALM functions
 ================
 
-Watch napalm functions and fire events on specific triggers.
-
 .. versionadded:: Oxygen
 
+Watch NAPALM functions and fire events on specific triggers.
+
 .. note::
-    The ``napalm`` beacon only work only when running under
-    a regular or a proxy minion.
+
+    The ``NAPALM`` beacon only works only when running under
+    a regular Minion or a Proxy Minion, managed via NAPALM_.
+    Check the documentation for the
+    :mod:`NAPALM proxy module <salt.proxy.napalm>`.
+
+    _NAPALM: http://napalm.readthedocs.io/en/latest/index.html
 
 The configuration accepts a list of Salt functions to be
 invoked, and the corresponding output hierarchy that should
-be matched against. When we want to match on any element
-at a certain level, we can have ``*`` to match anything.
+be matched against. To invoke a function with certain
+arguments, they can be specified using the ``_args`` key, or
+``_kwargs`` for more specific key-value arguments.
 
-To invoke a certain function with certain arguments,
-they can be specified using the ``_args`` key, or
-``_kwargs`` to configure more specific key-value arguments.
+The match structure follows the output hierarchy of the NAPALM
+functions, under the ``out`` key.
 
-The right operand can also accept mathematical comparisons
-when applicable (i.e., ``<``, ``<=``, ``!=``, ``>``, ``>=`` etc.).
+For example, the following is normal structure returned by the
+:mod:`ntp.stats <salt.modules.napalm_ntp.stats>` execution function:
+
+.. code-block:: json
+
+    {
+        "comment": "",
+        "result": true,
+        "out": [
+            {
+                "referenceid": ".GPSs.",
+                "remote": "172.17.17.1",
+                "synchronized": true,
+                "reachability": 377,
+                "offset": 0.461,
+                "when": "860",
+                "delay": 143.606,
+                "hostpoll": 1024,
+                "stratum": 1,
+                "jitter": 0.027,
+                "type": "-"
+            },
+            {
+                "referenceid": ".INIT.",
+                "remote": "172.17.17.2",
+                "synchronized": false,
+                "reachability": 0,
+                "offset": 0.0,
+                "when": "-",
+                "delay": 0.0,
+                "hostpoll": 1024,
+                "stratum": 16,
+                "jitter": 4000.0,
+                "type": "-"
+            }
+        ]
+    }
+
+In order to fire events when the synchronization is lost with
+one of the NTP peers, e.g., ``172.17.17.2``, we can match it explicitly as:
+
+.. code-block:: yaml
+
+    ntp.stats:
+      remote: 172.17.17.2
+      synchronized: false
+
+There is one single nesting level, as the output of ``ntp.stats`` is
+just a list of dictionaries, and this beacon will compare each dictionary
+from the list with the structure examplified above.
+
+.. note::
+
+    When we want to match on any element at a certain level, we can
+    configure ``*`` to match anything.
+
+Considering a more complex structure consisting on multiple nested levels,
+e.g., the output of the :mod:`bgp.neighbors <salt.modules.napalm_bgp.neighbors>`
+execution function, to check when any neighbor from the ``global``
+routing table is down, the match structure would have the format:
+
+.. code-block:: yaml
+
+    bgp.neighbors:
+      global:
+        '*':
+          up: false
+
+The match structure above will match any BGP neighbor, with
+any network (``*`` matches any AS number), under the ``global`` VRF.
+In other words, this beacon will push an event on the Salt bus
+when there's a BGP neighbor down.
+
+The right operand can also accept mathematical operations
+(i.e., ``<``, ``<=``, ``!=``, ``>``, ``>=`` etc.) when comparing
+numerical values.
 
 Configuration Example:
 
@@ -37,13 +116,6 @@ Configuration Example:
             # fire events only when the xe-0/0/0 interface is down
             'xe-0/0/0':
               is_up: false
-        - bgp.neighbors:
-            # fire events only when the 172.17.17.1 BGP neighbor is down
-            _args:
-              - 172.17.17.1
-            global:
-              '*':
-                up: false
         - ntp.stats:
             # fire when there's any NTP peer unsynchornized
             synchronized: false
@@ -57,6 +129,44 @@ Configuration Example:
             # fire only when there's a NTP peer with
             # synchronization stratum > 5
             stratum: '> 5'
+
+Event structure example:
+
+.. code-block:: json
+
+    salt/beacon/edge01.bjm01/napalm/junos/ntp.stats {
+        "_stamp": "2017-09-05T09:51:09.377202",
+        "args": [],
+        "data": {
+            "comment": "",
+            "out": [
+                {
+                    "delay": 0.0,
+                    "hostpoll": 1024,
+                    "jitter": 4000.0,
+                    "offset": 0.0,
+                    "reachability": 0,
+                    "referenceid": ".INIT.",
+                    "remote": "172.17.17.1",
+                    "stratum": 16,
+                    "synchronized": false,
+                    "type": "-",
+                    "when": "-"
+                }
+            ],
+            "result": true
+        },
+        "fun": "ntp.stats",
+        "id": "edge01.bjm01",
+        "kwargs": {},
+        "match": {
+            "stratum": "> 5"
+        }
+    }
+
+The event examplified above has been fired when the device
+identified by the Minion id ``edge01.bjm01`` has been synchronized
+with a NTP server at a stratum level greater than 5.
 '''
 from __future__ import absolute_import
 
@@ -69,7 +179,8 @@ from salt.ext import six
 import salt.utils.napalm
 
 log = logging.getLogger(__name__)
-_numeric_regex = re.compile('^(<|>|<=|>=|==|!=)\s*(\d+(\.\d+){0,1})$')
+_numeric_regex = re.compile(r'^(<|>|<=|>=|==|!=)\s*(\d+(\.\d+){0,1})$')
+# the numeric regex will match the right operand, e.g '>= 20', '< 100', '!= 20', '< 1000.12' etc.
 _numeric_operand = {
     '<': '__lt__',
     '>': '__gt__',
@@ -77,7 +188,8 @@ _numeric_operand = {
     '<=': '__le__',
     '==': '__eq__',
     '!=': '__ne__',
-}
+}  # mathematical operand - private method map
+
 
 __virtualname__ = 'napalm'
 
@@ -191,7 +303,7 @@ def beacon(config):
         log.debug('Got the reply from the minion:')
         log.debug(fun_ret)
         if not fun_ret.get('result', False):
-            log.error('Error whilst executing {fun}'.format(fun))
+            log.error('Error whilst executing {}'.format(fun))
             log.error(fun_ret)
             continue
         fun_ret_out = fun_ret['out']
