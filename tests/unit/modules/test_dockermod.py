@@ -704,9 +704,9 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual({"retcode": 0, "comment": "container cmd"}, ret)
 
     def test_images_with_empty_tags(self):
-        """
+        '''
         docker 1.12 reports also images without tags with `null`.
-        """
+        '''
         client = Mock()
         client.api_version = '1.24'
         client.images = Mock(
@@ -749,3 +749,24 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(docker_mod, 'inspect_image', inspect_image_mock):
                 ret = docker_mod.compare_container('container1', 'container2')
                 self.assertEqual(ret, {})
+
+    def test_resolve_tag(self):
+        '''
+        Test the resolve_tag function
+        '''
+        with_prefix = 'docker.io/foo:latest'
+        no_prefix = 'bar:latest'
+        with patch.object(docker_mod,
+                          'list_tags',
+                          MagicMock(return_value=[with_prefix])):
+            self.assertEqual(docker_mod.resolve_tag('foo'), with_prefix)
+            self.assertEqual(docker_mod.resolve_tag('foo:latest'), with_prefix)
+            self.assertEqual(docker_mod.resolve_tag(with_prefix), with_prefix)
+            self.assertEqual(docker_mod.resolve_tag('foo:bar'), False)
+
+        with patch.object(docker_mod,
+                          'list_tags',
+                          MagicMock(return_value=[no_prefix])):
+            self.assertEqual(docker_mod.resolve_tag('bar'), no_prefix)
+            self.assertEqual(docker_mod.resolve_tag(no_prefix), no_prefix)
+            self.assertEqual(docker_mod.resolve_tag('bar:baz'), False)
