@@ -1274,7 +1274,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         if use_msiexec:
             cmd = msiexec
             arguments = ['/i', cached_pkg]
-            if pkginfo['version_num'].get('allusers', True):
+            if pkginfo[version_num].get('allusers', True):
                 arguments.append('ALLUSERS="1"')
             arguments.extend(salt.utils.shlex_split(install_flags))
         else:
