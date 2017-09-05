@@ -30,7 +30,6 @@ import time
 
 # Import salt libs
 import salt.syspaths
-import salt.utils  # Can be removed once check_state_result is moved
 import salt.utils.event
 import salt.utils.versions
 from salt.ext import six
@@ -342,7 +341,7 @@ def state(name,
             except KeyError:
                 m_state = False
             if m_state:
-                m_state = salt.utils.check_state_result(m_ret, recurse=True)
+                m_state = __utils__['state.check_result'](m_ret, recurse=True)
 
         if not m_state:
             if minion not in fail_minions:
