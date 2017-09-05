@@ -42,7 +42,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Determine if URL-referenced NPM module can be successfully installed.
         '''
-        ret = self.run_state('npm.installed', name='git://github.com/request/request')
+        ret = self.run_state('npm.installed', name='request/request#v2.81.1')
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('npm.removed', name='git://github.com/request/request')
         self.assertSaltTrueReturn(ret)

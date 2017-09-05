@@ -627,7 +627,11 @@ def _clean_dir(root, keep, exclude_pat):
             while True:
                 fn_ = os.path.dirname(fn_)
                 real_keep.add(fn_)
-                if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\\\'])]:
+                if fn_ in [
+                           os.sep,
+                           ''.join([os.path.splitdrive(fn_)[0], os.sep]),
+                           ''.join([os.path.splitdrive(fn_)[0], os.sep, os.sep])
+                          ]:
                     break
 
     def _delete_not_kept(nfn):
@@ -1407,7 +1411,8 @@ def symlink(
     return ret
 
 
-def absent(name):
+def absent(name,
+           **kwargs):
     '''
     Make sure that the named file or directory is absent. If it exists, it will
     be deleted. This will work to reverse any of the functions in the file
@@ -1469,7 +1474,8 @@ def absent(name):
     return ret
 
 
-def exists(name):
+def exists(name,
+           **kwargs):
     '''
     Verify that the named file or directory is present or exists.
     Ensures pre-requisites outside of Salt's purview
@@ -1495,7 +1501,8 @@ def exists(name):
     return ret
 
 
-def missing(name):
+def missing(name,
+            **kwargs):
     '''
     Verify that the named file or directory is missing, this returns True only
     if the named file is missing but does not remove the file if it is present.

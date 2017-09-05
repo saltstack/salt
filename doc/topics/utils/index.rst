@@ -91,8 +91,8 @@ Also you could even write your utility modules in object oriented fashion:
 
     # -*- coding: utf-8 -*-
     '''
-    My utils module
-    ---------------
+    My OOP-style utils module
+    -------------------------
 
     This module contains common functions for use in my other custom types.
     '''

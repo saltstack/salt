@@ -315,7 +315,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         try:
             for pillar in self.git_pillar:
-                pillar.update()
+                pillar.fetch_remotes()
         except Exception as exc:
             log.error(u'Exception caught while updating git_pillar',
                       exc_info=True)
@@ -471,18 +471,18 @@ class Master(SMaster):
                 pass
 
         if self.opts.get(u'git_pillar_verify_config', True):
-            non_legacy_git_pillars = [
+            git_pillars = [
                 x for x in self.opts.get(u'ext_pillar', [])
                 if u'git' in x
                 and not isinstance(x[u'git'], six.string_types)
             ]
-            if non_legacy_git_pillars:
+            if git_pillars:
                 try:
                     new_opts = copy.deepcopy(self.opts)
                     from salt.pillar.git_pillar \
                         import PER_REMOTE_OVERRIDES as per_remote_overrides, \
                         PER_REMOTE_ONLY as per_remote_only
-                    for repo in non_legacy_git_pillars:
+                    for repo in git_pillars:
                         new_opts[u'ext_pillar'] = [repo]
                         try:
                             git_pillar = salt.utils.gitfs.GitPillar(new_opts)
@@ -1304,7 +1304,6 @@ class AESFuncs(object):
             return False
         load[u'grains'][u'id'] = load[u'id']
 
-        pillar_dirs = {}
         pillar = salt.pillar.get_pillar(
             self.opts,
             load[u'grains'],
@@ -1313,7 +1312,7 @@ class AESFuncs(object):
             ext=load.get(u'ext'),
             pillar_override=load.get(u'pillar_override', {}),
             pillarenv=load.get(u'pillarenv'))
-        data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
+        data = pillar.compile_pillar()
         self.fs_.update_opts()
         if self.opts.get(u'minion_data_cache', False):
             self.masterapi.cache.store(u'minions/{0}'.format(load[u'id']),
@@ -1677,12 +1676,7 @@ class ClearFuncs(object):
                                        message=u'Authentication failure of type "token" occurred.'))
 
             # Authorize
-            if self.opts[u'keep_acl_in_token'] and u'auth_list' in token:
-                auth_list = token[u'auth_list']
-            else:
-                clear_load[u'eauth'] = token[u'eauth']
-                clear_load[u'username'] = token[u'name']
-                auth_list = self.loadauth.get_auth_list(clear_load)
+            auth_list = self.loadauth.get_auth_list(clear_load, token)
 
             if not self.ckminions.runner_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
                 return dict(error=dict(name=u'TokenAuthenticationError',
@@ -1745,12 +1739,7 @@ class ClearFuncs(object):
                                        message=u'Authentication failure of type "token" occurred.'))
 
             # Authorize
-            if self.opts[u'keep_acl_in_token'] and u'auth_list' in token:
-                auth_list = token[u'auth_list']
-            else:
-                clear_load[u'eauth'] = token[u'eauth']
-                clear_load[u'username'] = token[u'name']
-                auth_list = self.loadauth.get_auth_list(clear_load)
+            auth_list = self.loadauth.get_auth_list(clear_load, token)
             if not self.ckminions.wheel_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
                 return dict(error=dict(name=u'TokenAuthenticationError',
                                        message=(u'Authentication failure of type "token" occurred for '
@@ -1867,12 +1856,7 @@ class ClearFuncs(object):
                 return u''
 
             # Get acl
-            if self.opts[u'keep_acl_in_token'] and u'auth_list' in token:
-                auth_list = token[u'auth_list']
-            else:
-                extra[u'eauth'] = token[u'eauth']
-                extra[u'username'] = token[u'name']
-                auth_list = self.loadauth.get_auth_list(extra)
+            auth_list = self.loadauth.get_auth_list(extra, token)
 
             # Authorize the request
             if not self.ckminions.auth_check(

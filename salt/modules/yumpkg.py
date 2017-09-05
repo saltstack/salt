@@ -2834,7 +2834,7 @@ def _parse_repo_file(filename):
 
     # Try to extract leading comments
     headers = ''
-    with salt.utils.fopen(filename, 'r') as rawfile:
+    with salt.utils.files.fopen(filename, 'r') as rawfile:
         for line in rawfile:
             if line.strip().startswith('#'):
                 headers += '{0}\n'.format(line.strip())

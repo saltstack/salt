@@ -10,7 +10,6 @@ import sys
 import tempfile
 
 # Import Salt Libs
-import salt.utils
 import salt.utils.platform
 import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
@@ -264,7 +263,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.files.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
                 self.assertFalse(cmdmod._is_valid_shell('foo'))
 
-    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
     def test_os_environment_remains_intact(self):
         '''
         Make sure the OS environment is not tainted after running a command

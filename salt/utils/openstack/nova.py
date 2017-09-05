@@ -290,8 +290,9 @@ class SaltNova(object):
         self.session = keystoneauth1.session.Session(auth=options, verify=verify)
         conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
         self.kwargs['auth_token'] = conn.client.session.get_token()
-        self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': 'identity'}).json().get('catalog', [])
-        if conn.client.get_endpoint(service_type='identity').endswith('v3'):
+        identity_service_type = kwargs.get('identity_service_type', 'identity')
+        self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': identity_service_type}).json().get('catalog', [])
+        if conn.client.get_endpoint(service_type=identity_service_type).endswith('v3'):
             self._v3_setup(region_name)
         else:
             self._v2_setup(region_name)
