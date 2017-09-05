@@ -110,6 +110,12 @@ Support has been added to the ``virtual`` grain for detecting Solaris LDOMs
 running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is 
 populated as a list of domain roles.
 
+Lists of comments in state returns
+----------------------------------
+
+State functions can now return a list of strings for the ``comment`` field,
+as opposed to only a single string.
+This is meant to ease writing states with multiple or multi-part comments.
 
 Beacon configuration changes
 ----------------------------------------
