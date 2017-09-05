@@ -2539,7 +2539,7 @@ def _parse_repo_file(filename):
 
     for section in parsed._sections:
         section_dict = dict(parsed._sections[section])
-        section_dict.pop('__name__')
+        section_dict.pop('__name__', None)
         config[section] = section_dict
 
     # Try to extract leading comments
