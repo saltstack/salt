@@ -37,9 +37,9 @@ FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 log = logging.getLogger(__name__)
 
 
-def _ping(tgt, tgt_type, timeout, gather_job_timeout):
+def _ping(tgt, tgt_type, timeout, gather_job_timeout, sleep_time='0'):
     client = salt.client.get_local_client(__opts__['conf_file'])
-    pub_data = client.run_job(tgt, 'test.ping', (), tgt_type, '', timeout, '')
+    pub_data = client.run_job(tgt, 'test.sleep', (str(sleep_time)), tgt_type, '', timeout, '')
 
     if not pub_data:
         return pub_data
@@ -69,7 +69,7 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
     return returned, not_returned
 
 
-def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):
+def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None, sleep_time='0'):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -103,7 +103,7 @@ def status(output=True, tgt='*', tgt_type='glob', expr_form=None, timeout=None, 
     if not gather_job_timeout:
         gather_job_timeout = __opts__['gather_job_timeout']
 
-    ret['up'], ret['down'] = _ping(tgt, tgt_type, timeout, gather_job_timeout)
+    ret['up'], ret['down'] = _ping(tgt, tgt_type, timeout, gather_job_timeout, sleep_time)
     return ret
 
 
@@ -159,7 +159,7 @@ def key_regen():
     return msg
 
 
-def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
+def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None, sleep_time='0'):
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -177,7 +177,7 @@ def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
         salt-run manage.down tgt="webservers" tgt_type="nodegroup"
 
     '''
-    ret = status(output=False, tgt=tgt, tgt_type=tgt_type).get('down', [])
+    ret = status(output=False, tgt=tgt, tgt_type=tgt_type, sleep_time=sleep_time).get('down', [])
     for minion in ret:
         if removekeys:
             wheel = salt.wheel.Wheel(__opts__)
@@ -185,7 +185,7 @@ def down(removekeys=False, tgt='*', tgt_type='glob', expr_form=None):
     return ret
 
 
-def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None):  # pylint: disable=C0103
+def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeout=None, sleep_time='0'):  # pylint: disable=C0103
     '''
     .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
@@ -206,7 +206,8 @@ def up(tgt='*', tgt_type='glob', expr_form=None, timeout=None, gather_job_timeou
         tgt=tgt,
         tgt_type=tgt_type,
         timeout=timeout,
-        gather_job_timeout=gather_job_timeout
+        gather_job_timeout=gather_job_timeout,
+        sleep_time=sleep_time
     ).get('up', [])
     return ret
 
