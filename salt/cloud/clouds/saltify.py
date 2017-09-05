@@ -60,7 +60,6 @@ def _get_connection_info():
     Return connection information for the passed VM data
     '''
     vm_ = get_configured_provider()
-
     try:
         ret = {'username': vm_['username'],
                'password': vm_['password'],

@@ -397,13 +397,14 @@ def bootstrap(vm_, opts=None):
 
     # NOTE: deploy_kwargs is also used to pass inline_script variable content
     #       to run_inline_script function
+    host = salt.config.get_cloud_config_value('ssh_host', vm_, opts)
     deploy_kwargs = {
         'opts': opts,
-        'host': vm_['ssh_host'],
+        'host': host,
         'port': salt.config.get_cloud_config_value(
             'ssh_port', vm_, opts, default=22
         ),
-        'salt_host': vm_.get('salt_host', vm_['ssh_host']),
+        'salt_host': vm_.get('salt_host', host),
         'username': ssh_username,
         'script': deploy_script_code,
         'inline_script': inline_script_config,

@@ -97,6 +97,57 @@ file. For example:
 
 These commands will run in sequence **before** the bootstrap script is executed.
 
+New salt-cloud Grains
+=====================
+
+When salt cloud creates a new minon, it will now add grain information
+to the minion configuration file, identifying the resources originally used
+to create it.
+
+The generated grain information will appear similar to:
+
+.. code-block:: yaml
+
+    grains:
+      salt-cloud:
+        driver: ec2
+        provider: my_ec2:ec2
+        profile: ec2-web
+
+The generation of salt-cloud grains can be surpressed by the
+option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
+
+Upgraded Saltify Driver
+=======================
+
+The salt-cloud Saltify driver is used to provision machines which
+are not controlled by a dedicated cloud supervisor (such as typical hardware
+machines) by pushing a salt-bootstrap command to them and accepting them on
+the salt master. Creation of a node has been its only function and no other
+salt-cloud commands were implemented.
+
+With this upgrade, it can use the salt-api to provide advanced control,
+such as rebooting a machine, querying it along with conventional cloud minions,
+and, ultimately, disconnecting it from its master.
+
+After disconnection from ("destroying" on) one master, a machine can be
+re-purposed by connecting to ("creating" on) a subsequent master.
+
+New Vagrant Driver
+==================
+
+The salt-cloud Vagrant driver brings virtual machines running in a limited
+environment, such as a programmer's workstation, under salt-cloud control.
+This can be useful for experimentation, instruction, or testing salt configurations.
+
+Using salt-api on the master, and a salt-minion running on the host computer,
+the Vagrant driver can create (``vagrant up``), restart (``vagrant reload``),
+and destroy (``vagrant destroy``) VMs, as controlled by salt-cloud profiles
+which designate a ``Vagrantfile`` on the host machine.
+
+The master can be a very limited machine, such as a Raspberry Pi, or a small
+VagrantBox VM.
+
 Newer PyWinRM Versions
 ----------------------
 
@@ -623,10 +674,12 @@ Profitbricks Cloud Updated Dependency
 The minimum version of the ``profitbrick`` python package for the ``profitbricks``
 cloud driver has changed from 3.0.0 to 3.1.0.
 
+
 Azure Cloud Updated Dependency
 ------------------------------
 
 The azure sdk used for the ``azurearm`` cloud driver now depends on ``azure-cli>=2.0.12``
+
 
 Module Deprecations
 ===================
