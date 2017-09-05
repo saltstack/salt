@@ -49,7 +49,8 @@ import salt.minion
 import salt.runner
 import salt.output
 import salt.version
-import salt.utils  # Can be removed once get_colors and appendproctitle are moved
+import salt.utils  # Can be removed once appendproctitle is moved
+import salt.utils.color
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -188,7 +189,7 @@ class TestDaemon(object):
 
     def __init__(self, parser):
         self.parser = parser
-        self.colors = salt.utils.get_colors(self.parser.options.no_colors is False)
+        self.colors = salt.utils.color.get_colors(self.parser.options.no_colors is False)
         if salt.utils.platform.is_windows():
             # There's no shell color support on windows...
             for key in self.colors:
