@@ -1020,7 +1020,7 @@ class LocalFuncs(object):
 
         if error:
             # Authentication error occurred: do not continue.
-            return dict(error=error)
+            return {'error': error}
 
         # Authorize
         runner_check = self.ckminions.runner_check(
@@ -1030,9 +1030,9 @@ class LocalFuncs(object):
         )
         username = auth_check.get('username')
         if not runner_check:
-            return dict(error=dict(name=err_name,
-                                   message=('Authentication failure of type "{0}" occurred '
-                                            'for user {1}.').format(auth_type, username)))
+            return {'error': {'name': err_name,
+                              'message': 'Authentication failure of type "{0}" occurred '
+                                         'for user {1}.'.format(auth_type, username)}}
         elif isinstance(runner_check, dict) and 'error' in runner_check:
             # A dictionary with an error name/message was handled by ckminions.runner_check
             return runner_check
@@ -1046,10 +1046,10 @@ class LocalFuncs(object):
                                        username)
         except Exception as exc:
             log.error('Exception occurred while '
-                    'introspecting {0}: {1}'.format(fun, exc))
-            return dict(error=dict(name=exc.__class__.__name__,
-                                   args=exc.args,
-                                   message=str(exc)))
+                      'introspecting {0}: {1}'.format(fun, exc))
+            return {'error': {'name': exc.__class__.__name__,
+                              'args': exc.args,
+                              'message': str(exc)}}
 
     def wheel(self, load):
         '''
@@ -1069,7 +1069,7 @@ class LocalFuncs(object):
 
         if error:
             # Authentication error occurred: do not continue.
-            return dict(error=error)
+            return {'error': error}
 
         # Authorize
         username = auth_check.get('username')
@@ -1080,9 +1080,9 @@ class LocalFuncs(object):
                 load['kwarg']
             )
             if not wheel_check:
-                return dict(error=dict(name=err_name,
-                                       message=('Authentication failure of type "{0}" occurred for '
-                                                'user {1}.').format(auth_type, username)))
+                return {'error': {'name': err_name,
+                                  'message': 'Authentication failure of type "{0}" occurred for '
+                                             'user {1}.'.format(auth_type, username)}}
             elif isinstance(wheel_check, dict) and 'error' in wheel_check:
                 # A dictionary with an error name/message was handled by ckminions.wheel_check
                 return wheel_check
