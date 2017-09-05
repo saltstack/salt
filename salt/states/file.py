@@ -3060,6 +3060,7 @@ def recurse(name,
             sym_mode=None,
             template=None,
             context=None,
+            replace=True,
             defaults=None,
             include_empty=False,
             backup='',
@@ -3147,6 +3148,11 @@ def recurse(name,
         .. note::
 
             The template option is required when recursively applying templates.
+
+    replace : True
+        If set to ``False`` and the file already exists, the file will not be
+        modified even if changes would otherwise be made. Permissions and
+        ownership will still be enforced, however.
 
     context
         Overrides default context variables passed to the template.
@@ -3337,8 +3343,8 @@ def recurse(name,
         if _ret['changes']:
             ret['changes'][path] = _ret['changes']
 
-    def manage_file(path, source):
-        if clean and os.path.exists(path) and os.path.isdir(path):
+    def manage_file(path, source, replace):
+        if clean and os.path.exists(path) and os.path.isdir(path) and replace:
             _ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
             if __opts__['test']:
                 _ret['comment'] = u'Replacing directory {0} with a ' \
@@ -3368,6 +3374,7 @@ def recurse(name,
             attrs=None,
             template=template,
             makedirs=True,
+            replace=replace,
             context=context,
             defaults=defaults,
             backup=backup,
@@ -3424,7 +3431,7 @@ def recurse(name,
     for dirname in mng_dirs:
         manage_directory(dirname)
     for dest, src in mng_files:
-        manage_file(dest, src)
+        manage_file(dest, src, replace)
 
     if clean:
         # TODO: Use directory(clean=True) instead
