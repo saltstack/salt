@@ -213,8 +213,8 @@ def save_load(jid, clear_load, minion=None):
     try:
         jid_doc = cb_.get(str(jid))
     except couchbase.exceptions.NotFoundError:
-        log.warning('Could not write job cache file for jid: {0}'.format(jid))
-        return False
+        cb_.add(str(jid), {}, ttl=_get_ttl())
+        jid_doc = cb_.get(str(jid))
 
     jid_doc.value['load'] = clear_load
     cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
