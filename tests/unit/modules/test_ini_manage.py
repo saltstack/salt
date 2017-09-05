@@ -41,10 +41,6 @@ class IniManageTestCase(TestCase):
         '# The following option is empty',
         'empty_option ='
     ])
-    print('*' * 68)
-    print('original')
-    print(repr(salt.utils.to_bytes(TEST_FILE_CONTENT)))
-    print('*' * 68)
 
     maxDiff = None
 
