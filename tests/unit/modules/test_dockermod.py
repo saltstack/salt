@@ -18,6 +18,8 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.config
+import salt.loader
 from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
 import salt.modules.dockermod as docker_mod
@@ -39,7 +41,12 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     Validate docker module
     '''
     def setup_loader_modules(self):
-        return {docker_mod: {'__context__': {'docker.docker_version': ''}}}
+        utils = salt.loader.utils(
+            salt.config.DEFAULT_MINION_OPTS,
+            whitelist=['state']
+        )
+        return {docker_mod: {'__context__': {'docker.docker_version': ''},
+                             '__utils__': utils}}
 
     try:
         docker_version = docker_mod.docker.version_info

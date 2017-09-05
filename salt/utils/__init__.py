@@ -3286,7 +3286,7 @@ def search_onfail_requisites(sid, highstate):
     import salt.utils.state
     salt.utils.versions.warn_until(
         'Neon',
-        'Use of \'salt.utils.search_onfail_requisites\' detected. This function'
+        'Use of \'salt.utils.search_onfail_requisites\' detected. This function '
         'has been moved to \'salt.utils.state.search_onfail_requisites\' as of '
         'Salt Oxygen. This warning will be removed in Salt Neon.'
     )
@@ -3313,7 +3313,7 @@ def check_onfail_requisites(state_id, state_result, running, highstate):
     import salt.utils.state
     salt.utils.versions.warn_until(
         'Neon',
-        'Use of \'salt.utils.check_onfail_requisites\' detected. This function'
+        'Use of \'salt.utils.check_onfail_requisites\' detected. This function '
         'has been moved to \'salt.utils.state.check_onfail_requisites\' as of '
         'Salt Oxygen. This warning will be removed in Salt Neon.'
     )
@@ -3334,7 +3334,7 @@ def check_state_result(running, recurse=False, highstate=None):
     import salt.utils.state
     salt.utils.versions.warn_until(
         'Neon',
-        'Use of \'salt.utils.check_state_result\' detected. This function'
+        'Use of \'salt.utils.check_state_result\' detected. This function '
         'has been moved to \'salt.utils.state.check_result\' as of '
         'Salt Oxygen. This warning will be removed in Salt Neon.'
     )

@@ -26,6 +26,7 @@ import salt.utils.odict
 import salt.utils.platform
 import salt.modules.state as state
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
 
 
 class MockState(object):
@@ -984,7 +985,12 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                 MockTarFile.path = ""
                 MockJson.flag = False
-                with patch('salt.utils.files.fopen', mock_open()), \
-                        patch.dict(state.__utils__, {'state.check_result': MagicMock(return_value=True)}):
-                    self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
-                                              0, "md5"))
+                if six.PY2:
+                    with patch('salt.utils.files.fopen', mock_open()), \
+                            patch.dict(state.__utils__, {'state.check_result': MagicMock(return_value=True)}):
+                        self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
+                                                  0, "md5"))
+                else:
+                    with patch('salt.utils.files.fopen', mock_open()):
+                        self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
+                                                  0, "md5"))
