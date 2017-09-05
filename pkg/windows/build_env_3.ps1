@@ -175,7 +175,7 @@ If (Test-Path "$($ini['Settings']['Python3Dir'])\python.exe") {
     DownloadFileWithProgress $url $file
 
     Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python3']) . . ."
-    $p    = Start-Process $file -ArgumentList '/passive InstallAllUsers=1 TargetDir="C:\Program Files\Python35" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=0 PrependPath=1 Shortcuts=0' -Wait -NoNewWindow -PassThru
+    $p    = Start-Process $file -ArgumentList "/passive InstallAllUsers=1 TargetDir=`"$($ini['Settings']['Python3Dir'])`" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=0 PrependPath=1 Shortcuts=0" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -247,7 +247,7 @@ Start_Process_and_test_exitcode  "$($ini['Settings']['Scripts3Dir'])\pip.exe" "i
 
 # Move DLL's to Python Root
 Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
-Move-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['Python3Dir'])" -Force
+Move-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['SitePkgs3Dir'])\win32" -Force
 
 # Remove pywin32_system32 directory
 Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
@@ -256,6 +256,10 @@ Remove-Item "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32"
 # Remove pythonwin directory
 Write-Output " - $script_name :: Removing pythonwin Directory . . ."
 Remove-Item "$($ini['Settings']['SitePkgs3Dir'])\pythonwin" -Force -Recurse
+
+# Remove PyWin32 PostInstall and testall Scripts
+Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
+Remove-Item "$($ini['Settings']['Scripts3Dir'])\pywin32_*" -Force -Recurse
 
 #==============================================================================
 # Fix PyCrypto
