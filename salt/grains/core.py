@@ -2434,6 +2434,9 @@ def default_gateway():
 
     If the `ip` command is unavailable, no grains will be populated.
 
+    Currently does not support multiple default gateways. The grains will be
+    set to the first default gateway found.
+
     List of grains:
 
         ip4_gw: True  # ip/True/False if default ipv4 gateway
@@ -2463,5 +2466,3 @@ def default_gateway():
         except Exception as exc:
             pass
     return grains
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
