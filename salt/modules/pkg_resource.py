@@ -106,12 +106,7 @@ def parse_targets(name=None,
         salt '*' pkg_resource.parse_targets
     '''
     if '__env__' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'__env__\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('__env__')
 
     if __grains__['os'] == 'MacOS' and sources:
