@@ -1303,12 +1303,20 @@ def write_mount_cache(real_name,
     '''
     cache = salt.utils.mount.read_cache(__opts__)
 
-    if 'mounts' in cache:
-        cache['mounts'][real_name] = {'device': device,
-                                      'fstype': fstype,
-                                      'mkmnt': mkmnt,
-                                      'opts': opts}
+    if cache:
+        if 'mounts' in cache:
+            cache['mounts'][real_name] = {'device': device,
+                                          'fstype': fstype,
+                                          'mkmnt': mkmnt,
+                                          'opts': opts}
+        else:
+            cache['mounts'] = {}
+            cache['mounts'][real_name] = {'device': device,
+                                          'fstype': fstype,
+                                          'mkmnt': mkmnt,
+                                          'opts': opts}
     else:
+        cache = {}
         cache['mounts'] = {}
         cache['mounts'][real_name] = {'device': device,
                                       'fstype': fstype,
@@ -1333,8 +1341,9 @@ def delete_mount_cache(real_name):
     '''
     cache = salt.utils.mount.read_cache(__opts__)
 
-    if 'mounts' in cache:
-        if real_name in cache['mounts']:
-            del cache['mounts'][real_name]
-            cache = salt.utils.mount.write_cache(cache, __opts__)
+    if cache:
+        if 'mounts' in cache:
+            if real_name in cache['mounts']:
+                del cache['mounts'][real_name]
+                cache = salt.utils.mount.write_cache(cache, __opts__)
     return True
