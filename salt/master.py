@@ -1671,23 +1671,23 @@ class ClearFuncs(object):
 
         # Authenticate
         auth_check = self.loadauth.check_authentication(clear_load, auth_type, key=key)
-        error = auth_check.get('error')
+        error = auth_check.get(u'error')
 
         if error:
             # Authentication error occurred: do not continue.
-            return {'error': error}
+            return {u'error': error}
 
         # Authorize
-        username = auth_check.get('username')
+        username = auth_check.get(u'username')
         if auth_type != u'user':
             runner_check = self.ckminions.runner_check(
-                auth_check.get('auth_list', []),
+                auth_check.get(u'auth_list', []),
                 clear_load[u'fun'],
                 clear_load.get(u'kwarg', {})
             )
             if not runner_check:
-                return {'error': {'name': err_name,
-                                  'message': u'Authentication failure of type "{0}" occurred for '
+                return {u'error': {u'name': err_name,
+                                   u'message': u'Authentication failure of type "{0}" occurred for '
                                              u'user {1}.'.format(auth_type, username)}}
             elif isinstance(runner_check, dict) and u'error' in runner_check:
                 # A dictionary with an error name/message was handled by ckminions.runner_check
@@ -1713,9 +1713,9 @@ class ClearFuncs(object):
                                        username)
         except Exception as exc:
             log.error(u'Exception occurred while introspecting %s: %s', fun, exc)
-            return {'error': {'name': exc.__class__.__name__,
-                              'args': exc.args,
-                              'message': str(exc)}}
+            return {u'error': {u'name': exc.__class__.__name__,
+                               u'args': exc.args,
+                               u'message': str(exc)}}
 
     def wheel(self, clear_load):
         '''
@@ -1726,24 +1726,24 @@ class ClearFuncs(object):
 
         # Authenticate
         auth_check = self.loadauth.check_authentication(clear_load, auth_type, key=key)
-        error = auth_check.get('error')
+        error = auth_check.get(u'error')
 
         if error:
             # Authentication error occurred: do not continue.
-            return {'error': error}
+            return {u'error': error}
 
         # Authorize
-        username = auth_check.get('username')
+        username = auth_check.get(u'username')
         if auth_type != u'user':
             wheel_check = self.ckminions.wheel_check(
-                auth_check.get('auth_list', []),
+                auth_check.get(u'auth_list', []),
                 clear_load[u'fun'],
                 clear_load.get(u'kwarg', {})
             )
             if not wheel_check:
-                return {'error': {'name': err_name,
-                                  'message': u'Authentication failure of type "{0}" occurred for '
-                                             u'user {1}.'.format(auth_type, username)}}
+                return {u'error': {u'name': err_name,
+                                   u'message': u'Authentication failure of type "{0}" occurred for '
+                                               u'user {1}.'.format(auth_type, username)}}
             elif isinstance(wheel_check, dict) and u'error' in wheel_check:
                 # A dictionary with an error name/message was handled by ckminions.wheel_check
                 return wheel_check
