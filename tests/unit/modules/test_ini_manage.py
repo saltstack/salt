@@ -19,27 +19,27 @@ class IniManageTestCase(TestCase):
         '# Comment on the first line',
         '',
         '# First main option',
-        'option1 = main1',
+        'option1=main1',
         '',
         '# Second main option',
-        'option2 = main2',
+        'option2=main2',
         '',
         '',
         '[main]',
         '# Another comment',
-        'test1 = value 1',
+        'test1=value 1',
         '',
-        'test2 = value 2',
+        'test2=value 2',
         '',
         '[SectionB]',
-        'test1 = value 1B',
+        'test1=value 1B',
         '',
         '# Blank line should be above',
         'test3 = value 3B',
         '',
         '[SectionC]',
         '# The following option is empty',
-        'empty_option ='
+        'empty_option='
     ])
 
     maxDiff = None
