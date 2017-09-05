@@ -125,8 +125,8 @@ class IniManageTestCase(TestCase):
         })
         with salt.utils.fopen(self.tfile.name, 'r') as fp:
             file_content = fp.read()
-        self.assertIn('\nempty_option = \n', file_content,
-                      'empty_option was not preserved')
+        expected = '{0}{1}{0}'.format(os.linesep, 'empty_option = ')
+        self.assertIn(expected, file_content, 'empty_option was not preserved')
 
     def test_empty_lines_preserved_after_edit(self):
         ini.set_option(self.tfile.name, {
