@@ -157,4 +157,3 @@ Arguments:
         # No document found in the database
         log.debug('ext_pillar.rethinkdb: no document found')
         return {}
-
