@@ -298,14 +298,11 @@ class LoadAuth(object):
         failure.
         '''
         error_msg = 'Authentication failure of type "user" occurred.'
-        if 'key' not in load:
+        auth_key = load.pop('key', None)
+        if auth_key is None:
             log.warning(error_msg)
             return False
 
-        auth_key = load.pop('key')
-        if not auth_key:
-            log.warning(error_msg)
-            return False
         if 'user' in load:
             auth_user = AuthUser(load['user'])
             if auth_user.is_sudo():
