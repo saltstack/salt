@@ -147,8 +147,7 @@ Arguments:
             return {}
 
         else:
-            for document in data:
-                result = document
+            result = data.items.pop()
 
         if pillar_key:
             return {pillar_key: result}
@@ -158,3 +157,4 @@ Arguments:
         # No document found in the database
         log.debug('ext_pillar.rethinkdb: no document found')
         return {}
+
