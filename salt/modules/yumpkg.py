@@ -764,8 +764,8 @@ def list_repo_pkgs(*args, **kwargs):
                 _parse_output(out['stdout'], strict=True)
     else:
         for repo in repos:
-            cmd = [_yum(), '--quiet', 'repository-packages', repo,
-                   'list', '--showduplicates']
+            cmd = [_yum(), '--quiet', '--showduplicates',
+                   'repository-packages', repo, 'list']
             # Can't concatenate because args is a tuple, using list.extend()
             cmd.extend(args)
 
@@ -2539,7 +2539,7 @@ def _parse_repo_file(filename):
 
     for section in parsed._sections:
         section_dict = dict(parsed._sections[section])
-        section_dict.pop('__name__')
+        section_dict.pop('__name__', None)
         config[section] = section_dict
 
     # Try to extract leading comments
