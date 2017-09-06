@@ -2359,6 +2359,16 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                   'Default: %default.')
         )
 
+        self.add_option(
+            '--preserve-minions',
+            default=False,
+            help=('Setting this to True prevents the master from deleting '
+                  'the minion cache when keys are deleted, this may have '
+                  'security implications if compromised minions auth with '
+                  'a previous deleted minion ID. '
+                  'Default: %default.')
+        )
+
         key_options_group = optparse.OptionGroup(
             self, 'Key Generation Options'
         )
@@ -2457,6 +2467,13 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                 self.options.rotate_aes_key = True
             elif self.options.rotate_aes_key.lower() == 'false':
                 self.options.rotate_aes_key = False
+
+    def process_preserve_minions(self):
+        if hasattr(self.options, 'preserve_minions') and isinstance(self.options.preserve_minions, str):
+            if self.options.preserve_minions.lower() == 'true':
+                self.options.preserve_minions = True
+            elif self.options.preserve_minions.lower() == 'false':
+                self.options.preserve_minions = False
 
     def process_list(self):
         # Filter accepted list arguments as soon as possible
