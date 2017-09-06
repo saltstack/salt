@@ -246,7 +246,7 @@ def grains():
             DETAILS['grains_cache']['model'] = compute_rack['outConfigs']['computeRackUnit']['model']
             DETAILS['grains_cache']['name'] = compute_rack['outConfigs']['computeRackUnit']['name']
             DETAILS['grains_cache']['serial'] = compute_rack['outConfigs']['computeRackUnit']['serial']
-        except:
+        except Exception as err:
             pass
     return DETAILS['grains_cache']
 
