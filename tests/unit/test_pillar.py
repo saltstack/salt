@@ -81,7 +81,7 @@ class PillarTestCase(TestCase):
                                            mock_ext_pillar_func})):
             pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'dev')
         # ext pillar function doesn't have the extra_minion_data arg
-        with patch('inspect.getargspec',
+        with patch('salt.utils.args.get_function_argspec',
                    MagicMock(return_value=MagicMock(args=[]))):
             pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
                                          'fake_ext_pillar')
@@ -90,7 +90,7 @@ class PillarTestCase(TestCase):
                                                      arg='foo')
         # ext pillar function has the extra_minion_data arg
         mock_ext_pillar_func.reset_mock()
-        with patch('inspect.getargspec',
+        with patch('salt.utils.args.get_function_argspec',
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
                                          'fake_ext_pillar')
@@ -121,7 +121,7 @@ class PillarTestCase(TestCase):
                                            mock_ext_pillar_func})):
             pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'dev')
         # ext pillar function doesn't have the extra_minion_data arg
-        with patch('inspect.getargspec',
+        with patch('salt.utils.args.get_function_argspec',
                    MagicMock(return_value=MagicMock(args=[]))):
             pillar._external_pillar_data('fake_pillar', ['foo'],
                                          'fake_ext_pillar')
@@ -130,7 +130,7 @@ class PillarTestCase(TestCase):
                                                      'foo')
         # ext pillar function has the extra_minion_data arg
         mock_ext_pillar_func.reset_mock()
-        with patch('inspect.getargspec',
+        with patch('salt.utils.args.get_function_argspec',
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', ['foo'],
                                          'fake_ext_pillar')
@@ -161,7 +161,7 @@ class PillarTestCase(TestCase):
                                            mock_ext_pillar_func})):
             pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'dev')
         # ext pillar function doesn't have the extra_minion_data arg
-        with patch('inspect.getargspec',
+        with patch('salt.utils.args.get_function_argspec',
                    MagicMock(return_value=MagicMock(args=[]))):
             pillar._external_pillar_data('fake_pillar', 'fake_val',
                                          'fake_ext_pillar')
@@ -169,7 +169,7 @@ class PillarTestCase(TestCase):
                                                      'fake_pillar', 'fake_val')
         # ext pillar function has the extra_minion_data arg
         mock_ext_pillar_func.reset_mock()
-        with patch('inspect.getargspec',
+        with patch('salt.utils.args.get_function_argspec',
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', 'fake_val',
                                          'fake_ext_pillar')
@@ -200,7 +200,7 @@ class PillarTestCase(TestCase):
             pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'dev',
                                         extra_minion_data={'fake_key': 'foo'})
         # ext pillar function doesn't have the extra_minion_data arg
-        with patch('inspect.getargspec',
+        with patch('salt.utils.args.get_function_argspec',
                    MagicMock(return_value=MagicMock(args=[]))):
             pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
                                          'fake_ext_pillar')
@@ -208,7 +208,7 @@ class PillarTestCase(TestCase):
             'mocked-minion', 'fake_pillar', arg='foo')
         # ext pillar function has the extra_minion_data arg
         mock_ext_pillar_func.reset_mock()
-        with patch('inspect.getargspec',
+        with patch('salt.utils.args.get_function_argspec',
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', {'arg': 'foo'},
                                          'fake_ext_pillar')
@@ -240,7 +240,7 @@ class PillarTestCase(TestCase):
             pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'dev',
                                         extra_minion_data={'fake_key': 'foo'})
         # ext pillar function doesn't have the extra_minion_data arg
-        with patch('inspect.getargspec',
+        with patch('salt.utils.args.get_function_argspec',
                    MagicMock(return_value=MagicMock(args=[]))):
             pillar._external_pillar_data('fake_pillar', ['bar'],
                                          'fake_ext_pillar')
@@ -248,7 +248,7 @@ class PillarTestCase(TestCase):
             'mocked-minion', 'fake_pillar', 'bar')
         # ext pillar function has the extra_minion_data arg
         mock_ext_pillar_func.reset_mock()
-        with patch('inspect.getargspec',
+        with patch('salt.utils.args.get_function_argspec',
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', ['bar'],
                                          'fake_ext_pillar')
@@ -280,7 +280,7 @@ class PillarTestCase(TestCase):
             pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'dev',
                                         extra_minion_data={'fake_key': 'foo'})
         # ext pillar function doesn't have the extra_minion_data arg
-        with patch('inspect.getargspec',
+        with patch('salt.utils.args.get_function_argspec',
                    MagicMock(return_value=MagicMock(args=[]))):
             pillar._external_pillar_data('fake_pillar', 'bar',
                                          'fake_ext_pillar')
@@ -288,7 +288,7 @@ class PillarTestCase(TestCase):
             'mocked-minion', 'fake_pillar', 'bar')
         # ext pillar function has the extra_minion_data arg
         mock_ext_pillar_func.reset_mock()
-        with patch('inspect.getargspec',
+        with patch('salt.utils.args.get_function_argspec',
                    MagicMock(return_value=MagicMock(args=['extra_minion_data']))):
             pillar._external_pillar_data('fake_pillar', 'bar',
                                          'fake_ext_pillar')
