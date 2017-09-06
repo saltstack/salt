@@ -2082,12 +2082,7 @@ def managed(name,
             - win_inheritance: False
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     name = os.path.expanduser(name)
@@ -3060,6 +3055,7 @@ def recurse(name,
             sym_mode=None,
             template=None,
             context=None,
+            replace=True,
             defaults=None,
             include_empty=False,
             backup='',
@@ -3148,6 +3144,11 @@ def recurse(name,
 
             The template option is required when recursively applying templates.
 
+    replace : True
+        If set to ``False`` and the file already exists, the file will not be
+        modified even if changes would otherwise be made. Permissions and
+        ownership will still be enforced, however.
+
     context
         Overrides default context variables passed to the template.
 
@@ -3215,12 +3216,7 @@ def recurse(name,
         option is usually not needed except in special circumstances.
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     name = os.path.expanduser(sdecode(name))
@@ -3337,8 +3333,8 @@ def recurse(name,
         if _ret['changes']:
             ret['changes'][path] = _ret['changes']
 
-    def manage_file(path, source):
-        if clean and os.path.exists(path) and os.path.isdir(path):
+    def manage_file(path, source, replace):
+        if clean and os.path.exists(path) and os.path.isdir(path) and replace:
             _ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
             if __opts__['test']:
                 _ret['comment'] = u'Replacing directory {0} with a ' \
@@ -3368,6 +3364,7 @@ def recurse(name,
             attrs=None,
             template=template,
             makedirs=True,
+            replace=replace,
             context=context,
             defaults=defaults,
             backup=backup,
@@ -3424,7 +3421,7 @@ def recurse(name,
     for dirname in mng_dirs:
         manage_directory(dirname)
     for dest, src in mng_files:
-        manage_file(dest, src)
+        manage_file(dest, src, replace)
 
     if clean:
         # TODO: Use directory(clean=True) instead
@@ -5036,12 +5033,7 @@ def patch(name,
     hash_ = kwargs.pop('hash', None)
 
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     name = os.path.expanduser(name)
@@ -5694,12 +5686,7 @@ def serialize(name,
         }
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     name = os.path.expanduser(name)
