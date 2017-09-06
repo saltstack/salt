@@ -49,6 +49,7 @@ from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
 import salt.utils
 import salt.utils.templates
+from salt.ext.six.moves import range  # pylint: disable=import-error
 
 try:
     import kubernetes  # pylint: disable=import-self
@@ -719,9 +720,9 @@ def delete_deployment(name, namespace='default', **kwargs):
         if not platform.startswith("win"):
             try:
                 with _time_limit(POLLING_TIME_LIMIT):
-                    while show_deployment(name, namespace) is not None:  # pylint: disable=useless-else-on-loop
+                    while show_deployment(name, namespace) is not None:
                         sleep(1)
-                    else:
+                    else:  # pylint: disable=useless-else-on-loop
                         mutable_api_response['code'] = 200
             except TimeoutException:
                 pass
