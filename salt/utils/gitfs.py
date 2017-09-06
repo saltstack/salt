@@ -38,7 +38,6 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 # Import third party libs
 import salt.ext.six as six
 
-VALID_PROVIDERS = ('pygit2', 'gitpython')
 # Optional per-remote params that can only be used on a per-remote basis, and
 # thus do not have defaults in salt/config.py.
 PER_REMOTE_ONLY = ('name',)
@@ -164,7 +163,7 @@ class GitProvider(object):
     directly.
 
     self.provider should be set in the sub-class' __init__ function before
-    invoking GitProvider.__init__().
+    invoking the parent class' __init__.
     '''
     def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
                  override_params, cache_root, role='gitfs'):
@@ -857,8 +856,10 @@ class GitPython(GitProvider):
     def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
                  override_params, cache_root, role='gitfs'):
         self.provider = 'gitpython'
-        GitProvider.__init__(self, opts, remote, per_remote_defaults,
-                             per_remote_only, override_params, cache_root, role)
+        super(GitPython, self).__init__(
+            opts, remote, per_remote_defaults, per_remote_only,
+            override_params, cache_root, role
+        )
 
     def add_refspecs(self, *refspecs):
         '''
@@ -1192,8 +1193,10 @@ class Pygit2(GitProvider):
     def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
                  override_params, cache_root, role='gitfs'):
         self.provider = 'pygit2'
-        GitProvider.__init__(self, opts, remote, per_remote_defaults,
-                             per_remote_only, override_params, cache_root, role)
+        super(Pygit2, self).__init__(
+            opts, remote, per_remote_defaults, per_remote_only,
+            override_params, cache_root, role
+        )
 
     def add_refspecs(self, *refspecs):
         '''
@@ -1877,11 +1880,17 @@ class Pygit2(GitProvider):
             fp_.write(blob.data)
 
 
+GIT_PROVIDERS = {
+    'pygit2': Pygit2,
+    'gitpython': GitPython,
+}
+
+
 class GitBase(object):
     '''
     Base class for gitfs/git_pillar
     '''
-    def __init__(self, opts, valid_providers=VALID_PROVIDERS, cache_root=None):
+    def __init__(self, opts, git_providers=None, cache_root=None):
         '''
         IMPORTANT: If specifying a cache_root, understand that this is also
         where the remotes will be cloned. A non-default cache_root is only
@@ -1889,8 +1898,9 @@ class GitBase(object):
         out into the winrepo locations and not within the cachedir.
         '''
         self.opts = opts
-        self.valid_providers = valid_providers
-        self.get_provider()
+        self.git_providers = git_providers if git_providers is not None \
+            else GIT_PROVIDERS
+        self.verify_provider()
         if cache_root is not None:
             self.cache_root = self.remote_root = cache_root
         else:
@@ -1948,7 +1958,7 @@ class GitBase(object):
 
         self.remotes = []
         for remote in remotes:
-            repo_obj = self.provider_class(
+            repo_obj = self.git_providers[self.provider](
                 self.opts,
                 remote,
                 per_remote_defaults,
@@ -2202,7 +2212,7 @@ class GitBase(object):
             # Hash file won't exist if no files have yet been served up
             pass
 
-    def get_provider(self):
+    def verify_provider(self):
         '''
         Determine which provider to use
         '''
@@ -2223,12 +2233,12 @@ class GitBase(object):
                     # Should only happen if someone does something silly like
                     # set the provider to a numeric value.
                     desired_provider = str(desired_provider).lower()
-                if desired_provider not in self.valid_providers:
+                if desired_provider not in self.git_providers:
                     log.critical(
                         'Invalid {0}_provider \'{1}\'. Valid choices are: {2}'
                         .format(self.role,
                                 desired_provider,
-                                ', '.join(self.valid_providers))
+                                ', '.join(self.git_providers))
                     )
                     failhard(self.role)
                 elif desired_provider == 'pygit2' and self.verify_pygit2():
@@ -2241,17 +2251,13 @@ class GitBase(object):
                 .format(self.role)
             )
             failhard(self.role)
-        if self.provider == 'pygit2':
-            self.provider_class = Pygit2
-        elif self.provider == 'gitpython':
-            self.provider_class = GitPython
 
     def verify_gitpython(self, quiet=False):
         '''
         Check if GitPython is available and at a compatible version (>= 0.3.0)
         '''
         def _recommend():
-            if HAS_PYGIT2 and 'pygit2' in self.valid_providers:
+            if HAS_PYGIT2 and 'pygit2' in self.git_providers:
                 log.error(_RECOMMEND_PYGIT2.format(self.role))
 
         if not HAS_GITPYTHON:
@@ -2262,7 +2268,7 @@ class GitBase(object):
                 )
                 _recommend()
             return False
-        elif 'gitpython' not in self.valid_providers:
+        elif 'gitpython' not in self.git_providers:
             return False
 
         # pylint: disable=no-member
@@ -2302,7 +2308,7 @@ class GitBase(object):
         Pygit2 must be at least 0.20.3 and libgit2 must be at least 0.20.0.
         '''
         def _recommend():
-            if HAS_GITPYTHON and 'gitpython' in self.valid_providers:
+            if HAS_GITPYTHON and 'gitpython' in self.git_providers:
                 log.error(_RECOMMEND_GITPYTHON.format(self.role))
 
         if not HAS_PYGIT2:
@@ -2313,7 +2319,7 @@ class GitBase(object):
                 )
                 _recommend()
             return False
-        elif 'pygit2' not in self.valid_providers:
+        elif 'pygit2' not in self.git_providers:
             return False
 
         # pylint: disable=no-member
@@ -2432,7 +2438,7 @@ class GitFS(GitBase):
     '''
     def __init__(self, opts):
         self.role = 'gitfs'
-        GitBase.__init__(self, opts)
+        super(GitFS, self).__init__(opts)
 
     def dir_list(self, load):
         '''
@@ -2735,7 +2741,7 @@ class GitPillar(GitBase):
     '''
     def __init__(self, opts):
         self.role = 'git_pillar'
-        GitBase.__init__(self, opts)
+        super(GitPillar, self).__init__(opts)
 
     def checkout(self):
         '''
@@ -2837,7 +2843,7 @@ class WinRepo(GitBase):
     '''
     def __init__(self, opts, winrepo_dir):
         self.role = 'winrepo'
-        GitBase.__init__(self, opts, cache_root=winrepo_dir)
+        super(WinRepo, self).__init__(opts, cache_root=winrepo_dir)
 
     def checkout(self):
         '''

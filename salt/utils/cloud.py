@@ -293,12 +293,14 @@ def salt_config_to_yaml(configuration, line_break='\n'):
                      Dumper=SafeOrderedDumper)
 
 
-def bootstrap(vm_, opts):
+def bootstrap(vm_, opts=None):
     '''
     This is the primary entry point for logging into any system (POSIX or
     Windows) to install Salt. It will make the decision on its own as to which
     deploy function to call.
     '''
+    if opts is None:
+        opts = __opts__
     deploy_config = salt.config.get_cloud_config_value(
         'deploy',
         vm_, opts, default=False)
