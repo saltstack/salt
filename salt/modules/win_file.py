@@ -818,8 +818,10 @@ def stats(path, hash_type='sha256', follow_symlinks=True):
 
         salt '*' file.stats /etc/passwd
     '''
+    # This is to mirror the behavior of file.py. `check_file_meta` expects an
+    # empty dictionary when the file does not exist
     if not os.path.exists(path):
-        raise CommandExecutionError('Path not found: {0}'.format(path))
+        return {}
 
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
@@ -1556,6 +1558,13 @@ def check_perms(path,
         # Specify advanced attributes with a list
         salt '*' file.check_perms C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'files_only'}}"
     '''
+    # This is to work with the state module.
+    if not os.path.exists(path):
+        if ret:
+            return ret
+        else:
+            raise CommandExecutionError('The directory does not exist.')
+
     path = os.path.expanduser(path)
 
     if not ret:
