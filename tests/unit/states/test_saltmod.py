@@ -20,6 +20,8 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.config
+import salt.loader
 import salt.utils.jid
 import salt.utils.event
 import salt.states.saltmod as saltmod
@@ -31,6 +33,10 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.states.saltmod
     '''
     def setup_loader_modules(self):
+        utils = salt.loader.utils(
+            salt.config.DEFAULT_MINION_OPTS,
+            whitelist=['state']
+        )
         return {
             saltmod: {
                 '__env__': 'base',
@@ -41,7 +47,8 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                     'transport': 'tcp'
                 },
                 '__salt__': {'saltutil.cmd': MagicMock()},
-                '__orchestration_jid__': salt.utils.jid.gen_jid()
+                '__orchestration_jid__': salt.utils.jid.gen_jid(),
+                '__utils__': utils,
             }
         }
 
@@ -251,8 +258,8 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         name = 'state'
 
-        ret = {'changes': True, 'name': 'state', 'result': True,
-               'comment': 'Runner function \'state\' executed.',
+        ret = {'changes': {}, 'name': 'state', 'result': True,
+               'comment': 'Runner function \'state\' executed with return True.',
                '__orchestration__': True}
         runner_mock = MagicMock(return_value={'return': True})
 
@@ -267,8 +274,8 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         name = 'state'
 
-        ret = {'changes': True, 'name': 'state', 'result': True,
-               'comment': 'Wheel function \'state\' executed.',
+        ret = {'changes': {}, 'name': 'state', 'result': True,
+               'comment': 'Wheel function \'state\' executed with return True.',
                '__orchestration__': True}
         wheel_mock = MagicMock(return_value={'return': True})
 

@@ -1677,12 +1677,7 @@ class ClearFuncs(object):
                                        message=u'Authentication failure of type "token" occurred.'))
 
             # Authorize
-            if self.opts[u'keep_acl_in_token'] and u'auth_list' in token:
-                auth_list = token[u'auth_list']
-            else:
-                clear_load[u'eauth'] = token[u'eauth']
-                clear_load[u'username'] = token[u'name']
-                auth_list = self.loadauth.get_auth_list(clear_load)
+            auth_list = self.loadauth.get_auth_list(clear_load, token)
 
             if not self.ckminions.runner_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
                 return dict(error=dict(name=u'TokenAuthenticationError',
@@ -1745,12 +1740,7 @@ class ClearFuncs(object):
                                        message=u'Authentication failure of type "token" occurred.'))
 
             # Authorize
-            if self.opts[u'keep_acl_in_token'] and u'auth_list' in token:
-                auth_list = token[u'auth_list']
-            else:
-                clear_load[u'eauth'] = token[u'eauth']
-                clear_load[u'username'] = token[u'name']
-                auth_list = self.loadauth.get_auth_list(clear_load)
+            auth_list = self.loadauth.get_auth_list(clear_load, token)
             if not self.ckminions.wheel_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
                 return dict(error=dict(name=u'TokenAuthenticationError',
                                        message=(u'Authentication failure of type "token" occurred for '
@@ -1867,12 +1857,7 @@ class ClearFuncs(object):
                 return u''
 
             # Get acl
-            if self.opts[u'keep_acl_in_token'] and u'auth_list' in token:
-                auth_list = token[u'auth_list']
-            else:
-                extra[u'eauth'] = token[u'eauth']
-                extra[u'username'] = token[u'name']
-                auth_list = self.loadauth.get_auth_list(extra)
+            auth_list = self.loadauth.get_auth_list(extra, token)
 
             # Authorize the request
             if not self.ckminions.auth_check(

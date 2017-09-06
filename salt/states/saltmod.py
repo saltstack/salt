@@ -30,7 +30,6 @@ import time
 
 # Import salt libs
 import salt.syspaths
-import salt.utils  # Can be removed once check_state_result is moved
 import salt.utils.event
 import salt.utils.versions
 from salt.ext import six
@@ -342,7 +341,7 @@ def state(name,
             except KeyError:
                 m_state = False
             if m_state:
-                m_state = salt.utils.check_state_result(m_ret, recurse=True)
+                m_state = __utils__['state.check_result'](m_ret, recurse=True)
 
         if not m_state:
             if minion not in fail_minions:
@@ -742,18 +741,26 @@ def runner(name, **kwargs):
     if isinstance(runner_return, dict) and 'Error' in runner_return:
         out['success'] = False
     if not out.get('success', True):
+        cmt = "Runner function '{0}' failed{1}.".format(
+            name,
+            ' with return {0}'.format(runner_return) if runner_return else '',
+        )
         ret = {
             'name': name,
             'result': False,
             'changes': {},
-            'comment': runner_return if runner_return else "Runner function '{0}' failed without comment.".format(name)
+            'comment': cmt,
         }
     else:
+        cmt = "Runner function '{0}' executed{1}.".format(
+            name,
+            ' with return {0}'.format(runner_return) if runner_return else '',
+        )
         ret = {
             'name': name,
             'result': True,
-            'changes': runner_return if runner_return else {},
-            'comment': "Runner function '{0}' executed.".format(name)
+            'changes': {},
+            'comment': cmt,
         }
 
     ret['__orchestration__'] = True
@@ -802,14 +809,14 @@ def wheel(name, **kwargs):
                                      **kwargs)
 
     ret['result'] = True
-    ret['comment'] = "Wheel function '{0}' executed.".format(name)
-
     ret['__orchestration__'] = True
     if 'jid' in out:
         ret['__jid__'] = out['jid']
 
     runner_return = out.get('return')
-    if runner_return:
-        ret['changes'] = runner_return
+    ret['comment'] = "Wheel function '{0}' executed{1}.".format(
+        name,
+        ' with return {0}'.format(runner_return) if runner_return else '',
+    )
 
     return ret

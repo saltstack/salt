@@ -104,7 +104,7 @@ def parse_pkginfo(line, osarch=None):
     if epoch not in ('(none)', '0'):
         version = ':'.join((epoch, version))
 
-    if install_time:
+    if install_time not in ('(none)', '0'):
         install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
         install_date_time_t = int(install_time)
     else:
