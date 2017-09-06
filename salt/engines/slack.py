@@ -12,44 +12,43 @@ prefaced with a ``!``.
     .. code-block:: yaml
 
         engines:
-            slack:
-               token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
-               control: True
-               valid_users:
-                   - garethgreenaway
-               valid_commands:
-                   - test.ping
-                   - cmd.run
-                   - list_jobs
-                   - list_commands
-               aliases:
-                   list_jobs:
-                       cmd: jobs.list_jobs
-                   list_commands:
-                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
+            - slack:
+                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
+                control: True
+                valid_users:
+                    - garethgreenaway
+                valid_commands:
+                    - test.ping
+                    - cmd.run
+                    - list_jobs
+                    - list_commands
+                aliases:
+                    list_jobs:
+                        cmd: jobs.list_jobs
+                    list_commands:
+                        cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
 
     :configuration: Example configuration using groups
     .. versionadded: 2017.7.0
 
         engines:
-            slack:
-               token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
-               control: True
-               groups:
-                 gods:
-                   users:
-                     - garethgreenaway
-                   commands:
-                     - test.ping
-                     - cmd.run
-                     - list_jobs
-                     - list_commands
-               aliases:
+            - slack:
+                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
+                control: True
+                groups:
+                    gods:
+                        users:
+                            - garethgreenaway
+                        commands:
+                            - test.ping
+                            - cmd.run
+                            - list_jobs
+                            - list_commands
+                aliases:
                    list_jobs:
-                       cmd: jobs.list_jobs
+                        cmd: jobs.list_jobs
                    list_commands:
-                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
-
+                        cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
 
 :depends: slackclient
 '''
@@ -62,6 +61,7 @@ import logging
 import time
 import re
 import yaml
+import ast
 
 try:
     import slackclient
@@ -182,11 +182,20 @@ def start(token,
                                             if 'aliases' in groups[group]:
                                                 aliases.update(groups[group]['aliases'])
 
+                                if 'user' not in _m:
+                                    if 'message' in _m and 'user' in _m['message']:
+                                        log.debug('Message was edited, '
+                                                  'so we look for user in '
+                                                  'the original message.')
+                                        _user = _m['message']['user']
+                                else:
+                                    _user = _m['user']
+
                                 # Ensure the user is allowed to run commands
                                 if valid_users:
-                                    log.debug('{0} {1}'.format(all_users, _m['user']))
-                                    if _m['user'] not in valid_users and all_users.get(_m['user'], None) not in valid_users:
-                                        channel.send_message('{0} not authorized to run Salt commands'.format(all_users[_m['user']]))
+                                    log.debug('{0} {1}'.format(all_users, _user))
+                                    if _user not in valid_users and all_users.get(_user, None) not in valid_users:
+                                        channel.send_message('{0} not authorized to run Salt commands'.format(all_users[_user]))
                                         return
 
                                 # Trim the ! from the front
@@ -220,7 +229,7 @@ def start(token,
                                 # Ensure the command is allowed
                                 if valid_commands:
                                     if cmd not in valid_commands:
-                                        channel.send_message('{0} is not allowed to use command {1}.'.format(all_users[_m['user']], cmd))
+                                        channel.send_message('{0} is not allowed to use command {1}.'.format(all_users[_user], cmd))
                                         return
 
                                 # Parse args and kwargs
@@ -246,6 +255,10 @@ def start(token,
                                     tgt_type = kwargs['tgt_type']
                                     del kwargs['tgt_type']
 
+                                # Check for pillar string representation of dict and convert it to dict
+                                if 'pillar' in kwargs:
+                                    kwargs.update(pillar=ast.literal_eval(kwargs['pillar']))
+
                                 ret = {}
 
                                 if cmd in runner_functions:
@@ -255,7 +268,7 @@ def start(token,
                                 # Default to trying to run as a client module.
                                 else:
                                     local = salt.client.LocalClient()
-                                    ret = local.cmd('{0}'.format(target), cmd, args, kwargs, tgt_type='{0}'.format(tgt_type))
+                                    ret = local.cmd('{0}'.format(target), cmd, arg=args, kwarg=kwargs, tgt_type='{0}'.format(tgt_type))
 
                                 if ret:
                                     return_text = json.dumps(ret, sort_keys=True, indent=1)

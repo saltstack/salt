@@ -621,6 +621,13 @@ class Client(object):
 
             def on_header(hdr):
                 if write_body[1] is not False and write_body[2] is None:
+                    if not hdr.strip() and 'Content-Type' not in write_body[1]:
+                        # We've reached the end of the headers and not yet
+                        # found the Content-Type. Reset the values we're
+                        # tracking so that we properly follow the redirect.
+                        write_body[0] = None
+                        write_body[1] = False
+                        return
                     # Try to find out what content type encoding is used if
                     # this is a text file
                     write_body[1].parse_line(hdr)  # pylint: disable=no-member
@@ -1257,7 +1264,7 @@ class RemoteClient(Client):
             if not os.path.isfile(path):
                 msg = 'specified file {0} is not present to generate hash: {1}'
                 log.warning(msg.format(path, err))
-                return {}
+                return {}, None
             else:
                 ret = {}
                 hash_type = self.opts.get('hash_type', 'md5')

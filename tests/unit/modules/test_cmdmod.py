@@ -263,6 +263,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
                 self.assertFalse(cmdmod._is_valid_shell('foo'))
 
+    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
     def test_os_environment_remains_intact(self):
         '''
         Make sure the OS environment is not tainted after running a command

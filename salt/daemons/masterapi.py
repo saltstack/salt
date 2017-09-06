@@ -1055,12 +1055,7 @@ class LocalFuncs(object):
                 return dict(error=dict(name=err_name,
                                        message='Authentication failure of type "token" occurred.'))
             username = token['name']
-            if self.opts['keep_acl_in_token'] and 'auth_list' in token:
-                auth_list = token['auth_list']
-            else:
-                load['eauth'] = token['eauth']
-                load['username'] = username
-                auth_list = self.loadauth.get_auth_list(load)
+            auth_list = self.loadauth.get_auth_list(load, token)
         else:
             auth_type = 'eauth'
             err_name = 'EauthAuthenticationError'
@@ -1102,12 +1097,7 @@ class LocalFuncs(object):
                 return dict(error=dict(name=err_name,
                                        message='Authentication failure of type "token" occurred.'))
             username = token['name']
-            if self.opts['keep_acl_in_token'] and 'auth_list' in token:
-                auth_list = token['auth_list']
-            else:
-                load['eauth'] = token['eauth']
-                load['username'] = username
-                auth_list = self.loadauth.get_auth_list(load)
+            auth_list = self.loadauth.get_auth_list(load, token)
         elif 'eauth' in load:
             auth_type = 'eauth'
             err_name = 'EauthAuthenticationError'
@@ -1217,12 +1207,7 @@ class LocalFuncs(object):
                 return ''
 
             # Get acl from eauth module.
-            if self.opts['keep_acl_in_token'] and 'auth_list' in token:
-                auth_list = token['auth_list']
-            else:
-                extra['eauth'] = token['eauth']
-                extra['username'] = token['name']
-                auth_list = self.loadauth.get_auth_list(extra)
+            auth_list = self.loadauth.get_auth_list(extra, token)
 
             # Authorize the request
             if not self.ckminions.auth_check(

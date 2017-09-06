@@ -561,7 +561,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
             # If pillarenv is set, only grab pillars with that match pillarenv
-            if opts['pillarenv'] and env != opts['pillarenv']:
+            if opts['pillarenv'] and env != opts['pillarenv'] and env != '__env__':
                 log.debug(
                     'env \'%s\' for pillar dir \'%s\' does not match '
                     'pillarenv \'%s\', skipping',
