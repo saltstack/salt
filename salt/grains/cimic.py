@@ -30,7 +30,7 @@ def __virtual__():
     return False
 
 
-def panos(proxy=None):
+def cimc(proxy=None):
     if not proxy:
         return {}
     if proxy['cimc.initialized']() is False:
