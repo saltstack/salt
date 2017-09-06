@@ -18,7 +18,7 @@ the saltmaster's minion pillar.
 
 .. versionadded: 2016.3.0
 
-:configuration: Example configuration using only a "default" group. The default group is not special.
+:configuration: Example configuration using only a 'default' group. The default group is not special.
 In addition, other groups are being loaded from pillars.
 
 .. code-block:: yaml
@@ -28,7 +28,7 @@ In addition, other groups are being loaded from pillars.
           token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
           control: True
           fire_all: False
-          groups_pillar_name: "slack_engine:groups_pillar"
+          groups_pillar_name: 'slack_engine:groups_pillar'
           groups:
             default:
               users:
@@ -54,7 +54,7 @@ In addition, other groups are being loaded from pillars.
                 target: saltmaster
                 tgt_type: list
 
-:configuration: Example configuration using the "default" group and a non-default group and a pillar that will be merged in
+:configuration: Example configuration using the 'default' group and a non-default group and a pillar that will be merged in
     If the user is '*' (without the quotes) then the group's users or commands will match all users as appropriate
 
 .. versionadded: 2017.7.0
@@ -68,7 +68,7 @@ In addition, other groups are being loaded from pillars.
           control: True
           fire_all: True
           tag: salt/engines/slack
-          groups_pillar_name: "slack_engine:groups_pillar"
+          groups_pillar_name: 'slack_engine:groups_pillar'
           groups:
             default:
               valid_users:
@@ -171,7 +171,7 @@ class SlackClient(object):
         channels = {}
         if 'message' in ret:
             for item in ret['message']:
-                channels[item["id"]] = item["name"]
+                channels[item['id']] = item['name']
         return channels
 
     def get_config_groups(self, groups_conf, groups_pillar_name):
@@ -183,12 +183,12 @@ class SlackClient(object):
         # Get groups
         # Default to returning something that'll never match
         ret_groups = {
-            "default": {
-                "users": set(),
-                "commands": set(),
-                "aliases": dict(),
-                "default_target": dict(),
-                "targets": dict()
+            'default': {
+                'users': set(),
+                'commands': set(),
+                'aliases': dict(),
+                'default_target': dict(),
+                'targets': dict()
             }
         }
 
@@ -205,13 +205,13 @@ class SlackClient(object):
         try:
             groups_gen = itertools.chain(self._groups_from_pillar(groups_pillar_name).items(), use_groups.items())
         except AttributeError:
-            log.warn("Failed to get groups from {}: {}".format(groups_pillar_name, self._groups_from_pillar(groups_pillar_name)))
-            log.warn("or from config: {}".format(use_groups))
+            log.warn('Failed to get groups from {}: {}'.format(groups_pillar_name, self._groups_from_pillar(groups_pillar_name)))
+            log.warn('or from config: {}'.format(use_groups))
             groups_gen = []
         for name, config in groups_gen:
-            log.info("Trying to get {} and {} to be useful".format(name, config))
+            log.info('Trying to get {} and {} to be useful'.format(name, config))
             ret_groups.setdefault(name, {
-                "users": set(), "commands": set(), "aliases": dict(), "default_target": dict(), "targets": dict()
+                'users': set(), 'commands': set(), 'aliases': dict(), 'default_target': dict(), 'targets': dict()
             })
             try:
                 ret_groups[name]['users'].update(set(config.get('users', [])))
@@ -222,11 +222,12 @@ class SlackClient(object):
             except IndexError:
                 log.warn("Couldn't use group {}. Check that targets is a dict and not a list".format(name))
 
-        log.debug("Got the groups: {}".format(ret_groups))
+        log.debug('Got the groups: {}'.format(ret_groups))
         return ret_groups
 
     def _groups_from_pillar(self, pillar_name):
-        '''pillar_prefix is the pillar.get syntax for the pillar to be queried.
+        '''
+        pillar_prefix is the pillar.get syntax for the pillar to be queried.
         Group name is gotten via the equivalent of using
         ``salt['pillar.get']('{}:{}'.format(pillar_prefix, group_name))``
         in a jinja template.
@@ -238,9 +239,9 @@ class SlackClient(object):
         caller = salt.client.Caller()
         pillar_groups = caller.cmd('pillar.get', pillar_name)
         # pillar_groups = __salt__['pillar.get'](pillar_name, {})
-        log.info("Got pillar groups {} from pillar {}".format(pillar_groups, pillar_name))
-        log.info("pillar groups is {}".format(pillar_groups))
-        log.info("pillar groups type is {}".format(type(pillar_groups)))
+        log.debug('Got pillar groups %s from pillar %s', pillar_groups, pillar_name)
+        log.debug('pillar groups is %s', pillar_groups)
+        log.debug('pillar groups type is %s',  type(pillar_groups))
         if pillar_groups:
             return pillar_groups
         else:
@@ -248,7 +249,7 @@ class SlackClient(object):
 
     def fire(self, tag, msg):
         '''
-        This replaces a function in main called "fire"
+        This replaces a function in main called 'fire'
 
         It fires an event into the salt bus.
         '''
@@ -287,7 +288,7 @@ class SlackClient(object):
             On failure it returns an empty tuple
 
         '''
-        log.info("{} wants to run {} with groups {}".format(user, command, groups))
+        log.info('{} wants to run {} with groups {}'.format(user, command, groups))
         for key, val in groups.items():
             if user not in val['users']:
                 if '*' not in val['users']:
@@ -295,9 +296,9 @@ class SlackClient(object):
             if (command not in val['commands']) and (command not in val.get('aliases', {}).keys()):
                 if '*' not in val['commands']:
                     continue  # again, pass
-            log.info("Slack user {} permitted to run {}".format(user, command))
+            log.info('Slack user {} permitted to run {}'.format(user, command))
             return (key, val,)  # matched this group, return the group
-        log.info("Slack user {} denied trying to run {}".format(user, command))
+        log.info('Slack user {} denied trying to run {}'.format(user, command))
         return ()
 
     def commandline_to_list(self, cmdline_str, trigger_string):
@@ -341,7 +342,7 @@ class SlackClient(object):
         # cmdline = _text[1:].split(' ', 1)
         cmdline = self.commandline_to_list(text, trigger_string)
         permitted_group = self.can_user_run(slack_user_name, cmdline[0], loaded_groups)
-        log.debug("slack_user_name is {} and the permitted group is {}".format(slack_user_name, permitted_group))
+        log.debug('slack_user_name is {} and the permitted group is {}'.format(slack_user_name, permitted_group))
 
         if not permitted_group:
             return (False, None, cmdline[0])
@@ -350,7 +351,7 @@ class SlackClient(object):
 
         # maybe there are aliases, so check on that
         if cmdline[0] in permitted_group[1].get('aliases', {}).keys():
-            use_cmdline = self.commandline_to_list(permitted_group[1]['aliases'][cmdline[0]], "")
+            use_cmdline = self.commandline_to_list(permitted_group[1]['aliases'][cmdline[0]], '')
         else:
             use_cmdline = cmdline
         target = self.get_target(permitted_group, cmdline, use_cmdline)
@@ -363,41 +364,42 @@ class SlackClient(object):
         this isn't a message type
         '''
         if m_data.get('type') != 'message':
-            raise TypeError("This isn't a message")
+            raise TypeError('This is not a message')
         # Edited messages have text in message
         _text = m_data.get('text', None) or m_data.get('message', {}).get('text', None)
         try:
-            log.info("Message is {}".format(_text))  # this can violate the ascii codec
+            log.info('Message is {}'.format(_text))  # this can violate the ascii codec
         except UnicodeEncodeError as uee:
-            log.warn("Got a message that I couldn't log.  The reason is: {}".format(uee))
+            log.warn('Got a message that I could not log.  The reason is: {}'.format(uee))
 
         # Convert UTF to string
         _text = json.dumps(_text)
         _text = yaml.safe_load(_text)
 
         if not _text:
-            raise ValueError("_text has no value")
+            raise ValueError('_text has no value')
         return _text
 
     def generate_triggered_messages(self, token, trigger_string, groups, groups_pillar_name):
-        '''slack_token = string
+        '''
+        slack_token = string
         trigger_string = string
         input_valid_users = set
         input_valid_commands = set
 
         When the trigger_string prefixes the message text, yields a dictionary of {
-            "message_data": m_data,
-            "cmdline": cmdline_list, # this is a list
-            "channel": channel,
-            "user": m_data['user'],
-            "slack_client": sc
+            'message_data': m_data,
+            'cmdline': cmdline_list, # this is a list
+            'channel': channel,
+            'user': m_data['user'],
+            'slack_client': sc
         }
 
-        else yields {"message_data": m_data} and the caller can handle that
+        else yields {'message_data': m_data} and the caller can handle that
 
         When encountering an error (e.g. invalid message), yields {}, the caller can proceed to the next message
 
-        When the websocket being read from has given up all its messages, yields {"done": True} to
+        When the websocket being read from has given up all its messages, yields {'done': True} to
         indicate that the caller has read all of the relevent data for now, and should continue
         its own processing and check back for more data later.
 
@@ -442,18 +444,18 @@ class SlackClient(object):
                 break
             else:
                 # see https://api.slack.com/docs/rate-limits
-                log.warning("Slack connection is invalid.  Server: {}, sleeping {}".format(self.sc.server, sleeps))
+                log.warning('Slack connection is invalid.  Server: {}, sleeping {}'.format(self.sc.server, sleeps))
                 time.sleep(sleeps)  # respawning too fast makes the slack API unhappy about the next reconnection
         else:
-            raise UserWarning("Connection to slack is still invalid, giving up: {}".format(self.slack_connect))  # Boom!
+            raise UserWarning('Connection to slack is still invalid, giving up: {}'.format(self.slack_connect))  # Boom!
         while True:
             msg = self.sc.rtm_read()
             for m_data in msg:
                 try:
                     msg_text = self.message_text(m_data)
                 except (ValueError, TypeError) as msg_err:
-                    log.debug("Got an error from trying to get the message text {}".format(msg_err))
-                    yield {"message_data": m_data}  # Not a message type from the API?
+                    log.debug('Got an error from trying to get the message text {}'.format(msg_err))
+                    yield {'message_data': m_data}  # Not a message type from the API?
                     continue
 
                 # Find the channel object from the channel name
@@ -462,15 +464,15 @@ class SlackClient(object):
                 if msg_text.startswith(trigger_string):
                     loaded_groups = self.get_config_groups(groups, groups_pillar_name)
                     if not data.get('user_name'):
-                        log.error("The user {} can't be looked up via slack.  What has happened here?".format(
+                        log.error('The user {} can not be looked up via slack.  What has happened here?'.format(
                             m_data.get('user')))
-                        channel.send_message("The user {} can't be looked up via slack.  Not running {}".format(
+                        channel.send_message('The user {} can not be looked up via slack.  Not running {}'.format(
                             data['user_id'], msg_text))
-                        yield {"message_data": m_data}
+                        yield {'message_data': m_data}
                         continue
                     (allowed, target, cmdline) = self.control_message_target(
                             data['user_name'], msg_text, loaded_groups, trigger_string)
-                    log.debug("Got target: {}, cmdline: {}".format(target, cmdline))
+                    log.debug('Got target: {}, cmdline: {}'.format(target, cmdline))
                     if allowed:
                         yield {
                             'message_data': m_data,
@@ -515,11 +517,11 @@ class SlackClient(object):
              'default_target': {'target': '*', 'tgt_type': 'glob'},
              'targets': {}, 'users': {'dmangot', 'jmickle', 'pcn'}}
 
-        Run each of them through ``get_configured_target(("foo", f), "pillar.get")`` and confirm a valid target
+        Run each of them through ``get_configured_target(('foo', f), 'pillar.get')`` and confirm a valid target
 
         '''
         # Default to targetting all minions with a type of glob
-        null_target = {"target": '*', "tgt_type": 'glob'}
+        null_target = {'target': '*', 'tgt_type': 'glob'}
 
         def check_cmd_against_group(cmd):
             '''
@@ -532,23 +534,23 @@ class SlackClient(object):
             if group_config.get('targets'):
                 if group_config['targets'].get(cmd):
                     target = group_config['targets'][cmd]
-            if not target.get("target"):
-                log.debug("Group {} is not configured to have a target for cmd {}.".format(name, cmd))
+            if not target.get('target'):
+                log.debug('Group {} is not configured to have a target for cmd {}.'.format(name, cmd))
             return target
 
         for this_cl in cmdline, alias_cmdline:
             _, kwargs = self.parse_args_and_kwargs(this_cl)
             if 'target' in kwargs:
-                log.debug("target is in kwargs {}.".format(kwargs))
+                log.debug('target is in kwargs {}.'.format(kwargs))
                 if 'tgt_type' in kwargs:
-                    log.debug("tgt_type is in kwargs {}.".format(kwargs))
-                    return {"target": kwargs['target'], "tgt_type": kwargs['tgt_type']}
-                return {"target": kwargs['target'], "tgt_type": 'glob'}
+                    log.debug('tgt_type is in kwargs {}.'.format(kwargs))
+                    return {'target': kwargs['target'], 'tgt_type': kwargs['tgt_type']}
+                return {'target': kwargs['target'], 'tgt_type': 'glob'}
 
         for this_cl in cmdline, alias_cmdline:
             checked = check_cmd_against_group(this_cl[0])
-            log.debug("this cmdline has target {}.".format(this_cl))
-            if checked.get("target"):
+            log.debug('this cmdline has target {}.'.format(this_cl))
+            if checked.get('target'):
                 return checked
         return null_target
 
@@ -579,7 +581,7 @@ class SlackClient(object):
             import pprint
             log.exception('Exception {0} encountered when trying to serialize {1}'.format(
                 exc, pprint.pformat(data)))
-            return "Got an error trying to serialze/clean up the response"
+            return 'Got an error trying to serialze/clean up the response'
 
     def parse_args_and_kwargs(self, cmdline):
         '''
@@ -640,57 +642,57 @@ class SlackClient(object):
         outstanding = dict()  # set of job_id that we need to check for
 
         while True:
-            log.trace("Sleeping for interval of {}".format(interval))
+            log.trace('Sleeping for interval of {}'.format(interval))
             time.sleep(interval)
             # Drain the slack messages, up to 10 messages at a clip
             count = 0
             for msg in message_generator:
                 # The message_generator yields dicts.  Leave this loop
-                # on a dict that looks like {"done": True} or when we've done it
+                # on a dict that looks like {'done': True} or when we've done it
                 # 10 times without taking a break.
-                log.trace("Got a message from the generator: {}".format(msg.keys()))
+                log.trace('Got a message from the generator: {}'.format(msg.keys()))
                 if count > 10:
-                    log.warn("Breaking in getting messages because count is exceeded")
+                    log.warn('Breaking in getting messages because count is exceeded')
                     break
                 if len(msg) == 0:
                     count += 1
-                    log.warn("len(msg) is zero")
+                    log.warn('len(msg) is zero')
                     continue  # This one is a dud, get the next message
-                if msg.get("done"):
-                    log.trace("msg is done")
+                if msg.get('done'):
+                    log.trace('msg is done')
                     break
                 if fire_all:
-                    log.debug("Firing message to the bus with tag: {}".format(tag))
-                    log.debug("{} {}".format(tag, msg))
+                    log.debug('Firing message to the bus with tag: {}'.format(tag))
+                    log.debug('{} {}'.format(tag, msg))
                     self.fire('{0}/{1}'.format(tag, msg['message_data'].get('type')), msg)
                 if control and (len(msg) > 1) and msg.get('cmdline'):
                     channel = self.sc.server.channels.find(msg['channel'])
                     jid = self.run_command_async(msg)
-                    log.debug("Submitted a job and got jid: {}".format(jid))
+                    log.debug('Submitted a job and got jid: {}'.format(jid))
                     outstanding[jid] = msg  # record so we can return messages to the caller
                     channel.send_message("@{}'s job is submitted as salt jid {}".format(msg['user_name'], jid))
                 count += 1
             start_time = time.time()
             job_status = self.get_jobs_from_runner(outstanding.keys())  # dict of job_ids:results are returned
-            log.trace("Getting {} jobs status took {} seconds".format(len(job_status), time.time() - start_time))
+            log.trace('Getting {} jobs status took {} seconds'.format(len(job_status), time.time() - start_time))
             for jid, result in job_status.items():
                 if result:
-                    log.debug("ret to send back is {}".format(result))
+                    log.debug('ret to send back is {}'.format(result))
                     # formatting function?
                     this_job = outstanding[jid]
                     channel = self.sc.server.channels.find(this_job['channel'])
                     return_text = self.format_return_text(result)
                     return_prefix = "@{}'s job `{}` (id: {}) (target: {}) returned".format(
-                        this_job["user_name"], this_job["cmdline"], jid, this_job["target"])
+                        this_job['user_name'], this_job['cmdline'], jid, this_job['target'])
                     channel.send_message(return_prefix)
                     ts = time.time()
                     st = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S%f')
                     filename = 'salt-results-{0}.yaml'.format(st)
                     r = self.sc.api_call(
-                        "files.upload", channels=channel.id, filename=filename,
+                        'files.upload', channels=channel.id, filename=filename,
                         content=return_text)
                     # Handle unicode return
-                    log.debug("Got back {} via the slack client".format(r))
+                    log.debug('Got back {} via the slack client'.format(r))
                     resp = yaml.safe_load(json.dumps(r))
                     if 'ok' in resp and resp['ok'] is False:
                         this_job['channel'].send_message('Error: {0}'.format(resp['error']))
@@ -712,7 +714,7 @@ class SlackClient(object):
         :param interval: time to wait between ending a loop and beginning the next
 
         '''
-        log.debug("Going to run a command async")
+        log.debug('Going to run a command async')
         runner_functions = sorted(salt.runner.Runner(__opts__).functions)
         # Parse args and kwargs
         cmd = msg['cmdline'][0]
@@ -724,33 +726,33 @@ class SlackClient(object):
             kwargs.update(pillar=ast.literal_eval(kwargs['pillar']))
 
         # Check for target. Otherwise assume None
-        target = msg["target"]["target"]
+        target = msg['target']['target']
         # Check for tgt_type. Otherwise assume glob
-        tgt_type = msg["target"]['tgt_type']
-        log.debug("target_type is: {}".format(tgt_type))
+        tgt_type = msg['target']['tgt_type']
+        log.debug('target_type is: {}'.format(tgt_type))
 
         if cmd in runner_functions:
             runner = salt.runner.RunnerClient(__opts__)
-            log.debug("Command {} will run via runner_functions".format(cmd))
+            log.debug('Command {} will run via runner_functions'.format(cmd))
             # pylint is tripping
             # pylint: disable=missing-whitespace-after-comma
-            job_id_dict = runner.async(cmd, {"args": args, "kwargs": kwargs})
+            job_id_dict = runner.async(cmd, {'args': args, 'kwargs': kwargs})
             job_id = job_id_dict['jid']
 
         # Default to trying to run as a client module.
         else:
             local = salt.client.LocalClient()
-            log.debug("Command {} will run via local.cmd_async, targeting {}".format(cmd, target))
-            log.debug("Running {}, {}, {}, {}, {}".format(str(target), cmd, args, kwargs, str(tgt_type)))
+            log.debug('Command {} will run via local.cmd_async, targeting {}'.format(cmd, target))
+            log.debug('Running {}, {}, {}, {}, {}'.format(str(target), cmd, args, kwargs, str(tgt_type)))
             # according to https://github.com/saltstack/salt-api/issues/164, tgt_type has changed to expr_form
             job_id = local.cmd_async(str(target), cmd, arg=args, kwarg=kwargs, tgt_type=str(tgt_type))
-            log.info("ret from local.cmd_async is {}".format(job_id))
+            log.info('ret from local.cmd_async is {}'.format(job_id))
         return job_id
 
 
 def start(token,
           control=False,
-          trigger="!",
+          trigger='!',
           groups=None,
           groups_pillar_name=None,
           fire_all=False,
@@ -761,7 +763,7 @@ def start(token,
 
     if (not token) or (not token.startswith('xoxb')):
         time.sleep(2)  # don't respawn too quickly
-        log.error("Slack bot token not found, bailing...")
+        log.error('Slack bot token not found, bailing...')
         raise UserWarning('Slack Engine bot token not configured')
 
     try:
@@ -769,4 +771,4 @@ def start(token,
         message_generator = client.generate_triggered_messages(token, trigger, groups, groups_pillar_name)
         client.run_commands_from_slack_async(message_generator, fire_all, tag, control)
     except Exception:
-        raise Exception("{}".format(traceback.format_exc()))
+        raise Exception('{}'.format(traceback.format_exc()))
