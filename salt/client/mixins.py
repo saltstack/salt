@@ -360,19 +360,18 @@ class SyncClientMixin(object):
             # that since the caller knows what is an arg vs a kwarg, but while
             # we make the transition we will load "kwargs" using format_call if
             # there are no kwargs in the low object passed in.
-            f_call = {} if 'arg' in low and 'kwarg' in low \
-                else salt.utils.format_call(
+
+            if 'arg' in low and 'kwarg' in low:
+                args = low['arg']
+                kwargs = low['kwarg']
+            else:
+                f_call = salt.utils.format_call(
                     self.functions[fun],
                     low,
                     expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
                 )
-
-            args = f_call.get('args', ()) \
-                if 'arg' not in low \
-                else low['arg']
-            kwargs = f_call.get('kwargs', {}) \
-                if 'kwarg' not in low \
-                else low['kwarg']
+                args = f_call.get('args', ())
+                kwargs = f_call.get('kwargs', {})
 
             # Update the event data with loaded args and kwargs
             data['fun_args'] = list(args) + ([kwargs] if kwargs else [])
