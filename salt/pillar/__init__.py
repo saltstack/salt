@@ -25,6 +25,7 @@ import salt.utils.url
 import salt.utils.cache
 import salt.utils.crypt
 import salt.utils.dictupdate
+import salt.utils.args
 from salt.exceptions import SaltClientError
 from salt.template import compile_template
 from salt.utils.dictupdate import merge
@@ -841,7 +842,7 @@ class Pillar(object):
         Builds actual pillar data structure and updates the ``pillar`` variable
         '''
         ext = None
-        args = inspect.getargspec(self.ext_pillars[key]).args
+        args = salt.utils.args.get_function_argspec(self.ext_pillars[key]).args
 
         if isinstance(val, dict):
             if ('extra_minion_data' in args) and self.extra_minion_data:
