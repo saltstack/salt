@@ -66,7 +66,7 @@ class TestGitFSProvider(TestCase):
                 ('git_pillar', salt.utils.gitfs.GitPillar),
                 ('winrepo', salt.utils.gitfs.WinRepo)):
             key = '{0}_provider'.format(role_name)
-            for provider in salt.utils.gitfs.VALID_PROVIDERS:
+            for provider in salt.utils.gitfs.GIT_PROVIDERS:
                 verify = 'verify_gitpython'
                 mock1 = _get_mock(verify, provider)
                 with patch.object(role_class, verify, mock1):
