@@ -18,7 +18,6 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.modules.alternatives as alternatives
-import salt.utils.path
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
