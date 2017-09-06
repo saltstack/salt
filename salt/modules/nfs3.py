@@ -147,6 +147,6 @@ def reload_exports():
     ret['stderr'] = output['stderr']
     # exportfs always returns 0, so retcode is useless
     # We will consider it an error if stderr is nonempty
-    ret['result'] = output['stderr'] == ""
+    ret['result'] = output['stderr'] == ''
 
     return ret
