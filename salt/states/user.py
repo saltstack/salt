@@ -23,14 +23,14 @@ as either absent or present
     testuser:
       user.absent
 '''
-
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 import logging
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
+import salt.utils.platform
 from salt.utils.locales import sdecode, sdecode_if_string
 
 # Import 3rd-party libs
@@ -146,7 +146,7 @@ def _changes(name,
             change['warndays'] = warndays
         if expire and lshad['expire'] != expire:
             change['expire'] = expire
-    elif 'shadow.info' in __salt__ and salt.utils.is_windows():
+    elif 'shadow.info' in __salt__ and salt.utils.platform.is_windows():
         if expire and expire is not -1 and salt.utils.date_format(lshad['expire']) != salt.utils.date_format(expire):
             change['expire'] = expire
 
@@ -633,7 +633,7 @@ def present(name,
 
         # Setup params specific to Linux and Windows to be passed to the
         # add.user function
-        if not salt.utils.is_windows():
+        if not salt.utils.platform.is_windows():
             params = {'name': name,
                       'uid': uid,
                       'gid': gid,
@@ -667,8 +667,8 @@ def present(name,
                 # pwd incorrectly reports presence of home
                 ret['changes']['home'] = ''
             if 'shadow.info' in __salt__ \
-                and not salt.utils.is_windows()\
-                and not salt.utils.is_darwin():
+                and not salt.utils.platform.is_windows() \
+                and not salt.utils.platform.is_darwin():
                 if password and not empty_password:
                     __salt__['shadow.set_password'](name, password)
                     spost = __salt__['shadow.info'](name)
@@ -740,7 +740,7 @@ def present(name,
                                          ' {1}'.format(name, expire)
                         ret['result'] = False
                     ret['changes']['expire'] = expire
-            elif salt.utils.is_windows():
+            elif salt.utils.platform.is_windows():
                 if password and not empty_password:
                     if not __salt__['user.setpassword'](name, password):
                         ret['comment'] = 'User {0} created but failed to set' \
@@ -757,7 +757,7 @@ def present(name,
                                          ' {1}'.format(name, expire)
                         ret['result'] = False
                     ret['changes']['expiration_date'] = spost['expire']
-            elif salt.utils.is_darwin() and password and not empty_password:
+            elif salt.utils.platform.is_darwin() and password and not empty_password:
                 if not __salt__['shadow.set_password'](name, password):
                     ret['comment'] = 'User {0} created but failed to set' \
                                      ' password to' \

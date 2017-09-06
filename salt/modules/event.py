@@ -16,7 +16,7 @@ import salt.crypt
 import salt.utils.event
 import salt.payload
 import salt.transport
-import salt.ext.six as six
+from salt.ext import six
 
 __proxyenabled__ = ['*']
 log = logging.getLogger(__name__)

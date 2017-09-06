@@ -12,12 +12,12 @@ import os
 import re
 
 # Import salt libraries
-import salt.utils
 import salt.utils.files
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import filter, zip  # pylint: disable=import-error,redefined-builtin
 
 # Set up logger
@@ -31,7 +31,7 @@ def __virtual__():
     '''
     Only load on POSIX-like systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The cryptdev module cannot be loaded: not a POSIX-like system')
 
     return True

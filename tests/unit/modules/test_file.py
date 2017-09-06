@@ -641,7 +641,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_patch(self):
         with patch('os.path.isdir', return_value=False) as mock_isdir, \
-                patch('salt.utils.which', return_value='/bin/patch') as mock_which:
+                patch('salt.utils.path.which', return_value='/bin/patch') as mock_which:
             cmd_mock = MagicMock(return_value='test_retval')
             with patch.dict(filemod.__salt__, {'cmd.run_all': cmd_mock}):
                 ret = filemod.patch('/path/to/file', '/path/to/patch')
@@ -652,7 +652,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_patch_dry_run(self):
         with patch('os.path.isdir', return_value=False) as mock_isdir, \
-                patch('salt.utils.which', return_value='/bin/patch') as mock_which:
+                patch('salt.utils.path.which', return_value='/bin/patch') as mock_which:
             cmd_mock = MagicMock(return_value='test_retval')
             with patch.dict(filemod.__salt__, {'cmd.run_all': cmd_mock}):
                 ret = filemod.patch('/path/to/file', '/path/to/patch', dry_run=True)
@@ -663,7 +663,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_patch_dir(self):
         with patch('os.path.isdir', return_value=True) as mock_isdir, \
-                patch('salt.utils.which', return_value='/bin/patch') as mock_which:
+                patch('salt.utils.path.which', return_value='/bin/patch') as mock_which:
             cmd_mock = MagicMock(return_value='test_retval')
             with patch.dict(filemod.__salt__, {'cmd.run_all': cmd_mock}):
                 ret = filemod.patch('/path/to/dir', '/path/to/patch')

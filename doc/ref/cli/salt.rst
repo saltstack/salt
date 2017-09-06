@@ -81,7 +81,7 @@ Options
 
     Pass in an external authentication medium to validate against. The
     credentials will be prompted for. The options are `auto`,
-    `keystone`, `ldap`, `pam`, and `stormpath`. Can be used with the -T
+    `keystone`, `ldap`, and `pam`. Can be used with the -T
     option.
 
 .. option:: -T, --make-token

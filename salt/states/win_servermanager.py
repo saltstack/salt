@@ -12,6 +12,7 @@ from __future__ import absolute_import
 
 # Import salt modules
 import salt.utils
+import salt.utils.versions
 
 
 def __virtual__():
@@ -113,7 +114,7 @@ def installed(name,
               - Web-Service
     '''
     if 'force' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Flourine',
             'Parameter \'force\' has been detected in the argument list. This'
             'parameter is no longer used and has been replaced by \'recurse\''

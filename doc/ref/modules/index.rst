@@ -429,7 +429,7 @@ similar to the following:
        Confine this module to Mac OS with Homebrew.
        '''
 
-       if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
+       if salt.utils.path.which('brew') and __grains__['os'] == 'MacOS':
            return __virtualname__
        return False
 
@@ -451,7 +451,7 @@ For example:
         '''
         Only load if git exists on the system
         '''
-        if salt.utils.which('git') is None:
+        if salt.utils.path.which('git') is None:
             return (False,
                     'The git execution module cannot be loaded: git unavailable.')
         else:

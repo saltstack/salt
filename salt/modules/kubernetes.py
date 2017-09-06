@@ -51,11 +51,17 @@ try:
     import kubernetes.client
     from kubernetes.client.rest import ApiException
     from urllib3.exceptions import HTTPError
+    try:
+        # There is an API change in Kubernetes >= 2.0.0.
+        from kubernetes.client import V1beta1Deployment as AppsV1beta1Deployment
+        from kubernetes.client import V1beta1DeploymentSpec as AppsV1beta1DeploymentSpec
+    except ImportError:
+        from kubernetes.client import AppsV1beta1Deployment
+        from kubernetes.client import AppsV1beta1DeploymentSpec
 
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
-
 
 log = logging.getLogger(__name__)
 
@@ -876,7 +882,7 @@ def create_deployment(
     '''
     body = __create_object_body(
         kind='Deployment',
-        obj_class=kubernetes.client.V1beta1Deployment,
+        obj_class=AppsV1beta1Deployment,
         spec_creator=__dict_to_deployment_spec,
         name=name,
         namespace=namespace,
@@ -1139,7 +1145,7 @@ def replace_deployment(name,
     '''
     body = __create_object_body(
         kind='Deployment',
-        obj_class=kubernetes.client.V1beta1Deployment,
+        obj_class=AppsV1beta1Deployment,
         spec_creator=__dict_to_deployment_spec,
         name=name,
         namespace=namespace,
@@ -1410,9 +1416,9 @@ def __dict_to_object_meta(name, namespace, metadata):
 
 def __dict_to_deployment_spec(spec):
     '''
-    Converts a dictionary into kubernetes V1beta1DeploymentSpec instance.
+    Converts a dictionary into kubernetes AppsV1beta1DeploymentSpec instance.
     '''
-    spec_obj = kubernetes.client.V1beta1DeploymentSpec()
+    spec_obj = AppsV1beta1DeploymentSpec()
     for key, value in iteritems(spec):
         if hasattr(spec_obj, key):
             setattr(spec_obj, key, value)

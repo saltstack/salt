@@ -97,6 +97,7 @@ execution modules
     cytest
     daemontools
     data
+    datadog_api
     ddns
     deb_apache
     deb_postgres
@@ -399,7 +400,6 @@ execution modules
     state
     status
     statuspage
-    stormpath
     supervisord
     suse_apache
     svn
@@ -417,6 +417,7 @@ execution modules
     test
     testinframod
     test_virtual
+    textfsm_mod
     timezone
     tls
     tomcat

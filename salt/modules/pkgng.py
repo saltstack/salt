@@ -48,8 +48,9 @@ import salt.utils
 import salt.utils.files
 import salt.utils.itertools
 import salt.utils.pkg
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -297,7 +298,7 @@ def latest_version(*names, **kwargs):
     root = kwargs.get('root')
     pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot, root=root)
 
-    if salt.utils.compare_versions(_get_pkgng_version(jail, chroot, root), '>=', '1.6.0'):
+    if salt.utils.versions.compare(_get_pkgng_version(jail, chroot, root), '>=', '1.6.0'):
         quiet = True
     else:
         quiet = False
@@ -329,7 +330,7 @@ def latest_version(*names, **kwargs):
                 ret[name] = pkgver
             else:
                 if not any(
-                    (salt.utils.compare_versions(ver1=x,
+                    (salt.utils.versions.compare(ver1=x,
                                                  oper='>=',
                                                  ver2=pkgver)
                      for x in installed)

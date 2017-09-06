@@ -16,8 +16,9 @@ import copy
 # Import salt libs
 import salt.utils
 import salt.utils.pkg
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'pkgutil'
@@ -227,7 +228,7 @@ def latest_version(*names, **kwargs):
         if name in names:
             cver = pkgs.get(name, '')
             nver = version_rev.split(',')[0]
-            if not cver or salt.utils.compare_versions(ver1=cver,
+            if not cver or salt.utils.versions.compare(ver1=cver,
                                                        oper='<',
                                                        ver2=nver):
                 # Remove revision for version comparison

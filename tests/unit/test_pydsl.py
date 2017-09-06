@@ -16,14 +16,14 @@ from tests.support.paths import TMP
 # Import Salt libs
 import salt.loader
 import salt.config
-import salt.utils
 import salt.utils.files
+import salt.utils.versions
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO
 
 
@@ -91,12 +91,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
 
     def render_sls(self, content, sls='', saltenv='base', **kws):
         if 'env' in kws:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             kws.pop('env')
 
         return self.HIGHSTATE.state.rend['pydsl'](

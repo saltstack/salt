@@ -16,17 +16,21 @@ import copy as pycopy
 # Import Salt libs
 import salt.exceptions
 import salt.minion
-import salt.utils
+import salt.utils  # Can be removed once daemonize, get_specific_user, format_call are moved
+import salt.utils.args
 import salt.utils.doc
 import salt.utils.error
 import salt.utils.event
 import salt.utils.jid
 import salt.utils.job
 import salt.utils.lazy
+import salt.utils.platform
 import salt.utils.process
+import salt.utils.state
+import salt.utils.versions
 import salt.transport
 import salt.log.setup
-import salt.ext.six as six
+from salt.ext import six
 
 # Import 3rd-party libs
 import tornado.stack_context
@@ -34,18 +38,18 @@ import tornado.stack_context
 log = logging.getLogger(__name__)
 
 CLIENT_INTERNAL_KEYWORDS = frozenset([
-    'client',
-    'cmd',
-    'eauth',
-    'fun',
-    'kwarg',
-    'match',
-    'token',
-    '__jid__',
-    '__tag__',
-    '__user__',
-    'username',
-    'password'
+    u'client',
+    u'cmd',
+    u'eauth',
+    u'fun',
+    u'kwarg',
+    u'match',
+    u'token',
+    u'__jid__',
+    u'__tag__',
+    u'__user__',
+    u'username',
+    u'password'
 ])
 
 
@@ -77,9 +81,9 @@ class ClientFuncsDict(collections.MutableMapping):
             raise KeyError
 
         def wrapper(*args, **kwargs):
-            low = {'fun': key,
-                   'args': args,
-                   'kwargs': kwargs,
+            low = {u'fun': key,
+                   u'args': args,
+                   u'kwargs': kwargs,
                    }
             pub_data = {}
             # Copy kwargs keys so we can iterate over and pop the pub data
@@ -87,18 +91,18 @@ class ClientFuncsDict(collections.MutableMapping):
 
             # pull out pub_data if you have it
             for kwargs_key in kwargs_keys:
-                if kwargs_key.startswith('__pub_'):
+                if kwargs_key.startswith(u'__pub_'):
                     pub_data[kwargs_key] = kwargs.pop(kwargs_key)
 
-            async_pub = self.client._gen_async_pub(pub_data.get('__pub_jid'))
+            async_pub = self.client._gen_async_pub(pub_data.get(u'__pub_jid'))
 
             user = salt.utils.get_specific_user()
             return self.client._proc_function(
                 key,
                 low,
                 user,
-                async_pub['tag'],  # TODO: fix
-                async_pub['jid'],  # TODO: fix
+                async_pub[u'tag'],  # TODO: fix
+                async_pub[u'jid'],  # TODO: fix
                 False,  # Don't daemonize
             )
         return wrapper
@@ -129,14 +133,14 @@ class SyncClientMixin(object):
         Execute a function through the master network interface.
         '''
         load = kwargs
-        load['cmd'] = self.client
+        load[u'cmd'] = self.client
         channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 usage='master_call')
+                                                 crypt=u'clear',
+                                                 usage=u'master_call')
         ret = channel.send(load)
         if isinstance(ret, collections.Mapping):
-            if 'error' in ret:
-                salt.utils.error.raise_error(**ret['error'])
+            if u'error' in ret:
+                salt.utils.error.raise_error(**ret[u'error'])
         return ret
 
     def cmd_sync(self, low, timeout=None, full_return=False):
@@ -155,19 +159,19 @@ class SyncClientMixin(object):
                 'eauth': 'pam',
             })
         '''
-        event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=True)
+        event = salt.utils.event.get_master_event(self.opts, self.opts[u'sock_dir'], listen=True)
         job = self.master_call(**low)
-        ret_tag = salt.utils.event.tagify('ret', base=job['tag'])
+        ret_tag = salt.utils.event.tagify(u'ret', base=job[u'tag'])
 
         if timeout is None:
-            timeout = self.opts.get('rest_timeout', 300)
+            timeout = self.opts.get(u'rest_timeout', 300)
         ret = event.get_event(tag=ret_tag, full=True, wait=timeout, auto_reconnect=True)
         if ret is None:
             raise salt.exceptions.SaltClientTimeout(
-                "RunnerClient job '{0}' timed out".format(job['jid']),
-                jid=job['jid'])
+                u"RunnerClient job '{0}' timed out".format(job[u'jid']),
+                jid=job[u'jid'])
 
-        return ret if full_return else ret['data']['return']
+        return ret if full_return else ret[u'data'][u'return']
 
     def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
         '''
@@ -202,40 +206,40 @@ class SyncClientMixin(object):
             arg = tuple()
         if not isinstance(arg, list) and not isinstance(arg, tuple):
             raise salt.exceptions.SaltInvocationError(
-                'arg must be formatted as a list/tuple'
+                u'arg must be formatted as a list/tuple'
             )
         if pub_data is None:
             pub_data = {}
         if not isinstance(pub_data, dict):
             raise salt.exceptions.SaltInvocationError(
-                'pub_data must be formatted as a dictionary'
+                u'pub_data must be formatted as a dictionary'
             )
         if kwarg is None:
             kwarg = {}
         if not isinstance(kwarg, dict):
             raise salt.exceptions.SaltInvocationError(
-                'kwarg must be formatted as a dictionary'
+                u'kwarg must be formatted as a dictionary'
             )
         arglist = salt.utils.args.parse_input(
             arg,
-            no_parse=self.opts.get('no_parse', []))
+            no_parse=self.opts.get(u'no_parse', []))
 
         # if you were passed kwarg, add it to arglist
         if kwarg:
-            kwarg['__kwarg__'] = True
+            kwarg[u'__kwarg__'] = True
             arglist.append(kwarg)
 
         args, kwargs = salt.minion.load_args_and_kwargs(
             self.functions[fun], arglist, pub_data
         )
-        low = {'fun': fun,
-               'arg': args,
-               'kwarg': kwargs}
+        low = {u'fun': fun,
+               u'arg': args,
+               u'kwarg': kwargs}
         return self.low(fun, low, print_event=print_event, full_return=full_return)
 
     @property
     def mminion(self):
-        if not hasattr(self, '_mminion'):
+        if not hasattr(self, u'_mminion'):
             self._mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
         return self._mminion
 
@@ -244,15 +248,15 @@ class SyncClientMixin(object):
         Check for deprecated usage and allow until Salt Oxygen.
         '''
         msg = []
-        if 'args' in low:
-            msg.append('call with arg instead')
-            low['arg'] = low.pop('args')
-        if 'kwargs' in low:
-            msg.append('call with kwarg instead')
-            low['kwarg'] = low.pop('kwargs')
+        if u'args' in low:
+            msg.append(u'call with arg instead')
+            low[u'arg'] = low.pop(u'args')
+        if u'kwargs' in low:
+            msg.append(u'call with kwarg instead')
+            low[u'kwarg'] = low.pop(u'kwargs')
 
         if msg:
-            salt.utils.warn_until('Oxygen', ' '.join(msg))
+            salt.utils.versions.warn_until(u'Oxygen', u' '.join(msg))
 
         return self._low(fun, low, print_event=print_event, full_return=full_return)
 
@@ -266,13 +270,13 @@ class SyncClientMixin(object):
             class_name = self.__class__.__name__.lower()
         except AttributeError:
             log.warning(
-                'Unable to determine class name',
+                u'Unable to determine class name',
                 exc_info_on_loglevel=logging.DEBUG
             )
             return True
 
         try:
-            return self.opts['{0}_returns'.format(class_name)]
+            return self.opts[u'{0}_returns'.format(class_name)]
         except KeyError:
             # No such option, assume this isn't one we care about gating and
             # just return True.
@@ -295,24 +299,24 @@ class SyncClientMixin(object):
         # this is not to clutter the output with the module loading
         # if we have a high debug level.
         self.mminion  # pylint: disable=W0104
-        jid = low.get('__jid__', salt.utils.jid.gen_jid())
-        tag = low.get('__tag__', salt.utils.event.tagify(jid, prefix=self.tag_prefix))
+        jid = low.get(u'__jid__', salt.utils.jid.gen_jid())
+        tag = low.get(u'__tag__', salt.utils.event.tagify(jid, prefix=self.tag_prefix))
 
-        data = {'fun': '{0}.{1}'.format(self.client, fun),
-                'jid': jid,
-                'user': low.get('__user__', 'UNKNOWN'),
+        data = {u'fun': u'{0}.{1}'.format(self.client, fun),
+                u'jid': jid,
+                u'user': low.get(u'__user__', u'UNKNOWN'),
                }
 
         event = salt.utils.event.get_event(
-                'master',
-                self.opts['sock_dir'],
-                self.opts['transport'],
+                u'master',
+                self.opts[u'sock_dir'],
+                self.opts[u'transport'],
                 opts=self.opts,
                 listen=False)
 
         if print_event:
             print_func = self.print_async_event \
-                if hasattr(self, 'print_async_event') \
+                if hasattr(self, u'print_async_event') \
                 else None
         else:
             # Suppress printing of return event (this keeps us from printing
@@ -327,12 +331,12 @@ class SyncClientMixin(object):
 
         # TODO: document these, and test that they exist
         # TODO: Other things to inject??
-        func_globals = {'__jid__': jid,
-                        '__user__': data['user'],
-                        '__tag__': tag,
+        func_globals = {u'__jid__': jid,
+                        u'__user__': data[u'user'],
+                        u'__tag__': tag,
                         # weak ref to avoid the Exception in interpreter
                         # teardown of event
-                        '__jid_event__': weakref.proxy(namespaced_event),
+                        u'__jid_event__': weakref.proxy(namespaced_event),
                         }
 
         try:
@@ -344,9 +348,9 @@ class SyncClientMixin(object):
             completed_funcs = []
 
             for mod_name in six.iterkeys(self_functions):
-                if '.' not in mod_name:
+                if u'.' not in mod_name:
                     continue
-                mod, _ = mod_name.split('.', 1)
+                mod, _ = mod_name.split(u'.', 1)
                 if mod in completed_funcs:
                     continue
                 completed_funcs.append(mod)
@@ -362,86 +366,88 @@ class SyncClientMixin(object):
             # we make the transition we will load "kwargs" using format_call if
             # there are no kwargs in the low object passed in
             f_call = None
-            if 'arg' not in low:
+            if u'arg' not in low:
                 f_call = salt.utils.format_call(
                     self.functions[fun],
                     low,
                     expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
                 )
-                args = f_call.get('args', ())
+                args = f_call.get(u'args', ())
             else:
-                args = low['arg']
+                args = low[u'arg']
 
-            if 'kwarg' not in low:
+            if u'kwarg' not in low:
                 log.critical(
-                    'kwargs must be passed inside the low data within the '
-                    '\'kwarg\' key. See usage of '
-                    'salt.utils.args.parse_input() and '
-                    'salt.minion.load_args_and_kwargs() elsewhere in the '
-                    'codebase.'
+                    u'kwargs must be passed inside the low data within the '
+                    u'\'kwarg\' key. See usage of '
+                    u'salt.utils.args.parse_input() and '
+                    u'salt.minion.load_args_and_kwargs() elsewhere in the '
+                    u'codebase.'
                 )
                 kwargs = {}
             else:
-                kwargs = low['kwarg']
+                kwargs = low[u'kwarg']
 
             # Update the event data with loaded args and kwargs
-            data['fun_args'] = list(args) + ([kwargs] if kwargs else [])
-            func_globals['__jid_event__'].fire_event(data, 'new')
+            data[u'fun_args'] = list(args) + ([kwargs] if kwargs else [])
+            func_globals[u'__jid_event__'].fire_event(data, u'new')
 
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
-                data['return'] = self.functions[fun](*args, **kwargs)
-                data['success'] = True
-                if isinstance(data['return'], dict) and 'data' in data['return']:
+                data[u'return'] = self.functions[fun](*args, **kwargs)
+                data[u'success'] = True
+                if isinstance(data[u'return'], dict) and u'data' in data[u'return']:
                     # some functions can return boolean values
-                    data['success'] = salt.utils.check_state_result(data['return']['data'])
+                    data[u'success'] = salt.utils.state.check_result(data[u'return'][u'data'])
         except (Exception, SystemExit) as ex:
             if isinstance(ex, salt.exceptions.NotImplemented):
-                data['return'] = str(ex)
+                data[u'return'] = str(ex)
             else:
-                data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
+                data[u'return'] = u'Exception occurred in {0} {1}: {2}'.format(
                     self.client,
                     fun,
                     traceback.format_exc(),
                     )
-            data['success'] = False
-
-        namespaced_event.fire_event(data, 'ret')
+            data[u'success'] = False
 
         if self.store_job:
             try:
                 salt.utils.job.store_job(
                     self.opts,
                     {
-                        'id': self.opts['id'],
-                        'tgt': self.opts['id'],
-                        'jid': data['jid'],
-                        'return': data,
+                        u'id': self.opts[u'id'],
+                        u'tgt': self.opts[u'id'],
+                        u'jid': data[u'jid'],
+                        u'return': data,
                     },
                     event=None,
                     mminion=self.mminion,
                     )
             except salt.exceptions.SaltCacheError:
-                log.error('Could not store job cache info. '
-                          'Job details for this run may be unavailable.')
+                log.error(u'Could not store job cache info. '
+                          u'Job details for this run may be unavailable.')
+
+        # Outputters _can_ mutate data so write to the job cache first!
+        namespaced_event.fire_event(data, u'ret')
 
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
-        log.info('Runner completed: {0}'.format(data['jid']))
+        log.info(u'Runner completed: %s', data[u'jid'])
         del event
         del namespaced_event
-        return data if full_return else data['return']
+        return data if full_return else data[u'return']
 
     def get_docs(self, arg=None):
         '''
         Return a dictionary of functions and the inline documentation for each
         '''
         if arg:
-            if '*' in arg:
+            if u'*' in arg:
                 target_mod = arg
                 _use_fnmatch = True
             else:
-                target_mod = arg + '.' if not arg.endswith('.') else arg
+                target_mod = arg + u'.' if not arg.endswith(u'.') else arg
+                _use_fnmatch = False
             if _use_fnmatch:
                 docs = [(fun, self.functions[fun].__doc__)
                         for fun in fnmatch.filter(self.functions, target_mod)]
@@ -468,7 +474,7 @@ class AsyncClientMixin(object):
         Run this method in a multiprocess target to execute the function in a
         multiprocess and fire the return data on the event bus
         '''
-        if daemonize and not salt.utils.is_windows():
+        if daemonize and not salt.utils.platform.is_windows():
             # Shutdown the multiprocessing before daemonizing
             salt.log.setup.shutdown_multiprocessing_logging()
 
@@ -478,9 +484,9 @@ class AsyncClientMixin(object):
             salt.log.setup.setup_multiprocessing_logging()
 
         # pack a few things into low
-        low['__jid__'] = jid
-        low['__user__'] = user
-        low['__tag__'] = tag
+        low[u'__jid__'] = jid
+        low[u'__user__'] = user
+        low[u'__tag__'] = tag
 
         return self.low(fun, low, full_return=False)
 
@@ -508,9 +514,9 @@ class AsyncClientMixin(object):
         if jid is None:
             jid = salt.utils.jid.gen_jid()
         tag = salt.utils.event.tagify(jid, prefix=self.tag_prefix)
-        return {'tag': tag, 'jid': jid}
+        return {u'tag': tag, u'jid': jid}
 
-    def async(self, fun, low, user='UNKNOWN', pub=None):
+    def async(self, fun, low, user=u'UNKNOWN', pub=None):
         '''
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return
@@ -519,7 +525,7 @@ class AsyncClientMixin(object):
 
         proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
                 target=self._proc_function,
-                args=(fun, low, user, async_pub['tag'], async_pub['jid']))
+                args=(fun, low, user, async_pub[u'tag'], async_pub[u'jid']))
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
             # Reset current signals before starting the process in
             # order not to inherit the current signal handlers
@@ -535,29 +541,29 @@ class AsyncClientMixin(object):
             return
 
         # if we are "quiet", don't print
-        if self.opts.get('quiet', False):
+        if self.opts.get(u'quiet', False):
             return
 
         # some suffixes we don't want to print
-        if suffix in ('new',):
+        if suffix in (u'new',):
             return
 
         try:
-            outputter = self.opts.get('output', event.get('outputter', None) or event.get('return').get('outputter'))
+            outputter = self.opts.get(u'output', event.get(u'outputter', None) or event.get(u'return').get(u'outputter'))
         except AttributeError:
             outputter = None
 
         # if this is a ret, we have our own set of rules
-        if suffix == 'ret':
+        if suffix == u'ret':
             # Check if outputter was passed in the return data. If this is the case,
             # then the return data will be a dict two keys: 'data' and 'outputter'
-            if isinstance(event.get('return'), dict) \
-                    and set(event['return']) == set(('data', 'outputter')):
-                event_data = event['return']['data']
-                outputter = event['return']['outputter']
+            if isinstance(event.get(u'return'), dict) \
+                    and set(event[u'return']) == set((u'data', u'outputter')):
+                event_data = event[u'return'][u'data']
+                outputter = event[u'return'][u'outputter']
             else:
-                event_data = event['return']
+                event_data = event[u'return']
         else:
-            event_data = {'suffix': suffix, 'event': event}
+            event_data = {u'suffix': suffix, u'event': event}
 
         salt.output.display_output(event_data, outputter, self.opts)

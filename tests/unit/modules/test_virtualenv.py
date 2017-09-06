@@ -28,7 +28,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         base_virtualenv_mock = MagicMock()
         base_virtualenv_mock.__version__ = '1.9.1'
-        patcher = patch('salt.utils.which', lambda exe: exe)
+        patcher = patch('salt.utils.path.which', lambda exe: exe)
         patcher.start()
         self.addCleanup(patcher.stop)
         return {
