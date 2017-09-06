@@ -98,7 +98,7 @@ if not platform.startswith("win"):
         finally:
             signal.alarm(0)
 
-    _polling_time_limit = 30
+    POLLING_TIME_LIMIT = 30
 
 
 # pylint: disable=no-member
@@ -718,7 +718,7 @@ def delete_deployment(name, namespace='default', **kwargs):
         mutable_api_response = api_response.to_dict()
         if not platform.startswith("win"):
             try:
-                with _time_limit(_polling_time_limit):
+                with _time_limit(POLLING_TIME_LIMIT):
                     while show_deployment(name, namespace) is not None:  # pylint: disable=useless-else-on-loop
                         sleep(1)
                     else:
@@ -734,6 +734,10 @@ def delete_deployment(name, namespace='default', **kwargs):
                     break
                 else:
                     sleep(1)
+        if mutable_api_response['code'] != 200:
+            log.warning("Reached polling time limit. Deployment is not yet "
+                        "deleted, but we are backing off. Sorry, but you'll "
+                        "have to check manually.")
         return mutable_api_response
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
