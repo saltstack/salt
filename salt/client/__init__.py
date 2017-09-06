@@ -837,6 +837,7 @@ class LocalClient(object):
             tgt_type=u'glob',
             ret=u'',
             kwarg=None,
+            yield_all_minions=True,
             **kwargs):
         '''
         Yields the individual minion returns as they come in
@@ -883,7 +884,8 @@ class LocalClient(object):
             else:
                 if kwargs.get(u'yield_pub_data'):
                     yield pub_data
-                kwargs.setdefault('expect_minions', True)
+                if yield_all_minions:
+                    kwargs['expect_minions'] = True
                 for fn_ret in self.get_iter_returns(pub_data[u'jid'],
                                                     pub_data[u'minions'],
                                                     timeout=self._get_timeout(timeout),
@@ -909,6 +911,7 @@ class LocalClient(object):
             kwarg=None,
             show_jid=False,
             verbose=False,
+            yield_all_minions=True,
             **kwargs):
         '''
         Yields the individual minion returns as they come in, or None
@@ -958,6 +961,8 @@ class LocalClient(object):
             if not pub_data:
                 yield pub_data
             else:
+                if yield_all_minions:
+                    kwargs['expect_minions'] = True
                 for fn_ret in self.get_iter_returns(pub_data[u'jid'],
                                                     pub_data[u'minions'],
                                                     timeout=timeout,
