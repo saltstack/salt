@@ -108,7 +108,7 @@ import pprint
 import textwrap
 
 # Import salt libs
-import salt.utils
+import salt.utils.color
 import salt.utils.stringutils
 import salt.output
 from salt.utils.locales import sdecode
@@ -158,7 +158,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
 def _format_host(host, data):
     host = sdecode(host)
 
-    colors = salt.utils.get_colors(
+    colors = salt.utils.color.get_colors(
             __opts__.get('color'),
             __opts__.get('color_theme'))
     tabular = __opts__.get('state_tabular', False)
