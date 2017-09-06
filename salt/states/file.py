@@ -1565,7 +1565,7 @@ def managed(name,
     the salt master and potentially run through a templating system.
 
     name
-        The location of the file to manage
+        The location of the file to manage, as an absolute path.
 
     source
         The source file to download to the minion, this source file can be
@@ -1735,13 +1735,15 @@ def managed(name,
 
     group
         The group ownership set for the file, this defaults to the group salt
-        is running as on the minion On Windows, this is ignored
+        is running as on the minion. On Windows, this is ignored
 
     mode
-        The permissions to set on this file, e.g. ``644``, ``0775``, or ``4664``.
+        The permissions to set on this file, e.g. ``644``, ``0775``, or
+        ``4664``.
 
-        The default mode for new files and directories corresponds umask of salt
-        process. For existing files and directories it's not enforced.
+        The default mode for new files and directories corresponds to the
+        umask of the salt process. The mode of existing files and directories
+        will only be changed if ``mode`` is specified.
 
         .. note::
             This option is **not** supported on Windows.
@@ -2584,7 +2586,7 @@ def directory(name,
     Ensure that a named directory is present and has the right perms
 
     name
-        The location to create or manage a directory
+        The location to create or manage a directory, as an absolute path
 
     user
         The user to own the directory; this defaults to the user salt is
