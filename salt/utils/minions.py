@@ -202,7 +202,7 @@ class CkMinions(object):
         Return the minions found by looking via globs
         '''
         return {'minions': fnmatch.filter(self._pki_minions(), expr),
-                'missing': list()}
+                'missing': []}
 
     def _check_list_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
@@ -220,7 +220,7 @@ class CkMinions(object):
         '''
         reg = re.compile(expr)
         return {'minions': [m for m in self._pki_minions() if reg.match(m)],
-                'missing': list()}
+                'missing': []}
 
     def _pki_minions(self):
         '''
@@ -268,8 +268,8 @@ class CkMinions(object):
         elif cache_enabled:
             minions = list_cached_minions()
         else:
-            return {'minions': list(),
-                    'missing': list()}
+            return {'minions': [],
+                    'missing': []}
 
         if cache_enabled:
             if greedy:
@@ -278,7 +278,7 @@ class CkMinions(object):
                 cminions = minions
             if not cminions:
                 return {'minions': minions,
-                        'missing': list()}
+                        'missing': []}
             minions = set(minions)
             for id_ in cminions:
                 if greedy and id_ not in minions:
@@ -297,7 +297,7 @@ class CkMinions(object):
                     minions.remove(id_)
             minions = list(minions)
         return {'minions': minions,
-                'missing': list()}
+                'missing': []}
 
     def _check_grain_minions(self, expr, delimiter, greedy):
         '''
@@ -352,8 +352,8 @@ class CkMinions(object):
         elif cache_enabled:
             minions = self.cache.list('minions')
         else:
-            return {'minions': list(),
-                    'missing': list()}
+            return {'minions': [],
+                    'missing': []}
 
         if cache_enabled:
             if greedy:
@@ -362,7 +362,7 @@ class CkMinions(object):
                 cminions = minions
             if cminions is None:
                 return {'minions': minions,
-                        'missing': list()}
+                        'missing': []}
 
             tgt = expr
             try:
@@ -374,8 +374,8 @@ class CkMinions(object):
                     tgt = ipaddress.ip_network(tgt)
                 except:  # pylint: disable=bare-except
                     log.error('Invalid IP/CIDR target: {0}'.format(tgt))
-                    return {'minions': list(),
-                            'missing': list()}
+                    return {'minions': [],
+                            'missing': []}
             proto = 'ipv{0}'.format(tgt.version)
 
             minions = set(minions)
@@ -397,7 +397,7 @@ class CkMinions(object):
                     minions.remove(id_)
 
         return {'minions': list(minions),
-                'missing': list()}
+                'missing': []}
 
     def _check_range_minions(self, expr, greedy):
         '''
@@ -423,13 +423,13 @@ class CkMinions(object):
                     if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
                         mlist.append(fn_)
                 return {'minions': mlist,
-                        'missing': list()}
+                        'missing': []}
             elif cache_enabled:
                 return {'minions': self.cache.list('minions'),
-                        'missing': list()}
+                        'missing': []}
             else:
-                return {'minions': list(),
-                        'missing': list()}
+                return {'minions': [],
+                        'missing': []}
 
     def _check_compound_pillar_exact_minions(self, expr, delimiter, greedy):
         '''
@@ -452,7 +452,7 @@ class CkMinions(object):
         '''
         if not isinstance(expr, six.string_types) and not isinstance(expr, (list, tuple)):
             log.error('Compound target that is neither string, list nor tuple')
-            return {'minions': list(), 'missing': list()}
+            return {'minions': [], 'missing': []}
         minions = set(self._pki_minions())
         log.debug('minions: {0}'.format(minions))
 
@@ -488,7 +488,7 @@ class CkMinions(object):
                     if results:
                         if results[-1] == '(' and word in ('and', 'or'):
                             log.error('Invalid beginning operator after "(": {0}'.format(word))
-                            return {'minions': list(), 'missing': list()}
+                            return {'minions': [], 'missing': []}
                         if word == 'not':
                             if not results[-1] in ('&', '|', '('):
                                 results.append('&')
@@ -508,7 +508,7 @@ class CkMinions(object):
                                 log.error('Invalid compound expr (unexpected '
                                           'right parenthesis): {0}'
                                           .format(expr))
-                                return {'minions': list(), 'missing': list()}
+                                return {'minions': [], 'missing': []}
                             results.append(word)
                             unmatched.pop()
                             if unmatched and unmatched[-1] == '-':
@@ -517,7 +517,7 @@ class CkMinions(object):
                         else:  # Won't get here, unless oper is added
                             log.error('Unhandled oper in compound expr: {0}'
                                       .format(expr))
-                            return {'minions': list(), 'missing': list()}
+                            return {'minions': [], 'missing': []}
                     else:
                         # seq start with oper, fail
                         if word == 'not':
@@ -533,13 +533,13 @@ class CkMinions(object):
                                 'Expression may begin with'
                                 ' binary operator: {0}'.format(word)
                             )
-                            return {'minions': list(), 'missing': list()}
+                            return {'minions': [], 'missing': []}
 
                 elif target_info and target_info['engine']:
                     if 'N' == target_info['engine']:
                         # Nodegroups should already be expanded/resolved to other engines
                         log.error('Detected nodegroup expansion failure of "{0}"'.format(word))
-                        return {'minions': list(), 'missing': list()}
+                        return {'minions': [], 'missing': []}
                     engine = ref.get(target_info['engine'])
                     if not engine:
                         # If an unknown engine is called at any time, fail out
@@ -550,7 +550,7 @@ class CkMinions(object):
                                 word,
                             )
                         )
-                        return {'minions': list(), 'missing': list()}
+                        return {'minions': [], 'missing': []}
 
                     engine_args = [target_info['pattern']]
                     if target_info['engine'] in ('G', 'P', 'I', 'J'):
@@ -583,10 +583,10 @@ class CkMinions(object):
                 return {'minions': minions, 'missing': missing}
             except Exception:
                 log.error('Invalid compound target: {0}'.format(expr))
-                return {'minions': list(), 'missing': list()}
+                return {'minions': [], 'missing': []}
 
         return {'minions': list(minions),
-                'missing': list()}
+                'missing': []}
 
     def connected_ids(self, subset=None, show_ipv4=False, include_localhost=False):
         '''
@@ -638,7 +638,7 @@ class CkMinions(object):
         for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
             if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
                 mlist.append(fn_)
-        return {'minions': mlist, 'missing': list()}
+        return {'minions': mlist, 'missing': []}
 
     def check_minions(self,
                       expr,
@@ -670,7 +670,7 @@ class CkMinions(object):
             log.exception(
                     'Failed matching available minions with {0} pattern: {1}'
                     .format(tgt_type, expr))
-            _res = {'minions': list(), 'missing': list()}
+            _res = {'minions': [], 'missing': []}
         return _res
 
     def _expand_matching(self, auth_entry):
