@@ -887,7 +887,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                 except OSError as err:
                     self.info(
                         'PIDfile could not be deleted: {0}'.format(
-                            self.config['pidfile'], traceback.format_exc(err)
+                            self.config['pidfile']
                         )
                     )
 
