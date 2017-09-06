@@ -18,6 +18,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.modules.alternatives as alternatives
+import salt.utils.path
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -67,7 +68,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_current(self):
         mock = MagicMock(return_value='/etc/alternatives/salt')
-        with patch.dict(alternatives.__salt__, {'file.readlink': mock}):
+        with patch('salt.utils.path.readlink', mock):
             ret = alternatives.show_current('better-world')
             self.assertEqual('/etc/alternatives/salt', ret)
             mock.assert_called_once_with('/etc/alternatives/better-world')
@@ -81,7 +82,7 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_installed(self):
         mock = MagicMock(return_value='/etc/alternatives/salt')
-        with patch.dict(alternatives.__salt__, {'file.readlink': mock}):
+        with patch('salt.utils.path.readlink', mock):
             self.assertTrue(
                 alternatives.check_installed(
                     'better-world', '/etc/alternatives/salt'
