@@ -55,7 +55,22 @@ To ensure an NFS export is absent:
         - name: '/srv/nfs'
 
 '''
+import salt.utils.path
 
+
+def __virtual__():
+    '''
+    Only work with nfs tools installed
+    '''
+    cmd = 'exportfs'
+    if salt.utils.path.which(cmd):
+        return bool(cmd)
+
+    return(
+        False,
+        'The nfs_exports state module failed to load: '
+        'the exportfs binary is not in the path'
+    )
 
 def present(name,
             clients=None,
