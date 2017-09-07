@@ -182,7 +182,7 @@ def minion_mods(
                             generated modules in __context__
 
     :param dict utils: Utility functions which should be made available to
-                            Salt modules in __utils__. See `utils_dir` in
+                            Salt modules in __utils__. See `utils_dirs` in
                             salt.config for additional information about
                             configuration.
 
@@ -559,7 +559,7 @@ def ssh_wrapper(opts, functions=None, context=None):
     )
 
 
-def render(opts, functions, states=None):
+def render(opts, functions, states=None, proxy=None):
     '''
     Returns the render modules
     '''
@@ -567,6 +567,7 @@ def render(opts, functions, states=None):
             '__grains__': opts.get('grains', {})}
     if states:
         pack['__states__'] = states
+    pack['__proxy__'] = proxy or {}
     ret = LazyLoader(
         _module_dirs(
             opts,

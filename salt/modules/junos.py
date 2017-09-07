@@ -114,7 +114,7 @@ def rpc(cmd=None, dest=None, format='xml', *args, **kwargs):
 
     Options:
       * cmd: the rpc to be executed
-      * dest: destination file where the rpc ouput is dumped
+      * dest: destination file where the rpc output is dumped
       * format: the format in which the rpc reply must be stored in file specified in the dest (used only when dest is specified)
       * args: other arguments as taken by rpc call of PyEZ
       * kwargs: keyworded arguments taken by rpc call of PyEZ
@@ -382,7 +382,7 @@ def install_config(path=None, **kwargs):
 
     Options:
       * path: Path where the configuration file is present.
-      * kwargs: keyworded arguments taken by load fucntion of PyEZ
+      * kwargs: keyworded arguments taken by load function of PyEZ
     '''
     conn = __proxy__['junos.conn']()
     ret = dict()

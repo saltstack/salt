@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Import Python libs
 from __future__ import absolute_import
+import socket
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -106,8 +107,36 @@ class NetworkTestCase(TestCase):
         self.assertEqual(ret, '10.1.2.3')
 
     def test_host_to_ips(self):
-        ret = network.host_to_ips('www.saltstack.com')
-        self.assertEqual(ret, ['104.199.122.13'])
+        '''
+        NOTE: When this test fails it's usually because the IP address has
+        changed. In these cases, we just need to update the IP address in the
+        assertion.
+        '''
+        def _side_effect(host, *args):
+            try:
+                return {
+                    'github.com': [
+                        (2, 1, 6, '', ('192.30.255.112', 0)),
+                        (2, 1, 6, '', ('192.30.255.113', 0)),
+                    ],
+                    'ipv6host.foo': [
+                        (socket.AF_INET6, 1, 6, '', ('2001:a71::1', 0, 0, 0)),
+                    ],
+                }[host]
+            except KeyError:
+                raise socket.gaierror(-2, 'Name or service not known')
+
+        getaddrinfo_mock = MagicMock(side_effect=_side_effect)
+        with patch.object(socket, 'getaddrinfo', getaddrinfo_mock):
+            # Test host that can be resolved
+            ret = network.host_to_ips('github.com')
+            self.assertEqual(ret, ['192.30.255.112', '192.30.255.113'])
+            # Test ipv6
+            ret = network.host_to_ips('ipv6host.foo')
+            self.assertEqual(ret, ['2001:a71::1'])
+            # Test host that can't be resolved
+            ret = network.host_to_ips('someothersite.com')
+            self.assertEqual(ret, None)
 
     def test_generate_minion_id(self):
         self.assertTrue(network.generate_minion_id())
@@ -265,6 +294,38 @@ class NetworkTestCase(TestCase):
         '''
         self.assertEqual(network._generate_minion_id(),
                          ['hostname.domainname.blank', 'nodename', 'hostname', '1.2.3.4', '5.6.7.8'])
+
+    @patch('platform.node', MagicMock(return_value='127'))
+    @patch('socket.gethostname', MagicMock(return_value='127'))
+    @patch('socket.getfqdn', MagicMock(return_value='127.domainname.blank'))
+    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'attrname', ('127.0.1.1', 0))]))
+    @patch('salt.utils.fopen', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
+    def test_generate_minion_id_127_name(self):
+        '''
+        Test if minion IDs can be named 127.foo
+
+        :return:
+        '''
+        self.assertEqual(network._generate_minion_id(),
+                         ['127.domainname.blank', '127', '1.2.3.4', '5.6.7.8'])
+
+    @patch('platform.node', MagicMock(return_value='127890'))
+    @patch('socket.gethostname', MagicMock(return_value='127890'))
+    @patch('socket.getfqdn', MagicMock(return_value='127890.domainname.blank'))
+    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'attrname', ('127.0.1.1', 0))]))
+    @patch('salt.utils.fopen', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
+    def test_generate_minion_id_127_name_startswith(self):
+        '''
+        Test if minion IDs can be named starting from "127"
+
+        :return:
+        '''
+        self.assertEqual(network._generate_minion_id(),
+                         ['127890.domainname.blank', '127890', '1.2.3.4', '5.6.7.8'])
 
     @patch('platform.node', MagicMock(return_value='hostname'))
     @patch('socket.gethostname', MagicMock(return_value='hostname'))

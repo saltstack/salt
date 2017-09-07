@@ -257,7 +257,7 @@ def call(method, **params):
         * result (True/False): if the operation succeeded
         * out (object): returns the object as-is from the call
         * comment (string): provides more details in case the call failed
-        * traceback (string): complete traceback in case of exeception. Please submit an issue including this traceback
+        * traceback (string): complete traceback in case of exception. Please submit an issue including this traceback
         on the `correct driver repo`_ and make sure to read the FAQ_
 
     .. _`correct driver repo`: https://github.com/napalm-automation/napalm/issues/new

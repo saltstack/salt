@@ -45,9 +45,9 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
             self.add_constructor(
                 u'tag:yaml.org,2002:omap',
                 type(self).construct_yaml_map)
-            self.add_constructor(
-                u'tag:yaml.org,2002:python/unicode',
-                type(self).construct_unicode)
+        self.add_constructor(
+            u'tag:yaml.org,2002:python/unicode',
+            type(self).construct_unicode)
         self.dictclass = dictclass
 
     def construct_yaml_map(self, node):

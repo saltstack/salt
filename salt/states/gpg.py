@@ -132,7 +132,7 @@ def present(name,
                 else:
                     ret['comment'].append('Invalid trust level {0}'.format(trust))
 
-        ret['comment'] = '\n'.join(ret['comment'])
+    ret['comment'] = '\n'.join(ret['comment'])
     return ret
 
 
@@ -188,5 +188,5 @@ def absent(name,
                 ret['comment'].append('Deleting {0} from GPG keychain'.format(name))
         else:
             ret['comment'].append('{0} not found in GPG keychain'.format(name))
-        ret['comment'] = '\n'.join(ret['comment'])
+    ret['comment'] = '\n'.join(ret['comment'])
     return ret

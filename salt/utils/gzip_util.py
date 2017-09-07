@@ -10,8 +10,11 @@ from __future__ import absolute_import
 # Import python libs
 import gzip
 
+# Import Salt libs
+import salt.utils
+
 # Import 3rd-party libs
-from salt.ext.six import BytesIO
+from salt.ext.six import BytesIO, StringIO
 
 
 class GzipFile(gzip.GzipFile):
@@ -63,3 +66,38 @@ def uncompress(data):
     with open_fileobj(buf, 'rb') as igz:
         unc = igz.read()
         return unc
+
+
+def compress_file(fh_, compresslevel=9, chunk_size=1048576):
+    '''
+    Generator that reads chunk_size bytes at a time from a file/filehandle and
+    yields the compressed result of each read.
+
+    .. note::
+        Each chunk is compressed separately. They cannot be stitched together
+        to form a compressed file. This function is designed to break up a file
+        into compressed chunks for transport and decompression/reassembly on a
+        remote host.
+    '''
+    try:
+        bytes_read = int(chunk_size)
+        if bytes_read != chunk_size:
+            raise ValueError
+    except ValueError:
+        raise ValueError('chunk_size must be an integer')
+    try:
+        while bytes_read == chunk_size:
+            buf = StringIO()
+            with open_fileobj(buf, 'wb', compresslevel) as ogz:
+                try:
+                    bytes_read = ogz.write(fh_.read(chunk_size))
+                except AttributeError:
+                    # Open the file and re-attempt the read
+                    fh_ = salt.utils.fopen(fh_, 'rb')
+                    bytes_read = ogz.write(fh_.read(chunk_size))
+            yield buf.getvalue()
+    finally:
+        try:
+            fh_.close()
+        except AttributeError:
+            pass

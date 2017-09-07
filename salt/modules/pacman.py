@@ -19,6 +19,7 @@ import os.path
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 import salt.utils.itertools
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
@@ -397,6 +398,8 @@ def refresh_db(root=None):
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     cmd = ['pacman', '-Sy']
 
     if root is not None:
@@ -520,15 +523,6 @@ def install(name=None,
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
-
-    version_num = kwargs.get('version')
-    if version_num:
-        if pkgs is None and sources is None:
-            # Allow 'version' to work for single package target
-            pkg_params = {name: version_num}
-        else:
-            log.warning('\'version\' parameter will be ignored for multiple '
-                        'package targets')
 
     if 'root' in kwargs:
         pkg_params['-r'] = kwargs['root']

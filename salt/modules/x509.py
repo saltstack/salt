@@ -330,10 +330,14 @@ def _parse_subject(subject):
     for nid_name, nid_num in six.iteritems(subject.nid):
         if nid_num in nids:
             continue
-        val = getattr(subject, nid_name)
-        if val:
-            ret[nid_name] = val
-            nids.append(nid_num)
+        try:
+            val = getattr(subject, nid_name)
+            if val:
+                ret[nid_name] = val
+                nids.append(nid_num)
+        except TypeError as e:
+            if e.args and e.args[0] == 'No string argument provided':
+                pass
 
     return ret
 
@@ -879,7 +883,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         represents one certificate. A dict must contain either the key
         ``serial_number`` with the value of the serial number to revoke, or
         ``certificate`` with either the PEM encoded text of the certificate,
-        or a path ot the certificate to revoke.
+        or a path to the certificate to revoke.
 
         The dict can optionally contain the ``revocation_date`` key. If this
         key is omitted the revocation date will be set to now. If should be a
@@ -979,21 +983,24 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         OpenSSL.crypto.FILETYPE_PEM,
         get_pem_entry(signing_private_key))
 
+    export_kwargs = {
+        'cert': cert,
+        'key': key,
+        'type': OpenSSL.crypto.FILETYPE_PEM,
+        'days': days_valid
+    }
+    if digest:
+        export_kwargs['digest'] = bytes(digest)
+    else:
+        log.warning('No digest specified. The default md5 digest will be used.')
+
     try:
-        crltext = crl.export(
-            cert,
-            key,
-            OpenSSL.crypto.FILETYPE_PEM,
-            days=days_valid,
-            digest=bytes(digest))
-    except TypeError:
+        crltext = crl.export(**export_kwargs)
+    except (TypeError, ValueError):
         log.warning(
             'Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used.')
-        crltext = crl.export(
-            cert,
-            key,
-            OpenSSL.crypto.FILETYPE_PEM,
-            days=days_valid)
+        export_kwargs.pop('digest', None)
+        crltext = crl.export(**export_kwargs)
 
     if text:
         return crltext

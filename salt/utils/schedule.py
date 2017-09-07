@@ -324,6 +324,7 @@ from __future__ import absolute_import, with_statement
 import os
 import sys
 import time
+import copy
 import signal
 import datetime
 import itertools
@@ -332,6 +333,7 @@ import logging
 import errno
 import random
 import yaml
+import copy
 
 # Import Salt libs
 import salt.config
@@ -830,7 +832,7 @@ class Schedule(object):
             kwargs = {}
             if 'kwargs' in data:
                 kwargs = data['kwargs']
-                ret['fun_args'].append(data['kwargs'])
+                ret['fun_args'].append(copy.deepcopy(kwargs))
 
             if func not in self.functions:
                 ret['return'] = self.functions.missing_fun_string(func)
@@ -843,9 +845,15 @@ class Schedule(object):
             if argspec.keywords:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in six.iteritems(ret):
-                    kwargs['__pub_{0}'.format(key)] = val
+                    kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
 
             ret['return'] = self.functions[func](*args, **kwargs)
+
+            # runners do not provide retcode
+            if 'retcode' in self.functions.pack['__context__']:
+                ret['retcode'] = self.functions.pack['__context__']['retcode']
+
+            ret['success'] = True
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
@@ -863,7 +871,6 @@ class Schedule(object):
                 for returner in OrderedDict.fromkeys(rets):
                     ret_str = '{0}.returner'.format(returner)
                     if ret_str in self.returners:
-                        ret['success'] = True
                         self.returners[ret_str](ret)
                     else:
                         log.info(
@@ -872,11 +879,6 @@ class Schedule(object):
                             )
                         )
 
-            # runners do not provide retcode
-            if 'retcode' in self.functions.pack['__context__']:
-                ret['retcode'] = self.functions.pack['__context__']['retcode']
-
-            ret['success'] = True
         except Exception:
             log.exception("Unhandled exception running {0}".format(ret['fun']))
             # Although catch-all exception handlers are bad, the exception here
@@ -887,26 +889,39 @@ class Schedule(object):
             ret['success'] = False
             ret['retcode'] = 254
         finally:
-            try:
-                # Only attempt to return data to the master
-                # if the scheduled job is running on a minion.
-                if '__role' in self.opts and self.opts['__role'] == 'minion':
-                    if 'return_job' in data and not data['return_job']:
-                        pass
-                    else:
-                        # Send back to master so the job is included in the job list
-                        mret = ret.copy()
-                        mret['jid'] = 'req'
-                        if data.get('return_job') == 'nocache':
-                            # overwrite 'req' to signal to master that this job shouldn't be stored
-                            mret['jid'] = 'nocache'
-                        event = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
-                        load = {'cmd': '_return', 'id': self.opts['id']}
-                        for key, value in six.iteritems(mret):
-                            load[key] = value
-                        event.fire_event(load, '__schedule_return')
+            # Only attempt to return data to the master if the scheduled job is running
+            # on a master itself or a minion.
+            if '__role' in self.opts and self.opts['__role'] in ('master', 'minion'):
+                # The 'return_job' option is enabled by default even if not set
+                if 'return_job' in data and not data['return_job']:
+                    pass
+                else:
+                    # Send back to master so the job is included in the job list
+                    mret = ret.copy()
+                    mret['jid'] = 'req'
+                    if data.get('return_job') == 'nocache':
+                        # overwrite 'req' to signal to master that
+                        # this job shouldn't be stored
+                        mret['jid'] = 'nocache'
+                    load = {'cmd': '_return', 'id': self.opts['id']}
+                    for key, value in six.iteritems(mret):
+                        load[key] = value
 
-                log.debug('schedule.handle_func: Removing {0}'.format(proc_fn))
+                    if '__role' in self.opts and self.opts['__role'] == 'minion':
+                        event = salt.utils.event.get_event('minion',
+                                                           opts=self.opts,
+                                                           listen=False)
+                    elif '__role' in self.opts and self.opts['__role'] == 'master':
+                        event = salt.utils.event.get_master_event(self.opts,
+                                                                  self.opts['sock_dir'])
+                    try:
+                        event.fire_event(load, '__schedule_return')
+                    except Exception as exc:
+                        log.exception("Unhandled exception firing event: {0}".format(exc))
+
+            log.debug('schedule.handle_func: Removing {0}'.format(proc_fn))
+
+            try:
                 os.unlink(proc_fn)
             except OSError as exc:
                 if exc.errno == errno.EEXIST or exc.errno == errno.ENOENT:
@@ -958,7 +973,6 @@ class Schedule(object):
             # Add up how many seconds between now and then
             when = 0
             seconds = 0
-            cron = 0
             now = int(time.time())
 
             if 'until' in data:
@@ -1077,23 +1091,35 @@ class Schedule(object):
                                 log.error('Invalid date string {0}. '
                                           'Ignoring job {1}.'.format(i, job))
                                 continue
-                        when = int(time.mktime(when__.timetuple()))
-                        if when >= now:
-                            _when.append(when)
+                        _when.append(int(time.mktime(when__.timetuple())))
+
+                    # Sort the list of "whens" from earlier to later schedules
                     _when.sort()
+
+                    for i in _when:
+                        if i < now and len(_when) > 1:
+                            # Remove all missed schedules except the latest one.
+                            # We need it to detect if it was triggered previously.
+                            _when.remove(i)
+
                     if _when:
-                        # Grab the first element
-                        # which is the next run time
+                        # Grab the first element, which is the next run time or
+                        # last scheduled time in the past.
                         when = _when[0]
 
                         # If we're switching to the next run in a list
-                        # ensure the job can run
-                        if '_when' in data and data['_when'] != when:
+                        # ensure the job can run.
+                        if '_when' in data and \
+                                (data['_when'] != when or len(_when) == 1):
                             data['_when_run'] = True
-                            data['_when'] = when
-                        seconds = when - now
+                            # Calculate time to previously scheduled job
+                            # (which has not been run yet), or it should be
+                            # the last time definition in the list.
+                            seconds = data['_when'] - now
+                        else:
+                            seconds = when - now
 
-                        # scheduled time is in the past and the run was not triggered before
+                        # Scheduled time is in the past and the run was not triggered before
                         if seconds < 0 and not data.get('_when_run', False):
                             continue
 
@@ -1108,6 +1134,9 @@ class Schedule(object):
                         if when > data['_when']:
                             data['_when'] = when
                             data['_when_run'] = True
+                        # At last scheduled time, we disable all subsequent job runs
+                        elif len(_when) == 1:
+                            del data['_when']
 
                     else:
                         continue
@@ -1169,11 +1198,23 @@ class Schedule(object):
 
                 now = int(time.mktime(datetime.datetime.now().timetuple()))
                 try:
-                    cron = int(croniter.croniter(data['cron'], now).get_next())
+                    cron = croniter.croniter(data['cron'], now)
+                    # Get first scheduled time from now on to be able to
+                    # calculate when it was intended to run before.
+                    cron.get_next()
                 except (ValueError, KeyError):
                     log.error('Invalid cron string. Ignoring')
                     continue
-                seconds = cron - now
+                # Calculate how many seconds passed from previous run...
+                data['_cron_prev'] = now - int(cron.get_prev())
+                # ...and need to wait till next scheduled job.
+                data['_cron_next'] = int(cron.get_next()) - now
+                # If less than one minute left till next job, this will
+                # increase loop interval to wait for next cycle.
+                # This prevents setting loop interval to low, which has
+                # negative performance impact, especially on Master side.
+                seconds = data['_cron_next'] if data['_cron_next'] >= 60 \
+                    else int(cron.get_next()) - now
             else:
                 continue
 
@@ -1186,6 +1227,7 @@ class Schedule(object):
             if 'when' not in data:
                 if seconds < self.loop_interval:
                     self.loop_interval = seconds
+
             run = False
 
             if 'splay' in data:
@@ -1209,7 +1251,11 @@ class Schedule(object):
                     data['_when_run'] = False
                     run = True
             elif 'cron' in data:
-                if seconds == 1:
+                # Run the job only if less than or just one second left till
+                # the scheduled time, or during the next loop interval right after that.
+                if data['_cron_next'] <= 1 or \
+                    (data['_cron_prev'] < self.option('loop_interval') and
+                        data['_cron_prev'] < self.loop_interval):
                     run = True
             else:
                 if job in self.intervals:

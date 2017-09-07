@@ -12,8 +12,9 @@ from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
-from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from salttesting.mock import Mock, MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 from salttesting.helpers import ensure_in_syspath
+import salt.utils.pkg
 
 ensure_in_syspath('../../')
 
@@ -156,7 +157,8 @@ class BrewTestCase(TestCase):
                                                'retcode': 1})
         with patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
                                         'cmd.run_all': mock_failure}):
-            self.assertRaises(CommandExecutionError, mac_brew.refresh_db)
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                self.assertRaises(CommandExecutionError, mac_brew.refresh_db)
 
     @patch('salt.modules.mac_brew._homebrew_bin',
            MagicMock(return_value=HOMEBREW_BIN))
@@ -168,7 +170,8 @@ class BrewTestCase(TestCase):
         mock_success = MagicMock(return_value={'retcode': 0})
         with patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
                                         'cmd.run_all': mock_success}):
-            self.assertTrue(mac_brew.refresh_db())
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                self.assertTrue(mac_brew.refresh_db())
 
     # 'install' function tests: 1
     # Only tested a few basics

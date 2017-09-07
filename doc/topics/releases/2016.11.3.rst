@@ -367,7 +367,7 @@ Changes:
 
   * 5244041 Merge pull request `#39221`_ from lvg01/fix-bug-39220
 
-    * e8a41d6 Removes to early content stripping (stripping is allready done when needed with ident:true), fixes `#39220`_
+    * e8a41d6 Removes to early content stripping (stripping is already done when needed with ident:true), fixes `#39220`_
 
     * a4b169e Fixed wrong logic, fixes `#39220`_
 
@@ -482,7 +482,7 @@ Changes:
 - **PR** `#39276`_: (*gtmanfred*) _device_mismatch_ignored will never be True
   @ *2017-02-09T17:05:28Z*
 
-  - **ISSUE** `#39269`_: (*alexharrington*) Remount forced with lizardfs fuse filesystem due to device missmatch
+  - **ISSUE** `#39269`_: (*alexharrington*) Remount forced with lizardfs fuse filesystem due to device mismatch
     | refs: `#39276`_
   - **ISSUE** `#39106`_: (*carsten-AEI*) CVMFS fuse mount gets remounted every time
     | refs: `#39276`_
@@ -688,7 +688,7 @@ Changes:
   - **ISSUE** `#1`_: (*thatch45*) Enable regex on the salt cli
   - **PR** `#39146`_: (*gtmanfred*) update vmware getting started doc
   - **PR** `#39145`_: (*garethgreenaway*) [2016.3] Fix when targeting via pillar with Salt syndic
-  - **PR** `#39131`_: (*bobrik*) Clarify ipv6 option for minion and inteface for master, closes `#39118`_
+  - **PR** `#39131`_: (*bobrik*) Clarify ipv6 option for minion and interface for master, closes `#39118`_
   - **PR** `#39116`_: (*terminalmage*) Don't abort pillar.get with merge=True if default is None
   - **PR** `#39077`_: (*terminalmage*) Apply fix from `#38705`_ to 2016.3 branch
   - **PR** `#38804`_: (*alexbleotu*) Second attempt to fix prepending of root_dir to paths
@@ -717,7 +717,7 @@ Changes:
 
       * 97521b3 Second attempt to fix prepending of root_dir to paths
 
-    * 6ffeda3 Clarify ipv6 option for minion and inteface for master, closes `#39118`_ (`#39131`_)
+    * 6ffeda3 Clarify ipv6 option for minion and interface for master, closes `#39118`_ (`#39131`_)
 
     * 646b9ea Don't abort pillar.get with merge=True if default is None (`#39116`_)
 
@@ -978,7 +978,7 @@ Changes:
 
   - **PR** `#39039`_: (*rallytime*) Update 2016.11.2 release notes
 
-* a7fc02e Ungate the status.py module and raise unsupported errors in functions not executeable on Windows. (`#39005`_)
+* a7fc02e Ungate the status.py module and raise unsupported errors in functions not executable on Windows. (`#39005`_)
 
   - **PR** `#39005`_: (*cro*) Ungate the status.py module and raise unsupported errors in functions not executable on Windows.
     | refs: `#39536`_
@@ -1214,7 +1214,7 @@ Changes:
     | refs: `#38875`_
   - **PR** `#38890`_: (*cro*) Backport  `#38887`_ to 2016.3: Enable resetting a VM via salt-cloud & VMware driver
   - **PR** `#38883`_: (*techhat*) Don't require text_out path to exist
-  - **PR** `#38875`_: (*terminalmage*) Reactor: fix traceback when salt:// path is nonexistant
+  - **PR** `#38875`_: (*terminalmage*) Reactor: fix traceback when salt:// path is nonexistent
   - **PR** `#38867`_: (*mchugh19*) Touch deploy.sh before use
     | refs: `#38883`_
   - **PR** `#38851`_: (*terminalmage*) Support docker-py 2.0 in dockerng
@@ -1237,7 +1237,7 @@ Changes:
 
       * fbc4d2a reactor: ensure glob_ref is a string
 
-      * 2e443d7 cp.cache_file: add note re: return for nonexistant salt:// path
+      * 2e443d7 cp.cache_file: add note re: return for nonexistent salt:// path
 
     * e9ebec4 Merge pull request `#38890`_ from cro/vmware_reset_vm_20163
 

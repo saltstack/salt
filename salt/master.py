@@ -18,6 +18,7 @@ import stat
 import logging
 import multiprocessing
 import traceback
+import salt.serializers.msgpack
 
 # Import third party libs
 try:
@@ -459,7 +460,7 @@ class Master(SMaster):
             os.chdir('/')
         except OSError as err:
             errors.append(
-                'Cannot change to root directory ({1})'.format(err)
+                'Cannot change to root directory ({0})'.format(err)
             )
 
         fileserver = salt.fileserver.Fileserver(self.opts)
@@ -1119,8 +1120,10 @@ class AESFuncs(object):
                 )
             )
             return False
+
         if 'tok' in load:
             load.pop('tok')
+
         return load
 
     def _ext_nodes(self, load):
@@ -1336,7 +1339,7 @@ class AESFuncs(object):
             load['id'],
             load.get('saltenv', load.get('env')),
             ext=load.get('ext'),
-            pillar=load.get('pillar_override', {}),
+            pillar_override=load.get('pillar_override', {}),
             pillarenv=load.get('pillarenv'))
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         self.fs_.update_opts()
@@ -1403,6 +1406,24 @@ class AESFuncs(object):
 
         :param dict load: The minion payload
         '''
+        if self.opts['require_minion_sign_messages'] and 'sig' not in load:
+            log.critical('_return: Master is requiring minions to sign their messages, but there is no signature in this payload from {0}.'.format(load['id']))
+            return False
+
+        if 'sig' in load:
+            log.trace('Verifying signed event publish from minion')
+            sig = load.pop('sig')
+            this_minion_pubkey = os.path.join(self.opts['pki_dir'], 'minions/{0}'.format(load['id']))
+            serialized_load = salt.serializers.msgpack.serialize(load)
+            if not salt.crypt.verify_signature(this_minion_pubkey, serialized_load, sig):
+                log.info('Failed to verify event signature from minion {0}.'.format(load['id']))
+                if self.opts['drop_messages_signature_fail']:
+                    log.critical('Drop_messages_signature_fail is enabled, dropping message from {0}'.format(load['id']))
+                    return False
+                else:
+                    log.info('But \'drop_message_signature_fail\' is disabled, so message is still accepted.')
+            load['sig'] = sig
+
         try:
             salt.utils.job.store_job(
                 self.opts, load, event=self.event, mminion=self.mminion)
@@ -1446,6 +1467,9 @@ class AESFuncs(object):
                 ret['fun_args'] = load['arg']
             if 'out' in load:
                 ret['out'] = load['out']
+            if 'sig' in load:
+                ret['sig'] = load['sig']
+
             self._return(ret)
 
     def minion_runner(self, clear_load):

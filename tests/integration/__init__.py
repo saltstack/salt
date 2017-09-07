@@ -650,9 +650,31 @@ class SaltMinion(SaltDaemonScriptBase):
             return set([self.config['id']])
 
 
+class SaltProxy(SaltDaemonScriptBase):
+    '''
+    Class which runs the salt-proxy daemon
+    '''
+
+    cli_script_name = 'salt-proxy'
+
+    def get_script_args(self):
+        #script_args = ['-l', 'debug', '--proxyid', 'testproxy']
+        script_args = ['-l', 'quiet', '--proxyid', 'testproxy']
+        if salt.utils.is_windows() is False:
+            script_args.append('--disable-keepalive')
+        return script_args
+
+    def get_check_ports(self):
+        if salt.utils.is_windows():
+            return set([self.config['tcp_pub_port'],
+                        self.config['tcp_pull_port']])
+        else:
+            return set([self.config['id']])
+
+
 class SaltMaster(SaltDaemonScriptBase):
     '''
-    Class which runs the salt-minion daemon
+    Class which runs the salt-master daemon
     '''
 
     cli_script_name = 'salt-master'
@@ -791,8 +813,16 @@ class TestDaemon(object):
         self.smaster_process.display_name = 'syndic salt-master'
         self.syndic_process = SaltSyndic(self.syndic_opts, TMP_SYNDIC_MINION_CONF_DIR, SCRIPT_DIR)
         self.syndic_process.display_name = 'salt-syndic'
-        for process in (self.master_process, self.minion_process, self.sub_minion_process,
-                        self.smaster_process, self.syndic_process):
+        processes_to_start = [self.master_process, self.minion_process, self.sub_minion_process,
+                        self.smaster_process, self.syndic_process]
+
+        if self.parser.options.proxy or (getattr(self.parser.options, 'name', False)
+                                         and any(['proxy' in item
+                                             for item in self.parser.options.name])):
+            self.proxy_process = SaltProxy(self.proxy_opts, TMP_CONF_DIR, SCRIPT_DIR)
+            self.proxy_process.display_name = 'salt-proxy'
+            processes_to_start.append(self.proxy_process)
+        for process in processes_to_start:
             sys.stdout.write(
                 ' * {LIGHT_YELLOW}Starting {0} ... {ENDC}'.format(
                     process.display_name,
@@ -1020,6 +1050,7 @@ class TestDaemon(object):
             * syndic
             * syndic_master
             * sub_minion
+            * proxy
         '''
         return RUNTIME_CONFIGS[role]
 
@@ -1106,6 +1137,16 @@ class TestDaemon(object):
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
         syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
 
+        # This proxy connects to master
+        proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))
+        proxy_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        proxy_opts['user'] = running_tests_user
+        proxy_opts['config_dir'] = TMP_CONF_DIR
+        proxy_opts['root_dir'] = os.path.join(TMP, 'rootdir')
+        proxy_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
+        proxy_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
+        proxy_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+
         if transport == 'raet':
             master_opts['transport'] = 'raet'
             master_opts['raet_port'] = 64506
@@ -1178,7 +1219,7 @@ class TestDaemon(object):
             syndic_opts[optname] = optname_path
             syndic_master_opts[optname] = optname_path
 
-        for conf in (master_opts, minion_opts, sub_minion_opts, syndic_opts, syndic_master_opts):
+        for conf in (master_opts, minion_opts, sub_minion_opts, syndic_opts, syndic_master_opts, proxy_opts):
             if 'log_handlers_dirs' not in conf:
                 conf['log_handlers_dirs'] = []
             conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
@@ -1186,7 +1227,7 @@ class TestDaemon(object):
 
         # ----- Transcribe Configuration ---------------------------------------------------------------------------->
         for entry in os.listdir(CONF_DIR):
-            if entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
+            if entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
                 # These have runtime computed values and will be handled
                 # differently
                 continue
@@ -1202,7 +1243,7 @@ class TestDaemon(object):
                     os.path.join(TMP_CONF_DIR, entry)
                 )
 
-        for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
+        for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
             with salt.utils.fopen(os.path.join(TMP_CONF_DIR, entry), 'w') as fp_:
                 fp_.write(yaml.dump(computed_config, default_flow_style=False))
@@ -1226,6 +1267,7 @@ class TestDaemon(object):
         # ----- Verify Environment ---------------------------------------------------------------------------------->
         master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
         minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
+        proxy_opts = salt.config.proxy_config(os.path.join(TMP_CONF_DIR, 'proxy'))
         syndic_opts = salt.config.syndic_config(
             os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'master'),
             os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'minion'),
@@ -1238,6 +1280,7 @@ class TestDaemon(object):
         RUNTIME_CONFIGS['syndic'] = freeze(syndic_opts)
         RUNTIME_CONFIGS['sub_minion'] = freeze(sub_minion_opts)
         RUNTIME_CONFIGS['syndic_master'] = freeze(syndic_master_opts)
+        RUNTIME_CONFIGS['proxy'] = freeze(proxy_opts)
 
         verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
@@ -1284,6 +1327,7 @@ class TestDaemon(object):
 
         cls.master_opts = master_opts
         cls.minion_opts = minion_opts
+        cls.proxy_opts = proxy_opts
         cls.sub_minion_opts = sub_minion_opts
         cls.syndic_opts = syndic_opts
         cls.syndic_master_opts = syndic_master_opts
@@ -1295,6 +1339,8 @@ class TestDaemon(object):
         '''
         self.sub_minion_process.terminate()
         self.minion_process.terminate()
+        if hasattr(self, 'proxy_process'):
+            self.proxy_process.terminate()
         self.master_process.terminate()
         try:
             self.syndic_process.terminate()
@@ -2080,9 +2126,10 @@ class SaltReturnAssertsMixIn(object):
 
     def __getWithinSaltReturn(self, ret, keys):
         self.assertReturnNonEmptySaltType(ret)
-        keys = self.__return_valid_keys(keys)
-        okeys = keys[:]
+        ret_data = []
         for part in six.itervalues(ret):
+            keys = self.__return_valid_keys(keys)
+            okeys = keys[:]
             try:
                 ret_item = part[okeys.pop(0)]
             except (KeyError, TypeError):
@@ -2100,11 +2147,13 @@ class SaltReturnAssertsMixIn(object):
                             ''.join(['[\'{0}\']'.format(k) for k in keys]), part
                         )
                     )
-            return ret_item
+            ret_data.append(ret_item)
+        return ret_data
 
     def assertSaltTrueReturn(self, ret):
         try:
-            self.assertTrue(self.__getWithinSaltReturn(ret, 'result'))
+            for saltret in self.__getWithinSaltReturn(ret, 'result'):
+                self.assertTrue(saltret)
         except AssertionError:
             log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
@@ -2122,7 +2171,8 @@ class SaltReturnAssertsMixIn(object):
 
     def assertSaltFalseReturn(self, ret):
         try:
-            self.assertFalse(self.__getWithinSaltReturn(ret, 'result'))
+            for saltret in self.__getWithinSaltReturn(ret, 'result'):
+                self.assertFalse(saltret)
         except AssertionError:
             log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
@@ -2138,7 +2188,8 @@ class SaltReturnAssertsMixIn(object):
 
     def assertSaltNoneReturn(self, ret):
         try:
-            self.assertIsNone(self.__getWithinSaltReturn(ret, 'result'))
+            for saltret in self.__getWithinSaltReturn(ret, 'result'):
+                self.assertIsNone(saltret)
         except AssertionError:
             log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
@@ -2153,51 +2204,42 @@ class SaltReturnAssertsMixIn(object):
                 )
 
     def assertInSaltComment(self, in_comment, ret):
-        return self.assertIn(
-            in_comment, self.__getWithinSaltReturn(ret, 'comment')
-        )
+        for saltret in self.__getWithinSaltReturn(ret, 'comment'):
+            self.assertIn(in_comment, saltret)
 
     def assertNotInSaltComment(self, not_in_comment, ret):
-        return self.assertNotIn(
-            not_in_comment, self.__getWithinSaltReturn(ret, 'comment')
-        )
+        for saltret in self.__getWithinSaltReturn(ret, 'comment'):
+            self.assertNotIn(not_in_comment, saltret)
 
     def assertSaltCommentRegexpMatches(self, ret, pattern):
         return self.assertInSaltReturnRegexpMatches(ret, pattern, 'comment')
 
     def assertInSaltStateWarning(self, in_comment, ret):
-        return self.assertIn(
-            in_comment, self.__getWithinSaltReturn(ret, 'warnings')
-        )
+        for saltret in self.__getWithinSaltReturn(ret, 'warnings'):
+            self.assertIn(in_comment, saltret)
 
     def assertNotInSaltStateWarning(self, not_in_comment, ret):
-        return self.assertNotIn(
-            not_in_comment, self.__getWithinSaltReturn(ret, 'warnings')
-        )
+        for saltret in self.__getWithinSaltReturn(ret, 'warnings'):
+            self.assertNotIn(not_in_comment, saltret)
 
     def assertInSaltReturn(self, item_to_check, ret, keys):
-        return self.assertIn(
-            item_to_check, self.__getWithinSaltReturn(ret, keys)
-        )
+        for saltret in self.__getWithinSaltReturn(ret, keys):
+            self.assertIn(item_to_check, saltret)
 
     def assertNotInSaltReturn(self, item_to_check, ret, keys):
-        return self.assertNotIn(
-            item_to_check, self.__getWithinSaltReturn(ret, keys)
-        )
+        for saltret in self.__getWithinSaltReturn(ret, keys):
+            self.assertNotIn(item_to_check, saltret)
 
     def assertInSaltReturnRegexpMatches(self, ret, pattern, keys=()):
-        return self.assertRegexpMatches(
-            self.__getWithinSaltReturn(ret, keys), pattern
-        )
+        for saltret in self.__getWithinSaltReturn(ret, keys):
+            self.assertRegexpMatches(saltret, pattern)
 
     def assertSaltStateChangesEqual(self, ret, comparison, keys=()):
         keys = ['changes'] + self.__return_valid_keys(keys)
-        return self.assertEqual(
-            self.__getWithinSaltReturn(ret, keys), comparison
-        )
+        for saltret in self.__getWithinSaltReturn(ret, keys):
+            self.assertEqual(saltret, comparison)
 
     def assertSaltStateChangesNotEqual(self, ret, comparison, keys=()):
         keys = ['changes'] + self.__return_valid_keys(keys)
-        return self.assertNotEqual(
-            self.__getWithinSaltReturn(ret, keys), comparison
-        )
+        for saltret in self.__getWithinSaltReturn(ret, keys):
+            self.assertNotEqual(saltret, comparison)

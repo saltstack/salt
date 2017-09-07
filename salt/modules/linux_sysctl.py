@@ -35,21 +35,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _check_systemd_salt_config():
-    conf = '/etc/sysctl.d/99-salt.conf'
-    if not os.path.exists(conf):
-        sysctl_dir = os.path.split(conf)[0]
-        if not os.path.exists(sysctl_dir):
-            os.makedirs(sysctl_dir)
-        try:
-            with salt.utils.fopen(conf, 'w'):
-                pass
-        except (IOError, OSError):
-            msg = 'Could not create file: {0}'
-            raise CommandExecutionError(msg.format(conf))
-    return conf
-
-
 def default_config():
     '''
     Linux hosts using systemd 207 or later ignore ``/etc/sysctl.conf`` and only
@@ -65,7 +50,7 @@ def default_config():
     '''
     if salt.utils.systemd.booted(__context__) \
             and salt.utils.systemd.version(__context__) >= 207:
-        return _check_systemd_salt_config()
+        return '/etc/sysctl.d/99-salt.conf'
     return '/etc/sysctl.conf'
 
 
@@ -181,6 +166,9 @@ def persist(name, value, config=None):
     edited = False
     # If the sysctl.conf is not present, add it
     if not os.path.isfile(config):
+        sysctl_dir = os.path.dirname(config)
+        if not os.path.exists(sysctl_dir):
+            os.makedirs(sysctl_dir)
         try:
             with salt.utils.fopen(config, 'w+') as _fh:
                 _fh.write('#\n# Kernel sysctl configuration\n#\n')

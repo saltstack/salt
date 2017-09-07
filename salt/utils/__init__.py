@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Some of the utils used by salt
+
+NOTE: The dev team is working on splitting up this file for the Oxygen release.
+Please do not add any new functions to this file. New functions should be
+organized in other files under salt/utils/. Please consult the dev team if you
+are unsure where a new function should go.
 '''
 
 # Import python libs
@@ -1675,7 +1680,9 @@ def is_proxy():
     # then this will fail.
     is_proxy = False
     try:
-        if 'salt-proxy' in main.__file__:
+        # Changed this from 'salt-proxy in main...' to 'proxy in main...'
+        # to support the testsuite's temp script that is called 'cli_salt_proxy'
+        if 'proxy' in main.__file__:
             is_proxy = True
     except AttributeError:
         pass
@@ -1956,7 +1963,7 @@ def is_true(value=None):
         pass
 
     # Now check for truthiness
-    if isinstance(value, (int, float)):
+    if isinstance(value, (six.integer_types, float)):
         return value > 0
     elif isinstance(value, six.string_types):
         return str(value).lower() == 'true'
@@ -2066,19 +2073,31 @@ def parse_docstring(docstring):
         return ret
 
 
-def print_cli(msg):
+def print_cli(msg, retries=10, step=0.01):
     '''
     Wrapper around print() that suppresses tracebacks on broken pipes (i.e.
     when salt output is piped to less and less is stopped prematurely).
     '''
-    try:
+    while retries:
         try:
-            print(msg)
-        except UnicodeEncodeError:
-            print(msg.encode('utf-8'))
-    except IOError as exc:
-        if exc.errno != errno.EPIPE:
-            raise
+            try:
+                print(msg)
+            except UnicodeEncodeError:
+                print(msg.encode('utf-8'))
+        except IOError as exc:
+            err = "{0}".format(exc)
+            if exc.errno != errno.EPIPE:
+                if (
+                    ("temporarily unavailable" in err or
+                     exc.errno in (errno.EAGAIN,)) and
+                    retries
+                ):
+                    time.sleep(step)
+                    retries -= 1
+                    continue
+                else:
+                    raise
+        break
 
 
 def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
@@ -2159,7 +2178,7 @@ def namespaced_function(function, global_dict, defaults=None, preserve_context=F
     Redefine (clone) a function under a different globals() namespace scope
 
         preserve_context:
-            Allow to keep the context taken from orignal namespace,
+            Allow keeping the context taken from orignal namespace,
             and extend it with globals() taken from
             new targetted namespace.
     '''
@@ -2716,7 +2735,7 @@ def repack_dictlist(data,
     if val_cb is None:
         val_cb = lambda x, y: y
 
-    valid_non_dict = (six.string_types, int, float)
+    valid_non_dict = (six.string_types, six.integer_types, float)
     if isinstance(data, list):
         for element in data:
             if isinstance(element, valid_non_dict):
@@ -3210,3 +3229,26 @@ def substr_in_list(string_to_search_for, list_to_search):
     string is present in any of the strings which comprise a list
     '''
     return any(string_to_search_for in s for s in list_to_search)
+
+
+def is_quoted(val):
+    '''
+    Return a single or double quote, if a string is wrapped in extra quotes.
+    Otherwise return an empty string.
+    '''
+    ret = ''
+    if (
+        isinstance(val, six.string_types) and val[0] == val[-1] and
+        val.startswith(('\'', '"'))
+    ):
+        ret = val[0]
+    return ret
+
+
+def dequote(val):
+    '''
+    Remove extra quotes around a string.
+    '''
+    if is_quoted(val):
+        return val[1:-1]
+    return val

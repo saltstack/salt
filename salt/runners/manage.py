@@ -678,7 +678,7 @@ def bootstrap(version='develop',
 
         .. versionchanged:: 2016.11.0
 
-        .. deprecated:: 2016.11.0
+        .. deprecated:: Oxygen
 
     script_args
         Any additional arguments that you want to pass to the script.

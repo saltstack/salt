@@ -38,6 +38,7 @@ import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
+import salt.utils.pkg
 import salt.utils.pkg.deb
 import salt.utils.systemd
 from salt.exceptions import (
@@ -134,19 +135,6 @@ def _reconstruct_ppa_name(owner_name, ppa_name):
     return 'ppa:{0}/{1}'.format(owner_name, ppa_name)
 
 
-def _get_repo(**kwargs):
-    '''
-    Check the kwargs for either 'fromrepo' or 'repo' and return the value.
-    'fromrepo' takes precedence over 'repo'.
-    '''
-    for key in ('fromrepo', 'repo'):
-        try:
-            return kwargs[key]
-        except KeyError:
-            pass
-    return ''
-
-
 def _check_apt():
     '''
     Abort if python-apt is not installed
@@ -241,18 +229,11 @@ def latest_version(*names, **kwargs):
     '''
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
     show_installed = salt.utils.is_true(kwargs.pop('show_installed', False))
-
     if 'repo' in kwargs:
-        # Remember to kill _get_repo() too when removing this warning.
-        salt.utils.warn_until(
-            'Hydrogen',
-            'The \'repo\' argument to apt.latest_version is deprecated, and '
-            'will be removed in Salt {version}. Please use \'fromrepo\' '
-            'instead.'
+        raise SaltInvocationError(
+            'The \'repo\' argument is invalid, use \'fromrepo\' instead'
         )
-    fromrepo = _get_repo(**kwargs)
-    kwargs.pop('fromrepo', None)
-    kwargs.pop('repo', None)
+    fromrepo = kwargs.pop('fromrepo', None)
     cache_valid_time = kwargs.pop('cache_valid_time', 0)
 
     if len(names) == 0:
@@ -368,6 +349,8 @@ def refresh_db(cache_valid_time=0):
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     APT_LISTS_PATH = "/var/lib/apt/lists"
     ret = {}
     if cache_valid_time:
@@ -1214,8 +1197,8 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         elif salt.utils.is_true(state.get('hold', False)):
             if 'test' in __opts__ and __opts__['test']:
                 ret[target].update(result=None)
-                ret['comment'] = ('Package {0} is set not to be held.'
-                                  .format(target))
+                ret[target]['comment'] = ('Package {0} is set not to be '
+                                          'held.'.format(target))
             else:
                 result = set_selections(selection={'install': [target]})
                 ret[target].update(changes=result[target], result=True)
@@ -1377,9 +1360,10 @@ def _get_upgradable(dist_upgrade=True, **kwargs):
         cmd.append('dist-upgrade')
     else:
         cmd.append('upgrade')
-    fromrepo = _get_repo(**kwargs)
-    if fromrepo:
-        cmd.extend(['-o', 'APT::Default-Release={0}'.format(fromrepo)])
+    try:
+        cmd.extend(['-o', 'APT::Default-Release={0}'.format(kwargs['fromrepo'])])
+    except KeyError:
+        pass
 
     call = __salt__['cmd.run_all'](cmd,
                                    python_shell=False,
@@ -1840,6 +1824,11 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     The following options are available to modify a repo definition:
 
+        architectures
+            a comma separated list of supported architectures, e.g. ``amd64``
+            If this option is not set, all architectures (configured in the
+            system) will be used.
+
         comps
             a comma separated list of components for the repo, e.g. ``main``
 
@@ -2208,6 +2197,9 @@ def expand_repo_def(**kwargs):
                                                  dist)
 
     source_entry = sourceslist.SourceEntry(repo)
+    for list_args in ('architectures', 'comps'):
+        if list_args in kwargs:
+            kwargs[list_args] = kwargs[list_args].split(',')
     for kwarg in _MODIFY_OK:
         if kwarg in kwargs:
             setattr(source_entry, kwarg, kwargs[kwarg])

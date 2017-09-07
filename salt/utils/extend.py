@@ -227,7 +227,7 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     :param salt_dir: The targeted Salt source directory
     :type  salt_dir: ``str``
 
-    :param merge: Merge with salt directory, `False` to keep seperate, `True` to merge trees.
+    :param merge: Merge with salt directory, `False` to keep separate, `True` to merge trees.
     :type  merge: ``bool``
 
     :param temp_dir: The directory for generated code, if omitted, system temp will be used

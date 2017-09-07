@@ -325,6 +325,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
     # to quote problems
     cmd_kwargs = copy.deepcopy(cmd_kwargs)
     cmd_kwargs['use_vt'] = False
+    cmd_kwargs['bg'] = False
 
     if onlyif is not None:
         if isinstance(onlyif, string_types):
@@ -1080,7 +1081,7 @@ def script(name,
         source = name
 
     # If script args present split from name and define args
-    if len(name.split()) > 1:
+    if not cmd_kwargs.get('args', None) and len(name.split()) > 1:
         cmd_kwargs.update({'args': name.split(' ', 1)[1]})
 
     cret = mod_run_check(

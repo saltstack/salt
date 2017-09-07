@@ -199,6 +199,9 @@ VALID_OPTS = {
     # The directory containing unix sockets for things like the event bus
     'sock_dir': str,
 
+    # The pool size of unix sockets, it is necessary to avoid blocking waiting for zeromq and tcp communications.
+    'sock_pool_size': int,
+
     # Specifies how the file server should backup files, if enabled. The backups
     # live in the cache dir.
     'backup_mode': str,
@@ -310,7 +313,7 @@ VALID_OPTS = {
     # Whether or not scheduled mine updates should be accompanied by a job return for the job cache
     'mine_return_job': bool,
 
-    # Schedule a mine update every n number of seconds
+    # The number of minutes between mine updates.
     'mine_interval': int,
 
     # The ipc strategy. (i.e., sockets versus tcp, etc)
@@ -328,7 +331,7 @@ VALID_OPTS = {
     # The TCP port on which minion events should be pulled if ipc_mode is TCP
     'tcp_pull_port': int,
 
-    # The TCP port on which events for the master should be pulled if ipc_mode is TCP
+    # The TCP port on which events for the master should be published if ipc_mode is TCP
     'tcp_master_pub_port': int,
 
     # The TCP port on which events for the master should be pulled if ipc_mode is TCP
@@ -852,7 +855,7 @@ VALID_OPTS = {
 
     'queue_dirs': list,
 
-    # Instructs the minion to ping its master(s) ever n number of seconds. Used
+    # Instructs the minion to ping its master(s) every n number of seconds. Used
     # primarily as a mitigation technique against minion disconnects.
     'ping_interval': int,
 
@@ -958,6 +961,22 @@ VALID_OPTS = {
 
     # Permit or deny allowing minions to request revoke of its own key
     'allow_minion_key_revoke': bool,
+
+    # File chunk size for salt-cp
+    'salt_cp_chunk_size': int,
+
+    # Require that the minion sign messages it posts to the master on the event
+    # bus
+    'minion_sign_messages': bool,
+
+    # Have master drop messages from minions for which their signatures do
+    # not verify
+    'drop_messages_signature_fail': bool,
+
+    # Require that payloads from minions have a 'sig' entry
+    # (in other words, require that minions have 'minion_sign_messages'
+    # turned on)
+    'require_minion_sign_messages': bool,
 }
 
 # default configurations
@@ -989,6 +1008,7 @@ DEFAULT_MINION_OPTS = {
     'grains_deep_merge': False,
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'minion'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
+    'sock_pool_size': 1,
     'backup_mode': '',
     'renderer': 'yaml_jinja',
     'renderer_whitelist': [],
@@ -1201,6 +1221,8 @@ DEFAULT_MINION_OPTS = {
     'minion_jid_queue_hwm': 100,
     'ssl': None,
     'cache': 'localfs',
+    'salt_cp_chunk_size': 65536,
+    'minion_sign_messages': False,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1212,6 +1234,7 @@ DEFAULT_MASTER_OPTS = {
     'user': salt.utils.get_user(),
     'worker_threads': 5,
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'master'),
+    'sock_pool_size': 1,
     'ret_port': 4506,
     'timeout': 5,
     'keep_jobs': 24,
@@ -1478,23 +1501,25 @@ DEFAULT_MASTER_OPTS = {
     'django_auth_path': '',
     'django_auth_settings': '',
     'allow_minion_key_revoke': True,
+    'salt_cp_chunk_size': 98304,
+    'require_minion_sign_messages': False,
+    'drop_messages_signature_fail': False,
 }
 
 
 # ----- Salt Proxy Minion Configuration Defaults ----------------------------------->
-# Note DEFAULT_MINION_OPTS
-# is loaded first, then if we are setting up a proxy, the config is overwritten with
-# these settings.
+# These are merged with DEFAULT_MINION_OPTS since many of them also apply here.
 DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
-    'sign_pub_messages': False,
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': False,
     'append_minionid_config_dirs': ['cachedir', 'pidfile'],
     'default_include': 'proxy.d/*.conf',
+    'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'proxy'),
+    'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'proxy'),
+    'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'proxy'),
 }
-
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
 DEFAULT_CLOUD_OPTS = {
     'verify_env': True,
@@ -1924,7 +1949,7 @@ def prepend_root_dir(opts, path_options):
                 # Remove relative root dir so we can add the absolute root dir
                 path = path[len(root_opt):]
             elif os.path.isabs(path_option):
-                # Absolute path (not default or overriden root_dir)
+                # Absolute path (not default or overridden root_dir)
                 # No prepending required
                 continue
             # Prepending the root dir
@@ -1966,9 +1991,6 @@ def minion_config(path,
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS.copy()
 
-    if path is not None and path.endswith('proxy'):
-        defaults.update(DEFAULT_PROXY_MINION_OPTS)
-
     if not os.environ.get(env_var, None):
         # No valid setting was given using the configuration variable.
         # Lets see is SALT_CONFIG_DIR is of any use
@@ -1981,6 +2003,58 @@ def minion_config(path,
                 os.environ[env_var] = env_config_file_path
 
     overrides = load_config(path, env_var, DEFAULT_MINION_OPTS['conf_file'])
+    default_include = overrides.get('default_include',
+                                    defaults['default_include'])
+    include = overrides.get('include', [])
+
+    overrides.update(include_config(default_include, path, verbose=False,
+                                    exit_on_config_errors=not ignore_config_errors))
+    overrides.update(include_config(include, path, verbose=True,
+                                    exit_on_config_errors=not ignore_config_errors))
+
+    opts = apply_minion_config(overrides, defaults,
+                               cache_minion_id=cache_minion_id,
+                               minion_id=minion_id)
+    apply_sdb(opts)
+    _validate_opts(opts)
+    return opts
+
+
+def proxy_config(path,
+                 env_var='SALT_PROXY_CONFIG',
+                 defaults=None,
+                 cache_minion_id=False,
+                 ignore_config_errors=True,
+                 minion_id=None):
+    '''
+    Reads in the proxy minion configuration file and sets up special options
+
+    This is useful for Minion-side operations, such as the
+    :py:class:`~salt.client.Caller` class, and manually running the loader
+    interface.
+
+    .. code-block:: python
+
+        import salt.config
+        proxy_opts = salt.config.proxy_config('/etc/salt/proxy')
+    '''
+    if defaults is None:
+        defaults = DEFAULT_MINION_OPTS.copy()
+
+    defaults.update(DEFAULT_PROXY_MINION_OPTS)
+
+    if not os.environ.get(env_var, None):
+        # No valid setting was given using the configuration variable.
+        # Lets see is SALT_CONFIG_DIR is of any use
+        salt_config_dir = os.environ.get('SALT_CONFIG_DIR', None)
+        if salt_config_dir:
+            env_config_file_path = os.path.join(salt_config_dir, 'proxy')
+            if salt_config_dir and os.path.isfile(env_config_file_path):
+                # We can get a configuration file using SALT_CONFIG_DIR, let's
+                # update the environment with this information
+                os.environ[env_var] = env_config_file_path
+
+    overrides = load_config(path, env_var, DEFAULT_PROXY_MINION_OPTS['conf_file'])
     default_include = overrides.get('default_include',
                                     defaults['default_include'])
     include = overrides.get('include', [])
@@ -2053,6 +2127,7 @@ def syndic_config(master_config_path,
         'sock_dir': os.path.join(
             opts['cachedir'], opts.get('syndic_sock_dir', opts['sock_dir'])
         ),
+        'sock_pool_size': master_opts['sock_pool_size'],
         'cachedir': master_opts['cachedir'],
     }
     opts.update(syndic_opts)
@@ -2061,7 +2136,7 @@ def syndic_config(master_config_path,
         'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir'
     ]
-    for config_key in ('log_file', 'key_logfile'):
+    for config_key in ('log_file', 'key_logfile', 'syndic_log_file'):
         # If this is not a URI and instead a local path
         if urlparse(opts.get(config_key, '')).scheme == '':
             prepend_root_dirs.append(config_key)
@@ -2227,7 +2302,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     elif master_config_path is not None and master_config is None:
         master_config = salt.config.master_config(master_config_path)
 
-    # cloud config has a seperate cachedir
+    # cloud config has a separate cachedir
     del master_config['cachedir']
 
     # 2nd - salt-cloud configuration which was loaded before so we could
@@ -3002,7 +3077,7 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['nova', 'virtualbox']
+    non_image_drivers = ['nova', 'virtualbox', 'softlayer']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',

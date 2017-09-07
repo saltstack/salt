@@ -82,6 +82,13 @@ class AliasedLoader(object):
         else:
             return getattr(self.wrapped, name)
 
+    def __contains__(self, name):
+        if name in ALIASES:
+            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
+            return ALIASES[name] in self.wrapped
+        else:
+            return name in self.wrapped
+
 
 class AliasedModule(object):
     '''
@@ -272,7 +279,7 @@ def _get_jinja_error(trace, context=None):
         ):
             add_log = True
             template_path = error[0]
-    # if we add a log, format explicitly the exeception here
+    # if we add a log, format explicitly the exception here
     # by telling to output the macro context after the macro
     # error log place at the beginning
     if add_log:
@@ -305,14 +312,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     if not saltenv:
         if tmplpath:
-            # i.e., the template is from a file outside the state tree
-            #
-            # XXX: FileSystemLoader is not being properly instantiated here is
-            # it? At least it ain't according to:
-            #
-            #   http://jinja.pocoo.org/docs/api/#jinja2.FileSystemLoader
-            loader = jinja2.FileSystemLoader(
-                context, os.path.dirname(tmplpath))
+            loader = jinja2.FileSystemLoader(os.path.dirname(tmplpath))
     else:
         loader = salt.utils.jinja.SaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
 

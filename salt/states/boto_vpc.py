@@ -5,10 +5,13 @@ Manage VPCs
 
 .. versionadded:: 2015.8.0
 
+:depends:
+
+- boto >= 2.8.0
+- boto3 >= 1.2.6
+
 Create and destroy VPCs. Be aware that this interacts with Amazon's services,
 and so may incur charges.
-
-This module uses ``boto``, which can be installed via package, or pip.
 
 This module accepts explicit vpc credentials but can also utilize
 IAM roles assigned to the instance through Instance Profiles. Dynamic
@@ -147,6 +150,8 @@ import logging
 import salt.ext.six as six
 import salt.utils.dictupdate as dictupdate
 
+__virtualname__ = 'boto_vpc'
+
 log = logging.getLogger(__name__)
 
 
@@ -154,7 +159,14 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto_vpc' if 'boto_vpc.exists' in __salt__ else False
+    boto_version = '2.8.0'
+    boto3_version = '1.2.6'
+    if 'boto_vpc.exists' in __salt__:
+        return __virtualname__
+    else:
+        return False, 'The following libraries are required to run the boto_vpc state module: ' \
+                      'boto >= {0} and boto3 >= {1}.'.format(boto_version,
+                                                             boto3_version)
 
 
 def present(name, cidr_block, instance_tenancy=None, dns_support=None,
@@ -1735,10 +1747,10 @@ def delete_vpc_peering_connection(name, conn_id=None, conn_name=None,
         Name of the state
 
     conn_id
-        ID of the peering connection to delete.  Exlusive with conn_name.
+        ID of the peering connection to delete.  Exclusive with conn_name.
 
     conn_name
-        The name of the peering connection to delete.  Exlusive with conn_id.
+        The name of the peering connection to delete.  Exclusive with conn_id.
 
     region
         Region to connect to.

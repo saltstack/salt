@@ -1,8 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-Microsoft certificate management via the Pki PowerShell module.
+Microsoft certificate management via the PKI Client PowerShell module.
+https://technet.microsoft.com/en-us/itpro/powershell/windows/pkiclient/pkiclient
+
+The PKI Client PowerShell module is only available on Windows 8+ and Windows
+Server 2012+.
+https://technet.microsoft.com/en-us/library/hh848636(v=wps.620).aspx
 
 :platform:      Windows
+
+:depends:
+    - PowerShell 4
+    - PKI Client Module (Windows 8+ / Windows Server 2012+)
 
 .. versionadded:: 2016.11.0
 '''
@@ -29,10 +38,16 @@ __virtualname__ = 'win_pki'
 
 def __virtual__():
     '''
-    Only works on Windows systems with the PKI PowerShell module installed.
+    Requires Windows
+    Requires Windows 8+ / Windows Server 2012+
+    Requires PowerShell
+    Requires PKI Client PowerShell module installed.
     '''
     if not salt.utils.is_windows():
         return False, 'Only available on Windows Systems'
+
+    if salt.utils.version_cmp(__grains__['osversion'], '6.2.9200') == -1:
+        return False, 'Only available on Windows 8+ / Windows Server 2012 +'
 
     if not __salt__['cmd.shell_info']('powershell')['installed']:
         return False, 'Powershell not available'
@@ -272,9 +287,9 @@ def import_cert(name,
         return False
 
     if password:
-        cert_props = get_cert_file(name=cached_source_path, password=password)
+        cert_props = get_cert_file(name=cached_source_path, cert_format=cert_format, password=password)
     else:
-        cert_props = get_cert_file(name=cached_source_path)
+        cert_props = get_cert_file(name=cached_source_path, cert_format=cert_format)
 
     current_certs = get_certs(context=context, store=store)
 

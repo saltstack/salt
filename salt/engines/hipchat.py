@@ -14,22 +14,22 @@ keys make the engine interactive.
     .. code-block:: yaml
 
         engines:
-            hipchat:
-               token: 'XXXXXX'
-               room: 'salt'
-               control: True
-               valid_users:
-                   - SomeUser
-               valid_commands:
-                   - test.ping
-                   - cmd.run
-                   - list_jobs
-                   - list_commands
-               aliases:
-                   list_jobs:
-                       cmd: jobs.list_jobs
-                   list_commands:
-                       cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster
+            - hipchat:
+                token: 'XXXXXX'
+                room: 'salt'
+                control: True
+                valid_users:
+                    - SomeUser
+                valid_commands:
+                    - test.ping
+                    - cmd.run
+                    - list_jobs
+                    - list_commands
+                aliases:
+                    list_jobs:
+                        cmd: jobs.list_jobs
+                    list_commands:
+                        cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster
 '''
 
 from __future__ import absolute_import

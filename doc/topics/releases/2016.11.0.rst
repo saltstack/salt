@@ -261,7 +261,7 @@ Runner Changes
   ``salt://_utils/``) are now able to be synced to the master, making it easier
   to use them in custom runners. A :py:mod:`saltutil.sync_utils
   <salt.runners.saltutil.sync_utils>` function has been added to the
-  :py:mod:`saltutil runner <salt.runners.saltutil>` to faciliate the syncing of
+  :py:mod:`saltutil runner <salt.runners.saltutil>` to facilitate the syncing of
   utility modules to the master.
 
 Pillar Changes
@@ -276,7 +276,7 @@ Pillar Changes
 Network Automation: NAPALM
 ==========================
 
-Beginning with 2016.11.0, network automation is inclued by default in the core
+Beginning with 2016.11.0, network automation is included by default in the core
 of Salt. It is based on a the `NAPALM <https://github.com/napalm-automation/napalm>`_
 library and provides facilities to manage the configuration and retrieve data
 from network devices running widely used operating systems such: JunOS, IOS-XR,
@@ -704,7 +704,7 @@ Runner Module Deprecations
 - The ``fileserver`` runner no longer accepts the ``outputter`` keyword argument. Users will
   need to specify an outputter using the ``--out`` option.
 
-- The ``jobs`` runner no longer accepts the ``ouputter`` keyword argument. Users will need to
+- The ``jobs`` runner no longer accepts the ``outputter`` keyword argument. Users will need to
   specify an outputter using the ``--out`` option.
 
 - ``virt`` runner module:

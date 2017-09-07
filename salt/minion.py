@@ -20,6 +20,7 @@ import contextlib
 import multiprocessing
 from random import randint, shuffle
 from stat import S_IMODE
+import salt.serializers.msgpack
 
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -1239,16 +1240,30 @@ class Minion(MinionBase):
         return functions, returners, errors, executors
 
     def _send_req_sync(self, load, timeout):
+
+        if self.opts['minion_sign_messages']:
+            log.trace('Signing event to be published onto the bus.')
+            minion_privkey_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
+            sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
+            load['sig'] = sig
+
         channel = salt.transport.Channel.factory(self.opts)
         return channel.send(load, timeout=timeout)
 
     @tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
+
+        if self.opts['minion_sign_messages']:
+            log.trace('Signing event to be published onto the bus.')
+            minion_privkey_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
+            sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
+            load['sig'] = sig
+
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts)
         ret = yield channel.send(load, timeout=timeout)
         raise tornado.gen.Return(ret)
 
-    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True):
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True, timeout_handler=None):
         '''
         Fire an event on the master, or drop message if unable to send.
         '''
@@ -1267,10 +1282,6 @@ class Minion(MinionBase):
         else:
             return
 
-        def timeout_handler(*_):
-            log.info('fire_master failed: master could not be contacted. Request timed out.')
-            return True
-
         if sync:
             try:
                 self._send_req_sync(load, timeout)
@@ -1281,6 +1292,12 @@ class Minion(MinionBase):
                 log.info('fire_master failed: {0}'.format(traceback.format_exc()))
                 return False
         else:
+            if timeout_handler is None:
+                def handle_timeout(*_):
+                    log.info('fire_master failed: master could not be contacted. Request timed out.')
+                    return True
+                timeout_handler = handle_timeout
+
             with tornado.stack_context.ExceptionStackContext(timeout_handler):
                 self._send_req_async(load, timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
         return True
@@ -2201,13 +2218,15 @@ class Minion(MinionBase):
         if ping_interval > 0 and self.connected:
             def ping_master():
                 try:
-                    if not self._fire_master('ping', 'minion_ping'):
+                    def ping_timeout_handler(*_):
                         if not self.opts.get('auth_safemode', True):
                             log.error('** Master Ping failed. Attempting to restart minion**')
                             delay = self.opts.get('random_reauth_delay', 5)
                             log.info('delaying random_reauth_delay {0}s'.format(delay))
                             # regular sys.exit raises an exception -- which isn't sufficient in a thread
                             os._exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+
+                    self._fire_master('ping', 'minion_ping', sync=False, timeout_handler=ping_timeout_handler)
                 except Exception:
                     log.warning('Attempt to ping master failed.', exc_on_loglevel=logging.DEBUG)
             self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
@@ -2222,7 +2241,7 @@ class Minion(MinionBase):
             except Exception:
                 log.critical('The beacon errored: ', exc_info=True)
             if beacons and self.connected:
-                self._fire_master(events=beacons)
+                self._fire_master(events=beacons, sync=False)
 
         self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
 

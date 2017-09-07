@@ -35,12 +35,16 @@ try:
     import yum
     HAS_YUM = True
 except ImportError:
-    from salt.ext.six.moves import configparser
     HAS_YUM = False
+
+from salt.ext.six.moves import configparser
+
 # pylint: enable=import-error,redefined-builtin
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
+import salt.ext.six as six
 import salt.utils.itertools
 import salt.utils.systemd
 import salt.utils.decorators as decorators
@@ -178,7 +182,16 @@ def _check_versionlock():
     Ensure that the appropriate versionlock plugin is present
     '''
     if _yum() == 'dnf':
-        vl_plugin = 'python-dnf-plugins-extras-versionlock'
+        if int(__grains__.get('osmajorrelease')) >= 26:
+            if six.PY3:
+                vl_plugin = 'python3-dnf-plugin-versionlock'
+            else:
+                vl_plugin = 'python2-dnf-plugin-versionlock'
+        else:
+            if six.PY3:
+                vl_plugin = 'python3-dnf-plugins-extras-versionlock'
+            else:
+                vl_plugin = 'python-dnf-plugins-extras-versionlock'
     else:
         vl_plugin = 'yum-versionlock' \
             if __grains__.get('osmajorrelease') == '5' \
@@ -196,10 +209,10 @@ def _get_repo_options(**kwargs):
     in the yum command, based on the kwargs.
     '''
     # Get repo options from the kwargs
-    fromrepo = kwargs.get('fromrepo', '')
-    repo = kwargs.get('repo', '')
-    disablerepo = kwargs.get('disablerepo', '')
-    enablerepo = kwargs.get('enablerepo', '')
+    fromrepo = kwargs.pop('fromrepo', '')
+    repo = kwargs.pop('repo', '')
+    disablerepo = kwargs.pop('disablerepo', '')
+    enablerepo = kwargs.pop('enablerepo', '')
 
     # Support old 'repo' argument
     if repo and not fromrepo:
@@ -232,7 +245,7 @@ def _get_excludes_option(**kwargs):
     Returns a list of '--disableexcludes' option to be used in the yum command,
     based on the kwargs.
     '''
-    disable_excludes = kwargs.get('disableexcludes', '')
+    disable_excludes = kwargs.pop('disableexcludes', '')
     ret = []
     if disable_excludes:
         log.info('Disabling excludes for \'%s\'', disable_excludes)
@@ -245,11 +258,25 @@ def _get_branch_option(**kwargs):
     Returns a list of '--branch' option to be used in the yum command,
     based on the kwargs. This feature requires 'branch' plugin for YUM.
     '''
-    branch = kwargs.get('branch', '')
+    branch = kwargs.pop('branch', '')
     ret = []
     if branch:
         log.info('Adding branch \'%s\'', branch)
         ret.append('--branch=\'{0}\''.format(branch))
+    return ret
+
+
+def _get_extra_options(**kwargs):
+    '''
+    Returns list of extra options for yum
+    '''
+    ret = []
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    for key, value in six.iteritems(kwargs):
+        if isinstance(key, six.string_types):
+            ret.append('--{0}=\'{1}\''.format(key, value))
+        elif value is True:
+            ret.append('--{0}'.format(key))
     return ret
 
 
@@ -455,10 +482,11 @@ def latest_version(*names, **kwargs):
     def _check_cur(pkg):
         if pkg.name in cur_pkgs:
             for installed_version in cur_pkgs[pkg.name]:
-                # If any installed version is greater than the one found by
-                # yum/dnf list available, then it is not an upgrade.
+                # If any installed version is greater than (or equal to) the
+                # one found by yum/dnf list available, then it is not an
+                # upgrade.
                 if salt.utils.compare_versions(ver1=installed_version,
-                                               oper='>',
+                                               oper='>=',
                                                ver2=pkg.version,
                                                cmp_func=version_cmp):
                     return False
@@ -736,8 +764,8 @@ def list_repo_pkgs(*args, **kwargs):
                 _parse_output(out['stdout'], strict=True)
     else:
         for repo in repos:
-            cmd = [_yum(), '--quiet', 'repository-packages', repo,
-                   'list', '--showduplicates']
+            cmd = [_yum(), '--quiet', '--showduplicates',
+                   'repository-packages', repo, 'list']
             # Can't concatenate because args is a tuple, using list.extend()
             cmd.extend(args)
 
@@ -864,6 +892,8 @@ def refresh_db(**kwargs):
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     retcodes = {
         100: True,
         0: None,
@@ -878,6 +908,11 @@ def refresh_db(**kwargs):
 
     clean_cmd = [_yum(), '--quiet', 'clean', 'expire-cache']
     update_cmd = [_yum(), '--quiet', 'check-update']
+
+    if __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '7':
+        # This feature is disable because it is not used by Salt and lasts a lot with using large repo like EPEL
+        update_cmd.append('--setopt=autocheck_running_kernel=false')
+
     for args in (repo_arg, exclude_arg, branch_arg):
         if args:
             clean_cmd.extend(args)
@@ -1072,15 +1107,6 @@ def install(name=None,
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
-
-    version_num = kwargs.get('version')
-    if version_num:
-        if pkgs is None and sources is None:
-            # Allow "version" to work for single package target
-            pkg_params = {name: version_num}
-        else:
-            log.warning('"version" parameter will be ignored for multiple '
-                        'package targets')
 
     old = list_pkgs(versions_as_list=False)
     # Use of __context__ means no duplicate work here, just accessing
@@ -1488,10 +1514,21 @@ def upgrade(name=None,
 
         .. versionadded:: 2016.3.0
 
+
+    .. note::
+
+        To add extra arguments to the `yum upgrade` command, pass them as key
+        word arguments.  For arguments without assignments, pass `True`
+
+    .. code-block:: bash
+
+        salt '*' pkg.upgrade security=True exclude='kernel*'
+
     '''
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
     branch_arg = _get_branch_option(**kwargs)
+    extra_args = _get_extra_options(**kwargs)
 
     if salt.utils.is_true(refresh):
         refresh_db(**kwargs)
@@ -1520,7 +1557,7 @@ def upgrade(name=None,
             and __salt__['config.get']('systemd.scope', True):
         cmd.extend(['systemd-run', '--scope'])
     cmd.extend([_yum(), '--quiet', '-y'])
-    for args in (repo_arg, exclude_arg, branch_arg):
+    for args in (repo_arg, exclude_arg, branch_arg, extra_args):
         if args:
             cmd.extend(args)
     if skip_verify:
@@ -2329,8 +2366,9 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         if stanza == repo:
             continue
         comments = ''
-        if 'comments' in filerepos[stanza]:
-            comments = '\n'.join(filerepos[stanza]['comments'])
+        if 'comments' in six.iterkeys(filerepos[stanza]):
+            comments = salt.utils.pkg.rpm.combine_comments(
+                    filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
         for line in filerepos[stanza]:
@@ -2465,7 +2503,8 @@ def mod_repo(repo, basedir=None, **kwargs):
     for stanza in six.iterkeys(filerepos):
         comments = ''
         if 'comments' in six.iterkeys(filerepos[stanza]):
-            comments = '\n'.join(filerepos[stanza]['comments'])
+            comments = salt.utils.pkg.rpm.combine_comments(
+                    filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
@@ -2487,41 +2526,32 @@ def _parse_repo_file(filename):
     '''
     Turn a single repo file into a dict
     '''
-    repos = {}
-    header = ''
-    repo = ''
-    with salt.utils.fopen(filename, 'r') as rfile:
-        for line in rfile:
-            if line.startswith('['):
-                repo = line.strip().replace('[', '').replace(']', '')
-                repos[repo] = {}
+    parsed = configparser.ConfigParser()
+    config = {}
 
-            # Even though these are essentially uselss, I want to allow the
-            # user to maintain their own comments, etc
-            if not line:
-                if not repo:
-                    header += line
-            if line.startswith('#'):
-                if not repo:
-                    header += line
-                else:
-                    if 'comments' not in repos[repo]:
-                        repos[repo]['comments'] = []
-                    repos[repo]['comments'].append(line.strip())
-                continue
+    try:
+        parsed.read(filename)
+    except configparser.MissingSectionHeaderError as err:
+        log.error(
+            'Failed to parse file {0}, error: {1}'.format(filename, err.message)
+        )
+        return ('', {})
 
-            # These are the actual configuration lines that matter
-            if '=' in line:
-                try:
-                    comps = line.strip().split('=')
-                    repos[repo][comps[0].strip()] = '='.join(comps[1:])
-                except KeyError:
-                    log.error(
-                        'Failed to parse line in %s, offending line was '
-                        '\'%s\'', filename, line.rstrip()
-                    )
+    for section in parsed._sections:
+        section_dict = dict(parsed._sections[section])
+        section_dict.pop('__name__', None)
+        config[section] = section_dict
 
-    return (header, repos)
+    # Try to extract leading comments
+    headers = ''
+    with salt.utils.fopen(filename, 'r') as rawfile:
+        for line in rawfile:
+            if line.strip().startswith('#'):
+                headers += '{0}\n'.format(line.strip())
+            else:
+                break
+
+    return (headers, config)
 
 
 def file_list(*packages):

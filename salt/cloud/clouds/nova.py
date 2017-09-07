@@ -709,14 +709,35 @@ def request_instance(vm_=None, call=None):
                                                      search_global=False,
                                                      default={})
     if floating_ip_conf.get('auto_assign', False):
-        pool = floating_ip_conf.get('pool', 'public')
         floating_ip = None
-        for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
-            if opts['fixed_ip'] is None and opts['pool'] == pool:
-                floating_ip = fl_ip
-                break
-        if floating_ip is None:
-            floating_ip = conn.floating_ip_create(pool)['ip']
+        if floating_ip_conf.get('ip_address', None) is not None:
+            ip_address = floating_ip_conf.get('ip_address', None)
+            try:
+                fl_ip_dict = conn.floating_ip_show(ip_address)
+                floating_ip = fl_ip_dict['ip']
+            except Exception as err:
+                raise SaltCloudSystemExit(
+                    'Error assigning floating_ip for {0} on Nova\n\n'
+                    'The following exception was thrown by libcloud when trying to '
+                    'assign a floating ip: {1}\n'.format(
+                        vm_['name'], err
+                    )
+                )
+
+        else:
+            pool = floating_ip_conf.get('pool', 'public')
+            try:
+                floating_ip = conn.floating_ip_create(pool)['ip']
+            except Exception:
+                log.info('A new IP address was unable to be allocated. '
+                         'An IP address will be pulled from the already allocated list, '
+                         'This will cause a race condition when building in parallel.')
+                for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
+                    if opts['fixed_ip'] is None and opts['pool'] == pool:
+                        floating_ip = fl_ip
+                        break
+                if floating_ip is None:
+                    log.error('No IP addresses available to allocate for this server: {0}'.format(vm_['name']))
 
         def __query_node_data(vm_):
             try:
@@ -763,7 +784,7 @@ def request_instance(vm_=None, call=None):
             raise SaltCloudSystemExit(
                 'Error assigning floating_ip for {0} on Nova\n\n'
                 'The following exception was thrown by libcloud when trying to '
-                'assing a floating ip: {1}\n'.format(
+                'assign a floating ip: {1}\n'.format(
                     vm_['name'], exc
                 )
             )

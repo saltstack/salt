@@ -319,7 +319,7 @@ The user to run the Salt processes
 .. conf_minion:: sudo_user
 
 ``sudo_user``
---------------
+-------------
 
 Default: ``''``
 
@@ -596,6 +596,26 @@ With ``grains_deep_merge``, the result will be:
       k1: v1
       k2: v2
 
+.. conf_minion:: grains_refresh_every
+
+``grains_refresh_every``
+------------------------
+
+Default: ``0``
+
+The ``grains_refresh_every`` setting allows for a minion to periodically
+check its grains to see if they have changed and, if so, to inform the master
+of the new grains. This operation is moderately expensive, therefore care
+should be taken not to set this value too low.
+
+Note: This value is expressed in minutes.
+
+A value of 10 minutes is a reasonable default.
+
+.. code-block:: yaml
+
+    grains_refresh_every: 0
+
 .. conf_minion:: mine_enabled
 
 ``mine_enabled``
@@ -629,7 +649,7 @@ return for the job cache.
     mine_return_job: False
 
 ``mine_functions``
--------------------
+------------------
 
 Default: Empty
 
@@ -647,6 +667,18 @@ Note these can be defined in the pillar for a minion as well.
         interface: eth0
         cidr: '10.0.0.0/8'
 
+.. conf_minion:: mine_interval
+
+``mine_interval``
+-----------------
+
+Default: ``60``
+
+The number of minutes between mine updates.
+
+.. code-block:: yaml
+
+    mine_interval: 60
 
 .. conf_minion:: sock_dir
 
@@ -660,6 +692,19 @@ The directory where Unix sockets will be kept.
 .. code-block:: yaml
 
     sock_dir: /var/run/salt/minion
+
+.. conf_minion:: outputter_dirs
+
+``outputter_dirs``
+------------------
+
+Default: ``[]``
+
+A list of additional directories to search for salt outputters in.
+
+.. code-block:: yaml
+
+    outputter_dirs: []
 
 .. conf_minion:: backup_mode
 
@@ -704,6 +749,20 @@ seconds each iteration.
 .. code-block:: yaml
 
     acceptance_wait_time_max: 0
+
+.. conf_minion:: rejected_retry
+
+``rejected_retry``
+------------------
+
+Default: ``False``
+
+If the master rejects the minion's public key, retry instead of exiting.
+Rejected keys will be handled the same as waiting on acceptance.
+
+.. code-block:: yaml
+
+    rejected_retry: False
 
 .. conf_minion:: random_reauth_delay
 
@@ -802,6 +861,20 @@ restart.
 .. code-block:: yaml
 
     auth_safemode: False
+
+.. conf_minion:: ping_interval
+
+``ping_interval``
+-----------------
+
+Default: ``0``
+
+Instructs the minion to ping its master(s) every n number of seconds. Used
+primarily as a mitigation technique against minion disconnects.
+
+.. code-block:: yaml
+
+    ping_interval: 0
 
 .. conf_minion:: recon_default
 
@@ -1121,7 +1194,7 @@ If certain returners should be disabled, this is the place
 .. conf_minion:: enable_whitelist_modules
 
 ``whitelist_modules``
-----------------------------
+---------------------
 
 Default: ``[]`` (Module whitelisting is disabled.  Adding anything to the config option
 will cause only the listed modules to be enabled.  Modules not in the list will
@@ -1213,6 +1286,20 @@ A list of extra directories to search for Salt renderers
     render_dirs:
       - /var/lib/salt/renderers
 
+.. conf_minion:: utils_dirs
+
+``utils_dirs``
+--------------
+
+Default: ``[]``
+
+A list of extra directories to search for Salt utilities
+
+.. code-block:: yaml
+
+    utils_dirs:
+      - /var/lib/salt/utils
+
 .. conf_minion:: cython_enable
 
 ``cython_enable``
@@ -1260,6 +1347,20 @@ below.
 
     providers:
       service: systemd
+
+.. conf_minion:: modules_max_memory
+
+``modules_max_memory``
+----------------------
+
+Default: ``-1``
+
+Specify a max size (in bytes) for modules on import. This feature is currently
+only supported on *nix operating systems and requires psutil.
+
+.. code-block:: yaml
+
+    modules_max_memory: -1
 
 
 Top File Settings
@@ -1392,6 +1493,52 @@ environment lacks one.
 
     default_top: dev
 
+.. conf_minion:: startup_states
+
+``startup_states``
+------------------
+
+Default: ``''``
+
+States to run when the minion daemon starts. To enable, set ``startup_states`` to:
+
+- ``highstate``: Execute state.highstate
+- ``sls``: Read in the sls_list option and execute the named sls files
+- ``top``: Read top_file option and execute based on that file on the Master
+
+.. code-block:: yaml
+
+    startup_states: ''
+
+.. conf_minion:: sls_list
+
+``sls_list``
+------------
+
+Default: ``[]``
+
+List of states to run when the minion starts up if ``startup_states`` is set to ``sls``.
+
+.. code-block:: yaml
+
+    sls_list:
+      - edit.vim
+      - hyper
+
+.. conf_minion:: top_file
+
+``top_file``
+------------
+
+Default: ``''``
+
+Top file to execute if ``startup_states`` is set to ``top``.
+
+.. code-block:: yaml
+
+    top_file: ''
+
+
 State Management Settings
 =========================
 
@@ -1408,7 +1555,7 @@ The default renderer used for local state executions
 
     renderer: yaml_jinja
 
-.. conf_master:: test
+.. conf_minion:: test
 
 ``test``
 --------
@@ -1451,6 +1598,22 @@ the output will be shortened to a single line.
 .. code-block:: yaml
 
     state_output: full
+
+
+.. conf_minion:: state_output_diff
+
+``state_output_diff``
+---------------------
+
+Default: ``False``
+
+The state_output_diff setting changes whether or not the output from
+successful states is returned. Useful when even the terse output of these
+states is cluttering the logs. Set it to True to ignore them.
+
+.. code-block:: yaml
+
+    state_output_diff: False
 
 .. conf_minion:: autoload_dynamic_modules
 
@@ -1813,6 +1976,35 @@ before the initial key exchange. The master fingerprint can be found by running
 
    master_finger: 'ba:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:11:13'
 
+.. conf_minion:: keysize
+
+``keysize``
+-----------
+
+Default: ``2048``
+
+The size of key that should be generated when creating new keys.
+
+.. code-block:: yaml
+
+    keysize: 2048
+
+.. conf_minion:: permissive_pki_access
+
+``permissive_pki_access``
+-------------------------
+
+Default: ``False``
+
+Enable permissive access to the salt keys. This allows you to run the
+master or minion as root, but have a non-root group be given access to
+your pki_dir. To make the access explicit, root must belong to the group
+you've given access to. This is potentially quite insecure.
+
+.. code-block:: yaml
+
+    permissive_pki_access: False
+
 .. conf_minion:: verify_master_pubkey_sign
 
 ``verify_master_pubkey_sign``
@@ -1920,7 +2112,7 @@ blocked. If `cmd_whitelist_glob` is NOT SET, then all shell commands are permitt
       - 'cat /etc/fstab'
 
 
-.. conf_master:: ssl
+.. conf_minion:: ssl
 
 ``ssl``
 -------
@@ -1944,6 +2136,62 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         keyfile: <path_to_keyfile>
         certfile: <path_to_certfile>
         ssl_version: PROTOCOL_TLSv1_2
+
+
+Reactor Settings
+================
+
+.. conf_minion:: reactor
+
+``reactor``
+-----------
+
+Default: ``[]``
+
+Defines a salt reactor. See the :ref:`Reactor <reactor>` documentation for more
+information.
+
+.. code-block:: yaml
+
+    reactor: []
+
+.. conf_minion:: reactor_refresh_interval
+
+``reactor_refresh_interval``
+----------------------------
+
+Default: ``60``
+
+The TTL for the cache of the reactor configuration.
+
+.. code-block:: yaml
+
+    reactor_refresh_interval: 60
+
+.. conf_minion:: reactor_worker_threads
+
+``reactor_worker_threads``
+--------------------------
+
+Default: ``10``
+
+The number of workers for the runner/wheel in the reactor.
+
+.. code-block:: yaml
+    reactor_worker_threads: 10
+
+.. conf_minion:: reactor_worker_hwm
+
+``reactor_worker_hwm``
+----------------------
+
+Default: ``10000``
+
+The queue size for workers in the reactor.
+
+.. code-block:: yaml
+
+    reactor_worker_hwm: 10000
 
 
 Thread Settings
@@ -2216,6 +2464,62 @@ option then the minion will log a warning message.
       - /etc/roles/webserver
 
 
+Keepalive Settings
+==================
+
+.. conf_minion:: tcp_keepalive
+
+``tcp_keepalive``
+-----------------
+
+Default: ``True``
+
+The tcp keepalive interval to set on TCP ports. This setting can be used to tune Salt
+connectivity issues in messy network environments with misbehaving firewalls.
+
+.. code-block:: yaml
+
+    tcp_keepalive: True
+
+.. conf_minion:: tcp_keepalive_cnt
+
+``tcp_keepalive_cnt``
+---------------------
+
+Default: ``-1``
+
+Sets the ZeroMQ TCP keepalive count. May be used to tune issues with minion disconnects.
+
+.. code-block:: yaml
+
+    tcp_keepalive_cnt: -1
+
+.. conf_minion:: tcp_keepalive_idle
+
+``tcp_keepalive_idle``
+----------------------
+
+Default: ``300``
+
+Sets ZeroMQ TCP keepalive idle. May be used to tune issues with minion disconnects.
+
+.. code-block:: yaml
+
+    tcp_keepalive_idle: 300
+
+.. conf_minion:: tcp_keepalive_intvl
+
+``tcp_keepalive_intvl``
+-----------------------
+
+Default: ``-1``
+
+Sets ZeroMQ TCP keepalive interval. May be used to tune issues with minion disconnects.
+
+.. code-block:: yaml
+
+    tcp_keepalive_intvl': -1
+
 
 Frozen Build Update Settings
 ============================
@@ -2317,6 +2621,36 @@ out.
 
     winrepo_dir: 'D:\winrepo'
 
+.. conf_minion:: winrepo_dir_ng
+
+``winrepo_dir_ng``
+------------------
+
+.. versionadded:: 2015.8.0
+    A new :ref:`ng <windows-package-manager>` repo was added.
+
+Default: ``/srv/salt/win/repo-ng``
+
+Location on the minion where the :conf_minion:`winrepo_remotes_ng` are checked
+out for 2015.8.0 and later minions.
+
+.. code-block:: yaml
+
+    winrepo_dir_ng: /srv/salt/win/repo-ng
+
+.. conf_minion:: winrepo_source_dir
+
+``winrepo_source_dir``
+----------------------
+
+Default: ``salt://win/repo-ng/``
+
+The source location for the winrepo sls files.
+
+.. code-block:: yaml
+
+    winrepo_source_dir: salt://win/repo-ng/
+
 .. conf_minion:: winrepo_cachefile
 .. conf_minion:: win_repo_cachefile
 
@@ -2365,6 +2699,36 @@ URL of the the repository:
 
     winrepo_remotes:
       - '<commit_id> https://github.com/saltstack/salt-winrepo.git'
+
+Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
+ID is useful in that it allows one to revert back to a previous version in the
+event that an error is introduced in the latest revision of the repo.
+
+.. conf_minion:: winrepo_remotes_ng
+
+``winrepo_remotes_ng``
+----------------------
+
+.. versionadded:: 2015.8.0
+    A new :ref:`ng <windows-package-manager>` repo was added.
+
+Default: ``['https://github.com/saltstack/salt-winrepo-ng.git']``
+
+List of git repositories to checkout and include in the winrepo for
+2015.8.0 and later minions.
+
+.. code-block:: yaml
+
+    winrepo_remotes_ng:
+      - https://github.com/saltstack/salt-winrepo-ng.git
+
+To specify a specific revision of the repository, prepend a commit ID to the
+URL of the repository:
+
+.. code-block:: yaml
+
+    winrepo_remotes_ng:
+      - '<commit_id> https://github.com/saltstack/salt-winrepo-ng.git'
 
 Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
 ID is useful in that it allows one to revert back to a previous version in the

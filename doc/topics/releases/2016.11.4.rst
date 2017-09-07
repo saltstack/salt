@@ -832,7 +832,7 @@ Changes:
   * 2febd05 Merge pull request `#40372`_ from zer0def/pip-cache-fixes
   * d68067f Merge remote-tracking branch 'main/2016.11' into pip-cache-fixes
 
-  * 4f23a23 Fixed the `test_install_download_cache_argument_in_resulting_command` to accomodate introduced cache directory argument fixes and renamed it to `test_install_download_cache_dir_arguments_in_resulting_command`.
+  * 4f23a23 Fixed the `test_install_download_cache_argument_in_resulting_command` to accommodate introduced cache directory argument fixes and renamed it to `test_install_download_cache_dir_arguments_in_resulting_command`.
 
   * 9d0f94e Fixed unnecessary API changes introduced with suggested changes.
 
@@ -1345,7 +1345,7 @@ Changes:
   @ *2017-03-17T15:17:08Z*
 
   - **PR** `#40090`_: (*rallytime*) Back-port `#40056`_ to 2016.3
-  - **PR** `#40059`_: (*terminalmage*) Fix traceback when virtualenv.managed is invoked with nonexistant user
+  - **PR** `#40059`_: (*terminalmage*) Fix traceback when virtualenv.managed is invoked with nonexistent user
   - **PR** `#40057`_: (*cachedout*) More mentionbot blacklists
   - **PR** `#40056`_: (*thatch45*) update mention bot blacklist
     | refs: `#40090`_
@@ -1354,7 +1354,7 @@ Changes:
 
   * 116201f Merge pull request `#40059`_ from terminalmage/fix-virtualenv-traceback
 
-    * e3cfd29 Fix traceback when virtualenv.managed is invoked with nonexistant user
+    * e3cfd29 Fix traceback when virtualenv.managed is invoked with nonexistent user
 
   * a01b52b Merge pull request `#40090`_ from rallytime/`bp-40056`_
 
@@ -1386,7 +1386,7 @@ Changes:
   - **PR** `#40053`_: (*gtmanfred*) Update rh_ip.py
   - **PR** `#40041`_: (*terminalmage*) Fix transposed lines in salt.utils.process
   - **PR** `#40038`_: (*velom*) correctly parse "pkg_name===version" from pip freeze
-  - **PR** `#40018`_: (*meaksh*) Allows overriding 'timeout' and 'gather_job_timeout' to 'manage.up' runner call
+  - **PR** `#40018`_: (*meaksh*) Allow overriding 'timeout' and 'gather_job_timeout' to 'manage.up' runner call
     | refs: `#40072`_
   * b12720a Merge pull request `#40088`_ from rallytime/merge-2016.11
   * 626bd03 Merge branch '2016.3' into '2016.11'
@@ -1397,9 +1397,9 @@ Changes:
 
   * 8dcffc7 Merge pull request `#40018`_ from meaksh/2016.3-handling-timeouts-for-manage.up-runner
 
-    * 9f5c3b7 Allows to set custom timeouts for 'manage.up' and 'manage.status'
+    * 9f5c3b7 Allow setting custom timeouts for 'manage.up' and 'manage.status'
 
-    * 2102d9c Allows to set 'timeout' and 'gather_job_timeout' via kwargs
+    * 2102d9c Allow setting 'timeout' and 'gather_job_timeout' via kwargs
 
   * 22fc529 Merge pull request `#40038`_ from velom/fix-pip-freeze-parsing
 
@@ -1419,15 +1419,15 @@ Changes:
   * 703ab23 Merge pull request `#40055`_ from rallytime/doc-build-warnings
   * 72d16c9 Update "yaml" code-block references with "jinja" where needed
 
-- **PR** `#40072`_: (*meaksh*) [2016.11] Allows overriding 'timeout' and 'gather_job_timeout' to 'manage.up' runner call
+- **PR** `#40072`_: (*meaksh*) [2016.11] Allow overriding 'timeout' and 'gather_job_timeout' to 'manage.up' runner call
   @ *2017-03-16T15:31:46Z*
 
-  - **PR** `#40018`_: (*meaksh*) Allows overriding 'timeout' and 'gather_job_timeout' to 'manage.up' runner call
+  - **PR** `#40018`_: (*meaksh*) Allow overriding 'timeout' and 'gather_job_timeout' to 'manage.up' runner call
     | refs: `#40072`_
   * e73a1d0 Merge pull request `#40072`_ from meaksh/2016.11-handling-timeouts-for-manage.up-runner
-  * 40246d3 Allows to set custom timeouts for 'manage.up' and 'manage.status'
+  * 40246d3 Allow setting custom timeouts for 'manage.up' and 'manage.status'
 
-  * ad232fd Allows to set 'timeout' and 'gather_job_timeout' via kwargs
+  * ad232fd Allow setting 'timeout' and 'gather_job_timeout' via kwargs
 
 - **PR** `#40045`_: (*terminalmage*) Fix error when chhome is invoked by user.present state in Windows
   @ *2017-03-15T19:00:41Z*
@@ -1458,7 +1458,7 @@ Changes:
   - **PR** `#40016`_: (*terminalmage*) Attempt to fix failing grains tests in 2016.3
   - **PR** `#39994`_: (*rallytime*) Add a versionadded tag for dockerng ulimits addition
   - **PR** `#39988`_: (*terminalmage*) Add comment explaining change from `#39973`_
-  - **PR** `#39980`_: (*vutny*) [2016.3] Allow to use `bg` kwarg for `cmd.run` state function
+  - **PR** `#39980`_: (*vutny*) [2016.3] Allow using `bg` kwarg for `cmd.run` state function
   - **PR** `#39973`_: (*terminalmage*) Don't use docker.Client instance from context if missing attributes
   * 277bd17 Merge pull request `#40025`_ from rallytime/merge-2016.11
   * 029f28b Merge branch '2016.3' into '2016.11'
@@ -1475,7 +1475,7 @@ Changes:
 
   * 0c61d06 Merge pull request `#39980`_ from vutny/cmd-run-state-bg
 
-    * a81dc9d [2016.3] Allow to use `bg` kwarg for `cmd.run` state function
+    * a81dc9d [2016.3] Allow using `bg` kwarg for `cmd.run` state function
 
   * b042484 Merge pull request `#39994`_ from rallytime/ulimits-dockerng-version
 
@@ -1834,7 +1834,7 @@ Changes:
   * 9f70ad7 Merge pull request `#39472`_ from whiteinge/_reformat_low-update
   * d11f538 Add RunnerClient test for old/new-style arg/kwarg parsing
 
-  * ec377ab Reenable skipped RunnerClient tests
+  * ec377ab Re-enable skipped RunnerClient tests
 
   * 27f7fd9 Update _reformat_low to run arg through parse_input
 
@@ -2022,13 +2022,13 @@ Changes:
   * e63cbba Merge pull request `#39653`_ from cachedout/26_odict
   * 91eb721 Use salt's ordereddict for comparison
 
-- **PR** `#39609`_: (*gtmanfred*) intialize the Client stuff in FSClient
+- **PR** `#39609`_: (*gtmanfred*) initialize the Client stuff in FSClient
   @ *2017-02-24T18:50:55Z*
 
   - **ISSUE** `#38836`_: (*toanctruong*) file.managed with S3 Source errors out with obscure message
     | refs: `#39589`_ `#39609`_
   * 0bc6027 Merge pull request `#39609`_ from gtmanfred/2016.11
-  * 0820620 intialize the Client stuff in FSClient
+  * 0820620 initialize the Client stuff in FSClient
 
 - **PR** `#39615`_: (*skizunov*) Bonjour/Avahi beacons: Make sure TXT record length is valid
   @ *2017-02-24T18:47:05Z*

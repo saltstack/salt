@@ -127,11 +127,11 @@ Changes:
   * 35ddb79 Merge pull request `#40141`_ from bobrik/fallback-resolve
   * af1545d Use the first address if cannot connect to any
 
-- **PR** `#40059`_: (*terminalmage*) Fix traceback when virtualenv.managed is invoked with nonexistant user
+- **PR** `#40059`_: (*terminalmage*) Fix traceback when virtualenv.managed is invoked with nonexistent user
   @ *2017-03-16T20:46:43Z*
 
   * 116201f Merge pull request `#40059`_ from terminalmage/fix-virtualenv-traceback
-  * e3cfd29 Fix traceback when virtualenv.managed is invoked with nonexistant user
+  * e3cfd29 Fix traceback when virtualenv.managed is invoked with nonexistent user
 
 - **PR** `#40090`_: (*rallytime*) Back-port `#40056`_ to 2016.3
   @ *2017-03-16T19:42:58Z*
@@ -153,13 +153,13 @@ Changes:
   * d36bdb1 Merge pull request `#40070`_ from Ch3LL/2016.3.6_release
   * a1f8b49 update 2016.3.6 release notes with additional PR's
 
-- **PR** `#40018`_: (*meaksh*) Allows overriding 'timeout' and 'gather_job_timeout' to 'manage.up' runner call
+- **PR** `#40018`_: (*meaksh*) Allow overriding 'timeout' and 'gather_job_timeout' to 'manage.up' runner call
   @ *2017-03-15T19:43:01Z*
 
   * 8dcffc7 Merge pull request `#40018`_ from meaksh/2016.3-handling-timeouts-for-manage.up-runner
-  * 9f5c3b7 Allows to set custom timeouts for 'manage.up' and 'manage.status'
+  * 9f5c3b7 Allow setting custom timeouts for 'manage.up' and 'manage.status'
 
-  * 2102d9c Allows to set 'timeout' and 'gather_job_timeout' via kwargs
+  * 2102d9c Allow setting 'timeout' and 'gather_job_timeout' via kwargs
 
 - **PR** `#40038`_: (*velom*) correctly parse "pkg_name===version" from pip freeze
   @ *2017-03-15T19:30:03Z*
@@ -197,11 +197,11 @@ Changes:
 
   * 5d84b40 Attempt to fix failing grains tests in 2016.3
 
-- **PR** `#39980`_: (*vutny*) [2016.3] Allow to use `bg` kwarg for `cmd.run` state function
+- **PR** `#39980`_: (*vutny*) [2016.3] Allow using `bg` kwarg for `cmd.run` state function
   @ *2017-03-14T17:16:14Z*
 
   * 0c61d06 Merge pull request `#39980`_ from vutny/cmd-run-state-bg
-  * a81dc9d [2016.3] Allow to use `bg` kwarg for `cmd.run` state function
+  * a81dc9d [2016.3] Allow using `bg` kwarg for `cmd.run` state function
 
 - **PR** `#39994`_: (*rallytime*) Add a versionadded tag for dockerng ulimits addition
   @ *2017-03-13T20:58:02Z*
@@ -658,7 +658,7 @@ Changes:
   - **ISSUE** `#39220`_: (*lvg01*) state file.line skips leading spaces in content with mode:ensure and indent:False
     | refs: `#39221`_ `#39221`_ `#39221`_ `#39221`_
   * 5244041 Merge pull request `#39221`_ from lvg01/fix-bug-39220
-  * e8a41d6 Removes to early content stripping (stripping is allready done when needed with ident:true), fixes `#39220`_
+  * e8a41d6 Removes to early content stripping (stripping is already done when needed with ident:true), fixes `#39220`_
 
   * a4b169e Fixed wrong logic, fixes `#39220`_
 
@@ -807,11 +807,11 @@ Changes:
 
   * 97521b3 Second attempt to fix prepending of root_dir to paths
 
-* 6ffeda3 Clarify ipv6 option for minion and inteface for master, closes `#39118`_ (`#39131`_)
+* 6ffeda3 Clarify ipv6 option for minion and interface for master, closes `#39118`_ (`#39131`_)
 
   - **ISSUE** `#39118`_: (*bobrik*) Minion ipv6 option is not documented
     | refs: `#39289`_
-  - **PR** `#39131`_: (*bobrik*) Clarify ipv6 option for minion and inteface for master, closes `#39118`_
+  - **PR** `#39131`_: (*bobrik*) Clarify ipv6 option for minion and interface for master, closes `#39118`_
 
 * 646b9ea Don't abort pillar.get with merge=True if default is None (`#39116`_)
 
@@ -1013,7 +1013,7 @@ Changes:
 
   * e40fac5 Catch MinionError in file.source_list
 
-- **PR** `#38875`_: (*terminalmage*) Reactor: fix traceback when salt:// path is nonexistant
+- **PR** `#38875`_: (*terminalmage*) Reactor: fix traceback when salt:// path is nonexistent
   @ *2017-01-24T15:23:39Z*
 
   - **ISSUE** `#36121`_: (*Ashald*) TemplateNotFound/Unable to cache file
@@ -1021,7 +1021,7 @@ Changes:
   * b5df104 Merge pull request `#38875`_ from terminalmage/issue36121
   * fbc4d2a reactor: ensure glob_ref is a string
 
-  * 2e443d7 cp.cache_file: add note re: return for nonexistant salt:// path
+  * 2e443d7 cp.cache_file: add note re: return for nonexistent salt:// path
 
 - **PR** `#38890`_: (*cro*) Backport  `#38887`_ to 2016.3: Enable resetting a VM via salt-cloud & VMware driver
   @ *2017-01-24T15:15:35Z*

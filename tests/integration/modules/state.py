@@ -695,13 +695,6 @@ class StateModuleTest(integration.ModuleCase,
         #ret = self.run_function('state.sls', mods='requisites.fullsls_prereq')
         #self.assertEqual(['sls command can only be used with require requisite'], ret)
 
-    def test_requisites_full_sls_import(self):
-        '''
-        Test full sls requisite with nothing but an import
-        '''
-        ret = self.run_function('state.sls', mods='requisites.fullsls_require_import')
-        self.assertSaltTrueReturn(ret)
-
     def test_requisites_prereq_simple_ordering_and_errors(self):
         '''
         Call sls file containing several prereq_in and prereq.

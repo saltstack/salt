@@ -126,6 +126,17 @@ class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTes
             },
         })
 
+    def test_invalid_kwargs_are_ignored(self):
+        low = {
+            'client': 'runner',
+            'fun': 'test.metasyntactic',
+            'thiskwargisbad': 'justpretendimnothere',
+        }
+        low.update(self.eauth_creds)
+
+        ret = self.runner.cmd_sync(low)
+        self.assertEqual(ret[0], 'foo')
+
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -214,7 +214,7 @@ def uptime():
             raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
         seconds = int(float(salt.utils.fopen(ut_path).read().split()[0]))
     elif salt.utils.is_sunos():
-        # note: some flavors/vesions report the host uptime inside a zone
+        # note: some flavors/versions report the host uptime inside a zone
         #       https://support.oracle.com/epmos/faces/BugDisplay?id=15611584
         res = __salt__['cmd.run_all']('kstat -p unix:0:system_misc:boot_time')
         if res['retcode'] > 0:

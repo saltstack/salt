@@ -18,8 +18,9 @@ import salt.utils.http
 
 GEM = 'tidy'
 GEM_VER = '1.1.2'
-OLD_GEM = 'thor'
-OLD_VERSION = '0.17.0'
+OLD_GEM = 'brass'
+OLD_VERSION = '1.0.0'
+NEW_VERSION = '1.2.1'
 GEM_LIST = [GEM, OLD_GEM]
 
 
@@ -123,18 +124,18 @@ class GemModuleTest(integration.ModuleCase):
 
         self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
         gem_list = self.run_function('gem.list', [OLD_GEM])
-        self.assertEqual({'thor': ['0.17.0']}, gem_list)
+        self.assertEqual({OLD_GEM: [OLD_VERSION]}, gem_list)
 
         self.run_function('gem.update', [OLD_GEM])
         gem_list = self.run_function('gem.list', [OLD_GEM])
-        self.assertEqual({'thor': ['0.19.4', '0.17.0']}, gem_list)
+        self.assertEqual({OLD_GEM: [NEW_VERSION, OLD_VERSION]}, gem_list)
 
         self.run_function('gem.uninstall', [OLD_GEM])
         self.assertFalse(self.run_function('gem.list', [OLD_GEM]))
 
-    def test_udpate_system(self):
+    def test_update_system(self):
         '''
-        gem.udpate_system
+        gem.update_system
         '''
         ret = self.run_function('gem.update_system')
         self.assertTrue(ret)

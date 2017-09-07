@@ -547,7 +547,7 @@ class ProxyMinionOptionParserTestCase(LogSettingsParserTests):
         # Log file
         self.log_file = '/tmp/salt_proxy_minion_parser_test'
         # Function to patch
-        self.config_func = 'salt.config.minion_config'
+        self.config_func = 'salt.config.proxy_config'
 
         # Mock log setup
         self.setup_log()

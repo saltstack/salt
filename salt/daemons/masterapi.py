@@ -253,27 +253,12 @@ def access_keys(opts):
         acl_users.add(opts['user'])
     acl_users.add(salt.utils.get_user())
     if opts['client_acl_verify'] and HAS_PWD:
-        log.profile('Beginning pwd.getpwall() call in masterarpi acess_keys function')
+        log.profile('Beginning pwd.getpwall() call in masterarpi access_keys function')
         for user in pwd.getpwall():
             users.append(user.pw_name)
-        log.profile('End pwd.getpwall() call in masterarpi acess_keys function')
+        log.profile('End pwd.getpwall() call in masterarpi access_keys function')
     for user in acl_users:
-        log.info(
-            'Preparing the {0} key for local communication'.format(
-                user
-            )
-        )
-
-        if opts['client_acl_verify'] and HAS_PWD:
-            if user not in users:
-                try:
-                    log.profile('Beginning pwd.getpnam() call in masterarpi acess_keys function')
-                    user = pwd.getpwnam(user).pw_name
-                    log.profile('Beginning pwd.getpwnam() call in masterarpi acess_keys function')
-                except KeyError:
-                    log.error('ACL user {0} is not available'.format(user))
-                    continue
-
+        log.info('Preparing the %s key for local communication', user)
         keys[user] = mk_key(opts, user)
 
     # Check other users matching ACL patterns
@@ -731,7 +716,7 @@ class RemoteFuncs(object):
                 load.get('saltenv', load.get('env')),
                 load.get('ext'),
                 self.mminion.functions,
-                pillar=load.get('pillar_override', {}))
+                pillar_override=load.get('pillar_override', {}))
         pillar_dirs = {}
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         if self.opts.get('minion_data_cache', False):
@@ -772,6 +757,7 @@ class RemoteFuncs(object):
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
             return False
+
         if load['jid'] == 'req':
             # The minion is returning a standalone job, request a jobid
             prep_fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])

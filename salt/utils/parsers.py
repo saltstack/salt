@@ -1766,7 +1766,7 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
         except AttributeError:
             minion_id = None
 
-        return config.minion_config(self.get_config_file_path(),
+        return config.proxy_config(self.get_config_file_path(),
                                     cache_minion_id=False,
                                     minion_id=minion_id)
 
@@ -2108,6 +2108,25 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
     _default_logging_level_ = config.DEFAULT_MASTER_OPTS['log_level']
     _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS['log_file']
 
+    def _mixin_setup(self):
+        file_opts_group = optparse.OptionGroup(self, 'File Options')
+        file_opts_group.add_option(
+            '-C', '--chunked',
+            default=False,
+            dest='chunked',
+            action='store_true',
+            help='Use chunked files transfer. Supports big files, recursive '
+                 'lookup and directories creation.'
+        )
+        file_opts_group.add_option(
+            '-n', '--no-compression',
+            default=True,
+            dest='gzip',
+            action='store_false',
+            help='Disable gzip compression.'
+        )
+        self.add_option_group(file_opts_group)
+
     def _mixin_after_parsed(self):
         # salt-cp needs arguments
         if len(self.args) <= 1:
@@ -2121,7 +2140,7 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
                 self.config['tgt'] = self.args[0].split()
         else:
             self.config['tgt'] = self.args[0]
-        self.config['src'] = self.args[1:-1]
+        self.config['src'] = [os.path.realpath(x) for x in self.args[1:-1]]
         self.config['dest'] = self.args[-1]
 
     def setup_config(self):
@@ -2294,6 +2313,16 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                   'Default: %default.')
         )
 
+        self.add_option(
+            '--preserve-minions',
+            default=False,
+            help=('Setting this to True prevents the master from deleting '
+                  'the minion cache when keys are deleted, this may have '
+                  'security implications if compromised minions auth with '
+                  'a previous deleted minion ID. '
+                  'Default: %default.')
+        )
+
         key_options_group = optparse.OptionGroup(
             self, 'Key Generation Options'
         )
@@ -2392,6 +2421,13 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                 self.options.rotate_aes_key = True
             elif self.options.rotate_aes_key.lower() == 'false':
                 self.options.rotate_aes_key = False
+
+    def process_preserve_minions(self):
+        if hasattr(self.options, 'preserve_minions') and isinstance(self.options.preserve_minions, str):
+            if self.options.preserve_minions.lower() == 'true':
+                self.options.preserve_minions = True
+            elif self.options.preserve_minions.lower() == 'false':
+                self.options.preserve_minions = False
 
     def process_list(self):
         # Filter accepted list arguments as soon as possible

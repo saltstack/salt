@@ -20,6 +20,7 @@ import re
 import platform
 import logging
 import locale
+import datetime
 import salt.exceptions
 
 __proxyenabled__ = ['*']
@@ -501,7 +502,7 @@ def _virtual(osdata):
                 '\'virtual\' grain.'
             )
     # Check if enable_lspci is True or False
-    if __opts__.get('enable_lspci', True) is False:
+    if __opts__.get('enable_lspci', True) is True:
         # /proc/bus/pci does not exists, lspci will fail
         if os.path.exists('/proc/bus/pci'):
             _cmds += ['lspci']
@@ -771,6 +772,8 @@ def _virtual(osdata):
                         grains['virtual_subtype'] = 'ovirt'
                     elif 'Google' in output:
                         grains['virtual'] = 'gce'
+                    elif 'BHYVE' in output:
+                        grains['virtual'] = 'bhyve'
             except IOError:
                 pass
     elif osdata['kernel'] == 'FreeBSD':
@@ -919,28 +922,19 @@ def _windows_platform_data():
 
         os_release = platform.release()
         info = salt.utils.win_osinfo.get_os_version_info()
+        server = {'Vista': '2008Server',
+                  '7': '2008ServerR2',
+                  '8': '2012Server',
+                  '8.1': '2012ServerR2',
+                  '10': '2016Server'}
 
         # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
         # started reporting the Desktop version instead of the Server version on
         # Server versions of Windows, so we need to look those up
-        # Check for Python >=2.7.12 or >=3.5.2
-        ver = pythonversion()['pythonversion']
-        if ((six.PY2 and
-                salt.utils.compare_versions(ver, '>=', [2, 7, 12, 'final', 0]))
-            or
-            (six.PY3 and
-                salt.utils.compare_versions(ver, '>=', [3, 5, 2, 'final', 0]))):
-            # (Product Type 1 is Desktop, Everything else is Server)
-            if info['ProductType'] > 1:
-                server = {'Vista': '2008Server',
-                          '7': '2008ServerR2',
-                          '8': '2012Server',
-                          '8.1': '2012ServerR2',
-                          '10': '2016Server'}
-                os_release = server.get(os_release,
-                                        'Grain not found. Update lookup table '
-                                        'in the `_windows_platform_data` '
-                                        'function in `grains\\core.py`')
+        # So, if you find a Server Platform that's a key in the server
+        # dictionary, then lookup the actual Server Release.
+        if info['ProductType'] > 1 and os_release in server:
+            os_release = server[os_release]
 
         service_pack = None
         if info['ServicePackMajor'] > 0:
@@ -1047,6 +1041,7 @@ _OS_NAME_MAP = {
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
     'manjaro': 'Manjaro',
+    'manjarolin': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
     'slesexpand': 'RES',
@@ -1678,25 +1673,23 @@ def ip_fqdn():
 
     ret = {}
     ret['ipv4'] = salt.utils.network.ip_addrs(include_loopback=True)
+    ret['ipv6'] = salt.utils.network.ip_addrs6(include_loopback=True)
+
     _fqdn = hostname()['fqdn']
-    sockets = [(socket.AF_INET, '4')]
-
-    if __opts__.get('ipv6', True):
-        ret['ipv6'] = salt.utils.network.ip_addrs6(include_loopback=True)
-        sockets.append((socket.AF_INET6, '6'))
-
-    for socket_type, ipv_num in sockets:
+    for socket_type, ipv_num in ((socket.AF_INET, '4'), (socket.AF_INET6, '6')):
         key = 'fqdn_ip' + ipv_num
         if not ret['ipv' + ipv_num]:
             ret[key] = []
         else:
             try:
+                start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list(set(item[4][0] for item in info))
             except socket.error:
-                if __opts__['__role'] == 'master':
-                    log.warning('Unable to find IPv{0} record for "{1}" causing a 10 second timeout when rendering grains. '
-                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn))
+                timediff = datetime.datetime.utcnow() - start_time
+                if timediff.seconds > 5 and __opts__['__role'] == 'master':
+                    log.warning('Unable to find IPv{0} record for "{1}" causing a {2} second timeout when rendering grains. '
+                                'Set the dns or /etc/hosts for IPv{0} to clear this.'.format(ipv_num, _fqdn, timediff))
                 ret[key] = []
 
     return ret
@@ -1763,7 +1756,7 @@ def ip6_interfaces():
     # Provides:
     #   ip_interfaces
 
-    if salt.utils.is_proxy() or not __opts__.get('ipv6', True):
+    if salt.utils.is_proxy():
         return {}
 
     ret = {}
@@ -1807,10 +1800,8 @@ def dns():
         return {}
 
     resolv = salt.utils.dns.parse_resolv()
-    keys = ['nameservers', 'ip4_nameservers', 'sortlist']
-    if __opts__.get('ipv6', True):
-        keys.append('ip6_nameservers')
-    for key in keys:
+    for key in ('nameservers', 'ip4_nameservers', 'ip6_nameservers',
+                'sortlist'):
         if key in resolv:
             resolv[key] = [str(i) for i in resolv[key]]
 

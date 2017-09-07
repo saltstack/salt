@@ -82,9 +82,14 @@ class SSHAuthKeyTestCase(TestCase):
               '/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ=='
         options = 'command="/usr/local/lib/ssh-helper"'
         email = 'github.com'
-
+        empty_line = '\n'
+        comment_line = '# this is a comment \n'
         # Write out the authorized key to a temporary file
         temp_file = tempfile.NamedTemporaryFile(delete=False, mode='w+')
+        # Add comment
+        temp_file.write(comment_line)
+        # Add empty line for #41335
+        temp_file.write(empty_line)
         temp_file.write('{0} {1} {2} {3}'.format(options, enc, key, email))
         temp_file.close()
 
@@ -124,6 +129,8 @@ class SSHAuthKeyTestCase(TestCase):
             self.assertIn(key, file_txt)
             self.assertIn('{0} '.format(','.join(options)), file_txt)
             self.assertIn(email, file_txt)
+            self.assertIn(empty_line, file_txt)
+            self.assertIn(comment_line, file_txt)
 
 
 if __name__ == '__main__':

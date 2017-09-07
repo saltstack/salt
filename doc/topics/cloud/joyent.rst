@@ -49,7 +49,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 
 .. code-block:: yaml
 
-    joyent_512
+    joyent_512:
       provider: my-joyent-config
       size: g4-highcpu-512M
       image: ubuntu-16.04

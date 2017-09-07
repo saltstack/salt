@@ -211,7 +211,7 @@ def _gather_pillar(pillarenv, pillar_override):
         __grains__,
         __opts__['id'],
         __opts__['environment'],
-        pillar=pillar_override,
+        pillar_override=pillar_override,
         pillarenv=pillarenv
     )
     ret = pillar.compile_pillar()
@@ -526,10 +526,25 @@ def _run(cmd,
         try:
             proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
         except (OSError, IOError) as exc:
-            raise CommandExecutionError(
+            msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
-                'reason: {2}'.format(cmd, kwargs, exc)
+                'reason: '.format(
+                    cmd if _check_loglevel(output_loglevel) is not None
+                        else 'REDACTED',
+                    kwargs
+                )
             )
+            try:
+                if exc.filename is None:
+                    msg += 'command not found'
+                else:
+                    msg += '{0}: {1}'.format(exc, exc.filename)
+            except AttributeError:
+                # Both IOError and OSError have the filename attribute, so this
+                # is a precaution in case the exception classes in the previous
+                # try/except are changed.
+                msg += 'unknown'
+            raise CommandExecutionError(msg)
 
         try:
             proc.run()
@@ -2667,7 +2682,7 @@ def shell_info(shell, list_modules=False):
     .. versionadded:: 2016.11.0
 
     Provides information about a shell or script languages which often use
-    ``#!``. The values returned are dependant on the shell or scripting
+    ``#!``. The values returned are dependent on the shell or scripting
     languages all return the ``installed``, ``path``, ``version``,
     ``version_raw``
 

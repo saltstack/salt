@@ -111,6 +111,9 @@ TEST_SUITES = {
     'reactor':
         {'display_name': 'Reactor',
          'path': 'integration/reactor'},
+    'proxy':
+        {'display_name': 'Proxy',
+         'path': 'integration/proxy'},
 }
 
 
@@ -119,7 +122,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
     support_destructive_tests_selection = True
     source_code_basedir = SALT_ROOT
 
-    def _get_suites(self, include_unit=False, include_cloud_provider=False):
+    def _get_suites(self, include_unit=False, include_cloud_provider=False,
+                    include_proxy=False):
         '''
         Return a set of all test suites except unit and cloud provider tests
         unless requested
@@ -129,24 +133,30 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             suites -= set(['unit'])
         if not include_cloud_provider:
             suites -= set(['cloud_provider'])
+        if not include_proxy:
+            suites -= set(['proxy'])
 
         return suites
 
-    def _check_enabled_suites(self, include_unit=False, include_cloud_provider=False):
+    def _check_enabled_suites(self, include_unit=False,
+                              include_cloud_provider=False, include_proxy=False):
         '''
         Query whether test suites have been enabled
         '''
         suites = self._get_suites(include_unit=include_unit,
-                                  include_cloud_provider=include_cloud_provider)
+                                  include_cloud_provider=include_cloud_provider,
+                                  include_proxy=include_proxy)
 
         return any([getattr(self.options, suite) for suite in suites])
 
-    def _enable_suites(self, include_unit=False, include_cloud_provider=False):
+    def _enable_suites(self, include_unit=False, include_cloud_provider=False,
+                       include_proxy=False):
         '''
         Enable test suites for current test run
         '''
         suites = self._get_suites(include_unit=include_unit,
-                                  include_cloud_provider=include_cloud_provider)
+                                  include_cloud_provider=include_cloud_provider,
+                                  include_proxy=include_proxy)
 
         for suite in suites:
             setattr(self.options, suite, True)
@@ -347,6 +357,16 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run salt-api tests'
         )
 
+        self.test_selection_group.add_option(
+            '-P',
+            '--proxy',
+            '--proxy-tests',
+            dest='proxy',
+            action='store_true',
+            default=False,
+            help='Run salt-proxy tests'
+        )
+
     def validate_options(self):
         if self.options.cloud_provider:
             # Turn on expensive tests execution
@@ -367,7 +387,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         # When no tests are specifically enumerated on the command line, setup
         # a default run: +unit -cloud_provider
         if not self.options.name and not \
-                self._check_enabled_suites(include_unit=True, include_cloud_provider=True):
+                self._check_enabled_suites(include_unit=True,
+                                           include_cloud_provider=True,
+                                           include_proxy=True):
             self._enable_suites(include_unit=True)
 
         self.start_coverage(
@@ -405,6 +427,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print_header(' * Salt daemons started')
             master_conf = TestDaemon.config('master')
             minion_conf = TestDaemon.config('minion')
+            proxy_conf = TestDaemon.config('proxy')
             sub_minion_conf = TestDaemon.config('sub_minion')
             syndic_conf = TestDaemon.config('syndic')
             syndic_master_conf = TestDaemon.config('syndic_master')
@@ -443,6 +466,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             if sub_minion_conf['ipc_mode'] == 'tcp':
                 print('tcp pub port: {0}'.format(sub_minion_conf['tcp_pub_port']))
                 print('tcp pull port: {0}'.format(sub_minion_conf['tcp_pull_port']))
+            print('\n')
+
+            print_header(' * Proxy Minion configuration values', top=True)
+            print('interface: {0}'.format(proxy_conf['interface']))
+            print('master: {0}'.format(proxy_conf['master']))
+            print('master port: {0}'.format(proxy_conf['master_port']))
+            if minion_conf['ipc_mode'] == 'tcp':
+                print('tcp pub port: {0}'.format(proxy_conf['tcp_pub_port']))
+                print('tcp pull port: {0}'.format(proxy_conf['tcp_pull_port']))
             print('\n')
 
             print_header(' Your client configuration is at {0}'.format(TestDaemon.config_location()))
@@ -534,7 +566,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         status = []
         # Return an empty status if no tests have been enabled
-        if not self._check_enabled_suites(include_cloud_provider=True) and not self.options.name:
+        if not self._check_enabled_suites(include_cloud_provider=True, include_proxy=True) and not self.options.name:
             return status
 
         with TestDaemon(self):

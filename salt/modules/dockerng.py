@@ -1899,6 +1899,10 @@ def login(*registries):
             cmd = ['docker', 'login', '-u', username, '-p', password]
             if registry.lower() != 'hub':
                 cmd.append(registry)
+            log.debug(
+                'Attempting to login to docker registry \'%s\' as user \'%s\'',
+                registry, username
+            )
             login_cmd = __salt__['cmd.run_all'](
                 cmd,
                 python_shell=False,
@@ -3046,9 +3050,6 @@ def create(image,
         pull(image, client_timeout=client_timeout)
 
     create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
-    if create_kwargs.get('hostname') is None \
-            and create_kwargs.get('name') is not None:
-        create_kwargs['hostname'] = create_kwargs['name']
 
     if create_kwargs.pop('validate_input', False):
         _validate_input(create_kwargs, validate_ip_addrs=validate_ip_addrs)
@@ -4402,7 +4403,7 @@ def save(name,
     ret['Size_Human'] = _size_fmt(ret['Size'])
 
     # Process push
-    if kwargs.get(push, False):
+    if kwargs.get('push', False):
         ret['Push'] = __salt__['cp.push'](path)
 
     return ret
@@ -5620,7 +5621,7 @@ def _gather_pillar(pillarenv, pillar_override, **grains):
         # Not sure if these two are correct
         __opts__['id'],
         __opts__['environment'],
-        pillar=pillar_override,
+        pillar_override=pillar_override,
         pillarenv=pillarenv
     )
     ret = pillar.compile_pillar()

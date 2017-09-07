@@ -96,6 +96,7 @@ from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 import salt.utils
 import salt.utils.pkg.deb
+import salt.utils.pkg.rpm
 
 
 def __virtual__():
@@ -221,6 +222,11 @@ def managed(name, ppa=None, **kwargs):
         ``enabled`` argument. If this is passed for an APT-based distro, then
         the reverse will be passed as ``disabled``. For example, passing
         ``enabled=False`` will assume ``disabled=False``.
+
+    architectures
+        On apt-based systems, architectures can restrict the available
+        architectures that the repository provides (e.g. only amd64).
+        architectures should be a comma-separated list.
 
     comps
         On apt-based systems, comps dictate the types of packages to be
@@ -398,6 +404,12 @@ def managed(name, ppa=None, **kwargs):
                         salt.utils.pkg.deb.combine_comments(kwargs['comments'])
                     if pre_comments != post_comments:
                         break
+            elif kwarg == 'comments' and os_family == 'redhat':
+                precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
+                kwargcomments = salt.utils.pkg.rpm.combine_comments(
+                        sanitizedkwargs[kwarg])
+                if precomments != kwargcomments:
+                    break
             else:
                 if os_family in ('redhat', 'suse') \
                         and any(isinstance(x, bool) for x in

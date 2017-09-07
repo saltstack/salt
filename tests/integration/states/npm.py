@@ -6,6 +6,7 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+from distutils.version import LooseVersion
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -15,6 +16,9 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+import salt.modules.cmdmod as cmd
+
+MAX_NPM_VERSION = '5.0.0'
 
 
 @skipIf(salt.utils.which('npm') is None, 'npm not installed')
@@ -36,7 +40,7 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         Determine if URL-referenced NPM module can be successfully installed.
         '''
-        ret = self.run_state('npm.installed', name='git://github.com/request/request')
+        ret = self.run_state('npm.installed', name='request/request#v2.81.1')
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('npm.removed', name='git://github.com/request/request')
         self.assertSaltTrueReturn(ret)
@@ -50,12 +54,14 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state('npm.installed', name=None, pkgs=['pm2', 'grunt'])
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(salt.utils.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),
+            'Skip with npm >= 5.0.0 until #41770 is fixed')
     @destructiveTest
     def test_npm_cache_clean(self):
         '''
         Basic test to determine if NPM successfully cleans it's cached packages.
         '''
-        ret = self.run_state('npm.cache_cleaned', name=None)
+        ret = self.run_state('npm.cache_cleaned', name=None, force=True)
         self.assertSaltTrueReturn(ret)
 
 

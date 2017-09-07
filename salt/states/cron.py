@@ -116,7 +116,7 @@ entry on the minion already contains a numeric value, then using the ``random``
 keyword will not modify it.
 
 Added the opportunity to set a job with a special keyword like '@reboot' or
-'@hourly'.
+'@hourly'. Quotes must be used, otherwise PyYAML will strip the '@' sign.
 
 .. code-block:: yaml
 
@@ -150,6 +150,13 @@ from salt.modules.cron import (
 )
 
 
+def __virtual__():
+    if 'cron.list_tab' in __salt__:
+        return True
+    else:
+        return (False, 'cron module could not be loaded')
+
+
 def _check_cron(user,
                 cmd,
                 minute=None,
@@ -159,7 +166,8 @@ def _check_cron(user,
                 dayweek=None,
                 comment=None,
                 commented=None,
-                identifier=None):
+                identifier=None,
+                special=None):
     '''
     Return the changes
     '''
@@ -180,16 +188,21 @@ def _check_cron(user,
     if cmd is not None:
         cmd = str(cmd)
     lst = __salt__['cron.list_tab'](user)
-    for cron in lst['crons']:
-        if _cron_matched(cron, cmd, identifier):
-            if any([_needs_change(x, y) for x, y in
-                    ((cron['minute'], minute), (cron['hour'], hour),
-                     (cron['daymonth'], daymonth), (cron['month'], month),
-                     (cron['dayweek'], dayweek), (cron['identifier'], identifier),
-                     (cron['cmd'], cmd), (cron['comment'], comment),
-                     (cron['commented'], commented))]):
-                return 'update'
-            return 'present'
+    if special is None:
+        for cron in lst['crons']:
+            if _cron_matched(cron, cmd, identifier):
+                if any([_needs_change(x, y) for x, y in
+                        ((cron['minute'], minute), (cron['hour'], hour),
+                         (cron['daymonth'], daymonth), (cron['month'], month),
+                         (cron['dayweek'], dayweek), (cron['identifier'], identifier),
+                         (cron['cmd'], cmd), (cron['comment'], comment),
+                         (cron['commented'], commented))]):
+                    return 'update'
+                return 'present'
+    else:
+        for cron in lst['special']:
+            if special == cron['spec'] and cmd == cron['cmd']:
+                return 'present'
     return 'absent'
 
 
@@ -289,7 +302,8 @@ def present(name,
         edits. This defaults to the state id
 
     special
-        A special keyword to specify periodicity (eg. @reboot, @hourly...)
+        A special keyword to specify periodicity (eg. @reboot, @hourly...).
+        Quotes must be used, otherwise PyYAML will strip the '@' sign.
 
         .. versionadded:: 2016.3.0
     '''
@@ -310,7 +324,8 @@ def present(name,
                              dayweek=dayweek,
                              comment=comment,
                              commented=commented,
-                             identifier=identifier)
+                             identifier=identifier,
+                             special=special)
         ret['result'] = None
         if status == 'absent':
             ret['comment'] = 'Cron {0} is set to be added'.format(name)
@@ -374,7 +389,8 @@ def absent(name,
         edits. This defaults to the state id
 
     special
-        The special keyword used in the job (eg. @reboot, @hourly...)
+        The special keyword used in the job (eg. @reboot, @hourly...).
+        Quotes must be used, otherwise PyYAML will strip the '@' sign.
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
     ###       cannot be removed from the function definition, otherwise the use

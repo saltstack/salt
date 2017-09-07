@@ -620,6 +620,7 @@ class LocalClient(object):
             * ``nodegroup`` - Match on nodegroup
             * ``range`` - Use a Range server for matching
             * ``compound`` - Pass a compound match string
+            * ``ipcidr`` - Match based on Subnet (CIDR notation) or IPv4 address.
 
         :param ret: The returner to use. The value passed can be single
             returner, or a comma delimited list of returners to call in order
@@ -1122,8 +1123,17 @@ class LocalClient(object):
                         minions.remove(raw['data']['id'])
                         break
                 except KeyError as exc:
-                    # This is a safe pass. We're just using the try/except to avoid having to deep-check for keys
-                    log.debug('Passing on saltutil error. This may be an error in saltclient. {0}'.format(exc))
+                    # This is a safe pass. We're just using the try/except to
+                    # avoid having to deep-check for keys.
+                    missing_key = exc.__str__().strip('\'"')
+                    if missing_key == 'retcode':
+                        log.debug('retcode missing from client return')
+                    else:
+                        log.debug(
+                            'Passing on saltutil error. Key \'%s\' missing '
+                            'from client return. This may be an error in '
+                            'the client.', missing_key
+                        )
                 # Keep track of the jid events to unsubscribe from later
                 open_jids.add(jinfo['jid'])
 

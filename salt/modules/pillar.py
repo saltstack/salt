@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 def get(key,
         default=KeyError,
         merge=False,
+        merge_nested_lists=None,
         delimiter=DEFAULT_TARGET_DELIM,
         saltenv=None):
     '''
@@ -51,7 +52,7 @@ def get(key,
 
         pkg:apache
 
-    merge : False
+    merge : ``False``
         If ``True``, the retrieved values will be merged into the passed
         default. When the default and the retrieved value are both
         dictionaries, the dictionaries will be recursively merged.
@@ -61,6 +62,18 @@ def get(key,
             If the default and the retrieved value are not of the same type,
             then merging will be skipped and the retrieved value will be
             returned. Earlier releases raised an error in these cases.
+
+    merge_nested_lists
+        If set to ``False``, lists nested within the retrieved pillar
+        dictionary will *overwrite* lists in ``default``. If set to ``True``,
+        nested lists will be *merged* into lists in ``default``. If unspecified
+        (the default), this option is inherited from the
+        :conf_minion:`pillar_merge_lists` minion config option.
+
+        .. note::
+            This option is ignored when ``merge`` is set to ``False``.
+
+        .. versionadded:: 2016.11.6
 
     delimiter
         Specify an alternate delimiter to use when traversing a nested dict.
@@ -95,8 +108,9 @@ def get(key,
     if not __opts__.get('pillar_raise_on_missing'):
         if default is KeyError:
             default = ''
-    opt_merge_lists = __opts__.get('pillar_merge_lists', False)
-    pillar_dict = __pillar__ if saltenv is None else items(saltenv=saltenv)
+    opt_merge_lists = __opts__.get('pillar_merge_lists', False) if \
+        merge_nested_lists is None else merge_nested_lists
+    pillar_dict = __pillar__ if saltenv is None else items(pillarenv=saltenv)
 
     if merge:
         if isinstance(default, dict):
@@ -189,7 +203,7 @@ def items(*args, **kwargs):
         __opts__,
         __grains__,
         __opts__['id'],
-        pillar=kwargs.get('pillar'),
+        pillar_override=kwargs.get('pillar'),
         pillarenv=kwargs.get('pillarenv') or __opts__['pillarenv'])
 
     return pillar.compile_pillar()
@@ -397,7 +411,7 @@ def ext(external, pillar=None):
         __opts__['id'],
         __opts__['environment'],
         ext=external,
-        pillar=pillar)
+        pillar_override=pillar)
 
     ret = pillar_obj.compile_pillar()
 

@@ -91,8 +91,9 @@ class NetworkTestCase(TestCase):
         Test for return information on open ports and states
         '''
         with patch.dict(network.__grains__, {'kernel': 'Linux'}):
-            with patch.object(network, '_netstat_linux', return_value='A'):
-                self.assertEqual(network.netstat(), 'A')
+            with patch.object(salt.utils, 'which', return_value=True):
+                with patch.object(network, '_netstat_linux', return_value='A'):
+                    self.assertEqual(network.netstat(), 'A')
 
         with patch.dict(network.__grains__, {'kernel': 'OpenBSD'}):
             with patch.object(network, '_netstat_bsd', return_value='A'):
@@ -334,12 +335,13 @@ class NetworkTestCase(TestCase):
             self.assertRaises(CommandExecutionError, network.routes, 'inet')
 
         with patch.dict(network.__grains__, {'kernel': 'Linux'}):
-            with patch.object(network, '_netstat_route_linux',
-                              side_effect=['A', [{'addr_family': 'inet'}]]):
-                self.assertEqual(network.routes(None), 'A')
+            with patch.object(salt.utils, 'which', return_value=True):
+                with patch.object(network, '_netstat_route_linux',
+                                  side_effect=['A', [{'addr_family': 'inet'}]]):
+                    self.assertEqual(network.routes(None), 'A')
 
-                self.assertListEqual(network.routes('inet'),
-                                     [{'addr_family': 'inet'}])
+                    self.assertListEqual(network.routes('inet'),
+                                         [{'addr_family': 'inet'}])
 
     def test_default_route(self):
         '''

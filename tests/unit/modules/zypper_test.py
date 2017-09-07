@@ -25,6 +25,7 @@ ensure_in_syspath('../../')
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import configparser
 import salt.ext.six as six
+import salt.utils.pkg
 
 
 class ZyppCallMock(object):
@@ -52,6 +53,7 @@ from salt.modules import zypper
 zypper.__salt__ = dict()
 zypper.__grains__ = dict()
 zypper.__context__ = dict()
+zypper.__opts__ = dict()
 zypper.rpm = None
 
 
@@ -249,10 +251,11 @@ class ZypperTestCase(TestCase):
         }
 
         with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=run_out)}):
-            result = zypper.refresh_db()
-            self.assertEqual(result.get("openSUSE-Leap-42.1-LATEST"), False)
-            self.assertEqual(result.get("openSUSE-Leap-42.1-Update"), False)
-            self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                result = zypper.refresh_db()
+                self.assertEqual(result.get("openSUSE-Leap-42.1-LATEST"), False)
+                self.assertEqual(result.get("openSUSE-Leap-42.1-Update"), False)
+                self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
 
     def test_info_installed(self):
         '''
@@ -359,6 +362,11 @@ class ZypperTestCase(TestCase):
                 self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
                 zypper_mock.assert_any_call('update', '--auto-agree-with-licenses')
 
+            with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1,1.2"}])):
+                ret = zypper.upgrade()
+                self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
+                zypper_mock.assert_any_call('update', '--auto-agree-with-licenses')
+
             with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
                 ret = zypper.upgrade(dist_upgrade=True)
                 self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
@@ -378,6 +386,23 @@ class ZypperTestCase(TestCase):
                 ret = zypper.upgrade(dist_upgrade=True, fromrepo=["Dummy", "Dummy2"], novendorchange=True)
                 self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
                 zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change')
+
+    @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
+    @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
+    @patch.dict('salt.modules.zypper.__grains__', {'osrelease_info': [12, 1]})
+    def test_upgrade_kernel(self):
+        '''
+        Test kernel package upgrade success.
+
+        :return:
+        '''
+
+        with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=(['kernel-default'], None))}):
+            with patch('salt.modules.zypper.__zypper__.noraise.call', MagicMock()):
+                with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[
+                    {"kernel-default": "3.12.49-11.1"}, {"kernel-default": "3.12.49-11.1,3.12.51-60.20.2"}])):
+                    ret = zypper.install('kernel-default', '--auto-agree-with-licenses')
+                    self.assertDictEqual(ret, {"kernel-default": {"old": "3.12.49-11.1", "new": "3.12.51-60.20.2"}})
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
     @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))

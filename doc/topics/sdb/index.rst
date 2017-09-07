@@ -96,7 +96,7 @@ a new value using a command like:
 
 Deleting values (if supported by the driver) is done pretty much the same way as
 getting them. Provided that you have a profile called ``mykvstore`` that uses
-a driver allowing to delete values you would delete a value as shown bellow:
+a driver allowing to delete values you would delete a value as shown below:
 
 .. code-block:: bash
 

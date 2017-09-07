@@ -25,7 +25,7 @@ try:
     )
     HAS_LIBCLOUD = True
     LIBCLOUD_VERSION_INFO = tuple([
-        int(part) for part in libcloud.__version__.replace('-', '.').split('.')[:3]
+        int(part) for part in libcloud.__version__.replace('-', '.').replace('rc', '.').split('.')[:3]
     ])
 
 except ImportError:
@@ -150,7 +150,7 @@ def avail_locations(conn=None, call=None):
 
         ret[img_name] = {}
         for attr in dir(img):
-            if attr.startswith('_'):
+            if attr.startswith('_') or attr == 'driver':
                 continue
 
             attr_value = getattr(img, attr)
@@ -187,7 +187,7 @@ def avail_images(conn=None, call=None):
 
         ret[img_name] = {}
         for attr in dir(img):
-            if attr.startswith('_'):
+            if attr.startswith('_') or attr in ('driver', 'get_uuid'):
                 continue
             attr_value = getattr(img, attr)
             if isinstance(attr_value, string_types) and not six.PY3:
@@ -222,7 +222,7 @@ def avail_sizes(conn=None, call=None):
 
         ret[size_name] = {}
         for attr in dir(size):
-            if attr.startswith('_'):
+            if attr.startswith('_') or attr in ('driver', 'get_uuid'):
                 continue
 
             try:

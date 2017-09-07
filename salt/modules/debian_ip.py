@@ -1581,13 +1581,13 @@ def _write_file_ifaces(iface, data, **settings):
         if adapter == iface:
             saved_ifcfg = tmp
 
-    _SEPERATE_FILE = False
+    _SEPARATE_FILE = False
     if 'filename' in settings:
         if not settings['filename'].startswith('/'):
             filename = '{0}/{1}'.format(_DEB_NETWORK_DIR, settings['filename'])
         else:
             filename = settings['filename']
-        _SEPERATE_FILE = True
+        _SEPARATE_FILE = True
     else:
         if 'filename' in adapters[adapter]['data']:
             filename = adapters[adapter]['data']
@@ -1600,7 +1600,7 @@ def _write_file_ifaces(iface, data, **settings):
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.flopen(filename, 'w') as fout:
-        if _SEPERATE_FILE:
+        if _SEPARATE_FILE:
             fout.write(saved_ifcfg)
         else:
             fout.write(ifcfg)

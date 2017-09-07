@@ -44,19 +44,20 @@ class LocalemodTestCase(TestCase):
         Test for Get the current system locale
         '''
         with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': True}):
-            localemod.HAS_DBUS = True
-            with patch.object(localemod,
-                              '_parse_dbus_locale',
-                              return_value={'LANG': 'A'}):
-                self.assertEqual('A', localemod.get_locale())
-                localemod._parse_dbus_locale.assert_called_once_with()
+            with patch.dict(localemod.__grains__, {'os_family': ['Unknown']}):
+                localemod.HAS_DBUS = True
+                with patch.object(localemod,
+                                  '_parse_dbus_locale',
+                                  return_value={'LANG': 'A'}):
+                    self.assertEqual('A', localemod.get_locale())
+                    localemod._parse_dbus_locale.assert_called_once_with()
 
-            localemod.HAS_DBUS = False
-            with patch.object(localemod,
-                              '_parse_localectl',
-                              return_value={'LANG': 'A'}):
-                self.assertEqual('A', localemod.get_locale())
-                localemod._parse_localectl.assert_called_once_with()
+                localemod.HAS_DBUS = False
+                with patch.object(localemod,
+                                  '_parse_localectl',
+                                  return_value={'LANG': 'A'}):
+                    self.assertEqual('A', localemod.get_locale())
+                    localemod._parse_localectl.assert_called_once_with()
 
         with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': False}):
             with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
@@ -82,8 +83,9 @@ class LocalemodTestCase(TestCase):
         Test for Sets the current system locale
         '''
         with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': True}):
-            with patch.object(localemod, '_localectl_set', return_value=True):
-                self.assertTrue(localemod.set_locale('l'))
+            with patch.dict(localemod.__grains__, {'os_family': ['Unknown']}):
+                with patch.object(localemod, '_localectl_set', return_value=True):
+                    self.assertTrue(localemod.set_locale('l'))
 
         with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': False}):
             with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):

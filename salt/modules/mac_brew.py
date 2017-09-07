@@ -17,6 +17,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
 from salt.ext.six.moves import zip
@@ -256,6 +257,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     cmd = 'brew update'
     if _call_brew(cmd)['retcode']:
         log.error('Failed to update')
