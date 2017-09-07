@@ -87,7 +87,7 @@ class TimeoutException(Exception):
     pass
 
 
-if not platform.startswith("win"):
+if salt.utils.is_windows():
     @contextmanager
     def _time_limit(seconds):
         def signal_handler(signum, frame):
@@ -717,7 +717,7 @@ def delete_deployment(name, namespace='default', **kwargs):
             namespace=namespace,
             body=body)
         mutable_api_response = api_response.to_dict()
-        if not platform.startswith("win"):
+        if salt.utils.is_windows():
             try:
                 with _time_limit(POLLING_TIME_LIMIT):
                     while show_deployment(name, namespace) is not None:
@@ -736,9 +736,9 @@ def delete_deployment(name, namespace='default', **kwargs):
                 else:
                     sleep(1)
         if mutable_api_response['code'] != 200:
-            log.warning("Reached polling time limit. Deployment is not yet "
-                        "deleted, but we are backing off. Sorry, but you'll "
-                        "have to check manually.")
+            log.warning('Reached polling time limit. Deployment is not yet '
+                        'deleted, but we are backing off. Sorry, but you\'ll '
+                        'have to check manually.')
         return mutable_api_response
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
