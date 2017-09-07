@@ -97,9 +97,11 @@ class GenesisTestCase(TestCase):
                                                'cmd.run': MagicMock(),
                                                'disk.blkid': MagicMock(return_value={})}):
                 with patch('salt.modules.genesis.salt.utils.which', return_value=True):
-                    param_set['params'].update(common_parms)
-                    self.assertEqual(genesis.bootstrap(**param_set['params']), None)
-                    genesis.__salt__['cmd.run'].assert_any_call(param_set['cmd'], python_shell=False)
+                    with patch('salt.modules.genesis.salt.utils.validate.path.is_readable',
+                               return_value=True):
+                        param_set['params'].update(common_parms)
+                        self.assertEqual(genesis.bootstrap(**param_set['params']), None)
+                        genesis.__salt__['cmd.run'].assert_any_call(param_set['cmd'], python_shell=False)
 
         with patch.object(genesis, '_bootstrap_pacman', return_value='A') as pacman_patch:
             with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),
