@@ -10,7 +10,6 @@ import os
 import re
 import sys
 import glob
-import getpass
 import time
 import codecs
 import logging
@@ -1761,6 +1760,10 @@ def _read_conf_file(path):
     '''
     Read in a config file from a given path and process it into a dictionary
     '''
+    if (not salt.utils.validate.path.exists(path, quiet=os.path.basename(path) == '.saltrc')
+            or not salt.utils.validate.path.is_readable(path)):
+        return {}
+
     log.debug('Reading configuration from {0}'.format(path))
     with salt.utils.fopen(path, 'r') as conf_file:
         try:
@@ -1811,6 +1814,9 @@ def _absolute_path(path, relative_to=None):
     return path
 
 
+__config_refs__ = {}
+
+
 def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
     '''
     Returns configuration dict from parsing either the file described by
@@ -1859,20 +1865,19 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
                     ifile.readline()  # skip first line
                     out.write(ifile.read())
 
-    opts = {}
-
-    if salt.utils.validate.path.is_readable(path):
+    if path not in __config_refs__:
         try:
             opts = _read_conf_file(path)
             opts['conf_file'] = path
+            __config_refs__[path] = opts
         except salt.exceptions.SaltConfigurationError as error:
             log.error(error)
             if exit_on_config_errors:
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-    else:
-        log.debug('Missing configuration file: {0}'.format(path))
+        else:
+            log.debug('Missing configuration file: {0}'.format(path))
 
-    return opts
+    return __config_refs__[path]
 
 
 def include_config(include, orig_path, verbose, exit_on_config_errors=False):
@@ -2196,13 +2201,8 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     overrides = defaults
 
     # Load cloud configuration from any default or provided includes
-    overrides.update(
-        salt.config.include_config(overrides['default_include'], path, verbose=False)
-    )
-    include = overrides.get('include', [])
-    overrides.update(
-        salt.config.include_config(include, path, verbose=True)
-    )
+    overrides.update(include_config(overrides['default_include'], path, verbose=False))
+    overrides.update(include_config(overrides.get('include', []), path, verbose=True))
 
     # The includes have been evaluated, let's see if master, providers and
     # profiles configuration settings have been included and if not, set the

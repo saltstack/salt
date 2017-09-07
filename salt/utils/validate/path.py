@@ -12,6 +12,10 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import logging
+
+
+log = logging.getLogger(__name__)
 
 
 def is_writeable(path, check_parent=False):
@@ -50,17 +54,33 @@ def is_writeable(path, check_parent=False):
     return os.access(parent_dir, os.W_OK)
 
 
-def is_readable(path):
+def exists(path, quiet=False):
+    '''
+    Check if a given path exists.
+
+    :param path: The path to check
+    :param quiet: Suppresses the log message
+    :returns: True or False
+    '''
+
+    _exists = os.access(path, os.F_OK)
+    if not _exists and not quiet:
+        log.error('Failed to read configuration from {0} - file does not exist'.format(path))
+
+    return _exists
+
+
+def is_readable(path, quiet=False):
     '''
     Check if a given path is readable by the current user.
 
     :param path: The path to check
+    :param quiet: Suppresses the log message
     :returns: True or False
     '''
 
-    if os.access(path, os.F_OK) and os.access(path, os.R_OK):
-        # The path exists and is readable
-        return True
+    _readable = os.access(path, os.R_OK)
+    if not _readable and not quiet:
+        log.error('Failed to read configuration from {0} - access denied'.format(path))
 
-    # The path does not exist
-    return False
+    return _readable

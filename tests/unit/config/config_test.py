@@ -882,10 +882,8 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 if not os.path.isdir(directory):
                     os.makedirs(directory)
 
-            default_config = sconfig.cloud_config(config_file_path)
-            default_config['deploy_scripts_search_path'] = deploy_dir_path
             with salt.utils.fopen(config_file_path, 'w') as cfd:
-                cfd.write(yaml.dump(default_config))
+                cfd.write(yaml.dump({'deploy_scripts_search_path': deploy_dir_path}))
 
             default_config = sconfig.cloud_config(config_file_path)
 
