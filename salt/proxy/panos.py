@@ -1,418 +1,603 @@
 # -*- coding: utf-8 -*-
 '''
-
-Proxy Minion interface module for managing Palo Alto firewall devices.
+A state module to manage Palo Alto network devices.
 
 :codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
 :maturity:   new
 :depends:    none
 :platform:   unix
 
-This proxy minion enables Palo Alto firewalls (hereafter referred to
-as simply 'panos') to be treated individually like a Salt Minion.
 
-The panos proxy leverages the XML API functionality on the Palo Alto
-firewall. The Salt proxy must have access to the Palo Alto firewall on
-HTTPS (tcp/443).
+About
+=====
+This state module was designed to handle connections to a Palo Alto based
+firewall. This module relies on the Palo Alto proxy module to interface with the devices.
 
-More in-depth conceptual reading on Proxy Minions can be found in the
-:ref:`Proxy Minion <proxy-minion>` section of Salt's
-documentation.
+This state module is designed to give extreme flexibility in the control over XPATH values on the PANOS device. It
+exposes the core XML API commands and allows state modules to chain complex XPATH commands.
 
-
-Configuration
-=============
-To use this integration proxy module, please configure the following:
-
-Pillar
-------
-
-Proxy minions get their configuration from Salt's Pillar. Every proxy must
-have a stanza in Pillar and a reference in the Pillar top-file that matches
-the ID. There are four connection options available for the panos proxy module.
-
-- Direct Device (Password)
-- Direct Device (API Key)
-- Panorama Pass-Through (Password)
-- Panorama Pass-Through (API Key)
-
-
-Direct Device (Password)
-------------------------
-
-The direct device configuration configures the proxy to connect directly to
-the device with username and password.
+Below is an example of how to construct a security rule and move to the top of the policy. This will take a config
+lock to prevent execution during the operation, then remove the lock. After the XPATH has been deployed, it will
+commit to the device.
 
 .. code-block:: yaml
 
-    proxy:
-      proxytype: panos
-      host: <ip or dns name of panos host>
-      username: <panos username>
-      password: <panos password>
+    panos/takelock:
+        panos.add_config_lock
+    panos/service_tcp_22:
+        panos.set_config:
+            - xpath: /config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys1']/service
+            - value: <entry name='tcp-22'><protocol><tcp><port>22</port></tcp></protocol></entry>
+            - commit: False
+    panos/create_rule1:
+        panos.set_config:
+            - xpath: /config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys1']/rulebase/security/rules
+            - value: '
+              <entry name="rule1">
+                <from><member>trust</member></from>
+                <to><member>untrust</member></to>
+                <source><member>10.0.0.1</member></source>
+                <destination><member>10.0.1.1</member></destination>
+                <service><member>tcp-22</member></service>
+                <application><member>any</member></application>
+                <action>allow</action>
+                <disabled>no</disabled>
+              </entry>'
+            - commit: False
+    panos/moveruletop:
+        panos.move_config:
+            - xpath: /config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys1']/rulebase/security/rules/entry[@name='rule1']
+            - where: top
+            - commit: False
+    panos/removelock:
+        panos.remove_config_lock
+    panos/commit:
+        panos.commit
 
-proxytype
-^^^^^^^^^
-The ``proxytype`` key and value pair is critical, as it tells Salt which
-interface to load from the ``proxy`` directory in Salt's install hierarchy,
-or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
-own proxy module, for example). To use this panos Proxy Module, set this to
-``panos``.
+Version Specific Configurations
+===============================
+Palo Alto devices running different versions will have different supported features and different command structures. In
+order to account for this, the proxy module can be leveraged to check if the panos device is at a specific revision
+level.
 
-host
-^^^^
-The location, or ip/dns, of the panos host. Required.
-
-username
-^^^^^^^^
-The username used to login to the panos host. Required.
-
-password
-^^^^^^^^
-The password used to login to the panos host. Required.
-
-Direct Device (API Key)
-------------------------
-
-Palo Alto devices allow for access to the XML API with a generated 'API key'_
-instead of username and password.
-
-.. _API key: https://www.paloaltonetworks.com/documentation/71/pan-os/xml-api/get-started-with-the-pan-os-xml-api/get-your-api-key
-
-.. code-block:: yaml
-
-    proxy:
-      proxytype: panos
-      host: <ip or dns name of panos host>
-      apikey: <panos generated api key>
-
-proxytype
-^^^^^^^^^
-The ``proxytype`` key and value pair is critical, as it tells Salt which
-interface to load from the ``proxy`` directory in Salt's install hierarchy,
-or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
-own proxy module, for example). To use this panos Proxy Module, set this to
-``panos``.
-
-host
-^^^^
-The location, or ip/dns, of the panos host. Required.
-
-apikey
-^^^^^^^^
-The generated XML API key for the panos host. Required.
-
-Panorama Pass-Through (Password)
-------------------------
-
-The Panorama pass-through method sends all connections through the Panorama
-management system. It passes the connections to the appropriate device using
-the serial number of the Palo Alto firewall.
-
-This option will reduce the number of connections that must be present for the
-proxy server. It will only require a connection to the Panorama server.
-
-The username and password will be for authentication to the Panorama server,
-not the panos device.
+The proxy['panos.is_required_version'] method will check if a panos device is currently running a version equal or
+greater than the passed version. For example, proxy['panos.is_required_version']('7.0.0') would match both 7.1.0 and
+8.0.0.
 
 .. code-block:: yaml
 
-    proxy:
-      proxytype: panos
-      serial: <serial number of panos host>
-      host: <ip or dns name of the panorama server>
-      username: <panorama server username>
-      password: <panorama server password>
+    {% if proxy['panos.is_required_version']('8.0.0') %}
+    panos/deviceconfig/system/motd-and-banner:
+      panos.set_config:
+        - xpath: /config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/motd-and-banner
+        - value: |
+          <banner-header>BANNER TEXT</banner-header>
+          <banner-header-color>color2</banner-header-color>
+          <banner-header-text-color>color18</banner-header-text-color>
+          <banner-header-footer-match>yes</banner-header-footer-match>
+        - commit: False
+    {% endif %}
 
-proxytype
-^^^^^^^^^
-The ``proxytype`` key and value pair is critical, as it tells Salt which
-interface to load from the ``proxy`` directory in Salt's install hierarchy,
-or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
-own proxy module, for example). To use this panos Proxy Module, set this to
-``panos``.
-
-serial
-^^^^^^
-The serial number of the panos host. Required.
-
-host
-^^^^
-The location, or ip/dns, of the Panorama server. Required.
-
-username
-^^^^^^^^
-The username used to login to the Panorama server. Required.
-
-password
-^^^^^^^^
-The password used to login to the Panorama server. Required.
-
-Panorama Pass-Through (API Key)
-------------------------
-
-The Panorama server can also utilize a generated 'API key'_ for authentication.
-
-.. _API key: https://www.paloaltonetworks.com/documentation/71/pan-os/xml-api/get-started-with-the-pan-os-xml-api/get-your-api-key
-
-.. code-block:: yaml
-
-    proxy:
-      proxytype: panos
-      serial: <serial number of panos host>
-      host: <ip or dns name of the panorama server>
-      apikey: <panos generated api key>
-
-proxytype
-^^^^^^^^^
-The ``proxytype`` key and value pair is critical, as it tells Salt which
-interface to load from the ``proxy`` directory in Salt's install hierarchy,
-or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
-own proxy module, for example). To use this panos Proxy Module, set this to
-``panos``.
-
-serial
-^^^^^^
-The serial number of the panos host. Required.
-
-host
-^^^^
-The location, or ip/dns, of the Panorama server. Required.
-
-apikey
-^^^^^^^^
-The generated XML API key for the Panorama server. Required.
+.. seealso::
+    :prox:`Palo Alto Proxy Module <salt.proxy.panos>`
 
 '''
 
-from __future__ import absolute_import
-
 # Import Python Libs
+from __future__ import absolute_import
 import logging
 
-# Import Salt Libs
-import salt.exceptions
-
-# This must be present or the Salt loader won't load this module.
-__proxyenabled__ = ['panos']
-
-# Variables are scoped to this module so we can have persistent data.
-GRAINS_CACHE = {'vendor': 'Palo Alto'}
-DETAILS = {}
-
-# Set up logging
-log = logging.getLogger(__file__)
-
-# Define the module's virtual name
-__virtualname__ = 'panos'
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
+    return 'panos.commit' in __salt__
+
+
+def _default_ret(name):
     '''
-    Only return if all the modules are available.
+    Set the default response values.
+
     '''
-    return __virtualname__
-
-
-def init(opts):
-    '''
-    This function gets called when the proxy starts up. For
-    panos devices, a determination is made on the connection type
-    and the appropriate connection details that must be cached.
-    '''
-    if 'host' not in opts['proxy']:
-        log.critical('No \'host\' key found in pillar for this proxy.')
-        return False
-    if 'apikey' not in opts['proxy']:
-        # If we do not have an apikey, we must have both a username and password
-        if 'username' not in opts['proxy']:
-            log.critical('No \'username\' key found in pillar for this proxy.')
-            return False
-        if 'password' not in opts['proxy']:
-            log.critical('No \'passwords\' key found in pillar for this proxy.')
-            return False
-
-    DETAILS['url'] = 'https://{0}/api/'.format(opts['proxy']['host'])
-
-    # Set configuration details
-    DETAILS['host'] = opts['proxy']['host']
-    if 'serial' in opts['proxy']:
-        DETAILS['serial'] = opts['proxy'].get('serial')
-        if 'apikey' in opts['proxy']:
-            log.debug("Selected pan_key method for panos proxy module.")
-            DETAILS['method'] = 'pan_key'
-            DETAILS['apikey'] = opts['proxy'].get('apikey')
-        else:
-            log.debug("Selected pan_pass method for panos proxy module.")
-            DETAILS['method'] = 'pan_pass'
-            DETAILS['username'] = opts['proxy'].get('username')
-            DETAILS['password'] = opts['proxy'].get('password')
-    else:
-        if 'apikey' in opts['proxy']:
-            log.debug("Selected dev_key method for panos proxy module.")
-            DETAILS['method'] = 'dev_key'
-            DETAILS['apikey'] = opts['proxy'].get('apikey')
-        else:
-            log.debug("Selected dev_pass method for panos proxy module.")
-            DETAILS['method'] = 'dev_pass'
-            DETAILS['username'] = opts['proxy'].get('username')
-            DETAILS['password'] = opts['proxy'].get('password')
-
-    # Ensure connectivity to the device
-    log.debug("Attempting to connect to panos proxy host.")
-    query = {'type': 'op', 'cmd': '<show><system><info></info></system></show>'}
-    call(query)
-    log.debug("Successfully connected to panos proxy host.")
-
-    DETAILS['initialized'] = True
-
-
-def call(payload=None):
-    '''
-    This function captures the query string and sends it to the Palo Alto device.
-    '''
-    ret = {}
-    try:
-        if DETAILS['method'] == 'dev_key':
-            # Pass the api key without the target declaration
-            conditional_payload = {'key': DETAILS['apikey']}
-            payload.update(conditional_payload)
-            r = __utils__['http.query'](DETAILS['url'],
-                                        data=payload,
-                                        method='POST',
-                                        decode_type='xml',
-                                        decode=True,
-                                        verify_ssl=False,
-                                        raise_error=True)
-            ret = r['dict'][0]
-        elif DETAILS['method'] == 'dev_pass':
-            # Pass credentials without the target declaration
-            r = __utils__['http.query'](DETAILS['url'],
-                                        username=DETAILS['username'],
-                                        password=DETAILS['password'],
-                                        data=payload,
-                                        method='POST',
-                                        decode_type='xml',
-                                        decode=True,
-                                        verify_ssl=False,
-                                        raise_error=True)
-            ret = r['dict'][0]
-        elif DETAILS['method'] == 'pan_key':
-            # Pass the api key with the target declaration
-            conditional_payload = {'key': DETAILS['apikey'],
-                                   'target': DETAILS['serial']}
-            payload.update(conditional_payload)
-            r = __utils__['http.query'](DETAILS['url'],
-                                        data=payload,
-                                        method='POST',
-                                        decode_type='xml',
-                                        decode=True,
-                                        verify_ssl=False,
-                                        raise_error=True)
-            ret = r['dict'][0]
-        elif DETAILS['method'] == 'pan_pass':
-            # Pass credentials with the target declaration
-            conditional_payload = {'target': DETAILS['serial']}
-            payload.update(conditional_payload)
-            r = __utils__['http.query'](DETAILS['url'],
-                                        username=DETAILS['username'],
-                                        password=DETAILS['password'],
-                                        data=payload,
-                                        method='POST',
-                                        decode_type='xml',
-                                        decode=True,
-                                        verify_ssl=False,
-                                        raise_error=True)
-            ret = r['dict'][0]
-    except KeyError as err:
-        raise salt.exceptions.CommandExecutionError("Did not receive a valid response from host.")
+    ret = {
+        'name': name,
+        'changes': {},
+        'commit': None,
+        'result': False,
+        'comment': ''
+    }
     return ret
 
 
-def is_required_version(required_version='0.0.0'):
+def add_config_lock(name):
     '''
-    Because different versions of Palo Alto support different command sets, this function
-    will return true if the current version of Palo Alto supports the required command.
+    Prevent other users from changing configuration until the lock is released.
+
+    name: The name of the module function to execute.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        panos/takelock:
+            panos.add_config_lock
+
     '''
-    if 'sw-version' in DETAILS['grains_cache']:
-        current_version = DETAILS['grains_cache']['sw-version']
-    else:
-        # If we do not have the current sw-version cached, we cannot check version requirements.
-        return False
+    ret = _default_ret(name)
 
-    required_version_split = required_version.split(".")
-    current_version_split = current_version.split(".")
+    ret.update({
+        'changes': __salt__['panos.add_config_lock'](),
+        'result': True
+    })
 
-    try:
-        if int(current_version_split[0]) > int(required_version_split[0]):
-            return True
-        elif int(current_version_split[0]) < int(required_version_split[0]):
-            return False
-
-        if int(current_version_split[1]) > int(required_version_split[1]):
-            return True
-        elif int(current_version_split[1]) < int(required_version_split[1]):
-            return False
-
-        if int(current_version_split[2]) > int(required_version_split[2]):
-            return True
-        elif int(current_version_split[2]) < int(required_version_split[2]):
-            return False
-
-        # We have an exact match
-        return True
-    except Exception as err:
-        return False
+    return ret
 
 
-def initialized():
+def clone_config(name, xpath=None, newname=None, commit=False):
     '''
-    Since grains are loaded in many different places and some of those
-    places occur before the proxy can be initialized, return whether
-    our init() function has been called
+    Clone a specific XPATH and set it to a new name.
+
+    name: The name of the module function to execute.
+
+    xpath(str): The XPATH of the configuration API tree to clone.
+
+    newname(str): The new name of the XPATH clone.
+
+    commit(bool): If true the firewall will commit the changes, if false do not commit changes.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        panos/clonerule:
+            panos.clone_config:
+              - xpath: /config/devices/entry/vsys/entry[@name='vsys1']/rulebase/security/rules&from=/config/devices/
+              entry/vsys/entry[@name='vsys1']/rulebase/security/rules/entry[@name='rule1']
+              - value: rule2
+              - commit: True
+
     '''
-    return DETAILS.get('initialized', False)
+    ret = _default_ret(name)
+
+    if not xpath:
+        return ret
+
+    if not newname:
+        return ret
+
+    query = {'type': 'config',
+             'action': 'clone',
+             'xpath': xpath,
+             'newname': newname}
+
+    response = __proxy__['panos.call'](query)
+
+    ret.update({
+        'changes': response,
+        'result': True
+    })
+
+    if commit is True:
+        ret.update({
+            'commit': __salt__['panos.commit'](),
+            'result': True
+        })
+
+    return ret
 
 
-def grains():
+def commit(name):
     '''
-    Get the grains from the proxied device
+    Commits the candidate configuration to the running configuration.
+
+    name: The name of the module function to execute.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        panos/commit:
+            panos.commit
+
     '''
-    if not DETAILS.get('grains_cache', {}):
-        DETAILS['grains_cache'] = GRAINS_CACHE
-        try:
-            query = {'type': 'op', 'cmd': '<show><system><info></info></system></show>'}
-            DETAILS['grains_cache'] = call(query)['system']
-        except Exception as err:
-            pass
-    return DETAILS['grains_cache']
+    ret = _default_ret(name)
+
+    ret.update({
+        'commit': __salt__['panos.commit'](),
+        'result': True
+    })
+
+    return ret
 
 
-def grains_refresh():
+def delete_config(name, xpath=None, commit=False):
     '''
-    Refresh the grains from the proxied device
+    Deletes a Palo Alto XPATH to a specific value.
+
+    Use the xpath parameter to specify the location of the object to be deleted.
+
+    name: The name of the module function to execute.
+
+    xpath(str): The XPATH of the configuration API tree to control.
+
+    commit(bool): If true the firewall will commit the changes, if false do not commit changes.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        panos/deletegroup:
+            panos.delete_config:
+              - xpath: /config/devices/entry/vsys/entry[@name='vsys1']/address-group/entry[@name='test']
+              - commit: True
+
     '''
-    DETAILS['grains_cache'] = None
-    return grains()
+    ret = _default_ret(name)
+
+    if not xpath:
+        return ret
+
+    query = {'type': 'config',
+             'action': 'delete',
+              'xpath': xpath}
+
+    response = __proxy__['panos.call'](query)
+
+    ret.update({
+        'changes': response,
+        'result': True
+    })
+
+    if commit is True:
+        ret.update({
+            'commit': __salt__['panos.commit'](),
+            'result': True
+        })
+
+    return ret
 
 
-def ping():
+def download_software(name, version=None, synch=False, check=False):
     '''
-    Returns true if the device is reachable, else false.
+    Ensures that a software version is downloaded.
+
+    name: The name of the module function to execute.
+
+    version(str): The software version to check. If this version is not already downloaded, it will attempt to download
+    the file from Palo Alto.
+
+    synch(bool): If true, after downloading the file it will be synched to its peer.
+
+    check(bool): If true, the PANOS device will first attempt to pull the most recent software inventory list from Palo
+    Alto.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        panos/version8.0.0:
+            panos.download_software:
+              - version: 8.0.0
+              - synch: False
+              - check: True
+
     '''
-    try:
-        query = {'type': 'op', 'cmd': '<show><system><info></info></system></show>'}
-        if 'system' in call(query):
-            return True
-        else:
-            return False
-    except Exception as err:
-        return False
+    ret = _default_ret(name)
+
+    if check is True:
+        __salt__['panos.check_software']()
+
+    versions = __salt__['panos.get_software_info']()
+
+    if 'sw-updates' not in versions \
+        or 'versions' not in versions['sw-updates'] \
+        or 'entry' not in versions['sw-updates']['versions']:
+        ret.update({
+            'comment': 'Software version is not found in the local software list.',
+            'result': False
+        })
+        return ret
+
+    for entry in versions['sw-updates']['versions']['entry']:
+        if entry['version'] == version and entry['downloaded'] == "yes":
+            ret.update({
+                'comment': 'Software version is already downloaded.',
+                'result': True
+            })
+        return ret
+
+    ret.update({
+        'changes': __salt__['panos.download_software_version'](version=version, synch=synch)
+    })
+
+    versions = __salt__['panos.get_software_info']()
+
+    if 'sw-updates' not in versions \
+        or 'versions' not in versions['sw-updates'] \
+        or 'entry' not in versions['sw-updates']['versions']:
+        ret.update({
+            'result': False
+        })
+        return ret
+
+    for entry in versions['sw-updates']['versions']['entry']:
+        if entry['version'] == version and entry['downloaded'] == "yes":
+            ret.update({
+                'result': True
+            })
+        return ret
+
+    return ret
 
 
-def shutdown():
+def edit_config(name, xpath=None, value=None, commit=False):
     '''
-    Shutdown the connection to the proxy device. For this proxy,
-    shutdown is a no-op.
+    Edits a Palo Alto XPATH to a specific value. This will always overwrite the existing value, even if it is not
+    changed.
+
+    You can replace an existing object hierarchy at a specified location in the configuration with a new value. Use
+    the xpath parameter to specify the location of the object, including the node to be replaced.
+
+    name: The name of the module function to execute.
+
+    xpath(str): The XPATH of the configuration API tree to control.
+
+    value(str): The XML value to edit. This must be a child to the XPATH.
+
+    commit(bool): If true the firewall will commit the changes, if false do not commit changes.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        panos/addressgroup:
+            panos.edit_config:
+              - xpath: /config/devices/entry/vsys/entry[@name='vsys1']/address-group/entry[@name='test']
+              - value: <static><entry name='test'><member>abc</member><member>xyz</member></entry></static>
+              - commit: True
+
     '''
-    log.debug('Panos proxy shutdown() called.')
+    ret = _default_ret(name)
+
+    if not xpath:
+        return ret
+
+    if not value:
+        return ret
+
+    query = {'type': 'config',
+             'action': 'edit',
+             'xpath': xpath,
+              'element': value}
+
+    response = __proxy__['panos.call'](query)
+
+    ret.update({
+        'changes': response,
+        'result': True
+    })
+
+    if commit is True:
+        ret.update({
+            'commit': __salt__['panos.commit'](),
+            'result': True
+        })
+
+    return ret
+
+
+def move_config(name, xpath=None, where=None, dst=None, commit=False):
+    '''
+    Moves a XPATH value to a new location.
+
+    Use the xpath parameter to specify the location of the object to be moved, the where parameter to
+    specify type of move, and dst parameter to specify the destination path.
+
+    name: The name of the module function to execute.
+
+    xpath(str): The XPATH of the configuration API tree to move.
+
+    where(str): The type of move to execute. Valid options are after, before, top, bottom. The after and before
+    options will require the dst option to specify the destination of the action. The top action will move the
+    XPATH to the top of its structure. The botoom action will move the XPATH to the bottom of its structure.
+
+    dst(str): Optional. Specifies the destination to utilize for a move action. This is ignored for the top
+    or bottom action.
+
+    commit(bool): If true the firewall will commit the changes, if false do not commit changes.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        panos/moveruletop:
+            panos.move_config:
+              - xpath: /config/devices/entry/vsys/entry[@name='vsys1']/rulebase/security/rules/entry[@name='rule1']
+              - where: top
+              - commit: True
+
+        panos/moveruleafter:
+            panos.move_config:
+              - xpath: /config/devices/entry/vsys/entry[@name='vsys1']/rulebase/security/rules/entry[@name='rule1']
+              - where: after
+              - dst: rule2
+              - commit: True
+
+    '''
+    ret = _default_ret(name)
+
+    if not xpath:
+        return ret
+
+    if not where:
+        return ret
+
+    if where == 'after':
+        query = {'type': 'config',
+                 'action': 'move',
+                 'xpath': xpath,
+                 'where': 'after',
+                 'dst': dst}
+    elif where == 'before':
+        query = {'type': 'config',
+                 'action': 'move',
+                 'xpath': xpath,
+                 'where': 'before',
+                 'dst': dst}
+    elif where == 'top':
+        query = {'type': 'config',
+                 'action': 'move',
+                 'xpath': xpath,
+                 'where': 'top'}
+    elif where == 'bottom':
+        query = {'type': 'config',
+                 'action': 'move',
+                 'xpath': xpath,
+                 'where': 'bottom'}
+
+    response = __proxy__['panos.call'](query)
+
+    ret.update({
+        'changes': response,
+        'result': True
+    })
+
+    if commit is True:
+        ret.update({
+            'commit': __salt__['panos.commit'](),
+            'result': True
+        })
+
+    return ret
+
+
+def remove_config_lock(name):
+    '''
+    Release config lock previously held.
+
+    name: The name of the module function to execute.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        panos/takelock:
+            panos.remove_config_lock
+
+    '''
+    ret = _default_ret(name)
+
+    ret.update({
+        'changes': __salt__['panos.remove_config_lock'](),
+        'result': True
+    })
+
+    return ret
+
+
+def rename_config(name, xpath=None, newname=None, commit=False):
+    '''
+    Rename a Palo Alto XPATH to a specific value. This will always rename the value even if a change is not needed.
+
+    name: The name of the module function to execute.
+
+    xpath(str): The XPATH of the configuration API tree to control.
+
+    newname(str): The new name of the XPATH value.
+
+    commit(bool): If true the firewall will commit the changes, if false do not commit changes.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        panos/renamegroup:
+            panos.rename_config:
+              - xpath: /config/devices/entry/vsys/entry[@name='vsys1']/address/entry[@name='old_address']
+              - value: new_address
+              - commit: True
+
+    '''
+    ret = _default_ret(name)
+
+    if not xpath:
+        return ret
+
+    if not newname:
+        return ret
+
+    query = {'type': 'config',
+             'action': 'rename',
+             'xpath': xpath,
+             'newname': newname}
+
+    response = __proxy__['panos.call'](query)
+
+    ret.update({
+        'changes': response,
+        'result': True
+    })
+
+    if commit is True:
+        ret.update({
+            'commit': __salt__['panos.commit'](),
+            'result': True
+        })
+
+    return ret
+
+
+def set_config(name, xpath=None, value=None, commit=False):
+    '''
+    Sets a Palo Alto XPATH to a specific value. This will always overwrite the existing value, even if it is not
+    changed.
+
+    You can add or create a new object at a specified location in the configuration hierarchy. Use the xpath parameter
+    to specify the location of the object in the configuration
+
+    name: The name of the module function to execute.
+
+    xpath(str): The XPATH of the configuration API tree to control.
+
+    value(str): The XML value to set. This must be a child to the XPATH.
+
+    commit(bool): If true the firewall will commit the changes, if false do not commit changes.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        panos/hostname:
+            panos.set_config:
+              - xpath: /config/devices/entry[@name='localhost.localdomain']/deviceconfig/system
+              - value: <hostname>foobar</hostname>
+              - commit: True
+
+    '''
+    ret = _default_ret(name)
+
+    if not xpath:
+        return ret
+
+    if not value:
+        return ret
+
+    query = {'type': 'config',
+             'action': 'set',
+             'xpath': xpath,
+             'element': value}
+
+    response = __proxy__['panos.call'](query)
+
+    ret.update({
+        'changes': response,
+        'result': True
+    })
+
+    if commit is True:
+        ret.update({
+            'commit': __salt__['panos.commit'](),
+            'result': True
+        })
+
+    return ret
