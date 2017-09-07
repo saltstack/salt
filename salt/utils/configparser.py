@@ -8,18 +8,24 @@ import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import configparser  # pylint: disable=redefined-builtin
+from salt.ext.six.moves.configparser import *  # pylint: disable=no-name-in-module,wildcard-import
+
+try:
+    from collections import OrderedDict as _default_dict
+except ImportError:
+    # fallback for setup.py which hasn't yet built _collections
+    _default_dict = dict
 
 
 # pylint: disable=string-substitution-usage-error
-class GitConfigParser(configparser.RawConfigParser, object):
+class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-variable
     '''
     Custom ConfigParser which reads and writes git config files.
 
     READ A GIT CONFIG FILE INTO THE PARSER OBJECT
 
-    >>> from salt.utils.configparser import GitConfigParser
-    >>> conf = GitConfigParser()
+    >>> import salt.utils.configparser
+    >>> conf = salt.utils.configparser.GitConfigParser()
     >>> conf.read('/home/user/.git/config')
 
     MAKE SOME CHANGES
@@ -39,7 +45,7 @@ class GitConfigParser(configparser.RawConfigParser, object):
     DEFAULTSECT = u'DEFAULT'
     SPACEINDENT = u' ' * 8
 
-    def __init__(self, defaults=None, dict_type=configparser._default_dict,
+    def __init__(self, defaults=None, dict_type=_default_dict,
                  allow_no_value=True):
         '''
         Changes default value for allow_no_value from False to True
@@ -95,7 +101,7 @@ class GitConfigParser(configparser.RawConfigParser, object):
                 optname = None
             # no section header in the file?
             elif cursect is None:
-                raise configparser.MissingSectionHeaderError(fpname, lineno, line)
+                raise MissingSectionHeaderError(fpname, lineno, line)  # pylint: disable=undefined-variable
             # an option line?
             else:
                 mo = self._optcre.match(line.lstrip())
@@ -122,7 +128,7 @@ class GitConfigParser(configparser.RawConfigParser, object):
                     # raised at the end of the file and will contain a
                     # list of all bogus lines
                     if not e:
-                        e = configparser.ParsingError(fpname)
+                        e = ParsingError(fpname)  # pylint: disable=undefined-variable
                     e.append(lineno, repr(line))
         # if any parsing errors occurred, raise an exception
         if e:
@@ -195,7 +201,7 @@ class GitConfigParser(configparser.RawConfigParser, object):
             try:
                 sectdict = self._sections[section]
             except KeyError:
-                raise configparser.NoSectionError(section)
+                raise NoSectionError(section)  # pylint: disable=undefined-variable
         key = self.optionxform(option)
         self._add_option(sectdict, key, value)
 
@@ -210,7 +216,7 @@ class GitConfigParser(configparser.RawConfigParser, object):
             try:
                 sectdict = self._sections[section]
             except KeyError:
-                raise configparser.NoSectionError(section)
+                raise NoSectionError(section)  # pylint: disable=undefined-variable
         option = self.optionxform(option)
         if option not in sectdict:
             return False

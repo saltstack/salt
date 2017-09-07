@@ -21,10 +21,7 @@ from tests.support.paths import TMP
 # Import salt libs
 import salt.utils.files
 import salt.utils.stringutils
-from salt.utils.configparser import GitConfigParser
-
-# Import 3rd-party libs
-from salt.ext.six.moves import configparser
+import salt.utils.configparser
 
 # The user.name param here is intentionally indented with spaces instead of a
 # tab to test that we properly load a file with mixed indentation.
@@ -77,7 +74,7 @@ class TestGitConfigParser(TestCase):
                         u'\n'.join(ORIG_CONFIG)
                     )
                 )
-        self.conf = GitConfigParser()
+        self.conf = salt.utils.configparser.GitConfigParser()
         self.conf.read(self.orig_config)
 
     @classmethod
@@ -96,8 +93,8 @@ class TestGitConfigParser(TestCase):
         '''
         ret = copy.copy(lines)
         for i, _ in enumerate(ret):
-            if ret[i].startswith(GitConfigParser.SPACEINDENT):
-                ret[i] = ret[i].replace(GitConfigParser.SPACEINDENT, u'\t')
+            if ret[i].startswith(salt.utils.configparser.GitConfigParser.SPACEINDENT):
+                ret[i] = ret[i].replace(salt.utils.configparser.GitConfigParser.SPACEINDENT, u'\t')
         return ret
 
     @staticmethod
@@ -199,7 +196,7 @@ class TestGitConfigParser(TestCase):
             # To confirm that the option is now gone, a get should raise an
             # NoOptionError exception.
             self.assertRaises(
-                configparser.NoOptionError,
+                salt.utils.configparser.NoOptionError,
                 self.conf.get,
                 self.remote,
                 item)
@@ -251,7 +248,7 @@ class TestGitConfigParser(TestCase):
             self.conf.remove_option_regexp(self.remote, u'fetch', u'heads'))
         # Trying to do a get now should raise an exception
         self.assertRaises(
-            configparser.NoOptionError,
+            salt.utils.configparser.NoOptionError,
             self.conf.get,
             self.remote,
             u'fetch')
