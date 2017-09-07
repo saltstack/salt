@@ -112,10 +112,9 @@ class VirtualenvTestCase(TestCase):
 
                 # Are we logging the deprecation information?
                 self.assertIn(
-                    'INFO:The virtualenv \'--never-download\' option has been '
-                    'deprecated in virtualenv(>=1.10), as such, the '
-                    '\'never_download\' option to `virtualenv.create()` has '
-                    'also been deprecated and it\'s not necessary anymore.',
+                    'INFO:--never-download was deprecated in 1.10.0, '
+                    'but reimplemented in 14.0.0. If this feature is needed, '
+                    'please install a supported virtualenv version.',
                     handler.messages
                 )
 
