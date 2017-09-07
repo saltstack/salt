@@ -114,7 +114,8 @@ class VirtualenvTestCase(TestCase):
                 self.assertIn(
                     'INFO:--never-download was deprecated in 1.10.0, '
                     'but reimplemented in 14.0.0. If this feature is needed, '
-                    'please install a supported virtualenv version.'
+                    'please install a supported virtualenv version.',
+                    handler.messages
                 )
 
     def test_issue_6031_multiple_extra_search_dirs(self):
