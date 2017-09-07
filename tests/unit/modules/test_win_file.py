@@ -7,7 +7,6 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -18,18 +17,19 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.win_file as win_file
 from salt.exceptions import CommandExecutionError
+import salt.utils
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinFileTestCase(TestCase, LoaderModuleMockMixin):
+class WinFileTestCase(TestCase):
     '''
         Test cases for salt.modules.win_file
     '''
     FAKE_RET = {'fake': 'ret data'}
-    FAKE_PATH = os.sep.join(['C:', 'path', 'does', 'not', 'exist'])
-
-    def setup_loader_modules(self):
-        return {win_file: {}}
+    if salt.utils.is_windows():
+        FAKE_PATH = os.sep.join(['C:', 'path', 'does', 'not', 'exist'])
+    else:
+        FAKE_PATH = os.sep.join(['path', 'does', 'not', 'exist'])
 
     def test_issue_43328_stats(self):
         '''
