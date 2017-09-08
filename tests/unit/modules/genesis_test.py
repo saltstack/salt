@@ -97,7 +97,7 @@ class GenesisTestCase(TestCase):
                                                'cmd.run': MagicMock(),
                                                'disk.blkid': MagicMock(return_value={})}):
                 with patch('salt.modules.genesis.salt.utils.which', return_value=True):
-                    with patch('salt.modules.genesis.salt.utils.validate.path.is_readable',
+                    with patch('salt.modules.genesis.salt.utils.validate.path.is_executable',
                                return_value=True):
                         param_set['params'].update(common_parms)
                         self.assertEqual(genesis.bootstrap(**param_set['params']), None)
