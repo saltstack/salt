@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import glob
 import logging
 import os
+import json
 import re
 import sqlite3 as lite
 from salt.exceptions import SaltInvocationError
@@ -164,6 +165,16 @@ def insert(queue, items):
             except lite.IntegrityError as esc:
                 return('One or more items already exists in this queue. '
                        'sqlite error: {0}'.format(esc))
+        if isinstance(items, dict):
+            items = json.dumps(items).replace('"', "'")
+            items = _quote_escape(items)
+            cmd = '''INSERT INTO {0}(name) VALUES('{1}')'''.format(queue, items)
+            log.debug('SQL Query: {0}'.format(cmd))
+            try:
+                cur.execute(cmd)
+            except lite.IntegrityError as esc:
+                return('Item already exists in this queue. '
+                       'sqlite error: {0}'.format(esc))
     return True
 
 
@@ -189,6 +200,13 @@ def delete(queue, items):
                 newitems.append((item,))
                 # we need a list of one item tuples here
             cur.executemany(cmd, newitems)
+        if isinstance(items, dict):
+            items = json.dumps(items).replace('"', "'")
+            items = _quote_escape(items)
+            cmd = """DELETE FROM {0} WHERE name = '{1}'""".format(queue, items)
+            log.debug('SQL Query: {0}'.format(cmd))
+            cur.execute(cmd)
+            return True
         return True
 
 

@@ -65,6 +65,7 @@ still running from the last time the process_runner task was executed.
 # Import python libs
 from __future__ import print_function
 from __future__ import absolute_import
+import json
 
 # Import salt libs
 import salt.loader
@@ -302,4 +303,6 @@ def process_runner(quantity=1, queue=None, backend=None):
     queue_kwargs = __get_queue_opts(queue=queue, backend=backend)
     data = process_queue(quantity=quantity, **queue_kwargs)
     for job in data['items']:
+        if backend=='sqlite':
+            job = json.loads(job.replace("'", '"'))
         __salt__[job['fun']](*job['args'], **job['kwargs'])
