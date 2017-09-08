@@ -41,7 +41,6 @@ import logging
 import yaml
 import tempfile
 import signal
-from sys import platform
 from time import sleep
 from contextlib import contextmanager
 
