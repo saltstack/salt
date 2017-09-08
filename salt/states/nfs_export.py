@@ -3,6 +3,8 @@
 Management of NFS exports
 ===============================================
 
+.. versionadded:: Oxygen
+
 To ensure an NFS export exists:
 
 .. code-block:: yaml
@@ -55,6 +57,7 @@ To ensure an NFS export is absent:
         - name: '/srv/nfs'
 
 '''
+from __future__ import absolute_import
 import salt.utils.path
 
 
@@ -71,6 +74,7 @@ def __virtual__():
         'The nfs_exports state module failed to load: '
         'the exportfs binary is not in the path'
     )
+
 
 def present(name,
             clients=None,
