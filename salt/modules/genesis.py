@@ -403,7 +403,7 @@ def _bootstrap_deb(
         log.error('Required tool debootstrap is not installed.')
         return False
 
-    if static_qemu and not salt.utils.validate.path.is_readable(static_qemu):
+    if static_qemu and not salt.utils.validate.path.is_executable(static_qemu):
         log.error('Required tool qemu not '
                   'present/readable at: {0}'.format(static_qemu))
         return False
