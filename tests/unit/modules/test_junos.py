@@ -52,6 +52,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 host='1.1.1.1',
                 user='test',
                 password='test123',
+                fact_style='old',
                 gather_facts=False)
             self.dev.open()
             self.dev.timeout = 30

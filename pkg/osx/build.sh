@@ -86,9 +86,9 @@ sudo $PKGRESOURCES/build_env.sh $PYVER
 # Install Salt
 ############################################################################
 echo -n -e "\033]0;Build: Install Salt\007"
-sudo rm -rm $SRCDIR/build
-sudo rm -rm $SRCDIR/dist
-sudo $PYTHON $SRCDIR/setup.py install
+sudo rm -rf $SRCDIR/build
+sudo rm -rf $SRCDIR/dist
+sudo $PYTHON $SRCDIR/setup.py build -e "$PYTHON -E -s" install
 
 ############################################################################
 # Build Package

@@ -330,10 +330,14 @@ def _parse_subject(subject):
     for nid_name, nid_num in six.iteritems(subject.nid):
         if nid_num in nids:
             continue
-        val = getattr(subject, nid_name)
-        if val:
-            ret[nid_name] = val
-            nids.append(nid_num)
+        try:
+            val = getattr(subject, nid_name)
+            if val:
+                ret[nid_name] = val
+                nids.append(nid_num)
+        except TypeError as e:
+            if e.args and e.args[0] == 'No string argument provided':
+                pass
 
     return ret
 
@@ -1373,10 +1377,19 @@ def create_certificate(
                 ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
 
-        cert_txt = __salt__['publish.publish'](
+        certs = __salt__['publish.publish'](
             tgt=ca_server,
             fun='x509.sign_remote_certificate',
-            arg=str(kwargs))[ca_server]
+            arg=str(kwargs))
+
+        if not any(certs):
+            raise salt.exceptions.SaltInvocationError(
+                    'ca_server did not respond'
+                    ' salt master must permit peers to'
+                    ' call the sign_remote_certificate function.')
+
+        cert_txt = certs[ca_server]
+
         if path:
             return write_pem(
                 text=cert_txt,

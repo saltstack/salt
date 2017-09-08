@@ -78,6 +78,7 @@ parameters are discussed in more detail below.
       # RHEL         -> ec2-user
       # CentOS       -> ec2-user
       # Ubuntu       -> ubuntu
+      # Debian       -> admin
       #
       ssh_username: ec2-user
 

@@ -306,7 +306,7 @@ def groups(username, **kwargs):
     '''
     group_list = []
 
-    bind = _bind(username, kwargs['password'],
+    bind = _bind(username, kwargs.get('password'),
                  anonymous=_config('anonymous', mandatory=False))
     if bind:
         log.debug('ldap bind to determine group membership succeeded!')
@@ -371,7 +371,7 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [_config('accountattributename'), 'cn'])
+                                           [_config('accountattributename'), 'cn', _config('groupattribute')])
             for _, entry in search_results:
                 if username in entry[_config('accountattributename')]:
                     group_list.append(entry['cn'][0])

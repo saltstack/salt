@@ -453,6 +453,11 @@ def _network_hosts(ip_addr_entry):
 def network_hosts(value, options=None, version=None):
     '''
     Return the list of hosts within a network.
+
+    .. note::
+
+        When running this command with a large IPv6 network, the command will
+        take a long time to gather all of the hosts.
     '''
     ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
     if not ipaddr_filter_out:

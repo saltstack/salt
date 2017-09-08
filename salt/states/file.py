@@ -622,7 +622,11 @@ def _clean_dir(root, keep, exclude_pat):
             while True:
                 fn_ = os.path.dirname(fn_)
                 real_keep.add(fn_)
-                if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\\\'])]:
+                if fn_ in [
+                           os.sep,
+                           ''.join([os.path.splitdrive(fn_)[0], os.sep]),
+                           ''.join([os.path.splitdrive(fn_)[0], os.sep, os.sep])
+                          ]:
                     break
 
     def _delete_not_kept(nfn):
@@ -1433,7 +1437,10 @@ def absent(name):
             ret['comment'] = 'File {0} is set for removal'.format(name)
             return ret
         try:
-            __salt__['file.remove'](name)
+            if salt.utils.is_windows():
+                __salt__['file.remove'](name, force=True)
+            else:
+                __salt__['file.remove'](name)
             ret['comment'] = 'Removed file {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
@@ -1546,7 +1553,7 @@ def managed(name,
     the salt master and potentially run through a templating system.
 
     name
-        The location of the file to manage
+        The location of the file to manage, as an absolute path.
 
     source
         The source file to download to the minion, this source file can be
@@ -1716,13 +1723,15 @@ def managed(name,
 
     group
         The group ownership set for the file, this defaults to the group salt
-        is running as on the minion On Windows, this is ignored
+        is running as on the minion. On Windows, this is ignored
 
     mode
-        The permissions to set on this file, e.g. ``644``, ``0775``, or ``4664``.
+        The permissions to set on this file, e.g. ``644``, ``0775``, or
+        ``4664``.
 
-        The default mode for new files and directories corresponds umask of salt
-        process. For existing files and directories it's not enforced.
+        The default mode for new files and directories corresponds to the
+        umask of the salt process. The mode of existing files and directories
+        will only be changed if ``mode`` is specified.
 
         .. note::
             This option is **not** supported on Windows.
@@ -2551,7 +2560,7 @@ def directory(name,
     Ensure that a named directory is present and has the right perms
 
     name
-        The location to create or manage a directory
+        The location to create or manage a directory, as an absolute path
 
     user
         The user to own the directory; this defaults to the user salt is
@@ -3736,7 +3745,13 @@ def line(name, content=None, match=None, mode=None, location=None,
     if not name:
         return _error(ret, 'Must provide name to file.line')
 
-    managed(name, create=create, user=user, group=group, mode=file_mode)
+    managed(
+        name,
+        create=create,
+        user=user,
+        group=group,
+        mode=file_mode,
+        replace=False)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -3784,7 +3799,8 @@ def replace(name,
             not_found_content=None,
             backup='.bak',
             show_changes=True,
-            ignore_if_missing=False):
+            ignore_if_missing=False,
+            backslash_literal=False):
     r'''
     Maintain an edit in a file.
 
@@ -3798,12 +3814,13 @@ def replace(name,
         A regular expression, to be matched using Python's
         :py:func:`~re.search`.
 
-        ..note::
+        .. note::
+
             If you need to match a literal string that contains regex special
             characters, you may want to use salt's custom Jinja filter,
             ``escape_regex``.
 
-            ..code-block:: jinja
+            .. code-block:: jinja
 
                 {{ 'http://example.com?foo=bar%20baz' | escape_regex }}
 
@@ -3883,6 +3900,14 @@ def replace(name,
         state will display an error raised by the execution module. If set to
         ``True``, the state will simply report no changes.
 
+    backslash_literal : False
+        .. versionadded:: 2016.11.7
+
+        Interpret backslashes as literal backslashes for the repl and not
+        escape characters.  This will help when using append/prepend so that
+        the backslashes are not interpreted for the repl on the second run of
+        the state.
+
     For complex regex patterns, it can be useful to avoid the need for complex
     quoting and escape sequences by making use of YAML's multiline string
     syntax.
@@ -3931,7 +3956,8 @@ def replace(name,
                                        backup=backup,
                                        dry_run=__opts__['test'],
                                        show_changes=show_changes,
-                                       ignore_if_missing=ignore_if_missing)
+                                       ignore_if_missing=ignore_if_missing,
+                                       backslash_literal=backslash_literal)
 
     if changes:
         ret['pchanges']['diff'] = changes
