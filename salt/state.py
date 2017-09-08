@@ -3100,7 +3100,7 @@ class BaseHighState(object):
         Returns:
         {'saltenv': ['state1', 'state2', ...]}
         '''
-        matches = {}
+        matches = DefaultOrderedDict(OrderedDict)
         # pylint: disable=cell-var-from-loop
         for saltenv, body in six.iteritems(top):
             if self.opts['environment']:
