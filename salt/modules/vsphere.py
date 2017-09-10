@@ -4294,3 +4294,14 @@ def _get_esxdatacenter_proxy_details():
     return det.get('vcenter'), det.get('username'), det.get('password'), \
             det.get('protocol'), det.get('port'), det.get('mechanism'), \
             det.get('principal'), det.get('domain'), det.get('datacenter')
+
+
+def _get_esxcluster_proxy_details():
+    '''
+    Returns the running esxcluster's proxy details
+    '''
+    det = __salt__['esxcluster.get_details']()
+    return det.get('vcenter'), det.get('username'), det.get('password'), \
+            det.get('protocol'), det.get('port'), det.get('mechanism'), \
+            det.get('principal'), det.get('domain'), det.get('datacenter'), \
+            det.get('cluster')
