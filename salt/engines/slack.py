@@ -241,7 +241,7 @@ class SlackClient(object):
         # pillar_groups = __salt__['pillar.get'](pillar_name, {})
         log.debug('Got pillar groups %s from pillar %s', pillar_groups, pillar_name)
         log.debug('pillar groups is %s', pillar_groups)
-        log.debug('pillar groups type is %s',  type(pillar_groups))
+        log.debug('pillar groups type is %s', type(pillar_groups))
         if pillar_groups:
             return pillar_groups
         else:
