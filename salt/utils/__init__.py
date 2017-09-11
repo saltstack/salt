@@ -983,48 +983,6 @@ def arg_lookup(fun, aspec=None):
     return ret
 
 
-@jinja_filter('is_text_file')
-def istextfile(fp_, blocksize=512):
-    '''
-    Uses heuristics to guess whether the given file is text or binary,
-    by reading a single block of bytes from the file.
-    If more than 30% of the chars in the block are non-text, or there
-    are NUL ('\x00') bytes in the block, assume this is a binary file.
-    '''
-    # Late import to avoid circular import.
-    import salt.utils.files
-
-    int2byte = (lambda x: bytes((x,))) if six.PY3 else chr
-    text_characters = (
-        b''.join(int2byte(i) for i in range(32, 127)) +
-        b'\n\r\t\f\b')
-    try:
-        block = fp_.read(blocksize)
-    except AttributeError:
-        # This wasn't an open filehandle, so treat it as a file path and try to
-        # open the file
-        try:
-            with salt.utils.files.fopen(fp_, 'rb') as fp2_:
-                block = fp2_.read(blocksize)
-        except IOError:
-            # Unable to open file, bail out and return false
-            return False
-    if b'\x00' in block:
-        # Files with null bytes are binary
-        return False
-    elif not block:
-        # An empty file is considered a valid text file
-        return True
-    try:
-        block.decode('utf-8')
-        return True
-    except UnicodeDecodeError:
-        pass
-
-    nontext = block.translate(None, text_characters)
-    return float(len(nontext)) / len(block) <= 0.30
-
-
 @jinja_filter('sorted_ignorecase')
 def isorted(to_sort):
     '''
@@ -3044,6 +3002,28 @@ def mkstemp(*args, **kwargs):
         'removed in Salt Neon.'
     )
     return salt.utils.files.mkstemp(*args, **kwargs)
+
+
+@jinja_filter('is_text_file')
+def istextfile(fp_, blocksize=512):
+    '''
+    Uses heuristics to guess whether the given file is text or binary,
+    by reading a single block of bytes from the file.
+    If more than 30% of the chars in the block are non-text, or there
+    are NUL ('\x00') bytes in the block, assume this is a binary file.
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.files
+
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.istextfile\' detected. This function has been moved '
+        'to \'salt.utils.files.is_text_file\' as of Salt Oxygen. This warning will '
+        'be removed in Salt Neon.'
+    )
+    return salt.utils.files.is_text_file(fp_, blocksize=blocksize)
 
 
 def str_version_to_evr(verstring):

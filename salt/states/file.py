@@ -4368,7 +4368,7 @@ def comment(name, regex, char='#', backup='.bak'):
     ret['result'] = __salt__['file.search'](name, unanchor_regex, multiline=True)
 
     if slines != nlines:
-        if not salt.utils.istextfile(name):
+        if not __utils__['files.is_text_file'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -4480,7 +4480,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     )
 
     if slines != nlines:
-        if not salt.utils.istextfile(name):
+        if not __utils__['files.is_text_file'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -4723,7 +4723,7 @@ def append(name,
         nlines = list(slines)
         nlines.extend(append_lines)
         if slines != nlines:
-            if not salt.utils.istextfile(name):
+            if not __utils__['files.is_text_file'](name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
                 # Changes happened, add them
@@ -4748,7 +4748,7 @@ def append(name,
         nlines = nlines.splitlines()
 
     if slines != nlines:
-        if not salt.utils.istextfile(name):
+        if not __utils__['files.is_text_file'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -4916,7 +4916,7 @@ def prepend(name,
     if __opts__['test']:
         nlines = test_lines + slines
         if slines != nlines:
-            if not salt.utils.istextfile(name):
+            if not __utils__['files.is_text_file'](name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
                 # Changes happened, add them
@@ -4959,7 +4959,7 @@ def prepend(name,
         nlines = nlines.splitlines(True)
 
     if slines != nlines:
-        if not salt.utils.istextfile(name):
+        if not __utils__['files.is_text_file'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
