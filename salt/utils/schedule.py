@@ -385,7 +385,7 @@ class Schedule(object):
     '''
     instance = None
 
-    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, isolate=None):
+    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=None):
         '''
         Only create one instance of Schedule
         '''
@@ -395,26 +395,26 @@ class Schedule(object):
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
             cls.instance = object.__new__(cls)
-            cls.instance.__singleton_init__(opts, functions, returners, intervals, cleanup, proxy, isolate)
+            cls.instance.__singleton_init__(opts, functions, returners, intervals, cleanup, proxy, standalone)
         else:
             log.debug('Re-using Schedule')
         return cls.instance
 
     # has to remain empty for singletons, since __init__ will *always* be called
-    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, isolate=None):
+    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=None):
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, isolate=None):
+    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=None):
         self.opts = opts
         self.proxy = proxy
         self.functions = functions
-        self.isolate = isolate
+        self.standalone = standalone
         if isinstance(intervals, dict):
             self.intervals = intervals
         else:
             self.intervals = {}
-        if not self.isolate:
+        if not self.standalone:
             if hasattr(returners, '__getitem__'):
                 self.returners = returners
             else:
@@ -423,7 +423,7 @@ class Schedule(object):
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = six.MAXSIZE
-        if not self.isolate:
+        if not self.standalone:
             clean_proc_dir(opts)
         if cleanup:
             for prefix in cleanup:
@@ -781,7 +781,7 @@ class Schedule(object):
 
         salt.utils.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
 
-        if not self.isolate:
+        if not self.standalone:
             proc_fn = os.path.join(
                 salt.minion.get_proc_dir(self.opts['cachedir']),
                 ret['jid']
@@ -824,7 +824,7 @@ class Schedule(object):
         try:
             ret['pid'] = os.getpid()
 
-            if not self.isolate:
+            if not self.standalone:
                 if 'jid_include' not in data or data['jid_include']:
                     log.debug('schedule.handle_func: adding this job to the jobcache '
                               'with data {0}'.format(ret))
@@ -858,7 +858,7 @@ class Schedule(object):
 
             ret['return'] = self.functions[func](*args, **kwargs)
 
-            if not self.isolate:
+            if not self.standalone:
                 # runners do not provide retcode
                 if 'retcode' in self.functions.pack['__context__']:
                     ret['retcode'] = self.functions.pack['__context__']['retcode']
@@ -929,7 +929,7 @@ class Schedule(object):
                     except Exception as exc:
                         log.exception("Unhandled exception firing event: {0}".format(exc))
 
-            if not self.isolate:
+            if not self.standalone:
                 log.debug('schedule.handle_func: Removing {0}'.format(proc_fn))
 
                 try:
