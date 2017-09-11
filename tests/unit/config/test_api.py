@@ -19,17 +19,20 @@ from tests.support.mock import (
 # Import Salt libs
 import salt.config
 import salt.utils.platform
+import salt.syspaths
 
 MOCK_MASTER_DEFAULT_OPTS = {
-    'log_file': '/var/log/salt/master',
-    'pidfile': '/var/run/salt-master.pid',
-    'root_dir': '/'
+    'log_file': '{0}/var/log/salt/master'.format(salt.syspaths.ROOT_DIR),
+    'pidfile': '{0}/var/run/salt-master.pid'.format(salt.syspaths.ROOT_DIR),
+    'root_dir': format(salt.syspaths.ROOT_DIR)
 }
 if salt.utils.platform.is_windows():
     MOCK_MASTER_DEFAULT_OPTS = {
-        'log_file': 'c:\\salt\\var\\log\\salt\\master',
-        'pidfile': 'c:\\salt\\var\\run\\salt-master.pid',
-        'root_dir': 'c:\\salt'
+        'log_file': '{0}\\var\\log\\salt\\master'.format(
+            salt.syspaths.ROOT_DIR),
+        'pidfile': '{0}\\var\\run\\salt-master.pid'.format(
+            salt.syspaths.ROOT_DIR),
+        'root_dir': format(salt.syspaths.ROOT_DIR)
     }
 
 
@@ -54,9 +57,10 @@ class APIConfigTestCase(TestCase):
         '''
         with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
 
-            expected = '/var/log/salt/api'
+            expected = '{0}/var/log/salt/api'.format(salt.syspaths.ROOT_DIR)
             if salt.utils.platform.is_windows():
-                expected = 'c:\\salt\\var\\log\\salt\\api'
+                expected = '{0}\\var\\log\\salt\\api'.format(
+                    salt.syspaths.ROOT_DIR)
 
             ret = salt.config.api_config('/some/fake/path')
             self.assertEqual(ret['log_file'], expected)
@@ -69,9 +73,10 @@ class APIConfigTestCase(TestCase):
         '''
         with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
 
-            expected = '/var/run/salt-api.pid'
+            expected = '{0}/var/run/salt-api.pid'.format(salt.syspaths.ROOT_DIR)
             if salt.utils.platform.is_windows():
-                expected = 'c:\\salt\\var\\run\\salt-api.pid'
+                expected = '{0}\\var\\run\\salt-api.pid'.format(
+                    salt.syspaths.ROOT_DIR)
 
             ret = salt.config.api_config('/some/fake/path')
             self.assertEqual(ret['pidfile'], expected)
