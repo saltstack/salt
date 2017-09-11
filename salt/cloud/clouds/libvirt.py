@@ -83,9 +83,6 @@ from salt.exceptions import (
     SaltCloudSystemExit
 )
 
-# Get logging started
-log = logging.getLogger(__name__)
-
 VIRT_STATE_NAME_MAP = {0: 'running',
                        1: 'running',
                        2: 'running',
@@ -100,6 +97,18 @@ IP_LEARNING_XML = """<filterref filter='clean-traffic'>
 
 __virtualname__ = 'libvirt'
 
+# Set up logging
+log = logging.getLogger(__name__)
+
+def libvirtErrorHandler(ctx, error):
+    '''
+    Redirect stderr prints from libvirt to salt logging.
+    '''
+    log.debug("libvirt error {0}".format(error))
+
+
+if HAS_LIBVIRT:
+    libvirt.registerErrorHandler(f=libvirtErrorHandler, ctx=None)
 
 def __virtual__():
     '''
