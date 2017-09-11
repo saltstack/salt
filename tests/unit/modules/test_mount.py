@@ -22,7 +22,7 @@ from tests.support.mock import (
 import salt.utils.files
 import salt.utils.path
 import salt.modules.mount as mount
-from salt.exceptions import CommandExecutionError, CommandNotFoundError
+from salt.exceptions import CommandExecutionError
 
 MOCK_SHELL_FILE = 'A B C D F G\n'
 
