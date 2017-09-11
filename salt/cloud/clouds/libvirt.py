@@ -41,6 +41,7 @@ Example profile:
         master_port: 5506
 
 Tested on:
+- Fedora 26 (libvirt 3.2.1, qemu 2.9.1)
 - Fedora 25 (libvirt 1.3.3.2, qemu 2.6.1)
 - Fedora 23 (libvirt 1.2.18, qemu 2.4.1)
 - Centos 7 (libvirt 1.2.17, qemu 1.5.3)
