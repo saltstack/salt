@@ -402,7 +402,7 @@ def ping():
     '''
     try:
         query = {'type': 'op', 'cmd': '<show><system><info></info></system></show>'}
-        if 'result' in call(query)['system']:
+        if 'system' in call(query):
             return True
         else:
             return False
