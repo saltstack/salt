@@ -69,6 +69,17 @@ def _sconnect(host=None, port=None, password=None):
     return redis.StrictRedis(host, port, password=password)
 
 
+def _get_kwargs_opts(**options):
+    '''
+    Return the Redis connection details from kwargs.
+    '''
+    host = options.get('host', None)
+    port = options.get('port', None)
+    database = options.get('db', None)
+    password = options.get('password', None)
+    return (host, port, database, password)
+
+
 def bgrewriteaof(host=None, port=None, db=None, password=None):
     '''
     Asynchronously rewrite the append-only file
@@ -256,10 +267,7 @@ def hdel(key, *fields, **options):
 
         salt '*' redis.hdel foo_hash bar_field1 bar_field2
     '''
-    host = options.get('host', None)
-    port = options.get('port', None)
-    database = options.get('db', None)
-    password = options.get('password', None)
+    (host, port, databse, password) = _get_kwargs_opts(**options)
     server = _connect(host, port, database, password)
     return server.hdel(key, *fields)
 
@@ -368,10 +376,7 @@ def hmget(key, *fields, **options):
 
         salt '*' redis.hmget foo_hash bar_field1 bar_field2
     '''
-    host = options.get('host', None)
-    port = options.get('port', None)
-    database = options.get('db', None)
-    password = options.get('password', None)
+    (host, port, databse, password) = _get_kwargs_opts(**options)
     server = _connect(host, port, database, password)
     return server.hmget(key, *fields)
 
@@ -637,6 +642,161 @@ def slaveof(master_host=None, master_port=None, host=None, port=None, db=None,
     return server.slaveof(master_host, master_port)
 
 
+def sadd(key, *members, **options):
+    '''
+    Add the specified members to the set stored at key.
+    Specified members that are already a member of this set are ignored.
+    If key does not exist, a new set is created before adding the specified members.
+    An error is returned when the value stored at key is not a set.
+
+    Returns:
+        The number of elements that were added to the set,
+        not including all the elements already present into the set.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.sadd foo_set foo_member bar_member
+    '''
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
+    return server.sadd(key, *members)
+
+
+def scard(key, host=None, port=None, db=None, password=None):
+    '''
+    Returns the set cardinality (number of elements) of the set stored at key.
+    Keys that do not exist are considered to be empty sets.
+
+    Returns:
+        The cardinality (number of elements) of the set,
+        or 0 if key does not exist.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.scard foo_set
+    '''
+    server = _connect(host, port, db, password)
+    return server.scard(key)
+
+
+def sdiff(key, *keys, **options):
+    '''
+    Returns the members of the set resulting from the difference
+    between the first set and all the successive sets.
+
+    Returns:
+        List with members of the resulting set.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.sdiff foo_set bar_set baz_set
+    '''
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
+    return server.sdiff(key, *keys)
+
+
+def sdiffstore(destination, key, *keys, **options):
+    '''
+    This command is equal to :mod:`redis.sdiff <salt.modules.redismod.sdiff>`,
+    but instead of returning the resulting set, it is stored in ``destination``.
+    If ``destination`` already exists, it is overwritten.
+
+    Returns:
+        The number of elements in the resulting set.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.sdiffstore destination_set foo_set bar_set baz_set
+    '''
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
+    return server.sdiffstore(destination, key, *keys)
+
+
+def sinter(key, *keys, **options):
+    '''
+    Returns the members of the set resulting
+    from the intersection of all the given sets.
+    Keys that do not exist are considered to be empty sets.
+    With one of the keys being an empty set,
+    the resulting set is also empty
+    (since set intersection with an empty set always results in an empty set).
+
+    Returns:
+        List with members of the resulting set.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.sinter foo_set bar_set baz_set
+    '''
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
+    return server.sinter(key, *keys)
+
+
+def sinterstore(destination, key, *keys, **options):
+    '''
+    This command is equal to :mod:`redis.sinter <salt.modules.redismod.sinter>`,
+    but instead of returning the resulting set, it is stored in ``destination``.
+    If ``destination`` already exists, it is overwritten.
+
+    Returns:
+        The number of elements in the resulting set.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.sinterstore dest foo_set bar_set baz_set
+    '''
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
+    return server.sinterstore(destination, key, *keys)
+
+
+def sismember(key, member, host=None, port=None, db=None, password=None):
+    '''
+    Returns if ``member`` is a member of the set stored at key.
+
+    Returns:
+        - ``1`` if the element is a member of the set.
+        - ``0`` if the element is not a member of the set, or if key does not exist.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.sismember foo_set bar_member
+    '''
+    server = _connect(host, port, db, password)
+    return server.sismember(key, member)
+
+
 def smembers(key, host=None, port=None, db=None, password=None):
     '''
     Get members in a Redis set
@@ -649,6 +809,168 @@ def smembers(key, host=None, port=None, db=None, password=None):
     '''
     server = _connect(host, port, db, password)
     return list(server.smembers(key))
+
+
+def smove(source, destination, member, host=None, port=None, db=None, password=None):
+    '''
+    Move member from the set at ``source`` to the set at ``destination``.
+    This operation is atomic. In every given moment the element
+    will appear to be a member of ``source`` or ``destination`` for other clients.
+    If the ``source`` set does not exist or does not contain the specified element,
+    no operation is performed and ``0`` is returned.
+    Otherwise, the element is removed from the ``source`` set and added
+    to the ``destination`` set. When the specified element already exists
+    in the ``destination`` set, it is only removed from the source set.
+    An error is returned if ``source`` or ``destination`` does not hold a set value.
+
+    Returns:
+        - ``1`` if the element is moved.
+        - ``0`` if the element is not a member of source and no operation was performed.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.smove foo_source bar_destination baz_member
+    '''
+    server = _connect(host, port, db, password)
+    return server.smove(source, destination, member)
+
+
+def spop(key, host=None, port=None, db=None, password=None):
+    '''
+    Removes and returns one or more random elements
+    from the set value store at ``key``.
+    This operation is similar to :mod:`redis.srandmember <salt.modules.redismod.srandmember>`,
+    that returns one or more random elements from a set but does not remove it.
+
+    Returns:
+        The removed element, or ``None`` when ``key`` does not exist.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.spop foo_set
+    '''
+    server = _connect(host, port, db, password)
+    return server.spop(key)
+
+
+def srandmember(key, count=None, host=None, port=None, db=None, password=None):
+    '''
+    When called with just the ``key`` argument,
+    return a random element from the set value stored at ``key``.
+    When called with the additional ``count`` argument,
+    return an array of ``count`` distinct elements if ``count`` is positive.
+    If called with a negative ``count`` the behavior changes
+    and the command is allowed to return the same element multiple times.
+    In this case the number of returned elements
+    is the absolute value of the specified ``count``.
+    When called with just the ``key`` argument,
+    the operation is similar to :mod:`redis.spop <salt.modules.redismod.spop>`,
+    however while :mod:`redis.spop <salt.modules.redismod.spop>` also removes
+    the randomly selected element from the set, ``srandmember`` will just return
+    a random element without altering the original set in any way.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.srandmember foo_set
+    '''
+    server = _connect(host, port, db, password)
+    return server.srandmember(key, number=count)
+
+
+def srem(key, *members, **options):
+    '''
+    Remove the specified members from the set stored at ``key``.
+    Specified members that are not a member of this set are ignored.
+    If ``key`` does not exist, it is treated as an empty set and this command returns ``0``.
+    An error is returned when the value stored at ``key`` is not a set.
+
+    Returns:
+        The number of members that were removed from the set,
+        not including non existing members.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.srem foo_set bar_member baz_member
+    '''
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
+    return server.srem(key, *members)
+
+
+def sunion(key, *keys, **options):
+    '''
+    Returns the members of the set resulting from the union of all the given sets.
+    Keys that do not exist are considered to be empty sets.
+
+    Returns:
+        List with members of the resulting set.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.sunion foo_set bar_set baz_set
+    '''
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
+    return server.sunion(key, *keys)
+
+
+def sunionstore(destination, key, *keys, **options):
+    '''
+    This command is equal to :mod:`redis.sunion <salt.modules.redismod.sunion>`,
+    but instead of returning the resulting set, it is stored in ``destination``.
+    If ``destination`` already exists, it is overwritten.
+
+    Returns:
+        The number of elements in the resulting set.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.sunionstore destination_set foo_set bar_set baz_set
+    '''
+    (host, port, databse, password) = _get_kwargs_opts(**options)
+    server = _connect(host, port, database, password)
+    return server.sunionstore(destination, key, *keys)
+
+
+def sscan(key, cursor=0, match=None, count=None, host=None, port=None, db=None, password=None):
+    '''
+    Incrementally return lists of elements in a set.
+    Also return a cursor indicating the scan position.
+
+    .. versionadded:: Nitrogen
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.sscan foo_set match='field_prefix_*' count=1
+    '''
+    server = _connect(host, port, db, password)
+    return server.sscan(key, cursor=cursor, match=match, count=count)
 
 
 def time(host=None, port=None, db=None, password=None):
