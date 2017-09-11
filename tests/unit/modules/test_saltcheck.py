@@ -3,9 +3,12 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import os.path
 
 try:
     import salt.modules.saltcheck as saltcheck
+    import salt.config
+    import salt.syspaths as syspaths
 except:
     raise
 
@@ -30,6 +33,14 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
+        # Setting the environment to be local
+        local_opts = salt.config.minion_config(
+            os.path.join(syspaths.CONFIG_DIR, u'minion'))
+        local_opts['file_client']= 'local'
+        patcher = patch('salt.config.minion_config',
+                        MagicMock(return_value=local_opts))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {saltcheck: {}}
 
     def test_call_salt_command(self):
