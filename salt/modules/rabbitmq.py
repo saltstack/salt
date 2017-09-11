@@ -476,8 +476,8 @@ def check_password(name, password, runas=None):
             return False
         return True
 
-    cmd = ('rabbit_auth_backend_internal:check_user_login'
-        '(<<"{0}">>, [{{password, <<"{1}">>}}]).').format(
+    cmd = ('rabbit_access_control:check_user_pass_login'
+        '(list_to_binary("{0}"), list_to_binary("{1}")).').format(
         name.replace('"', '\\"'),
         password.replace('"', '\\"'))
 
