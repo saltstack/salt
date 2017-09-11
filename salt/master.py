@@ -1311,7 +1311,8 @@ class AESFuncs(object):
             load.get(u'saltenv', load.get(u'env')),
             ext=load.get(u'ext'),
             pillar_override=load.get(u'pillar_override', {}),
-            pillarenv=load.get(u'pillarenv'))
+            pillarenv=load.get(u'pillarenv'),
+            extra_minion_data=load.get(u'extra_minion_data'))
         data = pillar.compile_pillar()
         self.fs_.update_opts()
         if self.opts.get(u'minion_data_cache', False):
