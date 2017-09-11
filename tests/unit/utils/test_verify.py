@@ -14,9 +14,9 @@ import tempfile
 import socket
 
 # Import third party libs
-try:
+if sys.platform.startswith('win'):
     import win32file
-except ImportError:
+else:
     import resource
 
 # Import Salt Testing libs
@@ -87,7 +87,7 @@ class TestVerify(TestCase):
         writer = FakeWriter()
         sys.stderr = writer
         # Now run the test
-        if salt.utils.is_windows():
+        if sys.platform.startswith('win'):
             self.assertTrue(check_user('nouser'))
         else:
             self.assertFalse(check_user('nouser'))
@@ -146,7 +146,7 @@ class TestVerify(TestCase):
                 'raise the salt\'s max_open_files setting. Please consider '
                 'raising this value.'
             )
-            if salt.utils.is_windows():
+            if sys.platform.startswith('win'):
                 logmsg_crash = (
                     '{0}:The number of accepted minion keys({1}) should be lower '
                     'than 1/4 of the max open files soft setting({2}). '
@@ -167,7 +167,7 @@ class TestVerify(TestCase):
 
             mof_test = 256
 
-            if salt.utils.is_windows():
+            if sys.platform.startswith('win'):
                 win32file._setmaxstdio(mof_test)
             else:
                 resource.setrlimit(resource.RLIMIT_NOFILE, (mof_test, mof_h))
@@ -204,7 +204,7 @@ class TestVerify(TestCase):
                                 level,
                                 newmax,
                                 mof_test,
-                                mof_test - newmax if salt.utils.is_windows() else mof_h - newmax,
+                                mof_test - newmax if sys.platform.startswith('win') else mof_h - newmax,
                             ),
                             handler.messages
                         )
@@ -229,7 +229,7 @@ class TestVerify(TestCase):
                         'CRITICAL',
                         newmax,
                         mof_test,
-                        mof_test - newmax if salt.utils.is_windows() else mof_h - newmax,
+                        mof_test - newmax if sys.platform.startswith('win') else mof_h - newmax,
                     ),
                     handler.messages
                 )
@@ -241,7 +241,7 @@ class TestVerify(TestCase):
                 raise
             finally:
                 shutil.rmtree(tempdir)
-                if salt.utils.is_windows():
+                if sys.platform.startswith('win'):
                     win32file._setmaxstdio(mof_h)
                 else:
                     resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
