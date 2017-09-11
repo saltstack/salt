@@ -1059,6 +1059,13 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         )
         self.add_option_group(group)
         group.add_option(
+            '-H', '--hosts',
+            default=False,
+            action='store_true',
+            dest='list_hosts',
+            help='List all known hosts to currently visible or other specified rosters'
+        )
+        group.add_option(
             '-E', '--pcre',
             default=False,
             action='store_true',
@@ -2193,9 +2200,17 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
     def _mixin_setup(self):
         file_opts_group = optparse.OptionGroup(self, 'File Options')
         file_opts_group.add_option(
+            '-C', '--chunked',
+            default=False,
+            dest='chunked',
+            action='store_true',
+            help='Use chunked files transfer. Supports big files, recursive '
+                 'lookup and directories creation.'
+        )
+        file_opts_group.add_option(
             '-n', '--no-compression',
             default=True,
-            dest='compression',
+            dest='gzip',
             action='store_false',
             help='Disable gzip compression.'
         )
@@ -2216,7 +2231,6 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
             self.config['tgt'] = self.args[0]
         self.config['src'] = [os.path.realpath(x) for x in self.args[1:-1]]
         self.config['dest'] = self.args[-1]
-        self.config['gzip'] = True
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
@@ -2783,6 +2797,12 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             help=('Start the runner operation and immediately return control.')
         )
+        self.add_option(
+            '--skip-grains',
+            default=False,
+            action='store_true',
+            help=('Do not load grains.')
+        )
         group = self.output_options_group = optparse.OptionGroup(
             self, 'Output Options', 'Configure your preferred output format.'
         )
@@ -3037,6 +3057,14 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             action='store_true',
             help='Run command via sudo.'
+        )
+        auth_group.add_option(
+            '--skip-roster',
+            dest='ssh_skip_roster',
+            default=False,
+            action='store_true',
+            help='If hostname is not found in the roster, do not store the information'
+                 'into the default roster file (flat).'
         )
         self.add_option_group(auth_group)
 

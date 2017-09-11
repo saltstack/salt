@@ -33,6 +33,7 @@ import salt.utils.powershell
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.timed_subprocess
+import salt.utils.versions
 import salt.utils.vt
 import salt.grains.extra
 from salt.ext import six
@@ -2119,12 +2120,7 @@ def script(source,
             )
 
     if '__env__' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'__env__\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('__env__')
 
     if salt.utils.platform.is_windows() and runas and cwd is None:
@@ -2335,12 +2331,7 @@ def script_retcode(source,
         salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     if '__env__' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'__env__\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('__env__')
 
     return script(source=source,
@@ -2402,33 +2393,39 @@ def has_exec(cmd):
     return which(cmd) is not None
 
 
-def exec_code(lang, code, cwd=None):
+def exec_code(lang, code, cwd=None, args=None, **kwargs):
     '''
     Pass in two strings, the first naming the executable language, aka -
     python2, python3, ruby, perl, lua, etc. the second string containing
     the code you wish to execute. The stdout will be returned.
+
+    All parameters from :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` except python_shell can be used.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
+        salt '*' cmd.exec_code ruby 'puts "cheese"' args='["arg1", "arg2"]' env='{"FOO": "bar"}'
     '''
-    return exec_code_all(lang, code, cwd)['stdout']
+    return exec_code_all(lang, code, cwd, args, **kwargs)['stdout']
 
 
-def exec_code_all(lang, code, cwd=None):
+def exec_code_all(lang, code, cwd=None, args=None, **kwargs):
     '''
     Pass in two strings, the first naming the executable language, aka -
     python2, python3, ruby, perl, lua, etc. the second string containing
     the code you wish to execute. All cmd artifacts (stdout, stderr, retcode, pid)
     will be returned.
 
+    All parameters from :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` except python_shell can be used.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' cmd.exec_code_all ruby 'puts "cheese"'
+        salt '*' cmd.exec_code_all ruby 'puts "cheese"' args='["arg1", "arg2"]' env='{"FOO": "bar"}'
     '''
     powershell = lang.lower().startswith("powershell")
 
@@ -2445,7 +2442,12 @@ def exec_code_all(lang, code, cwd=None):
     else:
         cmd = [lang, codefile]
 
-    ret = run_all(cmd, cwd=cwd, python_shell=False)
+    if isinstance(args, six.string_types):
+        cmd.append(args)
+    elif isinstance(args, list):
+        cmd += args
+
+    ret = run_all(cmd, cwd=cwd, python_shell=False, **kwargs)
     os.remove(codefile)
     return ret
 

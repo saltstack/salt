@@ -179,6 +179,7 @@ state modules
     netusers
     network
     netyang
+    nfs_export
     nftables
     npm
     ntp
@@ -250,7 +251,6 @@ state modules
     stateconf
     status
     statuspage
-    stormpath_account
     supervisord
     svn
     sysctl

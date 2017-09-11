@@ -80,10 +80,10 @@ import logging
 import os
 import re
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.pkg
 import salt.utils.platform
+import salt.utils.versions
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
@@ -179,7 +179,7 @@ def _fulfills_version_spec(versions, oper, desired_version,
             versions = versions['version']
     for ver in versions:
         if (oper == '==' and fnmatch.fnmatch(ver, desired_version)) \
-                or salt.utils.compare_versions(ver1=ver,
+                or salt.utils.versions.compare(ver1=ver,
                                                oper=oper,
                                                ver2=desired_version,
                                                cmp_func=cmp_func,
@@ -1256,8 +1256,11 @@ def installed(
 
         ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
-        :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
-        and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
+        :mod:`pacman <salt.modules.pacman>`,
+        :mod:`winrepo <salt.modules.win_pkg>`,
+        :mod:`yumpkg <salt.modules.yumpkg>`, and
+        :mod:`zypper <salt.modules.zypper>`,
+        version numbers can be specified
         in the ``pkgs`` argument. For example:
 
         .. code-block:: yaml
@@ -3067,7 +3070,7 @@ def mod_aggregate(low, chunks, running):
     if low.get('fun') not in agg_enabled:
         return low
     for chunk in chunks:
-        tag = salt.utils.gen_state_tag(chunk)
+        tag = __utils__['state.gen_tag'](chunk)
         if tag in running:
             # Already ran the pkg state, skip aggregation
             continue

@@ -159,7 +159,7 @@ def vgdisplay(vgname=''):
     return ret
 
 
-def lvdisplay(lvname=''):
+def lvdisplay(lvname='', quiet=False):
     '''
     Return information about the logical volume(s)
 
@@ -174,7 +174,10 @@ def lvdisplay(lvname=''):
     cmd = ['lvdisplay', '-c']
     if lvname:
         cmd.append(lvname)
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if quiet:
+        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='quiet')
+    else:
+        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -430,7 +433,7 @@ def lvcreate(lvname,
         cmd.extend(extra_arguments)
 
     if force:
-        cmd.append('-yes')
+        cmd.append('--yes')
 
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     lvdev = '/dev/{0}/{1}'.format(vgname, lvname)

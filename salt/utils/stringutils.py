@@ -89,6 +89,15 @@ def to_num(text):
             return text
 
 
+def to_none(text):
+    '''
+    Convert a string to None if the string is empty or contains only spaces.
+    '''
+    if str(text).strip():
+        return text
+    return None
+
+
 def is_quoted(value):
     '''
     Return a single or double quote, if a string is wrapped in extra quotes.

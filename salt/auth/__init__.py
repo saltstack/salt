@@ -17,9 +17,7 @@ from __future__ import absolute_import
 
 # Import python libs
 from __future__ import print_function
-import os
 import collections
-import hashlib
 import time
 import logging
 import random
@@ -33,6 +31,7 @@ import salt.transport.client
 import salt.utils
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.versions
 import salt.payload
 
 log = logging.getLogger(__name__)
@@ -56,6 +55,7 @@ class LoadAuth(object):
         self.max_fail = 1.0
         self.serial = salt.payload.Serial(opts)
         self.auth = salt.loader.auth(opts)
+        self.tokens = salt.loader.eauth_tokens(opts)
         self.ckminions = ckminions or salt.utils.minions.CkMinions(opts)
 
     def load_name(self, load):
@@ -200,13 +200,6 @@ class LoadAuth(object):
         '''
         if not self.authenticate_eauth(load):
             return {}
-        fstr = '{0}.auth'.format(load['eauth'])
-        hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
-        tok = str(hash_type(os.urandom(512)).hexdigest())
-        t_path = os.path.join(self.opts['token_dir'], tok)
-        while os.path.isfile(t_path):
-            tok = str(hash_type(os.urandom(512)).hexdigest())
-            t_path = os.path.join(self.opts['token_dir'], tok)
 
         if self._allow_custom_expire(load):
             token_expire = load.pop('token_expire', self.opts['token_expire'])
@@ -217,39 +210,27 @@ class LoadAuth(object):
         tdata = {'start': time.time(),
                  'expire': time.time() + token_expire,
                  'name': self.load_name(load),
-                 'eauth': load['eauth'],
-                 'token': tok}
+                 'eauth': load['eauth']}
 
         if self.opts['keep_acl_in_token']:
             acl_ret = self.__get_acl(load)
             tdata['auth_list'] = acl_ret
 
-        if 'groups' in load:
-            tdata['groups'] = load['groups']
+        groups = self.get_groups(load)
+        if groups:
+            tdata['groups'] = groups
 
-        try:
-            with salt.utils.files.set_umask(0o177):
-                with salt.utils.files.fopen(t_path, 'w+b') as fp_:
-                    fp_.write(self.serial.dumps(tdata))
-        except (IOError, OSError):
-            log.warning('Authentication failure: can not write token file "{0}".'.format(t_path))
-            return {}
-        return tdata
+        return self.tokens["{0}.mk_token".format(self.opts['eauth_tokens'])](self.opts, tdata)
 
     def get_tok(self, tok):
         '''
         Return the name associated with the token, or False if the token is
         not valid
         '''
-        t_path = os.path.join(self.opts['token_dir'], tok)
-        if not os.path.isfile(t_path):
+        tdata = self.tokens["{0}.get_token".format(self.opts['eauth_tokens'])](self.opts, tok)
+        if not tdata:
             return {}
-        try:
-            with salt.utils.files.fopen(t_path, 'rb') as fp_:
-                tdata = self.serial.loads(fp_.read())
-        except (IOError, OSError):
-            log.warning('Authentication failure: can not read token file "{0}".'.format(t_path))
-            return {}
+
         rm_tok = False
         if 'expire' not in tdata:
             # invalid token, delete it!
@@ -257,12 +238,21 @@ class LoadAuth(object):
         if tdata.get('expire', '0') < time.time():
             rm_tok = True
         if rm_tok:
-            try:
-                os.remove(t_path)
-                return {}
-            except (IOError, OSError):
-                pass
+            self.rm_token(tok)
+
         return tdata
+
+    def list_tokens(self):
+        '''
+        List all tokens in eauth_tokn storage.
+        '''
+        return self.tokens["{0}.list_tokens".format(self.opts['eauth_tokens'])](self.opts)
+
+    def rm_token(self, tok):
+        '''
+        Remove the given token from token storage.
+        '''
+        self.tokens["{0}.rm_token".format(self.opts['eauth_tokens'])](self.opts, tok)
 
     def authenticate_token(self, load):
         '''
@@ -345,7 +335,7 @@ class LoadAuth(object):
                 return False
         return True
 
-    def get_auth_list(self, load):
+    def get_auth_list(self, load, token=None):
         '''
         Retrieve access list for the user specified in load.
         The list is built by eauth module or from master eauth configuration.
@@ -353,30 +343,37 @@ class LoadAuth(object):
         list if the user has no rights to execute anything on this master and returns non-empty list
         if user is allowed to execute particular functions.
         '''
+        # Get auth list from token
+        if token and self.opts['keep_acl_in_token'] and 'auth_list' in token:
+            return token['auth_list']
         # Get acl from eauth module.
         auth_list = self.__get_acl(load)
         if auth_list is not None:
             return auth_list
 
-        if load['eauth'] not in self.opts['external_auth']:
+        eauth = token['eauth'] if token else load['eauth']
+        if eauth not in self.opts['external_auth']:
             # No matching module is allowed in config
             log.warning('Authorization failure occurred.')
             return None
 
-        name = self.load_name(load)  # The username we are attempting to auth with
-        groups = self.get_groups(load)  # The groups this user belongs to
-        eauth_config = self.opts['external_auth'][load['eauth']]
-        if groups is None or groups is False:
+        if token:
+            name = token['name']
+            groups = token.get('groups')
+        else:
+            name = self.load_name(load)  # The username we are attempting to auth with
+            groups = self.get_groups(load)  # The groups this user belongs to
+        eauth_config = self.opts['external_auth'][eauth]
+        if not groups:
             groups = []
         group_perm_keys = [item for item in eauth_config if item.endswith('%')]  # The configured auth groups
 
         # First we need to know if the user is allowed to proceed via any of their group memberships.
         group_auth_match = False
         for group_config in group_perm_keys:
-            group_config = group_config.rstrip('%')
-            for group in groups:
-                if group == group_config:
-                    group_auth_match = True
+            if group_config.rstrip('%') in groups:
+                group_auth_match = True
+                break
         # If a group_auth_match is set it means only that we have a
         # user which matches at least one or more of the groups defined
         # in the configuration file.
@@ -422,6 +419,13 @@ class Authorize(object):
     The authorization engine used by EAUTH
     '''
     def __init__(self, opts, load, loadauth=None):
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'Authorize\' class has been deprecated. Please use the '
+            '\'LoadAuth\', \'Reslover\', or \'AuthUser\' classes instead. '
+            'Support for the \'Authorze\' class will be removed in Salt '
+            '{version}.'
+        )
         self.opts = salt.config.master_config(opts['conf_file'])
         self.load = load
         self.ckminions = salt.utils.minions.CkMinions(opts)

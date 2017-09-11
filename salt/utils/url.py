@@ -12,6 +12,7 @@ import sys
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils
 import salt.utils.platform
+import salt.utils.versions
 from salt.utils.locales import sdecode
 
 
@@ -26,12 +27,7 @@ def parse(url):
     resource = url.split('salt://', 1)[-1]
 
     if '?env=' in resource:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the salt:// URL.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         path, saltenv = resource.split('?env=', 1)[0], None
     elif '?saltenv=' in resource:
         path, saltenv = resource.split('?saltenv=', 1)
@@ -61,15 +57,15 @@ def is_escaped(url):
     '''
     test whether `url` is escaped with `|`
     '''
-    if salt.utils.platform.is_windows():
-        return False
-
     scheme = urlparse(url).scheme
     if not scheme:
         return url.startswith('|')
     elif scheme == 'salt':
         path, saltenv = parse(url)
-        return path.startswith('|')
+        if salt.utils.platform.is_windows() and '|' in url:
+            return path.startswith('_')
+        else:
+            return path.startswith('|')
     else:
         return False
 
@@ -101,15 +97,15 @@ def unescape(url):
     '''
     remove escape character `|` from `url`
     '''
-    if salt.utils.platform.is_windows():
-        return url
-
     scheme = urlparse(url).scheme
     if not scheme:
         return url.lstrip('|')
     elif scheme == 'salt':
         path, saltenv = parse(url)
-        return create(path.lstrip('|'), saltenv)
+        if salt.utils.platform.is_windows() and '|' in url:
+            return create(path.lstrip('_'), saltenv)
+        else:
+            return create(path.lstrip('|'), saltenv)
     else:
         return url
 

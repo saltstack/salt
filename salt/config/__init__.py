@@ -53,7 +53,7 @@ _DFLT_LOG_DATEFMT = '%H:%M:%S'
 _DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
 _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
-    '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
+    '%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d] %(message)s'
 )
 _DFLT_REFSPECS = ['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']
 
@@ -111,9 +111,10 @@ VALID_OPTS = {
     'master_port': (six.string_types, int),
 
     # The behaviour of the minion when connecting to a master. Can specify 'failover',
-    # 'disable' or 'func'. If 'func' is specified, the 'master' option should be set to an
-    # exec module function to run to determine the master hostname. If 'disable' is specified
-    # the minion will run, but will not try to connect to a master.
+    # 'disable', 'distributed', or 'func'. If 'func' is specified, the 'master' option should be
+    # set to an exec module function to run to determine the master hostname. If 'disable' is
+    # specified the minion will run, but will not try to connect to a master. If 'distributed'
+    # is specified the minion will try to deterministically pick a master based on its' id.
     'master_type': str,
 
     # Specify the format in which the master address will be specified. Can
@@ -417,6 +418,12 @@ VALID_OPTS = {
     # Tell the client to display the jid when a job is published
     'show_jid': bool,
 
+    # Ensure that a generated jid is always unique. If this is set, the jid
+    # format is different due to an underscore and process id being appended
+    # to the jid. WARNING: A change to the jid format may break external
+    # applications that depend on the original format.
+    'unique_jid': bool,
+
     # Tells the highstate outputter to show successful states. False will omit successes.
     'state_verbose': bool,
 
@@ -718,6 +725,10 @@ VALID_OPTS = {
     # Auth subsystem module to use to get authorized access list for a user. By default it's the
     # same module used for external authentication.
     'eauth_acl_module': str,
+
+    # Subsystem to use to maintain eauth tokens. By default, tokens are stored on the local
+    # filesystem
+    'eauth_tokens': str,
 
     # The number of open files a daemon is allowed to have open. Frequently needs to be increased
     # higher than the system default in order to account for the way zeromq consumes file handles.
@@ -1075,6 +1086,11 @@ VALID_OPTS = {
     # (in other words, require that minions have 'minion_sign_messages'
     # turned on)
     'require_minion_sign_messages': bool,
+
+    # The list of config entries to be passed to external pillar function as
+    # part of the extra_minion_data param
+    # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
+    'pass_to_ext_pillars': (six.string_types, list),
 }
 
 # default configurations
@@ -1193,6 +1209,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
     'gitfs_disable_saltenv_mapping': False,
+    'unique_jid': False,
     'hash_type': 'sha256',
     'disable_modules': [],
     'disable_returners': [],
@@ -1437,6 +1454,7 @@ DEFAULT_MASTER_OPTS = {
     'hgfs_saltenv_blacklist': [],
     'show_timeout': True,
     'show_jid': False,
+    'unique_jid': False,
     'svnfs_remotes': [],
     'svnfs_mountpoint': '',
     'svnfs_root': '',
@@ -1469,8 +1487,9 @@ DEFAULT_MASTER_OPTS = {
     'syndic_forward_all_events': False,
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
-    'runner_dirs': [],
     'outputter_dirs': [],
+    'runner_dirs': [],
+    'utils_dirs': [],
     'client_acl_verify': True,
     'publisher_acl': {},
     'publisher_acl_blacklist': {},
@@ -1480,6 +1499,7 @@ DEFAULT_MASTER_OPTS = {
     'token_expire_user_override': False,
     'keep_acl_in_token': False,
     'eauth_acl_module': '',
+    'eauth_tokens': 'localfs',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
     'file_recv': False,
     'file_recv_max_size': 100,
@@ -1663,7 +1683,8 @@ DEFAULT_PROXY_MINION_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': True,
-    'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include'],
+    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'proxy', 'extmods'),
+    'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include', 'extension_modules'],
     'default_include': 'proxy.d/*.conf',
 
     # By default, proxies will preserve the connection.
@@ -2334,7 +2355,7 @@ def syndic_config(master_config_path,
         'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir'
     ]
-    for config_key in ('syndic_log_file', 'log_file', 'key_logfile'):
+    for config_key in ('log_file', 'key_logfile', 'syndic_log_file'):
         # If this is not a URI and instead a local path
         if urlparse(opts.get(config_key, '')).scheme == '':
             prepend_root_dirs.append(config_key)
@@ -3225,12 +3246,12 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['nova', 'virtualbox', 'libvirt', 'softlayer']
+    non_image_drivers = ['nova', 'virtualbox', 'libvirt', 'softlayer', 'oneandone']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
                         'softlayer', 'softlayer_hw', 'vmware', 'vsphere',
-                        'virtualbox', 'profitbricks', 'libvirt']
+                        'virtualbox', 'profitbricks', 'libvirt', 'oneandone']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
@@ -3595,12 +3616,23 @@ def apply_master_config(overrides=None, defaults=None):
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
+    opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
+    opts['syndic_dir'] = os.path.join(opts['cachedir'], 'syndics')
+    # Make sure ext_mods gets set if it is an untrue value
+    # (here to catch older bad configs)
     opts['extension_modules'] = (
         opts.get('extension_modules') or
         os.path.join(opts['cachedir'], 'extmods')
     )
-    opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
-    opts['syndic_dir'] = os.path.join(opts['cachedir'], 'syndics')
+    # Set up the utils_dirs location from the extension_modules location
+    opts['utils_dirs'] = (
+        opts.get('utils_dirs') or
+        [os.path.join(opts['extension_modules'], 'utils')]
+    )
+
+    # Insert all 'utils_dirs' directories to the system path
+    insert_system_path(opts, opts['utils_dirs'])
+
     if (overrides or {}).get('ipc_write_buffer', '') == 'dynamic':
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:

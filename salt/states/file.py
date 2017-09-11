@@ -288,6 +288,7 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.templates
 import salt.utils.url
+import salt.utils.versions
 from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -626,7 +627,11 @@ def _clean_dir(root, keep, exclude_pat):
             while True:
                 fn_ = os.path.dirname(fn_)
                 real_keep.add(fn_)
-                if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\\\'])]:
+                if fn_ in [
+                           os.sep,
+                           ''.join([os.path.splitdrive(fn_)[0], os.sep]),
+                           ''.join([os.path.splitdrive(fn_)[0], os.sep, os.sep])
+                          ]:
                     break
 
     def _delete_not_kept(nfn):
@@ -1406,7 +1411,8 @@ def symlink(
     return ret
 
 
-def absent(name):
+def absent(name,
+           **kwargs):
     '''
     Make sure that the named file or directory is absent. If it exists, it will
     be deleted. This will work to reverse any of the functions in the file
@@ -1468,7 +1474,8 @@ def absent(name):
     return ret
 
 
-def exists(name):
+def exists(name,
+           **kwargs):
     '''
     Verify that the named file or directory is present or exists.
     Ensures pre-requisites outside of Salt's purview
@@ -1494,7 +1501,8 @@ def exists(name):
     return ret
 
 
-def missing(name):
+def missing(name,
+            **kwargs):
     '''
     Verify that the named file or directory is missing, this returns True only
     if the named file is missing but does not remove the file if it is present.
@@ -1557,7 +1565,7 @@ def managed(name,
     the salt master and potentially run through a templating system.
 
     name
-        The location of the file to manage
+        The location of the file to manage, as an absolute path.
 
     source
         The source file to download to the minion, this source file can be
@@ -1727,13 +1735,15 @@ def managed(name,
 
     group
         The group ownership set for the file, this defaults to the group salt
-        is running as on the minion On Windows, this is ignored
+        is running as on the minion. On Windows, this is ignored
 
     mode
-        The permissions to set on this file, e.g. ``644``, ``0775``, or ``4664``.
+        The permissions to set on this file, e.g. ``644``, ``0775``, or
+        ``4664``.
 
-        The default mode for new files and directories corresponds umask of salt
-        process. For existing files and directories it's not enforced.
+        The default mode for new files and directories corresponds to the
+        umask of the salt process. The mode of existing files and directories
+        will only be changed if ``mode`` is specified.
 
         .. note::
             This option is **not** supported on Windows.
@@ -2074,12 +2084,7 @@ def managed(name,
             - win_inheritance: False
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     name = os.path.expanduser(name)
@@ -2581,7 +2586,7 @@ def directory(name,
     Ensure that a named directory is present and has the right perms
 
     name
-        The location to create or manage a directory
+        The location to create or manage a directory, as an absolute path
 
     user
         The user to own the directory; this defaults to the user salt is
@@ -3052,6 +3057,7 @@ def recurse(name,
             sym_mode=None,
             template=None,
             context=None,
+            replace=True,
             defaults=None,
             include_empty=False,
             backup='',
@@ -3140,6 +3146,11 @@ def recurse(name,
 
             The template option is required when recursively applying templates.
 
+    replace : True
+        If set to ``False`` and the file already exists, the file will not be
+        modified even if changes would otherwise be made. Permissions and
+        ownership will still be enforced, however.
+
     context
         Overrides default context variables passed to the template.
 
@@ -3207,12 +3218,7 @@ def recurse(name,
         option is usually not needed except in special circumstances.
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     name = os.path.expanduser(sdecode(name))
@@ -3329,8 +3335,8 @@ def recurse(name,
         if _ret['changes']:
             ret['changes'][path] = _ret['changes']
 
-    def manage_file(path, source):
-        if clean and os.path.exists(path) and os.path.isdir(path):
+    def manage_file(path, source, replace):
+        if clean and os.path.exists(path) and os.path.isdir(path) and replace:
             _ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
             if __opts__['test']:
                 _ret['comment'] = u'Replacing directory {0} with a ' \
@@ -3360,6 +3366,7 @@ def recurse(name,
             attrs=None,
             template=template,
             makedirs=True,
+            replace=replace,
             context=context,
             defaults=defaults,
             backup=backup,
@@ -3416,7 +3423,7 @@ def recurse(name,
     for dirname in mng_dirs:
         manage_directory(dirname)
     for dest, src in mng_files:
-        manage_file(dest, src)
+        manage_file(dest, src, replace)
 
     if clean:
         # TODO: Use directory(clean=True) instead
@@ -4361,7 +4368,7 @@ def comment(name, regex, char='#', backup='.bak'):
     ret['result'] = __salt__['file.search'](name, unanchor_regex, multiline=True)
 
     if slines != nlines:
-        if not salt.utils.istextfile(name):
+        if not __utils__['files.is_text_file'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -4473,7 +4480,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     )
 
     if slines != nlines:
-        if not salt.utils.istextfile(name):
+        if not __utils__['files.is_text_file'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -4716,7 +4723,7 @@ def append(name,
         nlines = list(slines)
         nlines.extend(append_lines)
         if slines != nlines:
-            if not salt.utils.istextfile(name):
+            if not __utils__['files.is_text_file'](name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
                 # Changes happened, add them
@@ -4741,7 +4748,7 @@ def append(name,
         nlines = nlines.splitlines()
 
     if slines != nlines:
-        if not salt.utils.istextfile(name):
+        if not __utils__['files.is_text_file'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -4909,7 +4916,7 @@ def prepend(name,
     if __opts__['test']:
         nlines = test_lines + slines
         if slines != nlines:
-            if not salt.utils.istextfile(name):
+            if not __utils__['files.is_text_file'](name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
                 # Changes happened, add them
@@ -4952,7 +4959,7 @@ def prepend(name,
         nlines = nlines.splitlines(True)
 
     if slines != nlines:
-        if not salt.utils.istextfile(name):
+        if not __utils__['files.is_text_file'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -5028,12 +5035,7 @@ def patch(name,
     hash_ = kwargs.pop('hash', None)
 
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     name = os.path.expanduser(name)
@@ -5686,12 +5688,7 @@ def serialize(name,
         }
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     name = os.path.expanduser(name)
