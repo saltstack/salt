@@ -100,7 +100,8 @@ __virtualname__ = 'libvirt'
 # Set up logging
 log = logging.getLogger(__name__)
 
-def libvirtErrorHandler(ctx, error):
+
+def libvirt_error_handler(ctx, error):
     '''
     Redirect stderr prints from libvirt to salt logging.
     '''
@@ -108,7 +109,8 @@ def libvirtErrorHandler(ctx, error):
 
 
 if HAS_LIBVIRT:
-    libvirt.registerErrorHandler(f=libvirtErrorHandler, ctx=None)
+    libvirt.registerErrorHandler(f=libvirt_error_handler, ctx=None)
+
 
 def __virtual__():
     '''
@@ -290,7 +292,7 @@ def create(vm_):
 
     validate_xml = vm_.get('validate_xml') if vm_.get('validate_xml') is not None else True
 
-    log.info("Cloning machine '{0}' with strategy '{1}' validate_xml='{2}'".format(vm_['name'], clone_strategy, validate_xml))
+    log.info("Cloning '{0}' with strategy '{1}' validate_xml='{2}'".format(vm_['name'], clone_strategy, validate_xml))
 
     try:
         # Check for required profile parameters before sending any API calls.
