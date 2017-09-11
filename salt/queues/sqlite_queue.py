@@ -210,7 +210,7 @@ def delete(queue, items):
         return True
 
 
-def pop(queue, quantity=1):
+def pop(queue, quantity=1, is_runner=False):
     '''
     Pop one or more or all items from the queue return them.
     '''
@@ -240,5 +240,7 @@ def pop(queue, quantity=1):
 
             cur.execute(del_cmd)
         con.commit()
+    if is_runner:
+        items = [json.loads(item[0].replace("'", '"')) for item in result]
     log.info(items)
     return items
