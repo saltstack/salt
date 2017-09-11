@@ -334,7 +334,7 @@ VALID_OPTS = {
     # Whether or not scheduled mine updates should be accompanied by a job return for the job cache
     'mine_return_job': bool,
 
-    # Schedule a mine update every n number of seconds
+    # The number of minutes between mine updates.
     'mine_interval': int,
 
     # The ipc strategy. (i.e., sockets versus tcp, etc)
