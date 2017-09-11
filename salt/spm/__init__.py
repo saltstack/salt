@@ -13,9 +13,12 @@ import tarfile
 import shutil
 import hashlib
 import logging
-import pwd
-import grp
 import sys
+try:
+    import pwd
+    import grp
+except ImportError:
+    pass
 
 # Import Salt libs
 import salt.client
@@ -490,10 +493,18 @@ class SPMClient(object):
 
         # No defaults for this in config.py; default to the current running
         # user and group
-        uid = self.opts.get('spm_uid', os.getuid())
-        gid = self.opts.get('spm_gid', os.getgid())
-        uname = pwd.getpwuid(uid)[0]
-        gname = grp.getgrgid(gid)[0]
+        import salt.utils
+        if salt.utils.is_windows():
+            import salt.utils.win_functions
+            uname = gname = salt.utils.win_functions.get_current_user()
+            uname_sid = salt.utils.win_functions.get_sid_from_name(uname)
+            uid = self.opts.get('spm_uid', uname_sid)
+            gid = self.opts.get('spm_gid', uname_sid)
+        else:
+            uid = self.opts.get('spm_uid', os.getuid())
+            gid = self.opts.get('spm_gid', os.getgid())
+            uname = pwd.getpwuid(uid)[0]
+            gname = grp.getgrgid(gid)[0]
 
         # Second pass: install the files
         for member in pkg_files:
@@ -709,7 +720,7 @@ class SPMClient(object):
             raise SPMInvocationError('A path to a directory must be specified')
 
         if args[1] == '.':
-            repo_path = os.environ['PWD']
+            repo_path = os.getcwdu()
         else:
             repo_path = args[1]
 
