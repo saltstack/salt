@@ -385,7 +385,7 @@ class Schedule(object):
     '''
     instance = None
 
-    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=None):
+    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=False):
         '''
         Only create one instance of Schedule
         '''
@@ -401,11 +401,11 @@ class Schedule(object):
         return cls.instance
 
     # has to remain empty for singletons, since __init__ will *always* be called
-    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=None):
+    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=False):
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=None):
+    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, standalone=False):
         self.opts = opts
         self.proxy = proxy
         self.functions = functions
