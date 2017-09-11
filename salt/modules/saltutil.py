@@ -54,6 +54,7 @@ import salt.utils.files
 import salt.utils.minion
 import salt.utils.process
 import salt.utils.url
+import salt.utils.versions
 import salt.wheel
 
 HAS_PSUTIL = True
@@ -375,10 +376,10 @@ def refresh_grains(**kwargs):
 
         salt '*' saltutil.refresh_grains
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     _refresh_pillar = kwargs.pop('refresh_pillar', True)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
     # Modules and pillar need to be refreshed in case grains changes affected
     # them, and the module refresh process reloads the grains and assigns the
     # newly-reloaded grains to each execution module's __grains__ dunder.
@@ -1285,7 +1286,7 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
 
 def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
     if 'expr_form' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -1445,7 +1446,7 @@ def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=No
         kwarg = {}
     jid = kwargs.pop('__orchestration_jid__', jid)
     saltenv = kwargs.pop('__env__', saltenv)
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         kwarg.update(kwargs)
 

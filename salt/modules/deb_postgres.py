@@ -10,7 +10,7 @@ import logging
 import pipes
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 # Import 3rd-party libs
 
@@ -23,7 +23,7 @@ def __virtual__():
     '''
     Only load this module if the pg_createcluster bin exists
     '''
-    if salt.utils.which('pg_createcluster'):
+    if salt.utils.path.which('pg_createcluster'):
         return __virtualname__
     return (False, 'postgres execution module not loaded: pg_createcluste command not found.')
 
@@ -52,7 +52,7 @@ def cluster_create(version,
         salt '*' postgres.cluster_create '9.3' locale='fr_FR'
 
     '''
-    cmd = [salt.utils.which('pg_createcluster')]
+    cmd = [salt.utils.path.which('pg_createcluster')]
     if port:
         cmd += ['--port', str(port)]
     if locale:
@@ -83,7 +83,7 @@ def cluster_list(verbose=False):
 
         salt '*' postgres.cluster_list verbose=True
     '''
-    cmd = [salt.utils.which('pg_lsclusters'), '--no-header']
+    cmd = [salt.utils.path.which('pg_lsclusters'), '--no-header']
     ret = __salt__['cmd.run_all'](' '.join([pipes.quote(c) for c in cmd]))
     if ret.get('retcode', 0) != 0:
         log.error('Error listing clusters')
@@ -127,7 +127,7 @@ def cluster_remove(version,
         salt '*' postgres.cluster_remove '9.3' 'main' stop=True
 
     '''
-    cmd = [salt.utils.which('pg_dropcluster')]
+    cmd = [salt.utils.path.which('pg_dropcluster')]
     if stop:
         cmd += ['--stop']
     cmd += [version, name]

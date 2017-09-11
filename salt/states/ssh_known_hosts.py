@@ -21,12 +21,12 @@ Manage the information stored in the known_hosts files.
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import os
 
-# Import salt libs
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandNotFoundError
-import salt.utils
 
 # Define the state's virtual name
 __virtualname__ = 'ssh_known_hosts'
@@ -36,7 +36,7 @@ def __virtual__():
     '''
     Does not work on Windows, requires ssh module functions
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return False, 'ssh_known_hosts: Does not support Windows'
 
     return __virtualname__

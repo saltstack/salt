@@ -19,6 +19,7 @@ import os.path
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 import salt.utils.pkg
 import salt.utils.itertools
 import salt.utils.systemd
@@ -26,7 +27,7 @@ from salt.exceptions import CommandExecutionError, MinionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -538,6 +539,7 @@ def install(name=None,
     cmd.append('pacman')
 
     errors = []
+    targets = []
     if pkg_type == 'file':
         cmd.extend(['-U', '--noprogressbar', '--noconfirm'])
         cmd.extend(pkg_params)
@@ -548,7 +550,6 @@ def install(name=None,
         if sysupgrade:
             cmd.append('-u')
         cmd.extend(['--noprogressbar', '--noconfirm', '--needed'])
-        targets = []
         wildcards = []
         for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
@@ -991,12 +992,12 @@ def list_repo_pkgs(*args, **kwargs):
         salt '*' pkg.list_repo_pkgs 'samba4*' fromrepo=base,updates
         salt '*' pkg.list_repo_pkgs 'python2-*' byrepo=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     fromrepo = kwargs.pop('fromrepo', '') or ''
     byrepo = kwargs.pop('byrepo', False)
     refresh = kwargs.pop('refresh', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if fromrepo:
         try:

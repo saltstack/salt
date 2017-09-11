@@ -5,6 +5,7 @@
     :maturity: develop
     versionadded:: oxygen
 '''
+# pylint: disable=invalid-name,no-member
 
 # Import Python libs
 from __future__ import absolute_import

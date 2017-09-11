@@ -14,20 +14,16 @@ Package support for openSUSE via the zypper package manager
 
 # Import python libs
 from __future__ import absolute_import
-import copy
 import fnmatch
 import logging
 import re
 import os
 import time
 import datetime
-from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
-import salt.ext.six as six
-from salt.exceptions import SaltInvocationError
-import salt.utils.event
+from salt.ext import six
 from salt.ext.six.moves import configparser
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
@@ -37,11 +33,13 @@ from xml.parsers.expat import ExpatError
 
 # Import salt libs
 import salt.utils
+import salt.utils.event
 import salt.utils.files
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.systemd
-from salt.exceptions import (
-    CommandExecutionError, MinionError)
+from salt.utils.versions import LooseVersion
+from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +60,7 @@ def __virtual__():
     if __grains__.get('os_family', '') != 'Suse':
         return (False, "Module zypper: non SUSE OS not suppored by zypper package manager")
     # Not all versions of SUSE use zypper, check that it is available
-    if not salt.utils.which('zypper'):
+    if not salt.utils.path.which('zypper'):
         return (False, "Module zypper: zypper package manager not found")
     return __virtualname__
 
@@ -668,7 +666,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': [{'version' : 'version', 'arch' : 'arch'}]}
 
-        Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
 
         If ``all`` is specified, all valid attributes will be returned.
 
@@ -695,7 +694,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     attr = kwargs.get("attr")
     if 'pkg.list_pkgs' in __context__:
-        return _format_pkg_list(__context__['pkg.list_pkgs'], versions_as_list, attr)
+        cached = __context__['pkg.list_pkgs']
+        return __salt__['pkg_resource.format_pkg_list'](cached, versions_as_list, attr)
 
     cmd = ['rpm', '-qa', '--queryformat', (
         "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-"
@@ -703,15 +703,11 @@ def list_pkgs(versions_as_list=False, **kwargs):
     ret = {}
     for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
         name, pkgver, rel, arch, epoch, install_time = line.split('_|-')
-        if epoch:
-            pkgver = '{0}:{1}'.format(epoch, pkgver)
-        if rel:
-            pkgver += '-{0}'.format(rel)
         install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
         install_date_time_t = int(install_time)
 
-        all_attr = {'version': pkgver, 'arch': arch, 'install_date': install_date,
-                    'install_date_time_t': install_date_time_t}
+        all_attr = {'epoch': epoch, 'version': pkgver, 'release': rel, 'arch': arch,
+                    'install_date': install_date, 'install_date_time_t': install_date_time_t}
         __salt__['pkg_resource.add_pkg'](ret, name, all_attr)
 
     for pkgname in ret:
@@ -719,35 +715,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     __context__['pkg.list_pkgs'] = ret
 
-    return _format_pkg_list(ret, versions_as_list, attr)
-
-
-def _format_pkg_list(packages, versions_as_list, attr):
-    '''
-    Formats packages according to parameters.
-    '''
-    ret = copy.deepcopy(packages)
-    if attr:
-        requested_attr = set(['version', 'arch', 'install_date', 'install_date_time_t'])
-
-        if attr != 'all':
-            requested_attr &= set(attr + ['version'])
-
-        for name in ret:
-            versions = []
-            for all_attr in ret[name]:
-                filtered_attr = {}
-                for key in requested_attr:
-                    filtered_attr[key] = all_attr[key]
-                versions.append(filtered_attr)
-            ret[name] = versions
-        return ret
-
-    for name in ret:
-        ret[name] = [d['version'] for d in ret[name]]
-    if not versions_as_list:
-        __salt__['pkg_resource.stringify'](ret)
-    return ret
+    return __salt__['pkg_resource.format_pkg_list'](ret, versions_as_list, attr)
 
 
 def _get_configured_repos():
@@ -1126,7 +1094,8 @@ def install(name=None,
                     'version': '<new-version>',
                     'arch': '<new-arch>'}}}
 
-        Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
 
         If ``all`` is specified, all valid attributes will be returned.
 

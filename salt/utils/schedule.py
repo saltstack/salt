@@ -337,14 +337,16 @@ import copy
 
 # Import Salt libs
 import salt.config
-import salt.utils
+import salt.utils  # Can be removed once appendproctitle and daemonize_if are moved
+import salt.utils.args
 import salt.utils.error
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
-import salt.utils.process
-import salt.utils.args
 import salt.utils.minion
+import salt.utils.platform
+import salt.utils.process
+import salt.utils.stringutils
 import salt.loader
 import salt.minion
 import salt.payload
@@ -353,11 +355,10 @@ import salt.exceptions
 import salt.log.setup as log_setup
 import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
-from salt.utils.process import os_is_running, default_signals, SignalHandlingMultiprocessingProcess
 from salt.utils.yamldumper import SafeOrderedDumper
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # pylint: disable=import-error
 try:
@@ -478,7 +479,7 @@ class Schedule(object):
         try:
             with salt.utils.files.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(
-                    salt.utils.to_bytes(
+                    salt.utils.stringutils.to_bytes(
                         yaml.dump(
                             {'schedule': self._get_schedule(include_pillar=False)},
                             Dumper=SafeOrderedDumper
@@ -667,12 +668,12 @@ class Schedule(object):
 
         multiprocessing_enabled = self.opts.get('multiprocessing', True)
         if multiprocessing_enabled:
-            thread_cls = SignalHandlingMultiprocessingProcess
+            thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
         else:
             thread_cls = threading.Thread
 
         if multiprocessing_enabled:
-            with default_signals(signal.SIGINT, signal.SIGTERM):
+            with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
                 proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
                 # Reset current signals before starting the process in
                 # order not to inherit the current signal handlers
@@ -746,7 +747,8 @@ class Schedule(object):
         '''
         Execute this method in a multiprocess or thread
         '''
-        if salt.utils.is_windows() or self.opts.get('transport') == 'zeromq':
+        if salt.utils.platform.is_windows() \
+                or self.opts.get('transport') == 'zeromq':
             # Since function references can't be pickled and pickling
             # is required when spawning new processes on Windows, regenerate
             # the functions and returners.
@@ -762,7 +764,7 @@ class Schedule(object):
                'fun': func,
                'fun_args': [],
                'schedule': data['name'],
-               'jid': salt.utils.jid.gen_jid()}
+               'jid': salt.utils.jid.gen_jid(self.opts)}
 
         if 'metadata' in data:
             if isinstance(data['metadata'], dict):
@@ -793,7 +795,8 @@ class Schedule(object):
                 if 'schedule' in job:
                     log.debug('schedule.handle_func: Checking job against '
                               'fun {0}: {1}'.format(ret['fun'], job))
-                    if ret['schedule'] == job['schedule'] and os_is_running(job['pid']):
+                    if ret['schedule'] == job['schedule'] \
+                            and salt.utils.process.os_is_running(job['pid']):
                         jobcount += 1
                         log.debug(
                             'schedule.handle_func: Incrementing jobcount, now '
@@ -806,7 +809,7 @@ class Schedule(object):
                                     ret['schedule'], data['maxrunning']))
                             return False
 
-        if multiprocessing_enabled and not salt.utils.is_windows():
+        if multiprocessing_enabled and not salt.utils.platform.is_windows():
             # Reconfigure multiprocessing logging after daemonizing
             log_setup.setup_multiprocessing_logging()
 
@@ -849,6 +852,12 @@ class Schedule(object):
 
             ret['return'] = self.functions[func](*args, **kwargs)
 
+            # runners do not provide retcode
+            if 'retcode' in self.functions.pack['__context__']:
+                ret['retcode'] = self.functions.pack['__context__']['retcode']
+
+            ret['success'] = True
+
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
                 if 'return_config' in data:
@@ -857,7 +866,7 @@ class Schedule(object):
                     ret['ret_kwargs'] = data['return_kwargs']
                 rets = []
                 for returner in [data_returner, self.schedule_returner]:
-                    if isinstance(returner, str):
+                    if isinstance(returner, six.string_types):
                         rets.append(returner)
                     elif isinstance(returner, list):
                         rets.extend(returner)
@@ -865,7 +874,6 @@ class Schedule(object):
                 for returner in OrderedDict.fromkeys(rets):
                     ret_str = '{0}.returner'.format(returner)
                     if ret_str in self.returners:
-                        ret['success'] = True
                         self.returners[ret_str](ret)
                     else:
                         log.info(
@@ -874,11 +882,6 @@ class Schedule(object):
                             )
                         )
 
-            # runners do not provide retcode
-            if 'retcode' in self.functions.pack['__context__']:
-                ret['retcode'] = self.functions.pack['__context__']['retcode']
-
-            ret['success'] = True
         except Exception:
             log.exception("Unhandled exception running {0}".format(ret['fun']))
             # Although catch-all exception handlers are bad, the exception here
@@ -1335,7 +1338,7 @@ class Schedule(object):
 
             multiprocessing_enabled = self.opts.get('multiprocessing', True)
 
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Temporarily stash our function references.
                 # You can't pickle function references, and pickling is
                 # required when spawning new processes on Windows.
@@ -1345,13 +1348,13 @@ class Schedule(object):
                 self.returners = {}
             try:
                 if multiprocessing_enabled:
-                    thread_cls = SignalHandlingMultiprocessingProcess
+                    thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
                 else:
                     thread_cls = threading.Thread
                 proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
 
                 if multiprocessing_enabled:
-                    with default_signals(signal.SIGINT, signal.SIGTERM):
+                    with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
                         # Reset current signals before starting the process in
                         # order not to inherit the current signal handlers
                         proc.start()
@@ -1364,7 +1367,7 @@ class Schedule(object):
                 if '_seconds' in data:
                     data['_next_fire_time'] = now + data['_seconds']
                 data['_splay'] = None
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Restore our function references.
                 self.functions = functions
                 self.returners = returners
@@ -1385,7 +1388,7 @@ def clean_proc_dir(opts):
                 job = salt.payload.Serial(opts).load(fp_)
             except Exception:  # It's corrupted
                 # Windows cannot delete an open file
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     fp_.close()
                 try:
                     os.unlink(fn_)
@@ -1400,7 +1403,7 @@ def clean_proc_dir(opts):
                               'pid {0} still exists.'.format(job['pid']))
                 else:
                     # Windows cannot delete an open file
-                    if salt.utils.is_windows():
+                    if salt.utils.platform.is_windows():
                         fp_.close()
                     # Maybe the file is already gone
                     try:

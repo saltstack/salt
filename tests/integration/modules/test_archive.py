@@ -15,8 +15,8 @@ from tests.support.paths import TMP
 from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 
 # Import 3rd party libs
 try:
@@ -67,16 +67,16 @@ class ArchiveTest(ModuleCase):
                 Given a Gödel numbering $φ$ of the computable functions and a
                 Blum complexity measure $Φ$ where a complexity class for a
                 boundary function $f$ is defined as
-                
+
                     $\mathrm C(f) := \{φ_i ∈ \mathbb R^{(1)} | (∀^∞ x) Φ_i(x) ≤ f(x)\}$.
-                
+
                 Then there exists a total computable function $f$ so that for
                 all $i$
-                
+
                     $\mathrm{Dom}(φ_i) = \mathrm{Dom}(φ_{f(i)})$
-                
+
                 and
-                
+
                     $\mathrm C(φ_i) ⊊ \mathrm{C}(φ_{f(i)})$.
             '''))
 
@@ -119,7 +119,7 @@ class ArchiveTest(ModuleCase):
             self.assertTrue(dir_in_ret)
         self.assertTrue(file_in_ret)
 
-    @skipIf(not salt.utils.which('tar'), 'Cannot find tar executable')
+    @skipIf(not salt.utils.path.which('tar'), 'Cannot find tar executable')
     def test_tar_pack(self):
         '''
         Validate using the tar function to create archives
@@ -133,7 +133,7 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('tar'), 'Cannot find tar executable')
+    @skipIf(not salt.utils.path.which('tar'), 'Cannot find tar executable')
     def test_tar_unpack(self):
         '''
         Validate using the tar function to extract archives
@@ -148,7 +148,7 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('gzip'), 'Cannot find gzip executable')
+    @skipIf(not salt.utils.path.which('gzip'), 'Cannot find gzip executable')
     def test_gzip(self):
         '''
         Validate using the gzip function
@@ -162,8 +162,8 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('gzip'), 'Cannot find gzip executable')
-    @skipIf(not salt.utils.which('gunzip'), 'Cannot find gunzip executable')
+    @skipIf(not salt.utils.path.which('gzip'), 'Cannot find gzip executable')
+    @skipIf(not salt.utils.path.which('gunzip'), 'Cannot find gunzip executable')
     def test_gunzip(self):
         '''
         Validate using the gunzip function
@@ -178,7 +178,7 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('zip'), 'Cannot find zip executable')
+    @skipIf(not salt.utils.path.which('zip'), 'Cannot find zip executable')
     def test_cmd_zip(self):
         '''
         Validate using the cmd_zip function
@@ -192,8 +192,8 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('zip'), 'Cannot find zip executable')
-    @skipIf(not salt.utils.which('unzip'), 'Cannot find unzip executable')
+    @skipIf(not salt.utils.path.which('zip'), 'Cannot find zip executable')
+    @skipIf(not salt.utils.path.which('unzip'), 'Cannot find unzip executable')
     def test_cmd_unzip(self):
         '''
         Validate using the cmd_unzip function
@@ -237,7 +237,7 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('rar'), 'Cannot find rar executable')
+    @skipIf(not salt.utils.path.which('rar'), 'Cannot find rar executable')
     def test_rar(self):
         '''
         Validate using the rar function
@@ -251,8 +251,8 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
-    @skipIf(not salt.utils.which('rar'), 'Cannot find rar executable')
-    @skipIf(not salt.utils.which('unrar'), 'Cannot find unrar executable')
+    @skipIf(not salt.utils.path.which('rar'), 'Cannot find rar executable')
+    @skipIf(not salt.utils.path.which('unrar'), 'Cannot find unrar executable')
     def test_unrar(self):
         '''
         Validate using the unrar function

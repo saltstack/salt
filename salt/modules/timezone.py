@@ -16,6 +16,8 @@ import string
 import salt.utils
 import salt.utils.files
 import salt.utils.itertools
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -27,12 +29,12 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The timezone execution module failed to load: '
                        'win_timezone.py should replace this module on Windows.'
                        'There was a problem loading win_timezone.py.')
 
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return (False, 'The timezone execution module failed to load: '
                        'mac_timezone.py should replace this module on macOS.'
                        'There was a problem loading mac_timezone.py.')
@@ -169,7 +171,7 @@ def get_zone():
 
         salt '*' timezone.get_zone
     '''
-    if salt.utils.which('timedatectl'):
+    if salt.utils.path.which('timedatectl'):
         ret = _timedatectl()
 
         for line in (x.strip() for x in salt.utils.itertools.split(ret['stdout'], '\n')):
@@ -261,7 +263,7 @@ def set_zone(timezone):
         salt '*' timezone.set_zone 'CST6CDT,M3.2.0/2:00:00,M11.1.0/2:00:00'
 
     '''
-    if salt.utils.which('timedatectl'):
+    if salt.utils.path.which('timedatectl'):
         try:
             __salt__['cmd.run']('timedatectl set-timezone {0}'.format(timezone))
         except CommandExecutionError:
@@ -372,7 +374,7 @@ def get_hwclock():
 
         salt '*' timezone.get_hwclock
     '''
-    if salt.utils.which('timedatectl'):
+    if salt.utils.path.which('timedatectl'):
         ret = _timedatectl()
         for line in (x.strip() for x in ret['stdout'].splitlines()):
             if 'rtc in local tz' in line.lower():

@@ -117,7 +117,7 @@ import sys
 # Import salt libs
 import salt.utils
 import salt.utils.jid
-import salt.ext.six as six
+from salt.ext import six
 
 # Import third party libs
 try:
@@ -189,7 +189,7 @@ def _gen_jid(cur):
     '''
     Generate an unique job id
     '''
-    jid = salt.utils.jid.gen_jid()
+    jid = salt.utils.jid.gen_jid(__opts__)
     sql = '''SELECT jid FROM jids WHERE jid = %s'''
     cur.execute(sql, (jid,))
     data = cur.fetchall()

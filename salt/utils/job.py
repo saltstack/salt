@@ -18,7 +18,7 @@ def store_job(opts, load, event=None, mminion=None):
     Store job information using the configured master_job_cache
     '''
     # Generate EndTime
-    endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid())
+    endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid(opts))
     # If the return data is invalid, just ignore it
     if any(key not in load for key in ('return', 'jid', 'id')):
         return False

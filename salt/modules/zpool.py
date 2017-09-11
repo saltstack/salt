@@ -12,8 +12,9 @@ import stat
 import logging
 
 # Import Salt libs
-import salt.utils
-import salt.utils.decorators as decorators
+import salt.utils.decorators
+import salt.utils.decorators.path
+import salt.utils.path
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -24,21 +25,21 @@ __func_alias__ = {
 }
 
 
-@decorators.memoize
+@salt.utils.decorators.memoize
 def _check_zpool():
     '''
     Looks to see if zpool is present on the system
     '''
-    return salt.utils.which('zpool')
+    return salt.utils.path.which('zpool')
 
 
-@decorators.memoize
+@salt.utils.decorators.memoize
 def _check_features():
     '''
     Looks to see if zpool-features is available
     '''
     # get man location
-    man = salt.utils.which('man')
+    man = salt.utils.path.which('man')
     if not man:
         return False
 
@@ -49,12 +50,12 @@ def _check_features():
     return res['retcode'] == 0
 
 
-@decorators.memoize
+@salt.utils.decorators.memoize
 def _check_mkfile():
     '''
     Looks to see if mkfile is present on the system
     '''
-    return salt.utils.which('mkfile')
+    return salt.utils.path.which('mkfile')
 
 
 def __virtual__():
@@ -918,7 +919,7 @@ def replace(zpool, old_device, new_device=None, force=False):
     return ret
 
 
-@salt.utils.decorators.which('mkfile')
+@salt.utils.decorators.path.which('mkfile')
 def create_file_vdev(size, *vdevs):
     '''
     .. versionchanged:: 2016.3.0

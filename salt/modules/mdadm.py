@@ -10,8 +10,11 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -32,7 +35,7 @@ def __virtual__():
     '''
     if __grains__['kernel'] != 'Linux':
         return (False, 'The mdadm execution module cannot be loaded: only available on Linux.')
-    if not salt.utils.which('mdadm'):
+    if not salt.utils.path.which('mdadm'):
         return (False, 'The mdadm execution module cannot be loaded: the mdadm binary is not in the path.')
     return __virtualname__
 
@@ -344,7 +347,7 @@ def assemble(name,
                 opts.append(kwargs[key])
 
     # Devices may have been written with a blob:
-    if isinstance(devices, str):
+    if isinstance(devices, six.string_types):
         devices = devices.split(',')
 
     cmd = ['mdadm', '-A', name, '-v'] + opts + devices
