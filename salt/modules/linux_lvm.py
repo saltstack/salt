@@ -391,7 +391,7 @@ def lvcreate(lvname,
              'stripesize', 'minor', 'persistent', 'mirrors', 'noudevsync',
              'monitor', 'ignoremonitoring', 'permission', 'poolmetadatasize',
              'readahead', 'regionsize', 'type',
-             'virtualsize', 'zero')
+             'virtualsize', 'wipesignatures', 'zero')
     no_parameter = ('noudevsync', 'ignoremonitoring', 'thin', )
 
     extra_arguments = []
@@ -403,6 +403,8 @@ def lvcreate(lvname,
                 extra_arguments.extend(['--{0}'.format(k), '{0}'.format(v)])
 
     cmd = [salt.utils.path.which('lvcreate')]
+
+    cmd.extend(['-y'])  # https://github.com/saltstack/salt/issues/41742
 
     if thinvolume:
         cmd.extend(['--thin', '-n', lvname])
