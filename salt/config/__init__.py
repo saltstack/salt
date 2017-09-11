@@ -569,6 +569,23 @@ VALID_OPTS = {
     # False in 2016.3.0
     'add_proxymodule_to_opts': bool,
 
+    # Merge pillar data into configuration opts.
+    # As multiple proxies can run on the same server, we may need different
+    # configuration options for each, while there's one single configuration file.
+    # The solution is merging the pillar data of each proxy minion into the opts.
+    'proxy_merge_pillar_in_opts': bool,
+
+    # Deep merge of pillar data into configuration opts.
+    # Evaluated only when `proxy_merge_pillar_in_opts` is True.
+    'proxy_deep_merge_pillar_in_opts': bool,
+
+    # The strategy used when merging pillar into opts.
+    # Considered only when `proxy_merge_pillar_in_opts` is True.
+    'proxy_merge_pillar_in_opts_strategy': str,
+
+    # Allow enabling mine details using pillar data.
+    'proxy_mines_pillar': bool,
+
     # In some particular cases, always alive proxies are not beneficial.
     # This option can be used in those less dynamic environments:
     # the user can request the connection
@@ -1636,6 +1653,12 @@ DEFAULT_PROXY_MINION_OPTS = {
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'proxy', 'extmods'),
     'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include', 'extension_modules'],
     'default_include': 'proxy.d/*.conf',
+
+    'proxy_merge_pillar_in_opts': False,
+    'proxy_deep_merge_pillar_in_opts': False,
+    'proxy_merge_pillar_in_opts_strategy': 'smart',
+
+    'proxy_mines_pillar': True,
 
     # By default, proxies will preserve the connection.
     # If this option is set to False,
