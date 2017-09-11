@@ -91,7 +91,7 @@ def _cron_matched(cron, cmd, identifier=None):
                 cid = eidentifier
             id_matched = eidentifier == cid
     if (
-        ((id_matched is None) and cmd == cron.get('cmd', None))
+        ((id_matched) and cmd == cron.get('cmd', None))
         or id_matched
     ):
         ret = True
