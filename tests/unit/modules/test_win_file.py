@@ -36,8 +36,9 @@ class WinFileTestCase(TestCase):
         Make sure that an empty dictionary is returned if the file doesn't exist
         '''
         with patch('os.path.exists', return_value=False):
-            ret = win_file.stats(self.FAKE_PATH)
-            self.assertEqual(ret, {})
+            self.assertRaises(CommandExecutionError,
+                              win_file.stats,
+                              self.FAKE_PATH)
 
     def test_issue_43328_check_perms_ret_passed(self):
         '''
