@@ -420,7 +420,8 @@ VALID_OPTS = {
 
     # Ensure that a generated jid is always unique. If this is set, the jid
     # format is different due to an underscore and process id being appended
-    # to the jid.
+    # to the jid. WARNING: A change to the jid format may break external
+    # applications that depend on the original format.
     'unique_jid': bool,
 
     # Tells the highstate outputter to show successful states. False will omit successes.
