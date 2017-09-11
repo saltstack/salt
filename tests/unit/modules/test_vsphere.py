@@ -630,7 +630,7 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                                       'domain': 'fake_domain'}
         self.esxcluster_details = {'vcenter': 'fake_vcenter',
                                    'datacenter': 'fake_dc',
-                                   'cluster', 'fake_cluster',
+                                   'cluster': 'fake_cluster',
                                    'username': 'fake_username',
                                    'password': 'fake_password',
                                    'protocol': 'fake_protocol',
@@ -638,8 +638,6 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                                    'mechanism': 'fake_mechanism',
                                    'principal': 'fake_principal',
                                    'domain': 'fake_domain'}
-
-
 
     def tearDown(self):
         for attrname in ('esxi_host_details', 'esxi_vcenter_details',
