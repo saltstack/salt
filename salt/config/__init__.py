@@ -418,6 +418,12 @@ VALID_OPTS = {
     # Tell the client to display the jid when a job is published
     'show_jid': bool,
 
+    # Ensure that a generated jid is always unique. If this is set, the jid
+    # format is different due to an underscore and process id being appended
+    # to the jid. WARNING: A change to the jid format may break external
+    # applications that depend on the original format.
+    'unique_jid': bool,
+
     # Tells the highstate outputter to show successful states. False will omit successes.
     'state_verbose': bool,
 
@@ -1203,6 +1209,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
     'gitfs_disable_saltenv_mapping': False,
+    'unique_jid': False,
     'hash_type': 'sha256',
     'disable_modules': [],
     'disable_returners': [],
@@ -1447,6 +1454,7 @@ DEFAULT_MASTER_OPTS = {
     'hgfs_saltenv_blacklist': [],
     'show_timeout': True,
     'show_jid': False,
+    'unique_jid': False,
     'svnfs_remotes': [],
     'svnfs_mountpoint': '',
     'svnfs_root': '',

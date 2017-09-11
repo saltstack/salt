@@ -1777,7 +1777,7 @@ class ClearFuncs(object):
 
         # Authorized. Do the job!
         try:
-            jid = salt.utils.jid.gen_jid()
+            jid = salt.utils.jid.gen_jid(self.opts)
             fun = clear_load.pop(u'fun')
             tag = tagify(jid, prefix=u'wheel')
             data = {u'fun': u"wheel.{0}".format(fun),
