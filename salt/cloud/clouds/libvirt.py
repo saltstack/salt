@@ -517,7 +517,7 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -528,7 +528,7 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
