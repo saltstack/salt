@@ -78,6 +78,7 @@ nodegroups:
   redundant_minions: N@min or N@mins
   nodegroup_loop_a: N@nodegroup_loop_b
   nodegroup_loop_b: N@nodegroup_loop_a
+  missing_minion: L@minion,ghostminion
 
 
 mysql.host: localhost

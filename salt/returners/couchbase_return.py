@@ -223,10 +223,11 @@ def save_load(jid, clear_load, minion=None):
     if 'tgt' in clear_load and clear_load['tgt'] != '':
         ckminions = salt.utils.minions.CkMinions(__opts__)
         # Retrieve the minions list
-        minions = ckminions.check_minions(
+        _res = ckminions.check_minions(
             clear_load['tgt'],
             clear_load.get('tgt_type', 'glob')
             )
+        minions = _res['minions']
         save_minions(jid, minions)
 
 

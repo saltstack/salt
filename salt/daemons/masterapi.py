@@ -550,11 +550,12 @@ class RemoteFuncs(object):
         if match_type.lower() == 'compound':
             match_type = 'compound_pillar_exact'
         checker = salt.utils.minions.CkMinions(self.opts)
-        minions = checker.check_minions(
+        _res = checker.check_minions(
                 load['tgt'],
                 match_type,
                 greedy=False
                 )
+        minions = _res['minions']
         for minion in minions:
             fdata = self.cache.fetch('minions/{0}'.format(minion), 'mine')
             if isinstance(fdata, dict):
@@ -872,9 +873,10 @@ class RemoteFuncs(object):
                 pub_load['tgt_type'] = load['tgt_type']
         ret = {}
         ret['jid'] = self.local.cmd_async(**pub_load)
-        ret['minions'] = self.ckminions.check_minions(
+        _res = self.ckminions.check_minions(
                 load['tgt'],
                 pub_load['tgt_type'])
+        ret['minions'] = _res['minions']
         auth_cache = os.path.join(
                 self.opts['cachedir'],
                 'publish_auth')
@@ -1157,11 +1159,12 @@ class LocalFuncs(object):
 
         # Retrieve the minions list
         delimiter = load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
-        minions = self.ckminions.check_minions(
+        _res = self.ckminions.check_minions(
             load['tgt'],
             load.get('tgt_type', 'glob'),
             delimiter
         )
+        minions = _res['minions']
 
         # Check for external auth calls
         if extra.get('token', False):
