@@ -3368,7 +3368,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
             pstat = os.lstat(path)
         except OSError:
             # Not a broken symlink, just a nonexistent path
-            return ret
+            raise CommandExecutionError('Path not found: {0}'.format(path))
     else:
         if follow_symlinks:
             pstat = os.stat(path)
@@ -4498,11 +4498,18 @@ def check_file_meta(
     '''
     changes = {}
     if not source_sum:
-        source_sum = {}
-    lstats = stats(name, hash_type=source_sum.get('hash_type', None), follow_symlinks=False)
+        source_sum = dict()
+
+    try:
+        lstats = stats(name, hash_type=source_sum.get('hash_type', None),
+                       follow_symlinks=False)
+    except CommandExecutionError:
+        lstats = {}
+
     if not lstats:
         changes['newfile'] = name
         return changes
+
     if 'hsum' in source_sum:
         if source_sum['hsum'] != lstats['sum']:
             if not sfn and source:

@@ -821,7 +821,7 @@ def stats(path, hash_type='sha256', follow_symlinks=True):
     # This is to mirror the behavior of file.py. `check_file_meta` expects an
     # empty dictionary when the file does not exist
     if not os.path.exists(path):
-        return {}
+        raise CommandExecutionError('Path not found: {0}'.format(path))
 
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
