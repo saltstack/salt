@@ -204,6 +204,14 @@ def clean_old_jobs(opts):
 
 
 def mk_key(opts, user):
+    if HAS_PWD:
+        uid = None
+        try:
+            uid = pwd.getpwnam(user).pw_uid
+        except KeyError:
+            # User doesn't exist in the system
+            if opts['client_acl_verify']:
+                return None
     if salt.utils.is_windows():
         # The username may contain '\' if it is in Windows
         # 'DOMAIN\username' format. Fix this for the keyfile path.
@@ -231,9 +239,9 @@ def mk_key(opts, user):
     # Write access is necessary since on subsequent runs, if the file
     # exists, it needs to be written to again. Windows enforces this.
     os.chmod(keyfile, 0o600)
-    if HAS_PWD:
+    if HAS_PWD and uid is not None:
         try:
-            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+            os.chown(keyfile, uid, -1)
         except OSError:
             # The master is not being run as root and can therefore not
             # chown the key file
@@ -248,27 +256,26 @@ def access_keys(opts):
     '''
     # TODO: Need a way to get all available users for systems not supported by pwd module.
     #       For now users pattern matching will not work for publisher_acl.
-    users = []
     keys = {}
     publisher_acl = opts['publisher_acl']
     acl_users = set(publisher_acl.keys())
     if opts.get('user'):
         acl_users.add(opts['user'])
     acl_users.add(salt.utils.get_user())
+    for user in acl_users:
+        log.info('Preparing the %s key for local communication', user)
+        key = mk_key(opts, user)
+        if key is not None:
+            keys[user] = key
+
+    # Check other users matching ACL patterns
     if opts['client_acl_verify'] and HAS_PWD:
         log.profile('Beginning pwd.getpwall() call in masterarpi access_keys function')
         for user in pwd.getpwall():
-            users.append(user.pw_name)
-        log.profile('End pwd.getpwall() call in masterarpi access_keys function')
-    for user in acl_users:
-        log.info('Preparing the %s key for local communication', user)
-        keys[user] = mk_key(opts, user)
-
-    # Check other users matching ACL patterns
-    if HAS_PWD:
-        for user in users:
+            user = user.pw_name
             if user not in keys and salt.utils.check_whitelist_blacklist(user, whitelist=acl_users):
                 keys[user] = mk_key(opts, user)
+        log.profile('End pwd.getpwall() call in masterarpi access_keys function')
 
     return keys
 
