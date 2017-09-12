@@ -883,7 +883,11 @@ def _check_dir_meta(name,
     '''
     Check the changes in directory metadata
     '''
-    stats = __salt__['file.stats'](name, None, follow_symlinks)
+    try:
+        stats = __salt__['file.stats'](name, None, follow_symlinks)
+    except CommandExecutionError:
+        state = {}
+
     changes = {}
     if not stats:
         changes['directory'] = 'new'
