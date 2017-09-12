@@ -106,12 +106,7 @@ def parse_targets(name=None,
         salt '*' pkg_resource.parse_targets
     '''
     if '__env__' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'__env__\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('__env__')
 
     if __grains__['os'] == 'MacOS' and sources:
@@ -316,7 +311,8 @@ def format_pkg_list(packages, versions_as_list, attr):
     '''
     ret = copy.deepcopy(packages)
     if attr:
-        requested_attr = set(['version', 'arch', 'install_date', 'install_date_time_t'])
+        requested_attr = set(['epoch', 'version', 'release', 'arch',
+                              'install_date', 'install_date_time_t'])
 
         if attr != 'all':
             requested_attr &= set(attr + ['version'])
@@ -326,13 +322,25 @@ def format_pkg_list(packages, versions_as_list, attr):
             for all_attr in ret[name]:
                 filtered_attr = {}
                 for key in requested_attr:
-                    filtered_attr[key] = all_attr[key]
+                    if all_attr[key]:
+                        filtered_attr[key] = all_attr[key]
                 versions.append(filtered_attr)
             ret[name] = versions
         return ret
 
     for name in ret:
-        ret[name] = [d['version'] for d in ret[name]]
+        ret[name] = [format_version(d['epoch'], d['version'], d['release'])
+                     for d in ret[name]]
     if not versions_as_list:
         stringify(ret)
     return ret
+
+
+def format_version(epoch, version, release):
+    '''
+    Formats a version string for list_pkgs.
+    '''
+    full_version = '{0}:{1}'.format(epoch, version) if epoch else version
+    if release:
+        full_version += '-{0}'.format(release)
+    return full_version

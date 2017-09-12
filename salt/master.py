@@ -315,7 +315,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         try:
             for pillar in self.git_pillar:
-                pillar.update()
+                pillar.fetch_remotes()
         except Exception as exc:
             log.error(u'Exception caught while updating git_pillar',
                       exc_info=True)
@@ -471,18 +471,18 @@ class Master(SMaster):
                 pass
 
         if self.opts.get(u'git_pillar_verify_config', True):
-            non_legacy_git_pillars = [
+            git_pillars = [
                 x for x in self.opts.get(u'ext_pillar', [])
                 if u'git' in x
                 and not isinstance(x[u'git'], six.string_types)
             ]
-            if non_legacy_git_pillars:
+            if git_pillars:
                 try:
                     new_opts = copy.deepcopy(self.opts)
                     from salt.pillar.git_pillar \
                         import PER_REMOTE_OVERRIDES as per_remote_overrides, \
                         PER_REMOTE_ONLY as per_remote_only
-                    for repo in non_legacy_git_pillars:
+                    for repo in git_pillars:
                         new_opts[u'ext_pillar'] = [repo]
                         try:
                             git_pillar = salt.utils.gitfs.GitPillar(new_opts)
@@ -1304,7 +1304,6 @@ class AESFuncs(object):
             return False
         load[u'grains'][u'id'] = load[u'id']
 
-        pillar_dirs = {}
         pillar = salt.pillar.get_pillar(
             self.opts,
             load[u'grains'],
@@ -1312,8 +1311,9 @@ class AESFuncs(object):
             load.get(u'saltenv', load.get(u'env')),
             ext=load.get(u'ext'),
             pillar_override=load.get(u'pillar_override', {}),
-            pillarenv=load.get(u'pillarenv'))
-        data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
+            pillarenv=load.get(u'pillarenv'),
+            extra_minion_data=load.get(u'extra_minion_data'))
+        data = pillar.compile_pillar()
         self.fs_.update_opts()
         if self.opts.get(u'minion_data_cache', False):
             self.masterapi.cache.store(u'minions/{0}'.format(load[u'id']),
@@ -1677,12 +1677,7 @@ class ClearFuncs(object):
                                        message=u'Authentication failure of type "token" occurred.'))
 
             # Authorize
-            if self.opts[u'keep_acl_in_token'] and u'auth_list' in token:
-                auth_list = token[u'auth_list']
-            else:
-                clear_load[u'eauth'] = token[u'eauth']
-                clear_load[u'username'] = token[u'name']
-                auth_list = self.loadauth.get_auth_list(clear_load)
+            auth_list = self.loadauth.get_auth_list(clear_load, token)
 
             if not self.ckminions.runner_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
                 return dict(error=dict(name=u'TokenAuthenticationError',
@@ -1745,12 +1740,7 @@ class ClearFuncs(object):
                                        message=u'Authentication failure of type "token" occurred.'))
 
             # Authorize
-            if self.opts[u'keep_acl_in_token'] and u'auth_list' in token:
-                auth_list = token[u'auth_list']
-            else:
-                clear_load[u'eauth'] = token[u'eauth']
-                clear_load[u'username'] = token[u'name']
-                auth_list = self.loadauth.get_auth_list(clear_load)
+            auth_list = self.loadauth.get_auth_list(clear_load, token)
             if not self.ckminions.wheel_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
                 return dict(error=dict(name=u'TokenAuthenticationError',
                                        message=(u'Authentication failure of type "token" occurred for '
@@ -1787,7 +1777,7 @@ class ClearFuncs(object):
 
         # Authorized. Do the job!
         try:
-            jid = salt.utils.jid.gen_jid()
+            jid = salt.utils.jid.gen_jid(self.opts)
             fun = clear_load.pop(u'fun')
             tag = tagify(jid, prefix=u'wheel')
             data = {u'fun': u"wheel.{0}".format(fun),
@@ -1853,11 +1843,13 @@ class ClearFuncs(object):
 
         # Retrieve the minions list
         delimiter = clear_load.get(u'kwargs', {}).get(u'delimiter', DEFAULT_TARGET_DELIM)
-        minions = self.ckminions.check_minions(
+        _res = self.ckminions.check_minions(
             clear_load[u'tgt'],
             clear_load.get(u'tgt_type', u'glob'),
             delimiter
         )
+        minions = _res.get('minions', list())
+        missing = _res.get('missing', list())
 
         # Check for external auth calls
         if extra.get(u'token', False):
@@ -1867,12 +1859,7 @@ class ClearFuncs(object):
                 return u''
 
             # Get acl
-            if self.opts[u'keep_acl_in_token'] and u'auth_list' in token:
-                auth_list = token[u'auth_list']
-            else:
-                extra[u'eauth'] = token[u'eauth']
-                extra[u'username'] = token[u'name']
-                auth_list = self.loadauth.get_auth_list(extra)
+            auth_list = self.loadauth.get_auth_list(extra, token)
 
             # Authorize the request
             if not self.ckminions.auth_check(
@@ -1962,7 +1949,7 @@ class ClearFuncs(object):
         if jid is None:
             return {u'enc': u'clear',
                     u'load': {u'error': u'Master failed to assign jid'}}
-        payload = self._prep_pub(minions, jid, clear_load, extra)
+        payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         # Send it!
         self._send_pub(payload)
@@ -1971,7 +1958,8 @@ class ClearFuncs(object):
             u'enc': u'clear',
             u'load': {
                 u'jid': clear_load[u'jid'],
-                u'minions': minions
+                u'minions': minions,
+                u'missing': missing
             }
         }
 
@@ -2008,7 +1996,7 @@ class ClearFuncs(object):
             chan = salt.transport.server.PubServerChannel.factory(opts)
             chan.publish(load)
 
-    def _prep_pub(self, minions, jid, clear_load, extra):
+    def _prep_pub(self, minions, jid, clear_load, extra, missing):
         '''
         Take a given load and perform the necessary steps
         to prepare a publication.
@@ -2029,6 +2017,7 @@ class ClearFuncs(object):
             u'fun': clear_load[u'fun'],
             u'arg': clear_load[u'arg'],
             u'minions': minions,
+            u'missing': missing,
             }
 
         # Announce the job on the event bus

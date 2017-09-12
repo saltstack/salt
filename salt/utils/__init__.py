@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Some of the utils used by salt
+
+NOTE: The dev team is working on splitting up this file for the Oxygen release.
+Please do not add any new functions to this file. New functions should be
+organized in other files under salt/utils/. Please consult the dev team if you
+are unsure where a new function should go.
 '''
 
 # Import python libs
@@ -14,9 +19,7 @@ import fnmatch
 import hashlib
 import json
 import logging
-import numbers
 import os
-import posixpath
 import random
 import re
 import shlex
@@ -24,10 +27,8 @@ import shutil
 import socket
 import sys
 import pstats
-import tempfile
 import time
 import types
-import warnings
 import string
 import subprocess
 import getpass
@@ -35,7 +36,6 @@ import getpass
 # Import 3rd-party libs
 from salt.ext import six
 # pylint: disable=import-error
-from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-in-module
 # pylint: disable=redefined-builtin
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
@@ -121,7 +121,6 @@ import salt.utils.dictupdate
 import salt.utils.versions
 import salt.version
 from salt.utils.decorators.jinja import jinja_filter
-from salt.textformat import TextFormat
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
     CommandNotFoundError, SaltSystemExit,
@@ -130,84 +129,6 @@ from salt.exceptions import (
 
 
 log = logging.getLogger(__name__)
-_empty = object()
-
-
-def get_color_theme(theme):
-    '''
-    Return the color theme to use
-    '''
-    # Keep the heavy lifting out of the module space
-    import yaml
-    if not os.path.isfile(theme):
-        log.warning('The named theme {0} if not available'.format(theme))
-
-    # Late import to avoid circular import.
-    import salt.utils.files
-    try:
-        with salt.utils.files.fopen(theme, 'rb') as fp_:
-            colors = yaml.safe_load(fp_.read())
-            ret = {}
-            for color in colors:
-                ret[color] = '\033[{0}m'.format(colors[color])
-            if not isinstance(colors, dict):
-                log.warning('The theme file {0} is not a dict'.format(theme))
-                return {}
-            return ret
-    except Exception:
-        log.warning('Failed to read the color theme {0}'.format(theme))
-        return {}
-
-
-def get_colors(use=True, theme=None):
-    '''
-    Return the colors as an easy to use dict.  Pass `False` to deactivate all
-    colors by setting them to empty strings.  Pass a string containing only the
-    name of a single color to be used in place of all colors.  Examples:
-
-    .. code-block:: python
-
-        colors = get_colors()  # enable all colors
-        no_colors = get_colors(False)  # disable all colors
-        red_colors = get_colors('RED')  # set all colors to red
-    '''
-
-    colors = {
-        'BLACK': TextFormat('black'),
-        'DARK_GRAY': TextFormat('bold', 'black'),
-        'RED': TextFormat('red'),
-        'LIGHT_RED': TextFormat('bold', 'red'),
-        'GREEN': TextFormat('green'),
-        'LIGHT_GREEN': TextFormat('bold', 'green'),
-        'YELLOW': TextFormat('yellow'),
-        'LIGHT_YELLOW': TextFormat('bold', 'yellow'),
-        'BLUE': TextFormat('blue'),
-        'LIGHT_BLUE': TextFormat('bold', 'blue'),
-        'MAGENTA': TextFormat('magenta'),
-        'LIGHT_MAGENTA': TextFormat('bold', 'magenta'),
-        'CYAN': TextFormat('cyan'),
-        'LIGHT_CYAN': TextFormat('bold', 'cyan'),
-        'LIGHT_GRAY': TextFormat('white'),
-        'WHITE': TextFormat('bold', 'white'),
-        'DEFAULT_COLOR': TextFormat('default'),
-        'ENDC': TextFormat('reset'),
-    }
-    if theme:
-        colors.update(get_color_theme(theme))
-
-    if not use:
-        for color in colors:
-            colors[color] = ''
-    if isinstance(use, six.string_types):
-        # Try to set all of the colors to the passed color
-        if use in colors:
-            for color in colors:
-                # except for color reset
-                if color == 'ENDC':
-                    continue
-                colors[color] = colors[use]
-
-    return colors
 
 
 def get_context(template, line, num_lines=5, marker=None):
@@ -1062,48 +983,6 @@ def arg_lookup(fun, aspec=None):
     return ret
 
 
-@jinja_filter('is_text_file')
-def istextfile(fp_, blocksize=512):
-    '''
-    Uses heuristics to guess whether the given file is text or binary,
-    by reading a single block of bytes from the file.
-    If more than 30% of the chars in the block are non-text, or there
-    are NUL ('\x00') bytes in the block, assume this is a binary file.
-    '''
-    # Late import to avoid circular import.
-    import salt.utils.files
-
-    int2byte = (lambda x: bytes((x,))) if six.PY3 else chr
-    text_characters = (
-        b''.join(int2byte(i) for i in range(32, 127)) +
-        b'\n\r\t\f\b')
-    try:
-        block = fp_.read(blocksize)
-    except AttributeError:
-        # This wasn't an open filehandle, so treat it as a file path and try to
-        # open the file
-        try:
-            with salt.utils.files.fopen(fp_, 'rb') as fp2_:
-                block = fp2_.read(blocksize)
-        except IOError:
-            # Unable to open file, bail out and return false
-            return False
-    if b'\x00' in block:
-        # Files with null bytes are binary
-        return False
-    elif not block:
-        # An empty file is considered a valid text file
-        return True
-    try:
-        block.decode('utf-8')
-        return True
-    except UnicodeDecodeError:
-        pass
-
-    nontext = block.translate(None, text_characters)
-    return float(len(nontext)) / len(block) <= 0.30
-
-
 @jinja_filter('sorted_ignorecase')
 def isorted(to_sort):
     '''
@@ -1449,148 +1328,6 @@ def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
     return ret
 
 
-def gen_state_tag(low):
-    '''
-    Generate the running dict tag string from the low data structure
-    '''
-    return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
-
-
-def search_onfail_requisites(sid, highstate):
-    """
-    For a particular low chunk, search relevant onfail related
-    states
-    """
-    onfails = []
-    if '_|-' in sid:
-        st = salt.state.split_low_tag(sid)
-    else:
-        st = {'__id__': sid}
-    for fstate, fchunks in six.iteritems(highstate):
-        if fstate == st['__id__']:
-            continue
-        else:
-            for mod_, fchunk in six.iteritems(fchunks):
-                if (
-                    not isinstance(mod_, six.string_types) or
-                    mod_.startswith('__')
-                ):
-                    continue
-                else:
-                    if not isinstance(fchunk, list):
-                        continue
-                    else:
-                        # bydefault onfail will fail, but you can
-                        # set onfail_stop: False to prevent the highstate
-                        # to stop if you handle it
-                        onfail_handled = False
-                        for fdata in fchunk:
-                            if not isinstance(fdata, dict):
-                                continue
-                            onfail_handled = (fdata.get('onfail_stop', True)
-                                              is False)
-                            if onfail_handled:
-                                break
-                        if not onfail_handled:
-                            continue
-                        for fdata in fchunk:
-                            if not isinstance(fdata, dict):
-                                continue
-                            for knob, fvalue in six.iteritems(fdata):
-                                if knob != 'onfail':
-                                    continue
-                                for freqs in fvalue:
-                                    for fmod, fid in six.iteritems(freqs):
-                                        if not (
-                                            fid == st['__id__'] and
-                                            fmod == st.get('state', fmod)
-                                        ):
-                                            continue
-                                        onfails.append((fstate, mod_, fchunk))
-    return onfails
-
-
-def check_onfail_requisites(state_id, state_result, running, highstate):
-    '''
-    When a state fail and is part of a highstate, check
-    if there is onfail requisites.
-    When we find onfail requisites, we will consider the state failed
-    only if at least one of those onfail requisites also failed
-
-    Returns:
-
-        True: if onfail handlers suceeded
-        False: if one on those handler failed
-        None: if the state does not have onfail requisites
-
-    '''
-    nret = None
-    if (
-        state_id and state_result and
-        highstate and isinstance(highstate, dict)
-    ):
-        onfails = search_onfail_requisites(state_id, highstate)
-        if onfails:
-            for handler in onfails:
-                fstate, mod_, fchunk = handler
-                ofresult = True
-                for rstateid, rstate in six.iteritems(running):
-                    if '_|-' in rstateid:
-                        st = salt.state.split_low_tag(rstateid)
-                    # in case of simple state, try to guess
-                    else:
-                        id_ = rstate.get('__id__', rstateid)
-                        if not id_:
-                            raise ValueError('no state id')
-                        st = {'__id__': id_, 'state': mod_}
-                    if mod_ == st['state'] and fstate == st['__id__']:
-                        ofresult = rstate.get('result', _empty)
-                        if ofresult in [False, True]:
-                            nret = ofresult
-                        if ofresult is False:
-                            # as soon as we find an errored onfail, we stop
-                            break
-                # consider that if we parsed onfailes without changing
-                # the ret, that we have failed
-                if nret is None:
-                    nret = False
-    return nret
-
-
-def check_state_result(running, recurse=False, highstate=None):
-    '''
-    Check the total return value of the run and determine if the running
-    dict has any issues
-    '''
-    if not isinstance(running, dict):
-        return False
-
-    if not running:
-        return False
-
-    ret = True
-    for state_id, state_result in six.iteritems(running):
-        if not recurse and not isinstance(state_result, dict):
-            ret = False
-        if ret and isinstance(state_result, dict):
-            result = state_result.get('result', _empty)
-            if result is False:
-                ret = False
-            # only override return value if we are not already failed
-            elif result is _empty and isinstance(state_result, dict) and ret:
-                ret = check_state_result(
-                    state_result, recurse=True, highstate=highstate)
-        # if we detect a fail, check for onfail requisites
-        if not ret:
-            # ret can be None in case of no onfail reqs, recast it to bool
-            ret = bool(check_onfail_requisites(state_id, state_result,
-                                               running, highstate))
-        # return as soon as we got a failure
-        if not ret:
-            break
-    return ret
-
-
 def st_mode_to_octal(mode):
     '''
     Convert the st_mode value from a stat(2) call (as returned from os.stat())
@@ -1656,7 +1393,7 @@ def is_true(value=None):
         pass
 
     # Now check for truthiness
-    if isinstance(value, (int, float)):
+    if isinstance(value, (six.integer_types, float)):
         return value > 0
     elif isinstance(value, six.string_types):
         return str(value).lower() == 'true'
@@ -2135,7 +1872,7 @@ def repack_dictlist(data,
     if val_cb is None:
         val_cb = lambda x, y: y
 
-    valid_non_dict = (six.string_types, int, float)
+    valid_non_dict = (six.string_types, six.integer_types, float)
     if isinstance(data, list):
         for element in data:
             if isinstance(element, valid_non_dict):
@@ -3267,6 +3004,28 @@ def mkstemp(*args, **kwargs):
     return salt.utils.files.mkstemp(*args, **kwargs)
 
 
+@jinja_filter('is_text_file')
+def istextfile(fp_, blocksize=512):
+    '''
+    Uses heuristics to guess whether the given file is text or binary,
+    by reading a single block of bytes from the file.
+    If more than 30% of the chars in the block are non-text, or there
+    are NUL ('\x00') bytes in the block, assume this is a binary file.
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.files
+
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.istextfile\' detected. This function has been moved '
+        'to \'salt.utils.files.is_text_file\' as of Salt Oxygen. This warning will '
+        'be removed in Salt Neon.'
+    )
+    return salt.utils.files.is_text_file(fp_, blocksize=blocksize)
+
+
 def str_version_to_evr(verstring):
     '''
     Split the package version string into epoch, version and release.
@@ -3430,3 +3189,135 @@ def kwargs_warn_until(kwargs,
         stacklevel=stacklevel,
         _version_info_=_version_info_,
         _dont_call_warnings=_dont_call_warnings)
+
+
+def get_color_theme(theme):
+    '''
+    Return the color theme to use
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.color
+    import salt.utils.versions
+
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.get_color_theme\' detected. This function has '
+        'been moved to \'salt.utils.color.get_color_theme\' as of Salt '
+        'Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.color.get_color_theme(theme)
+
+
+def get_colors(use=True, theme=None):
+    '''
+    Return the colors as an easy to use dict.  Pass `False` to deactivate all
+    colors by setting them to empty strings.  Pass a string containing only the
+    name of a single color to be used in place of all colors.  Examples:
+
+    .. code-block:: python
+
+        colors = get_colors()  # enable all colors
+        no_colors = get_colors(False)  # disable all colors
+        red_colors = get_colors('RED')  # set all colors to red
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.color
+    import salt.utils.versions
+
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.get_colors\' detected. This function has '
+        'been moved to \'salt.utils.color.get_colors\' as of Salt '
+        'Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.color.get_colors(use=use, theme=theme)
+
+
+def gen_state_tag(low):
+    '''
+    Generate the running dict tag string from the low data structure
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.state
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.gen_state_tag\' detected. This function has been '
+        'moved to \'salt.utils.state.gen_tag\' as of Salt Oxygen. This warning '
+        'will be removed in Salt Neon.'
+    )
+    return salt.utils.state.gen_tag(low)
+
+
+def search_onfail_requisites(sid, highstate):
+    '''
+    For a particular low chunk, search relevant onfail related states
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.state
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.search_onfail_requisites\' detected. This function '
+        'has been moved to \'salt.utils.state.search_onfail_requisites\' as of '
+        'Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.state.search_onfail_requisites(sid, highstate)
+
+
+def check_onfail_requisites(state_id, state_result, running, highstate):
+    '''
+    When a state fail and is part of a highstate, check
+    if there is onfail requisites.
+    When we find onfail requisites, we will consider the state failed
+    only if at least one of those onfail requisites also failed
+
+    Returns:
+
+        True: if onfail handlers suceeded
+        False: if one on those handler failed
+        None: if the state does not have onfail requisites
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.state
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.check_onfail_requisites\' detected. This function '
+        'has been moved to \'salt.utils.state.check_onfail_requisites\' as of '
+        'Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.state.check_onfail_requisites(
+        state_id, state_result, running, highstate
+    )
+
+
+def check_state_result(running, recurse=False, highstate=None):
+    '''
+    Check the total return value of the run and determine if the running
+    dict has any issues
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.state
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.check_state_result\' detected. This function '
+        'has been moved to \'salt.utils.state.check_result\' as of '
+        'Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.state.check_result(
+        running, recurse=recurse, highstate=highstate
+    )

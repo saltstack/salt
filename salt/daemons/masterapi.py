@@ -32,6 +32,8 @@ import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gitfs
+import salt.utils.verify
+import salt.utils.minions
 import salt.utils.gzip_util
 import salt.utils.jid
 import salt.utils.minions
@@ -64,44 +66,19 @@ def init_git_pillar(opts):
     ret = []
     for opts_dict in [x for x in opts.get('ext_pillar', [])]:
         if 'git' in opts_dict:
-            if isinstance(opts_dict['git'], six.string_types):
-                # Legacy git pillar code
-                try:
-                    import git
-                except ImportError:
-                    return ret
-                parts = opts_dict['git'].strip().split()
-                try:
-                    br = parts[0]
-                    loc = parts[1]
-                except IndexError:
-                    log.critical(
-                        'Unable to extract external pillar data: {0}'
-                        .format(opts_dict['git'])
-                    )
+            try:
+                pillar = salt.utils.gitfs.GitPillar(opts)
+                pillar.init_remotes(
+                    opts_dict['git'],
+                    git_pillar.PER_REMOTE_OVERRIDES,
+                    git_pillar.PER_REMOTE_ONLY
+                )
+                ret.append(pillar)
+            except FileserverConfigError:
+                if opts.get('git_pillar_verify_config', True):
+                    raise
                 else:
-                    ret.append(
-                        git_pillar._LegacyGitPillar(
-                            br,
-                            loc,
-                            opts
-                        )
-                    )
-            else:
-                # New git_pillar code
-                try:
-                    pillar = salt.utils.gitfs.GitPillar(opts)
-                    pillar.init_remotes(
-                        opts_dict['git'],
-                        git_pillar.PER_REMOTE_OVERRIDES,
-                        git_pillar.PER_REMOTE_ONLY
-                    )
-                    ret.append(pillar)
-                except FileserverConfigError:
-                    if opts.get('git_pillar_verify_config', True):
-                        raise
-                    else:
-                        log.critical('Could not initialize git_pillar')
+                    log.critical('Could not initialize git_pillar')
     return ret
 
 
@@ -573,11 +550,12 @@ class RemoteFuncs(object):
         if match_type.lower() == 'compound':
             match_type = 'compound_pillar_exact'
         checker = salt.utils.minions.CkMinions(self.opts)
-        minions = checker.check_minions(
+        _res = checker.check_minions(
                 load['tgt'],
                 match_type,
                 greedy=False
                 )
+        minions = _res['minions']
         for minion in minions:
             fdata = self.cache.fetch('minions/{0}'.format(minion), 'mine')
             if isinstance(fdata, dict):
@@ -705,8 +683,7 @@ class RemoteFuncs(object):
                 load.get('ext'),
                 self.mminion.functions,
                 pillar_override=load.get('pillar_override', {}))
-        pillar_dirs = {}
-        data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
+        data = pillar.compile_pillar()
         if self.opts.get('minion_data_cache', False):
             self.cache.store('minions/{0}'.format(load['id']),
                              'data',
@@ -742,7 +719,7 @@ class RemoteFuncs(object):
         Handle the return data sent from the minions
         '''
         # Generate EndTime
-        endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid())
+        endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid(self.opts))
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
             return False
@@ -896,9 +873,10 @@ class RemoteFuncs(object):
                 pub_load['tgt_type'] = load['tgt_type']
         ret = {}
         ret['jid'] = self.local.cmd_async(**pub_load)
-        ret['minions'] = self.ckminions.check_minions(
+        _res = self.ckminions.check_minions(
                 load['tgt'],
                 pub_load['tgt_type'])
+        ret['minions'] = _res['minions']
         auth_cache = os.path.join(
                 self.opts['cachedir'],
                 'publish_auth')
@@ -1043,12 +1021,7 @@ class LocalFuncs(object):
                 return dict(error=dict(name=err_name,
                                        message='Authentication failure of type "token" occurred.'))
             username = token['name']
-            if self.opts['keep_acl_in_token'] and 'auth_list' in token:
-                auth_list = token['auth_list']
-            else:
-                load['eauth'] = token['eauth']
-                load['username'] = username
-                auth_list = self.loadauth.get_auth_list(load)
+            auth_list = self.loadauth.get_auth_list(load, token)
         else:
             auth_type = 'eauth'
             err_name = 'EauthAuthenticationError'
@@ -1090,12 +1063,7 @@ class LocalFuncs(object):
                 return dict(error=dict(name=err_name,
                                        message='Authentication failure of type "token" occurred.'))
             username = token['name']
-            if self.opts['keep_acl_in_token'] and 'auth_list' in token:
-                auth_list = token['auth_list']
-            else:
-                load['eauth'] = token['eauth']
-                load['username'] = username
-                auth_list = self.loadauth.get_auth_list(load)
+            auth_list = self.loadauth.get_auth_list(load, token)
         elif 'eauth' in load:
             auth_type = 'eauth'
             err_name = 'EauthAuthenticationError'
@@ -1121,7 +1089,7 @@ class LocalFuncs(object):
                                                 'user {1}.').format(auth_type, username)))
 
         # Authenticated. Do the job.
-        jid = salt.utils.jid.gen_jid()
+        jid = salt.utils.jid.gen_jid(self.opts)
         fun = load.pop('fun')
         tag = salt.utils.event.tagify(jid, prefix='wheel')
         data = {'fun': "wheel.{0}".format(fun),
@@ -1191,11 +1159,12 @@ class LocalFuncs(object):
 
         # Retrieve the minions list
         delimiter = load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
-        minions = self.ckminions.check_minions(
+        _res = self.ckminions.check_minions(
             load['tgt'],
             load.get('tgt_type', 'glob'),
             delimiter
         )
+        minions = _res['minions']
 
         # Check for external auth calls
         if extra.get('token', False):
@@ -1205,12 +1174,7 @@ class LocalFuncs(object):
                 return ''
 
             # Get acl from eauth module.
-            if self.opts['keep_acl_in_token'] and 'auth_list' in token:
-                auth_list = token['auth_list']
-            else:
-                extra['eauth'] = token['eauth']
-                extra['username'] = token['name']
-                auth_list = self.loadauth.get_auth_list(extra)
+            auth_list = self.loadauth.get_auth_list(extra, token)
 
             # Authorize the request
             if not self.ckminions.auth_check(

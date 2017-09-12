@@ -87,7 +87,6 @@ import pprint
 import time
 
 # Import salt libs
-import salt.utils
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -96,6 +95,7 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudSystemExit
 )
+import salt.utils.files
 
 # Import salt.cloud libs
 import salt.utils.cloud
@@ -805,7 +805,7 @@ def load_public_key(vm_):
                 )
             )
 
-        with salt.utils.fopen(public_key_filename, 'r') as public_key:
+        with salt.utils.files.fopen(public_key_filename, 'r') as public_key:
             key = public_key.read().replace('\n', '')
 
             return key
