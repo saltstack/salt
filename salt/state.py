@@ -2091,8 +2091,6 @@ class State(object):
         if self.opts.get(u'test', False):
             return False
         if (low.get(u'failhard', False) or self.opts[u'failhard']) and tag in running:
-            if running[tag][u'result'] is None:
-                return False
             return not running[tag][u'result']
         return False
 
