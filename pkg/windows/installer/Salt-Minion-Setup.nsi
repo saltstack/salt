@@ -200,17 +200,38 @@ Section -Prerequisites
                 "VC Redist 2008 SP1 MFC is currently not installed. Would you like to install?" \
                 /SD IDYES IDNO endVcRedist
 
-            ClearErrors
             ; The Correct version of VCRedist is copied over by "build_pkg.bat"
             SetOutPath "$INSTDIR\"
             File "..\prereqs\vcredist.exe"
-            ExecWait "$INSTDIR\vcredist.exe /qb! /norestart"
-            IfErrors 0 endVcRedist
+            # If an output variable is specified ($0 in the case below),
+            # ExecWait sets the variable with the exit code (and only sets the
+            # error flag if an error occurs; if an error occurs, the contents
+            # of the user variable are undefined).
+            # http://nsis.sourceforge.net/Reference/ExecWait
+            ClearErrors
+            ExecWait '"$INSTDIR\vcredist.exe" /qb! /norestart' $0
+            IfErrors 0 CheckVcRedistErrorCode:
                 MessageBox MB_OK \
                     "VC Redist 2008 SP1 MFC failed to install. Try installing the package manually." \
                     /SD IDOK
+                Goto endVcRedist
+
+            checkVcRedistErrorCode:
+            # Check for Reboot Error Code (3010)
+            ${If} $0 == 3010
+                MessageBox MB_OK \
+                    "VC Redist 2008 SP1 MFC installed but requires a restart to complete." \
+                    /SD IDOK
+
+            # Check for any other errors
+            ${ElseIfNot} $0 == 0
+                MessageBox MB_OK \
+                    "VC Redist 2008 SP1 MFC failed with ErrorCode: $0. Try installing the package manually." \
+                    /SD IDOK
+            ${EndIf}
 
             endVcRedist:
+
         ${EndIf}
 
     ${EndIf}
@@ -715,6 +736,7 @@ Function getMinionConfig
     confFound:
     FileOpen $0 "$INSTDIR\conf\minion" r
 
+    ClearErrors
     confLoop:
         FileRead $0 $1
         IfErrors EndOfFile
