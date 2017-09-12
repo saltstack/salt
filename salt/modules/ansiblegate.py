@@ -222,6 +222,10 @@ def help(module=None, *args):
         except Exception as err:
             log.error("Error parsing doc section: {0}".format(err))
     if not args:
+        if 'description' in doc:
+            description = doc.get('description') or ''
+            del doc['description']
+            ret['Description'] = description
         ret['Available sections on module "{}"'.format(module.__name__.replace('ansible.modules.', ''))] = doc.keys()
     else:
         for arg in args:
