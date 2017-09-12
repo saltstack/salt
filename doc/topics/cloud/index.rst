@@ -64,7 +64,9 @@ automatically installed salt-cloud for you. Use your distribution's package
 manager to install the ``salt-cloud`` package from the same repo that you
 used to install Salt.  These repos will automatically be setup by Salt Bootstrap.
 
-If there is no salt-cloud package, install with ``pip install salt-cloud``.
+Alternatively, the ``-L`` option can be passed to the `Salt Bootstrap`_ script when
+installing Salt. The ``-L`` option will install ``salt-cloud`` and the required
+``libcloud`` package.
 
 .. _`Salt Bootstrap`: https://github.com/saltstack/salt-bootstrap
 
@@ -106,6 +108,7 @@ Cloud Provider Specifics
         Getting Started With Aliyun <aliyun>
         Getting Started With Azure <azure>
         Getting Started With Azure Arm <azurearm>
+        Getting Started With CloudStack <cloudstack>
         Getting Started With DigitalOcean <digitalocean>
         Getting Started With Dimension Data <dimensiondata>
         Getting Started With EC2 <aws>
@@ -116,6 +119,7 @@ Cloud Provider Specifics
         Getting Started With Libvirt <libvirt>
         Getting Started With Linode <linode>
         Getting Started With LXC <lxc>
+        Getting Started With OneAndOne <oneandone>
         Getting Started With OpenNebula <opennebula>
         Getting Started With OpenStack <openstack>
         Getting Started With Parallels <parallels>
@@ -128,6 +132,7 @@ Cloud Provider Specifics
         Getting Started With Vexxhost <vexxhost>
         Getting Started With Virtualbox <virtualbox>
         Getting Started With VMware <vmware>
+        Getting Started With Xen <xen>
 
 
 Miscellaneous Options

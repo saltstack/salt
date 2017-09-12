@@ -279,7 +279,7 @@ def config_absent(name):
     .. note::
         For certain cases extra lines could be removed based on dependencies.
         In this example, included after the example for config_present, the
-        ACLs would be removed because they depend on the existance of the
+        ACLs would be removed because they depend on the existence of the
         group.
 
     '''

@@ -13,29 +13,24 @@
         <your example config>
 
 '''
-# keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
-
-from __future__ import absolute_import
-
 # Import Python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
 import salt.utils.compat
 
-log = logging.getLogger(__name__)
-
 # Import third party libs
-HAS_LIBS = False
 try:
     #  Import libs...
     {% if depending_libraries %}
     import {{depending_libraries}}
     {% endif %}
     HAS_LIBS = True
+    MISSING_PACKAGE_REASON = None
 except ImportError as ie:
-    missing_package = ie.message
+    HAS_LIBS = False
+    MISSING_PACKAGE_REASON = ie.message
 
 log = logging.getLogger(__name__)
 
@@ -48,8 +43,9 @@ def __virtual__():
     '''
     if HAS_LIBS:
         return __virtualname__
-    return (False, 'The {{module_name}} execution module failed to load:'
-            'import error - {0}.'.format(missing_package))
+    return (False,
+            'The {{module_name}} execution module failed to load:'
+            'import error - {0}.'.format(MISSING_PACKAGE_REASON))
 
 
 def __init__(opts):

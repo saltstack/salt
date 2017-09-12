@@ -3,6 +3,7 @@
 The core behaviors used by minion and master
 '''
 # pylint: disable=W0232
+# pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
 from __future__ import absolute_import
@@ -17,25 +18,31 @@ from _socket import gaierror
 # Import salt libs
 import salt.daemons.masterapi
 import salt.utils.args
+import salt.utils.kinds as kinds
 import salt.utils.process
+import salt.utils.stringutils
 import salt.transport
 import salt.engines
+
+# pylint: disable=import-error
 from raet import raeting
 from raet.road.stacking import RoadStack
 from raet.road.estating import RemoteEstate
 from raet.lane.stacking import LaneStack
+# pylint: enable=import-error
 
 from salt import daemons
 from salt.daemons import salting
 from salt.exceptions import SaltException
-from salt.utils import kinds, is_windows
+from salt.utils.platform import is_windows
 from salt.utils.event import tagify
 
 # Import ioflo libs
-
+# pylint: disable=import-error
 from ioflo.aid.odicting import odict  # pylint: disable=E0611,F0401
 import ioflo.base.deeding
 from ioflo.base.consoling import getConsole
+# pylint: enable=import-error
 console = getConsole()
 
 # Import Third Party Libs
@@ -54,7 +61,7 @@ try:
 except ImportError:
     pass
 # pylint: disable=no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
@@ -393,7 +400,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                                                      kind=kinds.applKinds.master))
                     except gaierror as ex:
                         log.warning("Unable to connect to master {0}: {1}".format(mha, ex))
-                        if self.opts.value.get('master_type') != 'failover':
+                        if self.opts.value.get(u'master_type') not in (u'failover', u'distributed'):
                             raise ex
                 if not stack.remotes:
                     raise ex
@@ -860,7 +867,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         self.presence_req.value = deque()
         self.stats_req.value = deque()
         self.publish.value = deque()
-        self.worker_verify.value = salt.utils.rand_string()
+        self.worker_verify.value = salt.utils.stringutils.random()
         if self.opts.value.get('worker_threads'):
             worker_seed = []
             for index in range(self.opts.value['worker_threads']):

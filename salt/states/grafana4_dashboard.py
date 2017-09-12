@@ -2,6 +2,8 @@
 '''
 Manage Grafana v4.0 Dashboards
 
+.. versionadded:: 2017.7.0
+
 .. code-block:: yaml
 
     grafana:
@@ -42,7 +44,7 @@ import copy
 import json
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.dictdiffer import DictDiffer
 
 

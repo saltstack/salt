@@ -17,14 +17,14 @@ the Minion.
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 import json
 import os
-import distutils.version  # pylint: disable=no-name-in-module
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Set up logging
@@ -39,16 +39,19 @@ def __virtual__():
     Set the system module of the kernel is Windows
     '''
     # Verify Windows
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
+        log.debug('Module DSC: Only available on Windows systems')
         return False, 'Module DSC: Only available on Windows systems'
 
-    # Verify PowerShell 5.0
+    # Verify PowerShell
     powershell_info = __salt__['cmd.shell_info']('powershell')
     if not powershell_info['installed']:
-        return False, 'Module DSC: PowerShell not available'
+        log.debug('Module DSC: Requires PowerShell')
+        return False, 'Module DSC: Requires PowerShell'
 
-    if distutils.version.StrictVersion(powershell_info['version']) < \
-            distutils.version.StrictVersion('5.0'):
+    # Verify PowerShell 5.0 or greater
+    if salt.utils.versions.compare(powershell_info['version'], '<', '5.0'):
+        log.debug('Module DSC: Requires PowerShell 5 or later')
         return False, 'Module DSC: Requires PowerShell 5 or later'
 
     return __virtualname__
@@ -121,19 +124,19 @@ def run_config(path,
             file containing the proper hash table or the PowerShell code to
             create the hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         config_data_source (str): The path to the ``.psd1`` file on
             ``file_roots`` to cache at the location specified by
             ``config_data``. If this is specified, ``config_data`` must be a
             local path instead of a hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         script_parameters (str): Any additional parameters expected by the
             configuration script. These must be defined in the script itself.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         salt_env (str): The salt environment to use when copying the source.
             Default is 'base'
@@ -203,19 +206,19 @@ def compile_config(path,
             file containing the proper hash table or the PowerShell code to
             create the hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         config_data_source (str): The path to the ``.psd1`` file on
             ``file_roots`` to cache at the location specified by
             ``config_data``. If this is specified, ``config_data`` must be a
             local path instead of a hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         script_parameters (str): Any additional parameters expected by the
             configuration script. These must be defined in the script itself.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         salt_env (str): The salt environment to use when copying the source.
             Default is 'base'
@@ -555,6 +558,7 @@ def set_lcm_config(config_mode=None,
 
         salt '*' dsc.set_lcm_config ApplyOnly
     '''
+    temp_dir = os.getenv('TEMP', '{0}\\temp'.format(os.getenv('WINDIR')))
     cmd = 'Configuration SaltConfig {'
     cmd += '    Node localhost {'
     cmd += '        LocalConfigurationManager {'
@@ -567,7 +571,7 @@ def set_lcm_config(config_mode=None,
             return error
         cmd += '            ConfigurationMode = "{0}";'.format(config_mode)
     if config_mode_freq:
-        if isinstance(config_mode_freq, int):
+        if not isinstance(config_mode_freq, int):
             SaltInvocationError('config_mode_freq must be an integer')
             return 'config_mode_freq must be an integer. Passed {0}'.\
                 format(config_mode_freq)
@@ -578,7 +582,7 @@ def set_lcm_config(config_mode=None,
                                 'or Pull')
         cmd += '            RefreshMode = "{0}";'.format(refresh_mode)
     if refresh_freq:
-        if isinstance(refresh_freq, int):
+        if not isinstance(refresh_freq, int):
             SaltInvocationError('refresh_freq must be an integer')
         cmd += '            RefreshFrequencyMins = {0};'.format(refresh_freq)
     if reboot_if_needed is not None:
@@ -620,19 +624,21 @@ def set_lcm_config(config_mode=None,
                                 'All')
         cmd += '            DebugMode = "{0}";'.format(debug_mode)
     if status_retention_days:
-        if isinstance(status_retention_days, int):
+        if not isinstance(status_retention_days, int):
             SaltInvocationError('status_retention_days must be an integer')
         cmd += '            StatusRetentionTimeInDays = {0};'.format(status_retention_days)
     cmd += '        }}};'
-    cmd += r'SaltConfig -OutputPath "C:\DSC\SaltConfig"'
+    cmd += r'SaltConfig -OutputPath "{0}\SaltConfig"'.format(temp_dir)
 
     # Execute Config to create the .mof
     _pshell(cmd)
 
     # Apply the config
-    cmd = r'Set-DscLocalConfigurationManager -Path "C:\DSC\SaltConfig"'
-    ret = _pshell(cmd)
-    if not ret:
+    cmd = r'Set-DscLocalConfigurationManager -Path "{0}\SaltConfig"' \
+          r''.format(temp_dir)
+    ret = __salt__['cmd.run_all'](cmd, shell='powershell', python_shell=True)
+    __salt__['file.remove'](r'{0}\SaltConfig'.format(temp_dir))
+    if not ret['retcode']:
         log.info('LCM config applied successfully')
         return True
     else:

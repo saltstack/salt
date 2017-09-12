@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=resource-leakage
 
 # Import Python libs
 from __future__ import absolute_import, print_function
@@ -8,13 +9,13 @@ import pprint
 import optparse
 
 # Import Salt libs
-from salt.utils import get_colors
+import salt.utils.color
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 
-colors = get_colors()
+colors = salt.utils.color.get_colors()
 
 
 def parse():

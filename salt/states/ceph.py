@@ -68,14 +68,14 @@ def quorum(name, **kwargs):
             - require:
               - sesceph: mon_running
     '''
-    paramters = _ordereddict2dict(kwargs)
-    if paramters is None:
-        return _error(name, "Invalid paramters:%s")
+    parameters = _ordereddict2dict(kwargs)
+    if parameters is None:
+        return _error(name, "Invalid parameters:%s")
 
     if __opts__['test']:
         return _test(name, "cluster quorum")
     try:
-        cluster_quorum = __salt__['ceph.cluster_quorum'](**paramters)
+        cluster_quorum = __salt__['ceph.cluster_quorum'](**parameters)
     except (CommandExecutionError, CommandNotFoundError) as err:
         return _error(name, err.strerror)
     if cluster_quorum:

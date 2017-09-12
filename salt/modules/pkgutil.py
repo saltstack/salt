@@ -15,8 +15,10 @@ import copy
 
 # Import salt libs
 import salt.utils
+import salt.utils.pkg
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'pkgutil'
@@ -26,7 +28,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris
     '''
-    if __grains__['os'] == 'Solaris':
+    if __grains__['os_family'] == 'Solaris':
         return __virtualname__
     return (False, 'The pkgutil execution module cannot be loaded: '
             'only available on Solaris systems.')
@@ -42,6 +44,8 @@ def refresh_db():
 
         salt '*' pkgutil.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     return __salt__['cmd.retcode']('/opt/csw/bin/pkgutil -U') == 0
 
 
@@ -224,7 +228,7 @@ def latest_version(*names, **kwargs):
         if name in names:
             cver = pkgs.get(name, '')
             nver = version_rev.split(',')[0]
-            if not cver or salt.utils.compare_versions(ver1=cver,
+            if not cver or salt.utils.versions.compare(ver1=cver,
                                                        oper='<',
                                                        ver2=nver):
                 # Remove revision for version comparison

@@ -18,7 +18,7 @@ from salt.utils.doc import strip_rst as _strip_rst
 from salt.ext.six.moves import zip
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -421,8 +421,10 @@ def reload_modules():
 
         salt '*' sys.reload_modules
     '''
-    # This is handled inside the minion.py file, the function is caught before
-    # it ever gets here
+    # This function is actually handled inside the minion.py file, the function
+    # is caught before it ever gets here. Therefore, the docstring above is
+    # only for the online docs, and ANY CHANGES made to it must also be made in
+    # each of the gen_modules() funcs in minion.py.
     return True
 
 

@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Recursively iterate over directories and add all files as Pillar data
+
+``File_tree`` is an external pillar that allows
+values from all files in a directory tree to be imported as Pillar data.
+
+Note this is an external pillar, and is subject to the rules and constraints
+governing external pillars detailed here: :ref:`external-pillars`.
 
 .. versionadded:: 2015.5.0
 
@@ -51,6 +56,24 @@ intended to be used to deploy a file using ``contents_pillar`` with a
     files would not affected by the ``keep_newline`` configuration.  However,
     this module does not actually distinguish between binary and text files.
 
+.. versionchanged:: 2017.7.0
+    Templating/rendering has been added. You can now specify a default render
+    pipeline and a black- and whitelist of (dis)allowed renderers.
+
+    ``template`` must be set to ``True`` for templating to happen.
+
+    .. code-block:: yaml
+
+        ext_pillar:
+          - file_tree:
+            root_dir: /path/to/root/directory
+            render_default: jinja|yaml
+            renderer_blacklist:
+              - gpg
+            renderer_whitelist:
+              - jinja
+              - yaml
+            template: True
 
 Assigning Pillar Data to Individual Hosts
 -----------------------------------------
@@ -156,9 +179,12 @@ import logging
 import os
 
 # Import salt libs
-import salt.utils
+import salt.loader
 import salt.utils.dictupdate
+import salt.utils.files
 import salt.utils.minions
+import salt.utils.stringio
+import salt.template
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -192,11 +218,18 @@ def _check_newline(prefix, file_name, keep_newline):
     return True
 
 
-def _construct_pillar(top_dir, follow_dir_links, keep_newline=False):
+def _construct_pillar(top_dir,
+                      follow_dir_links,
+                      keep_newline=False,
+                      render_default=None,
+                      renderer_blacklist=None,
+                      renderer_whitelist=None,
+                      template=False):
     '''
     Construct pillar from file tree.
     '''
     pillar = {}
+    renderers = salt.loader.render(__opts__, __salt__)
 
     norm_top_dir = os.path.normpath(top_dir)
     for dir_path, dir_names, file_names in os.walk(
@@ -228,7 +261,7 @@ def _construct_pillar(top_dir, follow_dir_links, keep_newline=False):
 
             contents = ''
             try:
-                with salt.utils.fopen(file_path, 'rb') as fhr:
+                with salt.utils.files.fopen(file_path, 'rb') as fhr:
                     buf = fhr.read(__opts__['file_buffer_size'])
                     while buf:
                         contents += buf
@@ -243,7 +276,17 @@ def _construct_pillar(top_dir, follow_dir_links, keep_newline=False):
                           file_path,
                           exc.strerror)
             else:
-                pillar_node[file_name] = contents
+                data = contents
+                if template is True:
+                    data = salt.template.compile_template_str(template=contents,
+                                                              renderers=renderers,
+                                                              default=render_default,
+                                                              blacklist=renderer_blacklist,
+                                                              whitelist=renderer_whitelist)
+                if salt.utils.stringio.is_readable(data):
+                    pillar_node[file_name] = data.getvalue()
+                else:
+                    pillar_node[file_name] = data
 
     return pillar
 
@@ -253,7 +296,11 @@ def ext_pillar(minion_id,
                root_dir=None,
                follow_dir_links=False,
                debug=False,
-               keep_newline=False):
+               keep_newline=False,
+               render_default=None,
+               renderer_blacklist=None,
+               renderer_whitelist=None,
+               template=False):
     '''
     Compile pillar data for the specified minion ID
     '''
@@ -289,16 +336,21 @@ def ext_pillar(minion_id,
                 if (os.path.isdir(nodegroups_dir) and
                         nodegroup in master_ngroups):
                     ckminions = salt.utils.minions.CkMinions(__opts__)
-                    match = ckminions.check_minions(
+                    _res = ckminions.check_minions(
                         master_ngroups[nodegroup],
                         'compound')
+                    match = _res['minions']
                     if minion_id in match:
                         ngroup_dir = os.path.join(
                             nodegroups_dir, str(nodegroup))
                         ngroup_pillar.update(
                             _construct_pillar(ngroup_dir,
                                               follow_dir_links,
-                                              keep_newline)
+                                              keep_newline,
+                                              render_default,
+                                              renderer_blacklist,
+                                              renderer_whitelist,
+                                              template)
                         )
         else:
             if debug is True:
@@ -319,7 +371,13 @@ def ext_pillar(minion_id,
         log.error('file_tree: %s exists, but is not a directory', host_dir)
         return ngroup_pillar
 
-    host_pillar = _construct_pillar(host_dir, follow_dir_links, keep_newline)
+    host_pillar = _construct_pillar(host_dir,
+                                    follow_dir_links,
+                                    keep_newline,
+                                    render_default,
+                                    renderer_blacklist,
+                                    renderer_whitelist,
+                                    template)
     return salt.utils.dictupdate.merge(ngroup_pillar,
                                        host_pillar,
                                        strategy='recurse')

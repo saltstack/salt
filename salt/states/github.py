@@ -22,7 +22,7 @@ import datetime
 import logging
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import range
 
@@ -123,29 +123,30 @@ def absent(name, profile="github", **kwargs):
 
     target = __salt__['github.get_user'](name, profile=profile, **kwargs)
 
-    if not target:
+    if target:
+        if isinstance(target, bool) or target.get('in_org', False):
+            if __opts__['test']:
+                ret['comment'] = "User {0} will be deleted".format(name)
+                ret['result'] = None
+                return ret
+
+            result = __salt__['github.remove_user'](name, profile=profile, **kwargs)
+
+            if result:
+                ret['comment'] = 'Deleted user {0}'.format(name)
+                ret['changes'].setdefault('old', 'User {0} exists'.format(name))
+                ret['changes'].setdefault('new', 'User {0} deleted'.format(name))
+                ret['result'] = True
+            else:
+                ret['comment'] = 'Failed to delete {0}'.format(name)
+                ret['result'] = False
+        else:
+            ret['comment'] = "User {0} has already been deleted!".format(name)
+            ret['result'] = True
+    else:
         ret['comment'] = 'User {0} does not exist'.format(name)
         ret['result'] = True
         return ret
-    elif isinstance(target, bool) and target:
-        if __opts__['test']:
-            ret['comment'] = "User {0} will be deleted".format(name)
-            ret['result'] = None
-            return ret
-
-        result = __salt__['github.remove_user'](name, profile=profile, **kwargs)
-
-        if result:
-            ret['comment'] = 'Deleted user {0}'.format(name)
-            ret['changes'].setdefault('old', 'User {0} exists'.format(name))
-            ret['changes'].setdefault('new', 'User {0} deleted'.format(name))
-            ret['result'] = True
-        else:
-            ret['comment'] = 'Failed to delete {0}'.format(name)
-            ret['result'] = False
-    else:
-        ret['comment'] = "User {0} has already been deleted!".format(name)
-        ret['result'] = True
 
     return ret
 
@@ -524,7 +525,7 @@ def repo_present(
         The teams for which this repo should belong to, specified as a dict of
         team name to permission ('pull', 'push' or 'admin').
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     Example:
 

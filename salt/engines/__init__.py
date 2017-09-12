@@ -11,7 +11,7 @@ import logging
 # Import salt libs
 import salt
 import salt.loader
-import salt.utils
+import salt.utils.platform
 from salt.utils.process import SignalHandlingMultiprocessingProcess
 
 log = logging.getLogger(__name__)
@@ -21,13 +21,13 @@ def start_engines(opts, proc_mgr, proxy=None):
     '''
     Fire up the configured engines!
     '''
-    utils = salt.loader.utils(opts)
+    utils = salt.loader.utils(opts, proxy=proxy)
     if opts['__role'] == 'master':
         runners = salt.loader.runner(opts, utils=utils)
     else:
         runners = []
-    funcs = salt.loader.minion_mods(opts, utils=utils)
-    engines = salt.loader.engines(opts, funcs, runners, proxy=proxy)
+    funcs = salt.loader.minion_mods(opts, utils=utils, proxy=proxy)
+    engines = salt.loader.engines(opts, funcs, runners, utils, proxy=proxy)
 
     engines_opt = opts.get('engines', [])
     if isinstance(engines_opt, dict):
@@ -36,7 +36,7 @@ def start_engines(opts, proc_mgr, proxy=None):
     # Function references are not picklable. Windows needs to pickle when
     # spawning processes. On Windows, these will need to be recalculated
     # in the spawned child process.
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         runners = None
         utils = None
         funcs = None
@@ -109,18 +109,19 @@ class Engine(SignalHandlingMultiprocessingProcess):
         '''
         Run the master service!
         '''
-        if salt.utils.is_windows():
+        self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
+        if salt.utils.platform.is_windows():
             # Calculate function references since they can't be pickled.
-            self.utils = salt.loader.utils(self.opts)
             if self.opts['__role'] == 'master':
                 self.runners = salt.loader.runner(self.opts, utils=self.utils)
             else:
                 self.runners = []
-            self.funcs = salt.loader.minion_mods(self.opts, utils=self.utils)
+            self.funcs = salt.loader.minion_mods(self.opts, utils=self.utils, proxy=self.proxy)
 
         self.engine = salt.loader.engines(self.opts,
                                           self.funcs,
                                           self.runners,
+                                          self.utils,
                                           proxy=self.proxy)
         kwargs = self.config or {}
         try:

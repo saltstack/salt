@@ -110,7 +110,7 @@ To pass through a file that contains jinja + yaml templating (the default):
         method='POST',
         data_file='/srv/salt/somefile.jinja',
         data_render=True,
-        template_data={'key1': 'value1', 'key2': 'value2'}
+        template_dict={'key1': 'value1', 'key2': 'value2'}
     )
 
 To pass through a file that contains mako templating:
@@ -123,7 +123,7 @@ To pass through a file that contains mako templating:
         data_file='/srv/salt/somefile.mako',
         data_render=True,
         data_renderer='mako',
-        template_data={'key1': 'value1', 'key2': 'value2'}
+        template_dict={'key1': 'value1', 'key2': 'value2'}
     )
 
 Because this function uses Salt's own rendering system, any Salt renderer can
@@ -140,7 +140,7 @@ However, this can be changed to ``master`` if necessary.
         method='POST',
         data_file='/srv/salt/somefile.jinja',
         data_render=True,
-        template_data={'key1': 'value1', 'key2': 'value2'},
+        template_dict={'key1': 'value1', 'key2': 'value2'},
         opts=__opts__
     )
 
@@ -149,7 +149,7 @@ However, this can be changed to ``master`` if necessary.
         method='POST',
         data_file='/srv/salt/somefile.jinja',
         data_render=True,
-        template_data={'key1': 'value1', 'key2': 'value2'},
+        template_dict={'key1': 'value1', 'key2': 'value2'},
         node='master'
     )
 
@@ -170,11 +170,11 @@ a Python dict.
         header_file='/srv/salt/headers.jinja',
         header_render=True,
         header_renderer='jinja',
-        template_data={'key1': 'value1', 'key2': 'value2'}
+        template_dict={'key1': 'value1', 'key2': 'value2'}
     )
 
 Because much of the data that would be templated between headers and data may be
-the same, the ``template_data`` is the same for both. Correcting possible
+the same, the ``template_dict`` is the same for both. Correcting possible
 variable name collisions is up to the user.
 
 Authentication
@@ -377,7 +377,8 @@ using the ``ca_bundle`` variable.
     )
 
 Updating CA Bundles
-'''''''''''''''''''
+```````````````````
+
 The ``update_ca_bundle()`` function can be used to update the bundle file at a
 specified location. If the target location is not specified, then it will
 attempt to auto-detect the location of the bundle file. If the URL to download

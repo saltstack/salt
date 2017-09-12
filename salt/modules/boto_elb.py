@@ -42,19 +42,24 @@ Connection module for Amazon ELB
 :depends: boto >= 2.33.0
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
 from __future__ import absolute_import
 
 # Import Python libs
 import logging
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import json
-import salt.ext.six as six
+import time
 
 log = logging.getLogger(__name__)
 
+# Import Salt libs
+import salt.utils.odict as odict
+from salt.utils.versions import LooseVersion as _LooseVersion
+
 # Import third party libs
+from salt.ext import six
+from salt.ext.six import string_types
 try:
     import boto
     import boto.ec2  # pylint: enable=unused-import
@@ -74,10 +79,6 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-
-# Import Salt libs
-from salt.ext.six import string_types
-import salt.utils.odict as odict
 
 
 def __virtual__():
@@ -160,49 +161,60 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_elb.exists myelb region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    wait = 60
+    orig_wait = wait
 
-    try:
-        lb = conn.get_all_load_balancers(load_balancer_names=[name])
-        lb = lb[0]
-        ret = {}
-        ret['availability_zones'] = lb.availability_zones
-        listeners = []
-        for _listener in lb.listeners:
-            listener_dict = {}
-            listener_dict['elb_port'] = _listener.load_balancer_port
-            listener_dict['elb_protocol'] = _listener.protocol
-            listener_dict['instance_port'] = _listener.instance_port
-            listener_dict['instance_protocol'] = _listener.instance_protocol
-            listener_dict['policies'] = _listener.policy_names
-            if _listener.ssl_certificate_id:
-                listener_dict['certificate'] = _listener.ssl_certificate_id
-            listeners.append(listener_dict)
-        ret['listeners'] = listeners
-        backends = []
-        for _backend in lb.backends:
-            bs_dict = {}
-            bs_dict['instance_port'] = _backend.instance_port
-            bs_dict['policies'] = [p.policy_name for p in _backend.policies]
-            backends.append(bs_dict)
-        ret['backends'] = backends
-        ret['subnets'] = lb.subnets
-        ret['security_groups'] = lb.security_groups
-        ret['scheme'] = lb.scheme
-        ret['dns_name'] = lb.dns_name
-        ret['tags'] = _get_all_tags(conn, name)
-        lb_policy_lists = [
-            lb.policies.app_cookie_stickiness_policies,
-            lb.policies.lb_cookie_stickiness_policies,
-            lb.policies.other_policies
-            ]
-        policies = []
-        for policy_list in lb_policy_lists:
-            policies += [p.policy_name for p in policy_list]
-        ret['policies'] = policies
-        return ret
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        return {}
+    while True:
+        try:
+            lb = conn.get_all_load_balancers(load_balancer_names=[name])
+            lb = lb[0]
+            ret = {}
+            ret['availability_zones'] = lb.availability_zones
+            listeners = []
+            for _listener in lb.listeners:
+                listener_dict = {}
+                listener_dict['elb_port'] = _listener.load_balancer_port
+                listener_dict['elb_protocol'] = _listener.protocol
+                listener_dict['instance_port'] = _listener.instance_port
+                listener_dict['instance_protocol'] = _listener.instance_protocol
+                listener_dict['policies'] = _listener.policy_names
+                if _listener.ssl_certificate_id:
+                    listener_dict['certificate'] = _listener.ssl_certificate_id
+                listeners.append(listener_dict)
+            ret['listeners'] = listeners
+            backends = []
+            for _backend in lb.backends:
+                bs_dict = {}
+                bs_dict['instance_port'] = _backend.instance_port
+                bs_dict['policies'] = [p.policy_name for p in _backend.policies]
+                backends.append(bs_dict)
+            ret['backends'] = backends
+            ret['subnets'] = lb.subnets
+            ret['security_groups'] = lb.security_groups
+            ret['scheme'] = lb.scheme
+            ret['dns_name'] = lb.dns_name
+            ret['tags'] = _get_all_tags(conn, name)
+            lb_policy_lists = [
+                lb.policies.app_cookie_stickiness_policies,
+                lb.policies.lb_cookie_stickiness_policies,
+                lb.policies.other_policies
+                ]
+            policies = []
+            for policy_list in lb_policy_lists:
+                policies += [p.policy_name for p in policy_list]
+            ret['policies'] = policies
+            return ret
+        except boto.exception.BotoServerError as error:
+            if getattr(error, 'error_code', '') == 'Throttling':
+                if wait > 0:
+                    sleep = wait if wait % 5 == wait else 5
+                    log.info('Throttled by AWS API, will retry in 5 seconds.')
+                    time.sleep(sleep)
+                    wait -= sleep
+                    continue
+            log.error('API still throttling us after {0} seconds!'.format(orig_wait))
+            log.error(error)
+            return {}
 
 
 def listener_dict_to_tuple(listener):
@@ -706,7 +718,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     '''
     # convert instances to list type, enabling consistent use of instances
     # variable throughout the register_instances method
-    if isinstance(instances, str) or isinstance(instances, six.text_type):
+    if isinstance(instances, six.string_types) or isinstance(instances, six.text_type):
         instances = [instances]
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -750,7 +762,7 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
     '''
     # convert instances to list type, enabling consistent use of instances
     # variable throughout the deregister_instances method
-    if isinstance(instances, str) or isinstance(instances, six.text_type):
+    if isinstance(instances, six.string_types) or isinstance(instances, six.text_type):
         instances = [instances]
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 

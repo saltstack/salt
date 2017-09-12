@@ -28,6 +28,7 @@ hit `Enter`. Also, you can convert tabs to 2 spaces by these commands in Vim:
 
 Indentation
 ===========
+
 The suggested syntax for YAML files is to use 2 spaces for indentation,
 but YAML will follow whatever indentation system that the individual file
 uses. Indentation of two spaces works very well for SLS files given the
@@ -112,8 +113,24 @@ PyYAML will load these values as boolean ``True`` or ``False``. Un-capitalized
 versions will also be loaded as booleans (``true``, ``false``, ``yes``, ``no``,
 ``on``, and ``off``). This can be especially problematic when constructing
 Pillar data. Make sure that your Pillars which need to use the string versions
-of these values are enclosed in quotes.  Pillars will be parsed twice by salt,
-so you'll need to wrap your values in multiple quotes, for example '"false"'.
+of these values are enclosed in quotes. Pillars will be parsed twice by salt,
+so you'll need to wrap your values in multiple quotes, including double quotation
+marks (``" "``) and single quotation marks (``' '``). Note that spaces are included
+in the quotation type examples for clarity.
+
+Multiple quoting examples looks like this:
+
+.. code-block:: yaml
+
+    - '"false"'
+    - "'True'"
+    - "'YES'"
+    - '"No"'
+
+.. note::
+
+    When using multiple quotes in this manner, they must be different. Using ``"" ""``
+    or ``'' ''`` won't work in this case (spaces are included in examples for clarity).
 
 The '%' Sign
 ============
@@ -129,44 +146,42 @@ string literal:
         - source: salt://ssh_keys/chease.pub
         - config: '%h/.ssh/authorized_keys'
 
-Integers are Parsed as Integers
-===============================
+Time Expressions
+================
 
-NOTE: This has been fixed in salt 0.10.0, as of this release passing an
-integer that is preceded by a 0 will be correctly parsed
+PyYAML will load a time expression as the integer value of that, assuming
+``HH:MM``. So for example, ``12:00`` is loaded by PyYAML as ``720``. An
+excellent explanation for why can be found here__.
 
-When passing :func:`integers <python2:int>` into an SLS file, they are
-passed as integers. This means that if a state accepts a string value
-and an integer is passed, that an integer will be sent. The solution here
-is to send the integer as a string.
+To keep time expressions like this from being loaded as integers, always quote
+them.
 
-This is best explained when setting the mode for a file:
+.. note::
+    When using a jinja ``load_yaml`` map, items must be quoted twice. For
+    example:
 
-.. code-block:: yaml
+    .. code-block:: yaml
 
-    /etc/vimrc:
-      file:
-        - managed
-        - source: salt://edit/vimrc
-        - user: root
-        - group: root
-        - mode: 644
+        {% load_yaml as wsus_schedule %}
 
-Salt manages this well, since the mode is passed as 644, but if the mode is
-zero padded as 0644, then it is read by YAML as an integer and evaluated as
-an octal value, 0644 becomes 420. Therefore, if the file mode is
-preceded by a 0 then it needs to be passed as a string:
+        FRI_10:
+          time: '"23:00"'
+          day: 6 - Every Friday
+        SAT_10:
+          time: '"06:00"'
+          day: 7 - Every Saturday
+        SAT_20:
+          time: '"14:00"'
+          day: 7 - Every Saturday
+        SAT_30:
+          time: '"22:00"'
+          day: 7 - Every Saturday
+        SUN_10:
+          time: '"06:00"'
+          day: 1 - Every Sunday
+        {% endload %}
 
-.. code-block:: yaml
-
-    /etc/vimrc:
-      file:
-        - managed
-        - source: salt://edit/vimrc
-        - user: root
-        - group: root
-        - mode: '0644'
-
+.. __: http://stackoverflow.com/a/31007425
 
 YAML does not like "Double Short Decs"
 ======================================
@@ -250,8 +265,10 @@ Alternatively,  they can be defined the "old way",  or with multiple
         - require:
           - user: fred
 
-YAML support only plain ASCII
-=============================
+.. _yaml_plain_ascii:
+
+YAML supports only plain ASCII
+==============================
 
 According to YAML specification, only ASCII characters can be used.
 

@@ -2,17 +2,25 @@
 '''
 Minion data cache plugin for Consul key/value data store.
 
+.. versionadded:: 2016.11.2
+
+:depends: python-consul >= 0.2.0
+
 It is up to the system administrator to set up and configure the Consul
 infrastructure. All is needed for this plugin is a working Consul agent
-with a read-write access to the key-value storae.
+with a read-write access to the key-value store.
 
-The related documentation can be found here: https://www.consul.io/docs/index.html
+The related documentation can be found in the `Consul documentation`_.
 
-To enable this cache plugin the master will need the python client for
-Consul installed that could be easily done with `pip install python-consul`.
+To enable this cache plugin, the master will need the python client for
+Consul installed. This can be easily installed with pip:
 
-Optionally depending on the Consul agent configuration the following values
-could be set in the master config, these are the defaults:
+.. code-block: bash
+
+    pip install python-consul
+
+Optionally, depending on the Consul agent configuration, the following values
+could be set in the master config. These are the defaults:
 
 .. code-block:: yaml
 
@@ -21,20 +29,22 @@ could be set in the master config, these are the defaults:
     consul.token: None
     consul.scheme: http
     consul.consistency: default
-    consul.dc: None
+    consul.dc: dc1
     consul.verify: True
 
-Related docs could be found here:
-* python-consul: https://python-consul.readthedocs.io/en/latest/#consul
+Related docs could be found in the `python-consul documentation`_.
 
-To use the consul as a minion data cache backend set the master `cache` config
-value to `consul`:
+To use the consul as a minion data cache backend, set the master ``cache`` config
+value to ``consul``:
 
 .. code-block:: yaml
 
     cache: consul
 
-.. versionadded:: 2016.11.2
+
+.. _`Consul documentation`: https://www.consul.io/docs/index.html
+.. _`python-consul documentation`: https://python-consul.readthedocs.io/en/latest/#consul
+
 '''
 from __future__ import absolute_import
 import logging
@@ -52,6 +62,8 @@ api = None
 
 # Define the module's virtual name
 __virtualname__ = 'consul'
+
+__func_alias__ = {'list_': 'list'}
 
 
 def __virtual__():
@@ -71,8 +83,11 @@ def __virtual__():
             'verify': __opts__.get('consul.verify', True),
             }
 
-    global api
-    api = consul.Consul(**consul_kwargs)
+    try:
+        global api
+        api = consul.Consul(**consul_kwargs)
+    except AttributeError:
+        return (False, "Failed to invoke consul.Consul, please make sure you have python-consul >= 0.2.0 installed")
 
     return __virtualname__
 
@@ -101,7 +116,7 @@ def fetch(bank, key):
     try:
         _, value = api.kv.get(c_key)
         if value is None:
-            return value
+            return {}
         return __context__['serial'].loads(value['Value'])
     except Exception as exc:
         raise SaltCacheError(
@@ -129,7 +144,7 @@ def flush(bank, key=None):
         )
 
 
-def list(bank):
+def list_(bank):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''

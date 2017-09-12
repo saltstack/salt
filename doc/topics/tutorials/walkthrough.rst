@@ -294,7 +294,7 @@ This will display a very large list of available functions and documentation on
 them.
 
 .. note::
-    Module documentation is also available :ref:`on the web <all-salt_modules>`.
+    Module documentation is also available :ref:`on the web <all-salt.modules>`.
 
 These functions cover everything from shelling out to package management to
 manipulating database servers. They comprise a powerful system management API
@@ -304,7 +304,7 @@ of Salt.
 .. note::
 
     Salt comes with many plugin systems. The functions that are available via
-    the ``salt`` command are called :ref:`Execution Modules <all-salt_modules>`.
+    the ``salt`` command are called :ref:`Execution Modules <all-salt.modules>`.
 
 
 Helpful Functions to Know

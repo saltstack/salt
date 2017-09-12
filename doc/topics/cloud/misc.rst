@@ -94,7 +94,7 @@ profile or map:
 Setting Up a Salt Syndic with Salt Cloud
 ========================================
 
-In addition to `setting up new Salt Masters`_, :ref:`syndic`s can also be
+In addition to `setting up new Salt Masters`_, :ref:`syndics <syndic>` can also be
 provisioned using Salt Cloud. In order to set up a Salt Syndic via Salt Cloud,
 a Salt Master needs to be installed on the new machine and a master configuration
 file needs to be set up using the ``make_master`` setting. This setting can be
@@ -386,3 +386,42 @@ script, a cloud profile using ``file_map`` might look like:
       file_map:
         /local/path/to/custom/script: /remote/path/to/use/custom/script
         /local/path/to/package: /remote/path/to/store/package
+
+Running Pre-Flight Commands
+===========================
+
+.. versionadded:: Oxygen
+
+To execute specified preflight shell commands on a VM before the deploy script is
+run, use the ``preflight_cmds`` option. These must be defined as a list in a cloud
+configuration file. For example:
+
+.. code-block:: yaml
+
+       my-cloud-profile:
+         provider: linode-config
+         image: Ubuntu 16.04 LTS
+         size: Linode 2048
+         preflight_cmds:
+           - whoami
+           - echo 'hello world!'
+
+These commands will run in sequence **before** the bootstrap script is executed.
+
+Force Minion Config
+===================
+
+.. versionadded:: Oxygen
+
+The ``force_minion_config`` option requests the bootstrap process to overwrite
+an existing minion configuration file and public/private key files.
+Default: False
+
+This might be important for drivers (such as ``saltify``) which are expected to
+take over a connection from a former salt master.
+
+.. code-block:: yaml
+
+    my_saltify_provider:
+      driver: saltify
+      force_minion_config: true

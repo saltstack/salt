@@ -13,6 +13,7 @@ deployed one of two ways.
 The default configuration is to run this module using :program:`salt-api` to
 start the Python-based CherryPy server. This server is lightweight,
 multi-threaded, encrypted with SSL, and should be considered production-ready.
+See the section above for performance expectations.
 
 Using a WSGI-compliant web server
 ---------------------------------
@@ -48,7 +49,7 @@ from __future__ import absolute_import
 
 import os
 
-import cherrypy
+import cherrypy  # pylint: disable=3rd-party-module-not-gated
 
 
 def bootstrap_app():

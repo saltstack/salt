@@ -19,7 +19,7 @@ from __future__ import absolute_import
 import pprint
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import Salt Libs
 import salt.utils.cloud as suc
@@ -133,7 +133,7 @@ def present(name, cloud_provider, onlyif=None, unless=None, opts=None, **kwargs)
             cloud_provider,
             pprint.pformat(kwargs)
         )
-    elif info and 'Error' not in info:
+    elif info and 'Error' in info:
         ret['result'] = False
         ret['comment'] = ('Failed to create instance {0}'
                           'using profile {1}: {2}').format(

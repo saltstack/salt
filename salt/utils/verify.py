@@ -16,9 +16,9 @@ import socket
 import logging
 
 # Import third party libs
-if sys.platform.startswith('win'):
+try:
     import win32file
-else:
+except ImportError:
     import resource
 
 # Import salt libs
@@ -27,7 +27,9 @@ from salt.log.setup import LOG_LEVELS
 from salt.exceptions import SaltClientError, SaltSystemExit, \
     CommandExecutionError
 import salt.defaults.exitcodes
-import salt.utils
+import salt.utils  # Can be removed once get_jid_list and get_user are moved
+import salt.utils.files
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -145,7 +147,7 @@ def verify_files(files, user):
     '''
     Verify that the named files exist and are owned by the named user
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return True
     import pwd  # after confirming not running Windows
     try:
@@ -160,13 +162,14 @@ def verify_files(files, user):
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
-            try:
-                os.makedirs(dirname)
-            except OSError as err:
-                if err.errno != errno.EEXIST:
-                    raise
+            if dirname:
+                try:
+                    os.makedirs(dirname)
+                except OSError as err:
+                    if err.errno != errno.EEXIST:
+                        raise
             if not os.path.isfile(fn_):
-                with salt.utils.fopen(fn_, 'w+') as fp_:
+                with salt.utils.files.fopen(fn_, 'w+') as fp_:
                     fp_.write('')
 
         except IOError as err:
@@ -196,7 +199,7 @@ def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return win_verify_env(dirs, permissive, pki_dir, skip_extra)
     import pwd  # after confirming not running Windows
     try:
@@ -297,7 +300,7 @@ def check_user(user):
     '''
     Check user and assign process uid/gid.
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return True
     if user == salt.utils.get_user():
         return True
@@ -479,13 +482,22 @@ def clean_path(root, path, subdir=False):
     return ''
 
 
+def clean_id(id_):
+    '''
+    Returns if the passed id is clean.
+    '''
+    if re.search(r'\.\.\{sep}'.format(sep=os.sep), id_):
+        return False
+    return True
+
+
 def valid_id(opts, id_):
     '''
     Returns if the passed id is valid
     '''
     try:
-        return bool(clean_path(opts['pki_dir'], id_))
-    except (AttributeError, KeyError) as e:
+        return bool(clean_path(opts['pki_dir'], id_)) and clean_id(id_)
+    except (AttributeError, KeyError, TypeError) as e:
         return False
 
 
@@ -555,7 +567,7 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
         if not permissive:
             try:
                 # Get a clean dacl by not passing an obj_name
-                dacl = salt.utils.win_dacl.Dacl()
+                dacl = salt.utils.win_dacl.dacl()
 
                 # Add aces to the dacl, use the GUID (locale non-specific)
                 # Administrators Group
@@ -566,9 +578,6 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
                              'this_folder_subfolders_files')
                 # Owner
                 dacl.add_ace('S-1-3-4', 'grant', 'full_control',
-                             'this_folder_subfolders_files')
-                # Users Group
-                dacl.add_ace('S-1-5-32-545', 'grant', 'read_execute',
                              'this_folder_subfolders_files')
 
                 # Save the dacl to the object
@@ -602,7 +611,7 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
 
                 # Give Admins, System and Owner permissions
                 # Get a clean dacl by not passing an obj_name
-                dacl = salt.utils.win_dacl.Dacl()
+                dacl = salt.utils.win_dacl.dacl()
 
                 # Add aces to the dacl, use the GUID (locale non-specific)
                 # Administrators Group

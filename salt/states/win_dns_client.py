@@ -171,32 +171,32 @@ def primary_suffix(name,
 
     reg_data = {
             'suffix': {
-                'hkey': 'HKEY_LOCAL_MACHINE',
-                'path': r'SYSTEM\CurrentControlSet\services\Tcpip\Parameters',
-                'key':  'NV Domain',
-                'type': 'REG_SZ',
+                'hive': 'HKEY_LOCAL_MACHINE',
+                'key': r'SYSTEM\CurrentControlSet\services\Tcpip\Parameters',
+                'vname':  'NV Domain',
+                'vtype': 'REG_SZ',
                 'old':  None,
                 'new':  suffix
             },
             'updates': {
-                'hkey': 'HKEY_LOCAL_MACHINE',
-                'path': r'SYSTEM\CurrentControlSet\services\Tcpip\Parameters',
-                'key':  'SyncDomainWithMembership',
-                'type': 'REG_DWORD',
+                'hive': 'HKEY_LOCAL_MACHINE',
+                'key': r'SYSTEM\CurrentControlSet\services\Tcpip\Parameters',
+                'vname':  'SyncDomainWithMembership',
+                'vtype': 'REG_DWORD',
                 'old':  None,
                 'new':  updates
             }
     }
 
-    reg_data['suffix']['old'] = __salt__['reg.read_key'](
-            reg_data['suffix']['hkey'],
-            reg_data['suffix']['path'],
-            reg_data['suffix']['key'],)
+    reg_data['suffix']['old'] = __salt__['reg.read_value'](
+            reg_data['suffix']['hive'],
+            reg_data['suffix']['key'],
+            reg_data['suffix']['vname'],)['vdata']
 
-    reg_data['updates']['old'] = bool(__salt__['reg.read_key'](
-            reg_data['updates']['hkey'],
-            reg_data['updates']['path'],
-            reg_data['updates']['key'],))
+    reg_data['updates']['old'] = bool(__salt__['reg.read_value'](
+            reg_data['updates']['hive'],
+            reg_data['updates']['key'],
+            reg_data['updates']['vname'],)['vdata'])
 
     updates_operation = 'enabled' if reg_data['updates']['new'] else 'disabled'
 
@@ -234,19 +234,19 @@ def primary_suffix(name,
                     'new': {
                         'suffix': reg_data['suffix']['new']}}
 
-    suffix_result = __salt__['reg.set_key'](
-            reg_data['suffix']['hkey'],
-            reg_data['suffix']['path'],
+    suffix_result = __salt__['reg.set_value'](
+            reg_data['suffix']['hive'],
             reg_data['suffix']['key'],
+            reg_data['suffix']['vname'],
             reg_data['suffix']['new'],
-            reg_data['suffix']['type'])
+            reg_data['suffix']['vtype'])
 
-    updates_result = __salt__['reg.set_key'](
-            reg_data['updates']['hkey'],
-            reg_data['updates']['path'],
+    updates_result = __salt__['reg.set_value'](
+            reg_data['updates']['hive'],
             reg_data['updates']['key'],
+            reg_data['updates']['vname'],
             reg_data['updates']['new'],
-            reg_data['updates']['type'])
+            reg_data['updates']['vtype'])
 
     ret['result'] = suffix_result & updates_result
 

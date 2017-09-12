@@ -74,17 +74,17 @@ Connection module for Amazon CognitoIdentity
 
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import
 import logging
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -92,10 +92,10 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
 try:
-    #pylint: disable=unused-import
+    # pylint: disable=unused-import
     import boto
     import boto3
-    #pylint: enable=unused-import
+    # pylint: enable=unused-import
     from botocore.exceptions import ClientError
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     logging.getLogger('boto3').setLevel(logging.CRITICAL)

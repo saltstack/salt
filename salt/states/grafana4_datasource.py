@@ -2,6 +2,8 @@
 '''
 Manage Grafana v4.0 data sources
 
+.. versionadded:: 2017.7.0
+
 Token auth setup
 
 .. code-block:: yaml

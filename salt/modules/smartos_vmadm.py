@@ -14,10 +14,16 @@ except ImportError:
     from pipes import quote as _quote_args
 
 # Import Salt libs
-import salt.ext.six as six
 import salt.utils
+import salt.utils.args
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.decorators as decorators
+import salt.utils.files
 from salt.utils.odict import OrderedDict
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -35,21 +41,21 @@ def _check_vmadm():
     '''
     Looks to see if vmadm is present on the system
     '''
-    return salt.utils.which('vmadm')
+    return salt.utils.path.which('vmadm')
 
 
 def _check_zfs():
     '''
     Looks to see if zfs is present on the system
     '''
-    return salt.utils.which('zfs')
+    return salt.utils.path.which('zfs')
 
 
 def __virtual__():
     '''
     Provides vmadm on SmartOS
     '''
-    if salt.utils.is_smartos_globalzone() and _check_vmadm():
+    if salt.utils.platform.is_smartos_globalzone() and _check_vmadm():
         return __virtualname__
     return (
         False,
@@ -127,7 +133,7 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
 
     # write json file
     vmadm_json_file = __salt__['temp.file'](prefix='vmadm-')
-    with salt.utils.fopen(vmadm_json_file, 'w') as vmadm_json:
+    with salt.utils.files.fopen(vmadm_json_file, 'w') as vmadm_json:
         vmadm_json.write(json.dumps(vmcfg))
 
     # vmadm validate create|update [-f <filename>]
@@ -166,7 +172,7 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
         return ret
     else:
         # cleanup json file (only when succesful to help troubleshooting)
-        salt.utils.safe_rm(vmadm_json_file)
+        salt.utils.files.safe_rm(vmadm_json_file)
 
         # return uuid
         if res['stderr'].startswith('Successfully created VM'):
@@ -783,7 +789,7 @@ def create(from_file=None, **kwargs):
     ret = {}
     # prepare vmcfg
     vmcfg = {}
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     for k, v in six.iteritems(kwargs):
         vmcfg[k] = v
 
@@ -818,7 +824,7 @@ def update(vm, from_file=None, key='uuid', **kwargs):
     vmadm = _check_vmadm()
     # prepare vmcfg
     vmcfg = {}
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     for k, v in six.iteritems(kwargs):
         vmcfg[k] = v
 

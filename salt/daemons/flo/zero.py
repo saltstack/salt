@@ -3,6 +3,7 @@
 IoFlo behaviors for running a ZeroMQ based master
 '''
 # pylint: disable=W0232
+# pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
 from __future__ import absolute_import

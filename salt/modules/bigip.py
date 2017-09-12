@@ -19,7 +19,7 @@ except ImportError:
     HAS_LIBS = False
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
 import salt.utils
@@ -970,7 +970,7 @@ def replace_pool_members(hostname, username, password, name, members):
     #specify members if provided
     if members is not None:
 
-        if isinstance(members, str):
+        if isinstance(members, six.string_types):
             members = members.split(',')
 
         pool_members = []
@@ -984,7 +984,7 @@ def replace_pool_members(hostname, username, password, name, members):
                     member['state'] = member.pop('member_state')
 
                 #replace underscore with dash
-                for key in member.keys():
+                for key in member:
                     new_key = key.replace('_', '-')
                     member[new_key] = member.pop(key)
 
@@ -1039,7 +1039,7 @@ def add_pool_member(hostname, username, password, name, member):
             member['state'] = member.pop('member_state')
 
         #replace underscore with dash
-        for key in member.keys():
+        for key in member:
             new_key = key.replace('_', '-')
             member[new_key] = member.pop(key)
 
@@ -1164,7 +1164,7 @@ def delete_pool_member(hostname, username, password, name, member):
 
     CLI Example::
 
-        salt '*' bigip.delete_node bigip admin admin my-pool 10.2.2.2:80
+        salt '*' bigip.delete_pool_member bigip admin admin my-pool 10.2.2.2:80
     '''
 
     #build session
@@ -1473,7 +1473,7 @@ def create_virtual(hostname, username, password, name, destination,
             payload['vlans'] = 'none'
         elif vlans == 'default':
             payload['vlans'] = 'default'
-        elif isinstance(vlans, str) and (vlans.startswith('enabled') or vlans.startswith('disabled')):
+        elif isinstance(vlans, six.string_types) and (vlans.startswith('enabled') or vlans.startswith('disabled')):
             try:
                 vlans_setting = vlans.split(':')[0]
                 payload['vlans'] = vlans.split(':')[1].split(',')

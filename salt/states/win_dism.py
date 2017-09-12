@@ -15,11 +15,13 @@ Install windows features/capabilties with DISM
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
+import os
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
@@ -29,7 +31,7 @@ def __virtual__():
     '''
     Only work on Windows where the DISM module is available
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Module only available on Windows'
 
     return __virtualname__
@@ -319,6 +321,15 @@ def package_installed(name,
            'comment': '',
            'changes': {}}
 
+    # Fail if using a non-existent package path
+    if '~' not in name and not os.path.exists(name):
+        if __opts__['test']:
+            ret['result'] = None
+        else:
+            ret['result'] = False
+        ret['comment'] = 'Package path {0} does not exist'.format(name)
+        return ret
+
     old = __salt__['dism.installed_packages']()
 
     # Get package info so we can see if it's already installed
@@ -386,6 +397,15 @@ def package_removed(name, image=None, restart=False):
            'result': True,
            'comment': '',
            'changes': {}}
+
+    # Fail if using a non-existent package path
+    if '~' not in name and not os.path.exists(name):
+        if __opts__['test']:
+            ret['result'] = None
+        else:
+            ret['result'] = False
+        ret['comment'] = 'Package path {0} does not exist'.format(name)
+        return ret
 
     old = __salt__['dism.installed_packages']()
 

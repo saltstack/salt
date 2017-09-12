@@ -6,19 +6,57 @@ from __future__ import absolute_import
 
 # Import python libs
 import re
+import shlex
 import inspect
 
 # Import salt libs
 import salt.utils.jid
+from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 if six.PY3:
     KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)
 else:
     KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
+
+
+def clean_kwargs(**kwargs):
+    '''
+    Return a dict without any of the __pub* keys (or any other keys starting
+    with a dunder) from the kwargs dict passed into the execution module
+    functions. These keys are useful for tracking what was used to invoke
+    the function call, but they may not be desirable to have if passing the
+    kwargs forward wholesale.
+    '''
+    ret = {}
+    for key, val in six.iteritems(kwargs):
+        if not key.startswith('__'):
+            ret[key] = val
+    return ret
+
+
+def invalid_kwargs(invalid_kwargs, raise_exc=True):
+    '''
+    Raise a SaltInvocationError if invalid_kwargs is non-empty
+    '''
+    if invalid_kwargs:
+        if isinstance(invalid_kwargs, dict):
+            new_invalid = [
+                '{0}={1}'.format(x, y)
+                for x, y in six.iteritems(invalid_kwargs)
+            ]
+            invalid_kwargs = new_invalid
+    msg = (
+        'The following keyword arguments are not valid: {0}'
+        .format(', '.join(invalid_kwargs))
+    )
+    if raise_exc:
+        raise SaltInvocationError(msg)
+    else:
+        return msg
 
 
 def condition_input(args, kwargs):
@@ -40,20 +78,24 @@ def condition_input(args, kwargs):
     return ret
 
 
-def parse_input(args, condition=True):
+def parse_input(args, condition=True, no_parse=None):
     '''
     Parse out the args and kwargs from a list of input values. Optionally,
     return the args and kwargs without passing them to condition_input().
 
     Don't pull args with key=val apart if it has a newline in it.
     '''
+    if no_parse is None:
+        no_parse = ()
     _args = []
     _kwargs = {}
     for arg in args:
         if isinstance(arg, six.string_types):
             arg_name, arg_value = parse_kwarg(arg)
             if arg_name:
-                _kwargs[arg_name] = yamlify_arg(arg_value)
+                _kwargs[arg_name] = yamlify_arg(arg_value) \
+                    if arg_name not in no_parse \
+                    else arg_value
             else:
                 _args.append(yamlify_arg(arg))
         elif isinstance(arg, dict):
@@ -61,8 +103,7 @@ def parse_input(args, condition=True):
             # condition_input is called below, but this is the only way to
             # gracefully handle both CLI and API input.
             if arg.pop('__kwarg__', False) is True:
-                for key, val in six.iteritems(arg):
-                    _kwargs[key] = yamlify_arg(val)
+                _kwargs.update(arg)
             else:
                 _args.append(arg)
         else:
@@ -170,15 +211,25 @@ if six.PY3:
         return _ArgSpec(args, varargs, varkw, defaults)
 
 
-def get_function_argspec(func):
+def get_function_argspec(func, is_class_method=None):
     '''
     A small wrapper around getargspec that also supports callable classes
+    :param is_class_method: Pass True if you are sure that the function being passed
+                            is a class method. The reason for this is that on Python 3
+                            ``inspect.ismethod`` only returns ``True`` for bound methods,
+                            while on Python 2, it returns ``True`` for bound and unbound
+                            methods. So, on Python 3, in case of a class method, you'd
+                            need the class to which the function belongs to be instantiated
+                            and this is not always wanted.
     '''
     if not callable(func):
         raise TypeError('{0} is not a callable'.format(func))
 
     if six.PY2:
-        if inspect.isfunction(func):
+        if is_class_method is True:
+            aspec = inspect.getargspec(func)
+            del aspec.args[0]  # self
+        elif inspect.isfunction(func):
             aspec = inspect.getargspec(func)
         elif inspect.ismethod(func):
             aspec = inspect.getargspec(func)
@@ -191,7 +242,10 @@ def get_function_argspec(func):
                 'Cannot inspect argument list for \'{0}\''.format(func)
             )
     else:
-        if inspect.isfunction(func):
+        if is_class_method is True:
+            aspec = _getargspec(func)
+            del aspec.args[0]  # self
+        elif inspect.isfunction(func):
             aspec = _getargspec(func)  # pylint: disable=redefined-variable-type
         elif inspect.ismethod(func):
             aspec = _getargspec(func)
@@ -204,3 +258,13 @@ def get_function_argspec(func):
                 'Cannot inspect argument list for \'{0}\''.format(func)
             )
     return aspec
+
+
+def shlex_split(s, **kwargs):
+    '''
+    Only split if variable is a string
+    '''
+    if isinstance(s, six.string_types):
+        return shlex.split(s, **kwargs)
+    else:
+        return s

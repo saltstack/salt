@@ -2,6 +2,8 @@
 '''
 Installation of Windows Updates using the Windows Update Agent
 
+.. versionadded:: 2017.7.0
+
 Salt can manage Windows updates via the "wua" state module. Updates can be
 installed and removed. Update management declarations are as follows:
 
@@ -54,6 +56,7 @@ import logging
 # Import Salt libs
 from salt.ext import six
 import salt.utils
+import salt.utils.platform
 import salt.utils.win_update
 
 log = logging.getLogger(__name__)
@@ -65,7 +68,7 @@ def __virtual__():
     '''
     Only valid on Windows machines
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'WUA: Only available on Window systems'
 
     if not salt.utils.win_update.HAS_PYWIN32:

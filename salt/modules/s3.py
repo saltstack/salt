@@ -15,6 +15,9 @@ Connection module for Amazon S3
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
+    (Note: this is literally the pillar key 's3.keyid' or the config option 's3.keyid',
+    not "s3:\\n  keyid: blah".)
+
     A service_url may also be specified in the configuration::
 
         s3.service_url: s3.amazonaws.com
@@ -117,7 +120,7 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
                                  https_enable=https_enable)
 
 
-def get(bucket=None, path=None, return_bin=False, action=None,
+def get(bucket='', path='', return_bin=False, action=None,
         local_file=None, key=None, keyid=None, service_url=None,
         verify_ssl=None, kms_keyid=None, location=None, role_arn=None,
         path_style=None, https_enable=None):
@@ -201,7 +204,7 @@ def get(bucket=None, path=None, return_bin=False, action=None,
                                  https_enable=https_enable)
 
 
-def head(bucket, path=None, key=None, keyid=None, service_url=None,
+def head(bucket, path='', key=None, keyid=None, service_url=None,
          verify_ssl=None, kms_keyid=None, location=None, role_arn=None,
          path_style=None, https_enable=None):
     '''

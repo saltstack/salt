@@ -152,7 +152,7 @@ Requisite overview
 | name       | state is only     | state is only | order      | comment            |
 |  of        | executed if       | executed if   |            |  or                |
 |            | target execution  | target has    | 1.target   |                    |
-|            |                   |               | 2.state    |                    |  
+|            |                   |               | 2.state    |                    |
 | requisite  | result is         | changes       | (default)  | description        |
 +============+===================+===============+============+====================+
 | require    | success           |               | default    | state will always  |
@@ -173,7 +173,7 @@ Requisite overview
 |            |                   |               |            | target execution   |
 |            |                   |               |            | result is success  |
 |            |                   |               |            | and target has     |
-|            |                   |               |            | changes            |  
+|            |                   |               |            | changes            |
 +------------+-------------------+---------------+------------+--------------------+
 | onfail     | failed            |               | default    | Only requisite     |
 |            |                   |               |            | where state exec.  |
@@ -183,7 +183,7 @@ Requisite overview
 
 In this table, the following short form of terms is used:
 
-* **state** (= dependent state): state containing requisite 
+* **state** (= dependent state): state containing requisite
 * **target** (= state target) : state referenced by requisite
 
 
@@ -514,6 +514,45 @@ The ``use`` statement does not inherit the requisites arguments of the
 targeted state. This means also a chain of ``use`` requisites would not
 inherit inherited options.
 
+runas
+~~~~~
+
+.. versionadded:: 2017.7.0
+
+The ``runas`` global option is used to set the user which will be used to run
+the command in the ``cmd.run`` module.
+
+.. code-block:: yaml
+
+    django:
+      pip.installed:
+        - name: django >= 1.6, <= 1.7
+        - runas: daniel
+        - require:
+          - pkg: python-pip
+
+In the above state, the pip command run by ``cmd.run`` will be run by the daniel user.
+
+runas_password
+~~~~~~~~~~~~~~
+
+.. versionadded:: 2017.7.2
+
+The ``runas_password`` global option is used to set the password used by the
+runas global option. This is required by ``cmd.run`` on Windows when ``runas``
+is specified. It will be set when ``runas_password`` is defined in the state.
+
+.. code-block:: yaml
+
+    run_script:
+      cmd.run:
+        - name: Powershell -NonInteractive -ExecutionPolicy Bypass -File C:\\Temp\\script.ps1
+        - runas: frank
+        - runas_password: supersecret
+
+In the above state, the Powershell script run by ``cmd.run`` will be run by the
+frank user with the password ``supersecret``.
+
 .. _requisites-require-in:
 .. _requisites-watch-in:
 .. _requisites-onchanges-in:
@@ -831,7 +870,7 @@ this one, include a ``mod_run_check_cmd`` in the states file for the state.
 Retrying States
 ===============
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 The retry option in a state allows it to be executed multiple times until a desired
 result is obtained or the maximum number of attempts have been made.
@@ -905,7 +944,7 @@ The ``started`` return value is the ``started`` from the first run.
 
 The ``duration`` return value is the total duration of all attempts plus the retry intervals.
 
-The ``comment`` return value will include the result and comment from all previous attempts. 
+The ``comment`` return value will include the result and comment from all previous attempts.
 
 For example:
 

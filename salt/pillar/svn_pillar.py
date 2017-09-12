@@ -193,4 +193,4 @@ def ext_pillar(minion_id,
     opts = deepcopy(__opts__)
     opts['pillar_roots'][branch] = [pillar_dir]
     pil = Pillar(opts, __grains__, minion_id, branch)
-    return pil.compile_pillar()
+    return pil.compile_pillar(ext=False)

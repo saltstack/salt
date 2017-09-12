@@ -4,7 +4,7 @@ Return salt data via slack
 
 ..  versionadded:: 2015.5.0
 
-The following fields can be set in the minion conf file::
+The following fields can be set in the minion conf file:
 
 .. code-block:: yaml
 
@@ -82,15 +82,16 @@ from __future__ import absolute_import
 import yaml
 import pprint
 import logging
-import urllib
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six.moves.http_client
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Libs
 import salt.returners
 import salt.utils.slack
+from salt.utils.yamldumper import SafeOrderedDumper
 
 log = logging.getLogger(__name__)
 
@@ -167,7 +168,7 @@ def _post_message(channel,
                                     api_key=api_key,
                                     method='POST',
                                     header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
-                                    data=urllib.urlencode(parameters))
+                                    data=_urlencode(parameters))
 
     log.debug('result {0}'.format(result))
     if result:
@@ -211,7 +212,7 @@ def returner(ret):
         returns = dict((key, value) for key, value in returns.items() if value['result'] is not True or value['changes'])
 
     if yaml_format is True:
-        returns = yaml.dump(returns)
+        returns = yaml.dump(returns, Dumper=SafeOrderedDumper)
     else:
         returns = pprint.pformat(returns)
 

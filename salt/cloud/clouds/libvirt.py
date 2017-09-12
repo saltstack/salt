@@ -62,6 +62,8 @@ import os
 
 from xml.etree import ElementTree
 
+# Import 3rd-party libs
+from salt.ext import six
 try:
     import libvirt  # pylint: disable=import-error
     from libvirt import libvirtError
@@ -69,6 +71,7 @@ try:
 except ImportError:
     HAS_LIBVIRT = False
 
+# Import salt libs
 import salt.config as config
 import salt.utils
 import salt.utils.cloud
@@ -166,7 +169,7 @@ def list_nodes(call=None):
     providers = __opts__.get('providers', {})
 
     ret = {}
-    providers_to_check = [_f for _f in [cfg.get('libvirt') for cfg in providers.itervalues()] if _f]
+    providers_to_check = [_f for _f in [cfg.get('libvirt') for cfg in six.itervalues(providers)] if _f]
     for provider in providers_to_check:
         conn = __get_conn(provider['url'])
         domains = conn.listAllDomains()
@@ -239,7 +242,7 @@ def get_domain_ips(domain, ip_source):
         log.info("Exception polling address {0}".format(error))
         return ips
 
-    for (name, val) in addresses.iteritems():
+    for (name, val) in six.iteritems(addresses):
         if val['addrs']:
             for addr in val['addrs']:
                 tp = to_ip_addr_type(addr['type'])
@@ -275,7 +278,9 @@ def create(vm_):
     if ip_source not in set(['ip-learning', 'qemu-agent']):
         raise SaltCloudSystemExit("'ip_source' must be one of qemu-agent or ip-learning. Got '{0}'".format(ip_source))
 
-    log.info("Cloning machine '{0}' with strategy '{1}'".format(vm_['name'], clone_strategy))
+    validate_xml = vm_.get('validate_xml') if vm_.get('validate_xml') is not None else True
+
+    log.info("Cloning machine '{0}' with strategy '{1}' validate_xml='{2}'".format(vm_['name'], clone_strategy, validate_xml))
 
     try:
         # Check for required profile parameters before sending any API calls.
@@ -293,11 +298,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(name),
-        {
-            'name': name,
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -339,7 +340,9 @@ def create(vm_):
                 'event',
                 'requesting instance',
                 'salt/cloud/{0}/requesting'.format(name),
-                {'kwargs': kwargs},
+                args={
+                    'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
+                },
                 sock_dir=__opts__['sock_dir'],
                 transport=__opts__['transport']
             )
@@ -348,7 +351,11 @@ def create(vm_):
 
             domain_xml = ElementTree.fromstring(xml)
             domain_xml.find('./name').text = name
-            domain_xml.find('./description').text = "Cloned from {0}".format(base)
+            if domain_xml.find('./description') is None:
+                description_elem = ElementTree.Element('description')
+                domain_xml.insert(0, description_elem)
+            description = domain_xml.find('./description')
+            description.text = "Cloned from {0}".format(base)
             domain_xml.remove(domain_xml.find('./uuid'))
 
             for iface_xml in domain_xml.findall('./devices/interface'):
@@ -368,7 +375,7 @@ def create(vm_):
                 if agent_xml.find("""./target[@type='virtio'][@name='org.qemu.guest_agent.0']""") is not None:
                     source_element = agent_xml.find("""./source[@mode='bind']""")
                     # see if there is a path element that needs rewriting
-                    if 'path' in source_element.attrib:
+                    if source_element and 'path' in source_element.attrib:
                         path = source_element.attrib['path']
                         new_path = path.replace('/domain-{0}/'.format(base), '/domain-{0}/'.format(name))
                         log.debug("Rewriting agent socket path to {0}".format(new_path))
@@ -404,10 +411,12 @@ def create(vm_):
                 else:
                     raise SaltCloudExecutionFailure("Disk type '{0}' not supported".format(disk_type))
 
-            log.debug("Clone XML '{0}'".format(domain_xml))
             clone_xml = ElementTree.tostring(domain_xml)
+            log.debug("Clone XML '{0}'".format(clone_xml))
 
-            clone_domain = conn.defineXMLFlags(clone_xml, libvirt.VIR_DOMAIN_DEFINE_VALIDATE)
+            validate_flags = libvirt.VIR_DOMAIN_DEFINE_VALIDATE if validate_xml else 0
+            clone_domain = conn.defineXMLFlags(clone_xml, validate_flags)
+
             cleanup.append({'what': 'domain', 'item': clone_domain})
             clone_domain.createWithFlags(libvirt.VIR_DOMAIN_START_FORCE_BOOT)
 
@@ -438,11 +447,7 @@ def create(vm_):
             'event',
             'created instance',
             'salt/cloud/{0}/created'.format(name),
-            {
-                'name': name,
-                'profile': vm_['profile'],
-                'provider': vm_['driver'],
-            },
+            args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
@@ -491,7 +496,7 @@ def destroy(name, call=None):
     found = []
 
     providers = __opts__.get('providers', {})
-    providers_to_check = [_f for _f in [cfg.get('libvirt') for cfg in providers.itervalues()] if _f]
+    providers_to_check = [_f for _f in [cfg.get('libvirt') for cfg in six.itervalues(providers)] if _f]
     for provider in providers_to_check:
         conn = __get_conn(provider['url'])
         log.info("looking at {0}".format(provider['url']))
@@ -605,6 +610,9 @@ def find_pool_and_volume(conn, path):
 
 
 def generate_new_name(orig_name):
+    if '.' not in orig_name:
+        return '{0}-{1}'.format(orig_name, uuid.uuid1())
+
     name, ext = orig_name.rsplit('.', 1)
     return '{0}-{1}.{2}'.format(name, uuid.uuid1(), ext)
 
@@ -619,5 +627,5 @@ def get_domain_volumes(conn, domain):
                 pool, volume = find_pool_and_volume(conn, source)
                 volumes.append(volume)
             except libvirtError:
-                log.warn("Disk not found '{0}'".format(source))
+                log.warning("Disk not found '{0}'".format(source))
     return volumes
