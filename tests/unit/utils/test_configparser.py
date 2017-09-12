@@ -122,12 +122,14 @@ class TestGitConfigParser(TestCase):
             self.conf.get(u'alias', u'modified'),
             u"""! git status --porcelain | awk 'match($1, "M"){print $2}'"""
         )
+        # future lint: disable=non-unicode-string
         self.assertEqual(
             self.conf.get(u'alias', u'hist'),
             salt.utils.stringutils.to_unicode(
                 r"""log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short"""
             )
         )
+        # future lint: enable=non-unicode-string
 
     def test_read_space_indent(self):
         '''
@@ -180,7 +182,7 @@ class TestGitConfigParser(TestCase):
             [orig_refspec, new_refspec]
         )
         # Write the config object to a file
-        with salt.utils.files.fopen(self.new_config, 'w') as fp_:
+        with salt.utils.files.fopen(self.new_config, u'w') as fp_:
             self.conf.write(fp_)
         # Confirm that the new file was written correctly
         expected = self.fix_indent(ORIG_CONFIG)
@@ -257,10 +259,10 @@ class TestGitConfigParser(TestCase):
         '''
         Test writing using non-binary filehandle
         '''
-        self._test_write(mode='w')
+        self._test_write(mode=u'w')
 
     def test_write_binary(self):
         '''
         Test writing using binary filehandle
         '''
-        self._test_write(mode='wb')
+        self._test_write(mode=u'wb')
