@@ -61,9 +61,9 @@ class AnsibleModuleResolver(object):
                         not p_el.endswith('.py') or
                         p_el in ansible.constants.IGNORE_FILES):
                     continue
-                m_name = p_el.split('.')[0]
-                als_name = m_name[1:] if m_name.startswith('_') else m_name
-                paths[als_name] = p_el_path.replace(root, '')
+                p_el_path = p_el_path.replace(root, '').split('.')[0]
+                als_name = p_el_path.replace('.', '').replace('/', '', 1).replace('/', '.')
+                paths[als_name] = p_el_path
 
         return paths
 
