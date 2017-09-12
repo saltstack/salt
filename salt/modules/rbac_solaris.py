@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def __virtual__():
     '''
     Provides rbac if we are running on a solaris like system
     '''
-    if __grains__['kernel'] == 'SunOS' and salt.utils.which('profiles'):
+    if __grains__['kernel'] == 'SunOS' and salt.utils.path.which('profiles'):
         return __virtualname__
     return (
         False,

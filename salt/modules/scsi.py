@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import os.path
 import logging
 import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ def ls_(get_size=True):
         .. versionadded:: 2015.5.10
     '''
 
-    if not salt.utils.which('lsscsi'):
+    if not salt.utils.path.which('lsscsi'):
         __context__['retcode'] = 1
         return 'scsi.ls not available - lsscsi command not found'
 

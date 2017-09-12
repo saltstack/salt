@@ -7,22 +7,25 @@ import contextlib
 import errno
 import logging
 import os
+import re
 import shutil
 import stat
 import subprocess
 import tempfile
 import time
+import urllib
 
 # Import Salt libs
-import salt.utils
+import salt.utils  # Can be removed when backup_minion is moved
+import salt.utils.path
+import salt.utils.platform
 import salt.modules.selinux
-import salt.ext.six as six
 from salt.exceptions import CommandExecutionError, FileLockError, MinionError
-from salt.utils.decorators import jinja_filter
+from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd-party libs
-from stat import S_IMODE
-
+from salt.ext import six
+from salt.ext.six.moves import range
 try:
     import fcntl
     HAS_FCNTL = True
@@ -78,7 +81,7 @@ def recursive_copy(source, dest):
     (identical to cp -r on a unix machine)
     '''
     for root, _, files in os.walk(source):
-        path_from_source = root.replace(source, '').lstrip('/')
+        path_from_source = root.replace(source, '').lstrip(os.sep)
         target_directory = os.path.join(dest, path_from_source)
         if not os.path.exists(target_directory):
             os.makedirs(target_directory)
@@ -117,7 +120,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     # Get current file stats to they can be replicated after the new file is
     # moved to the destination path.
     fstat = None
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         try:
             fstat = os.stat(dest)
         except OSError:
@@ -127,7 +130,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         os.chown(dest, fstat.st_uid, fstat.st_gid)
         os.chmod(dest, fstat.st_mode)
     # If SELINUX is available run a restorecon on the file
-    rcon = salt.utils.which('restorecon')
+    rcon = salt.utils.path.which('restorecon')
     if rcon:
         policy = False
         try:
@@ -270,7 +273,7 @@ def set_umask(mask):
     '''
     Temporarily set the umask and restore once the contextmanager exits
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         # Don't attempt on Windows
         yield
     else:
@@ -296,7 +299,7 @@ def fopen(*args, **kwargs):
     '''
     binary = None
     # ensure 'binary' mode is always used on Windows in Python 2
-    if ((six.PY2 and salt.utils.is_windows() and 'binary' not in kwargs) or
+    if ((six.PY2 and salt.utils.platform.is_windows() and 'binary' not in kwargs) or
             kwargs.pop('binary', False)):
         if len(args) > 1:
             args = list(args)
@@ -393,7 +396,7 @@ def fpopen(*args, **kwargs):
                 os.chown(path, uid, gid)
 
         if mode is not None:
-            mode_part = S_IMODE(d_stat.st_mode)
+            mode_part = stat.S_IMODE(d_stat.st_mode)
             if mode_part != mode:
                 os.chmod(path, (d_stat.st_mode ^ mode_part) | mode)
 
@@ -426,7 +429,7 @@ def rm_rf(path):
 
         Usage : `shutil.rmtree(path, onerror=onerror)`
         '''
-        if salt.utils.is_windows() and not os.access(path, os.W_OK):
+        if salt.utils.platform.is_windows() and not os.access(path, os.W_OK):
             # Is the error an access error ?
             os.chmod(path, stat.S_IWUSR)
             func(path)
@@ -457,6 +460,81 @@ def is_fcntl_available(check_sunos=False):
     If ``check_sunos`` is passed as ``True`` an additional check to see if host is
     SunOS is also made. For additional information see: http://goo.gl/159FF8
     '''
-    if check_sunos and salt.utils.is_sunos():
+    if check_sunos and salt.utils.platform.is_sunos():
         return False
     return HAS_FCNTL
+
+
+def safe_filename_leaf(file_basename):
+    '''
+    Input the basename of a file, without the directory tree, and returns a safe name to use
+    i.e. only the required characters are converted by urllib.quote
+    If the input is a PY2 String, output a PY2 String. If input is Unicode output Unicode.
+    For consistency all platforms are treated the same. Hard coded to utf8 as its ascii compatible
+    windows is \\ / : * ? " < > | posix is /
+
+    .. versionadded:: 2017.7.2
+    '''
+    def _replace(re_obj):
+        return urllib.quote(re_obj.group(0), safe=u'')
+    if not isinstance(file_basename, six.text_type):
+        # the following string is not prefixed with u
+        return re.sub('[\\\\:/*?"<>|]',
+                      _replace,
+                      six.text_type(file_basename, 'utf8').encode('ascii', 'backslashreplace'))
+    # the following string is prefixed with u
+    return re.sub(u'[\\\\:/*?"<>|]', _replace, file_basename, flags=re.UNICODE)
+
+
+def safe_filepath(file_path_name):
+    '''
+    Input the full path and filename, splits on directory separator and calls safe_filename_leaf for
+    each part of the path.
+
+    .. versionadded:: 2017.7.2
+    '''
+    (drive, path) = os.path.splitdrive(file_path_name)
+    path = os.sep.join([safe_filename_leaf(file_section) for file_section in file_path_name.rsplit(os.sep)])
+    if drive:
+        return os.sep.join([drive, path])
+    else:
+        return path
+
+
+@jinja_filter('is_text_file')
+def is_text_file(fp_, blocksize=512):
+    '''
+    Uses heuristics to guess whether the given file is text or binary,
+    by reading a single block of bytes from the file.
+    If more than 30% of the chars in the block are non-text, or there
+    are NUL ('\x00') bytes in the block, assume this is a binary file.
+    '''
+    int2byte = (lambda x: bytes((x,))) if six.PY3 else chr
+    text_characters = (
+        b''.join(int2byte(i) for i in range(32, 127)) +
+        b'\n\r\t\f\b')
+    try:
+        block = fp_.read(blocksize)
+    except AttributeError:
+        # This wasn't an open filehandle, so treat it as a file path and try to
+        # open the file
+        try:
+            with fopen(fp_, 'rb') as fp2_:
+                block = fp2_.read(blocksize)
+        except IOError:
+            # Unable to open file, bail out and return false
+            return False
+    if b'\x00' in block:
+        # Files with null bytes are binary
+        return False
+    elif not block:
+        # An empty file is considered a valid text file
+        return True
+    try:
+        block.decode('utf-8')
+        return True
+    except UnicodeDecodeError:
+        pass
+
+    nontext = block.translate(None, text_characters)
+    return float(len(nontext)) / len(block) <= 0.30

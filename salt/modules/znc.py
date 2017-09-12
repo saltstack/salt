@@ -16,7 +16,7 @@ import random
 import signal
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ def __virtual__():
     '''
     Only load the module if znc is installed
     '''
-    if salt.utils.which('znc'):
+    if salt.utils.path.which('znc'):
         return 'znc'
     return (False, "Module znc: znc binary not found")
 

@@ -19,9 +19,13 @@ from tests.support.unit import skipIf
 import tests.support.paths as paths
 
 # Import salt libs
-import salt.ext.six as six
-import salt.utils
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +93,7 @@ class CPModuleTest(ModuleCase):
         with salt.utils.files.fopen(src, 'r') as fp_:
             data = fp_.read()
             if six.PY3:
-                data = salt.utils.to_bytes(data)
+                data = salt.utils.stringutils.to_bytes(data)
             hash_str = hashlib.md5(data).hexdigest()
 
         self.run_function(
@@ -105,7 +109,7 @@ class CPModuleTest(ModuleCase):
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
             if six.PY3:
-                data = salt.utils.to_bytes(data)
+                data = salt.utils.stringutils.to_bytes(data)
             self.assertEqual(hash_str, hashlib.md5(data).hexdigest())
 
     def test_get_file_makedirs(self):
@@ -457,7 +461,7 @@ class CPModuleTest(ModuleCase):
         with salt.utils.files.fopen(ret, 'r') as cp_:
             self.assertEqual(cp_.read(), 'foo')
 
-    @skipIf(not salt.utils.which('nginx'), 'nginx not installed')
+    @skipIf(not salt.utils.path.which('nginx'), 'nginx not installed')
     @skip_if_not_root
     def test_cache_remote_file(self):
         '''
@@ -556,7 +560,7 @@ class CPModuleTest(ModuleCase):
         ret = self.run_function('cp.list_minion')
         found = False
         search = 'grail/scene33'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             search = r'grail\scene33'
         for path in ret:
             if search in path:
@@ -603,7 +607,7 @@ class CPModuleTest(ModuleCase):
         with salt.utils.files.fopen(path, 'r') as fn_:
             data = fn_.read()
             if six.PY3:
-                data = salt.utils.to_bytes(data)
+                data = salt.utils.stringutils.to_bytes(data)
             self.assertEqual(
                 sha256_hash['hsum'], hashlib.sha256(data).hexdigest())
 

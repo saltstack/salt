@@ -25,19 +25,20 @@ import re
 import random
 
 # Import salt libs
-import salt
-import salt.utils.odict
 import salt.utils
+import salt.utils.args
+import salt.utils.cloud
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.network
+import salt.utils.odict
+import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-import salt.utils.cloud
 import salt.config
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
@@ -62,7 +63,7 @@ _marker = object()
 
 
 def __virtual__():
-    if salt.utils.which('lxc-start'):
+    if salt.utils.path.which('lxc-start'):
         return __virtualname__
     # To speed up the whole thing, we decided to not use the
     # subshell way and assume things are in place for lxc
@@ -71,7 +72,7 @@ def __virtual__():
     # lxc-version presence is not sufficient, in lxc1.0 alpha
     # (precise backports), we have it and it is sufficient
     # for the module to execute.
-    # elif salt.utils.which('lxc-version'):
+    # elif salt.utils.path.which('lxc-version'):
     #     passed = False
     #     try:
     #         passed = subprocess.check_output(
@@ -570,7 +571,7 @@ def _get_profile(key, name, **kwargs):
         raise CommandExecutionError('lxc.{0} must be a dictionary'.format(key))
 
     # Overlay the kwargs to override matched profile data
-    overrides = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    overrides = salt.utils.args.clean_kwargs(**copy.deepcopy(kwargs))
     profile_match = salt.utils.dictupdate.update(
         copy.deepcopy(profile_match),
         overrides
@@ -3099,7 +3100,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
     #   operation.
     #  - We also teach resolvconf to use the aforementioned dns.
     #  - We finally also set /etc/resolv.conf in all cases
-    rstr = __salt__['test.rand_str']()
+    rstr = __salt__['test.random_hash']()
     # no tmp here, apparmor won't let us execute !
     script = '/sbin/{0}_dns.sh'.format(rstr)
     DNS_SCRIPT = "\n".join([
@@ -3160,7 +3161,7 @@ def running_systemd(name, cache=True, path=None):
     k = 'lxc.systemd.test.{0}{1}'.format(name, path)
     ret = __context__.get(k, None)
     if ret is None or not cache:
-        rstr = __salt__['test.rand_str']()
+        rstr = __salt__['test.random_hash']()
         # no tmp here, apparmor won't let us execute !
         script = '/sbin/{0}_testsystemd.sh'.format(rstr)
         # ubuntu already had since trusty some bits of systemd but was
@@ -3497,7 +3498,7 @@ def bootstrap(name,
             pub_key=pub_key, priv_key=priv_key)
         if needs_install or force_install or unconditional_install:
             if install:
-                rstr = __salt__['test.rand_str']()
+                rstr = __salt__['test.random_hash']()
                 configdir = '/var/tmp/.c_{0}'.format(rstr)
 
                 cmd = 'install -m 0700 -d {0}'.format(configdir)

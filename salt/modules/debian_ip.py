@@ -19,13 +19,13 @@ import time
 # Import third party libs
 import jinja2
 import jinja2.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 import salt.utils.odict
+import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
 
@@ -221,7 +221,7 @@ def _read_file(path):
     '''
     try:
         with salt.utils.files.flopen(path, 'rb') as contents:
-            return [salt.utils.to_str(line) for line in contents.readlines()]
+            return [salt.utils.stringutils.to_str(line) for line in contents.readlines()]
     except (OSError, IOError):
         return ''
 

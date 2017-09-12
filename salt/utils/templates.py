@@ -5,7 +5,7 @@ Template render systems
 
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import codecs
 import os
 import logging
@@ -13,10 +13,10 @@ import tempfile
 import traceback
 import sys
 
-# Import third party libs
+# Import 3rd-party libs
 import jinja2
 import jinja2.ext
-import salt.ext.six as six
+from salt.ext import six
 
 if sys.version_info[:2] >= (3, 5):
     import importlib.machinery  # pylint: disable=no-name-in-module,import-error
@@ -26,10 +26,11 @@ else:
     import imp
     USE_IMPORTLIB = False
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
 import salt.utils.http
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.yamlencoding
 import salt.utils.locales
 import salt.utils.hashutils
@@ -39,7 +40,7 @@ from salt.exceptions import (
 import salt.utils.jinja
 import salt.utils.network
 from salt.utils.odict import OrderedDict
-from salt.utils.decorators import JinjaFilter, JinjaTest, JinjaGlobal
+from salt.utils.decorators.jinja import JinjaFilter, JinjaTest, JinjaGlobal
 from salt import __path__ as saltpath
 
 log = logging.getLogger(__name__)
@@ -168,7 +169,7 @@ def wrap_tmpl_func(render_str):
             output = render_str(tmplstr, context, tmplpath)
             if six.PY2:
                 output = output.encode(SLS_ENCODING)
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
 
@@ -357,9 +358,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
-        raise SaltRenderError('Jinja syntax error: {0}{1}'.format(exc, out),
-                              line,
-                              tmplstr)
+        raise SaltRenderError(
+            'Jinja syntax error: {0}{1}'.format(exc, out),
+            line,
+            tmplstr)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         out = _get_jinja_error(trace, context=decoded_context)[1]

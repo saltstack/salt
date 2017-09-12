@@ -135,21 +135,30 @@ A State Module must return a dict containing the following keys/values:
   ``test=True``, and changes would have been made if the state was not run in
   test mode.
 
-  +--------------------+-----------+-----------+
-  |                    | live mode | test mode |
-  +====================+===========+===========+
-  | no changes         | ``True``  | ``True``  |
-  +--------------------+-----------+-----------+
-  | successful changes | ``True``  | ``None``  |
-  +--------------------+-----------+-----------+
-  | failed changes     | ``False`` | ``None``  |
-  +--------------------+-----------+-----------+
+  +--------------------+-----------+------------------------+
+  |                    | live mode | test mode              |
+  +====================+===========+========================+
+  | no changes         | ``True``  | ``True``               |
+  +--------------------+-----------+------------------------+
+  | successful changes | ``True``  | ``None``               |
+  +--------------------+-----------+------------------------+
+  | failed changes     | ``False`` | ``False`` or ``None``  |
+  +--------------------+-----------+------------------------+
 
   .. note::
 
-      Test mode does not predict if the changes will be successful or not.
+      Test mode does not predict if the changes will be successful or not,
+      and hence the result for pending changes is usually ``None``.
 
-- **comment:** A string containing a summary of the result.
+      However, if a state is going to fail and this can be determined
+      in test mode without applying the change, ``False`` can be returned.
+
+- **comment:** A list of strings or a single string summarizing the result.
+  Note that support for lists of strings is available as of Salt Oxygen.
+  Lists of strings will be joined with newlines to form the final comment;
+  this is useful to allow multiple comments from subparts of a state.
+  Prefer to keep line lengths short (use multiple lines as needed),
+  and end with punctuation (e.g. a period) to delimit multiple comments.
 
 The return data can also, include the **pchanges** key, this stands for
 `predictive changes`. The **pchanges** key informs the State system what

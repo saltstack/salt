@@ -113,7 +113,7 @@ import smtplib
 from email.utils import formatdate
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.jid
 import salt.returners
 import salt.loader
@@ -264,7 +264,7 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
 
 
 def event_return(events):

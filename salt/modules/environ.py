@@ -3,17 +3,16 @@
 Support for getting and setting the environment variables
 of the current salt process.
 '''
-from __future__ import absolute_import
-
-# Import salt libs
-import salt.utils as utils
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 
+# Import Salt libs
+import salt.utils.platform
+
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +60,7 @@ def setval(key, val, false_unsets=False, permanent=False):
         salt '*' environ.setval baz bar permanent=True
         salt '*' environ.setval baz bar permanent=HKLM
     '''
-    is_windows = utils.is_windows()
+    is_windows = salt.utils.platform.is_windows()
     if is_windows:
         permanent_hive = 'HKCU'
         permanent_key = 'Environment'

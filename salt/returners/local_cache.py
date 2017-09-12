@@ -24,7 +24,7 @@ import salt.exceptions
 
 # Import 3rd-party libs
 import msgpack
-import salt.ext.six as six
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
         log.error(err)
         raise salt.exceptions.SaltCacheError(err)
     if passed_jid is None:  # this can be a None or an empty string.
-        jid = salt.utils.jid.gen_jid()
+        jid = salt.utils.jid.gen_jid(__opts__)
     else:
         jid = passed_jid
 
@@ -225,10 +225,11 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
         if minions is None:
             ckminions = salt.utils.minions.CkMinions(__opts__)
             # Retrieve the minions list
-            minions = ckminions.check_minions(
+            _res = ckminions.check_minions(
                     clear_load['tgt'],
                     clear_load.get('tgt_type', 'glob')
                     )
+            minions = _res['minions']
         # save the minions to a cache so we can see in the UI
         save_minions(jid, minions)
 
