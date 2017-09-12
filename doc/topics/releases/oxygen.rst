@@ -51,6 +51,12 @@ New NaCl Renderer
 
 A new renderer has been added for encrypted data.
 
+New salt-ssh roster
+-------------------
+
+A new roster has been added that allows users to pull in a list of hosts
+for salt-ssh targeting from a ~/.ssh configuration.
+
 New GitFS Features
 ------------------
 
