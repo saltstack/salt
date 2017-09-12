@@ -17,10 +17,11 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
-import salt.utils.path
-import salt.utils.yast
-import salt.utils.preseed
 import salt.utils.kickstart
+import salt.utils.path
+import salt.utils.preseed
+import salt.utils.validate.path
+import salt.utils.yast
 import salt.syspaths
 from salt.exceptions import SaltInvocationError
 
@@ -399,8 +400,13 @@ def _bootstrap_deb(
     if repo_url is None:
         repo_url = 'http://ftp.debian.org/debian/'
 
-    if not salt.utils.which('debootstrap'):
+    if not salt.utils.path.which('debootstrap'):
         log.error('Required tool debootstrap is not installed.')
+        return False
+
+    if static_qemu and not salt.utils.validate.path.is_executable(static_qemu):
+        log.error('Required tool qemu not '
+                  'present/readable at: {0}'.format(static_qemu))
         return False
 
     if isinstance(pkgs, (list, tuple)):
@@ -427,11 +433,13 @@ def _bootstrap_deb(
 
     __salt__['cmd.run'](deb_args, python_shell=False)
 
-    __salt__['cmd.run'](
-        'cp {qemu} {root}/usr/bin/'.format(
-            qemu=_cmd_quote(static_qemu), root=_cmd_quote(root)
+    if static_qemu:
+        __salt__['cmd.run'](
+            'cp {qemu} {root}/usr/bin/'.format(
+                qemu=_cmd_quote(static_qemu), root=_cmd_quote(root)
+            )
         )
-    )
+
     env = {'DEBIAN_FRONTEND': 'noninteractive',
            'DEBCONF_NONINTERACTIVE_SEEN': 'true',
            'LC_ALL': 'C',
