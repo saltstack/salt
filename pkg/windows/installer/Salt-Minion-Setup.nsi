@@ -204,7 +204,7 @@ Section -Prerequisites
             ; The Correct version of VCRedist is copied over by "build_pkg.bat"
             SetOutPath "$INSTDIR\"
             File "..\prereqs\vcredist.exe"
-            ExecWait "$INSTDIR\vcredist.exe /qb!"
+            ExecWait "$INSTDIR\vcredist.exe /qb! /norestart"
             IfErrors 0 endVcRedist
                 MessageBox MB_OK \
                     "VC Redist 2008 SP1 MFC failed to install. Try installing the package manually." \
