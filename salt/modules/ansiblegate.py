@@ -170,7 +170,7 @@ def help(module=None, *args):
         raise CommandExecutionError('Please tell me what module you want to have a help on. '
                                     'Or call ansible.list to know what is available.')
     try:
-        module = _resolver.load_module(module.split('.')[-1])
+        module = _resolver.load_module(module)
     except ImportError as err:
         raise CommandExecutionError('Module "{0}" is currently not functional on your system.'.format(module))
 
