@@ -16,7 +16,8 @@ import copy as pycopy
 # Import Salt libs
 import salt.exceptions
 import salt.minion
-import salt.utils
+import salt.utils  # Can be removed once daemonize, get_specific_user, format_call are moved
+import salt.utils.args
 import salt.utils.doc
 import salt.utils.error
 import salt.utils.event
@@ -25,6 +26,7 @@ import salt.utils.job
 import salt.utils.lazy
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.state
 import salt.utils.versions
 import salt.transport
 import salt.log.setup
@@ -297,7 +299,7 @@ class SyncClientMixin(object):
         # this is not to clutter the output with the module loading
         # if we have a high debug level.
         self.mminion  # pylint: disable=W0104
-        jid = low.get(u'__jid__', salt.utils.jid.gen_jid())
+        jid = low.get(u'__jid__', salt.utils.jid.gen_jid(self.opts))
         tag = low.get(u'__tag__', salt.utils.event.tagify(jid, prefix=self.tag_prefix))
 
         data = {u'fun': u'{0}.{1}'.format(self.client, fun),
@@ -396,7 +398,7 @@ class SyncClientMixin(object):
                 data[u'success'] = True
                 if isinstance(data[u'return'], dict) and u'data' in data[u'return']:
                     # some functions can return boolean values
-                    data[u'success'] = salt.utils.check_state_result(data[u'return'][u'data'])
+                    data[u'success'] = salt.utils.state.check_result(data[u'return'][u'data'])
         except (Exception, SystemExit) as ex:
             if isinstance(ex, salt.exceptions.NotImplemented):
                 data[u'return'] = str(ex)
@@ -510,7 +512,7 @@ class AsyncClientMixin(object):
 
     def _gen_async_pub(self, jid=None):
         if jid is None:
-            jid = salt.utils.jid.gen_jid()
+            jid = salt.utils.jid.gen_jid(self.opts)
         tag = salt.utils.event.tagify(jid, prefix=self.tag_prefix)
         return {u'tag': tag, u'jid': jid}
 

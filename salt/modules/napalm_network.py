@@ -1282,6 +1282,7 @@ def load_template(template_name,
                   template_user='root',
                   template_group='root',
                   template_mode='755',
+                  template_attrs='--------------e----',
                   saltenv=None,
                   template_engine='jinja',
                   skip_verify=False,
@@ -1368,10 +1369,15 @@ def load_template(template_name,
 
         .. versionadded:: 2016.11.2
 
-    template_user: 755
+    template_mode: 755
         Permissions of file.
 
         .. versionadded:: 2016.11.2
+
+    template_attrs: "--------------e----"
+        attributes of file. (see `man lsattr`)
+
+        .. versionadded:: oxygen
 
     saltenv: base
         Specifies the template environment.
@@ -1586,6 +1592,7 @@ def load_template(template_name,
                                                     user=template_user,
                                                     group=template_group,
                                                     mode=template_mode,
+                                                    attrs=template_attrs,
                                                     template=template_engine,
                                                     context=template_vars,
                                                     defaults=defaults,

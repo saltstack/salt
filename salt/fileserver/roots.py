@@ -40,12 +40,7 @@ def find_file(path, saltenv='base', **kwargs):
     Search the environment for the relative path.
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     path = os.path.normpath(path)
@@ -117,12 +112,7 @@ def serve_file(load, fnd):
     Return a chunk from a file based on the data received
     '''
     if 'env' in load:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = {'data': '',
@@ -218,12 +208,7 @@ def file_hash(load, fnd):
     Return a file hash, the hash type is set in the master config file
     '''
     if 'env' in load:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if 'path' not in load or 'saltenv' not in load:
@@ -298,12 +283,7 @@ def _file_lists(load, form):
     Return a dict containing the file lists for files, dirs, emtydirs and symlinks
     '''
     if 'env' in load:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if load['saltenv'] not in __opts__['file_roots']:
@@ -444,12 +424,7 @@ def symlink_list(load):
     Return a dict of all symlinks based on a given path on the Master
     '''
     if 'env' in load:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = {}

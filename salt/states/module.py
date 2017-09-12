@@ -348,7 +348,7 @@ def _call_function(name, returner=None, **kwargs):
         returners = salt.loader.returners(__opts__, __salt__)
         if returner in returners:
             returners[returner]({'id': __opts__['id'], 'ret': mret,
-                                 'fun': name, 'jid': salt.utils.jid.gen_jid()})
+                                 'fun': name, 'jid': salt.utils.jid.gen_jid(__opts__)})
 
     return mret
 
@@ -495,7 +495,7 @@ def _run(name, **kwargs):
                 'id': __opts__['id'],
                 'ret': mret,
                 'fun': name,
-                'jid': salt.utils.jid.gen_jid()}
+                'jid': salt.utils.jid.gen_jid(__opts__)}
         returners = salt.loader.returners(__opts__, __salt__)
         if kwargs['returner'] in returners:
             returners[kwargs['returner']](ret_ret)

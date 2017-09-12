@@ -53,7 +53,7 @@ _DFLT_LOG_DATEFMT = '%H:%M:%S'
 _DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
 _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
-    '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
+    '%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d] %(message)s'
 )
 _DFLT_REFSPECS = ['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']
 
@@ -111,9 +111,10 @@ VALID_OPTS = {
     'master_port': (six.string_types, int),
 
     # The behaviour of the minion when connecting to a master. Can specify 'failover',
-    # 'disable' or 'func'. If 'func' is specified, the 'master' option should be set to an
-    # exec module function to run to determine the master hostname. If 'disable' is specified
-    # the minion will run, but will not try to connect to a master.
+    # 'disable', 'distributed', or 'func'. If 'func' is specified, the 'master' option should be
+    # set to an exec module function to run to determine the master hostname. If 'disable' is
+    # specified the minion will run, but will not try to connect to a master. If 'distributed'
+    # is specified the minion will try to deterministically pick a master based on its' id.
     'master_type': str,
 
     # Specify the format in which the master address will be specified. Can
@@ -185,6 +186,16 @@ VALID_OPTS = {
 
     # A unique identifier for this daemon
     'id': str,
+
+    # Use a module function to determine the unique identifier. If this is
+    # set and 'id' is not set, it will allow invocation of a module function
+    # to determine the value of 'id'. For simple invocations without function
+    # arguments, this may be a string that is the function name. For
+    # invocations with function arguments, this may be a dictionary with the
+    # key being the function name, and the value being an embedded dictionary
+    # where each key is a function argument name and each value is the
+    # corresponding argument value.
+    'id_function': (dict, str),
 
     # The directory to store all cache files.
     'cachedir': str,
@@ -416,6 +427,12 @@ VALID_OPTS = {
 
     # Tell the client to display the jid when a job is published
     'show_jid': bool,
+
+    # Ensure that a generated jid is always unique. If this is set, the jid
+    # format is different due to an underscore and process id being appended
+    # to the jid. WARNING: A change to the jid format may break external
+    # applications that depend on the original format.
+    'unique_jid': bool,
 
     # Tells the highstate outputter to show successful states. False will omit successes.
     'state_verbose': bool,
@@ -1079,6 +1096,11 @@ VALID_OPTS = {
     # (in other words, require that minions have 'minion_sign_messages'
     # turned on)
     'require_minion_sign_messages': bool,
+
+    # The list of config entries to be passed to external pillar function as
+    # part of the extra_minion_data param
+    # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
+    'pass_to_ext_pillars': (six.string_types, list),
 }
 
 # default configurations
@@ -1102,6 +1124,7 @@ DEFAULT_MINION_OPTS = {
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': '',
+    'id_function': {},
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
     'append_minionid_config_dirs': [],
     'cache_jobs': False,
@@ -1197,6 +1220,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_ref_types': ['branch', 'tag', 'sha'],
     'gitfs_refspecs': _DFLT_REFSPECS,
     'gitfs_disable_saltenv_mapping': False,
+    'unique_jid': False,
     'hash_type': 'sha256',
     'disable_modules': [],
     'disable_returners': [],
@@ -1441,6 +1465,7 @@ DEFAULT_MASTER_OPTS = {
     'hgfs_saltenv_blacklist': [],
     'show_timeout': True,
     'show_jid': False,
+    'unique_jid': False,
     'svnfs_remotes': [],
     'svnfs_mountpoint': '',
     'svnfs_root': '',
@@ -3335,6 +3360,57 @@ def _cache_id(minion_id, cache_file):
         log.error('Could not cache minion ID: {0}'.format(exc))
 
 
+def call_id_function(opts):
+    '''
+    Evaluate the function that determines the ID if the 'id_function'
+    option is set and return the result
+    '''
+    if opts.get('id'):
+        return opts['id']
+
+    # Import 'salt.loader' here to avoid a circular dependency
+    import salt.loader as loader
+
+    if isinstance(opts['id_function'], str):
+        mod_fun = opts['id_function']
+        fun_kwargs = {}
+    elif isinstance(opts['id_function'], dict):
+        mod_fun, fun_kwargs = six.next(six.iteritems(opts['id_function']))
+        if fun_kwargs is None:
+            fun_kwargs = {}
+    else:
+        log.error('\'id_function\' option is neither a string nor a dictionary')
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
+    # split module and function and try loading the module
+    mod, fun = mod_fun.split('.')
+    if not opts.get('grains'):
+        # Get grains for use by the module
+        opts['grains'] = loader.grains(opts)
+
+    try:
+        id_mod = loader.raw_mod(opts, mod, fun)
+        if not id_mod:
+            raise KeyError
+        # we take whatever the module returns as the minion ID
+        newid = id_mod[mod_fun](**fun_kwargs)
+        if not isinstance(newid, str) or not newid:
+            log.error('Function {0} returned value "{1}" of type {2} instead of string'.format(
+                mod_fun, newid, type(newid))
+            )
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+        log.info('Evaluated minion ID from module: {0}'.format(mod_fun))
+        return newid
+    except TypeError:
+        log.error('Function arguments {0} are incorrect for function {1}'.format(
+            fun_kwargs, mod_fun)
+        )
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+    except KeyError:
+        log.error('Failed to load module {0}'.format(mod_fun))
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
+
 def get_id(opts, cache_minion_id=False):
     '''
     Guess the id of the minion.
@@ -3376,13 +3452,21 @@ def get_id(opts, cache_minion_id=False):
         log.debug('Guessing ID. The id can be explicitly set in {0}'
                   .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
-    newid = salt.utils.network.generate_minion_id()
+    if opts.get('id_function'):
+        newid = call_id_function(opts)
+    else:
+        newid = salt.utils.network.generate_minion_id()
 
     if opts.get('minion_id_lowercase'):
         newid = newid.lower()
         log.debug('Changed minion id {0} to lowercase.'.format(newid))
     if '__role' in opts and opts.get('__role') == 'minion':
-        log.debug('Found minion id from generate_minion_id(): {0}'.format(newid))
+        if opts.get('id_function'):
+            log.debug('Found minion id from external function {0}: {1}'.format(
+                opts['id_function'], newid))
+        else:
+            log.debug('Found minion id from generate_minion_id(): {0}'.format(
+                newid))
     if cache_minion_id and opts.get('minion_id_caching', True):
         _cache_id(newid, id_cache)
     is_ipv4 = salt.utils.network.is_ipv4(newid)
