@@ -29,7 +29,7 @@ import time
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 from salt.ext.six.moves import range
 
 __virtualname__ = 'blockdev'
@@ -150,7 +150,7 @@ def formatted(name, fs_type='ext4', force=False, **kwargs):
     if current_fs == fs_type:
         ret['result'] = True
         return ret
-    elif not salt.utils.which('mkfs.{0}'.format(fs_type)):
+    elif not salt.utils.path.which('mkfs.{0}'.format(fs_type)):
         ret['comment'] = 'Invalid fs_type: {0}'.format(fs_type)
         ret['result'] = False
         return ret
@@ -160,11 +160,11 @@ def formatted(name, fs_type='ext4', force=False, **kwargs):
         return ret
 
     __salt__['disk.format_'](name, fs_type, force=force, **kwargs)
-    current_fs = __salt__['disk.fstype'](name)
 
-    # Repeat lsblk check up to 10 times with 3s sleeping between each
-    # to avoid lsblk failing although mkfs has succeeded
-    # see https://github.com/saltstack/salt/issues/25775
+    # Repeat fstype check up to 10 times with 3s sleeping between each
+    # to avoid detection failing although mkfs has succeeded
+    # see https://github.com/saltstack/salt/issues/25775i
+    # This retry maybe superfluous - switching to blkid
     for i in range(10):
 
         log.info('Check blk fstype attempt %s of 10', str(i+1))
@@ -193,5 +193,5 @@ def _checkblk(name):
     Check if the blk exists and return its fstype if ok
     '''
 
-    blk = __salt__['cmd.run']('lsblk -o fstype {0}'.format(name)).splitlines()
-    return '' if len(blk) == 1 else blk[1]
+    blk = __salt__['cmd.run']('blkid -o value -s TYPE {0}'.format(name))
+    return '' if not blk else blk

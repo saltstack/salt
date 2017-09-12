@@ -9,7 +9,7 @@ import urlparse
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urlparse
 # pylint: enable=import-error,no-name-in-module
-from mako.lookup import TemplateCollection, TemplateLookup  # pylint: disable=import-error
+from mako.lookup import TemplateCollection, TemplateLookup  # pylint: disable=import-error,3rd-party-module-not-gated
 
 # Import salt libs
 import salt.fileclient

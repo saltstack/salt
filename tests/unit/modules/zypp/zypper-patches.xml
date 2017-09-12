@@ -1,0 +1,10 @@
+<?xml version='1.0'?>
+<stream>
+  <search-result version="0.0">
+    <solvable-list>
+      <solvable status="not-installed" name="SUSE-SLE-SERVER-12-SP2-2017-97" summary="Recommended update for ovmf" kind="patch"/>
+      <solvable status="installed" name="SUSE-SLE-SERVER-12-SP2-2017-98" summary="Recommended update for kmod" kind="patch"/>
+      <solvable status="not-installed" name="SUSE-SLE-SERVER-12-SP2-2017-99" summary="Security update for apache2" kind="patch"/>
+    </solvable-list>
+  </search-result>
+</stream>

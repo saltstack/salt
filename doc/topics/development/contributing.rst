@@ -260,6 +260,21 @@ The Salt development team will back-port bug fixes made to ``develop`` to the
 current release branch if the contributor cannot create the pull request
 against that branch.
 
+Release Branches
+----------------
+
+For each release, a branch will be created when the SaltStack release team is
+ready to tag. The release branch is created from the parent branch and will be
+the same name as the tag minus the ``v``. For example, the ``2017.7.1`` release
+branch was created from the ``2017.7`` parent branch and the ``v2017.7.1``
+release was tagged at the ``HEAD`` of the ``2017.7.1`` branch. This branching
+strategy will allow for more stability when there is a need for a re-tag during
+the testing phase of the release process.
+
+Once the release branch is created, the fixes required for a given release, as
+determined by the SaltStack release team, will be added to this branch. All
+commits in this branch will be merged forward into the parent branch as well.
+
 Keeping Salt Forks in Sync
 ==========================
 
@@ -418,3 +433,15 @@ and bug resolution. See the :ref:`Labels and Milestones
 .. _'Git resources`: https://help.github.com/articles/good-resources-for-learning-git-and-github/
 .. _`Closing issues via commit message`: https://help.github.com/articles/closing-issues-via-commit-messages
 .. _`git format-patch`: https://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
+.. _salt-users: https://groups.google.com/forum/#!forum/salt-users
+
+Mentionbot
+==========
+
+SaltStack runs a mention-bot which notifies contributors who might be able
+to help review incoming pull-requests based on their past contribution to
+files which are being changed.
+
+If you do not wish to receive these notifications, please add your GitHub
+handle to the blacklist line in the `.mention-bot` file located in the
+root of the Salt repository.

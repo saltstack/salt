@@ -4,11 +4,10 @@ Commands for working with travisci.
 
 :depends: pyOpenSSL >= 16.0.0
 '''
-from __future__ import absolute_import
 
 # Import python libraries
+from __future__ import absolute_import
 import base64
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import json
 
 
@@ -20,6 +19,7 @@ except ImportError:
     HAS_OPENSSL = False
 
 # Import Salt libraries
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext.six.moves.urllib.parse import parse_qs  # pylint: disable=import-error,no-name-in-module
 
 OPENSSL_MIN_VER = '16.0.0'
@@ -29,8 +29,8 @@ __virtualname__ = 'travisci'
 def __virtual__():
     if HAS_OPENSSL is False:
         return (False, 'The travisci module was unable to be loaded: Install pyOpenssl >= {0}'.format(OPENSSL_MIN_VER))
-    cur_version = distutils.version.LooseVersion(OpenSSL.__version__)
-    min_version = distutils.version.LooseVersion(OPENSSL_MIN_VER)
+    cur_version = _LooseVersion(OpenSSL.__version__)
+    min_version = _LooseVersion(OPENSSL_MIN_VER)
     if cur_version < min_version:
         return (False, 'The travisci module was unable to be loaded: Install pyOpenssl >= {0}'.format(OPENSSL_MIN_VER))
     return __virtualname__

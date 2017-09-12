@@ -50,8 +50,8 @@ def start(docker_url='unix://var/run/docker.sock',
     .. code-block:: yaml
 
         engines:
-          docker_events:
-            docker_url: unix://var/run/docker.sock
+          - docker_events:
+              docker_url: unix://var/run/docker.sock
 
     The config above sets up engines to listen
     for events from the Docker daemon and publish
@@ -79,7 +79,14 @@ def start(docker_url='unix://var/run/docker.sock',
     try:
         events = client.events()
         for event in events:
-            data = json.loads(event)
-            fire('{0}/{1}'.format(tag, data['status']), data)
+            data = json.loads(event.decode(__salt_system_encoding__, errors='replace'))
+            # https://github.com/docker/cli/blob/master/cli/command/system/events.go#L109
+            # https://github.com/docker/engine-api/blob/master/types/events/events.go
+            # Each output includes the event type, actor id, name and action.
+            # status field can be ommited
+            if data['Action']:
+                fire('{0}/{1}'.format(tag, data['Action']), data)
+            else:
+                fire('{0}/{1}'.format(tag, data['status']), data)
     except Exception:
         traceback.print_exc()

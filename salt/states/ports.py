@@ -28,7 +28,7 @@ from salt.modules.freebsdports import _normalize, _options_file_exists
 
 # Needed by imported function _options_file_exists
 import os  # pylint: disable=W0611
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

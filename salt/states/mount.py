@@ -24,6 +24,16 @@ Mount any type of mountable filesystem with the mounted function:
         - pass_num: 2
         - persist: True
         - mkmnt: True
+
+    /var/lib/bigdata:
+      mount.mounted:
+        - device: /srv/bigdata
+        - fstype: none
+        - opts: bind
+        - dump: 0
+        - pass_num: 0
+        - persist: True
+        - mkmnt: True
 '''
 from __future__ import absolute_import
 
@@ -35,7 +45,7 @@ import re
 from salt.ext.six import string_types
 
 import logging
-import salt.ext.six as six
+from salt.ext import six
 log = logging.getLogger(__name__)
 
 
@@ -65,7 +75,8 @@ def mounted(name,
             extra_mount_invisible_keys=None,
             extra_mount_ignore_fs_keys=None,
             extra_mount_translate_options=None,
-            hidden_opts=None):
+            hidden_opts=None,
+            **kwargs):
     '''
     Verify that a device is mounted
 
@@ -157,7 +168,7 @@ def mounted(name,
 
             password=badsecret
 
-    extra_ignore_fs_keys
+    extra_mount_ignore_fs_keys
         A dict of filesystem options which should not force a remount. This will update
         the internal dictionary. The dict should look like this::
 
@@ -370,6 +381,9 @@ def mounted(name,
                     if fstype in ['cifs'] and opt.split('=')[0] == 'user':
                         opt = "username={0}".format(opt.split('=')[1])
 
+                    if opt.split('=')[0] in mount_ignore_fs_keys.get(fstype, []):
+                        opt = opt.split('=')[0]
+
                     # convert uid/gid to numeric value from user/group name
                     name_id_opts = {'uid': 'user.info',
                                     'gid': 'group.info'}
@@ -427,18 +441,19 @@ def mounted(name,
                                     opts.remove('remount')
             if real_device not in device_list:
                 # name matches but device doesn't - need to umount
-                _device_mismatch_is_ignored = False
+                _device_mismatch_is_ignored = None
                 for regex in list(device_name_regex):
                     for _device in device_list:
                         if re.match(regex, _device):
                             _device_mismatch_is_ignored = _device
+                            break
                 if __opts__['test']:
                     ret['result'] = None
                     ret['comment'] = "An umount would have been forced " \
                                      + "because devices do not match.  Watched: " \
                                      + device
-                elif _device_mismatch_is_ignored is True:
-                    ret['result'] = None
+                elif _device_mismatch_is_ignored:
+                    ret['result'] = True
                     ret['comment'] = "An umount will not be forced " \
                                      + "because device matched device_name_regex: " \
                                      + _device_mismatch_is_ignored
@@ -684,7 +699,8 @@ def unmounted(name,
               device=None,
               config='/etc/fstab',
               persist=False,
-              user=None):
+              user=None,
+              **kwargs):
     '''
     .. versionadded:: 0.17.0
 

@@ -28,18 +28,12 @@ Dependencies
 from __future__ import absolute_import
 
 import logging
-log = logging.getLogger(__name__)
 
-# third party libs
-try:
-    # will try to import NAPALM
-    # https://github.com/napalm-automation/napalm
-    # pylint: disable=W0611
-    from napalm_base import get_network_driver
-    # pylint: enable=W0611
-    HAS_NAPALM = True
-except ImportError:
-    HAS_NAPALM = False
+# Import 3rd-party libs
+from salt.ext import six
+
+# import NAPALM utils
+import salt.utils.napalm
 
 try:
     from netaddr import IPAddress
@@ -60,6 +54,8 @@ except ImportError:
 
 __virtualname__ = 'netntp'
 
+log = logging.getLogger(__name__)
+
 # ----------------------------------------------------------------------------------------------------------------------
 # global variables
 # ----------------------------------------------------------------------------------------------------------------------
@@ -70,17 +66,10 @@ __virtualname__ = 'netntp'
 
 
 def __virtual__():
-
     '''
-    NAPALM library must be installed for this module to work.
-    Also, the key proxymodule must be set in the __opts___ dictionary.
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
     '''
-
-    if HAS_NAPALM and 'proxy' in __opts__:
-        return __virtualname__
-    else:
-        return (False, 'The network NTP state (netntp) cannot be loaded: \
-                NAPALM or proxy could not be loaded.')
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -120,7 +109,7 @@ def _check(peers):
         return False
 
     for peer in peers:
-        if not isinstance(peer, str):
+        if not isinstance(peer, six.string_types):
             return False
 
     if not HAS_NETADDR:  # if does not have this lib installed, will simply try to load what user specified

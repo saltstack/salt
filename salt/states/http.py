@@ -10,12 +10,14 @@ Perform an HTTP query and statefully return the result
 # Import python libs
 from __future__ import absolute_import
 import re
-
+import logging
 import time
 
 __monitor__ = [
         'query',
         ]
+
+log = logging.getLogger(__name__)
 
 
 def query(name, match=None, match_type='string', status=None, wait_for=None, **kwargs):
@@ -60,7 +62,7 @@ def query(name, match=None, match_type='string', status=None, wait_for=None, **k
         query_example:
           http.query:
             - name: 'http://example.com/'
-            - status: '200'
+            - status: 200
 
     '''
     # Monitoring state, but changes may be made over HTTP
@@ -129,6 +131,9 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
     '''
     Like query but, repeat and wait until match/match_type or status is fulfilled. State returns result from last
     query state in case of success or if no successful query was made within wait_for timeout.
+
+    request_interval
+        Optional interval to delay requests by N seconds to reduce the number of requests sent.
     '''
     starttime = time.time()
 
@@ -146,5 +151,9 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
             if not ret and caught_exception:
                 # workaround pylint bug https://www.logilab.org/ticket/3207
                 raise caught_exception  # pylint: disable=E0702
-
             return ret
+        else:
+            # Space requests out by delaying for an interval
+            if 'request_interval' in kwargs:
+                log.debug("delaying query for {0} seconds.".format(kwargs['request_interval']))
+                time.sleep(kwargs['request_interval'])

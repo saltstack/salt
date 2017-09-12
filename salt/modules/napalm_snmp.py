@@ -26,15 +26,9 @@ from __future__ import absolute_import
 import logging
 log = logging.getLogger(__file__)
 
-try:
-    # will try to import NAPALM
-    # https://github.com/napalm-automation/napalm
-    # pylint: disable=W0611
-    from napalm_base import get_network_driver
-    # pylint: enable=W0611
-    HAS_NAPALM = True
-except ImportError:
-    HAS_NAPALM = False
+# import NAPALM utils
+import salt.utils.napalm
+from salt.utils.napalm import proxy_napalm_wrap
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -50,17 +44,10 @@ __proxyenabled__ = ['napalm']
 
 
 def __virtual__():
-
     '''
-    NAPALM library must be installed for this module to work.
-    Also, the key proxymodule must be set in the __opts___ dictionary.
+    NAPALM library must be installed for this module to work and run in a (proxy) minion.
     '''
-
-    if HAS_NAPALM and 'proxy' in __opts__:
-        return __virtualname__
-    else:
-        return (False, 'The module SNMP (napalm_snmp) cannot be loaded: \
-                NAPALM or proxy could not be loaded.')
+    return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -71,7 +58,8 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def config():
+@proxy_napalm_wrap
+def config(**kwargs):  # pylint: disable=unused-argument
 
     '''
     Returns the SNMP configuration
@@ -83,19 +71,22 @@ def config():
         salt '*' snmp.config
     '''
 
-    return __proxy__['napalm.call'](
+    return salt.utils.napalm.call(
+        napalm_device,  # pylint: disable=undefined-variable
         'get_snmp_information',
         **{
         }
     )
 
 
+@proxy_napalm_wrap
 def remove_config(chassis_id=None,
                   community=None,
                   contact=None,
                   location=None,
                   test=False,
-                  commit=True):
+                  commit=True,
+                  **kwargs):  # pylint: disable=unused-argument
 
     '''
     Removes a configuration element from the SNMP configuration.
@@ -143,16 +134,19 @@ def remove_config(chassis_id=None,
         dic['contact'] = contact
     if location:
         dic['location'] = location
+    dic['inherit_napalm_device'] = napalm_device  # pylint: disable=undefined-variable
 
     return __salt__['net.load_template'](**dic)
 
 
+@proxy_napalm_wrap
 def update_config(chassis_id=None,
                   community=None,
                   contact=None,
                   location=None,
                   test=False,
-                  commit=True):
+                  commit=True,
+                  **kwargs):  # pylint: disable=unused-argument
 
     '''
     Updates the SNMP configuration.
@@ -217,5 +211,6 @@ def update_config(chassis_id=None,
         dic['contact'] = contact
     if location:
         dic['location'] = location
+    dic['inherit_napalm_device'] = napalm_device  # pylint: disable=undefined-variable
 
     return __salt__['net.load_template'](**dic)

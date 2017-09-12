@@ -22,6 +22,7 @@ import salt.config
 import re
 
 # Import Salt libs
+import salt.utils.hashutils
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 
@@ -237,30 +238,32 @@ def sig4(method, endpoint, params, prov_dict,
 
     amzdate = timenow.strftime('%Y%m%dT%H%M%SZ')
     datestamp = timenow.strftime('%Y%m%d')
-
-    canonical_headers = 'host:{0}\nx-amz-date:{1}'.format(
-        endpoint,
-        amzdate,
-    )
-
-    signed_headers = 'host;x-amz-date'
-
+    new_headers = {}
     if isinstance(headers, dict):
-        for header in sorted(headers.keys()):
-            canonical_headers += '\n{0}:{1}'.format(header, headers[header])
-            signed_headers += ';{0}'.format(header)
-    canonical_headers += '\n'
-
-    if token != '':
-        canonical_headers += 'x-amz-security-token:{0}\n'.format(token)
-        signed_headers += ';x-amz-security-token'
-
-    algorithm = 'AWS4-HMAC-SHA256'
+        new_headers = headers.copy()
 
     # Create payload hash (hash of the request body content). For GET
     # requests, the payload is an empty string ('').
     if not payload_hash:
-        payload_hash = hashlib.sha256(data).hexdigest()
+        payload_hash = salt.utils.hashutils.sha256_digest(data)
+
+    new_headers['X-Amz-date'] = amzdate
+    new_headers['host'] = endpoint
+    new_headers['x-amz-content-sha256'] = payload_hash
+    a_canonical_headers = []
+    a_signed_headers = []
+
+    if token != '':
+        new_headers['X-Amz-security-token'] = token
+
+    for header in sorted(new_headers.keys(), key=str.lower):
+        lower_header = header.lower()
+        a_canonical_headers.append('{0}:{1}'.format(lower_header, new_headers[header].strip()))
+        a_signed_headers.append(lower_header)
+    canonical_headers = '\n'.join(a_canonical_headers) + '\n'
+    signed_headers = ';'.join(a_signed_headers)
+
+    algorithm = 'AWS4-HMAC-SHA256'
 
     # Combine elements to create create canonical request
     canonical_request = '\n'.join((
@@ -278,7 +281,7 @@ def sig4(method, endpoint, params, prov_dict,
         algorithm,
         amzdate,
         credential_scope,
-        hashlib.sha256(canonical_request).hexdigest()
+        salt.utils.hashutils.sha256_digest(canonical_request)
     ))
 
     # Create the signing key using the function defined above.
@@ -306,18 +309,7 @@ def sig4(method, endpoint, params, prov_dict,
             signature,
         )
 
-    new_headers = {
-        'x-amz-date': amzdate,
-        'x-amz-content-sha256': payload_hash,
-        'Authorization': authorization_header,
-    }
-    if isinstance(headers, dict):
-        for header in sorted(headers.keys()):
-            new_headers[header] = headers[header]
-
-    # Add in security token if we have one
-    if token != '':
-        new_headers['X-Amz-Security-Token'] = token
+    new_headers['Authorization'] = authorization_header
 
     requesturl = '{0}?{1}'.format(requesturl, querystring)
     return new_headers, requesturl
@@ -400,7 +392,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
     service_url = prov_dict.get('service_url', 'amazonaws.com')
 
     if not location:
-        location = get_location(opts, provider)
+        location = get_location(opts, prov_dict)
 
     if endpoint is None:
         if not requesturl:

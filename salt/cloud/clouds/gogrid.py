@@ -43,11 +43,11 @@ from __future__ import absolute_import
 import pprint
 import logging
 import time
-import hashlib
 
 # Import salt cloud libs
 import salt.config as config
 import salt.utils.cloud
+import salt.utils.hashutils
 from salt.exceptions import SaltCloudSystemExit, SaltCloudException
 
 # Get logging started
@@ -96,11 +96,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -116,7 +112,7 @@ def create(vm_):
         public_ips = list_public_ips()
         if len(public_ips.keys()) < 1:
             raise SaltCloudException('No more IPs available')
-        host_ip = public_ips.keys()[0]
+        host_ip = list(public_ips)[0]
 
     create_kwargs = {
         'name': vm_['name'],
@@ -129,7 +125,9 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={'kwargs': create_kwargs},
+        args={
+            'kwargs': __utils__['cloud.filter_event']('requesting', create_kwargs, list(create_kwargs)),
+        },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -185,11 +183,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -540,7 +534,7 @@ def _query(action=None,
 
     epoch = str(int(time.time()))
     hashtext = ''.join((apikey, sharedsecret, epoch))
-    args['sig'] = hashlib.md5(hashtext).hexdigest()
+    args['sig'] = salt.utils.hashutils.md5_digest(hashtext)
     args['format'] = 'json'
     args['v'] = '1.0'
     args['api_key'] = apikey

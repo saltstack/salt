@@ -15,7 +15,7 @@ def __virtual__():
     return 'zabbix.hostgroup_create' in __salt__
 
 
-def present(name):
+def present(name, **kwargs):
     '''
     Ensures that the host group exists, eventually creates new host group.
 
@@ -34,6 +34,13 @@ def present(name):
 
 
     '''
+    connection_args = {}
+    if '_connection_user' in kwargs:
+        connection_args['_connection_user'] = kwargs['_connection_user']
+    if '_connection_password' in kwargs:
+        connection_args['_connection_password'] = kwargs['_connection_password']
+    if '_connection_url' in kwargs:
+        connection_args['_connection_url'] = kwargs['_connection_url']
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     # Comment and change messages
@@ -45,7 +52,7 @@ def present(name):
                                         }
                                  }
 
-    hostgroup_exists = __salt__['zabbix.hostgroup_exists'](name)
+    hostgroup_exists = __salt__['zabbix.hostgroup_exists'](name, **connection_args)
 
     # Dry run, test=true mode
     if __opts__['test']:
@@ -62,7 +69,7 @@ def present(name):
         ret['result'] = True
         ret['comment'] = comment_hostgroup_exists
     else:
-        hostgroup_create = __salt__['zabbix.hostgroup_create'](name)
+        hostgroup_create = __salt__['zabbix.hostgroup_create'](name, **connection_args)
 
         if 'error' not in hostgroup_create:
             ret['result'] = True
@@ -75,7 +82,7 @@ def present(name):
     return ret
 
 
-def absent(name):
+def absent(name, **kwargs):
     '''
     Ensures that the host group does not exist, eventually delete host group.
 
@@ -105,7 +112,15 @@ def absent(name):
                                         }
                                  }
 
-    hostgroup_exists = __salt__['zabbix.hostgroup_exists'](name)
+    connection_args = {}
+    if '_connection_user' in kwargs:
+        connection_args['_connection_user'] = kwargs['_connection_user']
+    if '_connection_password' in kwargs:
+        connection_args['_connection_password'] = kwargs['_connection_password']
+    if '_connection_url' in kwargs:
+        connection_args['_connection_url'] = kwargs['_connection_url']
+
+    hostgroup_exists = __salt__['zabbix.hostgroup_exists'](name, **connection_args)
 
     # Dry run, test=true mode
     if __opts__['test']:
@@ -118,7 +133,7 @@ def absent(name):
             ret['changes'] = changes_hostgroup_deleted
         return ret
 
-    hostgroup_get = __salt__['zabbix.hostgroup_get'](name)
+    hostgroup_get = __salt__['zabbix.hostgroup_get'](name, **connection_args)
 
     if not hostgroup_get:
         ret['result'] = True
@@ -126,7 +141,7 @@ def absent(name):
     else:
         try:
             groupid = hostgroup_get[0]['groupid']
-            hostgroup_delete = __salt__['zabbix.hostgroup_delete'](groupid)
+            hostgroup_delete = __salt__['zabbix.hostgroup_delete'](groupid, **connection_args)
         except KeyError:
             hostgroup_delete = False
 

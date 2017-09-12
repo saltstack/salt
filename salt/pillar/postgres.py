@@ -2,6 +2,8 @@
 '''
 Retrieve Pillar data by doing a postgres query
 
+.. versionadded:: 2017.7.0
+
 :maturity: new
 :depends: psycopg2
 :platform: all

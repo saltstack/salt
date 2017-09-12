@@ -19,14 +19,15 @@ import time
 # Import third party libs
 import jinja2
 import jinja2.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.odict
+import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
-import salt.utils.odict
 
 
 # Set up logging
@@ -219,8 +220,8 @@ def _read_file(path):
     Reads and returns the contents of a text file
     '''
     try:
-        with salt.utils.flopen(path, 'rb') as contents:
-            return [salt.utils.to_str(line) for line in contents.readlines()]
+        with salt.utils.files.flopen(path, 'rb') as contents:
+            return [salt.utils.stringutils.to_str(line) for line in contents.readlines()]
     except (OSError, IOError):
         return ''
 
@@ -280,7 +281,7 @@ def _parse_current_network_settings():
     opts['networking'] = ''
 
     if os.path.isfile(_DEB_NETWORKING_FILE):
-        with salt.utils.fopen(_DEB_NETWORKING_FILE) as contents:
+        with salt.utils.files.fopen(_DEB_NETWORKING_FILE) as contents:
             for line in contents:
                 if line.startswith('#'):
                     continue
@@ -574,7 +575,7 @@ def _parse_interfaces(interface_files=None):
     method = -1
 
     for interface_file in interface_files:
-        with salt.utils.fopen(interface_file) as interfaces:
+        with salt.utils.files.fopen(interface_file) as interfaces:
             # This ensures iface_dict exists, but does not ensure we're not reading a new interface.
             iface_dict = {}
             for line in interfaces:
@@ -921,6 +922,9 @@ def _parse_settings_bond_1(opts, iface, bond_def):
             _log_default_iface(iface, binding, bond_def[binding])
             bond.update({binding: bond_def[binding]})
 
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
+
     if not (__grains__['os'] == "Ubuntu" and __grains__['osrelease_info'][0] >= 16):
         if 'use_carrier' in opts:
             if opts['use_carrier'] in _CONFIG_TRUE:
@@ -973,9 +977,6 @@ def _parse_settings_bond_2(opts, iface, bond_def):
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
         bond.update({'arp_interval': bond_def['arp_interval']})
-
-    if 'primary' in opts:
-        bond.update({'primary': opts['primary']})
 
     if 'hashing-algorithm' in opts:
         valid = ['layer2', 'layer2+3', 'layer3+4']
@@ -1107,6 +1108,9 @@ def _parse_settings_bond_5(opts, iface, bond_def):
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
 
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
+
     return bond
 
 
@@ -1142,6 +1146,9 @@ def _parse_settings_bond_6(opts, iface, bond_def):
     else:
         _log_default_iface(iface, 'use_carrier', bond_def['use_carrier'])
         bond.update({'use_carrier': bond_def['use_carrier']})
+
+    if 'primary' in opts:
+        bond.update({'primary': opts['primary']})
 
     return bond
 
@@ -1483,7 +1490,7 @@ def _write_file(iface, data, folder, pattern):
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.flopen(filename, 'w') as fout:
+    with salt.utils.files.flopen(filename, 'w') as fout:
         fout.write(data)
     return filename
 
@@ -1492,13 +1499,23 @@ def _write_file_routes(iface, data, folder, pattern):
     '''
     Writes a file to disk
     '''
+    # ifup / ifdown is executing given folder via run-parts.
+    # according to run-parts man-page, only filenames with this pattern are
+    # executed: (^[a-zA-Z0-9_-]+$)
+
+    # In order to make the routes file work for vlan interfaces
+    # (default would have been in example /etc/network/if-up.d/route-bond0.12)
+    # these dots in the iface name need to be replaced by underscores, so it
+    # can be executed by run-parts
+    iface = iface.replace('.', '_')
+
     filename = os.path.join(folder, pattern.format(iface))
     if not os.path.exists(folder):
         msg = '{0} cannot be written. {1} does not exist'
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.flopen(filename, 'w') as fout:
+    with salt.utils.files.flopen(filename, 'w') as fout:
         fout.write(data)
 
     __salt__['file.set_mode'](filename, '0755')
@@ -1517,7 +1534,7 @@ def _write_file_network(data, filename, create=False):
         msg = msg.format(filename)
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.flopen(filename, 'w') as fout:
+    with salt.utils.files.flopen(filename, 'w') as fout:
         fout.write(data)
 
 
@@ -1575,13 +1592,13 @@ def _write_file_ifaces(iface, data, **settings):
         if adapter == iface:
             saved_ifcfg = tmp
 
-    _SEPERATE_FILE = False
+    _SEPARATE_FILE = False
     if 'filename' in settings:
         if not settings['filename'].startswith('/'):
             filename = '{0}/{1}'.format(_DEB_NETWORK_DIR, settings['filename'])
         else:
             filename = settings['filename']
-        _SEPERATE_FILE = True
+        _SEPARATE_FILE = True
     else:
         if 'filename' in adapters[adapter]['data']:
             filename = adapters[adapter]['data']
@@ -1593,8 +1610,8 @@ def _write_file_ifaces(iface, data, **settings):
         msg = msg.format(os.path.dirname(filename))
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.flopen(filename, 'w') as fout:
-        if _SEPERATE_FILE:
+    with salt.utils.files.flopen(filename, 'w') as fout:
+        if _SEPARATE_FILE:
             fout.write(saved_ifcfg)
         else:
             fout.write(ifcfg)
@@ -1626,7 +1643,7 @@ def _write_file_ppp_ifaces(iface, data):
         msg = msg.format(os.path.dirname(filename))
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.fopen(filename, 'w') as fout:
+    with salt.utils.files.fopen(filename, 'w') as fout:
         fout.write(ifcfg)
 
     # Return as a array so the difflib works

@@ -1,0 +1,5 @@
+============================
+Salt 2015.8.14 Release Notes
+============================
+
+Version 2015.8.14 is a bugfix release for :ref:`2015.8.0 <release-2015-8-0>`.

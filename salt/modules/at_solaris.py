@@ -10,7 +10,7 @@ Wrapper for at(1) on Solaris-like systems
 :maturity:      new
 :platform:      solaris,illumos,smartso
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 '''
 from __future__ import absolute_import
 
@@ -25,7 +25,9 @@ import logging
 from salt.ext.six.moves import map
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'at'
@@ -35,11 +37,11 @@ def __virtual__():
     '''
     We only deal with Solaris' specific version of at
     '''
-    if not salt.utils.is_sunos():
+    if not salt.utils.platform.is_sunos():
         return (False, 'The at module could not be loaded: unsupported platform')
-    if not salt.utils.which('at') or \
-        not salt.utils.which('atq') or \
-        not salt.utils.which('atrm'):
+    if not salt.utils.path.which('at') or \
+        not salt.utils.path.which('atq') or \
+        not salt.utils.path.which('atrm'):
         return (False, 'The at module could not be loaded: at command not found')
     return __virtualname__
 
@@ -100,7 +102,7 @@ def atq(tag=None):
             job=job
         )
         if __salt__['file.file_exists'](atjob_file):
-            with salt.utils.fopen(atjob_file, 'r') as atjob:
+            with salt.utils.files.fopen(atjob_file, 'r') as atjob:
                 for line in atjob:
                     tmp = job_kw_regex.match(line)
                     if tmp:
@@ -224,7 +226,8 @@ def atc(jobid):
         job=jobid
     )
     if __salt__['file.file_exists'](atjob_file):
-        return "".join(salt.utils.fopen(atjob_file, 'r').readlines())
+        with salt.utils.files.fopen(atjob_file, 'r') as rfh:
+            return "".join(rfh.readlines())
     else:
         return {'error': 'invalid job id \'{0}\''.format(jobid)}
 

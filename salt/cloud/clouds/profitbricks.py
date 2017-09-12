@@ -6,7 +6,7 @@ ProfitBricks Cloud Module
 The ProfitBricks SaltStack cloud module allows a ProfitBricks server to
 be automatically deployed and bootstraped with Salt.
 
-:depends: profitbrick >= 3.0.0
+:depends: profitbrick >= 3.1.0
 
 The module requires ProfitBricks credentials to be supplied along with
 an existing virtual datacenter UUID where the server resources will
@@ -98,7 +98,8 @@ import pprint
 import time
 
 # Import salt libs
-import salt.utils
+import salt.utils.cloud
+import salt.utils.files
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -108,14 +109,14 @@ from salt.exceptions import (
     SaltCloudSystemExit
 )
 
-# Import salt.cloud libs
-import salt.utils.cloud
-
+# Import 3rd-party libs
+from salt.ext import six
 try:
     from profitbricks.client import (
         ProfitBricksService, Server,
         NIC, Volume, FirewallRule,
-        Datacenter, LoadBalancer, LAN
+        Datacenter, LoadBalancer, LAN,
+        PBNotFoundError
     )
     HAS_PROFITBRICKS = True
 except ImportError:
@@ -428,7 +429,7 @@ def get_image(vm_):
     )
 
     images = avail_images()
-    for key, value in images.iteritems():
+    for key in six.iterkeys(images):
         if vm_image and vm_image in (images[key]['id'], images[key]['name']):
             return images[key]
 
@@ -480,7 +481,13 @@ def list_nodes(conn=None, call=None):
 
     ret = {}
     datacenter_id = get_datacenter_id()
-    nodes = conn.list_servers(datacenter_id=datacenter_id)
+
+    try:
+        nodes = conn.list_servers(datacenter_id=datacenter_id)
+    except PBNotFoundError:
+        log.error('Failed to get nodes list from datacenter: {0}'.format(
+                  datacenter_id))
+        raise
 
     for item in nodes['items']:
         node = {'id': item['id']}
@@ -640,8 +647,9 @@ def get_public_keys(vm_):
                 )
             )
         ssh_keys = []
-        for key in open(key_filename).readlines():
-            ssh_keys.append(key)
+        with salt.utils.files.fopen(key_filename) as rfh:
+            for key in rfh.readlines():
+                ssh_keys.append(key)
 
         return ssh_keys
 
@@ -680,6 +688,15 @@ def create(vm_):
     except AttributeError:
         pass
 
+    __utils__['cloud.fire_event'](
+        'event',
+        'starting create',
+        'salt/cloud/{0}/creating'.format(vm_['name']),
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
     data = None
     datacenter_id = get_datacenter_id()
     conn = get_conn()
@@ -699,7 +716,7 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={'name': vm_['name']},
+        args=__utils__['cloud.filter_event']('requesting', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -794,11 +811,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1015,7 +1028,7 @@ def _get_data_volumes(vm_):
     '''
     ret = []
     volumes = vm_['volumes']
-    for key, value in volumes.iteritems():
+    for key, value in six.iteritems(volumes):
         # Verify the required 'disk_size' property is present in the cloud
         # profile config
         if 'disk_size' not in volumes[key].keys():
@@ -1048,7 +1061,7 @@ def _get_firewall_rules(firewall_rules):
     Construct a list of optional firewall rules from the cloud profile.
     '''
     ret = []
-    for key, value in firewall_rules.iteritems():
+    for key, value in six.iteritems(firewall_rules):
         # Verify the required 'protocol' property is present in the cloud
         # profile config
         if 'protocol' not in firewall_rules[key].keys():

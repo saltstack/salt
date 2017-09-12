@@ -3,9 +3,20 @@
 Return data to a PostgreSQL server with json data stored in Pg's jsonb data type
 
 :maintainer:    Dave Boucha <dave@saltstack.com>, Seth House <shouse@saltstack.com>, C. R. Oldham <cr@saltstack.com>
-:maturity:      new
+:maturity:      Stable
 :depends:       python-psycopg2
 :platform:      all
+
+.. note::
+    There are three PostgreSQL returners.  Any can function as an external
+    :ref:`master job cache <external-master-cache>`. but each has different
+    features.  SaltStack recommends
+    :mod:`returners.pgjsonb <salt.returners.pgjsonb>` if you are working with
+    a version of PostgreSQL that has the appropriate native binary JSON types.
+    Otherwise, review
+    :mod:`returners.postgres <salt.returners.postgres>` and
+    :mod:`returners.postgres_local_cache <salt.returners.postgres_local_cache>`
+    to see which module best suits your particular needs.
 
 To enable this returner, the minion will need the python client for PostgreSQL
 installed and the following values configured in the minion or master
@@ -24,9 +35,13 @@ either exclude these options or set them to None.
 
 .. code-block:: yaml
 
-    returner.pgjsonb.ssl_ca: None
-    returner.pgjsonb.ssl_cert: None
-    returner.pgjsonb.ssl_key: None
+    returner.pgjsonb.sslmode: None
+    returner.pgjsonb.sslcert: None
+    returner.pgjsonb.sslkey: None
+    returner.pgjsonb.sslrootcert: None
+    returner.pgjsonb.sslcrl: None
+
+.. versionadded:: 2017.5.0
 
 Alternative configuration values can be used by prefacing the configuration
 with `alternative.`. Any values not found in the alternative configuration will
@@ -143,6 +158,7 @@ import logging
 import salt.returners
 import salt.utils.jid
 import salt.exceptions
+from salt.ext import six
 
 # Import third party libs
 try:
@@ -168,17 +184,26 @@ def _get_options(ret=None):
     '''
     Returns options used for the MySQL connection.
     '''
-    defaults = {'host': 'localhost',
-                'user': 'salt',
-                'pass': 'salt',
-                'db': 'salt',
-                'port': 5432}
+    defaults = {
+        'host': 'localhost',
+        'user': 'salt',
+        'pass': 'salt',
+        'db': 'salt',
+        'port': 5432
+    }
 
-    attrs = {'host': 'host',
-             'user': 'user',
-             'pass': 'pass',
-             'db': 'db',
-             'port': 'port'}
+    attrs = {
+        'host': 'host',
+        'user': 'user',
+        'pass': 'pass',
+        'db': 'db',
+        'port': 'port',
+        'sslmode': 'sslmode',
+        'sslcert': 'sslcert',
+        'sslkey': 'sslkey',
+        'sslrootcert': 'sslrootcert',
+        'sslcrl': 'sslcrl',
+    }
 
     _options = salt.returners.get_returner_options('returner.{0}'.format(__virtualname__),
                                                    ret,
@@ -201,19 +226,18 @@ def _get_serv(ret=None, commit=False):
     try:
         # An empty ssl_options dictionary passed to MySQLdb.connect will
         # effectively connect w/o SSL.
-        ssl_options = {}
-        if _options.get('ssl_ca'):
-            ssl_options['ca'] = _options.get('ssl_ca')
-        if _options.get('ssl_cert'):
-            ssl_options['cert'] = _options.get('ssl_cert')
-        if _options.get('ssl_key'):
-            ssl_options['key'] = _options.get('ssl_key')
-        conn = psycopg2.connect(host=_options.get('host'),
-                                user=_options.get('user'),
-                                password=_options.get('pass'),
-                                database=_options.get('db'),
-                                port=_options.get('port'))
-#                                ssl=ssl_options)
+        ssl_options = {
+            k: v for k, v in six.iteritems(_options)
+            if k in ['sslmode', 'sslcert', 'sslkey', 'sslrootcert', 'sslcrl']
+        }
+        conn = psycopg2.connect(
+            host=_options.get('host'),
+            port=_options.get('port'),
+            dbname=_options.get('db'),
+            user=_options.get('user'),
+            password=_options.get('pass'),
+            **ssl_options
+        )
     except psycopg2.OperationalError as exc:
         raise salt.exceptions.SaltMasterError('pgjsonb returner could not connect to database: {exc}'.format(exc=exc))
 
@@ -392,4 +416,4 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

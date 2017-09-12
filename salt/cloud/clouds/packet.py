@@ -53,7 +53,13 @@ from __future__ import absolute_import
 import logging
 import pprint
 import time
-import packet
+
+# Import 3rd-party libs
+try:
+    import packet
+    HAS_PACKET = True
+except ImportError:
+    HAS_PACKET = False
 
 # Import Salt Libs
 import salt.config as config
@@ -89,6 +95,8 @@ def __virtual__():
     '''
     Check for Packet configs.
     '''
+    if HAS_PACKET is False:
+        return False, 'The packet python library is not installed'
     if get_configured_provider() is False:
         return False
 
@@ -330,11 +338,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(name),
-        args={
-            'name': name,
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -342,6 +346,15 @@ def create(vm_):
     log.info('Creating Packet VM {0}'.format(name))
 
     manager = packet.Manager(auth_token=vm_['token'])
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        args=__utils__['cloud.filter_event']('requesting', vm_, ['name', 'profile', 'provider', 'driver']),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
     device = manager.create_device(project_id=vm_['project_id'],
                                 hostname=name,
@@ -418,11 +431,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(name),
-        args={
-            'name': name,
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -500,7 +509,7 @@ def get_devices_by_token():
 
     devices = []
 
-    for profile_name in vm_['profiles'].keys():
+    for profile_name in vm_['profiles']:
         profile = vm_['profiles'][profile_name]
 
         devices.extend(manager.list_devices(profile['project_id']))

@@ -3,6 +3,9 @@
 Management of the windows update agent
 ======================================
 
+This module is being deprecated and will be removed in Salt Fluorine. Please use
+the ``win_wua`` state module instead.
+
 .. versionadded:: 2014.7.0
 
 Set windows updates to run by category. Default behavior is to install
@@ -68,6 +71,7 @@ import logging
 
 # Import 3rd-party libs
 # pylint: disable=import-error
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 try:
     import win32com.client
@@ -77,8 +81,9 @@ except ImportError:
     HAS_DEPENDENCIES = False
 # pylint: enable=import-error
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -87,7 +92,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows() and HAS_DEPENDENCIES:
+    if salt.utils.platform.is_windows() and HAS_DEPENDENCIES:
         return True
     return False
 
@@ -316,8 +321,8 @@ class PyWinUpdater(object):
     def SetSkips(self, skips):
         if skips:
             for i in skips:
-                value = i[next(i.iterkeys())]
-                skip = next(i.iterkeys())
+                value = i[next(six.iterkeys(i))]
+                skip = next(six.iterkeys(i))
                 self.SetSkip(skip, value)
                 log.debug('was asked to set {0} to {1}'.format(skip, value))
 
@@ -453,10 +458,16 @@ def installed(name, categories=None, skips=None, retries=10):
         Number of retries to make before giving up. This is total, not per
         step.
     '''
+
     ret = {'name': name,
            'result': True,
            'changes': {},
            'comment': ''}
+    deprecation_msg = 'The \'win_update\' module is deprecated, and will be ' \
+                      'removed in Salt Fluorine. Please use the \'win_wua\' ' \
+                      'module instead.'
+    salt.utils.versions.warn_until('Fluorine', deprecation_msg)
+    ret.setdefault('warnings', []).append(deprecation_msg)
     if not categories:
         categories = [name]
     log.debug('categories to search for are: {0}'.format(categories))
@@ -535,6 +546,13 @@ def downloaded(name, categories=None, skips=None, retries=10):
            'result': True,
            'changes': {},
            'comment': ''}
+
+    deprecation_msg = 'The \'win_update\' module is deprecated, and will be ' \
+                      'removed in Salt Fluorine. Please use the \'win_wua\' ' \
+                      'module instead.'
+    salt.utils.versions.warn_until('Fluorine', deprecation_msg)
+    ret.setdefault('warnings', []).append(deprecation_msg)
+
     if not categories:
         categories = [name]
     log.debug('categories to search for are: {0}'.format(categories))

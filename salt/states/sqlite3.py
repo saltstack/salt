@@ -96,7 +96,7 @@ can be approximated with sqlite3's module functions and module.run:
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     import sqlite3
@@ -160,9 +160,13 @@ def row_absent(name, db, table, where_sql, where_args=None):
                 changes['changes']['old'] = rows[0]
 
             else:
-                cursor = conn.execute("DELETE FROM `" +
-                                      table + "` WHERE " + where_sql,
-                                      where_args)
+                if where_args is None:
+                    cursor = conn.execute("DELETE FROM `" +
+                                          table + "` WHERE " + where_sql)
+                else:
+                    cursor = conn.execute("DELETE FROM `" +
+                                          table + "` WHERE " + where_sql,
+                                          where_args)
                 conn.commit()
                 if cursor.rowcount == 1:
                     changes['result'] = True
@@ -406,8 +410,8 @@ def table_present(name, db, schema, force=False):
 
         if len(tables) == 1:
             sql = None
-            if isinstance(schema, str):
-                sql = schema
+            if isinstance(schema, six.string_types):
+                sql = schema.strip()
             else:
                 sql = _get_sql_from_schema(name, schema)
 
@@ -437,7 +441,7 @@ def table_present(name, db, schema, force=False):
         elif len(tables) == 0:
             # Create the table
             sql = None
-            if isinstance(schema, str):
+            if isinstance(schema, six.string_types):
                 sql = schema
             else:
                 sql = _get_sql_from_schema(name, schema)

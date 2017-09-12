@@ -2,15 +2,19 @@
 '''
 Module to provide icinga2 compatibility to salt.
 
+.. versionadded:: 2017.7.0
+
 :depends:   - icinga2 server
 '''
 
 # Import python libs
 from __future__ import absolute_import
 import logging
+import subprocess
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -20,12 +24,24 @@ def __virtual__():
     Only load this module if the mysql libraries exist
     '''
     # TODO: This could work on windows with some love
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The module cannot be loaded on windows.')
 
-    if salt.utils.which('icinga2'):
+    if salt.utils.path.which('icinga2'):
         return True
     return (False, 'Icinga2 not installed.')
+
+
+def _execute(cmd, ret_code=False):
+    process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    if ret_code:
+        return process.wait()
+    output, error = process.communicate()
+    if output:
+        log.debug(output)
+        return output
+    log.debug(error)
+    return error
 
 
 def generate_ticket(domain):
@@ -42,7 +58,7 @@ def generate_ticket(domain):
         salt '*' icinga2.generate_ticket domain.tld
 
     '''
-    result = __salt__['cmd.run']("icinga2 pki ticket --cn {0}".format(domain))
+    result = _execute(["icinga2", "pki", "ticket", "--cn", domain])
     return result
 
 
@@ -60,7 +76,7 @@ def generate_cert(domain):
         salt '*' icinga2.generate_cert domain.tld
 
     '''
-    result = __salt__['cmd.run']("icinga2 pki new-cert --cn {0} --key /etc/icinga2/pki/{0}.key --cert /etc/icinga2/pki/{0}.crt".format(domain))
+    result = _execute(["icinga2", "pki", "new-cert", "--cn", domain, "--key", "/etc/icinga2/pki/{0}.key".format(domain), "--cert", "/etc/icinga2/pki/{0}.crt".format(domain)], ret_code=True)
     return result
 
 
@@ -78,8 +94,8 @@ def save_cert(domain, master):
         salt '*' icinga2.save_cert domain.tld master.domain.tld
 
     '''
-    result = __salt__['cmd.run']("icinga2 pki save-cert --key /etc/icinga2/pki/{0}.key --cert /etc/icinga2/pki/{0}.cert --trustedcert /etc/icinga2/pki/trusted-master.crt \
-                                 --host {1}".format(domain, master))
+    result = _execute(["icinga2", "pki", "save-cert", "--key", "/etc/icinga2/pki/{0}.key".format(domain), "--cert", "/etc/icinga2/pki/{0}.cert".format(domain), "--trustedcert",
+                       "/etc/icinga2/pki/trusted-master.crt", "--host", master], ret_code=True)
     return result
 
 
@@ -98,8 +114,8 @@ def request_cert(domain, master, ticket, port):
         salt '*' icinga2.request_cert domain.tld master.domain.tld TICKET_ID
 
     '''
-    result = __salt__['cmd.run']("icinga2 pki request --host {0} --port {1} --ticket {2} --key /etc/icinga2/pki/{3}.key --cert \
-                       /etc/icinga2/pki/{3}.crt --trustedcert /etc/icinga2/pki/trusted-master.crt --ca /etc/icinga2/pki/ca.crt".format(master, port, ticket, domain))
+    result = _execute(["icinga2", "pki", "request", "--host", master, "--port", port, "--ticket", ticket, "--key", "/etc/icinga2/pki/{0}.key".format(domain), "--cert",
+                       "/etc/icinga2/pki/{0}.crt".format(domain), "--trustedcert", "/etc/icinga2/pki/trusted-master.crt", "--ca", "/etc/icinga2/pki/ca.crt"], ret_code=True)
     return result
 
 
@@ -118,5 +134,6 @@ def node_setup(domain, master, ticket):
         salt '*' icinga2.node_setup domain.tld master.domain.tld TICKET_ID
 
     '''
-    result = __salt__['cmd.run']("icinga2 node setup --ticket {0} --endpoint {1} --zone {2} --master_host {1} --trustedcert /etc/icinga2/pki/trusted-master.crt".format(ticket, master, domain))
+    result = _execute(["icinga2", "node", "setup", "--ticket", ticket, "--endpoint", master, "--zone", domain, "--master_host", master, "--trustedcert", "/etc/icinga2/pki/trusted-master.crt"],
+                       ret_code=True)
     return result

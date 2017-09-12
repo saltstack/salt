@@ -11,7 +11,7 @@ from __future__ import absolute_import, print_function
 import os
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import msgpack
 except ImportError:
@@ -19,7 +19,7 @@ except ImportError:
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltRenderError
-import salt.utils
+import salt.utils.files
 import salt.utils.gitfs
 import logging
 import salt.minion
@@ -29,7 +29,7 @@ import salt.template
 log = logging.getLogger(__name__)
 
 # Global parameters which can be overridden on a per-remote basis
-PER_REMOTE_OVERRIDES = ('ssl_verify',)
+PER_REMOTE_OVERRIDES = ('ssl_verify', 'refspecs')
 
 
 def genrepo(opts=None, fire_event=True):
@@ -119,7 +119,7 @@ def genrepo(opts=None, fire_event=True):
                             revmap[repodata['full_name']] = pkgname
                     ret.setdefault('repo', {}).update(config)
                     ret.setdefault('name_map', {}).update(revmap)
-    with salt.utils.fopen(
+    with salt.utils.files.fopen(
             os.path.join(winrepo_dir, winrepo_cachefile), 'w+b') as repo:
         repo.write(msgpack.dumps(ret))
     return ret

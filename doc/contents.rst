@@ -18,11 +18,14 @@ Salt Table of Contents
     topics/ssh/index
     topics/cloud/index
     topics/proxyminion/index
+    topics/network_automation/index
     topics/virt/index
     ref/cli/index
     ref/index
     topics/api
     topics/topology/index
+    topics/cache/index
     topics/windows/index
     topics/development/index
     topics/releases/index
+    topics/venafi/index

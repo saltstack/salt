@@ -10,9 +10,13 @@ import logging
 import threading
 
 # Import Salt Libs
-import salt.utils
 import salt.payload
-from salt.utils.network import remote_port_tcp as _remote_port_tcp
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.process
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -51,24 +55,8 @@ def cache_jobs(opts, jid, ret):
     jdir = os.path.dirname(fn_)
     if not os.path.isdir(jdir):
         os.makedirs(jdir)
-    with salt.utils.fopen(fn_, 'w+b') as fp_:
+    with salt.utils.files.fopen(fn_, 'w+b') as fp_:
         fp_.write(serial.dumps(ret))
-
-
-def connected_masters():
-    '''
-    Return current connected masters
-    '''
-    # default port
-    port = 4505
-
-    config_port = __salt__['config.get']('publish_port')
-    if config_port:
-        port = config_port
-
-    connected_masters_ips = _remote_port_tcp(port)
-
-    return connected_masters_ips
 
 
 def _read_proc_file(path, opts):
@@ -78,7 +66,7 @@ def _read_proc_file(path, opts):
     serial = salt.payload.Serial(opts)
     current_thread = threading.currentThread().name
     pid = os.getpid()
-    with salt.utils.fopen(path, 'rb') as fp_:
+    with salt.utils.files.fopen(path, 'rb') as fp_:
         buf = fp_.read()
         fp_.close()
         if buf:
@@ -101,7 +89,7 @@ def _read_proc_file(path, opts):
         except IOError:
             pass
         return None
-    if opts['multiprocessing']:
+    if opts.get('multiprocessing'):
         if data.get('pid') == pid:
             return None
     else:
@@ -143,7 +131,7 @@ def _check_cmdline(data):
 
     For non-Linux systems we punt and just return True
     '''
-    if not salt.utils.is_linux():
+    if not salt.utils.platform.is_linux():
         return True
     pid = data.get('pid')
     if not pid:
@@ -154,8 +142,8 @@ def _check_cmdline(data):
     if not os.path.isfile(path):
         return False
     try:
-        with salt.utils.fopen(path, 'rb') as fp_:
-            if 'salt' in fp_.read():
+        with salt.utils.files.fopen(path, 'rb') as fp_:
+            if six.b('salt') in fp_.read():
                 return True
     except (OSError, IOError):
         return False

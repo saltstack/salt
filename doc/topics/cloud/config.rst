@@ -56,6 +56,24 @@ settings can be placed in the provider or profile:
         sls_list:
           - web
 
+
+When salt cloud creates a new minon, it can automatically add grain information
+to the minion configuration file identifying the sources originally used
+to define it.
+
+The generated grain information will appear similar to:
+
+.. code-block:: yaml
+
+    grains:
+      salt-cloud:
+        driver: ec2
+        provider: my_ec2:ec2
+        profile: ec2-web
+
+The generation of the salt-cloud grain can be surpressed by the
+option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
+
 Cloud Configuration Syntax
 ==========================
 
@@ -97,7 +115,7 @@ Using the example configuration above:
 
 .. note::
 
-    Salt Cloud provider configurations within ``/etc/cloud.provider.d/ should not
+    Salt Cloud provider configurations within ``/etc/cloud.provider.d/`` should not
     specify the ``providers`` starting key.
 
 It is also possible to have multiple cloud configuration blocks within the same alias block.
@@ -371,7 +389,6 @@ both.
       compute_name: cloudServersOpenStack
       protocol: ipv4
       compute_region: DFW
-      protocol: ipv4
       user: myuser
       tenant: 5555555
       password: mypass

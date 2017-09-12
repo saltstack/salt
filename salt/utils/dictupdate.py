@@ -11,7 +11,7 @@ import collections
 # Import 3rd-party libs
 import copy
 import logging
-import salt.ext.six as six
+from salt.ext import six
 from salt.serializers.yamlex import merge_recursive as _yamlex_merge_recursive
 
 log = logging.getLogger(__name__)
@@ -27,8 +27,13 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
     on a manual merge (helpful for non-dict types like FunctionWrapper)
 
     If merge_lists=True, will aggregate list object types instead of replace.
-    This behavior is only activated when recursive_update=True. By default
-    merge_lists=False.
+    The list in ``upd`` is added to the list in ``dest``, so the resulting list
+    is ``dest[key] + upd[key]``. This behavior is only activated when
+    recursive_update=True. By default merge_lists=False.
+
+    .. versionchanged: 2016.11.6
+        When merging lists, duplicate values are removed. Values already
+        present in the ``dest`` list are not added from the ``upd`` list.
     '''
     if (not isinstance(dest, collections.Mapping)) \
             or (not isinstance(upd, collections.Mapping)):
@@ -50,7 +55,9 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
             elif isinstance(dest_subkey, list) \
                      and isinstance(val, list):
                 if merge_lists:
-                    dest[key] = dest.get(key, []) + val
+                    merged = copy.deepcopy(dest_subkey)
+                    merged.extend([x for x in val if x not in merged])
+                    dest[key] = merged
                 else:
                     dest[key] = upd[key]
             else:
@@ -58,7 +65,7 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
         return dest
     else:
         try:
-            for k in upd.keys():
+            for k in upd:
                 dest[k] = upd[k]
         except AttributeError:
             # this mapping is not a dict

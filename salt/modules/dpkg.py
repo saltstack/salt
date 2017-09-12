@@ -11,7 +11,10 @@ import re
 import datetime
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once compare_dicts is moved
+import salt.utils.args
+import salt.utils.files
+import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -248,14 +251,19 @@ def file_dict(*packages):
     return {'errors': errors, 'packages': ret}
 
 
-def _get_pkg_info(*packages):
+def _get_pkg_info(*packages, **kwargs):
     '''
     Return list of package information. If 'packages' parameter is empty,
     then data about all installed packages will be returned.
 
     :param packages: Specified packages.
+    :param failhard: Throw an exception if no packages found.
     :return:
     '''
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    failhard = kwargs.pop('failhard', True)
+    if kwargs:
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if __grains__['os'] == 'Ubuntu' and __grains__['osrelease_info'] < (12, 4):
         bin_var = '${binary}'
@@ -286,7 +294,10 @@ def _get_pkg_info(*packages):
 
     call = __salt__['cmd.run_all'](cmd, python_chell=False)
     if call['retcode']:
-        raise CommandExecutionError("Error getting packages information: {0}".format(call['stderr']))
+        if failhard:
+            raise CommandExecutionError("Error getting packages information: {0}".format(call['stderr']))
+        else:
+            return ret
 
     for pkg_info in [elm for elm in re.split(r"------", call['stdout']) if elm.strip()]:
         pkg_data = {}
@@ -315,7 +326,7 @@ def _get_pkg_license(pkg):
     licenses = set()
     cpr = "/usr/share/doc/{0}/copyright".format(pkg)
     if os.path.exists(cpr):
-        with salt.utils.fopen(cpr) as fp_:
+        with salt.utils.files.fopen(cpr) as fp_:
             for line in fp_.read().split(os.linesep):
                 if line.startswith("License:"):
                     licenses.add(line.split(":", 1)[1].strip())
@@ -346,14 +357,14 @@ def _get_pkg_ds_avail():
     :return:
     '''
     avail = "/var/lib/dpkg/available"
-    if not salt.utils.which('dselect') or not os.path.exists(avail):
+    if not salt.utils.path.which('dselect') or not os.path.exists(avail):
         return dict()
 
     # Do not update with dselect, just read what is.
     ret = dict()
     pkg_mrk = "Package:"
     pkg_name = "package"
-    with salt.utils.fopen(avail) as fp_:
+    with salt.utils.files.fopen(avail) as fp_:
         for pkg_info in fp_.read().split(pkg_mrk):
             nfo = dict()
             for line in (pkg_mrk + pkg_info).split(os.linesep):
@@ -369,7 +380,7 @@ def _get_pkg_ds_avail():
     return ret
 
 
-def info(*packages):
+def info(*packages, **kwargs):
     '''
     Returns a detailed summary of package information for provided package names.
     If no packages are specified, all packages will be returned.
@@ -379,19 +390,31 @@ def info(*packages):
     packages
         The names of the packages for which to return information.
 
+    failhard
+        Whether to throw an exception if none of the packages are installed.
+        Defaults to True.
+
+        .. versionadded:: 2016.11.3
+
     CLI example:
 
     .. code-block:: bash
 
         salt '*' lowpkg.info
         salt '*' lowpkg.info apache2 bash
+        salt '*' lowpkg.info 'php5*' failhard=false
     '''
     # Get the missing information from the /var/lib/dpkg/available, if it is there.
     # However, this file is operated by dselect which has to be installed.
     dselect_pkg_avail = _get_pkg_ds_avail()
 
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    failhard = kwargs.pop('failhard', True)
+    if kwargs:
+        salt.utils.args.invalid_kwargs(kwargs)
+
     ret = dict()
-    for pkg in _get_pkg_info(*packages):
+    for pkg in _get_pkg_info(*packages, failhard=failhard):
         # Merge extra information from the dselect, if available
         for pkg_ext_k, pkg_ext_v in dselect_pkg_avail.get(pkg['package'], {}).items():
             if pkg_ext_k not in pkg:

@@ -27,9 +27,11 @@ from __future__ import absolute_import
 import logging
 import socket
 import pprint
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import libcloud
 try:
+    import libcloud
     from libcloud.compute.base import NodeState
     from libcloud.compute.base import NodeAuthPassword
     from libcloud.compute.types import Provider
@@ -37,9 +39,15 @@ try:
     from libcloud.loadbalancer.base import Member
     from libcloud.loadbalancer.types import Provider as Provider_lb
     from libcloud.loadbalancer.providers import get_driver as get_driver_lb
-    # See https://github.com/saltstack/salt/issues/32743
-    import libcloud.security
-    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
+
+    # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
+    # However, older versions of libcloud must still be supported with this work-around.
+    # This work-around can be removed when the required minimum version of libcloud is
+    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+    if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
+        # See https://github.com/saltstack/salt/issues/32743
+        import libcloud.security
+        libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
@@ -133,6 +141,60 @@ def get_dependencies():
     )
 
 
+def _query_node_data(vm_, data):
+    running = False
+    try:
+        node = show_instance(vm_['name'], 'action')
+        running = (node['state'] == NodeState.RUNNING)
+        log.debug('Loaded node data for %s:\nname: %s\nstate: %s',
+                  vm_['name'], pprint.pformat(node['name']), node['state'])
+    except Exception as err:
+        log.error(
+            'Failed to get nodes list: %s', err,
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        # Trigger a failure in the wait for IP function
+        return running
+
+    if not running:
+        # Still not running, trigger another iteration
+        return
+
+    private = node['private_ips']
+    public = node['public_ips']
+
+    if private and not public:
+        log.warning('Private IPs returned, but not public. Checking for misidentified IPs.')
+        for private_ip in private:
+            private_ip = preferred_ip(vm_, [private_ip])
+            if private_ip is False:
+                continue
+            if salt.utils.cloud.is_public_ip(private_ip):
+                log.warning('%s is a public IP', private_ip)
+                data.public_ips.append(private_ip)
+            else:
+                log.warning('%s is a private IP', private_ip)
+                if private_ip not in data.private_ips:
+                    data.private_ips.append(private_ip)
+
+        if ssh_interface(vm_) == 'private_ips' and data.private_ips:
+            return data
+
+    if private:
+        data.private_ips = private
+        if ssh_interface(vm_) == 'private_ips':
+            return data
+
+    if public:
+        data.public_ips = public
+        if ssh_interface(vm_) != 'private_ips':
+            return data
+
+    log.debug('Contents of the node data:')
+    log.debug(data)
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -151,11 +213,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -164,42 +222,55 @@ def create(vm_):
     conn = get_conn()
     rootPw = NodeAuthPassword(vm_['auth'])
 
+    location = conn.ex_get_location_by_id(vm_['location'])
+    images = conn.list_images(location=location)
+    image = [x for x in images if x.id == vm_['image']][0]
+    network_domains = conn.ex_list_network_domains(location=location)
     try:
-        location = conn.ex_get_location_by_id(vm_['location'])
-        images = conn.list_images(location=location)
-        image = [x for x in images if x.id == vm_['image']][0]
-        network_domains = conn.ex_list_network_domains(location=location)
-        try:
-            network_domain = [y for y in network_domains
-                              if y.name == vm_['network_domain']][0]
-        except IndexError:
-            network_domain = conn.ex_create_network_domain(
-                location=location,
-                name=vm_['network_domain'],
-                plan='ADVANCED',
-                description=''
-            )
+        network_domain = [y for y in network_domains
+                          if y.name == vm_['network_domain']][0]
+    except IndexError:
+        network_domain = conn.ex_create_network_domain(
+            location=location,
+            name=vm_['network_domain'],
+            plan='ADVANCED',
+            description=''
+        )
 
-        try:
-            vlan = [y for y in conn.ex_list_vlans(
-                location=location,
-                network_domain=network_domain)
-                    if y.name == vm_['vlan']][0]
-        except (IndexError, KeyError):
-            # Use the first VLAN in the network domain
-            vlan = conn.ex_list_vlans(
-                location=location,
-                network_domain=network_domain)[0]
+    try:
+        vlan = [y for y in conn.ex_list_vlans(
+            location=location,
+            network_domain=network_domain)
+                if y.name == vm_['vlan']][0]
+    except (IndexError, KeyError):
+        # Use the first VLAN in the network domain
+        vlan = conn.ex_list_vlans(
+            location=location,
+            network_domain=network_domain)[0]
 
-        kwargs = {
-            'name': vm_['name'],
-            'image': image,
-            'auth': rootPw,
-            'ex_description': vm_['description'],
-            'ex_network_domain': network_domain,
-            'ex_vlan': vlan,
-            'ex_is_started': vm_['is_started']
-        }
+    kwargs = {
+        'name': vm_['name'],
+        'image': image,
+        'auth': rootPw,
+        'ex_description': vm_['description'],
+        'ex_network_domain': network_domain,
+        'ex_vlan': vlan,
+        'ex_is_started': vm_['is_started']
+    }
+
+    event_data = kwargs.copy()
+    del event_data['auth']
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        args=__utils__['cloud.filter_event']('requesting', event_data, list(event_data)),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
+    try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
         log.error(
@@ -211,67 +282,9 @@ def create(vm_):
         )
         return False
 
-    def __query_node_data(vm_, data):
-        running = False
-        try:
-            node = show_instance(vm_['name'], 'action')
-            running = (node['state'] == NodeState.RUNNING)
-            log.debug(
-                'Loaded node data for %s:\nname: %s\nstate: %s',
-                vm_['name'],
-                pprint.pformat(node['name']),
-                node['state']
-                )
-        except Exception as err:
-            log.error(
-                'Failed to get nodes list: %s', err,
-                # Show the traceback if the debug logging level is enabled
-                exc_info_on_loglevel=logging.DEBUG
-            )
-            # Trigger a failure in the wait for IP function
-            return False
-
-        if not running:
-            # Still not running, trigger another iteration
-            return
-
-        private = node['private_ips']
-        public = node['public_ips']
-
-        if private and not public:
-            log.warning(
-                'Private IPs returned, but not public... Checking for '
-                'misidentified IPs'
-            )
-            for private_ip in private:
-                private_ip = preferred_ip(vm_, [private_ip])
-                if salt.utils.cloud.is_public_ip(private_ip):
-                    log.warning('%s is a public IP', private_ip)
-                    data.public_ips.append(private_ip)
-                else:
-                    log.warning('%s is a private IP', private_ip)
-                    if private_ip not in data.private_ips:
-                        data.private_ips.append(private_ip)
-
-            if ssh_interface(vm_) == 'private_ips' and data.private_ips:
-                return data
-
-        if private:
-            data.private_ips = private
-            if ssh_interface(vm_) == 'private_ips':
-                return data
-
-        if public:
-            data.public_ips = public
-            if ssh_interface(vm_) != 'private_ips':
-                return data
-
-        log.debug('DATA')
-        log.debug(data)
-
     try:
         data = salt.utils.cloud.wait_for_ip(
-            __query_node_data,
+            _query_node_data,
             update_args=(vm_, data),
             timeout=config.get_cloud_config_value(
                 'wait_for_ip_timeout', vm_, __opts__, default=25 * 60),
@@ -330,11 +343,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )

@@ -3,6 +3,8 @@
 Display output in a table format
 =================================
 
+.. versionadded:: 2017.7.0
+
 This outputter displays a sequence of rows as table.
 
 Example output::
@@ -40,12 +42,10 @@ from functools import reduce  # pylint: disable=redefined-builtin
 
 # Import salt libs
 import salt.output
-import salt.utils.locales
 from salt.ext.six import string_types
-from salt.utils import get_colors
-from salt.ext.six.moves import map  # pylint: disable=redefined-builtin
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
-
+from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
+import salt.utils.color
+import salt.utils.locales
 
 __virtualname__ = 'table'
 
@@ -76,7 +76,7 @@ class TableDisplay(object):
                  width=50,  # column max width
                  wrapfunc=None):  # function wrapper
         self.__dict__.update(
-            get_colors(
+            salt.utils.color.get_colors(
                 __opts__.get('color'),
                 __opts__.get('color_theme')
             )
@@ -323,6 +323,12 @@ def output(ret, **kwargs):
         * labels_key: use the labels under a certain key. Otherwise will try to use the dictionary keys (if any).
         * title: display title when only one table is selected (using the ``rows_key`` argument).
     '''
+
+    # to facilitate re-use
+    if 'opts' in kwargs:
+        global __opts__  # pylint: disable=W0601
+        __opts__ = kwargs.pop('opts')
+
     # Prefer kwargs before opts
     base_indent = kwargs.get('nested_indent', 0) \
         or __opts__.get('out.table.nested_indent', 0)
@@ -339,8 +345,8 @@ def output(ret, **kwargs):
     for argk in argks:
         argv = kwargs.get(argk) \
             or __opts__.get('out.table.{key}'.format(key=argk))
-        if argv:
-            class_kvargs[argv] = argk
+        if argv is not None:
+            class_kvargs[argk] = argv
 
     table = TableDisplay(**class_kvargs)
 

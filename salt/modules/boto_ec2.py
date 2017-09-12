@@ -50,13 +50,13 @@ from __future__ import absolute_import
 import logging
 import time
 import json
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.utils
 import salt.utils.compat
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import third party libs
 try:
@@ -450,7 +450,7 @@ def assign_private_ip_addresses(network_interface_name=None, network_interface_i
         salt myminion boto_ec2.assign_private_ip_addresses network_interface_name=my_eni private_ip_addresses=private_ip
         salt myminion boto_ec2.assign_private_ip_addresses network_interface_name=my_eni secondary_private_ip_address_count=2
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     if not salt.utils.exactly_one((network_interface_name,
                                    network_interface_id)):
@@ -504,7 +504,7 @@ def unassign_private_ip_addresses(network_interface_name=None, network_interface
 
         salt myminion boto_ec2.unassign_private_ip_addresses network_interface_name=my_eni private_ip_addresses=private_ip
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     if not salt.utils.exactly_one((network_interface_name,
                                    network_interface_id)):
@@ -614,8 +614,8 @@ def create_image(ami_name, instance_id=None, instance_name=None, tags=None, regi
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.create_instance ami_name instance_name=myinstance
-        salt myminion boto_ec2.create_instance another_ami_name tags='{"mytag": "value"}' description='this is my ami'
+        salt myminion boto_ec2.create_image ami_name instance_name=myinstance
+        salt myminion boto_ec2.create_image another_ami_name tags='{"mytag": "value"}' description='this is my ami'
 
     '''
 
@@ -741,6 +741,31 @@ def get_id(name=None, tags=None, region=None, key=None,
     else:
         log.warning('Could not find instance.')
         return None
+
+
+def get_tags(instance_id=None, keyid=None, key=None, profile=None,
+             region=None):
+    '''
+    Given an instance_id, return a list of tags associated with that instance.
+
+    returns
+        (list) - list of tags as key/value pairs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.get_tags instance_id
+    '''
+    tags = []
+    client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
+    result = client.get_all_tags(filters={"resource-id": instance_id})
+    if len(result) > 0:
+        for tag in result:
+            tags.append({tag.name: tag.value})
+    else:
+        log.info("No tags found for instance_id {}".format(instance_id))
+    return tags
 
 
 def exists(instance_id=None, name=None, tags=None, region=None, key=None,
@@ -1758,20 +1783,18 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
     '''
     ret = {'success': True, 'comment': '', 'changes': {}}
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+    ### First creeate a dictionary mapping all changes for a given volume to it's volume ID...
+    tag_sets = {}
     for tm in tag_maps:
-        filters = tm.get('filters')
-        tags = tm.get('tags')
-        if not isinstance(filters, dict):
-            raise SaltInvocationError('Tag filters must be a dictionary: got {0}'.format(filters))
-        if not isinstance(tags, dict):
-            raise SaltInvocationError('Tags must be a dictionary: got {0}'.format(tags))
+        filters = dict(tm.get('filters', {}))
+        tags = dict(tm.get('tags', {}))
         args = {'return_objs': True, 'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
         new_filters = {}
         log.debug('got filters: {0}'.format(filters))
         instance_id = None
         in_states = tm.get('in_states', running_states)
         try:
-            for k, v in six.iteritems(filters):
+            for k, v in filters.items():
                 if k == 'volume_ids':
                     args['volume_ids'] = v
                 elif k == 'instance_name':
@@ -1789,40 +1812,79 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
         args['filters'] = new_filters
         volumes = get_all_volumes(**args)
         log.debug('got volume list: {0}'.format(volumes))
-        changes = {'old': {}, 'new': {}}
         for vol in volumes:
-            log.debug('current tags on vol.id {0}: {1}'.format(vol.id, dict(getattr(vol, 'tags', {}))))
-            curr = set(dict(getattr(vol, 'tags', {})).keys())
-            log.debug('requested tags on vol.id {0}: {1}'.format(vol.id, tags))
-            req = set(tags.keys())
-            add = list(req - curr)
-            update = [r for r in (req & curr) if vol.tags[r] != tags[r]]
-            remove = list(curr - req)
-            if add or update or (authoritative and remove):
-                changes['old'][vol.id] = dict(getattr(vol, 'tags', {}))
-                changes['new'][vol.id] = tags
-            else:
-                log.debug('No changes needed for vol.id {0}'.format(vol.id))
-            if len(add):
-                d = dict((k, tags[k]) for k in add)
-                log.debug('New tags for vol.id {0}: {1}'.format(vol.id, d))
-            if len(update):
-                d = dict((k, tags[k]) for k in update)
-                log.debug('Updated tags for vol.id {0}: {1}'.format(vol.id, d))
-            if not dry_run:
-                if not create_tags(vol.id, tags, region=region, key=key, keyid=keyid, profile=profile):
-                    ret['success'] = False
-                    ret['comment'] = "Failed to set tags on vol.id {0}: {1}".format(vol.id, tags)
-                    return ret
-                if authoritative:
-                    if len(remove):
-                        log.debug('Removed tags for vol.id {0}: {1}'.format(vol.id, remove))
-                        if not delete_tags(vol.id, remove, region=region, key=key, keyid=keyid, profile=profile):
-                            ret['success'] = False
-                            ret['comment'] = "Failed to remove tags on vol.id {0}: {1}".format(vol.id, remove)
-                            return ret
-        ret['changes'].update(changes) if changes['old'] or changes['new'] else None  # pylint: disable=W0106
+            tag_sets.setdefault(vol.id.replace('-', '_'), {'vol': vol, 'tags': tags.copy()})['tags'].update(tags.copy())
+    log.debug('tag_sets after munging: {0}'.format(tag_sets))
+
+    ### ...then loop through all those volume->tag pairs and apply them.
+    changes = {'old': {}, 'new': {}}
+    for volume in tag_sets.values():
+        vol, tags = volume['vol'], volume['tags']
+        log.debug('current tags on vol.id {0}: {1}'.format(vol.id, dict(getattr(vol, 'tags', {}))))
+        curr = set(dict(getattr(vol, 'tags', {})).keys())
+        log.debug('requested tags on vol.id {0}: {1}'.format(vol.id, tags))
+        req = set(tags.keys())
+        add = list(req - curr)
+        update = [r for r in (req & curr) if vol.tags[r] != tags[r]]
+        remove = list(curr - req)
+        if add or update or (authoritative and remove):
+            changes['old'][vol.id] = dict(getattr(vol, 'tags', {}))
+            changes['new'][vol.id] = tags
+        else:
+            log.debug('No changes needed for vol.id {0}'.format(vol.id))
+        if len(add):
+            d = dict((k, tags[k]) for k in add)
+            log.debug('New tags for vol.id {0}: {1}'.format(vol.id, d))
+        if len(update):
+            d = dict((k, tags[k]) for k in update)
+            log.debug('Updated tags for vol.id {0}: {1}'.format(vol.id, d))
+        if not dry_run:
+            if not create_tags(vol.id, tags, region=region, key=key, keyid=keyid, profile=profile):
+                ret['success'] = False
+                ret['comment'] = "Failed to set tags on vol.id {0}: {1}".format(vol.id, tags)
+                return ret
+            if authoritative:
+                if len(remove):
+                    log.debug('Removed tags for vol.id {0}: {1}'.format(vol.id, remove))
+                    if not delete_tags(vol.id, remove, region=region, key=key, keyid=keyid, profile=profile):
+                        ret['success'] = False
+                        ret['comment'] = "Failed to remove tags on vol.id {0}: {1}".format(vol.id, remove)
+                        return ret
+    ret['changes'].update(changes) if changes['old'] or changes['new'] else None  # pylint: disable=W0106
     return ret
+
+
+def get_all_tags(filters=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Describe all tags matching the filter criteria, or all tags in the account otherwise.
+
+    .. versionadded:: Oxygen
+
+    filters
+        (dict) - Additional constraints on which volumes to return.  Note that valid filters vary
+        extensively depending on the resource type.  When in doubt, search first without a filter
+        and then use the returned data to help fine-tune your search.  You can generally garner the
+        resource type from its ID (e.g. `vol-XXXXX` is a volume, `i-XXXXX` is an instance, etc.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.get_all_tags '{"tag:Name": myInstanceNameTag, resource-type: instance}'
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        ret = conn.get_all_tags(filters)
+        tags = {}
+        for t in ret:
+            if t.res_id not in tags:
+                tags[t.res_id] = {}
+            tags[t.res_id][t.name] = t.value
+        return tags
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return {}
 
 
 def create_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=None):
@@ -1896,7 +1958,7 @@ def delete_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=N
 
 
 def detach_volume(volume_id, instance_id=None, device=None, force=False,
-                  region=None, key=None, keyid=None, profile=None):
+                  wait_for_detachement=False, region=None, key=None, keyid=None, profile=None):
     '''
     Detach an EBS volume from an EC2 instance.
 
@@ -1914,6 +1976,8 @@ def detach_volume(volume_id, instance_id=None, device=None, force=False,
                  only as a last resort to detach a volume from a failed instance. The instance
                  will not have an opportunity to flush file system caches nor file system meta data.
                  If you use this option, you must perform file system check and repair procedures.
+    wait_for_detachement
+       (bool) - Whether or not to wait for volume detachement to complete.
 
     returns
         (bool) - True on success, False on failure.
@@ -1927,7 +1991,12 @@ def detach_volume(volume_id, instance_id=None, device=None, force=False,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        return conn.detach_volume(volume_id, instance_id, device, force)
+        ret = conn.detach_volume(volume_id, instance_id, device, force)
+        if ret and wait_for_detachement and not _wait_for_volume_available(conn, volume_id):
+            timeout_msg = 'Timed out waiting for the volume status "available".'
+            log.error(timeout_msg)
+            return False
+        return ret
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
@@ -1968,3 +2037,111 @@ def delete_volume(volume_id, instance_id=None, device=None, force=False,
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
+
+
+def _wait_for_volume_available(conn, volume_id, retries=5, interval=5):
+    i = 0
+    while True:
+        i = i + 1
+        time.sleep(interval)
+        vols = conn.get_all_volumes(volume_ids=[volume_id])
+        if len(vols) != 1:
+            return False
+        vol = vols[0]
+        if vol.status == 'available':
+            return True
+        if i > retries:
+            return False
+
+
+def attach_volume(volume_id, instance_id, device,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Attach an EBS volume to an EC2 instance.
+    ..
+
+    volume_id
+        (string) – The ID of the EBS volume to be attached.
+    instance_id
+        (string) – The ID of the EC2 instance to attach the volume to.
+    device
+        (string) – The device on the instance through which the volume is exposed (e.g. /dev/sdh)
+
+    returns
+        (bool) - True on success, False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.attach_volume vol-12345678 i-87654321 /dev/sdh
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        return conn.attach_volume(volume_id, instance_id, device)
+    except boto.exception.BotoServerError as error:
+        log.error(error)
+        return False
+
+
+def create_volume(zone_name, size=None, snapshot_id=None, volume_type=None,
+                  iops=None, encrypted=False, kms_key_id=None, wait_for_creation=False,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Create an EBS volume to an availability zone.
+
+    ..
+
+    zone_name
+        (string) – The Availability zone name of the EBS volume to be created.
+    size
+        (int) –  The size of the new volume, in GiB. If you're creating the
+                 volume from a snapshot and don't specify a volume size, the
+                 default is the snapshot size.
+    snapshot_id
+        (string) –  The snapshot ID from which the new volume will be created.
+    volume_type
+        (string) -  The type of the volume. Valid volume types for AWS can be found here:
+                    http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
+    iops
+        (int) - The provisioned IOPS you want to associate with this volume.
+    encrypted
+        (bool) - Specifies whether the volume should be encrypted.
+    kms_key_id
+        (string) - If encrypted is True, this KMS Key ID may be specified to
+                   encrypt volume with this key
+                   e.g.: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
+    wait_for_creation
+        (bool) - Whether or not to wait for volume creation to complete.
+
+    returns
+        (string) - created volume id on success, error message on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.create_volume us-east-1a size=10
+        salt-call boto_ec2.create_volume us-east-1a snapshot_id=snap-0123abcd
+
+    '''
+    if size is None and snapshot_id is None:
+        raise SaltInvocationError(
+            'Size must be provided if not created from snapshot.'
+        )
+    ret = {}
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        vol = conn.create_volume(size=size, zone=zone_name, snapshot=snapshot_id,
+                                 volume_type=volume_type, iops=iops, encrypted=encrypted,
+                                 kms_key_id=kms_key_id)
+        if wait_for_creation and not _wait_for_volume_available(conn, vol.id):
+            timeout_msg = 'Timed out waiting for the volume status "available".'
+            log.error(timeout_msg)
+            ret['error'] = timeout_msg
+        else:
+            ret['result'] = vol.id
+    except boto.exception.BotoServerError as error:
+        ret['error'] = __utils__['boto.get_error'](error)
+    return ret

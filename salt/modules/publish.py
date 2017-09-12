@@ -13,6 +13,7 @@ import salt.crypt
 import salt.payload
 import salt.transport
 import salt.utils.args
+import salt.utils.versions
 from salt.exceptions import SaltReqTimeoutError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -116,7 +117,8 @@ def _publish(
             'tok': tok,
             'tmo': timeout,
             'form': form,
-            'id': __opts__['id']}
+            'id': __opts__['id'],
+            'no_parse': __opts__.get('no_parse', [])}
 
     channel = salt.transport.Channel.factory(__opts__, master_uri=master_uri)
     try:
@@ -204,7 +206,7 @@ def publish(tgt,
     - range
     - compound
 
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -251,7 +253,7 @@ def publish(tgt,
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -301,7 +303,7 @@ def full_data(tgt,
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -342,7 +344,8 @@ def runner(fun, arg=None, timeout=5):
             'arg': arg,
             'tok': tok,
             'tmo': timeout,
-            'id': __opts__['id']}
+            'id': __opts__['id'],
+            'no_parse': __opts__.get('no_parse', [])}
 
     channel = salt.transport.Channel.factory(__opts__)
     try:

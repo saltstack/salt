@@ -11,9 +11,7 @@ Beacon to monitor memory usage.
 from __future__ import absolute_import
 import logging
 import re
-
-# Import Salt libs
-import salt.utils
+from salt.ext.six.moves import map
 
 # Import Third Party Libs
 try:
@@ -28,22 +26,28 @@ __virtualname__ = 'memusage'
 
 
 def __virtual__():
-    if salt.utils.is_windows():
-        return False
-    elif HAS_PSUTIL is False:
+    if HAS_PSUTIL is False:
         return False
     else:
         return __virtualname__
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''
     # Configuration for memusage beacon should be a list of dicts
-    if not isinstance(config, dict):
+    if not isinstance(config, list):
         return False, ('Configuration for memusage '
-                       'beacon must be a dictionary.')
+                       'beacon must be a list.')
+    else:
+        _config = {}
+        list(map(_config.update, config))
+
+        if 'percent' not in _config:
+            return False, ('Configuration for memusage beacon '
+                           'requires percent.')
+
     return True, 'Valid beacon configuration'
 
 
@@ -51,7 +55,8 @@ def beacon(config):
     '''
     Monitor the memory usage of the minion
 
-    Specify thresholds for percent used and only emit a beacon if it is exceeded.
+    Specify thresholds for percent used and only emit a beacon
+    if it is exceeded.
 
     .. code-block:: yaml
 
@@ -60,15 +65,17 @@ def beacon(config):
             - percent: 63%
     '''
     ret = []
-    for memusage in config:
-        mount = memusage.keys()[0]
-        _current_usage = psutil.virtual_memory()
 
-        current_usage = _current_usage.percent
-        monitor_usage = memusage[mount]
-        if '%' in monitor_usage:
-            monitor_usage = re.sub('%', '', monitor_usage)
-        monitor_usage = float(monitor_usage)
-        if current_usage >= monitor_usage:
-            ret.append({'memusage': current_usage})
+    _config = {}
+    list(map(_config.update, config))
+
+    _current_usage = psutil.virtual_memory()
+
+    current_usage = _current_usage.percent
+    monitor_usage = _config['percent']
+    if '%' in monitor_usage:
+        monitor_usage = re.sub('%', '', monitor_usage)
+    monitor_usage = float(monitor_usage)
+    if current_usage >= monitor_usage:
+        ret.append({'memusage': current_usage})
     return ret

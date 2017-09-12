@@ -8,4 +8,5 @@ Set SaltDir=%SaltDir:~0,-1%
 Set Python=%SaltDir%\bin\python.exe
 Set Script=%SaltDir%\bin\Scripts\salt-cp
 
-"%Python%" "%Script%" %*
+:: Launch Script
+"%Python%" -E -s "%Script%" %*

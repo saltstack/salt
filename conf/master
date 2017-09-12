@@ -59,15 +59,14 @@
 
 # Directory for custom modules. This directory can contain subdirectories for
 # each of Salt's module types such as "runners", "output", "wheel", "modules",
-# "states", "returners", etc.
-#extension_modules: <no default>
+# "states", "returners", "engines", "utils", etc.
+#extension_modules: /var/cache/salt/master/extmods
 
 # Directory for custom modules. This directory can contain subdirectories for
 # each of Salt's module types such as "runners", "output", "wheel", "modules",
-# "states", "returners", "engines", etc.
+# "states", "returners", "engines", "utils", etc.
 # Like 'extension_modules' but can take an array of paths
-#module_dirs: <no default>
-#   - /var/cache/salt/minion/extmods
+#module_dirs: []
 
 # Verify and set permissions on configuration directories at startup:
 #verify_env: True
@@ -91,6 +90,10 @@
 # Set the default outputter used by the salt command. The default is "nested".
 #output: nested
 
+# To set a list of additional directories to search for salt outputters, set the
+# outputter_dirs option.
+#outputter_dirs: []
+
 # Set the default output file used by the salt command. Default is to output
 # to the CLI and not to a file. Functions the same way as the "--out-file"
 # CLI option, only sets this to a single file for all salt commands.
@@ -98,6 +101,9 @@
 
 # Return minions that timeout when running commands like test.ping
 #show_timeout: True
+
+# Tell the client to display the jid when a job is published.
+#show_jid: False
 
 # By default, output is colored. To disable colored output, set the color value
 # to False.
@@ -133,6 +139,14 @@
 
 # Cache subsystem module to use for minion data cache.
 #cache: localfs
+# Enables a fast in-memory cache booster and sets the expiration time.
+#memcache_expire_seconds: 0
+# Set a memcache limit in items (bank + key) per cache storage (driver + driver_opts).
+#memcache_max_items: 1024
+# Each time a cache storage got full cleanup all the expired items not just the oldest one.
+#memcache_full_cleanup: False
+# Enable collecting the memcache stats and log it on `debug` log level.
+#memcache_debug: False
 
 # Store all returns in the given returner.
 # Setting this option requires that any returner-specific configuration also
@@ -185,6 +199,9 @@
 # WARNING: This may have security implications if compromised minions auth with
 # a previous deleted minion ID.
 #preserve_minion_cache: False
+
+# Allow or deny minions from requesting their own key revocation
+#allow_minion_key_revoke: True
 
 # If max_minions is used in large installations, the master might experience
 # high-load situations because of having to check the number of connected
@@ -271,9 +288,34 @@
 # a value for you. Default is disabled.
 # ipc_write_buffer: 'dynamic'
 
+# These two batch settings, batch_safe_limit and batch_safe_size, are used to
+# automatically switch to a batch mode execution. If a command would have been
+# sent to more than <batch_safe_limit> minions, then run the command in
+# batches of <batch_safe_size>. If no batch_safe_size is specified, a default
+# of 8 will be used. If no batch_safe_limit is specified, then no automatic
+# batching will occur.
+#batch_safe_limit: 100
+#batch_safe_size: 8
+
 
 #####        Security settings       #####
 ##########################################
+# Enable passphrase protection of Master private key.  Although a string value
+# is acceptable; passwords should be stored in an external vaulting mechanism
+# and retrieved via sdb. See https://docs.saltstack.com/en/latest/topics/sdb/.
+# Passphrase protection is off by default but an example of an sdb profile and
+# query is as follows.
+# masterkeyring:
+#  driver: keyring
+#  service: system
+#
+# key_pass: sdb://masterkeyring/key_pass
+
+# Enable passphrase protection of the Master signing_key. This only applies if
+# master_sign_pubkey is set to True.  This is disabled by default.
+# master_sign_pubkey: True
+# signing_key_pass: sdb://masterkeyring/signing_pass
+
 # Enable "open mode", this mode still maintains encryption, but turns off
 # authentication, this is only intended for highly secure environments or for
 # the situation where your keys end up in a bad state. If you run in open mode
@@ -283,6 +325,9 @@
 # Enable auto_accept, this setting will automatically accept all incoming
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
+
+# The size of key that should be generated when creating new keys.
+#keysize: 2048
 
 # Time in minutes that an incoming public key with a matching name found in
 # pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
@@ -362,6 +407,15 @@
 #
 #token_expire_user_override: False
 
+# Set to True to enable keeping the calculated user's auth list in the token
+# file. This is disabled by default and the auth list is calculated or requested
+# from the eauth driver each time.
+#keep_acl_in_token: False
+
+# Auth subsystem module to use to get authorized access list for a user. By default it's
+# the same module used for external authentication.
+#eauth_acl_module: django
+
 # Allow minions to push files to the master. This is disabled by default, for
 # security purposes.
 #file_recv: False
@@ -385,6 +439,20 @@
 # will cause minion to throw an exception and drop the message.
 # sign_pub_messages: False
 
+# Signature verification on messages published from minions
+# This requires that minions cryptographically sign the messages they
+# publish to the master.  If minions are not signing, then log this information
+# at loglevel 'INFO' and drop the message without acting on it.
+# require_minion_sign_messages: False
+
+# The below will drop messages when their signatures do not validate.
+# Note that when this option is False but `require_minion_sign_messages` is True
+# minions MUST sign their messages but the validity of their signatures
+# is ignored.
+# These two config options exist so a Salt infrastructure can be moved
+# to signing minion messages gradually.
+# drop_messages_signature_fail: False
+
 # Use TLS/SSL encrypted connection between master and minion.
 # Can be set to a dictionary containing keyword arguments corresponding to Python's
 # 'ssl.wrap_socket' method.
@@ -400,6 +468,38 @@
 # Pass in an alternative location for the salt-ssh roster file
 #roster_file: /etc/salt/roster
 
+# Define locations for roster files so they can be chosen when using Salt API.
+# An administrator can place roster files into these locations. Then when
+# calling Salt API, parameter 'roster_file' should contain a relative path to
+# these locations. That is, "roster_file=/foo/roster" will be resolved as
+# "/etc/salt/roster.d/foo/roster" etc. This feature prevents passing insecure
+# custom rosters through the Salt API.
+#
+#rosters:
+# - /etc/salt/roster.d
+# - /opt/salt/some/more/rosters
+
+# The ssh password to log in with.
+#ssh_passwd: ''
+
+#The target system's ssh port number.
+#ssh_port: 22
+
+# Comma-separated list of ports to scan.
+#ssh_scan_ports: 22
+
+# Scanning socket timeout for salt-ssh.
+#ssh_scan_timeout: 0.01
+
+# Boolean to run command via sudo.
+#ssh_sudo: False
+
+# Number of seconds to wait for a response when establishing an SSH connection.
+#ssh_timeout: 60
+
+# The user to log in as.
+#ssh_user: root
+
 # The log file of the salt-ssh command:
 #ssh_log_file: /var/log/salt/ssh
 
@@ -413,12 +513,27 @@
 # authentication with minions
 #ssh_use_home_key: False
 
+# Set this to True to default salt-ssh to run with ``-o IdentitiesOnly=yes``.
+# This option is intended for situations where the ssh-agent offers many
+# different identities and allows ssh to ignore those identities and use the
+# only one specified in options.
+#ssh_identities_only: False
+
+# List-only nodegroups for salt-ssh. Each group must be formed as either a
+# comma-separated list, or a YAML list. This option is useful to group minions
+# into easy-to-target groups when using salt-ssh. These groups can then be
+# targeted with the normal -N argument to salt-ssh.
+#ssh_list_nodegroups: {}
+
 #####    Master Module Management    #####
 ##########################################
 # Manage how master side modules are loaded.
 
 # Add any additional locations to look for master runners:
 #runner_dirs: []
+
+# Add any additional locations to look for master utils:
+#utils_dirs: []
 
 # Enable Cython for master side modules:
 #cython_enable: False
@@ -481,6 +596,11 @@
 # If set to 'changes', the output will be full unless the state didn't change.
 #state_output: full
 
+# The state_output_diff setting changes whether or not the output from
+# successful states is returned. Useful when even the terse output of these
+# states is cluttering the logs. Set it to True to ignore them.
+#state_output_diff: False
+
 # Automatically aggregate all states that have support for mod_aggregate by
 # setting to 'True'. Or pass a list of state module names to automatically
 # aggregate just those types.
@@ -521,6 +641,10 @@
 #    - /srv/salt
 #
 
+# The master_roots setting configures a master-only copy of the file_roots dictionary,
+# used by the state compiler.
+#master_roots: /srv/salt-master
+
 # When using multiple environments, each with their own top file, the
 # default behaviour is an unordered merge. To prevent top files from
 # being merged together and instead to only use the top file from the
@@ -538,11 +662,11 @@
 #default_top: base
 
 # The hash_type is the hash to use when discovering the hash of a file on
-# the master server. The default is md5 but sha1, sha224, sha256, sha384
-# and sha512 are also supported.
+# the master server. The default is sha256, but md5, sha1, sha224, sha384 and
+# sha512 are also supported.
 #
-# WARNING: While md5 is also supported, do not use it due to the high chance
-# of possible collisions and thus security breach.
+# WARNING: While md5 and sha1 are also supported, do not use them due to the
+# high chance of possible collisions and thus security breach.
 #
 # Prior to changing this value, the master should be stopped and all Salt
 # caches should be cleared.
@@ -612,10 +736,11 @@
 
 # Git File Server Backend Configuration
 #
-# Optional parameter used to specify the provider to be used for gitfs. Must
-# be one of the following: pygit2, gitpython, or dulwich. If unset, then each
-# will be tried in that same order, and the first one with a compatible
-# version installed will be the provider that is used.
+# Optional parameter used to specify the provider to be used for gitfs. Must be
+# either pygit2 or gitpython. If unset, then both will be tried (in that
+# order), and the first one with a compatible version installed will be the
+# provider that is used.
+#
 #gitfs_provider: pygit2
 
 # Along with gitfs_password, is used to authenticate to HTTPS remotes.
@@ -668,6 +793,11 @@
 # repository and defaults to the repository root.
 #gitfs_root: somefolder/otherfolder
 #
+# The refspecs fetched by gitfs remotes
+#gitfs_refspecs:
+#  - '+refs/heads/*:refs/remotes/origin/*'
+#  - '+refs/tags/*:refs/tags/*'
+#
 #
 #####         Pillar settings        #####
 ##########################################
@@ -684,10 +814,37 @@
 #  - hiera: /etc/hiera.yaml
 #  - cmd_yaml: cat /etc/salt/yaml
 
+
+# A list of paths to be recursively decrypted during pillar compilation.
+# Entries in this list can be formatted either as a simple string, or as a
+# key/value pair, with the key being the pillar location, and the value being
+# the renderer to use for pillar decryption. If the former is used, the
+# renderer specified by decrypt_pillar_default will be used.
+#decrypt_pillar:
+#  - 'foo:bar': gpg
+#  - 'lorem:ipsum:dolor'
+
+# The delimiter used to distinguish nested data structures in the
+# decrypt_pillar option.
+#decrypt_pillar_delimiter: ':'
+
+# The default renderer used for decryption, if one is not specified for a given
+# pillar key in decrypt_pillar.
+#decrypt_pillar_default: gpg
+
+# List of renderers which are permitted to be used for pillar decryption.
+#decrypt_pillar_renderers:
+#  - gpg
+
 # The ext_pillar_first option allows for external pillar sources to populate
 # before file system pillar. This allows for targeting file system pillar from
 # ext_pillar.
 #ext_pillar_first: False
+
+# The external pillars permitted to be used on-demand using pillar.ext
+#on_demand_ext_pillar:
+#  - libvirt
+#  - virtkey
 
 # The pillar_gitfs_ssl_verify option specifies whether to ignore ssl certificate
 # errors when contacting the pillar gitfs backend. You might want to set this to
@@ -719,6 +876,11 @@
 
 # Recursively merge lists by aggregating them instead of replacing them.
 #pillar_merge_lists: False
+
+# Set this option to True to force the pillarenv to be the same as the effective
+# saltenv when running states. If pillarenv is specified this option will be
+# ignored.
+#pillarenv_from_saltenv: False
 
 # Set this option to 'True' to force a 'KeyError' to be raised whenever an
 # attempt to retrieve a named value from pillar fails. When this option is set
@@ -785,6 +947,11 @@
 # to authenticate is protected by a passphrase.
 #git_pillar_passphrase: ''
 
+# The refspecs fetched by git_pillar remotes
+#git_pillar_refspecs:
+#  - '+refs/heads/*:refs/remotes/origin/*'
+#  - '+refs/tags/*:refs/tags/*'
+
 # A master can cache pillars locally to bypass the expense of having to render them
 # for each minion on every request. This feature should only be enabled in cases
 # where pillar rendering time is known to be unsatisfactory and any attendant security
@@ -803,7 +970,7 @@
 #pillar_cache_ttl: 3600
 
 # If and only if a master has set `pillar_cache: True`, one of several storage providers
-# can be utililzed.
+# can be utilized.
 #
 # `disk`: The default storage backend. This caches rendered pillars to the master cache.
 #         Rendered pillars are serialized and deserialized as msgpack structures for speed.
@@ -820,6 +987,21 @@
 #         This may represent a substantial security risk.
 #
 #pillar_cache_backend: disk
+
+
+######        Reactor Settings        #####
+###########################################
+# Define a salt reactor. See https://docs.saltstack.com/en/latest/topics/reactor/
+#reactor: []
+
+#Set the TTL for the cache of the reactor configuration.
+#reactor_refresh_interval: 60
+
+#Configure the number of workers for the runner/wheel in the reactor.
+#reactor_worker_threads: 10
+
+#Define the queue size for workers in the reactor.
+#reactor_worker_hwm: 10000
 
 
 #####          Syndic settings       #####
@@ -1030,6 +1212,11 @@
 #winrepo_remotes:
 #  - 'https://github.com/saltstack/salt-winrepo.git'
 
+# The refspecs fetched by winrepo remotes
+#winrepo_refspecs:
+#  - '+refs/heads/*:refs/remotes/origin/*'
+#  - '+refs/tags/*:refs/tags/*'
+#
 
 #####      Returner settings          ######
 ############################################

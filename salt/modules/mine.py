@@ -14,12 +14,14 @@ import traceback
 import salt.crypt
 import salt.payload
 import salt.utils
-import salt.utils.network
+import salt.utils.args
 import salt.utils.event
+import salt.utils.network
+import salt.utils.versions
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 MINE_INTERNAL_KEYWORDS = frozenset([
     '__pub_user',
@@ -80,7 +82,7 @@ def _mine_get(load, opts):
     return ret
 
 
-def update(clear=False):
+def update(clear=False, mine_functions=None):
     '''
     Execute the configured functions and send the data back up to the master.
     The functions to be executed are merged from the master config, pillar and
@@ -93,6 +95,34 @@ def update(clear=False):
             - eth0
           disk.usage: []
 
+    This function accepts the following arguments:
+
+    clear: False
+        Boolean flag specifying whether updating will clear the existing
+        mines, or will update. Default: `False` (update).
+
+    mine_functions
+        Update the mine data on certain functions only.
+        This feature can be used when updating the mine for functions
+        that require refresh at different intervals than the rest of
+        the functions specified under `mine_functions` in the
+        minion/master config or pillar.
+        A potential use would be together with the `scheduler`, for example:
+
+        .. code-block:: yaml
+
+            schedule:
+              lldp_mine_update:
+                function: mine.update
+                kwargs:
+                    mine_functions:
+                      net.lldp: []
+                hours: 12
+
+        In the example above, the mine for `net.lldp` would be refreshed
+        every 12 hours, while  `network.ip_addrs` would continue to be updated
+        as specified in `mine_interval`.
+
     The function cache will be populated with information from executing these
     functions
 
@@ -102,9 +132,17 @@ def update(clear=False):
 
         salt '*' mine.update
     '''
-    m_data = __salt__['config.merge']('mine_functions', {})
-    # If we don't have any mine functions configured, then we should just bail out
-    if not m_data:
+    m_data = {}
+    if not mine_functions:
+        m_data = __salt__['config.merge']('mine_functions', {})
+        # If we don't have any mine functions configured, then we should just bail out
+        if not m_data:
+            return
+    elif mine_functions and isinstance(mine_functions, list):
+        m_data = dict((fun, {}) for fun in mine_functions)
+    elif mine_functions and isinstance(mine_functions, dict):
+        m_data = mine_functions
+    else:
         return
 
     data = {}
@@ -161,7 +199,7 @@ def send(func, *args, **kwargs):
         salt '*' mine.send network.ip_addrs eth0
         salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     mine_func = kwargs.pop('mine_function', func)
     if mine_func not in __salt__:
         return False
@@ -234,7 +272,7 @@ def get(tgt,
 
         salt '*' mine.get '*' network.interfaces
         salt '*' mine.get 'os:Fedora' network.interfaces grain
-        salt '*' mine.get 'os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
+        salt '*' mine.get 'G@os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
 
     .. seealso:: Retrieving Mine data from Pillar and Orchestrate
 
@@ -245,7 +283,7 @@ def get(tgt,
         :py:func:`saltutil.runner <salt.modules.saltutil.runner>` module. For
         example:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set minion_ips = salt.saltutil.runner('mine.get',
                 tgt='*',
@@ -255,7 +293,7 @@ def get(tgt,
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -371,7 +409,7 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
         cidrs = cidr_
 
     # Get docker info
-    cmd = 'dockerng.ps'
+    cmd = 'docker.ps'
     docker_hosts = get('*', cmd)
 
     proxy_lists = {}

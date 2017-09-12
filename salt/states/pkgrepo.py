@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Management of APT/YUM package repos
+Management of APT/RPM package repos
 ===================================
 
-Package repositories for APT-based and YUM-based distros can be managed with
+Package repositories for APT-based and RPM-based distros(openSUSE/SUSE, CentOS/Fedora/Redhat) can be managed with
 these states. Here is some example SLS:
 
 .. code-block:: yaml
@@ -79,10 +79,9 @@ these states. Here is some example SLS:
     ``python-pycurl`` will need to be manually installed if it is not present
     once ``python-software-properties`` is installed.
 
-    On Ubuntu & Debian systems, the ```python-apt`` package is required to be
-    installed.  To check if this package is installed, run ``dpkg -l
-    python-software-properties``.  ``python-apt`` will need to be manually
-    installed if it is not present.
+    On Ubuntu & Debian systems, the ``python-apt`` package is required to be
+    installed. To check if this package is installed, run ``dpkg -l python-apt``.
+    ``python-apt`` will need to be manually installed if it is not present.
 
 '''
 
@@ -95,6 +94,10 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 import salt.utils
+import salt.utils.files
+import salt.utils.pkg.deb
+import salt.utils.pkg.rpm
+import salt.utils.versions
 
 
 def __virtual__():
@@ -110,7 +113,7 @@ def managed(name, ppa=None, **kwargs):
     <salt.modules.yumpkg>`, :mod:`apt <salt.modules.aptpkg>`, and :mod:`zypper
     <salt.modules.zypper>` repositories are supported.
 
-    **YUM OR ZYPPER-BASED SYSTEMS**
+    **YUM/DNF/ZYPPER-BASED SYSTEMS**
 
     .. note::
         One of ``baseurl`` or ``mirrorlist`` below is required. Additionally,
@@ -123,6 +126,16 @@ def managed(name, ppa=None, **kwargs):
         as seen in the entry in square brackets (e.g. ``[foo]``) for a given
         repo. Secondly, it will be the name of the file as stored in
         /etc/yum.repos.d (e.g. ``/etc/yum.repos.d/foo.conf``).
+
+    enabled : True
+        Whether or not the repo is enabled. Can be specified as True/False or
+        1/0.
+
+    disabled : False
+        Included to reduce confusion due to APT's use of the ``disabled``
+        argument. If this is passed for a YUM/DNF/Zypper-based distro, then the
+        reverse will be passed as ``enabled``. For example passing
+        ``disabled=True`` will assume ``enabled=False``.
 
     humanname
         This is used as the "name" value in the repo file in
@@ -139,7 +152,7 @@ def managed(name, ppa=None, **kwargs):
         enabled configuration. Anything supplied for this list will be saved
         in the repo configuration with a comment marker (#) in front.
 
-    Additional configuration values seen in yum repo files, such as ``gpgkey`` or
+    Additional configuration values seen in repo files, such as ``gpgkey`` or
     ``gpgcheck``, will be used directly as key-value pairs. For example:
 
     .. code-block:: yaml
@@ -201,9 +214,20 @@ def managed(name, ppa=None, **kwargs):
                 'deb http://us.archive.ubuntu.com/ubuntu precise main':
                   pkgrepo.managed
 
-    disabled
+    disabled : False
         Toggles whether or not the repo is used for resolving dependencies
         and/or installing packages.
+
+    enabled : True
+        Included to reduce confusion due to yum/dnf/zypper's use of the
+        ``enabled`` argument. If this is passed for an APT-based distro, then
+        the reverse will be passed as ``disabled``. For example, passing
+        ``enabled=False`` will assume ``disabled=False``.
+
+    architectures
+        On apt-based systems, architectures can restrict the available
+        architectures that the repository provides (e.g. only amd64).
+        architectures should be a comma-separated list.
 
     comps
         On apt-based systems, comps dictate the types of packages to be
@@ -235,29 +259,45 @@ def managed(name, ppa=None, **kwargs):
 
            Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
 
-    consolidate
-       If set to true, this will consolidate all sources definitions to
-       the sources.list file, cleanup the now unused files, consolidate
-       components (e.g. main) for the same URI, type, and architecture
-       to a single line, and finally remove comments from the sources.list
-       file.  The consolidate will run every time the state is processed. The
-       option only needs to be set on one repo managed by salt to take effect.
+    consolidate : False
+       If set to ``True``, this will consolidate all sources definitions to the
+       sources.list file, cleanup the now unused files, consolidate components
+       (e.g. main) for the same URI, type, and architecture to a single line,
+       and finally remove comments from the sources.list file.  The consolidate
+       will run every time the state is processed. The option only needs to be
+       set on one repo managed by salt to take effect.
 
-    clean_file
-       If set to true, empty file before config repo, dangerous if use
-       multiple sources in one file.
+    clean_file : False
+       If set to ``True``, empty the file before config repo
+
+       .. note::
+           Use with care. This can be dangerous if multiple sources are
+           configured in the same file.
 
        .. versionadded:: 2015.8.0
 
-    refresh_db
-       If set to false this will skip refreshing the apt package database on
-       debian based systems.
+    refresh : True
+       If set to ``False`` this will skip refreshing the apt package database
+       on debian based systems.
+
+    refresh_db : True
+       .. deprecated:: Oxygen
+           Use ``refresh`` instead.
 
     require_in
        Set this to a list of pkg.installed or pkg.latest to trigger the
        running of apt-get update prior to attempting to install these
-       packages. Setting a require in the pkg will not work for this.
+       packages. Setting a require in the pkg state will not work for this.
     '''
+    if 'refresh_db' in kwargs:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The \'refresh_db\' argument to \'pkg.mod_repo\' has been '
+            'renamed to \'refresh\'. Support for using \'refresh_db\' will be '
+            'removed in the Neon release of Salt.'
+        )
+        kwargs['refresh'] = kwargs.pop('refresh_db')
+
     ret = {'name': name,
            'changes': {},
            'result': None,
@@ -279,14 +319,19 @@ def managed(name, ppa=None, **kwargs):
                           'intended.')
         return ret
 
-    if 'enabled' in kwargs:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The `enabled` argument has been deprecated in favor of '
-            '`disabled`.'
-        )
+    enabled = kwargs.pop('enabled', None)
+    disabled = kwargs.pop('disabled', None)
+
+    if enabled is not None and disabled is not None:
+        ret['result'] = False
+        ret['comment'] = 'Only one of enabled/disabled is allowed'
+        return ret
+    elif enabled is None and disabled is None:
+        # If neither argument was passed we assume the repo will be enabled
+        enabled = True
 
     repo = name
+    os_family = __grains__['os_family'].lower()
     if __grains__['os'] in ('Ubuntu', 'Mint'):
         if ppa is not None:
             # overload the name/repo value for PPAs cleanly
@@ -296,26 +341,26 @@ def managed(name, ppa=None, **kwargs):
             except TypeError:
                 repo = ':'.join(('ppa', str(ppa)))
 
-    elif __grains__['os_family'].lower() in ('redhat', 'suse'):
+        kwargs['disabled'] = not salt.utils.is_true(enabled) \
+            if enabled is not None \
+            else salt.utils.is_true(disabled)
+
+    elif os_family in ('redhat', 'suse'):
         if 'humanname' in kwargs:
             kwargs['name'] = kwargs.pop('humanname')
-        _val = lambda x: '1' if salt.utils.is_true(x) else '0'
-        if 'disabled' in kwargs:
-            if 'enabled' in kwargs:
-                ret['result'] = False
-                ret['comment'] = 'Only one of enabled/disabled is permitted'
-                return ret
-            _reverse = lambda x: '1' if x == '0' else '0'
-            kwargs['enabled'] = _reverse(_val(kwargs.pop('disabled')))
-        elif 'enabled' in kwargs:
-            kwargs['enabled'] = _val(kwargs['enabled'])
         if 'name' not in kwargs:
             # Fall back to the repo name if humanname not provided
             kwargs['name'] = repo
 
-    # Replace 'enabled' from kwargs with 'disabled'
-    enabled = kwargs.pop('enabled', True)
-    kwargs['disabled'] = not salt.utils.is_true(enabled)
+        kwargs['enabled'] = not salt.utils.is_true(disabled) \
+            if disabled is not None \
+            else salt.utils.is_true(enabled)
+
+    elif os_family == 'nilinuxrt':
+        # opkg is the pkg virtual
+        kwargs['enabled'] = not salt.utils.is_true(disabled) \
+            if disabled is not None \
+            else salt.utils.is_true(enabled)
 
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
@@ -340,11 +385,10 @@ def managed(name, ppa=None, **kwargs):
     else:
         sanitizedkwargs = kwargs
 
-    if __grains__['os_family'] == 'Debian':
+    if os_family == 'debian':
         repo = _strip_uri(repo)
 
     if pre:
-        needs_update = False
         for kwarg in sanitizedkwargs:
             if kwarg not in pre:
                 if kwarg == 'enabled':
@@ -352,33 +396,49 @@ def managed(name, ppa=None, **kwargs):
                     # not explicitly set, so we don't need to update the repo
                     # if it's desired to be enabled and the 'enabled' key is
                     # missing from the repo definition
-                    if __grains__['os_family'] == 'RedHat':
+                    if os_family == 'redhat':
                         if not salt.utils.is_true(sanitizedkwargs[kwarg]):
-                            needs_update = True
+                            break
                     else:
-                        needs_update = True
+                        break
                 else:
-                    needs_update = True
+                    break
             elif kwarg == 'comps':
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
-                    needs_update = True
-            elif kwarg == 'line' and __grains__['os_family'] == 'Debian':
+                    break
+            elif kwarg == 'line' and os_family == 'debian':
                 # split the line and sort everything after the URL
                 sanitizedsplit = sanitizedkwargs[kwarg].split()
                 sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
-                reposplit = pre[kwarg].split()
+                reposplit, _, pre_comments = \
+                    [x.strip() for x in pre[kwarg].partition('#')]
+                reposplit = reposplit.split()
                 reposplit[3:] = sorted(reposplit[3:])
                 if sanitizedsplit != reposplit:
-                    needs_update = True
+                    break
                 if 'comments' in kwargs:
-                    _line = pre[kwarg].split('#')
-                    if str(kwargs['comments']) not in _line:
-                        needs_update = True
+                    post_comments = \
+                        salt.utils.pkg.deb.combine_comments(kwargs['comments'])
+                    if pre_comments != post_comments:
+                        break
+            elif kwarg == 'comments' and os_family == 'redhat':
+                precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
+                kwargcomments = salt.utils.pkg.rpm.combine_comments(
+                        sanitizedkwargs[kwarg])
+                if precomments != kwargcomments:
+                    break
             else:
-                if str(sanitizedkwargs[kwarg]) != str(pre[kwarg]):
-                    needs_update = True
-
-        if not needs_update:
+                if os_family in ('redhat', 'suse') \
+                        and any(isinstance(x, bool) for x in
+                                (sanitizedkwargs[kwarg], pre[kwarg])):
+                    # This check disambiguates 1/0 from True/False
+                    if salt.utils.is_true(sanitizedkwargs[kwarg]) != \
+                            salt.utils.is_true(pre[kwarg]):
+                        break
+                else:
+                    if str(sanitizedkwargs[kwarg]) != str(pre[kwarg]):
+                        break
+        else:
             ret['result'] = True
             ret['comment'] = ('Package repo \'{0}\' already configured'
                               .format(name))
@@ -395,11 +455,11 @@ def managed(name, ppa=None, **kwargs):
 
     # empty file before configure
     if kwargs.get('clean_file', False):
-        with salt.utils.fopen(kwargs['file'], 'w'):
+        with salt.utils.files.fopen(kwargs['file'], 'w'):
             pass
 
     try:
-        if __grains__['os_family'] == 'Debian':
+        if os_family == 'debian':
             __salt__['pkg.mod_repo'](repo, saltenv=__env__, **kwargs)
         else:
             __salt__['pkg.mod_repo'](repo, **kwargs)

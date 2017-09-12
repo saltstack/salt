@@ -24,9 +24,13 @@ import logging
 
 # Import salt libs
 import salt.fileserver
-import salt.utils
-from salt.utils.event import tagify
-import salt.ext.six as six
+import salt.utils  # Can be removed once is_bin_file and get_hash are moved
+import salt.utils.event
+import salt.utils.files
+import salt.utils.gzip_util
+import salt.utils.path
+import salt.utils.versions
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -36,12 +40,7 @@ def find_file(path, saltenv='base', **kwargs):
     Search the environment for the relative path.
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     path = os.path.normpath(path)
@@ -113,12 +112,7 @@ def serve_file(load, fnd):
     Return a chunk from a file based on the data received
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = {'data': '',
@@ -129,9 +123,12 @@ def serve_file(load, fnd):
         return ret
     ret['dest'] = fnd['rel']
     gzip = load.get('gzip', None)
-    with salt.utils.fopen(os.path.normpath(fnd['path']), 'rb') as fp_:
+    fpath = os.path.normpath(fnd['path'])
+    with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
+        if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+            data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
             ret['gzip'] = gzip
@@ -164,7 +161,7 @@ def update():
     old_mtime_map = {}
     # if you have an old map, load that
     if os.path.exists(mtime_map_path):
-        with salt.utils.fopen(mtime_map_path, 'r') as fp_:
+        with salt.utils.files.fopen(mtime_map_path, 'r') as fp_:
             for line in fp_:
                 try:
                     file_path, mtime = line.replace('\n', '').split(':', 1)
@@ -189,7 +186,7 @@ def update():
     mtime_map_path_dir = os.path.dirname(mtime_map_path)
     if not os.path.exists(mtime_map_path_dir):
         os.makedirs(mtime_map_path_dir)
-    with salt.utils.fopen(mtime_map_path, 'w') as fp_:
+    with salt.utils.files.fopen(mtime_map_path, 'w') as fp_:
         for file_path, mtime in six.iteritems(new_mtime_map):
             fp_.write('{file_path}:{mtime}\n'.format(file_path=file_path,
                                                      mtime=mtime))
@@ -202,7 +199,8 @@ def update():
                 __opts__['transport'],
                 opts=__opts__,
                 listen=False)
-        event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
+        event.fire_event(data,
+                         salt.utils.event.tagify(['roots', 'update'], prefix='fileserver'))
 
 
 def file_hash(load, fnd):
@@ -210,12 +208,7 @@ def file_hash(load, fnd):
     Return a file hash, the hash type is set in the master config file
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if 'path' not in load or 'saltenv' not in load:
@@ -240,7 +233,7 @@ def file_hash(load, fnd):
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.fopen(cache_path, 'r') as fp_:
+            with salt.utils.files.fopen(cache_path, 'r') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
@@ -280,7 +273,7 @@ def file_hash(load, fnd):
                 raise
     # save the cache object "hash:mtime"
     cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
-    with salt.utils.flopen(cache_path, 'w') as fp_:
+    with salt.utils.files.flopen(cache_path, 'w') as fp_:
         fp_.write(cache_object)
     return ret
 
@@ -290,18 +283,13 @@ def _file_lists(load, form):
     Return a dict containing the file lists for files, dirs, emtydirs and symlinks
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if load['saltenv'] not in __opts__['file_roots']:
         return []
 
-    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/roots')
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists', 'roots')
     if not os.path.isdir(list_cachedir):
         try:
             os.makedirs(list_cachedir)
@@ -318,40 +306,84 @@ def _file_lists(load, form):
         return cache_match
     if refresh_cache:
         ret = {
-            'files': [],
-            'dirs': [],
-            'empty_dirs': [],
-            'links': []
+            'files': set(),
+            'dirs': set(),
+            'empty_dirs': set(),
+            'links': {}
         }
+
+        def _add_to(tgt, fs_root, parent_dir, items):
+            '''
+            Add the files to the target set
+            '''
+            def _translate_sep(path):
+                '''
+                Translate path separators for Windows masterless minions
+                '''
+                return path.replace('\\', '/') if os.path.sep == '\\' else path
+
+            for item in items:
+                abs_path = os.path.join(parent_dir, item)
+                log.trace('roots: Processing %s', abs_path)
+                is_link = salt.utils.path.islink(abs_path)
+                log.trace(
+                    'roots: %s is %sa link',
+                    abs_path, 'not ' if not is_link else ''
+                )
+                if is_link and __opts__['fileserver_ignoresymlinks']:
+                    continue
+                rel_path = _translate_sep(os.path.relpath(abs_path, fs_root))
+                log.trace('roots: %s relative path is %s', abs_path, rel_path)
+                if salt.fileserver.is_file_ignored(__opts__, rel_path):
+                    continue
+                tgt.add(rel_path)
+                try:
+                    if not os.listdir(abs_path):
+                        ret['empty_dirs'].add(rel_path)
+                except Exception:
+                    # Generic exception because running os.listdir() on a
+                    # non-directory path raises an OSError on *NIX and a
+                    # WindowsError on Windows.
+                    pass
+                if is_link:
+                    link_dest = salt.utils.path.readlink(abs_path)
+                    log.trace(
+                        'roots: %s symlink destination is %s',
+                        abs_path, link_dest
+                    )
+                    if link_dest.startswith('..'):
+                        joined = os.path.join(abs_path, link_dest)
+                    else:
+                        joined = os.path.join(
+                            os.path.dirname(abs_path), link_dest
+                        )
+                    rel_dest = _translate_sep(
+                        os.path.relpath(
+                            os.path.realpath(os.path.normpath(joined)),
+                            fs_root
+                        )
+                    )
+                    log.trace(
+                        'roots: %s relative path is %s',
+                        abs_path, rel_dest
+                    )
+                    if not rel_dest.startswith('..'):
+                        # Only count the link if it does not point
+                        # outside of the root dir of the fileserver
+                        # (i.e. the "path" variable)
+                        ret['links'][rel_path] = link_dest
+
         for path in __opts__['file_roots'][load['saltenv']]:
             for root, dirs, files in os.walk(
                     path,
                     followlinks=__opts__['fileserver_followsymlinks']):
-                # Don't walk any directories that match file_ignore_regex or glob
-                dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(__opts__, d)]
+                _add_to(ret['dirs'], path, root, dirs)
+                _add_to(ret['files'], path, root, files)
 
-                dir_rel_fn = os.path.relpath(root, path)
-                if __opts__.get('file_client', 'remote') == 'local' and os.path.sep == "\\":
-                    dir_rel_fn = dir_rel_fn.replace('\\', '/')
-                ret['dirs'].append(dir_rel_fn)
-                if len(dirs) == 0 and len(files) == 0:
-                    if dir_rel_fn not in ('.', '..') \
-                            and not salt.fileserver.is_file_ignored(__opts__, dir_rel_fn):
-                        ret['empty_dirs'].append(dir_rel_fn)
-                for fname in files:
-                    is_link = os.path.islink(os.path.join(root, fname))
-                    if is_link:
-                        ret['links'].append(fname)
-                    if __opts__['fileserver_ignoresymlinks'] and is_link:
-                        continue
-                    rel_fn = os.path.relpath(
-                                os.path.join(root, fname),
-                                path
-                            )
-                    if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
-                        if __opts__.get('file_client', 'remote') == 'local' and os.path.sep == "\\":
-                            rel_fn = rel_fn.replace('\\', '/')
-                        ret['files'].append(rel_fn)
+        ret['files'] = sorted(ret['files'])
+        ret['dirs'] = sorted(ret['dirs'])
+        ret['empty_dirs'] = sorted(ret['empty_dirs'])
+
         if save_cache:
             try:
                 salt.fileserver.write_file_list_cache(
@@ -392,39 +424,19 @@ def symlink_list(load):
     Return a dict of all symlinks based on a given path on the Master
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = {}
     if load['saltenv'] not in __opts__['file_roots']:
         return ret
-    for path in __opts__['file_roots'][load['saltenv']]:
-        try:
-            prefix = load['prefix'].strip('/')
-        except KeyError:
-            prefix = ''
-        # Adopting rsync functionality here and stopping at any encounter of a symlink
-        for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=False):
-            # Don't walk any directories that match file_ignore_regex or glob
-            dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(__opts__, d)]
-            for fname in files:
-                if not os.path.islink(os.path.join(root, fname)):
-                    continue
-                rel_fn = os.path.relpath(
-                            os.path.join(root, fname),
-                            path
-                        )
-                if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
-                    ret[rel_fn] = os.readlink(os.path.join(root, fname))
-            for dname in dirs:
-                if os.path.islink(os.path.join(root, dname)):
-                    ret[os.path.relpath(os.path.join(root,
-                                                     dname),
-                                        path)] = os.readlink(os.path.join(root,
-                                                                          dname))
-    return ret
+
+    if 'prefix' in load:
+        prefix = load['prefix'].strip('/')
+    else:
+        prefix = ''
+
+    symlinks = _file_lists(load, 'links')
+    return dict([(key, val)
+                 for key, val in six.iteritems(symlinks)
+                 if key.startswith(prefix)])

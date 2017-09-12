@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Module for managing logrotate.
+
+.. versionadded:: 2017.7.0
+
 '''
 
 # Import python libs

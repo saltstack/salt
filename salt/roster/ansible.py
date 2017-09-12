@@ -46,18 +46,14 @@ There is also the option of specifying a dynamic inventory, and generating it on
 
     #!/bin/bash
     echo '{
-      "servers": {
-        "hosts": [
-          "salt.gtmanfred.com"
-        ]
-      },
-      "desktop": {
-        "hosts": [
-          "home"
-        ]
-      },
+      "servers": [
+        "salt.gtmanfred.com"
+      ],
+      "desktop": [
+        "home"
+      ],
       "computers": {
-        "hosts":{},
+        "hosts": [],
         "children": [
           "desktop",
           "servers"
@@ -100,11 +96,13 @@ import json
 import subprocess
 
 # Import Salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.files
+import salt.utils.stringutils
 from salt.roster import get_roster_file
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 CONVERSION = {
     'ansible_ssh_host': 'host',
@@ -187,7 +185,7 @@ class Inventory(Target):
         blocks = re.compile(r'^\[.*\]$')
         hostvar = re.compile(r'^\[([^:]+):vars\]$')
         parents = re.compile(r'^\[([^:]+):children\]$')
-        with salt.utils.fopen(inventory_file) as config:
+        with salt.utils.files.fopen(inventory_file) as config:
             for line in config.read().split('\n'):
                 if not line or line.startswith('#'):
                     continue
@@ -210,7 +208,7 @@ class Inventory(Target):
         '''
         Parse lines in the inventory file that are under the same group block
         '''
-        line_args = salt.utils.shlex_split(line)
+        line_args = salt.utils.args.shlex_split(line)
         name = line_args[0]
         host = {line_args[0]: dict()}
         for arg in line_args[1:]:
@@ -249,7 +247,7 @@ class Script(Target):
         self.tgt = tgt
         self.tgt_type = tgt_type
         inventory, error = subprocess.Popen([inventory_file], shell=True, stdout=subprocess.PIPE).communicate()
-        self.inventory = json.loads(salt.utils.to_str(inventory))
+        self.inventory = json.loads(salt.utils.stringutils.to_str(inventory))
         self.meta = self.inventory.get('_meta', {})
         self.groups = dict()
         self.hostvars = dict()
@@ -257,6 +255,8 @@ class Script(Target):
         for key, value in six.iteritems(self.inventory):
             if key == '_meta':
                 continue
+            if type(value) is list:
+                self._parse_groups(key, value)
             if 'hosts' in value:
                 self._parse_groups(key, value['hosts'])
             if 'children' in value:
@@ -277,7 +277,8 @@ class Script(Target):
                 if server not in host:
                     host[server] = dict()
                 for tmpkey, tmpval in six.iteritems(tmp):
-                    host[server][CONVERSION[tmpkey]] = tmpval
+                    if tmpkey in CONVERSION:
+                        host[server][CONVERSION[tmpkey]] = tmpval
                 if 'sudo' in host[server]:
                     host[server]['passwd'], host[server]['sudo'] = host[server]['sudo'], True
 

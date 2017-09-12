@@ -44,7 +44,7 @@ import json
 import yaml
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.compat
 import salt.utils.odict as odict
 
@@ -54,7 +54,10 @@ from salt.ext.six.moves.urllib.parse import unquote as _unquote  # pylint: disab
 try:
     import boto
     import boto.iam
+    import boto3
+    import botocore
     logging.getLogger('boto').setLevel(logging.CRITICAL)
+    logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -890,6 +893,31 @@ def deactivate_mfa_device(user_name, serial, region=None, key=None, keyid=None,
         return False
 
 
+def delete_virtual_mfa_device(serial, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes the specified virtual MFA device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.delete_virtual_mfa_device serial_num
+    '''
+    conn = __utils__['boto3.get_connection_func']('iam')()
+    try:
+        conn.delete_virtual_mfa_device(SerialNumber=serial)
+        log.info('Deleted virtual MFA device {0}.'.format(serial))
+        return True
+    except botocore.exceptions.ClientError as e:
+        log.debug(e)
+        if 'NoSuchEntity' in str(e):
+            log.info('Virtual MFA device {0} not found.'.format(serial))
+            return True
+        msg = 'Failed to delete virtual MFA device {0}.'
+        log.error(msg.format(serial))
+        return False
+
+
 def update_account_password_policy(allow_users_to_change_password=None,
                                    hard_expiry=None, max_password_age=None,
                                    minimum_password_length=None,
@@ -1634,6 +1662,40 @@ def export_users(path_prefix='/', region=None, key=None, keyid=None,
     return _safe_dump(results)
 
 
+def export_roles(path_prefix='/', region=None, key=None, keyid=None, profile=None):
+    '''
+    Get all IAM role details. Produces results that can be used to create an
+    sls file.
+
+    CLI Example:
+
+        salt-call boto_iam.export_roles --out=txt | sed "s/local: //" > iam_roles.sls
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return None
+    results = odict.OrderedDict()
+    roles = get_all_roles(path_prefix, region, key, keyid, profile)
+    for role in roles:
+        name = role.role_name
+        _policies = conn.list_role_policies(name, max_items=100)
+        _policies = _policies.list_role_policies_response.list_role_policies_result.policy_names
+        policies = {}
+        for policy_name in _policies:
+            _policy = conn.get_role_policy(name, policy_name)
+            _policy = json.loads(_unquote(
+                _policy.get_role_policy_response.get_role_policy_result.policy_document
+            ))
+            policies[policy_name] = _policy
+        role_sls = []
+        role_sls.append({"name": name})
+        role_sls.append({"policies": policies})
+        role_sls.append({'policy_document': json.loads(_unquote(role.assume_role_policy_document))})
+        role_sls.append({"path": role.path})
+        results["manage role " + name] = {"boto_iam_role.present": role_sls}
+    return _safe_dump(results)
+
+
 def _get_policy_arn(name, region=None, key=None, keyid=None, profile=None):
     if name.startswith('arn:aws:iam:'):
         return name
@@ -1893,7 +1955,7 @@ def list_policy_versions(policy_name,
         return ret.get('list_policy_versions_response', {}).get('list_policy_versions_result', {}).get('versions')
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to list {0} policy vesions.'
+        msg = 'Failed to list {0} policy versions.'
         log.error(msg.format(policy_name))
         return []
 

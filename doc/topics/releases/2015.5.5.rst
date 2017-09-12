@@ -2024,7 +2024,6 @@ Changes:
 .. _`fix-24036`: https://github.com/saltstack/salt/issues/24036
 .. _`fix-24272`: https://github.com/saltstack/salt/issues/24272
 .. _`fix-24483`: https://github.com/saltstack/salt/issues/24483
-.. _`fix-24484`: https://github.com/saltstack/salt/issues/24484
 .. _`fix-24882`: https://github.com/saltstack/salt/issues/24882
 .. _`fix-25192`: https://github.com/saltstack/salt/issues/25192
 .. _`fix-25616`: https://github.com/saltstack/salt/issues/25616
@@ -2032,11 +2031,7 @@ Changes:
 .. _`#16049`: https://github.com/saltstack/salt/issues/16049
 .. _`#16179`: https://github.com/saltstack/salt/issues/16179
 .. _`#24334`: https://github.com/saltstack/salt/issues/24334
-.. _`#24484`: https://github.com/saltstack/salt/issues/24484
 .. _`#25562`: https://github.com/saltstack/salt/issues/25562
-.. _`#25801`: https://github.com/saltstack/salt/issues/25801
-.. _`#25998`: https://github.com/saltstack/salt/issues/25998
-.. _`#26000`: https://github.com/saltstack/salt/pull/26000
 .. _`#26155`: https://github.com/saltstack/salt/issues/26155
 .. _`#26160`: https://github.com/saltstack/salt/pull/26160
 .. _`#26161`: https://github.com/saltstack/salt/issues/26161

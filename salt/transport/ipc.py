@@ -7,9 +7,11 @@ IPC transport classes
 from __future__ import absolute_import
 import logging
 import socket
-import msgpack
 import weakref
 import time
+
+# Import 3rd-party libs
+import msgpack
 
 # Import Tornado libs
 import tornado
@@ -17,12 +19,12 @@ import tornado.gen
 import tornado.netutil
 import tornado.concurrent
 from tornado.locks import Semaphore
-from tornado.ioloop import IOLoop
+from tornado.ioloop import IOLoop, TimeoutError as TornadoTimeoutError
 from tornado.iostream import IOStream
 # Import Salt libs
 import salt.transport.client
 import salt.transport.frame
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +69,7 @@ class FutureWithTimeout(tornado.concurrent.Future):
         # inside the future itself to track what happens
         # when it completes.
         self._future._future_with_timeout = None
-        self.set_exception(tornado.ioloop.TimeoutError())
+        self.set_exception(TornadoTimeoutError())
 
     def _done_callback(self, future):
         try:
@@ -175,13 +177,25 @@ class IPCServer(object):
                     body = framed_msg['body']
                     self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
             except tornado.iostream.StreamClosedError:
-                log.trace('Client disconnected from IPC {0}'.format(self.socket_path))
+                log.trace('Client disconnected '
+                          'from IPC {0}'.format(self.socket_path))
                 break
+            except socket.error as exc:
+                # On occasion an exception will occur with
+                # an error code of 0, it's a spurious exception.
+                if exc.errno == 0:
+                    log.trace('Exception occured with error number 0, '
+                              'spurious exception: {0}'.format(exc))
+                else:
+                    log.error('Exception occurred while '
+                              'handling stream: {0}'.format(exc))
             except Exception as exc:
-                log.error('Exception occurred while handling stream: {0}'.format(exc))
+                log.error('Exception occurred while '
+                          'handling stream: {0}'.format(exc))
 
     def handle_connection(self, connection, address):
-        log.trace('IPCServer: Handling connection to address: {0}'.format(address))
+        log.trace('IPCServer: Handling connection '
+                  'to address: {0}'.format(address))
         try:
             stream = IOStream(
                 connection,
@@ -236,15 +250,16 @@ class IPCClient(object):
         # FIXME
         key = str(socket_path)
 
-        if key not in loop_instance_map:
+        client = loop_instance_map.get(key)
+        if client is None:
             log.debug('Initializing new IPCClient for path: {0}'.format(key))
-            new_client = object.__new__(cls)
+            client = object.__new__(cls)
             # FIXME
-            new_client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
-            loop_instance_map[key] = new_client
+            client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
+            loop_instance_map[key] = client
         else:
             log.debug('Re-using IPCClient for {0}'.format(key))
-        return loop_instance_map[key]
+        return client
 
     def __singleton_init__(self, socket_path, io_loop=None):
         '''
@@ -644,7 +659,7 @@ class IPCMessageSubscriber(IPCClient):
                 if not first:
                     # We read at least one piece of data
                     break
-        except tornado.ioloop.TimeoutError:
+        except TornadoTimeoutError:
             # In the timeout case, just return None.
             # Keep 'self._read_stream_future' alive.
             ret = None

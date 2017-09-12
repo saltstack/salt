@@ -36,6 +36,21 @@ or more minions.
 See :ref:`Proxyminion Beacon <proxy-minion-beacon>` to help
 with easy configuration and management of ``salt-proxy`` processes.
 
+New in 2017.7.0
+---------------
+
+The :conf_proxy:`proxy_merge_grains_in_module` configuration variable
+introduced in 2016.3, has been changed, defaulting to ``True``.
+
+The connection with the remote device is kept alive by default, when the
+module implements the ``alive`` function and :conf_proxy:`proxy_keep_alive`
+is set to ``True``. The polling interval is set using the
+:conf_proxy:`proxy_keep_alive_interval` option which defaults to 1 minute.
+
+The developers are also able to use the :conf_proxy:`proxy_always_alive`,
+when designing a proxy module flexible enough to open the
+connection with the remote device only when required.
+
 New in 2016.11.0
 ----------------
 
@@ -74,7 +89,7 @@ they are being loaded for the correct proxytype, example below:
         Only work on proxy
         '''
         try:
-            if salt.utils.is_proxy() and \
+            if salt.utils.platform.is_proxy() and \
                __opts__['proxy']['proxytype'] == 'ssh_sample':
                 return __virtualname__
         except KeyError:
@@ -113,7 +128,7 @@ will be executed on proxy-minion startup and its contents will be merged with
 the rest of the proxy's grains.  Since older proxy-minions might have used other
 methods to call such a function and add its results to grains, this is config-gated
 by a new proxy configuration option called ``proxy_merge_grains_in_module``.  This
-defaults to ``True`` in the **Nitrogen** release.
+defaults to ``True`` in the **2017.7.0** release.
 
 
 New in 2015.8.2
@@ -141,20 +156,23 @@ will need to be restarted to pick up any changes.  A corresponding utility funct
 ``saltutil.sync_proxymodules``, has been added to sync these modules to minions.
 
 In addition, a salt.utils helper function called `is_proxy()` was added to make
-it easier to tell when the running minion is a proxy minion.
+it easier to tell when the running minion is a proxy minion. **NOTE: This
+function was renamed to salt.utils.platform.is_proxy() for the Oxygen release**
 
 New in 2015.8
 -------------
 
-Starting with the 2015.8 release of Salt, proxy processes are no longer forked off from a controlling minion.
-Instead, they have their own script ``salt-proxy`` which takes mostly the same arguments that the
-standard Salt minion does with the addition of ``--proxyid``.  This is the id that the salt-proxy will
-use to identify itself to the master.  Proxy configurations are still best kept in Pillar and their format
-has not changed.
+Starting with the 2015.8 release of Salt, proxy processes are no longer forked
+off from a controlling minion.  Instead, they have their own script
+``salt-proxy`` which takes mostly the same arguments that the standard Salt
+minion does with the addition of ``--proxyid``.  This is the id that the
+salt-proxy will use to identify itself to the master.  Proxy configurations are
+still best kept in Pillar and their format has not changed.
 
-This change allows for better process control and logging.  Proxy processes can now be listed with standard
-process management utilities (``ps`` from the command line).  Also, a full Salt minion is no longer
-required (though it is still strongly recommended) on machines hosting proxies.
+This change allows for better process control and logging.  Proxy processes can
+now be listed with standard process management utilities (``ps`` from the
+command line).  Also, a full Salt minion is no longer required (though it is
+still strongly recommended) on machines hosting proxies.
 
 
 Getting Started
@@ -351,17 +369,25 @@ the keyword ``pass`` if there is no shutdown logic required.
 be defined in the proxymodule. The code for ``ping`` should contact the
 controlled device and make sure it is really available.
 
+``alive(opts)``: Another optional function, it is used together with the
+``proxy_keep_alive`` option (default: ``True``). This function should
+return a boolean value corresponding to the state of the connection.
+If the connection is down, will try to restart (``shutdown``
+followed by ``init``). The polling frequency is controlled using
+the ``proxy_keep_alive_interval`` option, in minutes.
+
 ``grains()``: Rather than including grains in /srv/salt/_grains or in
 the standard install directories for grains, grains can be computed and
 returned by this function.  This function will be called automatically
 if ``proxy_merge_grains_in_module`` is set to ``True`` in /etc/salt/proxy.
-This variable defaults to ``True`` in the release code-named *Nitrogen*.
+This variable defaults to ``True`` in the release code-named *2017.7.0*.
 
 Pre 2015.8 the proxymodule also must have an ``id()`` function.  2015.8 and following don't use
 this function because the proxy's id is required on the command line.
 
 Here is an example proxymodule used to interface to a *very* simple REST
-server.  Code for the server is in the `salt-contrib GitHub repository <https://github.com/saltstack/salt-contrib/proxyminion_rest_example>`_
+server.  Code for the server is in the `salt-contrib GitHub repository
+<https://github.com/saltstack/salt-contrib/tree/master/proxyminion_rest_example>`_
 
 This proxymodule enables "service" enumeration, starting, stopping, restarting,
 and status; "package" installation, and a ping.
@@ -404,6 +430,9 @@ and status; "package" installation, and a ping.
         return True
 
 
+    def _complicated_function_that_determines_if_alive():
+        return True
+
     # Every proxy module needs an 'init', though you can
     # just put DETAILS['initialized'] = True here if nothing
     # else needs to be done.
@@ -418,6 +447,16 @@ and status; "package" installation, and a ping.
         # Make sure the REST URL ends with a '/'
         if not DETAILS['url'].endswith('/'):
             DETAILS['url'] += '/'
+
+    def alive(opts):
+        '''
+        This function returns a flag with the connection state.
+        It is very useful when the proxy minion establishes the communication
+        via a channel that requires a more elaborated keep-alive mechanism, e.g.
+        NETCONF over SSH.
+        '''
+        log.debug('rest_sample proxy alive() called...')
+        return _complicated_function_that_determines_if_alive()
 
 
     def initialized():
@@ -583,9 +622,10 @@ in the proxymodule itself.  This might be useful if a proxymodule author wants t
 all the code for the proxy interface in the same place instead of splitting it between
 the proxy and grains directories.
 
-This function will only be called automatically if the configuration variable ``proxy_merge_grains_in_module``
-is set to True in the proxy configuration file (default ``/etc/salt/proxy``).  This
-variable defaults to ``True`` in the release code-named *Nitrogen*.
+This function will only be called automatically if the configuration variable
+``proxy_merge_grains_in_module`` is set to True in the proxy configuration file
+(default ``/etc/salt/proxy``).  This variable defaults to ``True`` in the
+release code-named *2017.7.0*.
 
 
 .. code: python::
@@ -604,7 +644,7 @@ variable defaults to ``True`` in the release code-named *Nitrogen*.
 
     def __virtual__():
         try:
-            if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+            if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
                 return __virtualname__
         except KeyError:
             pass
@@ -672,7 +712,7 @@ Example from ``salt/grains/rest_sample.py``:
 
     def __virtual__():
         try:
-            if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+            if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
                 return __virtualname__
         except KeyError:
             pass

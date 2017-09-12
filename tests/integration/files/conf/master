@@ -7,7 +7,7 @@ ret_port: 64506
 worker_threads: 3
 pidfile: master.pid
 sock_dir: master_sock
-timeout: 3
+timeout: 12
 open_mode: True
 fileserver_list_cache_time: 0
 file_buffer_size: 8192
@@ -17,6 +17,7 @@ log_file: master.log
 log_fmt: '[%(asctime)s.%(msecs)s] %(colorlevel)s%(colorname)s%(colorprocess)s %(funcName)s() L%(lineno)s %(processName)s %(message)s'
 log_level_logfile: debug
 key_logfile: key.log
+ssh_log_file: ssh.log
 token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
 
 # These settings needed for tests on Windows which defaults
@@ -31,9 +32,6 @@ peer:
     - 'test.*'
 
 ext_pillar:
-  - git: master https://github.com/saltstack/pillar1.git
-  - git: master https://github.com/saltstack/pillar2.git
-  - git: dev:testing https://github.com/saltstack/pillar1.git
   - test_ext_pillar_opts:
     - test_issue_5951_actual_file_roots_in_opts
 
@@ -80,6 +78,7 @@ nodegroups:
   redundant_minions: N@min or N@mins
   nodegroup_loop_a: N@nodegroup_loop_b
   nodegroup_loop_b: N@nodegroup_loop_a
+  missing_minion: L@minion,ghostminion
 
 
 mysql.host: localhost
@@ -87,3 +86,14 @@ mysql.user: 'salt'
 mysql.pass: 'salt'
 mysql.db: 'salt'
 mysql.port: 3306
+
+libcloud_dns:
+  profile_test1:
+    driver: cloudflare
+    key: 12345
+    secret: mysecret
+  profile_test2:
+    driver: godaddy
+    key: 12345
+    secret: mysecret
+    shopper_id: 12345

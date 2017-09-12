@@ -37,8 +37,8 @@ __all__ = ['core', 'worker', 'maint', 'zero', 'dummy', 'jobber', 'reactor']
 import salt.daemons.masterapi
 
 # Import 3rd-party libs
-import ioflo.app.run
-import salt.ext.six as six
+import ioflo.app.run  # pylint: disable=3rd-party-module-not-gated
+from salt.ext import six
 
 
 def explode_opts(opts):

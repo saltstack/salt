@@ -7,7 +7,14 @@ Set up the version of Salt
 from __future__ import absolute_import, print_function
 import re
 import sys
+import locale
 import platform
+
+# linux_distribution depreacted in py3.7
+try:
+    from platform import linux_distribution
+except ImportError:
+    from distro import linux_distribution
 
 # pylint: disable=invalid-name,redefined-builtin
 # Import 3rd-party libs
@@ -53,17 +60,22 @@ class SaltStackVersion(object):
     and also supports version comparison.
     '''
 
-    __slots__ = ('name', 'major', 'minor', 'bugfix', 'mbugfix', 'pre_type', 'pre_num', 'noc', 'sha')
+    __slots__ = (u'name', u'major', u'minor', u'bugfix', u'mbugfix', u'pre_type', u'pre_num', u'noc', u'sha')
 
+    # future lint: disable=non-unicode-string
     git_describe_regex = re.compile(
         r'(?:[^\d]+)?(?P<major>[\d]{1,4})'
         r'\.(?P<minor>[\d]{1,2})'
         r'(?:\.(?P<bugfix>[\d]{0,2}))?'
         r'(?:\.(?P<mbugfix>[\d]{0,2}))?'
-        r'(?:(?P<pre_type>rc|a|b|alpha|beta)(?P<pre_num>[\d]{1}))?'
+        r'(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]{1}))?'
         r'(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-(?P<sha>[a-z0-9]{8}))?'
     )
-    git_sha_regex = re.compile(r'(?P<sha>[a-z0-9]{7})')
+    git_sha_regex = r'(?P<sha>[a-z0-9]{7})'
+    if six.PY2:
+        git_sha_regex = git_sha_regex.decode(__salt_system_encoding__)
+    git_sha_regex = re.compile(git_sha_regex)
+    # future lint: enable=non-unicode-string
 
     # Salt versions after 0.17.0 will be numbered like:
     #   <4-digit-year>.<month>.<bugfix>
@@ -81,116 +93,117 @@ class SaltStackVersion(object):
         # ----- Please refrain from fixing PEP-8 E203 and E265 ----->
         # The idea is to keep this readable.
         # -----------------------------------------------------------
-        'Hydrogen'      : (2014, 1),
-        'Helium'        : (2014, 7),
-        'Lithium'       : (2015, 5),
-        'Beryllium'     : (2015, 8),
-        'Boron'         : (2016, 3),
-        'Carbon'        : (2016, 11),
-        'Nitrogen'      : (MAX_SIZE - 102, 0),
-        'Oxygen'        : (MAX_SIZE - 101, 0),
-        'Fluorine'      : (MAX_SIZE - 100, 0),
+        u'Hydrogen'      : (2014, 1),
+        u'Helium'        : (2014, 7),
+        u'Lithium'       : (2015, 5),
+        u'Beryllium'     : (2015, 8),
+        u'Boron'         : (2016, 3),
+        u'Carbon'        : (2016, 11),
+        u'Nitrogen'      : (2017, 7),
+        u'Oxygen'        : (MAX_SIZE - 101, 0),
+        u'Fluorine'      : (MAX_SIZE - 100, 0),
+        u'Neon'          : (MAX_SIZE - 99, 0),
+        u'Sodium'        : (MAX_SIZE - 98, 0),
         # pylint: disable=E8265
-        #'Neon'         : (MAX_SIZE - 99 , 0),
-        #'Sodium'       : (MAX_SIZE - 98 , 0),
-        #'Magnesium'    : (MAX_SIZE - 97 , 0),
-        #'Aluminium'    : (MAX_SIZE - 96 , 0),
-        #'Silicon'      : (MAX_SIZE - 95 , 0),
-        #'Phosphorus'   : (MAX_SIZE - 94 , 0),
-        #'Sulfur'       : (MAX_SIZE - 93 , 0),
-        #'Chlorine'     : (MAX_SIZE - 92 , 0),
-        #'Argon'        : (MAX_SIZE - 91 , 0),
-        #'Potassium'    : (MAX_SIZE - 90 , 0),
-        #'Calcium'      : (MAX_SIZE - 89 , 0),
-        #'Scandium'     : (MAX_SIZE - 88 , 0),
-        #'Titanium'     : (MAX_SIZE - 87 , 0),
-        #'Vanadium'     : (MAX_SIZE - 86 , 0),
-        #'Chromium'     : (MAX_SIZE - 85 , 0),
-        #'Manganese'    : (MAX_SIZE - 84 , 0),
-        #'Iron'         : (MAX_SIZE - 83 , 0),
-        #'Cobalt'       : (MAX_SIZE - 82 , 0),
-        #'Nickel'       : (MAX_SIZE - 81 , 0),
-        #'Copper'       : (MAX_SIZE - 80 , 0),
-        #'Zinc'         : (MAX_SIZE - 79 , 0),
-        #'Gallium'      : (MAX_SIZE - 78 , 0),
-        #'Germanium'    : (MAX_SIZE - 77 , 0),
-        #'Arsenic'      : (MAX_SIZE - 76 , 0),
-        #'Selenium'     : (MAX_SIZE - 75 , 0),
-        #'Bromine'      : (MAX_SIZE - 74 , 0),
-        #'Krypton'      : (MAX_SIZE - 73 , 0),
-        #'Rubidium'     : (MAX_SIZE - 72 , 0),
-        #'Strontium'    : (MAX_SIZE - 71 , 0),
-        #'Yttrium'      : (MAX_SIZE - 70 , 0),
-        #'Zirconium'    : (MAX_SIZE - 69 , 0),
-        #'Niobium'      : (MAX_SIZE - 68 , 0),
-        #'Molybdenum'   : (MAX_SIZE - 67 , 0),
-        #'Technetium'   : (MAX_SIZE - 66 , 0),
-        #'Ruthenium'    : (MAX_SIZE - 65 , 0),
-        #'Rhodium'      : (MAX_SIZE - 64 , 0),
-        #'Palladium'    : (MAX_SIZE - 63 , 0),
-        #'Silver'       : (MAX_SIZE - 62 , 0),
-        #'Cadmium'      : (MAX_SIZE - 61 , 0),
-        #'Indium'       : (MAX_SIZE - 60 , 0),
-        #'Tin'          : (MAX_SIZE - 59 , 0),
-        #'Antimony'     : (MAX_SIZE - 58 , 0),
-        #'Tellurium'    : (MAX_SIZE - 57 , 0),
-        #'Iodine'       : (MAX_SIZE - 56 , 0),
-        #'Xenon'        : (MAX_SIZE - 55 , 0),
-        #'Caesium'      : (MAX_SIZE - 54 , 0),
-        #'Barium'       : (MAX_SIZE - 53 , 0),
-        #'Lanthanum'    : (MAX_SIZE - 52 , 0),
-        #'Cerium'       : (MAX_SIZE - 51 , 0),
-        #'Praseodymium' : (MAX_SIZE - 50 , 0),
-        #'Neodymium'    : (MAX_SIZE - 49 , 0),
-        #'Promethium'   : (MAX_SIZE - 48 , 0),
-        #'Samarium'     : (MAX_SIZE - 47 , 0),
-        #'Europium'     : (MAX_SIZE - 46 , 0),
-        #'Gadolinium'   : (MAX_SIZE - 45 , 0),
-        #'Terbium'      : (MAX_SIZE - 44 , 0),
-        #'Dysprosium'   : (MAX_SIZE - 43 , 0),
-        #'Holmium'      : (MAX_SIZE - 42 , 0),
-        #'Erbium'       : (MAX_SIZE - 41 , 0),
-        #'Thulium'      : (MAX_SIZE - 40 , 0),
-        #'Ytterbium'    : (MAX_SIZE - 39 , 0),
-        #'Lutetium'     : (MAX_SIZE - 38 , 0),
-        #'Hafnium'      : (MAX_SIZE - 37 , 0),
-        #'Tantalum'     : (MAX_SIZE - 36 , 0),
-        #'Tungsten'     : (MAX_SIZE - 35 , 0),
-        #'Rhenium'      : (MAX_SIZE - 34 , 0),
-        #'Osmium'       : (MAX_SIZE - 33 , 0),
-        #'Iridium'      : (MAX_SIZE - 32 , 0),
-        #'Platinum'     : (MAX_SIZE - 31 , 0),
-        #'Gold'         : (MAX_SIZE - 30 , 0),
-        #'Mercury'      : (MAX_SIZE - 29 , 0),
-        #'Thallium'     : (MAX_SIZE - 28 , 0),
-        #'Lead'         : (MAX_SIZE - 27 , 0),
-        #'Bismuth'      : (MAX_SIZE - 26 , 0),
-        #'Polonium'     : (MAX_SIZE - 25 , 0),
-        #'Astatine'     : (MAX_SIZE - 24 , 0),
-        #'Radon'        : (MAX_SIZE - 23 , 0),
-        #'Francium'     : (MAX_SIZE - 22 , 0),
-        #'Radium'       : (MAX_SIZE - 21 , 0),
-        #'Actinium'     : (MAX_SIZE - 20 , 0),
-        #'Thorium'      : (MAX_SIZE - 19 , 0),
-        #'Protactinium' : (MAX_SIZE - 18 , 0),
-        #'Uranium'      : (MAX_SIZE - 17 , 0),
-        #'Neptunium'    : (MAX_SIZE - 16 , 0),
-        #'Plutonium'    : (MAX_SIZE - 15 , 0),
-        #'Americium'    : (MAX_SIZE - 14 , 0),
-        #'Curium'       : (MAX_SIZE - 13 , 0),
-        #'Berkelium'    : (MAX_SIZE - 12 , 0),
-        #'Californium'  : (MAX_SIZE - 11 , 0),
-        #'Einsteinium'  : (MAX_SIZE - 10 , 0),
-        #'Fermium'      : (MAX_SIZE - 9  , 0),
-        #'Mendelevium'  : (MAX_SIZE - 8  , 0),
-        #'Nobelium'     : (MAX_SIZE - 7  , 0),
-        #'Lawrencium'   : (MAX_SIZE - 6  , 0),
-        #'Rutherfordium': (MAX_SIZE - 5  , 0),
-        #'Dubnium'      : (MAX_SIZE - 4  , 0),
-        #'Seaborgium'   : (MAX_SIZE - 3  , 0),
-        #'Bohrium'      : (MAX_SIZE - 2  , 0),
-        #'Hassium'      : (MAX_SIZE - 1  , 0),
-        #'Meitnerium'   : (MAX_SIZE - 0  , 0),
+        #'Sodium'       : (MAX_SIZE - 98, 0),
+        #'Magnesium'    : (MAX_SIZE - 97, 0),
+        #'Aluminium'    : (MAX_SIZE - 96, 0),
+        #'Silicon'      : (MAX_SIZE - 95, 0),
+        #'Phosphorus'   : (MAX_SIZE - 94, 0),
+        #'Sulfur'       : (MAX_SIZE - 93, 0),
+        #'Chlorine'     : (MAX_SIZE - 92, 0),
+        #'Argon'        : (MAX_SIZE - 91, 0),
+        #'Potassium'    : (MAX_SIZE - 90, 0),
+        #'Calcium'      : (MAX_SIZE - 89, 0),
+        #'Scandium'     : (MAX_SIZE - 88, 0),
+        #'Titanium'     : (MAX_SIZE - 87, 0),
+        #'Vanadium'     : (MAX_SIZE - 86, 0),
+        #'Chromium'     : (MAX_SIZE - 85, 0),
+        #'Manganese'    : (MAX_SIZE - 84, 0),
+        #'Iron'         : (MAX_SIZE - 83, 0),
+        #'Cobalt'       : (MAX_SIZE - 82, 0),
+        #'Nickel'       : (MAX_SIZE - 81, 0),
+        #'Copper'       : (MAX_SIZE - 80, 0),
+        #'Zinc'         : (MAX_SIZE - 79, 0),
+        #'Gallium'      : (MAX_SIZE - 78, 0),
+        #'Germanium'    : (MAX_SIZE - 77, 0),
+        #'Arsenic'      : (MAX_SIZE - 76, 0),
+        #'Selenium'     : (MAX_SIZE - 75, 0),
+        #'Bromine'      : (MAX_SIZE - 74, 0),
+        #'Krypton'      : (MAX_SIZE - 73, 0),
+        #'Rubidium'     : (MAX_SIZE - 72, 0),
+        #'Strontium'    : (MAX_SIZE - 71, 0),
+        #'Yttrium'      : (MAX_SIZE - 70, 0),
+        #'Zirconium'    : (MAX_SIZE - 69, 0),
+        #'Niobium'      : (MAX_SIZE - 68, 0),
+        #'Molybdenum'   : (MAX_SIZE - 67, 0),
+        #'Technetium'   : (MAX_SIZE - 66, 0),
+        #'Ruthenium'    : (MAX_SIZE - 65, 0),
+        #'Rhodium'      : (MAX_SIZE - 64, 0),
+        #'Palladium'    : (MAX_SIZE - 63, 0),
+        #'Silver'       : (MAX_SIZE - 62, 0),
+        #'Cadmium'      : (MAX_SIZE - 61, 0),
+        #'Indium'       : (MAX_SIZE - 60, 0),
+        #'Tin'          : (MAX_SIZE - 59, 0),
+        #'Antimony'     : (MAX_SIZE - 58, 0),
+        #'Tellurium'    : (MAX_SIZE - 57, 0),
+        #'Iodine'       : (MAX_SIZE - 56, 0),
+        #'Xenon'        : (MAX_SIZE - 55, 0),
+        #'Caesium'      : (MAX_SIZE - 54, 0),
+        #'Barium'       : (MAX_SIZE - 53, 0),
+        #'Lanthanum'    : (MAX_SIZE - 52, 0),
+        #'Cerium'       : (MAX_SIZE - 51, 0),
+        #'Praseodymium' : (MAX_SIZE - 50, 0),
+        #'Neodymium'    : (MAX_SIZE - 49, 0),
+        #'Promethium'   : (MAX_SIZE - 48, 0),
+        #'Samarium'     : (MAX_SIZE - 47, 0),
+        #'Europium'     : (MAX_SIZE - 46, 0),
+        #'Gadolinium'   : (MAX_SIZE - 45, 0),
+        #'Terbium'      : (MAX_SIZE - 44, 0),
+        #'Dysprosium'   : (MAX_SIZE - 43, 0),
+        #'Holmium'      : (MAX_SIZE - 42, 0),
+        #'Erbium'       : (MAX_SIZE - 41, 0),
+        #'Thulium'      : (MAX_SIZE - 40, 0),
+        #'Ytterbium'    : (MAX_SIZE - 39, 0),
+        #'Lutetium'     : (MAX_SIZE - 38, 0),
+        #'Hafnium'      : (MAX_SIZE - 37, 0),
+        #'Tantalum'     : (MAX_SIZE - 36, 0),
+        #'Tungsten'     : (MAX_SIZE - 35, 0),
+        #'Rhenium'      : (MAX_SIZE - 34, 0),
+        #'Osmium'       : (MAX_SIZE - 33, 0),
+        #'Iridium'      : (MAX_SIZE - 32, 0),
+        #'Platinum'     : (MAX_SIZE - 31, 0),
+        #'Gold'         : (MAX_SIZE - 30, 0),
+        #'Mercury'      : (MAX_SIZE - 29, 0),
+        #'Thallium'     : (MAX_SIZE - 28, 0),
+        #'Lead'         : (MAX_SIZE - 27, 0),
+        #'Bismuth'      : (MAX_SIZE - 26, 0),
+        #'Polonium'     : (MAX_SIZE - 25, 0),
+        #'Astatine'     : (MAX_SIZE - 24, 0),
+        #'Radon'        : (MAX_SIZE - 23, 0),
+        #'Francium'     : (MAX_SIZE - 22, 0),
+        #'Radium'       : (MAX_SIZE - 21, 0),
+        #'Actinium'     : (MAX_SIZE - 20, 0),
+        #'Thorium'      : (MAX_SIZE - 19, 0),
+        #'Protactinium' : (MAX_SIZE - 18, 0),
+        #'Uranium'      : (MAX_SIZE - 17, 0),
+        #'Neptunium'    : (MAX_SIZE - 16, 0),
+        #'Plutonium'    : (MAX_SIZE - 15, 0),
+        #'Americium'    : (MAX_SIZE - 14, 0),
+        #'Curium'       : (MAX_SIZE - 13, 0),
+        #'Berkelium'    : (MAX_SIZE - 12, 0),
+        #'Californium'  : (MAX_SIZE - 11, 0),
+        #'Einsteinium'  : (MAX_SIZE - 10, 0),
+        #'Fermium'      : (MAX_SIZE - 9, 0),
+        #'Mendelevium'  : (MAX_SIZE - 8, 0),
+        #'Nobelium'     : (MAX_SIZE - 7, 0),
+        #'Lawrencium'   : (MAX_SIZE - 6, 0),
+        #'Rutherfordium': (MAX_SIZE - 5, 0),
+        #'Dubnium'      : (MAX_SIZE - 4, 0),
+        #'Seaborgium'   : (MAX_SIZE - 3, 0),
+        #'Bohrium'      : (MAX_SIZE - 2, 0),
+        #'Hassium'      : (MAX_SIZE - 1, 0),
+        #'Meitnerium'   : (MAX_SIZE - 0, 0),
         # <---- Please refrain from fixing PEP-8 E203 and E265 ------
         # pylint: enable=E8203,E8265
     }
@@ -226,7 +239,7 @@ class SaltStackVersion(object):
             mbugfix = int(mbugfix)
 
         if pre_type is None:
-            pre_type = ''
+            pre_type = u''
         if pre_num is None:
             pre_num = 0
         elif isinstance(pre_num, string_types):
@@ -234,7 +247,7 @@ class SaltStackVersion(object):
 
         if noc is None:
             noc = 0
-        elif isinstance(noc, string_types) and noc == 'n/a':
+        elif isinstance(noc, string_types) and noc == u'n/a':
             noc = -1
         elif isinstance(noc, string_types):
             noc = int(noc)
@@ -257,7 +270,7 @@ class SaltStackVersion(object):
         match = cls.git_describe_regex.match(vstr)
         if not match:
             raise ValueError(
-                'Unable to parse version string: \'{0}\''.format(version_string)
+                u'Unable to parse version string: \'{0}\''.format(version_string)
             )
         return cls(*match.groups())
 
@@ -265,7 +278,7 @@ class SaltStackVersion(object):
     def from_name(cls, name):
         if name.lower() not in cls.LNAMES:
             raise ValueError(
-                'Named version \'{0}\' is not known'.format(name)
+                u'Named version \'{0}\' is not known'.format(name)
             )
         return cls(*cls.LNAMES[name.lower()])
 
@@ -302,16 +315,6 @@ class SaltStackVersion(object):
             self.bugfix,
             self.mbugfix
         )
-
-    @property
-    def rc_info(self):
-        import salt.utils
-        salt.utils.warn_until(
-            'Oxygen',
-            'Please stop using the \'rc_info\' attribute and instead use '
-            '\'pre_info\'. \'rc_info\' will be supported until Salt {version}.'
-        )
-        return self.pre_info
 
     @property
     def pre_info(self):
@@ -351,20 +354,20 @@ class SaltStackVersion(object):
 
     @property
     def string(self):
-        version_string = '{0}.{1}.{2}'.format(
+        version_string = u'{0}.{1}.{2}'.format(
             self.major,
             self.minor,
             self.bugfix
         )
         if self.mbugfix:
-            version_string += '.{0}'.format(self.mbugfix)
+            version_string += u'.{0}'.format(self.mbugfix)
         if self.pre_type:
-            version_string += '{0}{1}'.format(self.pre_type, self.pre_num)
+            version_string += u'{0}{1}'.format(self.pre_type, self.pre_num)
         if self.noc and self.sha:
             noc = self.noc
             if noc < 0:
-                noc = 'n/a'
-            version_string += '-{0}-{1}'.format(noc, self.sha)
+                noc = u'n/a'
+            version_string += u'-{0}-{1}'.format(noc, self.sha)
         return version_string
 
     @property
@@ -372,14 +375,14 @@ class SaltStackVersion(object):
         if self.name and self.major > 10000:
             version_string = self.name
             if self.sse:
-                version_string += ' Enterprise'
-            version_string += ' (Unreleased)'
+                version_string += u' Enterprise'
+            version_string += u' (Unreleased)'
             return version_string
         version_string = self.string
         if self.sse:
-            version_string += ' Enterprise'
+            version_string += u' Enterprise'
         if (self.major, self.minor) in self.RMATCH:
-            version_string += ' ({0})'.format(self.RMATCH[(self.major, self.minor)])
+            version_string += u' ({0})'.format(self.RMATCH[(self.major, self.minor)])
         return version_string
 
     def __str__(self):
@@ -393,7 +396,7 @@ class SaltStackVersion(object):
                 other = SaltStackVersion(*other)
             else:
                 raise ValueError(
-                    'Cannot instantiate Version from type \'{0}\''.format(
+                    u'Cannot instantiate Version from type \'{0}\''.format(
                         type(other)
                     )
                 )
@@ -405,13 +408,13 @@ class SaltStackVersion(object):
         if self.pre_type and not other.pre_type:
             # We have pre-release information, the other side doesn't
             other_noc_info = list(other.noc_info)
-            other_noc_info[4] = 'zzzzz'
+            other_noc_info[4] = u'zzzzz'
             return method(self.noc_info, tuple(other_noc_info))
 
         if not self.pre_type and other.pre_type:
             # The other side has pre-release informatio, we don't
             noc_info = list(self.noc_info)
-            noc_info[4] = 'zzzzz'
+            noc_info[4] = u'zzzzz'
             return method(tuple(noc_info), other.noc_info)
 
     def __lt__(self, other):
@@ -435,25 +438,25 @@ class SaltStackVersion(object):
     def __repr__(self):
         parts = []
         if self.name:
-            parts.append('name=\'{0}\''.format(self.name))
+            parts.append(u'name=\'{0}\''.format(self.name))
         parts.extend([
-            'major={0}'.format(self.major),
-            'minor={0}'.format(self.minor),
-            'bugfix={0}'.format(self.bugfix)
+            u'major={0}'.format(self.major),
+            u'minor={0}'.format(self.minor),
+            u'bugfix={0}'.format(self.bugfix)
         ])
         if self.mbugfix:
-            parts.append('minor-bugfix={0}'.format(self.mbugfix))
+            parts.append(u'minor-bugfix={0}'.format(self.mbugfix))
         if self.pre_type:
-            parts.append('{0}={1}'.format(self.pre_type, self.pre_num))
+            parts.append(u'{0}={1}'.format(self.pre_type, self.pre_num))
         noc = self.noc
         if noc == -1:
-            noc = 'n/a'
+            noc = u'n/a'
         if noc and self.sha:
             parts.extend([
-                'noc={0}'.format(noc),
-                'sha={0}'.format(self.sha)
+                u'noc={0}'.format(noc),
+                u'sha={0}'.format(self.sha)
             ])
-        return '<{0} {1}>'.format(self.__class__.__name__, ' '.join(parts))
+        return u'<{0} {1}>'.format(self.__class__.__name__, u' '.join(parts))
 
 
 # ----- Hardcoded Salt Codename Version Information ----------------------------------------------------------------->
@@ -471,15 +474,15 @@ def __discover_version(saltstack_version):
     import os
     import subprocess
 
-    if 'SETUP_DIRNAME' in globals():
+    if u'SETUP_DIRNAME' in globals():
         # This is from the exec() call in Salt's setup.py
         cwd = SETUP_DIRNAME  # pylint: disable=E0602
-        if not os.path.exists(os.path.join(cwd, '.git')):
+        if not os.path.exists(os.path.join(cwd, u'.git')):
             # This is not a Salt git checkout!!! Don't even try to parse...
             return saltstack_version
     else:
         cwd = os.path.abspath(os.path.dirname(__file__))
-        if not os.path.exists(os.path.join(os.path.dirname(cwd), '.git')):
+        if not os.path.exists(os.path.join(os.path.dirname(cwd), u'.git')):
             # This is not a Salt git checkout!!! Don't even try to parse...
             return saltstack_version
 
@@ -490,12 +493,12 @@ def __discover_version(saltstack_version):
             cwd=cwd
         )
 
-        if not sys.platform.startswith('win'):
+        if not sys.platform.startswith(u'win'):
             # Let's not import `salt.utils` for the above check
-            kwargs['close_fds'] = True
+            kwargs[u'close_fds'] = True
 
         process = subprocess.Popen(
-            ['git', 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*', '--always'], **kwargs)
+            [u'git', u'describe', u'--tags', u'--first-parent', u'--match', u'v[0-9]*', u'--always'], **kwargs)
 
         out, err = process.communicate()
 
@@ -503,7 +506,7 @@ def __discover_version(saltstack_version):
             # The git version running this might not support --first-parent
             # Revert to old command
             process = subprocess.Popen(
-                ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
+                [u'git', u'describe', u'--tags', u'--match', u'v[0-9]*', u'--always'], **kwargs)
             out, err = process.communicate()
         out = out.strip()
         err = err.strip()
@@ -560,7 +563,7 @@ def salt_information():
     '''
     Report version of salt.
     '''
-    yield 'Salt', __version__
+    yield u'Salt', __version__
 
 
 def dependency_information(include_salt_cloud=False):
@@ -568,37 +571,39 @@ def dependency_information(include_salt_cloud=False):
     Report versions of library dependencies.
     '''
     libs = [
-        ('Python', None, sys.version.rsplit('\n')[0].strip()),
-        ('Jinja2', 'jinja2', '__version__'),
-        ('M2Crypto', 'M2Crypto', 'version'),
-        ('msgpack-python', 'msgpack', 'version'),
-        ('msgpack-pure', 'msgpack_pure', 'version'),
-        ('pycrypto', 'Crypto', '__version__'),
-        ('libnacl', 'libnacl', '__version__'),
-        ('PyYAML', 'yaml', '__version__'),
-        ('ioflo', 'ioflo', '__version__'),
-        ('PyZMQ', 'zmq', '__version__'),
-        ('RAET', 'raet', '__version__'),
-        ('ZMQ', 'zmq', 'zmq_version'),
-        ('Mako', 'mako', '__version__'),
-        ('Tornado', 'tornado', 'version'),
-        ('timelib', 'timelib', 'version'),
-        ('dateutil', 'dateutil', '__version__'),
-        ('pygit2', 'pygit2', '__version__'),
-        ('libgit2', 'pygit2', 'LIBGIT2_VERSION'),
-        ('smmap', 'smmap', '__version__'),
-        ('cffi', 'cffi', '__version__'),
-        ('pycparser', 'pycparser', '__version__'),
-        ('gitdb', 'gitdb', '__version__'),
-        ('gitpython', 'git', '__version__'),
-        ('python-gnupg', 'gnupg', '__version__'),
-        ('mysql-python', 'MySQLdb', '__version__'),
-        ('cherrypy', 'cherrypy', '__version__'),
+        (u'Python', None, sys.version.rsplit(u'\n')[0].strip()),
+        (u'Jinja2', u'jinja2', u'__version__'),
+        (u'M2Crypto', u'M2Crypto', u'version'),
+        (u'msgpack-python', u'msgpack', u'version'),
+        (u'msgpack-pure', u'msgpack_pure', u'version'),
+        (u'pycrypto', u'Crypto', u'__version__'),
+        (u'pycryptodome', u'Cryptodome', u'version_info'),
+        (u'libnacl', u'libnacl', u'__version__'),
+        (u'PyYAML', u'yaml', u'__version__'),
+        (u'ioflo', u'ioflo', u'__version__'),
+        (u'PyZMQ', u'zmq', u'__version__'),
+        (u'RAET', u'raet', u'__version__'),
+        (u'ZMQ', u'zmq', u'zmq_version'),
+        (u'Mako', u'mako', u'__version__'),
+        (u'Tornado', u'tornado', u'version'),
+        (u'timelib', u'timelib', u'version'),
+        (u'dateutil', u'dateutil', u'__version__'),
+        (u'pygit2', u'pygit2', u'__version__'),
+        (u'libgit2', u'pygit2', u'LIBGIT2_VERSION'),
+        (u'smmap', u'smmap', u'__version__'),
+        (u'cffi', u'cffi', u'__version__'),
+        (u'pycparser', u'pycparser', u'__version__'),
+        (u'gitdb', u'gitdb', u'__version__'),
+        (u'gitpython', u'git', u'__version__'),
+        (u'python-gnupg', u'gnupg', u'__version__'),
+        (u'mysql-python', u'MySQLdb', u'__version__'),
+        (u'cherrypy', u'cherrypy', u'__version__'),
+        (u'docker-py', u'docker', u'__version__'),
     ]
 
     if include_salt_cloud:
         libs.append(
-            ('Apache Libcloud', 'libcloud', '__version__'),
+            (u'Apache Libcloud', u'libcloud', u'__version__'),
         )
 
     for name, imp, attr in libs:
@@ -611,7 +616,7 @@ def dependency_information(include_salt_cloud=False):
             if callable(version):
                 version = version()
             if isinstance(version, (tuple, list)):
-                version = '.'.join(map(str, version))
+                version = u'.'.join(map(str, version))
             yield name, version
         except Exception:
             yield name, None
@@ -625,45 +630,50 @@ def system_information():
         '''
         Return host system version.
         '''
-        lin_ver = platform.linux_distribution()
+        lin_ver = linux_distribution()
         mac_ver = platform.mac_ver()
         win_ver = platform.win32_ver()
 
         if lin_ver[0]:
-            return ' '.join(lin_ver)
+            return u' '.join(lin_ver)
         elif mac_ver[0]:
-            if isinstance(mac_ver[1], (tuple, list)) and ''.join(mac_ver[1]):
-                return ' '.join([mac_ver[0], '.'.join(mac_ver[1]), mac_ver[2]])
+            if isinstance(mac_ver[1], (tuple, list)) and u''.join(mac_ver[1]):
+                return u' '.join([mac_ver[0], u'.'.join(mac_ver[1]), mac_ver[2]])
             else:
-                return ' '.join([mac_ver[0], mac_ver[2]])
+                return u' '.join([mac_ver[0], mac_ver[2]])
         elif win_ver[0]:
-            return ' '.join(win_ver)
+            return u' '.join(win_ver)
         else:
-            return ''
+            return u''
 
     version = system_version()
     release = platform.release()
     if platform.win32_ver()[0]:
-        import win32api
-        if ((sys.version_info.major == 2 and sys.version_info >= (2, 7, 12)) or
-                (sys.version_info.major == 3 and sys.version_info >= (3, 5, 2))):
-            if win32api.GetVersionEx(1)[8] > 1:
-                server = {'Vista': '2008Server',
-                          '7': '2008ServerR2',
-                          '8': '2012Server',
-                          '8.1': '2012ServerR2',
-                          '10': '2016Server'}
-                release = server.get(platform.release(),
-                                     'UNKServer')
-                _, ver, sp, extra = platform.win32_ver()
-                version = ' '.join([release, ver, sp, extra])
+        import win32api  # pylint: disable=3rd-party-module-not-gated
+        server = {u'Vista': u'2008Server',
+                  u'7': u'2008ServerR2',
+                  u'8': u'2012Server',
+                  u'8.1': u'2012ServerR2',
+                  u'10': u'2016Server'}
+        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
+        # started reporting the Desktop version instead of the Server version on
+        # Server versions of Windows, so we need to look those up
+        # So, if you find a Server Platform that's a key in the server
+        # dictionary, then lookup the actual Server Release.
+        # If this is a Server Platform then `GetVersionEx` will return a number
+        # greater than 1.
+        if win32api.GetVersionEx(1)[8] > 1 and release in server:
+            release = server[release]
+        _, ver, sp, extra = platform.win32_ver()
+        version = ' '.join([release, ver, sp, extra])
 
     system = [
-        ('system', platform.system()),
-        ('dist', ' '.join(platform.dist())),
-        ('release', release),
-        ('machine', platform.machine()),
-        ('version', version),
+        (u'system', platform.system()),
+        (u'dist', u' '.join(linux_distribution(full_distribution_name=False))),
+        (u'release', release),
+        (u'machine', platform.machine()),
+        (u'version', version),
+        (u'locale', locale.getpreferredencoding()),
     ]
 
     for name, attr in system:
@@ -679,9 +689,9 @@ def versions_information(include_salt_cloud=False):
     lib_info = list(dependency_information(include_salt_cloud))
     sys_info = list(system_information())
 
-    return {'Salt Version': dict(salt_info),
-            'Dependency Versions': dict(lib_info),
-            'System Versions': dict(sys_info)}
+    return {u'Salt Version': dict(salt_info),
+            u'Dependency Versions': dict(lib_info),
+            u'System Versions': dict(sys_info)}
 
 
 def versions_report(include_salt_cloud=False):
@@ -690,25 +700,47 @@ def versions_report(include_salt_cloud=False):
     '''
     ver_info = versions_information(include_salt_cloud)
 
-    lib_pad = max(len(name) for name in ver_info['Dependency Versions'])
-    sys_pad = max(len(name) for name in ver_info['System Versions'])
+    lib_pad = max(len(name) for name in ver_info[u'Dependency Versions'])
+    sys_pad = max(len(name) for name in ver_info[u'System Versions'])
     padding = max(lib_pad, sys_pad) + 1
 
-    fmt = '{0:>{pad}}: {1}'
+    fmt = u'{0:>{pad}}: {1}'
     info = []
-    for ver_type in ('Salt Version', 'Dependency Versions', 'System Versions'):
-        info.append('{0}:'.format(ver_type))
+    for ver_type in (u'Salt Version', u'Dependency Versions', u'System Versions'):
+        info.append(u'{0}:'.format(ver_type))
         # List dependencies in alphabetical, case insensitive order
         for name in sorted(ver_info[ver_type], key=lambda x: x.lower()):
             ver = fmt.format(name,
-                             ver_info[ver_type][name] or 'Not Installed',
+                             ver_info[ver_type][name] or u'Not Installed',
                              pad=padding)
             info.append(ver)
-        info.append(' ')
+        info.append(u' ')
 
     for line in info:
         yield line
 
 
-if __name__ == '__main__':
-    print(__version__)
+def msi_conformant_version():
+    '''
+    An msi conformant version consists of up to 4 numbers, each smaller than 256, except the 4th.
+    Therefore, the year must be represented as 'short year'.
+
+    Examples (depend on git checkout):
+      develop                2016.11.0-742-g5ca4d20     16.11.0.742
+      20166.11 (branch)      2016.11.2-78-gce1f01f      16.11.2.78
+      v20166.11.2 (tag)      2016.11.2                  16.11.2.0
+
+    Note that the commit count for tags is 0(zero)
+    '''
+    year2 = int(str(__saltstack_version__.major)[2:])
+    month = __saltstack_version__.minor
+    minor = __saltstack_version__.bugfix
+    commi = __saltstack_version__.noc
+    return u'{0}.{1}.{2}.{3}'.format(year2, month, minor, commi)
+
+if __name__ == u'__main__':
+    if len(sys.argv) == 2 and sys.argv[1] == u'msi':
+        # Building the msi requires an msi-conformant version
+        print(msi_conformant_version())
+    else:
+        print(__version__)

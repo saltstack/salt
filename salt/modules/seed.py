@@ -13,8 +13,8 @@ import tempfile
 
 # Import salt libs
 import salt.crypt
-import salt.utils
 import salt.utils.cloud
+import salt.utils.files
 import salt.config
 import salt.syspaths
 import uuid
@@ -31,7 +31,7 @@ __func_alias__ = {
 
 def _file_or_content(file_):
     if os.path.exists(file_):
-        with salt.utils.fopen(file_) as fic:
+        with salt.utils.files.fopen(file_) as fic:
             return fic.read()
     return file_
 
@@ -220,7 +220,7 @@ def mkconfig(config=None,
 
     # Write the new minion's config to a tmp file
     tmp_config = os.path.join(tmp, 'minion')
-    with salt.utils.fopen(tmp_config, 'w+') as fp_:
+    with salt.utils.files.fopen(tmp_config, 'w+') as fp_:
         fp_.write(salt.utils.cloud.salt_config_to_yaml(config))
 
     # Generate keys for the minion
@@ -230,16 +230,16 @@ def mkconfig(config=None,
     if preseeded:
         log.debug('Writing minion.pub to {0}'.format(pubkeyfn))
         log.debug('Writing minion.pem to {0}'.format(privkeyfn))
-        with salt.utils.fopen(pubkeyfn, 'w') as fic:
+        with salt.utils.files.fopen(pubkeyfn, 'w') as fic:
             fic.write(_file_or_content(pub_key))
-        with salt.utils.fopen(privkeyfn, 'w') as fic:
+        with salt.utils.files.fopen(privkeyfn, 'w') as fic:
             fic.write(_file_or_content(priv_key))
         os.chmod(pubkeyfn, 0o600)
         os.chmod(privkeyfn, 0o600)
     else:
         salt.crypt.gen_keys(tmp, 'minion', 2048)
     if approve_key and not preseeded:
-        with salt.utils.fopen(pubkeyfn) as fp_:
+        with salt.utils.files.fopen(pubkeyfn) as fp_:
             pubkey = fp_.read()
             __salt__['pillar.ext']({'virtkey': [id_, pubkey]})
 
@@ -274,7 +274,7 @@ def _check_resolv(mpt):
     if not os.path.isfile(resolv):
         replace = True
     if not replace:
-        with salt.utils.fopen(resolv, 'rb') as fp_:
+        with salt.utils.files.fopen(resolv, 'rb') as fp_:
             conts = fp_.read()
             if 'nameserver' not in conts:
                 replace = True

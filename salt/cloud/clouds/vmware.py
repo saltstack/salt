@@ -116,7 +116,7 @@ configuration, run :py:func:`test_vcenter_connection`
 # Import python libs
 from __future__ import absolute_import
 from random import randint
-from re import findall
+from re import findall, split, search, compile
 import pprint
 import logging
 import time
@@ -126,6 +126,8 @@ import subprocess
 # Import salt libs
 import salt.utils
 import salt.utils.cloud
+import salt.utils.network
+import salt.utils.stringutils
 import salt.utils.xmlutil
 import salt.utils.vmware
 from salt.exceptions import SaltCloudSystemExit
@@ -133,15 +135,10 @@ from salt.exceptions import SaltCloudSystemExit
 # Import salt cloud libs
 import salt.config as config
 
-# Attempt to import pyVim and pyVmomi libs
-ESX_5_5_NAME_PORTION = 'VMware ESXi 5.5'
-SAFE_ESX_5_5_CONTROLLER_KEY_INDEX = 200
-FLATTEN_DISK_FULL_CLONE = 'moveAllDiskBackingsAndDisallowSharing'
-COPY_ALL_DISKS_FULL_CLONE = 'moveAllDiskBackingsAndAllowSharing'
-CURRENT_STATE_LINKED_CLONE = 'moveChildMostDiskBacking'
-QUICK_LINKED_CLONE = 'createNewChildDiskBacking'
-
+# Import 3rd-party libs
+from salt.ext import six
 try:
+    # Attempt to import pyVmomi libs
     from pyVmomi import vim
     HAS_PYVMOMI = True
 except Exception:
@@ -154,15 +151,13 @@ try:
 except Exception:
     pass
 
-try:
-    import salt.ext.six as six
-    HAS_SIX = True
-except ImportError:
-    # Salt version <= 2014.7.0
-    try:
-        import six
-    except ImportError:
-        HAS_SIX = False
+ESX_5_5_NAME_PORTION = 'VMware ESXi 5.5'
+SAFE_ESX_5_5_CONTROLLER_KEY_INDEX = 200
+FLATTEN_DISK_FULL_CLONE = 'moveAllDiskBackingsAndDisallowSharing'
+COPY_ALL_DISKS_FULL_CLONE = 'moveAllDiskBackingsAndAllowSharing'
+CURRENT_STATE_LINKED_CLONE = 'moveChildMostDiskBacking'
+QUICK_LINKED_CLONE = 'createNewChildDiskBacking'
+
 
 IP_RE = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 
@@ -203,7 +198,6 @@ def get_dependencies():
     '''
     deps = {
         'pyVmomi': HAS_PYVMOMI,
-        'six': HAS_SIX
     }
     return config.check_driver_dependencies(
         __virtualname__,
@@ -623,8 +617,9 @@ def _get_mode_spec(device, mode, disk_spec):
     return disk_spec
 
 
-def _get_size_spec(device, size_gb):
-    size_kb = int(size_gb * 1024.0 * 1024.0)
+def _get_size_spec(device, size_gb=None, size_kb=None):
+    if size_kb is None and size_gb is not None:
+        size_kb = int(size_gb * 1024.0 * 1024.0)
     disk_spec = _edit_existing_hard_disk_helper(disk=device, size_kb=size_kb) if device.capacityInKB < size_kb else None
     return disk_spec
 
@@ -655,22 +650,34 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                     if device.deviceInfo.label in list(devices['disk'].keys()):
                         disk_spec = None
                         if 'size' in devices['disk'][device.deviceInfo.label]:
-                            disk_spec = _get_size_spec(device, devices)
-                            size_kb = float(
-                                devices['disk'][device.deviceInfo.label]['size']
-                            ) * 1024 * 1024
+                            size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
+                            size_kb = int(size_gb * 1024.0 * 1024.0)
                         else:
-                            # User didn't specify disk size
-                            # in the cloud profile
-                            # so use the existing disk size
-                            log.info('Virtual disk size was not'
-                                     ' specified in the cloud profile.'
-                                     ' Using existing disk size.')
+                            # User didn't specify disk size in the cloud
+                            # profile so use the existing disk size
                             size_kb = device.capacityInKB
+                            size_gb = size_kb / (1024.0 * 1024.0)
+                            log.debug(
+                                'Virtual disk size for \'{0}\' was not '
+                                'specified in the cloud profile or map file. '
+                                'Using existing virtual disk size of \'{1}GB\''.format(
+                                    device.deviceInfo.label,
+                                    size_gb
+                                )
+                            )
 
-                        if device.capacityInKB < size_kb:
-                            # expand the disk
-                            disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
+                        if device.capacityInKB > size_kb:
+                            raise SaltCloudSystemExit(
+                                'The specified disk size \'{0}GB\' for \'{1}\' is '
+                                'smaller than the disk image size \'{2}GB\'. It must '
+                                'be equal to or greater than the disk image'.format(
+                                    float(devices['disk'][device.deviceInfo.label]['size']),
+                                    device.deviceInfo.label,
+                                    float(device.capacityInKB / (1024.0 * 1024.0))
+                                )
+                            )
+                        else:
+                            disk_spec = _get_size_spec(device=device, size_kb=size_kb)
 
                         if 'mode' in devices['disk'][device.deviceInfo.label]:
                             if devices['disk'][device.deviceInfo.label]['mode'] \
@@ -685,7 +692,8 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                                 raise SaltCloudSystemExit('Invalid disk'
                                                           ' backing mode'
                                                           ' specified!')
-                        device_specs.append(disk_spec)
+                        if disk_spec is not None:
+                            device_specs.append(disk_spec)
 
             elif isinstance(device.backing, vim.vm.device.VirtualEthernetCard.NetworkBackingInfo) or isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
                 # this is a network adapter
@@ -907,7 +915,16 @@ def _wait_for_ip(vm_ref, max_wait):
     max_wait_ip = max_wait
     vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_vmware_tools)
     if not vmware_tools_status:
-        return False
+        # VMware will only report the IP if VMware tools are installed. Try to
+        # determine the IP using DNS
+        vm_name = vm_ref.summary.config.name
+        resolved_ips = salt.utils.network.host_to_ips(vm_name)
+        log.debug("Timeout waiting for VMware tools. The name {0} resolved "
+                  "to {1}".format(vm_name, str(resolved_ips)))
+        if isinstance(resolved_ips, list) and len(resolved_ips):
+            return resolved_ips[0]
+        else:
+            return False
     time_counter = 0
     starttime = time.time()
     while time_counter < max_wait_ip:
@@ -973,6 +990,10 @@ def _format_instance_info_select(vm, selection):
         cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
         ram = "{0} MB".format(vm["config.hardware.memoryMB"]) if "config.hardware.memoryMB" in vm else "N/A"
         vm_select_info['size'] = u"cpu: {0}\nram: {1}".format(cpu, ram)
+        vm_select_info['size_dict'] = {
+            'cpu': cpu,
+            'memory': ram,
+        }
 
     if 'state' in selection:
         vm_select_info['state'] = str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A"
@@ -1160,6 +1181,10 @@ def _format_instance_info(vm):
         'id': str(vm['name']),
         'image': "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A",
         'size': u"cpu: {0}\nram: {1}".format(cpu, ram),
+        'size_dict': {
+            'cpu': cpu,
+            'memory': ram,
+        },
         'state': str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A",
         'private_ips': ip_addresses,
         'public_ips': [],
@@ -1564,6 +1589,10 @@ def list_nodes(kwargs=None, call=None):
             'id': vm["name"],
             'image': "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A",
             'size': u"cpu: {0}\nram: {1}".format(cpu, ram),
+            'size_dict': {
+                'cpu': cpu,
+                'memory': ram,
+            },
             'state': str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A",
             'private_ips': [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
             'public_ips': []
@@ -1975,15 +2004,24 @@ def start(name, call=None):
     return 'powered on'
 
 
-def stop(name, call=None):
+def stop(name, soft=False, call=None):
     '''
     To stop/power off a VM using its name
+
+    .. note::
+
+        If ``soft=True`` then issues a command to the guest operating system
+        asking it to perform a clean shutdown of all services.
+        Default is soft=False
+
+        For ``soft=True`` vmtools should be installed on guest system.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -a stop vmname
+        salt-cloud -a stop vmname soft=True
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2006,8 +2044,11 @@ def stop(name, call=None):
                 return ret
             try:
                 log.info('Stopping VM {0}'.format(name))
-                task = vm["object"].PowerOff()
-                salt.utils.vmware.wait_for_task(task, name, 'power off')
+                if soft:
+                    vm["object"].ShutdownGuest()
+                else:
+                    task = vm["object"].PowerOff()
+                    salt.utils.vmware.wait_for_task(task, name, 'power off')
             except Exception as exc:
                 log.error(
                     'Error while powering off VM {0}: {1}'.format(
@@ -2073,15 +2114,24 @@ def suspend(name, call=None):
     return 'suspended'
 
 
-def reset(name, call=None):
+def reset(name, soft=False, call=None):
     '''
     To reset a VM using its name
+
+    .. note::
+
+        If ``soft=True`` then issues a command to the guest operating system
+        asking it to perform a reboot. Otherwise hypervisor will terminate VM and start it again.
+        Default is soft=False
+
+        For ``soft=True`` vmtools should be installed on guest system.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -a reset vmname
+        salt-cloud -a reset vmname soft=True
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2104,8 +2154,11 @@ def reset(name, call=None):
                 return ret
             try:
                 log.info('Resetting VM {0}'.format(name))
-                task = vm["object"].Reset()
-                salt.utils.vmware.wait_for_task(task, name, 'reset')
+                if soft:
+                    vm["object"].RebootGuest()
+                else:
+                    task = vm["object"].ResetVM_Task()
+                    salt.utils.vmware.wait_for_task(task, name, 'reset')
             except Exception as exc:
                 log.error(
                     'Error while resetting VM {0}: {1}'.format(
@@ -2275,11 +2328,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -2323,6 +2372,9 @@ def create(vm_):
     extra_config = config.get_cloud_config_value(
         'extra_config', vm_, __opts__, default=None
     )
+    annotation = config.get_cloud_config_value(
+        'annotation', vm_, __opts__, default=None
+    )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=True
     )
@@ -2330,7 +2382,7 @@ def create(vm_):
         'private_key', vm_, __opts__, search_global=False, default=None
     )
     deploy = config.get_cloud_config_value(
-        'deploy', vm_, __opts__, search_global=False, default=True
+        'deploy', vm_, __opts__, search_global=True, default=True
     )
     wait_for_ip_timeout = config.get_cloud_config_value(
         'wait_for_ip_timeout', vm_, __opts__, default=20 * 60
@@ -2533,6 +2585,9 @@ def create(vm_):
             option = vim.option.OptionValue(key=key, value=value)
             config_spec.extraConfig.append(option)
 
+    if annotation:
+        config_spec.annotation = str(annotation)
+
     if 'clonefrom' in vm_:
         clone_spec = handle_snapshot(
             config_spec,
@@ -2554,8 +2609,14 @@ def create(vm_):
             global_ip = vim.vm.customization.GlobalIPSettings()
             if 'dns_servers' in list(vm_.keys()):
                 global_ip.dnsServerList = vm_['dns_servers']
-            hostName = vm_name.split('.')[0]
-            domainName = vm_name.split('.', 1)[-1]
+
+            non_hostname_chars = compile(r'[^\w-]')
+            if search(non_hostname_chars, vm_name):
+                hostName = split(non_hostname_chars, vm_name, maxsplit=1)[0]
+            else:
+                hostName = vm_name
+            domainName = hostName.split('.', 1)[-1]
+
             if 'Windows' not in object_ref.config.guestFullName:
                 identity = vim.vm.customization.LinuxPrep()
                 identity.hostName = vim.vm.customization.FixedName(name=hostName)
@@ -2598,12 +2659,15 @@ def create(vm_):
             pprint.pformat(config_spec))
         )
 
+    event_kwargs = vm_.copy()
+    del event_kwargs['password']
+
     try:
         __utils__['cloud.fire_event'](
             'event',
             'requesting instance',
             'salt/cloud/{0}/requesting'.format(vm_['name']),
-            args={'kwargs': vm_},
+            args=__utils__['cloud.filter_event']('requesting', event_kwargs, list(event_kwargs)),
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
@@ -2612,7 +2676,7 @@ def create(vm_):
             log.info("Creating {0} from {1}({2})".format(vm_['name'], clone_type, vm_['clonefrom']))
 
             if datastore and not datastore_ref and datastore_cluster_ref:
-                # datastore cluster has been specified so apply Storage DRS recomendations
+                # datastore cluster has been specified so apply Storage DRS recommendations
                 pod_spec = vim.storageDrs.PodSelectionSpec(storagePod=datastore_cluster_ref)
 
                 storage_spec = vim.storageDrs.StoragePlacementSpec(
@@ -2684,11 +2748,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -3741,7 +3801,7 @@ def add_host(kwargs=None, call=None):
             p1 = subprocess.Popen(('echo', '-n'), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             p2 = subprocess.Popen(('openssl', 's_client', '-connect', '{0}:443'.format(host_name)), stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             p3 = subprocess.Popen(('openssl', 'x509', '-noout', '-fingerprint', '-sha1'), stdin=p2.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out = salt.utils.to_str(p3.stdout.read())
+            out = salt.utils.stringutils.to_str(p3.stdout.read())
             ssl_thumbprint = out.split('=')[-1].strip()
             log.debug('SSL thumbprint received from the host system: {0}'.format(ssl_thumbprint))
             spec.sslThumbprint = ssl_thumbprint

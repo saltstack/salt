@@ -113,7 +113,7 @@ Changes:
 
 * bbd8260 Ignore Raspbian in service.py __virtual__ (`#32421`_)
 
-* 690addf FreeBSD supports packages in format java/openjdk7 so the prior commit broke that functionality. Check freebsd/pkg`#1409`_ for more info.
+* 690addf FreeBSD supports packages in format java/openjdk7 so the prior commit broke that functionality. Check ``freebsd/pkg#1409`` for more info.
 
 - **PR** `#32399`_: (*amontalban*) Backport to fix `#28262`_ for 2015.5 as requested in PR `#32376`_
 
@@ -289,6 +289,10 @@ Changes:
 
 - **PR** `#30291`_: (*thegoodduke*) ipset: fix test=true & add comment for every entry
 
+.. _`#23643`: https://github.com/saltstack/salt/issues/23643
+.. _`#23714`: https://github.com/saltstack/salt/issues/23714
+.. _`#28262`: https://github.com/saltstack/salt/issues/28262
+.. _`#31369`: https://github.com/saltstack/salt/issues/31369
 .. _`#24952`: https://github.com/saltstack/salt/pull/24952
 .. _`#26170`: https://github.com/saltstack/salt/pull/26170
 .. _`#26853`: https://github.com/saltstack/salt/pull/26853

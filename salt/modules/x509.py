@@ -23,9 +23,10 @@ import datetime
 import ast
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 import salt.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.odict import OrderedDict
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import range
@@ -74,11 +75,6 @@ CERT_DEFAULTS = {
     'serial_bits': 64,
     'algorithm': 'sha256'
 }
-PEM_RE = re.compile(
-    r"\s*(?P<pem_header>-----(?:.+?)-----)\s+"
-    r"(?P<pem_body>.+?)\s+(?P<pem_footer>-----(?:.+?)-----)\s*",
-    re.DOTALL
-)
 
 
 def __virtual__():
@@ -146,11 +142,13 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
         lhash = None
     except AttributeError:
         lhash = M2Crypto.m2.x509v3_lhash()                      # pylint: disable=no-member
-        ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)          # pylint: disable=no-member
-        #ctx not zeroed
+        ctx = M2Crypto.m2.x509v3_set_conf_lhash(
+            lhash)          # pylint: disable=no-member
+        # ctx not zeroed
         _fix_ctx(ctx, issuer)
-        x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)  # pylint: disable=no-member
-    #ctx,lhash freed
+        x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(
+            lhash, ctx, name, value)  # pylint: disable=no-member
+    # ctx,lhash freed
 
     if x509_ext_ptr is None:
         raise M2Crypto.X509.X509Error(
@@ -168,7 +166,7 @@ def _parse_openssl_req(csr_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
@@ -217,7 +215,7 @@ def _parse_openssl_crl(crl_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
@@ -318,7 +316,7 @@ def _text_or_file(input_):
     content to be parsed.
     '''
     if os.path.isfile(input_):
-        with salt.utils.fopen(input_) as fp_:
+        with salt.utils.files.fopen(input_) as fp_:
             return fp_.read()
     else:
         return input_
@@ -333,10 +331,14 @@ def _parse_subject(subject):
     for nid_name, nid_num in six.iteritems(subject.nid):
         if nid_num in nids:
             continue
-        val = getattr(subject, nid_name)
-        if val:
-            ret[nid_name] = val
-            nids.append(nid_num)
+        try:
+            val = getattr(subject, nid_name)
+            if val:
+                ret[nid_name] = val
+                nids.append(nid_num)
+        except TypeError as e:
+            if e.args and e.args[0] == 'No string argument provided':
+                pass
 
     return ret
 
@@ -353,16 +355,26 @@ def _get_certificate_obj(cert):
     return M2Crypto.X509.load_cert_string(text)
 
 
-def _get_private_key_obj(private_key):
+def _get_private_key_obj(private_key, passphrase=None):
     '''
     Returns a private key object based on PEM text.
     '''
     private_key = _text_or_file(private_key)
-    private_key = get_pem_entry(private_key, pem_type='RSA PRIVATE KEY')
-    rsaprivkey = M2Crypto.RSA.load_key_string(private_key)
+    private_key = get_pem_entry(private_key, pem_type='(?:RSA )?PRIVATE KEY')
+    rsaprivkey = M2Crypto.RSA.load_key_string(
+        private_key, callback=_passphrase_callback(passphrase))
     evpprivkey = M2Crypto.EVP.PKey()
     evpprivkey.assign_rsa(rsaprivkey)
     return evpprivkey
+
+
+def _passphrase_callback(passphrase):
+    '''
+    Returns a callback function used to supply a passphrase for private keys
+    '''
+    def f(*args):
+        return passphrase
+    return f
 
 
 def _get_request_obj(csr):
@@ -397,6 +409,8 @@ def _make_regex(pem_type):
     '''
     return re.compile(
         r"\s*(?P<pem_header>-----BEGIN {0}-----)\s+"
+        r"(?:(?P<proc_type>Proc-Type: 4,ENCRYPTED)\s*)?"
+        r"(?:(?P<dek_info>DEK-Info: (?:DES-[3A-Z\-]+,[0-9A-F]{{16}}|[0-9A-Z\-]+,[0-9A-F]{{32}}))\s*)?"
         r"(?P<pem_body>.+?)\s+(?P<pem_footer>"
         r"-----END {1}-----)\s*".format(pem_type, pem_type),
         re.DOTALL
@@ -424,18 +438,21 @@ def get_pem_entry(text, pem_type=None):
                 MIICyzCC Ar8CAQI...-----END CERTIFICATE REQUEST"
     '''
     text = _text_or_file(text)
+    # Replace encoded newlines
+    text = text.replace('\\n', '\n')
 
     _match = None
 
-    if len(text.splitlines()) == 1 and text.startswith('-----') and text.endswith('-----'):
+    if len(text.splitlines()) == 1 and text.startswith(
+            '-----') and text.endswith('-----'):
         # mine.get returns the PEM on a single line, we fix this
         pem_fixed = []
         pem_temp = text
         while len(pem_temp) > 0:
             if pem_temp.startswith('-----'):
                 # Grab ----(.*)---- blocks
-                pem_fixed.append(pem_temp[:pem_temp.index('-----', 5)+5])
-                pem_temp = pem_temp[pem_temp.index('-----', 5)+5:]
+                pem_fixed.append(pem_temp[:pem_temp.index('-----', 5) + 5])
+                pem_temp = pem_temp[pem_temp.index('-----', 5) + 5:]
             else:
                 # grab base64 chunks
                 if pem_temp[:64].count('-') == 0:
@@ -446,39 +463,34 @@ def get_pem_entry(text, pem_type=None):
                     pem_temp = pem_temp[pem_temp.index('-'):]
         text = "\n".join(pem_fixed)
 
-    if not pem_type:
-        # Find using a regex iterator, pick the first match
-        for _match in PEM_RE.finditer(text):
-            if _match:
-                break
-        if not _match:
-            raise salt.exceptions.SaltInvocationError(
-                'PEM text not valid:\n{0}'.format(text)
-            )
-        _match_dict = _match.groupdict()
-        pem_header = _match_dict['pem_header']
-        pem_footer = _match_dict['pem_footer']
-        pem_body = _match_dict['pem_body']
-    else:
+    _dregex = _make_regex('[0-9A-Z ]+')
+    errmsg = 'PEM text not valid:\n{0}'.format(text)
+    if pem_type:
         _dregex = _make_regex(pem_type)
-        for _match in _dregex.finditer(text):
-            if _match:
-                break
-        if not _match:
-            raise salt.exceptions.SaltInvocationError(
-                'PEM does not contain a single entry of type {0}:\n'
-                '{1}'.format(pem_type, text)
-            )
-        _match_dict = _match.groupdict()
-        pem_header = _match_dict['pem_header']
-        pem_footer = _match_dict['pem_footer']
-        pem_body = _match_dict['pem_body']
+        errmsg = ('PEM does not contain a single entry of type {0}:\n'
+                  '{1}'.format(pem_type, text))
+
+    for _match in _dregex.finditer(text):
+        if _match:
+            break
+    if not _match:
+        raise salt.exceptions.SaltInvocationError(errmsg)
+    _match_dict = _match.groupdict()
+    pem_header = _match_dict['pem_header']
+    proc_type = _match_dict['proc_type']
+    dek_info = _match_dict['dek_info']
+    pem_footer = _match_dict['pem_footer']
+    pem_body = _match_dict['pem_body']
 
     # Remove all whitespace from body
     pem_body = ''.join(pem_body.split())
 
     # Generate correctly formatted pem
     ret = pem_header + '\n'
+    if proc_type:
+        ret += proc_type + '\n'
+    if dek_info:
+        ret += dek_info + '\n' + '\n'
     for i in range(0, len(pem_body), 64):
         ret += pem_body[i:i + 64] + '\n'
     ret += pem_footer + '\n'
@@ -614,6 +626,8 @@ def read_csr(csr):
         # Get size returns in bytes. The world thinks of key sizes in bits.
         'Subject': _parse_subject(csr.get_subject()),
         'Subject Hash': _dec2hex(csr.get_subject().as_hash()),
+        'Public Key Hash': hashlib.sha1(csr.get_pubkey().get_modulus())\
+        .hexdigest()
     }
 
     ret['X509v3 Extensions'] = _get_csr_extensions(csr)
@@ -649,7 +663,7 @@ def read_crl(crl):
     return crlparsed
 
 
-def get_public_key(key, asObj=False):
+def get_public_key(key, passphrase=None, asObj=False):
     '''
     Returns a string containing the public key in PEM format.
 
@@ -687,7 +701,8 @@ def get_public_key(key, asObj=False):
         rsa = csr.get_pubkey().get_rsa()
     if (text.startswith('-----BEGIN PRIVATE KEY-----') or
             text.startswith('-----BEGIN RSA PRIVATE KEY-----')):
-        rsa = M2Crypto.RSA.load_key_string(text)
+        rsa = M2Crypto.RSA.load_key_string(
+            text, callback=_passphrase_callback(passphrase))
 
     if asObj:
         evppubkey = M2Crypto.EVP.PKey()
@@ -698,7 +713,7 @@ def get_public_key(key, asObj=False):
     return bio.read_all()
 
 
-def get_private_key_size(private_key):
+def get_private_key_size(private_key, passphrase=None):
     '''
     Returns the bit length of a private key in PEM format.
 
@@ -711,7 +726,7 @@ def get_private_key_size(private_key):
 
         salt '*' x509.get_private_key_size /etc/pki/mycert.key
     '''
-    return _get_private_key_obj(private_key).size() * 8
+    return _get_private_key_obj(private_key, passphrase).size() * 8
 
 
 def write_pem(text, path, overwrite=True, pem_type=None):
@@ -755,10 +770,10 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         except salt.exceptions.SaltInvocationError:
             pass
         try:
-            _private_key = get_pem_entry(_filecontents, 'RSA PRIVATE KEY')
+            _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
         except salt.exceptions.SaltInvocationError:
             pass
-    with salt.utils.fopen(path, 'w') as _fp:
+    with salt.utils.files.fopen(path, 'w') as _fp:
         if pem_type and pem_type == 'CERTIFICATE' and _private_key:
             _fp.write(_private_key)
         _fp.write(text)
@@ -768,7 +783,12 @@ def write_pem(text, path, overwrite=True, pem_type=None):
     return 'PEM written to {0}'.format(path)
 
 
-def create_private_key(path=None, text=False, bits=2048, verbose=True):
+def create_private_key(path=None,
+                       text=False,
+                       bits=2048,
+                       passphrase=None,
+                       cipher='aes_128_cbc',
+                       verbose=True):
     '''
     Creates a private key in PEM format.
 
@@ -782,6 +802,12 @@ def create_private_key(path=None, text=False, bits=2048, verbose=True):
 
     bits:
         Length of the private key in bits. Default 2048
+
+    passphrase:
+        Passphrase for encryting the private key
+
+    cipher:
+        Cipher for encrypting the private key. Has no effect if passhprase is None.
 
     verbose:
         Provide visual feedback on stdout. Default True
@@ -810,13 +836,18 @@ def create_private_key(path=None, text=False, bits=2048, verbose=True):
     rsa = M2Crypto.RSA.gen_key(bits, M2Crypto.m2.RSA_F4, _callback_func)
     # pylint: enable=no-member
     bio = M2Crypto.BIO.MemoryBuffer()
-    rsa.save_key_bio(bio, cipher=None)
+    if passphrase is None:
+        cipher = None
+    rsa.save_key_bio(
+        bio,
+        cipher=cipher,
+        callback=_passphrase_callback(passphrase))
 
     if path:
         return write_pem(
             text=bio.read_all(),
             path=path,
-            pem_type='RSA PRIVATE KEY'
+            pem_type='(?:RSA )?PRIVATE KEY'
         )
     else:
         return bio.read_all()
@@ -824,6 +855,7 @@ def create_private_key(path=None, text=False, bits=2048, verbose=True):
 
 def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         path=None, text=False, signing_private_key=None,
+        signing_private_key_passphrase=None,
         signing_cert=None, revoked=None, include_expired=False,
         days_valid=100, digest=''):
     '''
@@ -842,6 +874,9 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         A path or string of the private key in PEM format that will be used
         to sign this crl. This is required.
 
+    signing_private_key_passphrase:
+        Passphrase to decrypt the private key.
+
     signing_cert:
         A certificate matching the private key that will be used to sign
         this crl. This is required.
@@ -851,7 +886,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         represents one certificate. A dict must contain either the key
         ``serial_number`` with the value of the serial number to revoke, or
         ``certificate`` with either the PEM encoded text of the certificate,
-        or a path ot the certificate to revoke.
+        or a path to the certificate to revoke.
 
         The dict can optionally contain the ``revocation_date`` key. If this
         key is omitted the revocation date will be set to now. If should be a
@@ -945,16 +980,30 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
     cert = OpenSSL.crypto.load_certificate(
         OpenSSL.crypto.FILETYPE_PEM,
         get_pem_entry(signing_cert, pem_type='CERTIFICATE'))
-    signing_private_key = _text_or_file(signing_private_key)
+    signing_private_key = _get_private_key_obj(signing_private_key,
+                                               passphrase=signing_private_key_passphrase).as_pem(cipher=None)
     key = OpenSSL.crypto.load_privatekey(
         OpenSSL.crypto.FILETYPE_PEM,
         get_pem_entry(signing_private_key))
 
+    export_kwargs = {
+        'cert': cert,
+        'key': key,
+        'type': OpenSSL.crypto.FILETYPE_PEM,
+        'days': days_valid
+    }
+    if digest:
+        export_kwargs['digest'] = bytes(digest)
+    else:
+        log.warning('No digest specified. The default md5 digest will be used.')
+
     try:
-        crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid, digest=bytes(digest))
-    except TypeError:
-        log.warning('Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used.')
-        crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid)
+        crltext = crl.export(**export_kwargs)
+    except (TypeError, ValueError):
+        log.warning(
+            'Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used.')
+        export_kwargs.pop('digest', None)
+        crltext = crl.export(**export_kwargs)
 
     if text:
         return crltext
@@ -1125,6 +1174,9 @@ def create_certificate(
         certificate, and the public key matching ``signing_private_key`` will
         be used to create the certificate.
 
+    signing_private_key_passphrase:
+        Passphrase used to decrypt the signing_private_key.
+
     signing_cert:
         A certificate matching the private key that will be used to sign this
         certificate. This is used to populate the issuer values in the
@@ -1146,6 +1198,10 @@ def create_certificate(
         If you import a CSR as a public key, only the public key will be added
         to the certificate, subject or extension information in the CSR will
         be lost.
+
+    public_key_passphrase:
+        If the public key is supplied as a private key, this is the passphrase
+        used to decrypt it.
 
     csr:
         A file or PEM string containing a certificate signing request. This
@@ -1296,6 +1352,8 @@ def create_certificate(
         raise salt.exceptions.SaltInvocationError(
             'Either path or text must be specified, not both.')
 
+    if 'public_key_passphrase' not in kwargs:
+        kwargs['public_key_passphrase'] = None
     if ca_server:
         if 'signing_policy' not in kwargs:
             raise salt.exceptions.SaltInvocationError(
@@ -1309,19 +1367,30 @@ def create_certificate(
         if 'public_key' in kwargs:
             # Strip newlines to make passing through as cli functions easier
             kwargs['public_key'] = get_public_key(
-                kwargs['public_key']).replace('\n', '')
+                kwargs['public_key'],
+                passphrase=kwargs['public_key_passphrase']).replace('\n', '')
 
         # Remove system entries in kwargs
         # Including listen_in and preqreuired because they are not included
         # in STATE_INTERNAL_KEYWORDS
         # for salt 2014.7.2
-        for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['listen_in', 'preqrequired', '__prerequired__']:
+        for ignore in list(_STATE_INTERNAL_KEYWORDS) + \
+                ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
 
-        cert_txt = __salt__['publish.publish'](
+        certs = __salt__['publish.publish'](
             tgt=ca_server,
             fun='x509.sign_remote_certificate',
-            arg=str(kwargs))[ca_server]
+            arg=str(kwargs))
+
+        if not any(certs):
+            raise salt.exceptions.SaltInvocationError(
+                    'ca_server did not respond'
+                    ' salt master must permit peers to'
+                    ' call the sign_remote_certificate function.')
+
+        cert_txt = certs[ca_server]
+
         if path:
             return write_pem(
                 text=cert_txt,
@@ -1372,6 +1441,9 @@ def create_certificate(
     # If neither public_key or csr are included, this cert is self-signed
     if 'public_key' not in kwargs and 'csr' not in kwargs:
         kwargs['public_key'] = kwargs['signing_private_key']
+        if 'signing_private_key_passphrase' in kwargs:
+            kwargs['public_key_passphrase'] = kwargs[
+                'signing_private_key_passphrase']
 
     csrexts = {}
     if 'csr' in kwargs:
@@ -1380,7 +1452,8 @@ def create_certificate(
         cert.set_subject(csr.get_subject())
         csrexts = read_csr(kwargs['csr'])['X509v3 Extensions']
 
-    cert.set_pubkey(get_public_key(kwargs['public_key'], asObj=True))
+    cert.set_pubkey(get_public_key(kwargs['public_key'],
+                                   passphrase=kwargs['public_key_passphrase'], asObj=True))
 
     subject = cert.get_subject()
 
@@ -1429,13 +1502,19 @@ def create_certificate(
 
         cert.add_ext(ext)
 
+    if 'signing_private_key_passphrase' not in kwargs:
+        kwargs['signing_private_key_passphrase'] = None
     if 'testrun' in kwargs and kwargs['testrun'] is True:
         cert_props = read_certificate(cert)
         cert_props['Issuer Public Key'] = get_public_key(
-            kwargs['signing_private_key'])
+            kwargs['signing_private_key'],
+            passphrase=kwargs['signing_private_key_passphrase'])
         return cert_props
 
-    if not verify_private_key(kwargs['signing_private_key'], signing_cert):
+    if not verify_private_key(private_key=kwargs['signing_private_key'],
+                              passphrase=kwargs[
+                                  'signing_private_key_passphrase'],
+                              public_key=signing_cert):
         raise salt.exceptions.SaltInvocationError(
             'signing_private_key: {0} '
             'does no match signing_cert: {1}'.format(
@@ -1445,7 +1524,8 @@ def create_certificate(
         )
 
     cert.sign(
-        _get_private_key_obj(kwargs['signing_private_key']),
+        _get_private_key_obj(kwargs['signing_private_key'],
+                             passphrase=kwargs['signing_private_key_passphrase']),
         kwargs['algorithm']
     )
 
@@ -1459,7 +1539,7 @@ def create_certificate(
         else:
             prepend = ''
         write_pem(text=cert.as_pem(), path=os.path.join(kwargs['copypath'],
-                  prepend + kwargs['serial_number']+'.crt'),
+                                                        prepend + kwargs['serial_number'] + '.crt'),
                   pem_type='CERTIFICATE')
 
     if path:
@@ -1519,15 +1599,28 @@ def create_csr(path=None, text=False, **kwargs):
 
     if 'private_key' not in kwargs and 'public_key' in kwargs:
         kwargs['private_key'] = kwargs['public_key']
-        log.warning("OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
+        log.warning(
+            "OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
 
-    if 'private_key' not in kwargs not in kwargs:
+    if 'private_key' not in kwargs:
         raise salt.exceptions.SaltInvocationError('private_key is required')
 
     if 'public_key' not in kwargs:
         kwargs['public_key'] = kwargs['private_key']
 
-    csr.set_pubkey(get_public_key(kwargs['public_key'], asObj=True))
+    if 'private_key_passphrase' not in kwargs:
+        kwargs['private_key_passphrase'] = None
+    if 'public_key_passphrase' not in kwargs:
+        kwargs['public_key_passphrase'] = None
+    if kwargs['public_key_passphrase'] and not kwargs[
+            'private_key_passphrase']:
+        kwargs['private_key_passphrase'] = kwargs['public_key_passphrase']
+    if kwargs['private_key_passphrase'] and not kwargs[
+            'public_key_passphrase']:
+        kwargs['public_key_passphrase'] = kwargs['private_key_passphrase']
+
+    csr.set_pubkey(get_public_key(kwargs['public_key'],
+                                  passphrase=kwargs['public_key_passphrase'], asObj=True))
 
     # pylint: disable=unused-variable
     for entry, num in six.iteritems(subject.nid):
@@ -1547,6 +1640,9 @@ def create_csr(path=None, text=False, **kwargs):
             critical = True
             extval = extval[9:]
 
+        if extname == 'subjectKeyIdentifier' and 'hash' in extval:
+            extval = extval.replace('hash', _get_pubkey_hash(csr))
+
         if extname == 'subjectAltName':
             extval = extval.replace('IP Address', 'IP')
 
@@ -1565,7 +1661,8 @@ def create_csr(path=None, text=False, **kwargs):
 
     csr.add_extensions(extstack)
 
-    csr.sign(_get_private_key_obj(kwargs['private_key']), kwargs['algorithm'])
+    csr.sign(_get_private_key_obj(kwargs['private_key'],
+                                  passphrase=kwargs['private_key_passphrase']), kwargs['algorithm'])
 
     if path:
         return write_pem(
@@ -1577,7 +1674,7 @@ def create_csr(path=None, text=False, **kwargs):
         return csr.as_pem()
 
 
-def verify_private_key(private_key, public_key):
+def verify_private_key(private_key, public_key, passphrase=None):
     '''
     Verify that 'private_key' matches 'public_key'
 
@@ -1589,6 +1686,9 @@ def verify_private_key(private_key, public_key):
         The public key to verify, can be a string or path to a PEM formatted
         certificate, csr, or another private key.
 
+    passphrase:
+        Passphrase to decrypt the private key.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1596,10 +1696,12 @@ def verify_private_key(private_key, public_key):
         salt '*' x509.verify_private_key private_key=/etc/pki/myca.key \\
                 public_key=/etc/pki/myca.crt
     '''
-    return bool(get_public_key(private_key) == get_public_key(public_key))
+    return bool(get_public_key(private_key, passphrase)
+                == get_public_key(public_key))
 
 
-def verify_signature(certificate, signing_pub_key=None):
+def verify_signature(certificate, signing_pub_key=None,
+                     signing_pub_key_passphrase=None):
     '''
     Verify that ``certificate`` has been signed by ``signing_pub_key``
 
@@ -1611,6 +1713,9 @@ def verify_signature(certificate, signing_pub_key=None):
         The public key to verify, can be a string or path to a PEM formatted
         certificate, csr, or private key.
 
+    signing_pub_key_passphrase:
+        Passphrase to the signing_pub_key if it is an encrypted private key.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1621,7 +1726,8 @@ def verify_signature(certificate, signing_pub_key=None):
     cert = _get_certificate_obj(certificate)
 
     if signing_pub_key:
-        signing_pub_key = get_public_key(signing_pub_key, asObj=True)
+        signing_pub_key = get_public_key(signing_pub_key,
+                                         passphrase=signing_pub_key_passphrase, asObj=True)
 
     return bool(cert.verify(pkey=signing_pub_key) == 1)
 
@@ -1644,7 +1750,7 @@ def verify_crl(crl, cert):
 
         salt '*' x509.verify_crl crl=/etc/pki/myca.crl cert=/etc/pki/myca.crt
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )

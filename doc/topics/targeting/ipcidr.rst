@@ -10,7 +10,7 @@ notation).
 .. code-block:: bash
 
     salt -S 192.168.40.20 test.ping
-    salt -S 10.0.0.0/24 test.ping
+    salt -S 2001:db8::/64 test.ping
 
 Ipcidr matching can also be used in compound matches
 
@@ -27,7 +27,3 @@ It is also possible to use in both pillar and state-matching
      - internal
 
 .. _CIDR: http://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing
-
-.. note::
-
-    Only IPv4 matching is supported at this time.
