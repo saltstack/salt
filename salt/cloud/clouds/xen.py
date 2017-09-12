@@ -160,7 +160,8 @@ def _get_session():
         session.xenapi.login_with_password(user, password, api_version, originator)
     except XenAPI.Failure as ex:
         '''
-        if the server on the url is not the pool master, the pool master's address will be rturned in the exception message
+        if the server on the url is not the pool master, the pool master's
+        address will be rturned in the exception message
         '''
         pool_master_addr = str(ex.__dict__['details'][1])
         slash_parts = url.split('/')
@@ -189,10 +190,15 @@ def list_nodes():
     ret = {}
     for vm in vms:
         record = session.xenapi.VM.get_record(vm)
-        if not record['is_a_template'] and not record['is_control_domain']:
-            ret[record['name_label']] = {
-                'id': record['uuid'],
-                'image': record['other_config']['base_template_name'],
+        if not(record['is_a_template']) and not(record['is_control_domain']):
+            try:
+                base_template_name = record['other_config']['base_template_name']
+            except Exception as KeyError:
+                base_template_name = None
+                log.debug('VM {}, doesnt have base_template_name attribute'.format(
+                    record['name_label']))
+            ret[record['name_label']] = {'id': record['uuid'],
+               'image': base_template_name,
                 'name': record['name_label'],
                 'size': record['memory_dynamic_max'],
                 'state': record['power_state'],
@@ -304,10 +310,17 @@ def list_nodes_full(session=None):
     for vm in vms:
         record = session.xenapi.VM.get_record(vm)
         if not record['is_a_template'] and not record['is_control_domain']:
+            # deal with cases where the VM doesn't have 'base_template_name' attribute
+            try:
+                base_template_name = record['other_config']['base_template_name']
+            except Exception as KeyError:
+                base_template_name = None
+                log.debug('VM {}, doesnt have base_template_name attribute'.format(
+                    record['name_label']))
             vm_cfg = session.xenapi.VM.get_record(vm)
             vm_cfg['id'] = record['uuid']
             vm_cfg['name'] = record['name_label']
-            vm_cfg['image'] = record['other_config']['base_template_name']
+            vm_cfg['image'] = base_template_name
             vm_cfg['size'] = None
             vm_cfg['state'] = record['power_state']
             vm_cfg['private_ips'] = get_vm_ip(record['name_label'], session)
@@ -463,8 +476,14 @@ def show_instance(name, session=None, call=None):
     vm = _get_vm(name, session=session)
     record = session.xenapi.VM.get_record(vm)
     if not record['is_a_template'] and not record['is_control_domain']:
+        try:
+            base_template_name = record['other_config']['base_template_name']
+        except Exception as KeyError:
+            base_template_name = None
+            log.debug('VM {}, doesnt have base_template_name attribute'.format(
+                record['name_label']))
         ret = {'id': record['uuid'],
-               'image': record['other_config']['base_template_name'],
+               'image': base_template_name,
                'name': record['name_label'],
                'size': record['memory_dynamic_max'],
                'state': record['power_state'],
@@ -724,7 +743,7 @@ def _copy_vm(template=None, name=None, session=None, sr=None):
     '''
     Create VM by copy
 
-    This is faster and should be used if source and target are
+    This is slower and should be used if source and target are
     NOT in the same storage repository
 
     template = object reference
