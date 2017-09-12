@@ -124,8 +124,17 @@ def _set_callables(modules):
             '''
             Call an Ansible module as a function from the Salt.
             '''
+            kwargs = {}
+            if kw.get('__pub_arg'):
+                for _kw in kw.get('__pub_arg', []):
+                    if isinstance(_kw, dict):
+                        kwargs = _kw
+                        break
+            else:
+                kw = {}
+
             global _caller
-            return _caller.call(cmd_name)
+            return _caller.call(cmd_name, *args, **kwargs)
         _cmd.__doc__ = doc
         return _cmd
 
