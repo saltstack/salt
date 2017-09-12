@@ -100,8 +100,7 @@ def store_job(opts, load, event=None, mminion=None):
         raise KeyError(emsg)
 
     if 'jid' in load \
-            and 'get_load' in mminion.returners \
-            and not mminion.returners[getfstr](load.get('jid', '')):
+            and getfstr in mminion.returners:
         mminion.returners[savefstr](load['jid'], load)
     mminion.returners[fstr](load)
 
