@@ -4,7 +4,7 @@
 :maturity:      new
 :platform:      all
 
-.. versionadded:: 2017.x.0
+.. versionadded:: 2017.7.0
 
 States for managing Hashicorp Vault. Currently handles policies. Configuration
 instructions are documented in the execution module docs.

@@ -8,22 +8,22 @@ http://support.microsoft.com/kb/104011
 '''
 from __future__ import absolute_import
 
-# Python Libs
+# Import Python libs
 import logging
-import re
 import os
-from salt.ext.six.moves import map
+import re
 
-# Third party libs
+# Import Salt libs
+import salt.utils.platform
+
+# Import 3rd-party libs
+from salt.ext.six.moves import map
 try:
-    import win32gui
-    import win32con
+    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE
+    from win32api import SendMessage
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
-
-# Import salt libs
-import salt.utils
 
 # Settings
 log = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ def __virtual__():
     '''
     Load only on Windows
     '''
-    if salt.utils.is_windows() and HAS_WIN32:
+    if salt.utils.platform.is_windows() and HAS_WIN32:
         return 'win_path'
     return (False, "Module win_path: module only works on Windows systems")
 
@@ -55,12 +55,7 @@ def rehash():
 
         salt '*' win_path.rehash
     '''
-    return win32gui.SendMessageTimeout(win32con.HWND_BROADCAST,
-                                       win32con.WM_SETTINGCHANGE,
-                                       0,
-                                       'Environment',
-                                       0,
-                                       10000)[0] == 1
+    return bool(SendMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 'Environment'))
 
 
 def get_path():

@@ -188,7 +188,6 @@ dnspython
 dnsservers
 dnsutil
 dockerfile
-dockerio
 docstring
 docstrings
 dpkg
@@ -778,8 +777,6 @@ Stateconf
 stderr
 stdin
 stdout
-stormpath
-Stormpath
 str
 strftime
 subfolder

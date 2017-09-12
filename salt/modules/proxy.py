@@ -12,8 +12,8 @@ from __future__ import absolute_import
 import logging
 import re
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'proxy'
@@ -23,7 +23,7 @@ def __virtual__():
     '''
     Only work on Mac OS and Windows
     '''
-    if salt.utils.is_darwin() or salt.utils.is_windows():
+    if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
         return True
     return (False, 'Module proxy: module only works on Windows or MacOS systems')
 
@@ -82,7 +82,7 @@ def _get_proxy_windows(types=None):
     if len(types) == 1:
         return ret[types[0]]
     else:
-        for key in ret.keys():
+        for key in ret:
             if key not in types:
                 del ret[key]
 

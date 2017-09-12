@@ -2,7 +2,7 @@
 '''
  Namecheap management
 
- .. versionadded:: Nitrogen
+ .. versionadded:: 2017.7.0
 
  General Notes
  -------------
@@ -43,11 +43,13 @@
 from __future__ import absolute_import
 CAN_USE_NAMECHEAP = True
 
-
 try:
     import salt.utils.namecheap
 except ImportError:
     CAN_USE_NAMECHEAP = False
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 def __virtual__():
@@ -275,7 +277,7 @@ def create(domain_name, years, **kwargs):
             if nextkey not in kwargs:
                 opts_dict[nextkey] = value
 
-    for key, value in kwargs.iteritems():
+    for key, value in six.iteritems(kwargs):
         if key.startswith('Registrant'):
             add_to_opts(opts, kwargs, value, key[10:], ['Tech', 'Admin', 'AuxBilling', 'Billing'])
 

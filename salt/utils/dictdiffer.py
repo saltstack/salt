@@ -30,7 +30,7 @@ class DictDiffer(object):
     """
     def __init__(self, current_dict, past_dict):
         self.current_dict, self.past_dict = current_dict, past_dict
-        self.set_current, self.set_past = set(current_dict.keys()), set(past_dict.keys())
+        self.set_current, self.set_past = set(list(current_dict)), set(list(past_dict))
         self.intersect = self.set_current.intersection(self.set_past)
 
     def added(self):
@@ -56,7 +56,7 @@ def deep_diff(old, new, ignore=None):
     while len(stack) > 0:
         tmps = []
         tmp_old, tmp_new, reentrant = stack.pop()
-        for key in set(tmp_old.keys() + tmp_new.keys()):
+        for key in set(list(tmp_old) + list(tmp_new)):
             if key in tmp_old and key in tmp_new \
                     and tmp_old[key] == tmp_new[key]:
                 del tmp_old[key]

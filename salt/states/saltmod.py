@@ -30,10 +30,9 @@ import time
 
 # Import salt libs
 import salt.syspaths
-import salt.utils
 import salt.utils.event
-import salt.ext.six as six
-from salt.ext.six import string_types
+import salt.utils.versions
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -66,20 +65,25 @@ def state(name,
         tgt_type='glob',
         expr_form=None,
         ret='',
+        ret_config=None,
+        ret_kwargs=None,
         highstate=None,
         sls=None,
         top=None,
         saltenv=None,
         test=False,
         pillar=None,
-        expect_minions=False,
+        pillarenv=None,
+        expect_minions=True,
         fail_minions=None,
         allow_fail=0,
         concurrent=False,
         timeout=None,
         batch=None,
         queue=False,
-        orchestration_jid=None):
+        subset=None,
+        orchestration_jid=None,
+        **kwargs):
     '''
     Invoke a state run on a given target
 
@@ -98,11 +102,17 @@ def state(name,
         The target type to resolve, defaults to ``glob``
 
     expr_form
-        .. deprecated:: Nitrogen
+        .. deprecated:: 2017.7.0
             Use tgt_type instead
 
     ret
         Optionally set a single or a list of returners to use
+
+    ret_config
+        Use an alternative returner configuration
+
+    ret_kwargs
+        Override individual returner configuration items
 
     highstate
         Defaults to None, if set to True the target systems will ignore any
@@ -122,6 +132,11 @@ def state(name,
 
     pillar
         Pass the ``pillar`` kwarg through to the state function
+
+    pillarenv
+        The pillar environment to grab pillars from
+
+        .. versionadded:: 2017.7.0
 
     saltenv
         The default salt environment to pull sls files from
@@ -157,6 +172,11 @@ def state(name,
 
         .. versionadded:: 2016.3.0
 
+    subset
+        Number of minions from the targeted set to randomly use
+
+        .. versionadded:: 2017.7.0
+
     Examples:
 
     Run a list of sls files via :py:func:`state.sls <salt.state.sls>` on target
@@ -186,6 +206,12 @@ def state(name,
     '''
     cmd_kw = {'arg': [], 'kwarg': {}, 'ret': ret, 'timeout': timeout}
 
+    if ret_config:
+        cmd_kw['ret_config'] = ret_config
+
+    if ret_kwargs:
+        cmd_kw['ret_kwargs'] = ret_kwargs
+
     state_ret = {'name': name,
                  'changes': {},
                  'comment': '',
@@ -201,7 +227,7 @@ def state(name,
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -233,10 +259,12 @@ def state(name,
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
 
-    if __opts__.get('pillarenv'):
-        cmd_kw['kwarg']['pillarenv'] = __opts__['pillarenv']
+    if pillarenv is not None:
+        cmd_kw['kwarg']['pillarenv'] = pillarenv
 
-    cmd_kw['kwarg']['saltenv'] = __env__
+    if saltenv is not None:
+        cmd_kw['kwarg']['saltenv'] = saltenv
+
     cmd_kw['kwarg']['queue'] = queue
 
     if isinstance(concurrent, bool):
@@ -248,6 +276,8 @@ def state(name,
 
     if batch is not None:
         cmd_kw['batch'] = str(batch)
+    if subset is not None:
+        cmd_kw['subset'] = subset
 
     masterless = __opts__['__role'] == 'minion' and \
                  __opts__['file_client'] == 'local'
@@ -279,7 +309,7 @@ def state(name,
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, string_types):
+    elif isinstance(fail_minions, six.string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
         state_ret.setdefault('warnings', []).append(
@@ -287,6 +317,11 @@ def state(name,
             'string. Ignored.'
         )
         fail_minions = ()
+
+    if not cmd_ret and expect_minions:
+        state_ret['result'] = False
+        state_ret['comment'] = 'No minions returned'
+        return state_ret
 
     for minion, mdata in six.iteritems(cmd_ret):
         if mdata.get('out', '') != 'highstate':
@@ -306,7 +341,7 @@ def state(name,
             except KeyError:
                 m_state = False
             if m_state:
-                m_state = salt.utils.check_state_result(m_ret)
+                m_state = __utils__['state.check_result'](m_ret, recurse=True)
 
         if not m_state:
             if minion not in fail_minions:
@@ -315,9 +350,10 @@ def state(name,
             continue
         try:
             for state_item in six.itervalues(m_ret):
-                if 'changes' in state_item and state_item['changes']:
-                    changes[minion] = m_ret
-                    break
+                if isinstance(state_item, dict):
+                    if 'changes' in state_item and state_item['changes']:
+                        changes[minion] = m_ret
+                        break
             else:
                 no_change.add(minion)
         except AttributeError:
@@ -361,13 +397,16 @@ def function(
         tgt_type='glob',
         expr_form=None,
         ret='',
+        ret_config=None,
+        ret_kwargs=None,
         expect_minions=False,
         fail_minions=None,
         fail_function=None,
         arg=None,
         kwarg=None,
         timeout=None,
-        batch=None):
+        batch=None,
+        subset=None):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -381,7 +420,7 @@ def function(
         The target type, defaults to ``glob``
 
     expr_form
-        .. deprecated:: Nitrogen
+        .. deprecated:: 2017.7.0
             Use tgt_type instead
 
     arg
@@ -392,6 +431,12 @@ def function(
 
     ret
         Optionally set a single or a list of returners to use
+
+    ret_config
+        Use an alternative returner configuration
+
+    ret_kwargs
+        Override individual returner configuration items
 
     expect_minions
         An optional boolean for failing if some minions do not respond
@@ -405,6 +450,15 @@ def function(
 
     ssh
         Set to `True` to use the ssh client instead of the standard salt client
+
+    batch
+        Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
+
+    subset
+        Number of minions from the targeted set to randomly use
+
+        .. versionadded:: 2017.7.0
+
     '''
     func_ret = {'name': name,
            'changes': {},
@@ -412,7 +466,7 @@ def function(
            'result': True}
     if kwarg is None:
         kwarg = {}
-    if isinstance(arg, str):
+    if isinstance(arg, six.string_types):
         func_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
                            'Modifying in place, but please update SLS file '
                            'to remove this warning.']
@@ -423,7 +477,7 @@ def function(
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -433,11 +487,20 @@ def function(
 
     if batch is not None:
         cmd_kw['batch'] = str(batch)
+    if subset is not None:
+        cmd_kw['subset'] = subset
 
     cmd_kw['tgt_type'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
     cmd_kw['_cmd_meta'] = True
+
+    if ret_config:
+        cmd_kw['ret_config'] = ret_config
+
+    if ret_kwargs:
+        cmd_kw['ret_kwargs'] = ret_kwargs
+
     fun = name
     if __opts__['test'] is True:
         func_ret['comment'] = (
@@ -464,7 +527,7 @@ def function(
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, string_types):
+    elif isinstance(fail_minions, six.string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
         func_ret.setdefault('warnings', []).append(
@@ -658,6 +721,16 @@ def runner(name, **kwargs):
             'Unable to fire args event due to missing __orchestration_jid__'
         )
         jid = None
+
+    if __opts__.get('test', False):
+        ret = {
+            'name': name,
+            'result': None,
+            'changes': {},
+            'comment': "Runner function '{0}' would be executed.".format(name)
+        }
+        return ret
+
     out = __salt__['saltutil.runner'](name,
                                       __orchestration_jid__=jid,
                                       __env__=__env__,
@@ -668,18 +741,26 @@ def runner(name, **kwargs):
     if isinstance(runner_return, dict) and 'Error' in runner_return:
         out['success'] = False
     if not out.get('success', True):
+        cmt = "Runner function '{0}' failed{1}.".format(
+            name,
+            ' with return {0}'.format(runner_return) if runner_return else '',
+        )
         ret = {
             'name': name,
             'result': False,
             'changes': {},
-            'comment': runner_return if runner_return else "Runner function '{0}' failed without comment.".format(name)
+            'comment': cmt,
         }
     else:
+        cmt = "Runner function '{0}' executed{1}.".format(
+            name,
+            ' with return {0}'.format(runner_return) if runner_return else '',
+        )
         ret = {
             'name': name,
             'result': True,
-            'changes': runner_return if runner_return else {},
-            'comment': "Runner function '{0}' executed.".format(name)
+            'changes': {},
+            'comment': cmt,
         }
 
     ret['__orchestration__'] = True
@@ -715,20 +796,27 @@ def wheel(name, **kwargs):
             'Unable to fire args event due to missing __orchestration_jid__'
         )
         jid = None
+
+    if __opts__.get('test', False):
+        ret['result'] = None,
+        ret['changes'] = {}
+        ret['comment'] = "Wheel function '{0}' would be executed.".format(name)
+        return ret
+
     out = __salt__['saltutil.wheel'](name,
                                      __orchestration_jid__=jid,
                                      __env__=__env__,
                                      **kwargs)
 
     ret['result'] = True
-    ret['comment'] = "Wheel function '{0}' executed.".format(name)
-
     ret['__orchestration__'] = True
     if 'jid' in out:
         ret['__jid__'] = out['jid']
 
     runner_return = out.get('return')
-    if runner_return:
-        ret['changes'] = runner_return
+    ret['comment'] = "Wheel function '{0}' executed{1}.".format(
+        name,
+        ' with return {0}'.format(runner_return) if runner_return else '',
+    )
 
     return ret

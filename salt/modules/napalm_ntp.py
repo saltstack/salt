@@ -213,7 +213,7 @@ def set_peers(*peers, **options):
     :commit commit (bool): commit loaded config. By default `commit` is True (will commit the changes). Useful when
     the user does not want to commit after each change, but after a couple.
 
-    By default this function will commit the config changes (if any). To load without commiting, use the `commit`
+    By default this function will commit the config changes (if any). To load without committing, use the `commit`
     option. For dry run use the `test` argument.
 
     CLI Example:
@@ -246,7 +246,7 @@ def set_servers(*servers, **options):
     :commit commit (bool): commit loaded config. By default `commit` is True (will commit the changes). Useful when
     the user does not want to commit after each change, but after a couple.
 
-    By default this function will commit the config changes (if any). To load without commiting, use the `commit`
+    By default this function will commit the config changes (if any). To load without committing, use the `commit`
     option. For dry run use the `test` argument.
 
     CLI Example:
@@ -279,7 +279,7 @@ def delete_peers(*peers, **options):
     :commit commit (bool): commit loaded config. By default `commit` is True (will commit the changes). Useful when
     the user does not want to commit after each change, but after a couple.
 
-    By default this function will commit the config changes (if any). To load without commiting, use the `commit`
+    By default this function will commit the config changes (if any). To load without committing, use the `commit`
     option. For dry run use the `test` argument.
 
     CLI Example:
@@ -312,7 +312,7 @@ def delete_servers(*servers, **options):
     :commit commit (bool): commit loaded config. By default `commit` is True (will commit the changes). Useful when
     the user does not want to commit after each change, but after a couple.
 
-    By default this function will commit the config changes (if any). To load without commiting, use the `commit`
+    By default this function will commit the config changes (if any). To load without committing, use the `commit`
     option. For dry run use the `test` argument.
 
     CLI Example:

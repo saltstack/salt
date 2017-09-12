@@ -4,7 +4,7 @@ Pass Renderer for Salt
 
 [pass](https://www.passwordstore.org/)
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 # Setup
 __Note__: `<user>` needs to be replaced with the user salt-master will be
@@ -48,11 +48,11 @@ from os.path import expanduser
 from subprocess import Popen, PIPE
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ def _get_pass_exec():
     """
     Return the pass executable or raise an error
     """
-    pass_exec = salt.utils.which('pass')
+    pass_exec = salt.utils.path.which('pass')
     if pass_exec:
         return pass_exec
     else:
@@ -82,8 +82,7 @@ def _fetch_secret(pass_path):
     # The version of pass used during development sent output to
     # stdout instead of stderr even though its returncode was non zero.
     if proc.returncode or not pass_data:
-        msg = 'Could not fetch secret: {0} {1}'.format(pass_data, pass_error)
-        log.warn(msg)
+        log.warning('Could not fetch secret: %s %s', pass_data, pass_error)
         pass_data = pass_path
     return pass_data.strip()
 

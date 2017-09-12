@@ -4,12 +4,12 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
 
-
 # Import python libs
 from __future__ import absolute_import
 import datetime
 import os
 import re
+import logging
 import fnmatch
 import collections
 import copy
@@ -17,16 +17,17 @@ import time
 import logging
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 import salt.config
 import salt.minion
-import salt.utils
 import salt.utils.event
-from salt.utils.minion import connected_masters as _connected_masters
-from salt.utils.network import host_to_ips as _host_to_ips
+import salt.utils.files
+import salt.utils.network
+import salt.utils.path
+import salt.utils.platform
 from salt.ext.six.moves import zip
 from salt.exceptions import CommandExecutionError
 
@@ -39,6 +40,19 @@ __opts__ = {}
 __func_alias__ = {
     'time_': 'time'
 }
+
+
+log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    '''
+    Not all functions supported by Windows
+    '''
+    if salt.utils.platform.is_windows():
+        return False, 'Windows platform is not supported by this module'
+
+    return __virtualname__
 
 
 def _number(text):
@@ -56,9 +70,56 @@ def _number(text):
         return text
 
 
+def _get_boot_time_aix():
+    '''
+    Return the number of seconds since boot time on AIX
+
+    t=$(LC_ALL=POSIX ps -o etime= -p 1)
+    d=0 h=0
+    case $t in *-*) d=${t%%-*}; t=${t#*-};; esac
+    case $t in *:*:*) h=${t%%:*}; t=${t#*:};; esac
+    s=$((d*86400 + h*3600 + ${t%%:*}*60 + ${t#*:}))
+
+    t is 7-20:46:46
+    '''
+    boot_secs = 0
+    res = __salt__['cmd.run_all']('ps -o etime= -p 1')
+    if res['retcode'] > 0:
+        raise CommandExecutionError('Unable to find boot_time for pid 1.')
+    bt_time = res['stdout']
+    days = bt_time.split('-')
+    hms = days[1].split(':')
+    boot_secs = _number(days[0]) * 86400 + _number(hms[0]) * 3600 + _number(hms[1]) * 60 + _number(hms[2])
+    return boot_secs
+
+
+def _aix_loadavg():
+    '''
+    Return the load average on AIX
+    '''
+    #  03:42PM   up 9 days,  20:41,  2 users,  load average: 0.28, 0.47, 0.69
+    uptime = __salt__['cmd.run']('uptime')
+    ldavg = uptime.split('load average')
+    load_avg = ldavg[1].split()
+    return {'1-min': load_avg[1].strip(','),
+            '5-min': load_avg[2].strip(','),
+            '15-min': load_avg[3]}
+
+
+def _aix_nproc():
+    '''
+    Return the maximun number of PROCESSES allowed per user on AIX
+    '''
+    nprocs = __salt__['cmd.run']('lsattr -E -l sys0 | grep maxuproc', python_shell=True).split()
+    return _number(nprocs[1])
+
+
 def procs():
     '''
     Return the process data
+
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
 
     CLI Example:
 
@@ -67,8 +128,6 @@ def procs():
         salt '*' status.procs
     '''
     # Get the user, pid and cmd
-    if salt.utils.is_windows():
-        raise CommandExecutionError('This platform is not supported')
     ret = {}
     uind = 0
     pind = 0
@@ -117,8 +176,6 @@ def custom():
 
         salt '*' status.custom
     '''
-    if salt.utils.is_windows():
-        raise CommandExecutionError('This platform is not supported')
     ret = {}
     conf = __salt__['config.dot_vals']('status')
     for key, val in six.iteritems(conf):
@@ -143,6 +200,9 @@ def uptime():
     .. versionchanged:: 2016.11.0
         Support for OpenBSD, FreeBSD, NetBSD, MacOS, and Solaris
 
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     CLI Example:
 
     .. code-block:: bash
@@ -152,24 +212,25 @@ def uptime():
     curr_seconds = time.time()
 
     # Get uptime in seconds
-    if salt.utils.is_linux():
+    if salt.utils.platform.is_linux():
         ut_path = "/proc/uptime"
         if not os.path.exists(ut_path):
             raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
-        seconds = int(float(salt.utils.fopen(ut_path).read().split()[0]))
-    elif salt.utils.is_sunos():
-        # note: some flavors/vesions report the host uptime inside a zone
+        with salt.utils.files.fopen(ut_path) as rfh:
+            seconds = int(float(rfh.read().split()[0]))
+    elif salt.utils.platform.is_sunos():
+        # note: some flavors/versions report the host uptime inside a zone
         #       https://support.oracle.com/epmos/faces/BugDisplay?id=15611584
         res = __salt__['cmd.run_all']('kstat -p unix:0:system_misc:boot_time')
         if res['retcode'] > 0:
             raise CommandExecutionError('The boot_time kstat was not found.')
         seconds = int(curr_seconds - int(res['stdout'].split()[-1]))
-    elif salt.utils.is_openbsd() or salt.utils.is_netbsd():
+    elif salt.utils.platform.is_openbsd() or salt.utils.platform.is_netbsd():
         bt_data = __salt__['sysctl.get']('kern.boottime')
         if not bt_data:
             raise CommandExecutionError('Cannot find kern.boottime system parameter')
         seconds = int(curr_seconds - int(bt_data))
-    elif salt.utils.is_freebsd() or salt.utils.is_darwin():
+    elif salt.utils.platform.is_freebsd() or salt.utils.platform.is_darwin():
         # format: { sec = 1477761334, usec = 664698 } Sat Oct 29 17:15:34 2016
         bt_data = __salt__['sysctl.get']('kern.boottime')
         if not bt_data:
@@ -177,6 +238,8 @@ def uptime():
         data = bt_data.split("{")[-1].split("}")[0].strip().replace(' ', '')
         uptime = dict([(k, int(v,)) for k, v in [p.strip().split('=') for p in data.split(',')]])
         seconds = int(curr_seconds - uptime['sec'])
+    elif salt.utils.platform.is_aix():
+        seconds = _get_boot_time_aix()
     else:
         return __salt__['cmd.run']('uptime')
 
@@ -194,8 +257,8 @@ def uptime():
         'time': '{0}:{1}'.format(up_time.seconds // 3600, up_time.seconds % 3600 // 60),
     }
 
-    if salt.utils.which('who'):
-        who_cmd = 'who' if salt.utils.is_openbsd() else 'who -s'  # OpenBSD does not support -s
+    if salt.utils.path.which('who'):
+        who_cmd = 'who' if salt.utils.platform.is_openbsd() else 'who -s'  # OpenBSD does not support -s
         ut_ret['users'] = len(__salt__['cmd.run'](who_cmd).split(os.linesep))
 
     return ut_ret
@@ -205,6 +268,9 @@ def loadavg():
     '''
     Return the load averages for this minion
 
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     CLI Example:
 
     .. code-block:: bash
@@ -213,6 +279,9 @@ def loadavg():
 
         :raises CommandExecutionError: If the system cannot report loadaverages to Python
     '''
+    if __grains__['kernel'] == 'AIX':
+        return _aix_loadavg()
+
     try:
         load_avg = os.getloadavg()
     except AttributeError:
@@ -227,6 +296,9 @@ def cpustats():
     '''
     Return the CPU stats for this minion
 
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     CLI Example:
 
     .. code-block:: bash
@@ -239,7 +311,7 @@ def cpustats():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/stat', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/stat', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -302,11 +374,45 @@ def cpustats():
                 ret[_number(cpu[0])][fields[i]] = _number(cpu[i])
         return ret
 
+    def aix_cpustats():
+        '''
+        AIX specific implementation of cpustats
+        '''
+        ret = {}
+        ret['mpstat'] = []
+        procn = None
+        fields = []
+        for line in __salt__['cmd.run']('mpstat -a').splitlines():
+            if not line:
+                continue
+            procn = len(ret['mpstat'])
+            if line.startswith('System'):
+                comps = line.split(':')
+                ret['mpstat'].append({})
+                ret['mpstat'][procn]['system'] = {}
+                cpu_comps = comps[1].split()
+                for i in range(0, len(cpu_comps)):
+                    cpu_vals = cpu_comps[i].split('=')
+                    ret['mpstat'][procn]['system'][cpu_vals[0]] = cpu_vals[1]
+
+            if line.startswith('cpu'):
+                fields = line.split()
+                continue
+
+            if fields:
+                cpustat = line.split()
+                ret[_number(cpustat[0])] = {}
+                for i in range(1, len(fields)-1):
+                    ret[_number(cpustat[0])][fields[i]] = _number(cpustat[i])
+
+        return ret
+
     # dict that return a function that does the right thing per platform
     get_version = {
         'Linux': linux_cpustats,
         'FreeBSD': freebsd_cpustats,
         'SunOS': sunos_cpustats,
+        'AIX': aix_cpustats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -316,6 +422,9 @@ def cpustats():
 def meminfo():
     '''
     Return the memory info for this minion
+
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
 
     CLI Example:
 
@@ -329,7 +438,7 @@ def meminfo():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/meminfo', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/meminfo', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -364,10 +473,91 @@ def meminfo():
         sysctlvmtot = [x for x in sysctlvmtot if x]
         ret['vm.vmtotal'] = sysctlvmtot
         return ret
+
+    def aix_meminfo():
+        '''
+        AIX specific implementation of meminfo
+        '''
+        ret = {}
+        ret['svmon'] = []
+        ret['vmstat'] = []
+        procn = None
+        fields = []
+        pagesize_flag = False
+        for line in __salt__['cmd.run']('svmon -G').splitlines():
+            # Note: svmon is per-system
+            #               size       inuse        free         pin     virtual   mmode
+            #memory      1048576     1039740        8836      285078      474993     Ded
+            #pg space     917504        2574
+            #
+            #               work        pers        clnt       other
+            #pin          248379           0        2107       34592
+            #in use       474993           0      564747
+            #
+            #PageSize   PoolSize       inuse        pgsp         pin     virtual
+            #s    4 KB         -      666956        2574       60726      102209
+            #m   64 KB         -       23299           0       14022       23299
+            if not line:
+                continue
+
+            if re.match(r'\s', line):
+                # assume fields line
+                fields = line.split()
+                continue
+
+            if line.startswith('memory') or line.startswith('pin'):
+                procn = len(ret['svmon'])
+                ret['svmon'].append({})
+                comps = line.split()
+                ret['svmon'][procn][comps[0]] = {}
+                for i in range(0, len(fields)):
+                    if len(comps) > i + 1:
+                        ret['svmon'][procn][comps[0]][fields[i]] = comps[i+1]
+                continue
+
+            if line.startswith('pg space') or line.startswith('in use'):
+                procn = len(ret['svmon'])
+                ret['svmon'].append({})
+                comps = line.split()
+                pg_space = '{0} {1}'.format(comps[0], comps[1])
+                ret['svmon'][procn][pg_space] = {}
+                for i in range(0, len(fields)):
+                    if len(comps) > i + 2:
+                        ret['svmon'][procn][pg_space][fields[i]] = comps[i+2]
+                continue
+
+            if line.startswith('PageSize'):
+                fields = line.split()
+                pagesize_flag = False
+                continue
+
+            if pagesize_flag:
+                procn = len(ret['svmon'])
+                ret['svmon'].append({})
+                comps = line.split()
+                ret['svmon'][procn][comps[0]] = {}
+                for i in range(0, len(fields)):
+                    if len(comps) > i:
+                        ret['svmon'][procn][comps[0]][fields[i]] = comps[i]
+                continue
+
+        for line in __salt__['cmd.run']('vmstat -v').splitlines():
+            # Note: vmstat is per-system
+            if not line:
+                continue
+
+            procn = len(ret['vmstat'])
+            ret['vmstat'].append({})
+            comps = line.lstrip().split(' ', 1)
+            ret['vmstat'][procn][comps[1]] = comps[0]
+
+        return ret
+
     # dict that return a function that does the right thing per platform
     get_version = {
         'Linux': linux_meminfo,
         'FreeBSD': freebsd_meminfo,
+        'AIX': aix_meminfo,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -376,8 +566,11 @@ def meminfo():
 
 def cpuinfo():
     '''
-    ..versionchanged:: 2016.3.2
-    Return the CPU info for this minion
+    .. versionchanged:: 2016.3.2
+        Return the CPU info for this minion
+
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
 
     CLI Example:
 
@@ -391,7 +584,7 @@ def cpuinfo():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/cpuinfo', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/cpuinfo', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -488,12 +681,82 @@ def cpuinfo():
                 ret['psrinfo'][procn]['clock'] = "{0} {1}".format(line[10], line[11][:-1])
         return ret
 
+    def aix_cpuinfo():
+        '''
+        AIX  specific cpuinfo implementation
+        '''
+        ret = {}
+        ret['prtconf'] = []
+        ret['lparstat'] = []
+        procn = None
+        for line in __salt__['cmd.run']('prtconf | grep -i "Processor"', python_shell=True).splitlines():
+            # Note: prtconf is per-system and not per-cpu
+            # Output Example:
+            #prtconf | grep -i "Processor"
+            #Processor Type: PowerPC_POWER7
+            #Processor Implementation Mode: POWER 7
+            #Processor Version: PV_7_Compat
+            #Number Of Processors: 2
+            #Processor Clock Speed: 3000 MHz
+            #  Model Implementation: Multiple Processor, PCI bus
+            #  + proc0                                                           Processor
+            #  + proc4                                                           Processor
+            if not line:
+                continue
+            procn = len(ret['prtconf'])
+            if line.startswith('Processor') or line.startswith('Number'):
+                ret['prtconf'].append({})
+                comps = line.split(':')
+                comps[0] = comps[0].rstrip()
+                ret['prtconf'][procn][comps[0]] = comps[1]
+            else:
+                continue
+
+        for line in __salt__['cmd.run']('prtconf | grep "CPU"', python_shell=True).splitlines():
+            # Note: prtconf is per-system and not per-cpu
+            # Output Example:
+            #CPU Type: 64-bit
+            if not line:
+                continue
+            procn = len(ret['prtconf'])
+            if line.startswith('CPU'):
+                ret['prtconf'].append({})
+                comps = line.split(':')
+                comps[0] = comps[0].rstrip()
+                ret['prtconf'][procn][comps[0]] = comps[1]
+            else:
+                continue
+
+        for line in __salt__['cmd.run']('lparstat -i | grep CPU', python_shell=True).splitlines():
+            # Note: lparstat is per-system and not per-cpu
+            # Output Example:
+            #Online Virtual CPUs                        : 2
+            #Maximum Virtual CPUs                       : 2
+            #Minimum Virtual CPUs                       : 1
+            #Maximum Physical CPUs in system            : 32
+            #Active Physical CPUs in system             : 32
+            #Active CPUs in Pool                        : 32
+            #Shared Physical CPUs in system             : 32
+            #Physical CPU Percentage                    : 25.00%
+            #Desired Virtual CPUs                       : 2
+            if not line:
+                continue
+
+            procn = len(ret['lparstat'])
+            ret['lparstat'].append({})
+            comps = line.split(':')
+            comps[0] = comps[0].rstrip()
+            ret['lparstat'][procn][comps[0]] = comps[1]
+
+        return ret
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_cpuinfo,
         'FreeBSD': bsd_cpuinfo,
         'OpenBSD': bsd_cpuinfo,
         'SunOS': sunos_cpuinfo,
+        'AIX': aix_cpuinfo,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -502,8 +765,11 @@ def cpuinfo():
 
 def diskstats():
     '''
-    ..versionchanged:: 2016.3.2
-    Return the disk stats for this minion
+    .. versionchanged:: 2016.3.2
+        Return the disk stats for this minion
+
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
 
     CLI Example:
 
@@ -517,7 +783,7 @@ def diskstats():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/diskstats', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/diskstats', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -559,11 +825,67 @@ def diskstats():
                 ret[comps[0]][metric] = _number(value)
         return ret
 
+    def aix_diskstats():
+        '''
+        AIX specific implementation of diskstats
+        '''
+        ret = {}
+        procn = None
+        fields = []
+        disk_name = ''
+        disk_mode = ''
+        for line in __salt__['cmd.run']('iostat -dDV').splitlines():
+            # Note: iostat -dDV is per-system
+            #
+            #System configuration: lcpu=8 drives=1 paths=2 vdisks=2
+            #
+            #hdisk0          xfer:  %tm_act      bps      tps      bread      bwrtn
+            #                          0.0      0.8      0.0        0.0        0.8
+            #                read:      rps  avgserv  minserv  maxserv   timeouts      fails
+            #                          0.0      2.5      0.3     12.4           0          0
+            #               write:      wps  avgserv  minserv  maxserv   timeouts      fails
+            #                          0.0      0.3      0.2      0.7           0          0
+            #               queue:  avgtime  mintime  maxtime  avgwqsz    avgsqsz     sqfull
+            #                          0.3      0.0      5.3      0.0        0.0         0.0
+            #--------------------------------------------------------------------------------
+            if not line or line.startswith('System') or line.startswith('-----------'):
+                continue
+
+            if not re.match(r'\s', line):
+                #have new disk
+                dsk_comps = line.split(':')
+                dsk_firsts = dsk_comps[0].split()
+                disk_name = dsk_firsts[0]
+                disk_mode = dsk_firsts[1]
+                fields = dsk_comps[1].split()
+                ret[disk_name] = []
+
+                procn = len(ret[disk_name])
+                ret[disk_name].append({})
+                ret[disk_name][procn][disk_mode] = {}
+                continue
+
+            if ':' in line:
+                comps = line.split(':')
+                fields = comps[1].split()
+                disk_mode = comps[0].lstrip()
+                procn = len(ret[disk_name])
+                ret[disk_name].append({})
+                ret[disk_name][procn][disk_mode] = {}
+            else:
+                comps = line.split()
+                for i in range(0, len(fields)):
+                    if len(comps) > i:
+                        ret[disk_name][procn][disk_mode][fields[i]] = comps[i]
+
+        return ret
+
     # dict that return a function that does the right thing per platform
     get_version = {
         'Linux': linux_diskstats,
         'FreeBSD': generic_diskstats,
         'SunOS': generic_diskstats,
+        'AIX': aix_diskstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -587,10 +909,6 @@ def diskusage(*args):
         salt '*' status.diskusage ext?    # usage for ext[234] filesystems
         salt '*' status.diskusage / ext?  # usage for / and all ext filesystems
     '''
-
-    if salt.utils.is_windows():
-        raise CommandExecutionError('This platform is not supported')
-
     selected = set()
     fstypes = set()
     if not args:
@@ -615,7 +933,7 @@ def diskusage(*args):
         # ifile source of data varies with OS, otherwise all the same
         if __grains__['kernel'] == 'Linux':
             try:
-                with salt.utils.fopen('/proc/mounts', 'r') as fp_:
+                with salt.utils.files.fopen('/proc/mounts', 'r') as fp_:
                     ifile = fp_.read().splitlines()
             except OSError:
                 return {}
@@ -652,8 +970,11 @@ def diskusage(*args):
 
 def vmstats():
     '''
-    ..versionchanged:: 2016.3.2
-    Return the virtual memory stats for this minion
+    .. versionchanged:: 2016.3.2
+        Return the virtual memory stats for this minion
+
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
 
     CLI Example:
 
@@ -667,7 +988,7 @@ def vmstats():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/vmstat', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/vmstat', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -690,12 +1011,14 @@ def vmstats():
             if comps[0].isdigit():
                 ret[' '.join(comps[1:])] = _number(comps[0].strip())
         return ret
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_vmstats,
         'FreeBSD': generic_vmstats,
         'OpenBSD': generic_vmstats,
         'SunOS': generic_vmstats,
+        'AIX': generic_vmstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -706,12 +1029,18 @@ def nproc():
     '''
     Return the number of processing units available on this system
 
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' status.nproc
     '''
+    if __grains__['kernel'] == 'AIX':
+        return _aix_nproc()
+
     try:
         return _number(__salt__['cmd.run']('nproc').strip())
     except ValueError:
@@ -722,6 +1051,9 @@ def netstats():
     '''
     Return the network stats for this minion
 
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     CLI Example:
 
     .. code-block:: bash
@@ -730,11 +1062,11 @@ def netstats():
     '''
     def linux_netstats():
         '''
-        freebsd specific netstats implementation
+        linux specific netstats implementation
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/net/netstat', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/net/netstat', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -795,11 +1127,41 @@ def netstats():
                     ret[line[3]] = line[5]
         return ret
 
+    def aix_netstats():
+        '''
+        AIX specific netstats implementation
+        '''
+        ret = {}
+        fields = []
+        procn = None
+        proto_name = None
+        for line in __salt__['cmd.run']('netstat -s').splitlines():
+            if not line:
+                continue
+
+            if not re.match(r'\s', line) and ':' in line:
+                comps = line.split(':')
+                proto_name = comps[0]
+                ret[proto_name] = []
+                procn = len(ret[proto_name])
+                ret[proto_name].append({})
+                continue
+            else:
+                comps = line.split()
+                comps[0] = comps[0].strip()
+                if comps[0].isdigit():
+                    ret[proto_name][procn][' '.join(comps[1:])] = _number(comps[0])
+                else:
+                    continue
+
+        return ret
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_netstats,
         'FreeBSD': freebsd_netstats,
         'SunOS': sunos_netstats,
+        'AIX': aix_netstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -808,8 +1170,11 @@ def netstats():
 
 def netdev():
     '''
-    ..versionchanged:: 2016.3.2
-    Return the network device stats for this minion
+    .. versionchanged:: 2016.3.2
+        Return the network device stats for this minion
+
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
 
     CLI Example:
 
@@ -823,7 +1188,7 @@ def netdev():
         '''
         ret = {}
         try:
-            with salt.utils.fopen('/proc/net/dev', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/net/dev', 'r') as fp_:
                 stats = fp_.read()
         except IOError:
             pass
@@ -839,22 +1204,22 @@ def netdev():
                 # Support lines both like eth0:999 and eth0: 9999
                 comps.insert(1, line.split(':')[1].strip().split()[0])
                 ret[comps[0]] = {'iface': comps[0],
-                                 'rx_bytes': _number(comps[1]),
-                                 'rx_compressed': _number(comps[7]),
-                                 'rx_drop': _number(comps[4]),
-                                 'rx_errs': _number(comps[3]),
-                                 'rx_fifo': _number(comps[5]),
-                                 'rx_frame': _number(comps[6]),
-                                 'rx_multicast': _number(comps[8]),
-                                 'rx_packets': _number(comps[2]),
-                                 'tx_bytes': _number(comps[9]),
-                                 'tx_carrier': _number(comps[15]),
-                                 'tx_colls': _number(comps[14]),
-                                 'tx_compressed': _number(comps[16]),
-                                 'tx_drop': _number(comps[12]),
-                                 'tx_errs': _number(comps[11]),
-                                 'tx_fifo': _number(comps[13]),
-                                 'tx_packets': _number(comps[10])}
+                                 'rx_bytes': _number(comps[2]),
+                                 'rx_compressed': _number(comps[8]),
+                                 'rx_drop': _number(comps[5]),
+                                 'rx_errs': _number(comps[4]),
+                                 'rx_fifo': _number(comps[6]),
+                                 'rx_frame': _number(comps[7]),
+                                 'rx_multicast': _number(comps[9]),
+                                 'rx_packets': _number(comps[3]),
+                                 'tx_bytes': _number(comps[10]),
+                                 'tx_carrier': _number(comps[16]),
+                                 'tx_colls': _number(comps[15]),
+                                 'tx_compressed': _number(comps[17]),
+                                 'tx_drop': _number(comps[13]),
+                                 'tx_errs': _number(comps[12]),
+                                 'tx_fifo': _number(comps[14]),
+                                 'tx_packets': _number(comps[11])}
         return ret
 
     def freebsd_netdev():
@@ -878,7 +1243,7 @@ def netdev():
         '''
         ret = {}
         ##NOTE: we cannot use hwaddr_interfaces here, so we grab both ip4 and ip6
-        for dev in __grains__['ip4_interfaces'].keys() + __grains__['ip6_interfaces'].keys():
+        for dev in __grains__['ip4_interfaces'].keys() + __grains__['ip6_interfaces']:
             # fetch device info
             netstat_ipv4 = __salt__['cmd.run']('netstat -i -I {dev} -n -f inet'.format(dev=dev)).splitlines()
             netstat_ipv6 = __salt__['cmd.run']('netstat -i -I {dev} -n -f inet6'.format(dev=dev)).splitlines()
@@ -908,11 +1273,75 @@ def netdev():
 
         return ret
 
+    def aix_netdev():
+        '''
+        AIX specific implementation of netdev
+        '''
+        ret = {}
+        fields = []
+        procn = None
+        for dev in __grains__['ip4_interfaces'].keys() + __grains__['ip6_interfaces'].keys():
+            # fetch device info
+            #root@la68pp002_pub:/opt/salt/lib/python2.7/site-packages/salt/modules# netstat -i -n -I en0 -f inet6
+            #Name  Mtu   Network     Address            Ipkts Ierrs    Opkts Oerrs  Coll
+            #en0   1500  link#3      e2.eb.32.42.84.c 10029668     0   446490     0     0
+            #en0   1500  172.29.128  172.29.149.95    10029668     0   446490     0     0
+            #root@la68pp002_pub:/opt/salt/lib/python2.7/site-packages/salt/modules# netstat -i -n -I en0 -f inet6
+            #Name  Mtu   Network     Address            Ipkts Ierrs    Opkts Oerrs  Coll
+            #en0   1500  link#3      e2.eb.32.42.84.c 10029731     0   446499     0     0
+
+            netstat_ipv4 = __salt__['cmd.run']('netstat -i -n -I {dev} -f inet'.format(dev=dev)).splitlines()
+            netstat_ipv6 = __salt__['cmd.run']('netstat -i -n -I {dev} -f inet6'.format(dev=dev)).splitlines()
+
+            # add data
+            ret[dev] = []
+
+            for line in netstat_ipv4:
+                if line.startswith('Name'):
+                    fields = line.split()
+                    continue
+
+                comps = line.split()
+                if len(comps) < 3:
+                    raise CommandExecutionError('Insufficent data returned by command to process \'{0}\''.format(line))
+
+                if comps[2].startswith('link'):
+                    continue
+
+                procn = len(ret[dev])
+                ret[dev].append({})
+                ret[dev][procn]['ipv4'] = {}
+                for i in range(1, len(fields)):
+                    if len(comps) > i:
+                        ret[dev][procn]['ipv4'][fields[i]] = comps[i]
+
+            for line in netstat_ipv6:
+                if line.startswith('Name'):
+                    fields = line.split()
+                    continue
+
+                comps = line.split()
+                if len(comps) < 3:
+                    raise CommandExecutionError('Insufficent data returned by command to process \'{0}\''.format(line))
+
+                if comps[2].startswith('link'):
+                    continue
+
+                procn = len(ret[dev])
+                ret[dev].append({})
+                ret[dev][procn]['ipv6'] = {}
+                for i in range(1, len(fields)):
+                    if len(comps) > i:
+                        ret[dev][procn]['ipv6'][fields[i]] = comps[i]
+
+        return ret
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_netdev,
         'FreeBSD': freebsd_netdev,
         'SunOS': sunos_netdev,
+        'AIX': aix_netdev,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -929,8 +1358,6 @@ def w():  # pylint: disable=C0103
 
         salt '*' status.w
     '''
-    if salt.utils.is_windows():
-        raise CommandExecutionError('This platform is not supported')
     user_list = []
     users = __salt__['cmd.run']('w -h').splitlines()
     for row in users:
@@ -979,6 +1406,9 @@ def pid(sig):
     a Python-compatible regular expression to return all pids of
     processes matching the regexp.
 
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     CLI Example:
 
     .. code-block:: bash
@@ -1005,6 +1435,9 @@ def version():
     '''
     Return the system version for this minion
 
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     CLI Example:
 
     .. code-block:: bash
@@ -1016,7 +1449,7 @@ def version():
         linux specific implementation of version
         '''
         try:
-            with salt.utils.fopen('/proc/version', 'r') as fp_:
+            with salt.utils.files.fopen('/proc/version', 'r') as fp_:
                 return fp_.read().strip()
         except IOError:
             return {}
@@ -1025,6 +1458,7 @@ def version():
     get_version = {
         'Linux': linux_version,
         'FreeBSD': lambda: __salt__['cmd.run']('sysctl -n kern.version'),
+        'AIX': lambda: __salt__['cmd.run']('oslevel -s'),
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -1040,6 +1474,9 @@ def master(master=None, connected=True):
     run via a scheduled job from the minion. If master_ip is an FQDN/Hostname,
     it must be resolvable to a valid IPv4 address.
 
+    .. versionchanged:: 2016.11.4
+        Added support for AIX
+
     CLI Example:
 
     .. code-block:: bash
@@ -1049,13 +1486,14 @@ def master(master=None, connected=True):
     master_ips = None
 
     if master:
-        master_ips = _host_to_ips(master)
+        master_ips = salt.utils.network.host_to_ips(master)
 
     if not master_ips:
         return
 
     master_connection_status = False
-    connected_ips = _connected_masters()
+    port = __salt__['config.get']('publish_port', default=4505)
+    connected_ips = salt.utils.network.remote_port_tcp(port)
 
     # Get connection status for master
     for master_ip in master_ips:

@@ -6,26 +6,24 @@ Return/control aspects of the grains data
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
-import copy
-import math
 import random
 import logging
 import operator
 import collections
 import json
+import math
+import yaml
 from functools import reduce  # pylint: disable=redefined-builtin
 
-# Import 3rd-party libs
-import yaml
-import salt.utils.compat
-from salt.utils.odict import OrderedDict
-import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-
-# Import salt libs
+# Import Salt libs
+from salt.ext import six
 import salt.utils
+import salt.utils.compat
+import salt.utils.files
+import salt.utils.yamldumper
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
+from salt.ext.six.moves import range
 
 __proxyenabled__ = ['*']
 
@@ -236,7 +234,7 @@ def setvals(grains, destructive=False):
         )
 
     if os.path.isfile(gfn):
-        with salt.utils.fopen(gfn, 'rb') as fp_:
+        with salt.utils.files.fopen(gfn, 'rb') as fp_:
             try:
                 grains = yaml.safe_load(fp_.read())
             except yaml.YAMLError as exc:
@@ -252,39 +250,23 @@ def setvals(grains, destructive=False):
         else:
             grains[key] = val
             __grains__[key] = val
-    # Cast defaultdict to dict; is there a more central place to put this?
+    cstr = salt.utils.yamldumper.safe_dump(grains, default_flow_style=False)
     try:
-        yaml_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_representers)
-        yaml_multi_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_multi_representers)
-    except (TypeError, NameError):
-        # This likely means we are running under Python 2.6 which cannot deepcopy
-        # bound methods. Fallback to a modification of deepcopy which can support
-        # this behavior.
-        yaml_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_representers)
-        yaml_multi_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_multi_representers)
-    yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
-            yaml.representer.SafeRepresenter.represent_dict)
-    yaml.representer.SafeRepresenter.add_representer(OrderedDict,
-            yaml.representer.SafeRepresenter.represent_dict)
-    cstr = yaml.safe_dump(grains, default_flow_style=False)
-    yaml.representer.SafeRepresenter.yaml_representers = yaml_reps
-    yaml.representer.SafeRepresenter.yaml_multi_representers = yaml_multi_reps
-    try:
-        with salt.utils.fopen(gfn, 'w+') as fp_:
+        with salt.utils.files.fopen(gfn, 'w+') as fp_:
             fp_.write(cstr)
     except (IOError, OSError):
         msg = 'Unable to write to grains file at {0}. Check permissions.'
         log.error(msg.format(gfn))
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
     try:
-        with salt.utils.flopen(fn_, 'w+') as fp_:
+        with salt.utils.files.flopen(fn_, 'w+') as fp_:
             fp_.write('')
     except (IOError, OSError):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
     if not __opts__.get('local', False):
-        # Sync the grains
-        __salt__['saltutil.sync_grains']()
+        # Refresh the grains
+        __salt__['saltutil.refresh_grains']()
     # Return the grains we just set to confirm everything was OK
     return new_grains
 
@@ -415,7 +397,7 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
 
 def delkey(key):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: 2017.7.0
 
     Remove a grain completely from the grain system, this will remove the
     grain key and value
@@ -757,6 +739,24 @@ def set(key,
         ret['comment'] = _setval_ret
         ret['result'] = False
     return ret
+
+
+def equals(key, value):
+    '''
+    Used to make sure the minion's grain key/value matches.
+
+    Returns ``True`` if matches otherwise ``False``.
+
+    .. versionadded:: 2017.7.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.equals fqdn <expected_fqdn>
+        salt '*' grains.equals systemd:version 219
+    '''
+    return str(value) == str(get(key))
 
 
 # Provide a jinja function call compatible get aliased as fetch

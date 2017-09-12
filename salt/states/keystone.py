@@ -235,7 +235,7 @@ def user_present(name,
             ret['changes']['Password'] = 'Updated'
 
         if roles:
-            for tenant in roles.keys():
+            for tenant in roles:
                 args = dict({'user_name': name, 'tenant_name':
                              tenant, 'profile': profile}, **connection_args)
                 tenant_roles = __salt__['keystone.user_role_list'](**args)
@@ -284,7 +284,7 @@ def user_present(name,
                                          profile=profile,
                                          **connection_args)
         if roles:
-            for tenant in roles.keys():
+            for tenant in roles:
                 for role in roles[tenant]:
                     __salt__['keystone.user_role_add'](user=name,
                                                        role=role,
@@ -617,7 +617,7 @@ def endpoint_present(name,
                      publicurl=None,
                      internalurl=None,
                      adminurl=None,
-                     region='RegionOne',
+                     region=None,
                      profile=None,
                      url=None,
                      interface=None, **connection_args):
@@ -650,101 +650,20 @@ def endpoint_present(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Endpoint for service "{0}" already exists'.format(name)}
+           'comment': ''}
 
     _api_version(profile=profile, **connection_args)
 
-    endpoint = __salt__['keystone.endpoint_get'](name,
+    endpoint = __salt__['keystone.endpoint_get'](name, region,
                                                  profile=profile,
+                                                 interface=interface,
                                                  **connection_args)
 
-    if endpoint and 'Error' not in endpoint:
+    def _changes(desc):
+        return ret.get('comment', '') + desc + '\n'
 
-        if endpoint.get('region', None) != region:
-            if __opts__.get('test'):
-                ret['result'] = None
-                ret['comment'] = 'Endpoint for service "{0}" will be updated'.format(name)
-                ret['changes']['Endpoint'] = 'Will be updated'
-                return ret
-            ret['comment'] = 'Endpoint for service "{0}" will be updated'.format(name)
-            ret['changes']['Region'] = region
-
+    def _create_endpoint():
         if _OS_IDENTITY_API_VERSION > 2:
-
-            change_url = False
-            change_interface = False
-
-            if endpoint.get('url', None) != url:
-                change_url = True
-
-            if endpoint.get('interface', None) != interface:
-                change_interface = True
-
-            if __opts__.get('test') and (change_url or change_interface):
-                ret['result'] = None
-                ret['changes']['Endpoint'] = 'Will be updated'
-                ret['comment'] = 'Endpoint for service "{0}" will be updated'.format(name)
-                return ret
-
-            if change_url:
-                ret['comment'] = 'Endpoint for service "{0}" will be updated'.format(name)
-                ret['changes']['Endpoint'] = 'Will be updated'
-                ret['changes']['url'] = url
-
-            if change_interface:
-                ret['comment'] = 'Endpoint for service "{0}" will be updated'.format(name)
-                ret['changes']['Endpoint'] = 'Will be updated'
-                ret['changes']['interface'] = interface
-
-        else:
-            change_publicurl = False
-            change_adminurl = False
-            change_internalurl = False
-
-            if endpoint.get('publicurl', None) != publicurl:
-                change_publicurl = True
-
-            if endpoint.get('adminurl', None) != adminurl:
-                change_adminurl = True
-
-            if endpoint.get('internalurl', None) != internalurl:
-                change_internalurl = True
-
-            if __opts__.get('test') and (change_publicurl or change_adminurl or change_internalurl):
-                ret['result'] = None
-                ret['comment'] = 'Endpoint for service "{0}" will be updated'.format(name)
-                ret['changes']['Endpoint'] = 'Will be updated'
-                return ret
-
-            if endpoint.get('publicurl', None) != publicurl:
-                ret['comment'] = 'Endpoint for service "{0}" will be updated'.format(name)
-                ret['changes']['publicurl'] = publicurl
-
-            if endpoint.get('adminurl', None) != adminurl:
-                ret['comment'] = 'Endpoint for service "{0}" will be updated'.format(name)
-                ret['changes']['adminurl'] = adminurl
-
-            if endpoint.get('internalurl', None) != internalurl:
-                ret['comment'] = 'Endpoint for service "{0}" will be updated'.format(name)
-                ret['changes']['internalurl'] = internalurl
-
-        if ret['comment'].endswith('already exists'):
-            return ret
-        else:
-            __salt__['keystone.endpoint_delete'](name,
-                                                 profile=profile,
-                                                 **connection_args)
-            ret['comment'] = 'Endpoint for service "{0}" has been updated'.format(name)
-            ret['changes']['Endpoint'] = 'Will be updated'
-
-    else:
-        if __opts__.get('test'):
-            ret['result'] = None
-            ret['changes']['Endpoint'] = 'Will be created'
-            ret['comment'] = 'Endpoint for service "{0}" will be added'.format(name)
-            return ret
-
-        elif _OS_IDENTITY_API_VERSION > 2:
             ret['changes'] = __salt__['keystone.endpoint_create'](
                 name,
                 region=region,
@@ -761,25 +680,120 @@ def endpoint_present(name,
                 internalurl=internalurl,
                 profile=profile,
                 **connection_args)
+
+    if endpoint and 'Error' not in endpoint and endpoint.get('region') == region:
+
+        if _OS_IDENTITY_API_VERSION > 2:
+
+            change_url = False
+            change_interface = False
+
+            if endpoint.get('url', None) != url:
+                ret['comment'] = _changes('URL changes from "{0}" to "{1}"'.format(endpoint.get('url', None), url))
+                change_url = True
+
+            if endpoint.get('interface', None) != interface:
+                ret['comment'] = _changes('Interface changes from "{0}" to "{1}"'.format(endpoint.get('interface', None), interface))
+                change_interface = True
+
+            if __opts__.get('test') and (change_url or change_interface):
+                ret['result'] = None
+                ret['changes']['Endpoint'] = 'Will be updated'
+                ret['comment'] += 'Endpoint for service "{0}" will be updated'.format(name)
+                return ret
+
+            if change_url:
+                ret['changes']['url'] = url
+
+            if change_interface:
+                ret['changes']['interface'] = interface
+
+        else:
+            change_publicurl = False
+            change_adminurl = False
+            change_internalurl = False
+
+            if endpoint.get('publicurl', None) != publicurl:
+                change_publicurl = True
+
+                ret['comment'] = _changes('Public URL changes from "{0}" to "{1}"'.format(
+                    endpoint.get('publicurl', None), publicurl)
+                )
+
+            if endpoint.get('adminurl', None) != adminurl:
+                change_adminurl = True
+                ret['comment'] = _changes('Admin URL changes from "{0}" to "{1}"'.format(
+                    endpoint.get('adminurl', None), adminurl)
+                )
+
+            if endpoint.get('internalurl', None) != internalurl:
+                change_internalurl = True
+                ret['comment'] = _changes(
+                    'Internal URL changes from "{0}" to "{1}"'.format(
+                        endpoint.get('internalurl', None),
+                        internalurl
+                    )
+                )
+
+            if __opts__.get('test') and (change_publicurl or change_adminurl or change_internalurl):
+                ret['result'] = None
+                ret['comment'] += 'Endpoint for service "{0}" will be updated'.format(name)
+                ret['changes']['Endpoint'] = 'Will be updated'
+                return ret
+
+            if change_publicurl:
+                ret['changes']['publicurl'] = publicurl
+
+            if change_adminurl:
+                ret['changes']['adminurl'] = adminurl
+
+            if change_internalurl:
+                ret['changes']['internalurl'] = internalurl
+
+        if ret['comment']:  # changed
+            __salt__['keystone.endpoint_delete'](name, region, profile=profile, interface=interface, **connection_args)
+            _create_endpoint()
+            ret['comment'] += 'Endpoint for service "{0}" has been updated'.format(name)
+
+    else:
+        # Add new endpoint
+        if __opts__.get('test'):
+            ret['result'] = None
+            ret['changes']['Endpoint'] = 'Will be created'
+            ret['comment'] = 'Endpoint for service "{0}" will be added'.format(name)
+            return ret
+        _create_endpoint()
         ret['comment'] = 'Endpoint for service "{0}" has been added'.format(name)
+
+    if ret['comment'] == '':  # => no changes
+        ret['comment'] = 'Endpoint for service "{0}" already exists'.format(name)
     return ret
 
 
-def endpoint_absent(name, profile=None, **connection_args):
+def endpoint_absent(name, region=None, profile=None, interface=None, **connection_args):
     '''
     Ensure that the endpoint for a service doesn't exist in Keystone catalog
 
     name
         The name of the service whose endpoints should not exist
+
+    region (optional)
+        The region of the endpoint.  Defaults to ``RegionOne``.
+
+    interface
+        The interface type, which describes the visibility
+        of the endpoint. (for V3 API)
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Endpoint for service "{0}" is already absent'.format(name)}
+           'comment': 'Endpoint for service "{0}"{1} is already absent'.format(name,
+                      ', interface "{0}",'.format(interface) if interface is not None else '')}
 
     # Check if service is present
-    endpoint = __salt__['keystone.endpoint_get'](name,
+    endpoint = __salt__['keystone.endpoint_get'](name, region,
                                                  profile=profile,
+                                                 interface=interface,
                                                  **connection_args)
     if not endpoint:
         return ret
@@ -789,9 +803,11 @@ def endpoint_absent(name, profile=None, **connection_args):
             ret['comment'] = 'Endpoint for service "{0}" will be deleted'.format(name)
             return ret
         # Delete service
-        __salt__['keystone.endpoint_delete'](name,
+        __salt__['keystone.endpoint_delete'](name, region,
                                              profile=profile,
+                                             interface=interface,
                                              **connection_args)
-        ret['comment'] = 'Endpoint for service "{0}" has been deleted'.format(name)
+        ret['comment'] = 'Endpoint for service "{0}"{1} has been deleted'.format(name,
+                         ', interface "{0}",'.format(interface) if interface is not None else '')
         ret['changes']['endpoint'] = 'Deleted'
     return ret

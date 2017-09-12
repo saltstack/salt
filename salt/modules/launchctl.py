@@ -10,19 +10,23 @@ Module for the management of MacOS systems that use launchd/launchctl
 
 :depends:   - plistlib Python module
 '''
-from __future__ import absolute_import
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import plistlib
+import fnmatch
 import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.decorators as decorators
-import salt.ext.six as six
+import salt.utils.files
+from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -37,7 +41,7 @@ def __virtual__():
     '''
     Only work on MacOS
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return (False, 'Failed to load the mac_service module:\n'
                        'Only available on macOS systems.')
 
@@ -45,11 +49,11 @@ def __virtual__():
         return (False, 'Failed to load the mac_service module:\n'
                        'Required binary not found: "/bin/launchctl"')
 
-    if LooseVersion(__grains__['osrelease']) >= LooseVersion('10.11'):
+    if _LooseVersion(__grains__['osrelease']) >= _LooseVersion('10.11'):
         return (False, 'Failed to load the mac_service module:\n'
                        'Not available on El Capitan, uses mac_service.py')
 
-    if LooseVersion(__grains__['osrelease']) >= LooseVersion('10.10'):
+    if _LooseVersion(__grains__['osrelease']) >= _LooseVersion('10.10'):
         global BEFORE_YOSEMITE
         BEFORE_YOSEMITE = False
 
@@ -87,7 +91,7 @@ def _available_services():
                 try:
                     # This assumes most of the plist files
                     # will be already in XML format
-                    with salt.utils.fopen(file_path):
+                    with salt.utils.files.fopen(file_path):
                         plist = plistlib.readPlist(true_path)
 
                 except Exception:
@@ -101,7 +105,7 @@ def _available_services():
                         plist = plistlib.readPlistFromString(plist_xml)
                     else:
                         plist = plistlib.readPlistFromBytes(
-                            salt.utils.to_bytes(plist_xml))
+                            salt.utils.stringutils.to_bytes(plist_xml))
 
                 try:
                     available_services[plist.Label.lower()] = {
@@ -212,33 +216,56 @@ def missing(job_label):
     return False if _service_by_name(job_label) else True
 
 
-def status(job_label, runas=None):
+def status(name, runas=None):
     '''
-    Return the status for a service, returns a bool whether the service is
-    running.
+    Return the status for a service via systemd.
+    If the name contains globbing, a dict mapping service name to True/False
+    values is returned.
+
+    .. versionchanged:: Oxygen
+        The service name can now be a glob (e.g. ``salt*``)
+
+    Args:
+        name (str): The name of the service to check
+        runas (str): User to run launchctl commands
+
+    Returns:
+        bool: True if running, False otherwise
+        dict: Maps service name to True if running, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.status <service label>
+        salt '*' service.status <service name>
     '''
-    service = _service_by_name(job_label)
 
-    lookup_name = service['plist']['Label'] if service else job_label
-    launchctl_data = _get_launchctl_data(lookup_name, runas=runas)
-
-    if launchctl_data:
-        if BEFORE_YOSEMITE:
-            if six.PY3:
-                return 'PID' in plistlib.loads(launchctl_data)
-            else:
-                return 'PID' in dict(plistlib.readPlistFromString(launchctl_data))
-        else:
-            pattern = '"PID" = [0-9]+;'
-            return True if re.search(pattern, launchctl_data) else False
+    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    if contains_globbing:
+        services = fnmatch.filter(get_all(), name)
     else:
-        return False
+        services = [name]
+    results = {}
+    for service in services:
+        service_info = _service_by_name(service)
+
+        lookup_name = service_info['plist']['Label'] if service_info else service
+        launchctl_data = _get_launchctl_data(lookup_name, runas=runas)
+
+        if launchctl_data:
+            if BEFORE_YOSEMITE:
+                if six.PY3:
+                    results[service] = 'PID' in plistlib.loads(launchctl_data)
+                else:
+                    results[service] = 'PID' in dict(plistlib.readPlistFromString(launchctl_data))
+            else:
+                pattern = '"PID" = [0-9]+;'
+                results[service] = True if re.search(pattern, launchctl_data) else False
+        else:
+            results[service] = False
+    if contains_globbing:
+        return results
+    return results[name]
 
 
 def stop(job_label, runas=None):

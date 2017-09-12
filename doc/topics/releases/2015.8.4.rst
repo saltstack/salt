@@ -403,7 +403,7 @@ Changes:
 
 - **PR** `#29708`_: (*lagesag*) Fix test=True for file.directory with recurse ignore_files/ignore_dirs.
 
-- **PR** `#29642`_: (*cachedout*) Correctly restart deamonized minions on failure
+- **PR** `#29642`_: (*cachedout*) Correctly restart daemonized minions on failure
 
 - **PR** `#29599`_: (*cachedout*) Clean up minion shutdown
 

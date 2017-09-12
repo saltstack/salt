@@ -20,8 +20,8 @@ import re
 import json
 
 # Import Salt libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict
 
@@ -234,7 +234,7 @@ class _Section(OrderedDict):
             if indented_match:
                 indent = indented_match.group(1).replace('\t', '    ')
                 if indent > curr_indent:
-                    options = self.keys()
+                    options = list(self)
                     if options:
                         prev_opt = options[-1]
                         value = self.get(prev_opt)
@@ -280,7 +280,7 @@ class _Section(OrderedDict):
         changes = {}
         for key, value in six.iteritems(update_dict):
             # Ensure the value is either a _Section or a string
-            if hasattr(value, 'iteritems'):
+            if isinstance(value, (dict, OrderedDict)):
                 sect = _Section(
                     name=key, inicontents='',
                     separator=self.sep, commenter=self.com
@@ -297,7 +297,7 @@ class _Section(OrderedDict):
                                       'after': value_plain}})
                 # If it's not a section, it may already exist as a
                 # commented-out key/value pair
-                if not hasattr(value, 'iteritems'):
+                if not isinstance(value, _Section):
                     self._uncomment_if_commented(key)
 
                 super(_Section, self).update({key: value})
@@ -367,18 +367,20 @@ class _Ini(_Section):
         super(_Ini, self).__init__(name, inicontents, separator, commenter)
 
     def refresh(self, inicontents=None):
-        try:
-            inicontents = inicontents or salt.utils.fopen(self.name).read()
-        except (OSError, IOError) as exc:
-            raise CommandExecutionError(
-                "Unable to open file '{0}'. "
-                "Exception: {1}".format(self.name, exc)
-            )
+        if inicontents is None:
+            try:
+                with salt.utils.files.fopen(self.name) as rfh:
+                    inicontents = rfh.read()
+            except (OSError, IOError) as exc:
+                raise CommandExecutionError(
+                    "Unable to open file '{0}'. "
+                    "Exception: {1}".format(self.name, exc)
+                )
         if not inicontents:
             return
         # Remove anything left behind from a previous run.
-        for opt in self:
-            self.pop(opt)
+        self.clear()
+
         inicontents = ini_regx.split(inicontents)
         inicontents.reverse()
         # Pop anything defined outside of a section (ie. at the top of
@@ -393,7 +395,7 @@ class _Ini(_Section):
 
     def flush(self):
         try:
-            with salt.utils.fopen(self.name, 'w') as outfile:
+            with salt.utils.files.fopen(self.name, 'w') as outfile:
                 ini_gen = self.gen_ini()
                 next(ini_gen)
                 outfile.writelines(ini_gen)

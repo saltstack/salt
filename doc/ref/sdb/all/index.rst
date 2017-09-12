@@ -10,6 +10,7 @@ sdb modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cache
     confidant
     consul
     couchdb

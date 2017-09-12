@@ -9,11 +9,11 @@ from __future__ import absolute_import
 import os
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 import salt.exceptions
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'django'
@@ -28,9 +28,9 @@ def _get_django_admin(bin_env):
     Return the django admin
     '''
     if not bin_env:
-        if salt.utils.which('django-admin.py'):
+        if salt.utils.path.which('django-admin.py'):
             return 'django-admin.py'
-        elif salt.utils.which('django-admin'):
+        elif salt.utils.path.which('django-admin'):
             return 'django-admin'
         else:
             raise salt.exceptions.CommandExecutionError(
@@ -161,18 +161,19 @@ def loaddata(settings_module,
         salt '*' django.loaddata <settings_module> <comma delimited list of fixtures>
 
     '''
-
+    args = []
     kwargs = {}
     if database:
         kwargs['database'] = database
 
+    cmd = '{0} {1}'.format('loaddata', ' '.join(fixtures.split(',')))
+
     return command(settings_module,
-                   'loaddata',
+                   cmd,
                    bin_env,
                    pythonpath,
                    env,
-                   *fixtures.split(','),
-                   **kwargs)
+                   *args, **kwargs)
 
 
 def collectstatic(settings_module,

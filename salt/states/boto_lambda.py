@@ -8,7 +8,11 @@ Manage Lambda Functions
 Create and destroy Lambda Functions. Be aware that this interacts with Amazon's services,
 and so may incur charges.
 
-This module uses ``boto3``, which can be installed via package, or pip.
+:depends:
+    - boto
+    - boto3
+
+The dependencies listed above can be installed via package or pip.
 
 This module accepts explicit vpc credentials but can also utilize
 IAM roles assigned to the instance through Instance Profiles. Dynamic
@@ -65,9 +69,10 @@ import hashlib
 import json
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.dictupdate as dictupdate
 import salt.utils
+import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -143,12 +148,24 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
         64 MB.
 
     VpcConfig
-        If your Lambda function accesses resources in a VPC, you provide this
-        parameter identifying the list of security group IDs and subnet IDs.
-        These must belong to the same VPC. You must provide at least one
-        security group and one subnet ID.
+        If your Lambda function accesses resources in a VPC, you must provide this parameter
+        identifying the list of security group IDs/Names and subnet IDs/Name.  These must all belong
+        to the same VPC.  This is a dict of the form:
 
-        .. versionadded:: 2016.11.0
+        .. code-block:: yaml
+            VpcConfig:
+                SecurityGroupNames:
+                - mysecgroup1
+                - mysecgroup2
+                SecurityGroupIds:
+                - sg-abcdef1234
+                SubnetNames:
+                - mysubnet1
+                SubnetIds:
+                - subnet-1234abcd
+                - subnet-abcd1234
+
+        If VpcConfig is provided at all, you MUST pass at least one security group and one subnet.
 
     Permissions
         A list of permission definitions to be added to the function's policy
@@ -167,7 +184,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
             }
         }
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     region
         Region to connect to.
@@ -192,7 +209,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
         if isinstance(Permissions, six.string_types):
             Permissions = json.loads(Permissions)
         required_keys = set(('Action', 'Principal'))
-        optional_keys = set(('SourceArn', 'SourceAccount'))
+        optional_keys = set(('SourceArn', 'SourceAccount', 'Qualifier'))
         for sid, permission in six.iteritems(Permissions):
             keyset = set(permission.keys())
             if not keyset.issuperset(required_keys):
@@ -264,7 +281,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
                                     Environment, region, key, keyid,
                                     profile, RoleRetries)
     if not _ret.get('result'):
-        ret['result'] = False
+        ret['result'] = _ret.get('result', False)
         ret['comment'] = _ret['comment']
         ret['changes'] = {}
         return ret
@@ -273,7 +290,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
     _ret = _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key, S3ObjectVersion,
                                   region, key, keyid, profile)
     if not _ret.get('result'):
-        ret['result'] = False
+        ret['result'] = _ret.get('result', False)
         ret['comment'] = _ret['comment']
         ret['changes'] = {}
         return ret
@@ -282,7 +299,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
     _ret = _function_permissions_present(FunctionName, Permissions,
                                          region, key, keyid, profile)
     if not _ret.get('result'):
-        ret['result'] = False
+        ret['result'] = _ret.get('result', False)
         ret['comment'] = _ret['comment']
         ret['changes'] = {}
         return ret
@@ -299,6 +316,25 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
         region=region, key=key, keyid=keyid, profile=profile
     )
     return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
+
+
+def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
+    if isinstance(conf, six.string_types):
+        conf = json.loads(conf)
+    if not conf:
+        # if the conf is None, we should explicitly set the VpcConfig to
+        # {'SubnetIds': [], 'SecurityGroupIds': []} to take the lambda out of
+        # the VPC it was in
+        return {'SubnetIds': [], 'SecurityGroupIds': []}
+    if not isinstance(conf, dict):
+        raise SaltInvocationError('VpcConfig must be a dict.')
+    sns = [__salt__['boto_vpc.get_resource_id']('subnet', s, region=region, key=key,
+            keyid=keyid, profile=profile).get('id') for s in conf.pop('SubnetNames', [])]
+    sgs = [__salt__['boto_secgroup.get_group_id'](s, region=region, key=key, keyid=keyid,
+            profile=profile) for s in conf.pop('SecurityGroupNames', [])]
+    conf.setdefault('SubnetIds', []).extend(sns)
+    conf.setdefault('SecurityGroupIds', []).extend(sgs)
+    return conf
 
 
 def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
@@ -325,9 +361,10 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
     oldval = func.get('VpcConfig')
     if oldval is not None:
         oldval.pop('VpcId', None)
-    if oldval != VpcConfig:
+    fixed_VpcConfig = _resolve_vpcconfig(VpcConfig, region, key, keyid, profile)
+    if __utils__['boto3.ordered'](oldval) != __utils__['boto3.ordered'](fixed_VpcConfig):
         need_update = True
-        ret['changes'].setdefault('new', {})['VpcConfig'] = VpcConfig
+        ret['changes'].setdefault('new', {})['VpcConfig'] = fixed_VpcConfig
         ret['changes'].setdefault(
             'old', {})['VpcConfig'] = func.get('VpcConfig')
 
@@ -349,7 +386,7 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
         _r = __salt__['boto_lambda.update_function_config'](
             FunctionName=FunctionName, Role=Role, Handler=Handler,
             Description=Description, Timeout=Timeout, MemorySize=MemorySize,
-            VpcConfig=VpcConfig, Environment=Environment, region=region,
+            VpcConfig=fixed_VpcConfig, Environment=Environment, region=region,
             key=key, keyid=keyid, profile=profile, WaitForRole=True,
             RoleRetries=RoleRetries)
         if not _r.get('updated'):
@@ -371,7 +408,7 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key,
         size = os.path.getsize(ZipFile)
         if size == func['CodeSize']:
             sha = hashlib.sha256()
-            with salt.utils.fopen(ZipFile, 'rb') as f:
+            with salt.utils.files.fopen(ZipFile, 'rb') as f:
                 sha.update(f.read())
             hashed = sha.digest().encode('base64').strip()
             if hashed != func['CodeSha256']:

@@ -149,9 +149,9 @@ Changes:
 
   * fd2ee7d Add some simple unit tests for salt.config.api_config function
 
-  * 3d2fefc Make sure the pidfile and log_file values are overriden by api opts
+  * 3d2fefc Make sure the pidfile and log_file values are overridden by api opts
 
-  * 1f6b540 Make sure the pidfile and log_file values are overriden by api opts
+  * 1f6b540 Make sure the pidfile and log_file values are overridden by api opts
 
   * 04d307f salt-api no longer forces the default timeout
 
@@ -1046,7 +1046,7 @@ Changes:
 * 0e74bad Update branch refs to more relevant branch (`#37826`_)
 
   - **PR** `#37826`_: (*rallytime*) Update branch refs to more relevant branch
-  - **PR** `#37822`_: (*laleocen*) add documenation for multiline encryption using nacl
+  - **PR** `#37822`_: (*laleocen*) add documentation for multiline encryption using nacl
     | refs: `#37826`_
 
 * 6a9b49c Add "names" option to file state docs: point users to highstate doc examples (`#37823`_)
@@ -1796,7 +1796,7 @@ Changes:
 - **PR** `#37447`_: (*rallytime*) Cast ip_protocol rule as a str() in boto_secgroup.present
   @ *2016-11-04T04:03:45Z*
 
-  - **ISSUE** `#36961`_: (*nullify005*) boto_secgroup assumes a string when checking ip_protocol validity when not tcp|udp|all|-1
+  - **ISSUE** `#36961`_: (*nullify005*) boto_secgroup assumes a string when checking ip_protocol validity when not ``tcp|udp|all|-1``
     | refs: `#37447`_
   * 651e0f7 Merge pull request `#37447`_ from rallytime/`fix-36961`_
   * 6b930ac Cast ip_protocol rule as a str() in boto_secgroup.present

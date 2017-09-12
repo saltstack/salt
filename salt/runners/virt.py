@@ -10,13 +10,13 @@ import logging
 
 # Import Salt libs
 import salt.client
-import salt.utils.virt
+import salt.utils.files
 import salt.utils.cloud
 import salt.key
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ def query(host=None, quiet=False):
             if not isinstance(info, dict):
                 continue
             chunk = {}
-            id_ = next(info.iterkeys())
+            id_ = next(six.iterkeys(info))
             if host:
                 if host != id_:
                     continue
@@ -185,7 +185,7 @@ def init(
         The number of cpus to allocate to this new virtual machine.
 
     mem
-        The amount of memory to allocate tot his virtual machine. The number
+        The amount of memory to allocate to this virtual machine. The number
         is interpreted in megabytes.
 
     image
@@ -245,7 +245,7 @@ def init(
         __jid_event__.fire_event({'message': 'Minion will be preseeded'}, 'progress')
         priv_key, pub_key = salt.utils.cloud.gen_keys()
         accepted_key = os.path.join(__opts__['pki_dir'], 'minions', name)
-        with salt.utils.fopen(accepted_key, 'w') as fp_:
+        with salt.utils.files.fopen(accepted_key, 'w') as fp_:
             fp_.write(pub_key)
 
     client = salt.client.get_local_client(__opts__['conf_file'])
@@ -370,7 +370,7 @@ def force_off(name):
     try:
         cmd_ret = client.cmd_iter(
                 host,
-                'virt.destroy',
+                'virt.stop',
                 [name],
                 timeout=600)
     except SaltClientError as client_error:

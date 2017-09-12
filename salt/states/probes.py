@@ -75,7 +75,7 @@ def _default_ret(name):
 def _retrieve_rpm_probes():
 
     '''
-    Will retrive the probes from the network device using salt module "probes" throught NAPALM proxy.
+    Will retrieve the probes from the network device using salt module "probes" throught NAPALM proxy.
     '''
 
     return __salt__['probes.config']()

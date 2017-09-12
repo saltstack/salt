@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: 2016.11.0
-
 This runner makes Salt's
 execution modules available
 on the salt master.
+
+.. versionadded:: 2016.11.0
 
 .. _salt_salt_runner:
 
@@ -79,8 +79,10 @@ def execute(tgt,
             kwarg=None,
             **kwargs):
     '''
-    Execute `fun` on all minions matched by `tgt` and `tgt_type`.
-    Parameter `fun` is the name of execution module function to call.
+    .. versionadded:: 2017.7.0
+
+    Execute ``fun`` on all minions matched by ``tgt`` and ``tgt_type``.
+    Parameter ``fun`` is the name of execution module function to call.
 
     This function should mainly be used as a helper for runner modules,
     in order to avoid redundant code.
@@ -92,7 +94,20 @@ def execute(tgt,
         ret1 = __salt__['salt.execute']('*', 'mod.fun')
         ret2 = __salt__['salt.execute']('my_nodegroup', 'mod2.fun2', tgt_type='nodegroup')
 
-    .. versionadded:: Nitrogen
+    It can also be used to schedule jobs directly on the master, for example:
+
+    .. code-block:: yaml
+
+        schedule:
+            collect_bgp_stats:
+                function: salt.execute
+                args:
+                    - edge-routers
+                    - bgp.neighbors
+                kwargs:
+                    tgt_type: nodegroup
+                days: 1
+                returner: redis
     '''
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
@@ -100,7 +115,7 @@ def execute(tgt,
                          fun,
                          arg=arg,
                          timeout=timeout or __opts__['timeout'],
-                         tgt_type=tgt_type,  # no warn_until, as this is introduced only in Nitrogen
+                         tgt_type=tgt_type,  # no warn_until, as this is introduced only in 2017.7.0
                          ret=ret,
                          jid=jid,
                          kwarg=kwarg,

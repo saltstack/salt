@@ -8,7 +8,7 @@ Provide authentication using simple LDAP binds
 # Import python libs
 from __future__ import absolute_import
 import logging
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -280,8 +280,14 @@ def auth(username, password):
     '''
     Simple LDAP auth
     '''
-    if _bind(username, password, anonymous=_config('auth_by_group_membership_only', mandatory=False) and
-                                           _config('anonymous', mandatory=False)):
+    #If bind credentials are configured, use them instead of user's
+    if _config('binddn', mandatory=False) and _config('bindpw', mandatory=False):
+        bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
+    else:
+        bind = _bind(username, password, anonymous=_config('auth_by_group_membership_only', mandatory=False) and
+                                        _config('anonymous', mandatory=False))
+
+    if bind:
         log.debug('LDAP authentication successful')
         return True
     else:
@@ -306,8 +312,9 @@ def groups(username, **kwargs):
     '''
     group_list = []
 
-    bind = _bind(username, kwargs['password'],
-                 anonymous=_config('anonymous', mandatory=False))
+    # Perform un-authenticated bind to determine group membership
+    bind = _bind_for_search(anonymous=_config('anonymous', mandatory=False))
+
     if bind:
         log.debug('ldap bind to determine group membership succeeded!')
 
@@ -371,7 +378,7 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [_config('accountattributename'), 'cn'])
+                                           [_config('accountattributename'), 'cn', _config('groupattribute')])
             for _, entry in search_results:
                 if username in entry[_config('accountattributename')]:
                     group_list.append(entry['cn'][0])
@@ -381,7 +388,11 @@ def groups(username, **kwargs):
                         group_list.append(group.split(',')[0].split('=')[-1])
             log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
 
-            if not auth(username, kwargs['password']):
+            # Only test user auth on first call for job.
+            # 'show_jid' only exists on first payload so we can use that for the conditional.
+            if 'show_jid' in kwargs and not _bind(username, kwargs.get('password'),
+                                            anonymous=_config('auth_by_group_membership_only', mandatory=False) and
+                                            _config('anonymous', mandatory=False)):
                 log.error('LDAP username and password do not match')
                 return []
     else:
@@ -390,7 +401,7 @@ def groups(username, **kwargs):
     return group_list
 
 
-def expand_ldap_entries(entries, opts=None):
+def __expand_ldap_entries(entries, opts=None):
     '''
 
     :param entries: ldap subtree in external_auth config option
@@ -456,5 +467,24 @@ def expand_ldap_entries(entries, opts=None):
             else:
                 acl_tree.append({minion_or_ou: matchers})
 
-    log.trace('expand_ldap_entries: {0}'.format(acl_tree))
+    log.trace('__expand_ldap_entries: {0}'.format(acl_tree))
     return acl_tree
+
+
+def process_acl(auth_list, opts=None):
+    '''
+    Query LDAP, retrieve list of minion_ids from an OU or other search.
+    For each minion_id returned from the LDAP search, copy the perms
+    matchers into the auth dictionary
+    :param auth_list:
+    :param opts: __opts__ for when __opts__ is not injected
+    :return: Modified auth list.
+    '''
+    ou_names = []
+    for item in auth_list:
+        if isinstance(item, six.string_types):
+            continue
+        ou_names.extend([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
+    if ou_names:
+        auth_list = __expand_ldap_entries(auth_list, opts)
+    return auth_list

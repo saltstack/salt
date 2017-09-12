@@ -45,8 +45,12 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
+import salt.utils.itertools
+import salt.utils.pkg
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -150,7 +154,7 @@ def parse_config(file_name='/usr/local/etc/pkg.conf'):
     if not os.path.isfile(file_name):
         return 'Unable to find {0} on file system'.format(file_name)
 
-    with salt.utils.fopen(file_name) as ifile:
+    with salt.utils.files.fopen(file_name) as ifile:
         for line in ifile:
             if line.startswith('#') or line.startswith('\n'):
                 pass
@@ -251,6 +255,8 @@ def refresh_db(jail=None, chroot=None, root=None, force=False):
 
             salt '*' pkg.refresh_db force=True
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     cmd = _pkg(jail, chroot, root)
     cmd.append('update')
     if force:
@@ -292,7 +298,7 @@ def latest_version(*names, **kwargs):
     root = kwargs.get('root')
     pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot, root=root)
 
-    if salt.utils.compare_versions(_get_pkgng_version(jail, chroot, root), '>=', '1.6.0'):
+    if salt.utils.versions.compare(_get_pkgng_version(jail, chroot, root), '>=', '1.6.0'):
         quiet = True
     else:
         quiet = False
@@ -324,7 +330,7 @@ def latest_version(*names, **kwargs):
                 ret[name] = pkgver
             else:
                 if not any(
-                    (salt.utils.compare_versions(ver1=x,
+                    (salt.utils.versions.compare(ver1=x,
                                                  oper='>=',
                                                  ver2=pkgver)
                      for x in installed)
@@ -1151,8 +1157,6 @@ def upgrade(*names, **kwargs):
         opts += 'n'
     if not dryrun:
         opts += 'y'
-    if opts:
-        opts = '-' + opts
 
     cmd = _pkg(jail, chroot, root)
     cmd.append('upgrade')

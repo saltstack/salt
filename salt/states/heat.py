@@ -3,7 +3,7 @@
 Management of Heat
 ==================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends:   - heat Python module
 :configuration: See :py:mod:`salt.modules.heat` for setup instructions.
@@ -39,8 +39,7 @@ import json
 import logging
 
 # Import third party libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
 import salt.utils.files
 import salt.exceptions
 import yaml
@@ -212,9 +211,9 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
 
             if (template_manage_result['result']) or \
                     ((__opts__['test']) and (template_manage_result['result'] is not False)):
-                with salt.utils.fopen(template_tmp_file, 'r') as tfp_:
+                with salt.utils.files.fopen(template_tmp_file, 'r') as tfp_:
                     tpl = tfp_.read()
-                    salt.utils.safe_rm(template_tmp_file)
+                    salt.utils.files.safe_rm(template_tmp_file)
                     try:
                         if isinstance(tpl, six.binary_type):
                             tpl = tpl.decode('utf-8')
@@ -223,7 +222,7 @@ def deployed(name, template=None, enviroment=None, params=None, poll=5,
                             template_new = yaml.dump(template_parse, Dumper=YamlDumper)
                         else:
                             template_new = jsonutils.dumps(template_parse, indent=2, ensure_ascii=False)
-                        salt.utils.safe_rm(template_tmp_file)
+                        salt.utils.files.safe_rm(template_tmp_file)
                     except ValueError as ex:
                         ret['result'] = False
                         ret['comment'] = 'Error parsing template {0}'.format(ex)

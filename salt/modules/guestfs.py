@@ -13,7 +13,7 @@ import hashlib
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def __virtual__():
     '''
     Only load if libguestfs python bindings are installed
     '''
-    if salt.utils.which('guestmount'):
+    if salt.utils.path.which('guestmount'):
         return 'guestfs'
     return (False, 'The guestfs execution module cannot be loaded: guestmount binary not in path.')
 

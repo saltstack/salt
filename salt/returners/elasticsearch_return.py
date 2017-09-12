@@ -106,6 +106,9 @@ import json
 import salt.returners
 import salt.utils.jid
 
+# Import 3rd-party libs
+from salt.ext import six
+
 __virtualname__ = 'elasticsearch'
 
 log = logging.getLogger(__name__)
@@ -257,7 +260,7 @@ def returner(ret):
             index = '{0}-ordered'.format(index)
             max_chars = len(str(len(ret['return'])))
 
-            for uid, data in ret['return'].iteritems():
+            for uid, data in six.iteritems(ret['return']):
                 # Skip keys we've already prefixed
                 if uid.startswith(tuple('0123456789')):
                     continue
@@ -359,7 +362,7 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)
 
 
 def save_load(jid, load, minions=None):

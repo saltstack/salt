@@ -3,7 +3,7 @@
 Icinga2 state
 =============
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends:   - Icinga2 Python module
 :configuration: See :py:mod:`salt.modules.icinga2` for setup instructions.
@@ -24,7 +24,7 @@ from __future__ import absolute_import
 import os.path
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 
 
 def __virtual__():
@@ -119,7 +119,7 @@ def generate_ticket(name, output=None, grain=None, key=None, overwrite=True):
             ret['changes']['ticket'] = "Executed. Output into grain: {0}:{1}".format(grain, key)
     elif output:
         ret['changes']['ticket'] = "Executed. Output into {0}".format(output)
-        with salt.utils.fopen(output, 'w') as output_file:
+        with salt.utils.files.fopen(output, 'w') as output_file:
             output_file.write(str(ticket))
     else:
         ret['changes']['ticket'] = "Executed"

@@ -15,18 +15,19 @@ from __future__ import absolute_import
 import copy
 import fnmatch
 import logging
-import re
 import os.path
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
+import salt.utils.pkg
 import salt.utils.itertools
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -399,6 +400,8 @@ def refresh_db(root=None):
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     cmd = ['pacman', '-Sy']
 
     if root is not None:
@@ -526,15 +529,6 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version_num = kwargs.get('version')
-    if version_num:
-        if pkgs is None and sources is None:
-            # Allow 'version' to work for single package target
-            pkg_params = {name: version_num}
-        else:
-            log.warning('\'version\' parameter will be ignored for multiple '
-                        'package targets')
-
     if 'root' in kwargs:
         pkg_params['-r'] = kwargs['root']
 
@@ -545,6 +539,7 @@ def install(name=None,
     cmd.append('pacman')
 
     errors = []
+    targets = []
     if pkg_type == 'file':
         cmd.extend(['-U', '--noprogressbar', '--noconfirm'])
         cmd.extend(pkg_params)
@@ -555,63 +550,53 @@ def install(name=None,
         if sysupgrade:
             cmd.append('-u')
         cmd.extend(['--noprogressbar', '--noconfirm', '--needed'])
-        targets = []
         wildcards = []
         for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
                 targets.append(param)
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
-                if match:
-                    gt_lt, eq, verstr = match.groups()
-                    prefix = gt_lt or ''
-                    prefix += eq or ''
-                    # If no prefix characters were supplied, use '='
-                    prefix = prefix or '='
-                    if '*' in verstr:
-                        if prefix == '=':
-                            wildcards.append((param, verstr))
-                        else:
-                            errors.append(
-                                'Invalid wildcard for {0}{1}{2}'.format(
-                                    param, prefix, verstr
-                                )
+                prefix, verstr = salt.utils.pkg.split_comparison(version_num)
+                if not prefix:
+                    prefix = '='
+                if '*' in verstr:
+                    if prefix == '=':
+                        wildcards.append((param, verstr))
+                    else:
+                        errors.append(
+                            'Invalid wildcard for {0}{1}{2}'.format(
+                                param, prefix, verstr
                             )
-                        continue
-                    targets.append('{0}{1}{2}'.format(param, prefix, verstr))
+                        )
+                    continue
+                targets.append('{0}{1}{2}'.format(param, prefix, verstr))
+
+        if wildcards:
+            # Resolve wildcard matches
+            _available = list_repo_pkgs(*[x[0] for x in wildcards], refresh=refresh)
+            for pkgname, verstr in wildcards:
+                candidates = _available.get(pkgname, [])
+                match = salt.utils.fnmatch_multiple(candidates, verstr)
+                if match is not None:
+                    targets.append('='.join((pkgname, match)))
                 else:
                     errors.append(
-                        'Invalid version string \'{0}\' for package '
-                        '\'{1}\''.format(version_num, name)
+                        'No version matching \'{0}\' found for package \'{1}\' '
+                        '(available: {2})'.format(
+                            verstr,
+                            pkgname,
+                            ', '.join(candidates) if candidates else 'none'
+                        )
                     )
 
-    if wildcards:
-        # Resolve wildcard matches
-        _available = list_repo_pkgs(*[x[0] for x in wildcards], refresh=refresh)
-        for pkgname, verstr in wildcards:
-            candidates = _available.get(pkgname, [])
-            match = salt.utils.fnmatch_multiple(candidates, verstr)
-            if match is not None:
-                targets.append('='.join((pkgname, match)))
-            else:
-                errors.append(
-                    'No version matching \'{0}\' found for package \'{1}\' '
-                    '(available: {2})'.format(
-                        verstr,
-                        pkgname,
-                        ', '.join(candidates) if candidates else 'none'
-                    )
-                )
-
-        if refresh:
-            try:
-                # Prevent a second refresh when we run the install command
-                cmd.remove('-y')
-            except ValueError:
-                # Shouldn't happen since we only add -y when refresh is True,
-                # but just in case that code above is inadvertently changed,
-                # don't let this result in a traceback.
-                pass
+            if refresh:
+                try:
+                    # Prevent a second refresh when we run the install command
+                    cmd.remove('-y')
+                except ValueError:
+                    # Shouldn't happen since we only add -y when refresh is True,
+                    # but just in case that code above is inadvertently changed,
+                    # don't let this result in a traceback.
+                    pass
 
     if not errors:
         cmd.extend(targets)
@@ -1007,12 +992,12 @@ def list_repo_pkgs(*args, **kwargs):
         salt '*' pkg.list_repo_pkgs 'samba4*' fromrepo=base,updates
         salt '*' pkg.list_repo_pkgs 'python2-*' byrepo=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     fromrepo = kwargs.pop('fromrepo', '') or ''
     byrepo = kwargs.pop('byrepo', False)
     refresh = kwargs.pop('refresh', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if fromrepo:
         try:

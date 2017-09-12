@@ -39,6 +39,30 @@ Module for handling OpenStack Neutron calls
     For example::
 
         salt '*' neutron.network_list profile=openstack1
+
+    To use keystoneauth1 instead of keystoneclient, include the `use_keystoneauth`
+    option in the pillar or minion config.
+
+    .. note:: this is required to use keystone v3 as for authentication.
+
+    .. code-block:: yaml
+
+        keystone.user: admin
+        keystone.password: verybadpass
+        keystone.tenant: admin
+        keystone.auth_url: 'http://127.0.0.1:5000/v3/'
+        keystone.region_name: 'RegionOne'
+        keystone.service_type: 'network'
+        keystone.use_keystoneauth: true
+        keystone.verify: '/path/to/custom/certs/ca-bundle.crt'
+
+
+    Note: by default the neutron module will attempt to verify its connection
+    utilizing the system certificates. If you need to verify against another bundle
+    of CA certificates or want to skip verification altogether you will need to
+    specify the `verify` option. You can specify True or False to verify (or not)
+    against system certificates, a path to a bundle or CA certs to check against, or
+    None to allow keystoneauth to search for the certificates on its own.(defaults to True)
 '''
 
 # Import python libs
@@ -83,7 +107,10 @@ def _auth(profile=None):
         tenant = credentials['keystone.tenant']
         auth_url = credentials['keystone.auth_url']
         region_name = credentials.get('keystone.region_name', None)
-        service_type = credentials['keystone.service_type']
+        service_type = credentials.get('keystone.service_type', 'network')
+        os_auth_system = credentials.get('keystone.os_auth_system', None)
+        use_keystoneauth = credentials.get('keystone.use_keystoneauth', False)
+        verify = credentials.get('keystone.verify', True)
     else:
         user = __salt__['config.option']('keystone.user')
         password = __salt__['config.option']('keystone.password')
@@ -91,15 +118,37 @@ def _auth(profile=None):
         auth_url = __salt__['config.option']('keystone.auth_url')
         region_name = __salt__['config.option']('keystone.region_name')
         service_type = __salt__['config.option']('keystone.service_type')
+        os_auth_system = __salt__['config.option']('keystone.os_auth_system')
+        use_keystoneauth = __salt__['config.option']('keystone.use_keystoneauth')
+        verify = __salt__['config.option']('keystone.verify')
 
-    kwargs = {
-        'username': user,
-        'password': password,
-        'tenant_name': tenant,
-        'auth_url': auth_url,
-        'region_name': region_name,
-        'service_type': service_type
-    }
+    if use_keystoneauth is True:
+        project_domain_name = credentials['keystone.project_domain_name']
+        user_domain_name = credentials['keystone.user_domain_name']
+
+        kwargs = {
+            'username': user,
+            'password': password,
+            'tenant_name': tenant,
+            'auth_url': auth_url,
+            'region_name': region_name,
+            'service_type': service_type,
+            'os_auth_plugin': os_auth_system,
+            'use_keystoneauth': use_keystoneauth,
+            'verify': verify,
+            'project_domain_name': project_domain_name,
+            'user_domain_name': user_domain_name
+        }
+    else:
+        kwargs = {
+            'username': user,
+            'password': password,
+            'tenant_name': tenant,
+            'auth_url': auth_url,
+            'region_name': region_name,
+            'service_type': service_type,
+            'os_auth_plugin': os_auth_system
+        }
 
     return suoneu.SaltNeutron(**kwargs)
 
@@ -767,7 +816,7 @@ def create_floatingip(floating_network, port=None, profile=None):
     return conn.create_floatingip(floating_network, port)
 
 
-def update_floatingip(floatingip_id, port, profile=None):
+def update_floatingip(floatingip_id, port=None, profile=None):
     '''
     Updates a floatingIP
 
@@ -778,7 +827,8 @@ def update_floatingip(floatingip_id, port, profile=None):
         salt '*' neutron.update_floatingip network-name port-name
 
     :param floatingip_id: ID of floatingIP
-    :param port: ID or name of port
+    :param port: ID or name of port, to associate floatingip to
+    `None` or do not specify to disassociate the floatingip (Optional)
     :param profile: Profile to build on (Optional)
     :return: Value of updated floating IP information
     '''

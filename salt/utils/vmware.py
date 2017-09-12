@@ -79,15 +79,18 @@ import atexit
 import errno
 import logging
 import time
-from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
 
 # Import Salt Libs
 import salt.exceptions
 import salt.modules.cmdmod
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 
 
 # Import Third Party Libs
+from salt.ext import six
+from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
 try:
     from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub
     from pyVmomi import vim, vmodl
@@ -116,7 +119,7 @@ def __virtual__():
         return False, 'Missing dependency: The salt.utils.vmware module requires pyVmomi.'
 
 
-def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
+def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None, credstore=None):
     '''
     Shell out and call the specified esxcli commmand, parse the result
     and return something sane.
@@ -128,10 +131,12 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
     :param cmd: esxcli command and arguments
     :param esxi_host: If `host` is a vCenter host, then esxi_host is the
                       ESXi machine on which to execute this command
+    :param credstore: Optional path to the credential store file
+
     :return: Dictionary
     '''
 
-    esx_cmd = salt.utils.which('esxcli')
+    esx_cmd = salt.utils.path.which('esxcli')
     if not esx_cmd:
         log.error('Missing dependency: The salt.utils.vmware.esxcli function requires ESXCLI.')
         return False
@@ -141,6 +146,9 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
         port = 443
     if protocol is None:
         protocol = 'https'
+
+    if credstore:
+        esx_cmd += ' --credstore \'{0}\''.format(credstore)
 
     if not esxi_host:
         # Then we are connecting directly to an ESXi server,
@@ -232,12 +240,12 @@ def _get_service_instance(host, username, password, protocol,
                     pwd=password,
                     protocol=protocol,
                     port=port,
-                    sslContext=ssl._create_unverified_context(),
+                    sslContext=getattr(ssl, '_create_unverified_context', getattr(ssl, '_create_stdlib_context'))(),
                     b64token=token,
                     mechanism=mechanism)
             else:
+                log.exception(exc)
                 err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
-                log.trace(exc)
                 raise salt.exceptions.VMwareConnectionError(err_msg)
         except Exception as exc:
             if 'certificate verify failed' in str(exc):
@@ -256,8 +264,8 @@ def _get_service_instance(host, username, password, protocol,
                         mechanism=mechanism
                     )
                 except Exception as exc:
+                    log.exception(exc)
                     err_msg = exc.msg if hasattr(exc, 'msg') else str(exc)
-                    log.trace(err_msg)
                     raise salt.exceptions.VMwareConnectionError(
                         'Could not connect to host \'{0}\': '
                         '{1}'.format(host, err_msg))
@@ -347,7 +355,7 @@ def get_service_instance(host, username=None, password=None, protocol=None,
     service_instance = GetSi()
     if service_instance:
         stub = GetStub()
-        if salt.utils.is_proxy() or (hasattr(stub, 'host') and stub.host != ':'.join([host, str(port)])):
+        if salt.utils.platform.is_proxy() or (hasattr(stub, 'host') and stub.host != ':'.join([host, str(port)])):
             # Proxies will fork and mess up the cached service instance.
             # If this is a proxy or we are connecting to a different host
             # invalidate the service instance to avoid a potential memory leak
@@ -382,9 +390,16 @@ def get_service_instance(host, username=None, password=None, protocol=None,
                                                  mechanism,
                                                  principal,
                                                  domain)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
     except vim.fault.VimFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareApiError(exc.msg)
     except vmodl.RuntimeFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
     return service_instance
@@ -419,9 +434,16 @@ def disconnect(service_instance):
     log.trace('Disconnecting')
     try:
         Disconnect(service_instance)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
     except vim.fault.VimFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareApiError(exc.msg)
     except vmodl.RuntimeFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
 
@@ -435,9 +457,16 @@ def is_connection_to_a_vcenter(service_instance):
     '''
     try:
         api_type = service_instance.content.about.apiType
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
     except vim.fault.VimFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareApiError(exc.msg)
     except vmodl.RuntimeFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     log.trace('api_type = {0}'.format(api_type))
     if api_type == 'VirtualCenter':
@@ -544,8 +573,9 @@ def get_gssapi_token(principal, host, domain):
     while not ctx.established:
         out_token = ctx.step(in_token)
         if out_token:
-            encoded_token = base64.b64encode(out_token)
-            return encoded_token
+            if six.PY2:
+                return base64.b64encode(out_token)
+            return base64.b64encode(salt.utils.stringutils.to_bytes(out_token))
         if ctx.established:
             break
         if not in_token:
@@ -641,9 +671,16 @@ def get_root_folder(service_instance):
     try:
         log.trace('Retrieving root folder')
         return service_instance.RetrieveContent().rootFolder
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
     except vim.fault.VimFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareApiError(exc.msg)
     except vmodl.RuntimeFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
 
@@ -693,9 +730,16 @@ def get_content(service_instance, obj_type, property_list=None,
         try:
             obj_ref = service_instance.content.viewManager.CreateContainerView(
                 container_ref, [obj_type], True)
+        except vim.fault.NoPermission as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(
+                'Not enough permissions. Required privilege: '
+                '{}'.format(exc.privilegeId))
         except vim.fault.VimFault as exc:
+            log.exception(exc)
             raise salt.exceptions.VMwareApiError(exc.msg)
         except vmodl.RuntimeFault as exc:
+            log.exception(exc)
             raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
         # Create 'Traverse All' traversal spec to determine the path for
@@ -731,18 +775,32 @@ def get_content(service_instance, obj_type, property_list=None,
     # Retrieve the contents
     try:
         content = service_instance.content.propertyCollector.RetrieveContents([filter_spec])
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
     except vim.fault.VimFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareApiError(exc.msg)
     except vmodl.RuntimeFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
     # Destroy the object view
     if local_traversal_spec:
         try:
             obj_ref.Destroy()
+        except vim.fault.NoPermission as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(
+                'Not enough permissions. Required privilege: '
+                '{}'.format(exc.privilegeId))
         except vim.fault.VimFault as exc:
+            log.exception(exc)
             raise salt.exceptions.VMwareApiError(exc.msg)
         except vmodl.RuntimeFault as exc:
+            log.exception(exc)
             raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
     return content
@@ -981,7 +1039,7 @@ def create_datacenter(service_instance, datacenter_name):
     '''
     Creates a datacenter.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     service_instance
         The Service Instance Object
@@ -993,9 +1051,16 @@ def create_datacenter(service_instance, datacenter_name):
     log.trace('Creating datacenter \'{0}\''.format(datacenter_name))
     try:
         dc_obj = root_folder.CreateDatacenter(datacenter_name)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
     except vim.fault.VimFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareApiError(exc.msg)
     except vmodl.RuntimeFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     return dc_obj
 
@@ -1055,9 +1120,16 @@ def create_cluster(dc_ref, cluster_name, cluster_spec):
               ''.format(cluster_name, dc_name))
     try:
         dc_ref.hostFolder.CreateClusterEx(cluster_name, cluster_spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
     except vim.fault.VimFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareApiError(exc.msg)
     except vmodl.RuntimeFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
 
@@ -1077,9 +1149,16 @@ def update_cluster(cluster_ref, cluster_spec):
     try:
         task = cluster_ref.ReconfigureComputeResource_Task(cluster_spec,
                                                            modify=True)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
     except vim.fault.VimFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareApiError(exc.msg)
     except vmodl.RuntimeFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     wait_for_task(task, cluster_name, 'ClusterUpdateTask')
 
@@ -1284,9 +1363,16 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
                                                    task.__class__.__name__))
     try:
         task_info = task.info
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
     except vim.fault.VimFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareApiError(exc.msg)
     except vmodl.RuntimeFault as exc:
+        log.exception(exc)
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
     while task_info.state == 'running' or task_info.state == 'queued':
         if time_counter % sleep_seconds == 0:
@@ -1300,9 +1386,16 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
         time_counter += 1
         try:
             task_info = task.info
+        except vim.fault.NoPermission as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(
+                'Not enough permissions. Required privilege: '
+                '{}'.format(exc.privilegeId))
         except vim.fault.VimFault as exc:
+            log.exception(exc)
             raise salt.exceptions.VMwareApiError(exc.msg)
         except vmodl.RuntimeFault as exc:
+            log.exception(exc)
             raise salt.exceptions.VMwareRuntimeError(exc.msg)
     if task_info.state == 'success':
         msg = '[ {0} ] Successfully completed {1} task in {2} seconds'.format(
@@ -1317,11 +1410,19 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
         # task is in an error state
         try:
             raise task_info.error
+        except vim.fault.NoPermission as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(
+                'Not enough permissions. Required privilege: '
+                '{}'.format(exc.privilegeId))
         except vim.fault.VimFault as exc:
+            log.exception(exc)
             raise salt.exceptions.VMwareApiError(exc.msg)
         except vmodl.fault.SystemError as exc:
+            log.exception(exc)
             raise salt.exceptions.VMwareSystemError(exc.msg)
         except vmodl.fault.InvalidArgument as exc:
+            log.exception(exc)
             exc_message = exc.msg
             if exc.faultMessage:
                 exc_message = '{0} ({1})'.format(exc_message,

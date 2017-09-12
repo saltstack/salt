@@ -16,7 +16,10 @@ import logging
 import glob
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed when is_true and compare_dicts are moved
+import salt.utils.files
+import salt.utils.path
+import salt.utils.pkg
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, MinionError
 
@@ -40,7 +43,7 @@ def _check_xbps():
     '''
     Looks to see if xbps-install is present on the system, return full path
     '''
-    return salt.utils.which('xbps-install')
+    return salt.utils.path.which('xbps-install')
 
 
 @decorators.memoize
@@ -261,6 +264,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     cmd = 'xbps-install -Sy'
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     if call['retcode'] != 0:
@@ -270,7 +275,7 @@ def refresh_db():
 
         raise CommandExecutionError('{0}'.format(comment))
 
-    return {}
+    return True
 
 
 def version(*names, **kwargs):
@@ -428,7 +433,7 @@ def remove(name=None, pkgs=None, recursive=True, **kwargs):
         The name of the package to be deleted.
 
     recursive
-        Also remove dependant packages (not required elsewhere).
+        Also remove dependent packages (not required elsewhere).
         Default mode: enabled.
 
     Multiple Package Options:
@@ -549,7 +554,7 @@ def _locate_repo_files(repo, rewrite=False):
 
     for filename in files:
         write_buff = []
-        with salt.utils.fopen(filename, 'r') as cur_file:
+        with salt.utils.files.fopen(filename, 'r') as cur_file:
             for line in cur_file:
                 if regex.match(line):
                     ret_val.append(filename)
@@ -557,7 +562,7 @@ def _locate_repo_files(repo, rewrite=False):
                     write_buff.append(line)
         if rewrite and filename in ret_val:
             if len(write_buff) > 0:
-                with salt.utils.fopen(filename, 'w') as rewrite_file:
+                with salt.utils.files.fopen(filename, 'w') as rewrite_file:
                     rewrite_file.write("".join(write_buff))
             else:  # Prune empty files
                 os.remove(filename)
@@ -585,7 +590,7 @@ def add_repo(repo, conffile='/usr/share/xbps.d/15-saltstack.conf'):
 
     if len(_locate_repo_files(repo)) == 0:
         try:
-            with salt.utils.fopen(conffile, 'a+') as conf_file:
+            with salt.utils.files.fopen(conffile, 'a+') as conf_file:
                 conf_file.write('repository='+repo+'\n')
         except IOError:
             return False

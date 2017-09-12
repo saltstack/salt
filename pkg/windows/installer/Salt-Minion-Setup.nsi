@@ -30,6 +30,12 @@ ${StrStrAdv}
     !define PRODUCT_VERSION "Undefined Version"
 !endif
 
+!ifdef PythonVersion
+    !define PYTHON_VERSION "${PythonVersion}"
+!else
+    !define PYTHON_VERSION "2"
+!endif
+
 !if "$%PROCESSOR_ARCHITECTURE%" == "AMD64"
     !define CPUARCH "AMD64"
 !else if "$%PROCESSOR_ARCHITEW6432%" == "AMD64"
@@ -84,14 +90,15 @@ Page custom pageMinionConfig pageMinionConfig_Leave
 ###############################################################################
 Var Dialog
 Var Label
-Var CheckBox_Minion
-Var CheckBox_Minion_Delayed
+Var CheckBox_Minion_Start
+Var CheckBox_Minion_Start_Delayed
 Var MasterHost
 Var MasterHost_State
 Var MinionName
 Var MinionName_State
 Var StartMinion
 Var StartMinionDelayed
+Var DeleteInstallDir
 
 
 ###############################################################################
@@ -145,26 +152,26 @@ Function pageFinish_Show
 
     # Create Start Minion Checkbox
     ${NSD_CreateCheckbox} 120u 90u 100% 12u "&Start salt-minion"
-    Pop $CheckBox_Minion
-    SetCtlColors $CheckBox_Minion "" "ffffff"
+    Pop $CheckBox_Minion_Start
+    SetCtlColors $CheckBox_Minion_Start "" "ffffff"
     # This command required to bring the checkbox to the front
-    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
+    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion_Start, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
 
     # Create Start Minion Delayed ComboBox
-    ${NSD_CreateCheckbox} 130u 105u 100% 12u "&Delayed Start"
-    Pop $CheckBox_Minion_Delayed
-    SetCtlColors $CheckBox_Minion_Delayed "" "ffffff"
+    ${NSD_CreateCheckbox} 130u 102u 100% 12u "&Delayed Start"
+    Pop $CheckBox_Minion_Start_Delayed
+    SetCtlColors $CheckBox_Minion_Start_Delayed "" "ffffff"
     # This command required to bring the checkbox to the front
-    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion_Delayed, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
+    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion_Start_Delayed, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
 
     # Load current settings for Minion
     ${If} $StartMinion == 1
-        ${NSD_Check} $CheckBox_Minion
+        ${NSD_Check} $CheckBox_Minion_Start
     ${EndIf}
 
     # Load current settings for Minion Delayed
     ${If} $StartMinionDelayed == 1
-        ${NSD_Check} $CheckBox_Minion_Delayed
+        ${NSD_Check} $CheckBox_Minion_Start_Delayed
     ${EndIf}
 
 FunctionEnd
@@ -173,8 +180,8 @@ FunctionEnd
 Function pageFinish_Leave
 
     # Assign the current checkbox states
-    ${NSD_GetState} $CheckBox_Minion $StartMinion
-    ${NSD_GetState} $CheckBox_Minion_Delayed $StartMinionDelayed
+    ${NSD_GetState} $CheckBox_Minion_Start $StartMinion
+    ${NSD_GetState} $CheckBox_Minion_Start_Delayed $StartMinionDelayed
 
 FunctionEnd
 
@@ -182,47 +189,83 @@ FunctionEnd
 ###############################################################################
 # Installation Settings
 ###############################################################################
-Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
+!if ${PYTHON_VERSION} == 3
+    Name "${PRODUCT_NAME} ${PRODUCT_VERSION} (Python ${PYTHON_VERSION})"
+!else
+    Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+!endif
+OutFile "Salt-Minion-${PRODUCT_VERSION}-Py${PYTHON_VERSION}-${CPUARCH}-Setup.exe"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
 
 
-; Check and install Visual C++ 2008 SP1 MFC Security Update redist packages
+; Check and install Visual C++ redist packages
 ; See http://blogs.msdn.com/b/astebner/archive/2009/01/29/9384143.aspx for more info
 Section -Prerequisites
 
-    ; VCRedist only needed on Server 2008/Vista and below
-    ${If} ${AtMostWin2008}
+    Var /GLOBAL VcRedistName
+    Var /GLOBAL VcRedistGuid
+    Var /GLOBAL NeedVcRedist
+    Var /Global CheckVcRedist
+    StrCpy $CheckVcRedist "False"
 
-        !define VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
-        !define VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
+    ; Visual C++ 2015 redist packages
+    !define PY3_VC_REDIST_NAME "VC_Redist_2015"
+    !define PY3_VC_REDIST_X64_GUID "{50A2BC33-C9CD-3BF1-A8FF-53C10A0B183C}"
+    !define PY3_VC_REDIST_X86_GUID "{BBF2AC74-720C-3CB3-8291-5E34039232FA}"
 
-        Var /GLOBAL VcRedistGuid
-        Var /GLOBAL NeedVcRedist
+    ; Visual C++ 2008 SP1 MFC Security Update redist packages
+    !define PY2_VC_REDIST_NAME "VC_Redist_2008_SP1_MFC"
+    !define PY2_VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
+    !define PY2_VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
+
+    ${If} ${PYTHON_VERSION} == 3
+        StrCpy $VcRedistName ${PY3_VC_REDIST_NAME}
         ${If} ${CPUARCH} == "AMD64"
-            StrCpy $VcRedistGuid ${VC_REDIST_X64_GUID}
+            StrCpy $VcRedistGuid ${PY3_VC_REDIST_X64_GUID}
         ${Else}
-            StrCpy $VcRedistGuid ${VC_REDIST_X86_GUID}
+            StrCpy $VcRedistGuid ${PY3_VC_REDIST_X86_GUID}
         ${EndIf}
+        StrCpy $CheckVcRedist "True"
+
+    ${Else}
+
+        StrCpy $VcRedistName ${PY2_VC_REDIST_NAME}
+        ${If} ${CPUARCH} == "AMD64"
+            StrCpy $VcRedistGuid ${PY2_VC_REDIST_X64_GUID}
+        ${Else}
+            StrCpy $VcRedistGuid ${PY2_VC_REDIST_X86_GUID}
+        ${EndIf}
+
+        ; VCRedist 2008 only needed on Windows Server 2008R2/Windows 7 and below
+        ${If} ${AtMostWin2008R2}
+            StrCpy $CheckVcRedist "True"
+        ${EndIf}
+
+    ${EndIf}
+
+    ${If} $CheckVcRedist == "True"
 
         Push $VcRedistGuid
         Call MsiQueryProductState
         ${If} $NeedVcRedist == "True"
             MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
-                "VC Redist 2008 SP1 MFC is currently not installed. Would you like to install?" \
+                "$VcRedistName is currently not installed. Would you like to install?" \
                 /SD IDYES IDNO endVcRedist
 
             ClearErrors
             ; The Correct version of VCRedist is copied over by "build_pkg.bat"
             SetOutPath "$INSTDIR\"
             File "..\prereqs\vcredist.exe"
-            ExecWait "$INSTDIR\vcredist.exe /qb!"
+            ; /passive used by 2015 installer
+            ; /qb! used by 2008 installer
+            ; It just ignores the unrecognized switches...
+            ExecWait "$INSTDIR\vcredist.exe /qb! /passive"
             IfErrors 0 endVcRedist
                 MessageBox MB_OK \
-                    "VC Redist 2008 SP1 MFC failed to install. Try installing the package manually." \
+                    "$VcRedistName failed to install. Try installing the package manually." \
                     /SD IDOK
 
             endVcRedist:
@@ -277,39 +320,26 @@ Function .onInit
         Abort
 
     uninst:
-        ; Make sure we're in the right directory
-        ${If} $INSTDIR == "c:\salt\bin\Scripts"
-          StrCpy $INSTDIR "C:\salt"
+
+        ; Get current Silent status
+        StrCpy $R0 0
+        ${If} ${Silent}
+            StrCpy $R0 1
         ${EndIf}
 
-        ; Stop and remove the salt-minion service
-        nsExec::Exec 'net stop salt-minion'
-        nsExec::Exec 'sc delete salt-minion'
+        ; Turn on Silent mode
+        SetSilent silent
 
-        ; Stop and remove the salt-master service
-        nsExec::Exec 'net stop salt-master'
-        nsExec::Exec 'sc delete salt-master'
+        ; Don't remove all directories
+        StrCpy $DeleteInstallDir 0
 
-        ; Remove salt binaries and batch files
-        Delete "$INSTDIR\uninst.exe"
-        Delete "$INSTDIR\nssm.exe"
-        Delete "$INSTDIR\salt*"
-        Delete "$INSTDIR\vcredist.exe"
-        RMDir /r "$INSTDIR\bin"
+        ; Uninstall silently
+        Call uninstallSalt
 
-        ; Remove registry entries
-        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
-        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY_OTHER}"
-        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_CALL_REGKEY}"
-        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_CP_REGKEY}"
-        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_KEY_REGKEY}"
-        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_MASTER_REGKEY}"
-        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_MINION_REGKEY}"
-        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_RUN_REGKEY}"
-
-        ; Remove C:\salt from the Path
-        Push "C:\salt"
-        Call RemoveFromPath
+        ; Set it back to Normal mode, if that's what it was before
+        ${If} $R0 == 0
+            SetSilent normal
+        ${EndIf}
 
     skipUninstall:
 
@@ -349,12 +379,12 @@ Section -Post
     WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\"
 
     ; Register the Salt-Minion Service
-    nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
-    nsExec::Exec "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
+    nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe -E -s $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
     nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
     nsExec::Exec "nssm.exe set salt-minion Start SERVICE_AUTO_START"
-
-    RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
+    nsExec::Exec "nssm.exe set salt-minion AppNoConsole 1"
+    nsExec::Exec "nssm.exe set salt-minion AppStopMethodConsole 24000"
+    nsExec::Exec "nssm.exe set salt-minion AppStopMethodWindow 2000"
 
     Call updateMinionConfig
 
@@ -382,47 +412,92 @@ FunctionEnd
 
 
 Function un.onInit
+
+    ; Load the parameters
+    ${GetParameters} $R0
+
+    # Uninstaller: Remove Installation Directory
+    ${GetOptions} $R0 "/delete-install-dir" $R1
+    IfErrors delete_install_dir_not_found
+        StrCpy $DeleteInstallDir 1
+    delete_install_dir_not_found:
+
     MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
         "Are you sure you want to completely remove $(^Name) and all of its components?" \
         /SD IDYES IDYES +2
     Abort
+
 FunctionEnd
 
 
 Section Uninstall
 
+    Call un.uninstallSalt
+
+    ; Remove C:\salt from the Path
+    Push "C:\salt"
+    Call un.RemoveFromPath
+
+SectionEnd
+
+
+!macro uninstallSalt un
+Function ${un}uninstallSalt
+
+    ; Make sure we're in the right directory
+    ${If} $INSTDIR == "c:\salt\bin\Scripts"
+      StrCpy $INSTDIR "C:\salt"
+    ${EndIf}
+
     ; Stop and Remove salt-minion service
     nsExec::Exec 'net stop salt-minion'
     nsExec::Exec 'sc delete salt-minion'
+
+    ; Stop and remove the salt-master service
+    nsExec::Exec 'net stop salt-master'
+    nsExec::Exec 'sc delete salt-master'
 
     ; Remove files
     Delete "$INSTDIR\uninst.exe"
     Delete "$INSTDIR\nssm.exe"
     Delete "$INSTDIR\salt*"
     Delete "$INSTDIR\vcredist.exe"
+    RMDir /r "$INSTDIR\bin"
 
-    ; Remove salt directory, you must check to make sure you're not removing
-    ; the Program Files directory
+    ; Remove Registry entries
+    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
+    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY_OTHER}"
+    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_CALL_REGKEY}"
+    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_CP_REGKEY}"
+    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_KEY_REGKEY}"
+    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_MASTER_REGKEY}"
+    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_MINION_REGKEY}"
+    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_RUN_REGKEY}"
+
+    ; Automatically close when finished
+    SetAutoClose true
+
+    ; Prompt to remove the Installation directory
+    ${IfNot} $DeleteInstallDir == 1
+        MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
+            "Would you like to completely remove $INSTDIR and all of its contents?" \
+            /SD IDNO IDNO finished
+    ${EndIf}
+
+    ; Make sure you're not removing Program Files
     ${If} $INSTDIR != 'Program Files'
     ${AndIf} $INSTDIR != 'Program Files (x86)'
         RMDir /r "$INSTDIR"
     ${EndIf}
 
-    ; Remove Uninstall Entries
-    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
+    finished:
 
-    ; Remove Commandline Entries
-    DeleteRegKey HKLM "${PRODUCT_CALL_REGKEY}"
-    DeleteRegKey HKLM "${PRODUCT_MINION_REGKEY}"
+FunctionEnd
+!macroend
 
-    ; Remove C:\salt from the Path
-    Push "C:\salt"
-    Call un.RemoveFromPath
 
-    ; Automatically close when finished
-    SetAutoClose true
-
-SectionEnd
+!insertmacro uninstallSalt ""
+!insertmacro uninstallSalt "un."
 
 
 Function un.onUninstSuccess
@@ -560,8 +635,10 @@ Function AddToPath
 
     ; Check for Error Code 234, Path too long for the variable
     IntCmp $4 234 0 +4 +4 ; $4 == ERROR_MORE_DATA
-        DetailPrint "AddToPath: original length $2 > ${NSIS_MAX_STRLEN}"
-        MessageBox MB_OK "PATH not updated, original length $2 > ${NSIS_MAX_STRLEN}"
+        DetailPrint "AddToPath Failed: original length $2 > ${NSIS_MAX_STRLEN}"
+        MessageBox MB_OK \
+            "You may add C:\salt to the %PATH% for convenience when issuing local salt commands from the command line." \
+            /SD IDOK
         Goto done
 
     ; If no error, continue
@@ -596,7 +673,9 @@ Function AddToPath
     ; Make sure the new length isn't over the NSIS_MAX_STRLEN
     IntCmp $2 ${NSIS_MAX_STRLEN} +4 +4 0
         DetailPrint "AddToPath: new length $2 > ${NSIS_MAX_STRLEN}"
-        MessageBox MB_OK "PATH not updated, new length $2 > ${NSIS_MAX_STRLEN}."
+        MessageBox MB_OK \
+            "You may add C:\salt to the %PATH% for convenience when issuing local salt commands from the command line." \
+            /SD IDOK
         Goto done
 
     ; Append dir to PATH
@@ -631,10 +710,9 @@ FunctionEnd
 ;
 ; Usage:
 ;   Push "C:\path\to\add"
-;   Call RemoveFromPath
+;   Call un.RemoveFromPath
 ;------------------------------------------------------------------------------
-!macro RemoveFromPath un
-Function ${un}RemoveFromPath
+Function un.RemoveFromPath
 
     Exch $0
     Push $1
@@ -658,7 +736,6 @@ Function ${un}RemoveFromPath
     ; Check for Error Code 234, Path too long for the variable
     IntCmp $4 234 0 +4 +4 ; $4 == ERROR_MORE_DATA
         DetailPrint "AddToPath: original length $2 > ${NSIS_MAX_STRLEN}"
-        MessageBox MB_OK "PATH not updated, original length $2 > ${NSIS_MAX_STRLEN}"
         Goto done
 
     ; If no error, continue
@@ -677,7 +754,7 @@ Function ${un}RemoveFromPath
     ; Check for our directory inside the path
     Push $1             ; String to Search
     Push "$0;"          ; Dir to Find
-    Call ${un}StrStr
+    Call un.StrStr
     Pop $2              ; The results of the search
     StrCmp $2 "" done   ; If results are empty, we're done, otherwise continue
 
@@ -710,9 +787,6 @@ Function ${un}RemoveFromPath
         Pop $0
 
 FunctionEnd
-!macroend
-!insertmacro RemoveFromPath ""
-!insertmacro RemoveFromPath "un."
 
 
 ###############################################################################
@@ -818,14 +892,14 @@ Function parseCommandLineSwitches
         ; If start-minion was passed something, then set it
         StrCpy $StartMinion $R2
     ${ElseIfNot} $R1 == ""
-        ; If start-service was passed something, then set it
+        ; If start-service was passed something, then set StartMinion to that
         StrCpy $StartMinion $R1
     ${Else}
         ; Otherwise default to 1
         StrCpy $StartMinion 1
     ${EndIf}
 
-    # Service: Startup Type Delayed
+    # Service: Minion Startup Type Delayed
     ${GetOptions} $R0 "/start-minion-delayed" $R1
     IfErrors start_minion_delayed_not_found
         StrCpy $StartMinionDelayed 1

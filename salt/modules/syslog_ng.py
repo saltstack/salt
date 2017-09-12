@@ -34,11 +34,12 @@ import os
 import os.path
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 
@@ -425,7 +426,7 @@ def _is_simple_type(value):
     Returns True, if the given parameter value is an instance of either
     int, str, float or bool.
     '''
-    return isinstance(value, str) or isinstance(value, int) or isinstance(value, float) or isinstance(value, bool)
+    return isinstance(value, six.string_types) or isinstance(value, int) or isinstance(value, float) or isinstance(value, bool)
 
 
 def _get_type_id_options(name, configuration):
@@ -814,7 +815,7 @@ def _run_command_in_extended_path(syslog_ng_sbin_dir, command, params):
     '''
     orig_path = _add_to_path_envvar(syslog_ng_sbin_dir)
 
-    if not salt.utils.which(command):
+    if not salt.utils.path.which(command):
         error_message = (
             'Unable to execute the command \'{0}\'. It is not in the PATH.'
             .format(command)
@@ -1174,7 +1175,7 @@ def _write_config(config, newlines=2):
         text = config[key]
 
     try:
-        with salt.utils.fopen(__SYSLOG_NG_CONFIG_FILE, 'a') as fha:
+        with salt.utils.files.fopen(__SYSLOG_NG_CONFIG_FILE, 'a') as fha:
             fha.write(text)
 
             for _ in range(0, newlines):

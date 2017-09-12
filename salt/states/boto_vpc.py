@@ -5,10 +5,13 @@ Manage VPCs
 
 .. versionadded:: 2015.8.0
 
+:depends:
+
+- boto >= 2.8.0
+- boto3 >= 1.2.6
+
 Create and destroy VPCs. Be aware that this interacts with Amazon's services,
 and so may incur charges.
-
-This module uses ``boto``, which can be installed via package, or pip.
 
 This module accepts explicit vpc credentials but can also utilize
 IAM roles assigned to the instance through Instance Profiles. Dynamic
@@ -144,8 +147,10 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.dictupdate as dictupdate
+
+__virtualname__ = 'boto_vpc'
 
 log = logging.getLogger(__name__)
 
@@ -154,7 +159,14 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto_vpc' if 'boto_vpc.exists' in __salt__ else False
+    boto_version = '2.8.0'
+    boto3_version = '1.2.6'
+    if 'boto_vpc.exists' in __salt__:
+        return __virtualname__
+    else:
+        return False, 'The following libraries are required to run the boto_vpc state module: ' \
+                      'boto >= {0} and boto3 >= {1}.'.format(boto_version,
+                                                             boto3_version)
 
 
 def present(name, cidr_block, instance_tenancy=None, dns_support=None,
@@ -948,6 +960,8 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
+        if ret['result'] is None and __opts__['test']:
+            return ret
     _ret = _routes_present(route_table_name=name, routes=routes, tags=tags,
                            region=region, key=key, keyid=keyid, profile=profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
@@ -1279,7 +1293,7 @@ def route_table_absent(name, region=None,
 
 
 def nat_gateway_present(name, subnet_name=None, subnet_id=None,
-                        region=None, key=None, keyid=None, profile=None):
+                        region=None, key=None, keyid=None, profile=None, allocation_id=None):
     '''
     Ensure a nat gateway exists within the specified subnet
 
@@ -1303,6 +1317,10 @@ def nat_gateway_present(name, subnet_name=None, subnet_id=None,
     subnet_id
         Id of the subnet within which the nat gateway should exist.
         Either subnet_name or subnet_id must be provided.
+
+    allocation_id
+        If specified, the elastic IP address referenced by the ID is
+        associated with the gateway. Otherwise, a new allocation_id is created and used.
 
     region
         Region to connect to.
@@ -1337,7 +1355,8 @@ def nat_gateway_present(name, subnet_name=None, subnet_id=None,
         r = __salt__['boto_vpc.create_nat_gateway'](subnet_name=subnet_name,
                                                     subnet_id=subnet_id,
                                                     region=region, key=key,
-                                                    keyid=keyid, profile=profile)
+                                                    keyid=keyid, profile=profile,
+                                                    allocation_id=allocation_id)
         if not r.get('created'):
             ret['result'] = False
             ret['comment'] = 'Failed to create nat gateway: {0}.'.format(r['error']['message'])
@@ -1494,7 +1513,7 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
         'comment': 'Boto VPC peering state'
     }
 
-    if not pending['exists']:
+    if not pending:
         ret['result'] = True
         ret['changes'].update({
             'old': 'No pending VPC peering connection found. '
@@ -1730,10 +1749,10 @@ def delete_vpc_peering_connection(name, conn_id=None, conn_name=None,
         Name of the state
 
     conn_id
-        ID of the peering connection to delete.  Exlusive with conn_name.
+        ID of the peering connection to delete.  Exclusive with conn_name.
 
     conn_name
-        The name of the peering connection to delete.  Exlusive with conn_id.
+        The name of the peering connection to delete.  Exclusive with conn_id.
 
     region
         Region to connect to.

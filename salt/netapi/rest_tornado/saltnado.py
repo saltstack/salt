@@ -206,7 +206,7 @@ import tornado.web
 import tornado.gen
 from tornado.concurrent import Future
 from zmq.eventloop import ioloop
-import salt.ext.six as six
+from salt.ext import six
 # pylint: enable=import-error
 
 # instantiate the zmq IOLoop (specialized poller)
@@ -500,7 +500,8 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         ignore the data passed in and just get the args from wherever they are
         '''
         data = {}
-        for key, val in six.iteritems(self.request.arguments):
+        for key in self.request.arguments:
+            val = self.get_arguments(key)
             if len(val) == 1:
                 data[key] = val[0]
             else:
@@ -522,8 +523,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
 
         try:
             # Use cgi.parse_header to correctly separate parameters from value
-            header = cgi.parse_header(self.request.headers['Content-Type'])
-            value, parameters = header
+            value, parameters = cgi.parse_header(self.request.headers['Content-Type'])
             return ct_in_map[value](tornado.escape.native_str(data))
         except KeyError:
             self.send_error(406)
@@ -537,9 +537,9 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         if not self.request.body:
             return
         data = self.deserialize(self.request.body)
-        self.raw_data = copy(data)
+        self.request_payload = copy(data)
 
-        if 'arg' in data and not isinstance(data['arg'], list):
+        if data and 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]
 
         if not isinstance(data, list):
@@ -695,15 +695,13 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             }}
         '''
         try:
-            request_payload = self.deserialize(self.request.body)
-
-            if not isinstance(request_payload, dict):
+            if not isinstance(self.request_payload, dict):
                 self.send_error(400)
                 return
 
-            creds = {'username': request_payload['username'],
-                     'password': request_payload['password'],
-                     'eauth': request_payload['eauth'],
+            creds = {'username': self.request_payload['username'],
+                     'password': self.request_payload['password'],
+                     'eauth': self.request_payload['eauth'],
                      }
         # if any of the args are missing, its a bad request
         except KeyError:
@@ -1633,9 +1631,15 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             opts=self.application.opts,
             listen=False)
 
+        arguments = {}
+        for argname in self.request.query_arguments:
+            value = self.get_arguments(argname)
+            if len(value) == 1:
+                value = value[0]
+            arguments[argname] = value
         ret = self.event.fire_event({
-            'post': self.raw_data,
-            'get': dict(self.request.query_arguments),
+            'post': self.request_payload,
+            'get': arguments,
             # In Tornado >= v4.0.3, the headers come
             # back as an HTTPHeaders instance, which
             # is a dictionary. We must cast this as

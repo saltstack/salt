@@ -332,7 +332,7 @@ from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 #import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 BASE_SCHEMA_URL = 'https://non-existing.saltstack.com/schemas'
 RENDER_COMMENT_YAML_MAX_LINE_LENGTH = 80
@@ -515,7 +515,7 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
                 'Please pass all arguments as named arguments. Un-named '
                 'arguments are not supported'
             )
-        for key in kwargs.copy().keys():
+        for key in kwargs.copy():
             # Store the kwarg keys as the instance attributes for the
             # serialization step
             if key == 'name':
@@ -622,16 +622,20 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         if properties:
             serialized['properties'] = properties
 
-        # Update the serialized object with any items to include after properties
+        # Update the serialized object with any items to include after properties.
+        # Do not overwrite properties already existing in the serialized dict.
         if cls.after_items_update:
             after_items_update = {}
             for entry in cls.after_items_update:
-                name, data = next(six.iteritems(entry))
-                if name in after_items_update:
-                    after_items_update[name].extend(data)
-                else:
-                    after_items_update[name] = data
-            serialized.update(after_items_update)
+                for name, data in six.iteritems(entry):
+                    if name in after_items_update:
+                        if isinstance(after_items_update[name], list):
+                            after_items_update[name].extend(data)
+                    else:
+                        after_items_update[name] = data
+            if after_items_update:
+                after_items_update.update(serialized)
+                serialized = after_items_update
 
         if required:
             # Only include required if not empty

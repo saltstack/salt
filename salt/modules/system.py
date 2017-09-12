@@ -1,18 +1,32 @@
 # -*- coding: utf-8 -*-
 '''
-Support for reboot, shutdown, etc
+Support for reboot, shutdown, etc on POSIX-like systems.
+
+.. note::
+
+    If you have configured a wrapper such as ``molly-guard`` to
+    intercept *interactive* shutdown commands, be aware that calling
+    ``system.halt``, ``system.poweroff``, ``system.reboot``, and
+    ``system.shutdown`` with ``salt-call`` will hang indefinitely
+    while the wrapper script waits for user input. Calling them with
+    ``salt`` will work as expected.
+
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 from datetime import datetime, timedelta, tzinfo
 import re
 import os.path
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
+# Import 3rd-party libs
+from salt.ext import six
 
 __virtualname__ = 'system'
 
@@ -22,13 +36,13 @@ def __virtual__():
     Only supported on POSIX-like systems
     Windows, Solaris, and Mac have their own modules
     '''
-    if salt.utils.is_windows():
-        return (False, 'This module is not available on windows')
+    if salt.utils.platform.is_windows():
+        return (False, 'This module is not available on Windows')
 
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return (False, 'This module is not available on Mac OS')
 
-    if salt.utils.is_sunos():
+    if salt.utils.platform.is_sunos():
         return (False, 'This module is not available on SunOS')
 
     return __virtualname__
@@ -166,8 +180,11 @@ def has_settable_hwclock():
 
     salt '*' system.has_settable_hwclock
     '''
-    if salt.utils.which_bin(['hwclock']) is not None:
-        res = __salt__['cmd.run_all'](['hwclock', '--test', '--systohc'], python_shell=False)
+    if salt.utils.path.which_bin(['hwclock']) is not None:
+        res = __salt__['cmd.run_all'](
+            ['hwclock', '--test', '--systohc'], python_shell=False,
+            output_loglevel='quiet', ignore_retcode=True
+        )
         return res['retcode'] == 0
     return False
 
@@ -414,7 +431,7 @@ def get_system_date(utc_offset=None):
 
 def set_system_date(newdate, utc_offset=None):
     '''
-    Set the Windows system date. Use <mm-dd-yy> format for the date.
+    Set the system date. Use <mm-dd-yy> format for the date.
 
     :param str newdate:
         The date to set. Can be any of the following formats
@@ -493,21 +510,28 @@ def get_computer_desc():
         salt '*' system.get_computer_desc
     '''
     desc = None
-    hostname_cmd = salt.utils.which('hostnamectl')
+    hostname_cmd = salt.utils.path.which('hostnamectl')
     if hostname_cmd:
-        desc = __salt__['cmd.run']('{0} status --pretty'.format(hostname_cmd))
+        desc = __salt__['cmd.run'](
+            [hostname_cmd, 'status', '--pretty'],
+            python_shell=False
+        )
     else:
         pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
         try:
-            with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+            with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                 for line in mach_info.readlines():
                     match = pattern.match(line)
                     if match:
                         # get rid of whitespace then strip off quotes
-                        desc = _strip_quotes(match.group(1).strip()).replace('\\"', '"')
+                        desc = _strip_quotes(match.group(1).strip())
                         # no break so we get the last occurance
         except IOError:
             return False
+    if six.PY3:
+        desc = desc.replace('\\"', '"')
+    else:
+        desc = desc.replace('\\"', '"').decode('string_escape')
     return desc
 
 
@@ -526,20 +550,27 @@ def set_computer_desc(desc):
 
         salt '*' system.set_computer_desc "Michael's laptop"
     '''
-    hostname_cmd = salt.utils.which('hostnamectl')
+    if six.PY3:
+        desc = desc.replace('"', '\\"')
+    else:
+        desc = desc.encode('string_escape').replace('"', '\\"')
+    hostname_cmd = salt.utils.path.which('hostnamectl')
     if hostname_cmd:
-        result = __salt__['cmd.retcode']('{0} set-hostname --pretty {1}'.format(hostname_cmd, desc))
+        result = __salt__['cmd.retcode'](
+            [hostname_cmd, 'set-hostname', '--pretty', desc],
+            python_shell=False
+        )
         return True if result == 0 else False
 
     if not os.path.isfile('/etc/machine-info'):
-        f = salt.utils.fopen('/etc/machine-info', 'a')
-        f.close()
+        with salt.utils.files.fopen('/etc/machine-info', 'w'):
+            pass
 
     is_pretty_hostname_found = False
     pattern = re.compile(r'^\s*PRETTY_HOSTNAME=(.*)$')
-    new_line = 'PRETTY_HOSTNAME="{0}"'.format(desc.replace('"', '\\"'))
+    new_line = 'PRETTY_HOSTNAME="{0}"'.format(desc)
     try:
-        with salt.utils.fopen('/etc/machine-info', 'r+') as mach_info:
+        with salt.utils.files.fopen('/etc/machine-info', 'r+') as mach_info:
             lines = mach_info.readlines()
             for i, line in enumerate(lines):
                 if pattern.match(line):

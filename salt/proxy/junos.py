@@ -39,7 +39,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import copy
 
 # Import 3rd-party libs
 try:
@@ -90,7 +89,7 @@ def init(opts):
                      'baud',
                      'attempts',
                      'auto_probe',
-                     'ssh_private_key',
+                     'ssh_private_key_file',
                      'ssh_config',
                      'normalize'
                      ]
@@ -117,6 +116,15 @@ def conn():
     return thisproxy['conn']
 
 
+def alive(opts):
+    '''
+    Return the connection status with the remote device.
+
+    .. versionadded:: Oxygen
+    '''
+    return thisproxy['conn'].connected
+
+
 def proxytype():
     '''
     Returns the name of this proxy
@@ -124,17 +132,18 @@ def proxytype():
     return 'junos'
 
 
-def grains():
-    thisproxy['grains'] = copy.deepcopy(thisproxy['conn'].facts)
-    if thisproxy['grains']:
-        thisproxy['grains']['version_info'] = dict(
-            thisproxy['grains']['version_info'])
-    else:
-        log.debug(
-            'Grains will not be populated by junos facts \
-            as the device returned an empty facts dictionary.')
-
-    return thisproxy['grains']
+def get_serialized_facts():
+    facts = dict(thisproxy['conn'].facts)
+    if 'version_info' in facts:
+        facts['version_info'] = \
+            dict(facts['version_info'])
+    # For backward compatibility. 'junos_info' is present
+    # only of in newer versions of facts.
+    if 'junos_info' in facts:
+        for re in facts['junos_info']:
+            facts['junos_info'][re]['object'] = \
+                dict(facts['junos_info'][re]['object'])
+    return facts
 
 
 def ping():

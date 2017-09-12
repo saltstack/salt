@@ -38,11 +38,15 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
+import salt.utils.pkg
+import salt.utils.platform
 import salt.utils.mac_utils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -54,10 +58,10 @@ def __virtual__():
     '''
     Confine this module to Mac OS with MacPorts.
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return False, 'mac_ports only available on MacOS'
 
-    if not salt.utils.which('port'):
+    if not salt.utils.path.which('port'):
         return False, 'mac_ports requires the "port" binary'
 
     return __virtualname__
@@ -167,7 +171,7 @@ def latest_version(*names, **kwargs):
     ret = {}
 
     for key, val in six.iteritems(available):
-        if key not in installed or salt.utils.compare_versions(ver1=installed[key], oper='<', ver2=val):
+        if key not in installed or salt.utils.versions.compare(ver1=installed[key], oper='<', ver2=val):
             ret[key] = val
         else:
             ret[key] = '{0} (installed)'.format(version(key))
@@ -388,6 +392,8 @@ def refresh_db():
 
         salt mac pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     cmd = ['port', 'selfupdate']
     return salt.utils.mac_utils.execute_return_success(cmd)
 

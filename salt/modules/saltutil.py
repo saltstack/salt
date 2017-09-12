@@ -15,6 +15,8 @@ import logging
 import os
 import signal
 import sys
+import time
+import shutil
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -48,9 +50,11 @@ import salt.utils
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
+import salt.utils.files
 import salt.utils.minion
 import salt.utils.process
 import salt.utils.url
+import salt.utils.versions
 import salt.wheel
 
 HAS_PSUTIL = True
@@ -76,7 +80,8 @@ def _get_top_file_envs():
         return __context__['saltutil._top_file_envs']
     except KeyError:
         try:
-            st_ = salt.state.HighState(__opts__)
+            st_ = salt.state.HighState(__opts__,
+                                       initial_pillar=__pillar__)
             top = st_.get_top()
             if top:
                 envs = list(st_.top_matches(top).keys()) or 'base'
@@ -90,7 +95,7 @@ def _get_top_file_envs():
         return envs
 
 
-def _sync(form, saltenv=None, extmod_whitelist=None):
+def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     '''
     Sync the given directory in the given environment
     '''
@@ -98,11 +103,12 @@ def _sync(form, saltenv=None, extmod_whitelist=None):
         saltenv = _get_top_file_envs()
     if isinstance(saltenv, six.string_types):
         saltenv = saltenv.split(',')
-    ret, touched = salt.utils.extmods.sync(__opts__, form, saltenv=saltenv, extmod_whitelist=extmod_whitelist)
+    ret, touched = salt.utils.extmods.sync(__opts__, form, saltenv=saltenv, extmod_whitelist=extmod_whitelist,
+                                           extmod_blacklist=extmod_blacklist)
     # Dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
-        with salt.utils.fopen(mod_file, 'a+') as ofile:
+        with salt.utils.files.fopen(mod_file, 'a+') as ofile:
             ofile.write('')
     if form == 'grains' and \
        __opts__.get('grains_cache') and \
@@ -180,15 +186,19 @@ def update(version=None):
     return ret
 
 
-def sync_beacons(saltenv=None, refresh=True, extmod_whitelist=None):
+def sync_beacons(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2015.5.1
 
     Sync beacons from ``salt://_beacons`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for beacons to sync. If no top files are
+        found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available beacons on the minion. This refresh
@@ -198,6 +208,9 @@ def sync_beacons(saltenv=None, refresh=True, extmod_whitelist=None):
     extmod_whitelist : None
         comma-seperated list of modules to sync
 
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
     CLI Example:
 
     .. code-block:: bash
@@ -206,21 +219,25 @@ def sync_beacons(saltenv=None, refresh=True, extmod_whitelist=None):
         salt '*' saltutil.sync_beacons saltenv=dev
         salt '*' saltutil.sync_beacons saltenv=base,dev
     '''
-    ret = _sync('beacons', saltenv, extmod_whitelist)
+    ret = _sync('beacons', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_beacons()
     return ret
 
 
-def sync_sdb(saltenv=None, extmod_whitelist=None):
+def sync_sdb(saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2015.5.8,2015.8.3
 
     Sync sdb modules from ``salt://_sdb`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for sdb modules to sync. If no top files
+        are found, then the ``base`` environment will be synced.
 
     refresh : False
         This argument has no affect and is included for consistency with the
@@ -228,6 +245,9 @@ def sync_sdb(saltenv=None, extmod_whitelist=None):
 
     extmod_whitelist : None
         comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
 
     CLI Example:
 
@@ -237,19 +257,23 @@ def sync_sdb(saltenv=None, extmod_whitelist=None):
         salt '*' saltutil.sync_sdb saltenv=dev
         salt '*' saltutil.sync_sdb saltenv=base,dev
     '''
-    ret = _sync('sdb', saltenv, extmod_whitelist)
+    ret = _sync('sdb', saltenv, extmod_whitelist, extmod_blacklist)
     return ret
 
 
-def sync_modules(saltenv=None, refresh=True, extmod_whitelist=None):
+def sync_modules(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 0.10.0
 
     Sync execution modules from ``salt://_modules`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for execution modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -276,6 +300,9 @@ def sync_modules(saltenv=None, refresh=True, extmod_whitelist=None):
     extmod_whitelist : None
         comma-seperated list of modules to sync
 
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
     CLI Example:
 
     .. code-block:: bash
@@ -284,21 +311,25 @@ def sync_modules(saltenv=None, refresh=True, extmod_whitelist=None):
         salt '*' saltutil.sync_modules saltenv=dev
         salt '*' saltutil.sync_modules saltenv=base,dev
     '''
-    ret = _sync('modules', saltenv, extmod_whitelist)
+    ret = _sync('modules', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
     return ret
 
 
-def sync_states(saltenv=None, refresh=True, extmod_whitelist=None):
+def sync_states(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 0.10.0
 
     Sync state modules from ``salt://_states`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for state modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available states on the minion. This refresh
@@ -308,6 +339,9 @@ def sync_states(saltenv=None, refresh=True, extmod_whitelist=None):
     extmod_whitelist : None
         comma-seperated list of modules to sync
 
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
     CLI Examples:
 
     .. code-block:: bash
@@ -316,21 +350,58 @@ def sync_states(saltenv=None, refresh=True, extmod_whitelist=None):
         salt '*' saltutil.sync_states saltenv=dev
         salt '*' saltutil.sync_states saltenv=base,dev
     '''
-    ret = _sync('states', saltenv, extmod_whitelist)
+    ret = _sync('states', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
     return ret
 
 
-def sync_grains(saltenv=None, refresh=True, extmod_whitelist=None):
+def refresh_grains(**kwargs):
+    '''
+    .. versionadded:: 2016.3.6,2016.11.4,2017.7.0
+
+    Refresh the minion's grains without syncing custom grains modules from
+    ``salt://_grains``.
+
+    .. note::
+        The available execution modules will be reloaded as part of this
+        proceess, as grains can affect which modules are available.
+
+    refresh_pillar : True
+        Set to ``False`` to keep pillar data from being refreshed.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.refresh_grains
+    '''
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    _refresh_pillar = kwargs.pop('refresh_pillar', True)
+    if kwargs:
+        salt.utils.args.invalid_kwargs(kwargs)
+    # Modules and pillar need to be refreshed in case grains changes affected
+    # them, and the module refresh process reloads the grains and assigns the
+    # newly-reloaded grains to each execution module's __grains__ dunder.
+    refresh_modules()
+    if _refresh_pillar:
+        refresh_pillar()
+    return True
+
+
+def sync_grains(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 0.10.0
 
     Sync grains modules from ``salt://_grains`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for grains modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules and recompile
@@ -341,6 +412,9 @@ def sync_grains(saltenv=None, refresh=True, extmod_whitelist=None):
     extmod_whitelist : None
         comma-seperated list of modules to sync
 
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
     CLI Examples:
 
     .. code-block:: bash
@@ -349,22 +423,26 @@ def sync_grains(saltenv=None, refresh=True, extmod_whitelist=None):
         salt '*' saltutil.sync_grains saltenv=dev
         salt '*' saltutil.sync_grains saltenv=base,dev
     '''
-    ret = _sync('grains', saltenv, extmod_whitelist)
+    ret = _sync('grains', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
         refresh_pillar()
     return ret
 
 
-def sync_renderers(saltenv=None, refresh=True, extmod_whitelist=None):
+def sync_renderers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 0.10.0
 
     Sync renderers from ``salt://_renderers`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for renderers to sync. If no top files
+        are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -375,6 +453,9 @@ def sync_renderers(saltenv=None, refresh=True, extmod_whitelist=None):
     extmod_whitelist : None
         comma-seperated list of modules to sync
 
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
     CLI Examples:
 
     .. code-block:: bash
@@ -383,21 +464,25 @@ def sync_renderers(saltenv=None, refresh=True, extmod_whitelist=None):
         salt '*' saltutil.sync_renderers saltenv=dev
         salt '*' saltutil.sync_renderers saltenv=base,dev
     '''
-    ret = _sync('renderers', saltenv, extmod_whitelist)
+    ret = _sync('renderers', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
     return ret
 
 
-def sync_returners(saltenv=None, refresh=True, extmod_whitelist=None):
+def sync_returners(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 0.10.0
 
     Sync beacons from ``salt://_returners`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for returners to sync. If no top files
+        are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -407,6 +492,9 @@ def sync_returners(saltenv=None, refresh=True, extmod_whitelist=None):
     extmod_whitelist : None
         comma-seperated list of modules to sync
 
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
     CLI Examples:
 
     .. code-block:: bash
@@ -414,21 +502,25 @@ def sync_returners(saltenv=None, refresh=True, extmod_whitelist=None):
         salt '*' saltutil.sync_returners
         salt '*' saltutil.sync_returners saltenv=dev
     '''
-    ret = _sync('returners', saltenv, extmod_whitelist)
+    ret = _sync('returners', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
     return ret
 
 
-def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None):
+def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2015.8.2
 
     Sync proxy modules from ``salt://_proxy`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for proxy modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -438,6 +530,9 @@ def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None):
     extmod_whitelist : None
         comma-seperated list of modules to sync
 
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
     CLI Examples:
 
     .. code-block:: bash
@@ -446,21 +541,25 @@ def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None):
         salt '*' saltutil.sync_proxymodules saltenv=dev
         salt '*' saltutil.sync_proxymodules saltenv=base,dev
     '''
-    ret = _sync('proxy', saltenv, extmod_whitelist)
+    ret = _sync('proxy', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
     return ret
 
 
-def sync_engines(saltenv=None, refresh=False, extmod_whitelist=None):
+def sync_engines(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2016.3.0
 
     Sync engine modules from ``salt://_engines`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for engines to sync. If no top files are
+        found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -470,6 +569,9 @@ def sync_engines(saltenv=None, refresh=False, extmod_whitelist=None):
     extmod_whitelist : None
         comma-seperated list of modules to sync
 
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
     CLI Examples:
 
     .. code-block:: bash
@@ -477,19 +579,23 @@ def sync_engines(saltenv=None, refresh=False, extmod_whitelist=None):
         salt '*' saltutil.sync_engines
         salt '*' saltutil.sync_engines saltenv=base,dev
     '''
-    ret = _sync('engines', saltenv, extmod_whitelist)
+    ret = _sync('engines', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
     return ret
 
 
-def sync_output(saltenv=None, refresh=True, extmod_whitelist=None):
+def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     Sync outputters from ``salt://_output`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for outputters to sync. If no top files
+        are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -499,6 +605,9 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None):
     extmod_whitelist : None
         comma-seperated list of modules to sync
 
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
     CLI Examples:
 
     .. code-block:: bash
@@ -507,7 +616,7 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None):
         salt '*' saltutil.sync_output saltenv=dev
         salt '*' saltutil.sync_output saltenv=base,dev
     '''
-    ret = _sync('output', saltenv, extmod_whitelist)
+    ret = _sync('output', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
     return ret
@@ -515,11 +624,11 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None):
 sync_outputters = salt.utils.alias_function(sync_output, 'sync_outputters')
 
 
-def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None):
+def sync_clouds(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: 2014.7.0
+    .. versionadded:: 2017.7.0
 
-    Sync utility modules from ``salt://_utils`` to the minion
+    Sync utility modules from ``salt://_cloud`` to the minion
 
     saltenv : base
         The fileserver environment from which to sync. To sync from more than
@@ -533,6 +642,48 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None):
     extmod_whitelist : None
         comma-seperated list of modules to sync
 
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_clouds
+        salt '*' saltutil.sync_clouds saltenv=dev
+        salt '*' saltutil.sync_clouds saltenv=base,dev
+    '''
+    ret = _sync('clouds', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
+def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: 2014.7.0
+
+    Sync utility modules from ``salt://_utils`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for utility modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new utility modules are
+        synced. Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
     CLI Examples:
 
     .. code-block:: bash
@@ -541,7 +692,7 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None):
         salt '*' saltutil.sync_utils saltenv=dev
         salt '*' saltutil.sync_utils saltenv=base,dev
     '''
-    ret = _sync('utils', saltenv, extmod_whitelist)
+    ret = _sync('utils', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
     return ret
@@ -549,7 +700,7 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None):
 
 def list_extmods():
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     List Salt modules which have been synced externally
 
@@ -571,15 +722,19 @@ def list_extmods():
     return ret
 
 
-def sync_log_handlers(saltenv=None, refresh=True, extmod_whitelist=None):
+def sync_log_handlers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2015.8.0
 
     Sync log handlers from ``salt://_log_handlers`` to the minion
 
-    saltenv : base
+    saltenv
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for log handlers to sync. If no top files
+        are found, then the ``base`` environment will be synced.
 
     refresh : True
         If ``True``, refresh the available execution modules on the minion.
@@ -589,6 +744,9 @@ def sync_log_handlers(saltenv=None, refresh=True, extmod_whitelist=None):
     extmod_whitelist : None
         comma-seperated list of modules to sync
 
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
     CLI Examples:
 
     .. code-block:: bash
@@ -597,13 +755,13 @@ def sync_log_handlers(saltenv=None, refresh=True, extmod_whitelist=None):
         salt '*' saltutil.sync_log_handlers saltenv=dev
         salt '*' saltutil.sync_log_handlers saltenv=base,dev
     '''
-    ret = _sync('log_handlers', saltenv, extmod_whitelist)
+    ret = _sync('log_handlers', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
     return ret
 
 
-def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None):
+def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionadded:: 2015.8.11,2016.3.2
 
@@ -618,6 +776,9 @@ def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None):
 
     extmod_whitelist : None
         comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
 
     .. note::
         This function will raise an error if executed on a traditional (i.e.
@@ -634,14 +795,14 @@ def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None):
         raise CommandExecutionError(
             'Pillar modules can only be synced to masterless minions'
         )
-    ret = _sync('pillar', saltenv, extmod_whitelist)
+    ret = _sync('pillar', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
         refresh_pillar()
     return ret
 
 
-def sync_all(saltenv=None, refresh=True, extmod_whitelist=None):
+def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionchanged:: 2015.8.11,2016.3.2
         On masterless minions, pillar modules are now synced, and refreshed
@@ -676,6 +837,9 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None):
     extmod_whitelist : None
         dictionary of modules to sync based on type
 
+    extmod_blacklist : None
+        dictionary of modules to blacklist based on type
+
     CLI Examples:
 
     .. code-block:: bash
@@ -687,20 +851,21 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None):
     '''
     log.debug('Syncing all')
     ret = {}
-    ret['beacons'] = sync_beacons(saltenv, False, extmod_whitelist)
-    ret['modules'] = sync_modules(saltenv, False, extmod_whitelist)
-    ret['states'] = sync_states(saltenv, False, extmod_whitelist)
-    ret['sdb'] = sync_sdb(saltenv, extmod_whitelist)
-    ret['grains'] = sync_grains(saltenv, False, extmod_whitelist)
-    ret['renderers'] = sync_renderers(saltenv, False, extmod_whitelist)
-    ret['returners'] = sync_returners(saltenv, False, extmod_whitelist)
-    ret['output'] = sync_output(saltenv, False, extmod_whitelist)
-    ret['utils'] = sync_utils(saltenv, False, extmod_whitelist)
-    ret['log_handlers'] = sync_log_handlers(saltenv, False, extmod_whitelist)
-    ret['proxymodules'] = sync_proxymodules(saltenv, False, extmod_whitelist)
-    ret['engines'] = sync_engines(saltenv, False, extmod_whitelist)
+    ret['clouds'] = sync_clouds(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['beacons'] = sync_beacons(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['modules'] = sync_modules(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['states'] = sync_states(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['sdb'] = sync_sdb(saltenv, extmod_whitelist, extmod_blacklist)
+    ret['grains'] = sync_grains(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['renderers'] = sync_renderers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['returners'] = sync_returners(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['output'] = sync_output(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['utils'] = sync_utils(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['log_handlers'] = sync_log_handlers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['proxymodules'] = sync_proxymodules(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['engines'] = sync_engines(saltenv, False, extmod_whitelist, extmod_blacklist)
     if __opts__['file_client'] == 'local':
-        ret['pillar'] = sync_pillar(saltenv, False, extmod_whitelist)
+        ret['pillar'] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
         refresh_pillar()
@@ -833,6 +998,36 @@ def clear_cache():
     return True
 
 
+def clear_job_cache(hours=24):
+    '''
+    Forcibly removes job cache folders and files on a minion.
+
+    .. versionadded:: Oxygen
+
+    WARNING: The safest way to clear a minion cache is by first stopping
+    the minion and then deleting the cache files before restarting it.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.clear_job_cache hours=12
+    '''
+    threshold = time.time() - hours * 3600
+    for root, dirs, files in salt.utils.safe_walk(os.path.join(__opts__['cachedir'], 'minion_jobs'),
+                                                  followlinks=False):
+        for name in dirs:
+            try:
+                directory = os.path.join(root, name)
+                mtime = os.path.getmtime(directory)
+                if mtime < threshold:
+                    shutil.rmtree(directory)
+            except OSError as exc:
+                log.error('Attempt to clear cache with saltutil.clear_job_cache FAILED with: %s', exc)
+                return False
+    return True
+
+
 def find_job(jid):
     '''
     Return the data for a specific job id that is currently running.
@@ -906,7 +1101,7 @@ def find_cached_job(jid):
         else:
             return 'Local jobs cache directory {0} not found'.format(job_dir)
     path = os.path.join(job_dir, 'return.p')
-    with salt.utils.fopen(path, 'rb') as fp_:
+    with salt.utils.files.fopen(path, 'rb') as fp_:
         buf = fp_.read()
         fp_.close()
         if buf:
@@ -1091,7 +1286,7 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
 
 def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
     if 'expr_form' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -1108,6 +1303,13 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
             'ret': ret, 'kwarg': kwarg, 'batch': kwargs['batch'],
         }
         del kwargs['batch']
+    elif 'subset' in kwargs:
+        _cmd = client.cmd_subset
+        cmd_kwargs = {
+            'tgt': tgt, 'fun': fun, 'arg': arg, 'tgt_type': tgt_type,
+            'ret': ret, 'kwarg': kwarg, 'sub': kwargs['subset'],
+        }
+        del kwargs['subset']
     else:
         _cmd = client.cmd_iter
         cmd_kwargs = {
@@ -1136,7 +1338,7 @@ def cmd(tgt,
         ssh=False,
         **kwargs):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -1186,7 +1388,7 @@ def cmd_iter(tgt,
              ssh=False,
              **kwargs):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -1214,7 +1416,7 @@ def cmd_iter(tgt,
         yield ret
 
 
-def runner(name, **kwargs):
+def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=None, **kwargs):
     '''
     Execute a runner function. This function must be run on the master,
     either by targeting a minion running on a master or by using
@@ -1236,11 +1438,17 @@ def runner(name, **kwargs):
     .. code-block:: bash
 
         salt master_minion saltutil.runner jobs.list_jobs
+        salt master_minion saltutil.runner test.arg arg="['baz']" kwarg="{'foo': 'bar'}"
     '''
-    jid = kwargs.pop('__orchestration_jid__', None)
-    saltenv = kwargs.pop('__env__', 'base')
-    full_return = kwargs.pop('full_return', False)
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    if arg is None:
+        arg = []
+    if kwarg is None:
+        kwarg = {}
+    jid = kwargs.pop('__orchestration_jid__', jid)
+    saltenv = kwargs.pop('__env__', saltenv)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    if kwargs:
+        kwarg.update(kwargs)
 
     if 'master_job_cache' not in __opts__:
         master_config = os.path.join(os.path.dirname(__opts__['conf_file']),
@@ -1253,18 +1461,19 @@ def runner(name, **kwargs):
     if name in rclient.functions:
         aspec = salt.utils.args.get_function_argspec(rclient.functions[name])
         if 'saltenv' in aspec.args:
-            kwargs['saltenv'] = saltenv
+            kwarg['saltenv'] = saltenv
 
     if jid:
         salt.utils.event.fire_args(
             __opts__,
             jid,
-            {'type': 'runner', 'name': name, 'args': kwargs},
+            {'type': 'runner', 'name': name, 'args': arg, 'kwargs': kwarg},
             prefix='run'
         )
 
     return rclient.cmd(name,
-                       kwarg=kwargs,
+                       arg=arg,
+                       kwarg=kwarg,
                        print_event=False,
                        full_return=full_return)
 

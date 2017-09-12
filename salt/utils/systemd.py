@@ -11,6 +11,7 @@ import subprocess
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
 import salt.utils
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def version(context=None):
     contextkey = 'salt.utils.systemd.version'
     if isinstance(context, dict):
         # Can't put this if block on the same line as the above if block,
-        # because it willl break the elif below.
+        # because it will break the elif below.
         if contextkey in context:
             return context[contextkey]
     elif context is not None:
@@ -63,7 +64,7 @@ def version(context=None):
         ['systemctl', '--version'],
         close_fds=True,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]
-    outstr = salt.utils.to_str(stdout)
+    outstr = salt.utils.stringutils.to_str(stdout)
     try:
         ret = int(outstr.splitlines()[0].split()[-1])
     except (IndexError, ValueError):

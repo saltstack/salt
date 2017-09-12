@@ -11,12 +11,13 @@ except ImportError:
 # Import python libs
 import json
 import logging
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 
 log = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ def __virtual__():
     Only work when npm is installed.
     '''
     try:
-        if salt.utils.which('npm') is not None:
+        if salt.utils.path.which('npm') is not None:
             _check_valid_version()
             return True
         else:
@@ -48,9 +49,9 @@ def _check_valid_version():
     npm must be at least version 1.2.
     '''
     # pylint: disable=no-member
-    npm_version = distutils.version.LooseVersion(
+    npm_version = _LooseVersion(
         salt.modules.cmdmod.run('npm --version', output_loglevel='quiet'))
-    valid_version = distutils.version.LooseVersion('1.2')
+    valid_version = _LooseVersion('1.2')
     # pylint: enable=no-member
     if npm_version < valid_version:
         raise CommandExecutionError(
@@ -188,7 +189,7 @@ def _extract_json(npm_output):
     # macOS with fsevents includes the following line in the return
     # when a new module is installed which is invalid JSON:
     #     [fsevents] Success: "..."
-    while lines and lines[0].startswith('[fsevents]'):
+    while lines and (lines[0].startswith('[fsevents]') or lines[0].startswith('Pass ')):
         lines = lines[1:]
     try:
         return json.loads(''.join(lines))
@@ -252,7 +253,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
     return True
 
 
-def list_(pkg=None, dir=None, runas=None, env=None):
+def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     '''
     List installed NPM packages.
 
@@ -278,6 +279,11 @@ def list_(pkg=None, dir=None, runas=None, env=None):
 
         .. versionadded:: 2014.7.0
 
+    depth
+        Limit the depth of the packages listed
+
+        .. versionadded:: 2016.11.6, 2017.7.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -297,6 +303,11 @@ def list_(pkg=None, dir=None, runas=None, env=None):
     if not dir:
         cmd.append('--global')
 
+    if depth is not None:
+        if not isinstance(depth, (int, float)):
+            raise salt.exceptions.SaltInvocationError('Error: depth {0} must be a number'.format(depth))
+        cmd.append('--depth={0}'.format(int(depth)))
+
     if pkg:
         # Protect against injection
         pkg = _cmd_quote(pkg)
@@ -314,7 +325,7 @@ def list_(pkg=None, dir=None, runas=None, env=None):
     return json.loads(result['stdout']).get('dependencies', {})
 
 
-def cache_clean(path=None, runas=None, env=None):
+def cache_clean(path=None, runas=None, env=None, force=False):
     '''
     Clean cached NPM packages.
 
@@ -331,11 +342,16 @@ def cache_clean(path=None, runas=None, env=None):
         format as the :py:func:`cmd.run <salt.modules.cmdmod.run>` execution
         function.
 
+    force
+        Force cleaning of cache.  Required for npm@5 and greater
+
+        .. versionadded:: 2016.11.6
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' npm.cache_clean
+        salt '*' npm.cache_clean force=True
 
     '''
     env = env or {}
@@ -348,6 +364,8 @@ def cache_clean(path=None, runas=None, env=None):
     cmd = ['npm', 'cache', 'clean']
     if path:
         cmd.append(path)
+    if force is True:
+        cmd.append('--force')
 
     cmd = ' '.join(cmd)
     result = __salt__['cmd.run_all'](

@@ -3,6 +3,7 @@
 The core behaviors used by minion and master
 '''
 # pylint: disable=W0232
+# pylint: disable=3rd-party-module-not-gated
 
 from __future__ import absolute_import
 
@@ -20,7 +21,7 @@ from raet import raeting
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
-from salt.utils import kinds
+import salt.utils.kinds as kinds
 
 # Import ioflo libs
 import ioflo.base.deeding
@@ -64,7 +65,7 @@ def worker_fork(self):
 
 class Worker(multiprocessing.Process):
     '''
-    Create an ioflo worker in a seperate process
+    Create an ioflo worker in a separate process
     '''
     def __init__(self, opts, windex, worker_verify, access_keys, mkey, aes):
         super(Worker, self).__init__()

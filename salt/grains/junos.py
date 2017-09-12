@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 __proxyenabled__ = ['junos']
 __virtualname__ = 'junos'
@@ -48,7 +48,7 @@ def defaults():
 def facts(proxy=None):
     if proxy is None or proxy['junos.initialized']() is False:
         return {}
-    return {'junos_facts': proxy['junos.grains']()}
+    return {'junos_facts': proxy['junos.get_serialized_facts']()}
 
 
 def os_family():

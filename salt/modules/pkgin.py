@@ -18,11 +18,13 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
+import salt.utils.pkg
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, MinionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 VERSION_MATCH = re.compile(r'pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)')
 log = logging.getLogger(__name__)
@@ -36,7 +38,7 @@ def _check_pkgin():
     '''
     Looks to see if pkgin is present on the system, return full path
     '''
-    ppath = salt.utils.which('pkgin')
+    ppath = salt.utils.path.which('pkgin')
     if ppath is None:
         # pkgin was not found in $PATH, try to find it via LOCALBASE
         try:
@@ -221,7 +223,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     pkgin = _check_pkgin()
 
     if pkgin:
@@ -619,7 +622,7 @@ def file_dict(*packages):
                 continue  # unexpected string
 
     ret = {'errors': errors, 'files': files}
-    for field in ret.keys():
+    for field in ret:
         if not ret[field] or ret[field] == '':
             del ret[field]
     return ret

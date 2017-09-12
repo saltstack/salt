@@ -29,9 +29,10 @@ from numbers import Number
 
 # Import salt libs
 import salt.output
-from salt.ext.six import string_types
-from salt.utils import get_colors
+import salt.utils.color
 import salt.utils.locales
+import salt.utils.odict
+from salt.ext.six import string_types
 
 
 class NestDisplay(object):
@@ -40,7 +41,7 @@ class NestDisplay(object):
     '''
     def __init__(self):
         self.__dict__.update(
-            get_colors(
+            salt.utils.color.get_colors(
                 __opts__.get('color'),
                 __opts__.get('color_theme')
             )
@@ -127,7 +128,14 @@ class NestDisplay(object):
                         '----------'
                     )
                 )
-            for key in sorted(ret):
+
+            # respect key ordering of ordered dicts
+            if isinstance(ret, salt.utils.odict.OrderedDict):
+                keys = ret.keys()
+            else:
+                keys = sorted(ret)
+
+            for key in keys:
                 val = ret[key]
                 out.append(
                     self.ustring(

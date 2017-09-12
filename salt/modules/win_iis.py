@@ -15,11 +15,13 @@ from __future__ import absolute_import, unicode_literals
 import json
 import logging
 import os
+import decimal
 
 # Import salt libs
+import salt.utils.platform
 from salt.ext.six.moves import range
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-import salt.utils
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ def __virtual__():
     Load only on Windows
     Requires PowerShell and the WebAdministration module
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Only available on Windows systems'
 
     powershell_info = __salt__['cmd.shell_info']('powershell', True)
@@ -108,6 +110,22 @@ def _list_certs(certificate_store='My'):
     return ret
 
 
+def _iisVersion():
+    pscmd = []
+    pscmd.append(r"Get-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\InetStp\\")
+    pscmd.append(' | Select-Object MajorVersion, MinorVersion')
+
+    cmd_ret = _srvmgr(pscmd, return_json=True)
+
+    try:
+        items = json.loads(cmd_ret['stdout'], strict=False)
+    except ValueError:
+        log.error('Unable to parse return data as Json.')
+        return -1
+
+    return decimal.Decimal("{0}.{1}".format(items[0]['MajorVersion'], items[0]['MinorVersion']))
+
+
 def _srvmgr(cmd, return_json=False):
     '''
     Execute a powershell command from the WebAdministration PS module.
@@ -171,6 +189,11 @@ def list_sites():
         bindings = dict()
 
         for binding in item['bindings']['Collection']:
+
+            # Ignore bindings which do not have host names
+            if binding['protocol'] not in ['http', 'https']:
+                continue
+
             filtered_binding = dict()
 
             for key in binding:
@@ -280,7 +303,7 @@ def modify_site(name, sourcepath=None, apppool=None):
     '''
     Modify a basic website in IIS.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The IIS site name.
@@ -389,7 +412,7 @@ def stop_site(name):
     '''
     Stop a Web Site in IIS.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the website to stop.
@@ -414,7 +437,7 @@ def start_site(name):
     '''
     Start a Web Site in IIS.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the website to start.
@@ -439,7 +462,7 @@ def restart_site(name):
     '''
     Restart a Web Site in IIS.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the website to restart.
@@ -488,7 +511,7 @@ def list_bindings(site):
 
 
 def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
-                   sslflags=0):
+                   sslflags=None):
     '''
     Create an IIS Web Binding.
 
@@ -518,7 +541,6 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
         salt '*' win_iis.create_binding site='site0' hostheader='example.com' ipaddress='*' port='80'
     '''
     protocol = str(protocol).lower()
-    sslflags = int(sslflags)
     name = _get_binding_info(hostheader, ipaddress, port)
 
     if protocol not in _VALID_PROTOCOLS:
@@ -526,10 +548,12 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
                    ' {1}').format(protocol, _VALID_PROTOCOLS)
         raise SaltInvocationError(message)
 
-    if sslflags not in _VALID_SSL_FLAGS:
-        message = ("Invalid sslflags '{0}' specified. Valid sslflags range:"
-                   ' {1}..{2}').format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
-        raise SaltInvocationError(message)
+    if sslflags:
+        sslflags = int(sslflags)
+        if sslflags not in _VALID_SSL_FLAGS:
+            message = ("Invalid sslflags '{0}' specified. Valid sslflags range:"
+                       ' {1}..{2}').format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
+            raise SaltInvocationError(message)
 
     current_bindings = list_bindings(site)
 
@@ -537,13 +561,21 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
         log.debug('Binding already present: {0}'.format(name))
         return True
 
-    ps_cmd = ['New-WebBinding',
-              '-Name', "'{0}'".format(site),
-              '-HostHeader', "'{0}'".format(hostheader),
-              '-IpAddress', "'{0}'".format(ipaddress),
-              '-Port', "'{0}'".format(str(port)),
-              '-Protocol', "'{0}'".format(protocol),
-              '-SslFlags', '{0}'.format(sslflags)]
+    if sslflags:
+        ps_cmd = ['New-WebBinding',
+                  '-Name', "'{0}'".format(site),
+                  '-HostHeader', "'{0}'".format(hostheader),
+                  '-IpAddress', "'{0}'".format(ipaddress),
+                  '-Port', "'{0}'".format(str(port)),
+                  '-Protocol', "'{0}'".format(protocol),
+                  '-SslFlags', '{0}'.format(sslflags)]
+    else:
+        ps_cmd = ['New-WebBinding',
+                  '-Name', "'{0}'".format(site),
+                  '-HostHeader', "'{0}'".format(hostheader),
+                  '-IpAddress', "'{0}'".format(ipaddress),
+                  '-Port', "'{0}'".format(str(port)),
+                  '-Protocol', "'{0}'".format(protocol)]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -566,7 +598,7 @@ def modify_binding(site, binding, hostheader=None, ipaddress=None, port=None,
     Modify an IIS Web Binding. Use ``site`` and ``binding`` to target the
     binding.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         site (str): The IIS site name.
@@ -760,6 +792,11 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
     '''
     name = str(name).upper()
     binding_info = _get_binding_info(hostheader, ipaddress, port)
+
+    if _iisVersion() < 8:
+        # IIS 7.5 and earlier don't support SNI for HTTPS, therefore cert bindings don't contain the host header
+        binding_info = binding_info.rpartition(':')[0] + ':'
+
     binding_path = r"IIS:\SslBindings\{0}".format(binding_info.replace(':', '!'))
 
     if sslflags not in _VALID_SSL_FLAGS:
@@ -796,10 +833,22 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
         log.error('Certificate not present: {0}'.format(name))
         return False
 
-    ps_cmd = ['New-Item',
-              '-Path', "'{0}'".format(binding_path),
-              '-Thumbprint', "'{0}'".format(name),
-              '-SSLFlags', '{0}'.format(sslflags)]
+    if _iisVersion() < 8:
+        # IIS 7.5 and earlier have different syntax for associating a certificate with a site
+        # Modify IP spec to IIS 7.5 format
+        iis7path = binding_path.replace(r"\*!", "\\0.0.0.0!")
+        # win 2008 uses the following format: ip!port and not ip!port!
+        if iis7path.endswith("!"):
+            iis7path = iis7path[:-1]
+
+        ps_cmd = ['New-Item',
+                  '-Path', "'{0}'".format(iis7path),
+                  '-Thumbprint', "'{0}'".format(name)]
+    else:
+        ps_cmd = ['New-Item',
+                  '-Path', "'{0}'".format(binding_path),
+                  '-Thumbprint', "'{0}'".format(name),
+                  '-SSLFlags', '{0}'.format(sslflags)]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -810,7 +859,7 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
 
     new_cert_bindings = list_cert_bindings(site)
 
-    if binding_info not in new_cert_bindings(site):
+    if binding_info not in new_cert_bindings:
         log.error('Binding not present: {0}'.format(binding_info))
         return False
 
@@ -819,6 +868,7 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
         return True
 
     log.error('Unable to create certificate binding: {0}'.format(name))
+
     return False
 
 
@@ -1038,7 +1088,7 @@ def stop_apppool(name):
     '''
     Stop an IIS application pool.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the App Pool to stop.
@@ -1063,7 +1113,7 @@ def start_apppool(name):
     '''
     Start an IIS application pool.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the App Pool to start.
@@ -1208,6 +1258,9 @@ def set_container_setting(name, container, settings):
         salt '*' win_iis.set_container_setting name='MyTestPool' container='AppPools'
             settings="{'managedPipeLineMode': 'Integrated'}"
     '''
+
+    identityType_map2string = {'0': 'LocalSystem', '1': 'LocalService', '2': 'NetworkService', '3': 'SpecificUser', '4': 'ApplicationPoolIdentity'}
+    identityType_map2numeric = {'LocalSystem': '0', 'LocalService': '1', 'NetworkService': '2', 'SpecificUser': '3', 'ApplicationPoolIdentity': '4'}
     ps_cmd = list()
     container_path = r"IIS:\{0}\{1}".format(container, name)
 
@@ -1234,6 +1287,10 @@ def set_container_setting(name, container, settings):
         except ValueError:
             value = "'{0}'".format(settings[setting])
 
+        # Map to numeric to support server 2008
+        if setting == 'processModel.identityType' and settings[setting] in identityType_map2numeric.keys():
+            value = identityType_map2numeric[settings[setting]]
+
         ps_cmd.extend(['Set-ItemProperty',
                        '-Path', "'{0}'".format(container_path),
                        '-Name', "'{0}'".format(setting),
@@ -1253,6 +1310,10 @@ def set_container_setting(name, container, settings):
     failed_settings = dict()
 
     for setting in settings:
+        # map identity type from numeric to string for comparing
+        if setting == 'processModel.identityType' and settings[setting] in identityType_map2string.keys():
+            settings[setting] = identityType_map2string[settings[setting]]
+
         if str(settings[setting]) != str(new_settings[setting]):
             failed_settings[setting] = settings[setting]
 
@@ -1586,7 +1647,7 @@ def list_backups():
     r'''
     List the IIS Configuration Backups on the System.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     .. note::
         Backups are made when a configuration is edited. Manual backups are
@@ -1631,7 +1692,7 @@ def create_backup(name):
     r'''
     Backup an IIS Configuration on the System.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     .. note::
         Backups are stored in the ``$env:Windir\System32\inetsrv\backup``
@@ -1669,7 +1730,7 @@ def remove_backup(name):
     '''
     Remove an IIS Configuration backup from the System.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the backup to remove
@@ -1705,7 +1766,7 @@ def list_worker_processes(apppool):
     Returns a list of worker processes that correspond to the passed
     application pool.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         apppool (str): The application pool to query
@@ -1737,3 +1798,175 @@ def list_worker_processes(apppool):
         log.warning('No backups found in output: {0}'.format(cmd_ret))
 
     return ret
+
+
+def get_webapp_settings(name, site, settings):
+    r'''
+    Get the value of the setting for the IIS web application.
+    .. note::
+        Params are case sensitive.
+    :param str name: The name of the IIS web application.
+    :param str site: The site name contains the web application.
+        Example: Default Web Site
+    :param str settings: A dictionary of the setting names and their values.
+        Available settings: physicalPath, applicationPool, userName, password
+    Returns:
+        dict: A dictionary of the provided settings and their values.
+    .. versionadded:: 2017.7.0
+    CLI Example:
+    .. code-block:: bash
+        salt '*' win_iis.get_webapp_settings name='app0' site='Default Web Site'
+            settings="['physicalPath','applicationPool']"
+    '''
+    ret = dict()
+    pscmd = list()
+    availableSettings = ('physicalPath', 'applicationPool', 'userName', 'password')
+
+    if not settings:
+        log.warning('No settings provided')
+        return ret
+
+    pscmd.append(r'$Settings = @{};')
+
+    # Verify setting is ine predefined settings and append relevant query command per setting key
+    for setting in settings:
+        if setting in availableSettings:
+            if setting == "userName" or setting == "password":
+                pscmd.append(" $Property = Get-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
+                pscmd.append(r' -Name "{0}" -ErrorAction Stop | select Value;'.format(setting))
+                pscmd.append(r' $Property = $Property | Select-Object -ExpandProperty Value;')
+                pscmd.append(r" $Settings['{0}'] = [String] $Property;".format(setting))
+                pscmd.append(r' $Property = $Null;')
+
+            if setting == "physicalPath" or setting == "applicationPool":
+                pscmd.append(r" $Property = (get-webapplication {0}).{1};".format(name, setting))
+                pscmd.append(r" $Settings['{0}'] = [String] $Property;".format(setting))
+                pscmd.append(r' $Property = $Null;')
+
+        else:
+            availSetStr = ', '.join(availableSettings)
+            message = 'Unexpected setting:' + setting + '. Available settings are: ' + availSetStr
+            raise SaltInvocationError(message)
+
+    pscmd.append(' $Settings')
+    # Run commands and return data as json
+    cmd_ret = _srvmgr(cmd=str().join(pscmd), return_json=True)
+
+    # Update dict var to return data
+    try:
+        items = json.loads(cmd_ret['stdout'], strict=False)
+
+        if isinstance(items, list):
+            ret.update(items[0])
+        else:
+            ret.update(items)
+    except ValueError:
+        log.error('Unable to parse return data as Json.')
+
+    if None in six.viewvalues(ret):
+        message = 'Some values are empty - please validate site and web application names. Some commands are case sensitive'
+        raise SaltInvocationError(message)
+
+    return ret
+
+
+def set_webapp_settings(name, site, settings):
+    r'''
+    Configure an IIS application.
+    .. note::
+        This function only configures existing app.
+        Params are case sensitive.
+    :param str name: The IIS application.
+    :param str site: The IIS site name.
+    :param str settings: A dictionary of the setting names and their values.
+    :available settings:    physicalPath: The physical path of the webapp.
+    :                       applicationPool: The application pool for the webapp.
+    :                       userName: "connectAs" user
+    :                       password: "connectAs" password for user
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+    .. versionadded:: 2017.7.0
+    CLI Example:
+    .. code-block:: bash
+        salt '*' win_iis.set_webapp_settings name='app0' site='site0' settings="{'physicalPath': 'C:\site0', 'apppool': 'site0'}"
+    '''
+    pscmd = list()
+    current_apps = list_apps(site)
+    current_sites = list_sites()
+    availableSettings = ('physicalPath', 'applicationPool', 'userName', 'password')
+
+    # Validate params
+    if name not in current_apps:
+        msg = "Application" + name + "doesn't exist"
+        raise SaltInvocationError(msg)
+
+    if site not in current_sites:
+        msg = "Site" + site + "doesn't exist"
+        raise SaltInvocationError(msg)
+
+    if not settings:
+        msg = "No settings provided"
+        raise SaltInvocationError(msg)
+
+    # Treat all values as strings for the purpose of comparing them to existing values & validate settings exists in predefined settings list
+    for setting in settings.keys():
+        if setting in availableSettings:
+            settings[setting] = str(settings[setting])
+        else:
+            availSetStr = ', '.join(availableSettings)
+            log.error("Unexpected setting: %s ", setting)
+            log.error("Available settings: %s", availSetStr)
+            msg = "Unexpected setting:" + setting + " Available settings:" + availSetStr
+            raise SaltInvocationError(msg)
+
+    # Check if settings already configured
+    current_settings = get_webapp_settings(
+        name=name, site=site, settings=settings.keys())
+
+    if settings == current_settings:
+        log.warning('Settings already contain the provided values.')
+        return True
+
+    for setting in settings:
+        # If the value is numeric, don't treat it as a string in PowerShell.
+        try:
+            complex(settings[setting])
+            value = settings[setting]
+        except ValueError:
+            value = "'{0}'".format(settings[setting])
+
+        # Append relevant update command per setting key
+        if setting == "userName" or setting == "password":
+            pscmd.append(" Set-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{0}']/application[@path='/{1}']/virtualDirectory[@path='/']\"".format(site, name))
+            pscmd.append(" -Name \"{0}\" -Value {1};".format(setting, value))
+
+        if setting == "physicalPath" or setting == "applicationPool":
+            pscmd.append(r' Set-ItemProperty "IIS:\Sites\{0}\{1}" -Name {2} -Value {3};'.format(site, name, setting, value))
+            if setting == "physicalPath":
+                if not os.path.isdir(settings[setting]):
+                    msg = 'Path is not present: ' + settings[setting]
+                    raise SaltInvocationError(msg)
+
+    # Run commands
+    cmd_ret = _srvmgr(pscmd)
+
+    # Verify commands completed successfully
+    if cmd_ret['retcode'] != 0:
+        msg = 'Unable to set settings for web application {0}'.format(name)
+        raise SaltInvocationError(msg)
+
+    # verify changes
+    new_settings = get_webapp_settings(
+        name=name, site=site, settings=settings.keys())
+    failed_settings = dict()
+
+    for setting in settings:
+        if str(settings[setting]) != str(new_settings[setting]):
+            failed_settings[setting] = settings[setting]
+
+    if failed_settings:
+        log.error('Failed to change settings: {0}'.format(failed_settings))
+        return False
+
+    log.debug('Settings configured successfully: {0}'.format(settings.keys()))
+    return True

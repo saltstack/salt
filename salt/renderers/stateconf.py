@@ -35,11 +35,11 @@ import copy
 from os import path as ospath
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 __all__ = ['render']
@@ -206,7 +206,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             raise INVALID_USAGE_ERROR
 
         if isinstance(input, six.string_types):
-            with salt.utils.fopen(input, 'r') as ifile:
+            with salt.utils.files.fopen(input, 'r') as ifile:
                 sls_templ = ifile.read()
         else:  # assume file-like
             sls_templ = input.read()
@@ -382,7 +382,7 @@ def rename_state_ids(data, sls, is_extend=False):
             if sid.startswith('.'):
                 req[sname] = _local_to_abs_sid(sid, sls)
 
-    for sid in data:
+    for sid in list(data):
         if sid.startswith('.'):
             newsid = _local_to_abs_sid(sid, sls)
             if newsid in data:

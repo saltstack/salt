@@ -16,6 +16,7 @@ import requests
 
 import salt.crypt
 import salt.exceptions
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 logging.getLogger("requests").setLevel(logging.WARNING)
@@ -136,11 +137,12 @@ def make_request_with_profile(method, resource, profile, **args):
     DEPRECATED! Make a request to Vault, with a profile including connection
     details.
     '''
-    salt.utils.warn_until(
-        'Oxygen',
+    salt.utils.versions.warn_until(
+        'Fluorine',
         'Specifying Vault connection data within a \'profile\' has been '
         'deprecated. Please see the documentation for details on the new '
-        'configuration schema.'
+        'configuration schema. Support for this function will be removed '
+        'in Salt Fluorine.'
     )
     url = '{0}://{1}:{2}/v1/{3}'.format(
         profile.get('vault.scheme', 'https'),

@@ -36,7 +36,9 @@ import logging
 # Import salt libs
 from salt.key import get_key
 import salt.crypt
-import salt.utils
+import salt.utils  # Can be removed once pem_finger is moved
+import salt.utils.files
+import salt.utils.platform
 from salt.utils.sanitizers import clean
 
 
@@ -353,10 +355,16 @@ def gen(id_=None, keysize=2048):
            'pub': ''}
     priv = salt.crypt.gen_keys(__opts__['pki_dir'], id_, keysize)
     pub = '{0}.pub'.format(priv[:priv.rindex('.')])
-    with salt.utils.fopen(priv) as fp_:
+    with salt.utils.files.fopen(priv) as fp_:
         ret['priv'] = fp_.read()
-    with salt.utils.fopen(pub) as fp_:
+    with salt.utils.files.fopen(pub) as fp_:
         ret['pub'] = fp_.read()
+
+    # The priv key is given the Read-Only attribute. The causes `os.remove` to
+    # fail in Windows.
+    if salt.utils.platform.is_windows():
+        os.chmod(priv, 128)
+
     os.remove(priv)
     os.remove(pub)
     return ret
@@ -407,7 +415,7 @@ def gen_accept(id_, keysize=2048, force=False):
     acc_path = os.path.join(__opts__['pki_dir'], 'minions', id_)
     if os.path.isfile(acc_path) and not force:
         return {}
-    with salt.utils.fopen(acc_path, 'w+') as fp_:
+    with salt.utils.files.fopen(acc_path, 'w+') as fp_:
         fp_.write(ret['pub'])
     return ret
 

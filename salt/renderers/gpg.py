@@ -216,13 +216,13 @@ import logging
 from subprocess import Popen, PIPE
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 import salt.utils.stringio
 import salt.syspaths
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -233,7 +233,7 @@ def _get_gpg_exec():
     '''
     return the GPG executable or raise an error
     '''
-    gpg_exec = salt.utils.which('gpg')
+    gpg_exec = salt.utils.path.which('gpg')
     if gpg_exec:
         return gpg_exec
     else:
@@ -244,11 +244,22 @@ def _get_key_dir():
     '''
     return the location of the GPG key directory
     '''
+    gpg_keydir = None
     if 'config.get' in __salt__:
         gpg_keydir = __salt__['config.get']('gpg_keydir')
-    else:
-        gpg_keydir = __opts__.get('gpg_keydir')
-    return gpg_keydir or os.path.join(__opts__['config_dir'], 'gpgkeys')
+
+    if not gpg_keydir:
+        gpg_keydir = __opts__.get(
+            'gpg_keydir',
+            os.path.join(
+                __opts__.get(
+                    'config_dir',
+                    os.path.dirname(__opts__['conf_file']),
+                ),
+                'gpgkeys'
+            ))
+
+    return gpg_keydir
 
 
 def _decrypt_ciphertext(cipher, translate_newlines=False):
@@ -266,6 +277,8 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
     proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
     decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
+        if six.PY3:
+            cipher = cipher.decode(__salt_system_encoding__)
         log.warning(
             'Could not decrypt cipher %s, received: %s',
             cipher,
@@ -273,7 +286,7 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
         )
         return cipher
     else:
-        if six.PY3:
+        if six.PY3 and isinstance(decrypted_data, bytes):
             decrypted_data = decrypted_data.decode(__salt_system_encoding__)
         return str(decrypted_data)
 

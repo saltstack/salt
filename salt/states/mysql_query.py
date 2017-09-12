@@ -26,10 +26,10 @@ import sys
 import os.path
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():
@@ -84,12 +84,18 @@ def run_file(name,
     overwrite:
         The file or grain will be overwritten if it already exists (default)
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Database {0} is already present'.format(name)}
+           'comment': 'Database {0} is already present'.format(database)}
+
+    if not os.path.exists(query_file):
+        ret['comment'] = 'File {0} does not exist'.format(query_file)
+        ret['result'] = False
+        return ret
+
     # check if database exists
     if not __salt__['mysql.db_exists'](database, **connection_args):
         err = _get_mysql_error()
@@ -183,7 +189,7 @@ def run_file(name,
                                     + grain + ":" + key
     elif output is not None:
         ret['changes']['query'] = "Executed. Output into " + output
-        with salt.utils.fopen(output, 'w') as output_file:
+        with salt.utils.files.fopen(output, 'w') as output_file:
             if 'results' in query_result:
                 for res in query_result['results']:
                     for col, val in six.iteritems(res):
@@ -234,7 +240,7 @@ def run(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Database {0} is already present'.format(name)}
+           'comment': 'Database {0} is already present'.format(database)}
     # check if database exists
     if not __salt__['mysql.db_exists'](database, **connection_args):
         err = _get_mysql_error()
@@ -323,7 +329,7 @@ def run(name,
                                     + grain + ":" + key
     elif output is not None:
         ret['changes']['query'] = "Executed. Output into " + output
-        with salt.utils.fopen(output, 'w') as output_file:
+        with salt.utils.files.fopen(output, 'w') as output_file:
             if 'results' in query_result:
                 for res in query_result['results']:
                     for col, val in six.iteritems(res):

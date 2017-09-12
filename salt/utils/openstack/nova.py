@@ -5,13 +5,12 @@ Nova class
 
 # Import Python libs
 from __future__ import absolute_import, with_statement
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
 import inspect
 import logging
 import time
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 HAS_NOVA = False
 # pylint: disable=import-error
 try:
@@ -37,14 +36,17 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-import salt.utils
+import salt.utils.cloud
+import salt.utils.files
 from salt.exceptions import SaltCloudSystemExit
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Get logging started
 log = logging.getLogger(__name__)
 
 # Version added to novaclient.client.Client function
 NOVACLIENT_MINVER = '2.6.1'
+NOVACLIENT_MAXVER = '6.0.1'
 
 # dict for block_device_mapping_v2
 CLIENT_BDM2_KEYS = {
@@ -63,10 +65,14 @@ CLIENT_BDM2_KEYS = {
 
 def check_nova():
     if HAS_NOVA:
-        novaclient_ver = LooseVersion(novaclient.__version__)
-        min_ver = LooseVersion(NOVACLIENT_MINVER)
-        if novaclient_ver >= min_ver:
+        novaclient_ver = _LooseVersion(novaclient.__version__)
+        min_ver = _LooseVersion(NOVACLIENT_MINVER)
+        max_ver = _LooseVersion(NOVACLIENT_MAXVER)
+        if novaclient_ver >= min_ver and novaclient_ver <= max_ver:
             return HAS_NOVA
+        elif novaclient_ver > max_ver:
+            log.debug('Older novaclient version required. Maximum: {0}'.format(NOVACLIENT_MAXVER))
+            return False
         log.debug('Newer novaclient version required.  Minimum: {0}'.format(NOVACLIENT_MINVER))
     return False
 
@@ -241,7 +247,7 @@ class SaltNova(object):
                            os_auth_plugin=os_auth_plugin,
                            **kwargs)
 
-    def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, **kwargs):
+    def _new_init(self, username, project_id, auth_url, region_name, password, os_auth_plugin, auth=None, verify=True, **kwargs):
         if auth is None:
             auth = {}
 
@@ -281,11 +287,12 @@ class SaltNova(object):
 
         self.client_kwargs = sanatize_novaclient(self.client_kwargs)
         options = loader.load_from_options(**self.kwargs)
-        self.session = keystoneauth1.session.Session(auth=options)
+        self.session = keystoneauth1.session.Session(auth=options, verify=verify)
         conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
         self.kwargs['auth_token'] = conn.client.session.get_token()
-        self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': 'identity'}).json().get('catalog', [])
-        if conn.client.get_endpoint(service_type='identity').endswith('v3'):
+        identity_service_type = kwargs.get('identity_service_type', 'identity')
+        self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': identity_service_type}).json().get('catalog', [])
+        if conn.client.get_endpoint(service_type=identity_service_type).endswith('v3'):
             self._v3_setup(region_name)
         else:
             self._v2_setup(region_name)
@@ -758,7 +765,7 @@ class SaltNova(object):
         '''
         nt_ks = self.compute_conn
         if pubfile:
-            with salt.utils.fopen(pubfile, 'r') as fp_:
+            with salt.utils.files.fopen(pubfile, 'r') as fp_:
                 pubkey = fp_.read()
         if not pubkey:
             return False
@@ -1145,7 +1152,14 @@ class SaltNova(object):
         floating_ips = nt_ks.floating_ips.list()
         for floating_ip in floating_ips:
             if floating_ip.ip == ip:
-                return floating_ip
+                response = {
+                    'ip': floating_ip.ip,
+                    'fixed_ip': floating_ip.fixed_ip,
+                    'id': floating_ip.id,
+                    'instance_id': floating_ip.instance_id,
+                    'pool': floating_ip.pool
+                }
+                return response
         return {}
 
     def floating_ip_create(self, pool=None):

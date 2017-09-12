@@ -10,8 +10,8 @@ import os
 import re
 
 # Import salt libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.files
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 import salt.utils.systemd
@@ -35,21 +35,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _check_systemd_salt_config():
-    conf = '/etc/sysctl.d/99-salt.conf'
-    if not os.path.exists(conf):
-        sysctl_dir = os.path.split(conf)[0]
-        if not os.path.exists(sysctl_dir):
-            os.makedirs(sysctl_dir)
-        try:
-            with salt.utils.fopen(conf, 'w'):
-                pass
-        except (IOError, OSError):
-            msg = 'Could not create file: {0}'
-            raise CommandExecutionError(msg.format(conf))
-    return conf
-
-
 def default_config():
     '''
     Linux hosts using systemd 207 or later ignore ``/etc/sysctl.conf`` and only
@@ -65,7 +50,7 @@ def default_config():
     '''
     if salt.utils.systemd.booted(__context__) \
             and salt.utils.systemd.version(__context__) >= 207:
-        return _check_systemd_salt_config()
+        return '/etc/sysctl.d/99-salt.conf'
     return '/etc/sysctl.conf'
 
 
@@ -85,7 +70,7 @@ def show(config_file=False):
     ret = {}
     if config_file:
         try:
-            with salt.utils.fopen(config_file) as fp_:
+            with salt.utils.files.fopen(config_file) as fp_:
                 for line in fp_:
                     if not line.startswith('#') and '=' in line:
                         # search if we have some '=' instead of ' = ' separators
@@ -177,12 +162,14 @@ def persist(name, value, config=None):
     '''
     if config is None:
         config = default_config()
-    running = show()
     edited = False
     # If the sysctl.conf is not present, add it
     if not os.path.isfile(config):
+        sysctl_dir = os.path.dirname(config)
+        if not os.path.exists(sysctl_dir):
+            os.makedirs(sysctl_dir)
         try:
-            with salt.utils.fopen(config, 'w+') as _fh:
+            with salt.utils.files.fopen(config, 'w+') as _fh:
                 _fh.write('#\n# Kernel sysctl configuration\n#\n')
         except (IOError, OSError):
             msg = 'Could not write to file: {0}'
@@ -191,7 +178,7 @@ def persist(name, value, config=None):
     # Read the existing sysctl.conf
     nlines = []
     try:
-        with salt.utils.fopen(config, 'r') as _fh:
+        with salt.utils.files.fopen(config, 'r') as _fh:
             # Use readlines because this should be a small file
             # and it seems unnecessary to indent the below for
             # loop since it is a fairly large block of code.
@@ -229,15 +216,11 @@ def persist(name, value, config=None):
             # This is the line to edit
             if str(comps[1]) == str(value):
                 # It is correct in the config, check if it is correct in /proc
-                if name in running:
-                    if str(running[name]) != str(value):
-                        assign(name, value)
-                        return 'Updated'
-                    else:
-                        return 'Already set'
-                # It is missing from the running config. We can not set it.
+                if str(get(name)) != str(value):
+                    assign(name, value)
+                    return 'Updated'
                 else:
-                    raise CommandExecutionError('sysctl {0} does not exist'.format(name))
+                    return 'Already set'
 
             nlines.append('{0} = {1}\n'.format(name, value))
             edited = True
@@ -247,7 +230,7 @@ def persist(name, value, config=None):
     if not edited:
         nlines.append('{0} = {1}\n'.format(name, value))
     try:
-        with salt.utils.fopen(config, 'w+') as _fh:
+        with salt.utils.files.fopen(config, 'w+') as _fh:
             _fh.writelines(nlines)
     except (IOError, OSError):
         msg = 'Could not write to file: {0}'

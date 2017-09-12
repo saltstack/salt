@@ -23,37 +23,97 @@ Please check Installation_ for complete details.
 Pillar
 ------
 
-The napalm proxy configuration requires four mandatory parameters in order to connect to the network device:
+The napalm proxy configuration requires the following parameters in order to connect to the network device:
 
-* driver: specifies the network device operating system. For a complete list of the supported operating systems \
-please refer to the `NAPALM Read the Docs page`_.
-* host: hostname
-* username: username to be used when connecting to the device
-* passwd: the password needed to establish the connection
-* optional_args: dictionary with the optional arguments. Check the complete list of supported `optional arguments`_
+driver
+    Specifies the network device operating system.
+    For a complete list of the supported operating systems please refer to the
+    `NAPALM Read the Docs page`_.
+
+host
+    The IP Address or FQDN to use when connecting to the device. Alternatively,
+    the following field names can be used instead: ``hostname``, ``fqdn``, ``ip``.
+
+username
+    The username to be used when connecting to the device.
+
+passwd
+    The password needed to establish the connection.
+
+    .. note::
+
+        This field may not be mandatory when working with SSH-based drivers, and
+        the username has a SSH key properly configured on the device targeted to
+        be managed.
+
+optional_args
+    Dictionary with the optional arguments.
+    Check the complete list of supported `optional arguments`_.
+
+always_alive: ``True``
+    In certain less dynamic environments, maintaining the remote connection permanently
+    open with the network device is not always beneficial. In that case, the user can
+    select to initialize the connection only when needed, by specifying this field to ``false``.
+    Default: ``true`` (maintains the connection with the remote network device).
+
+    .. versionadded:: 2017.7.0
+
+provider: ``napalm_base``
+    The module that provides the ``get_network_device`` function.
+    This option is useful when the user has more specific needs and requires
+    to extend the NAPALM capabilities using a private library implementation.
+    The only constraint is that the alternative library needs to have the
+    ``get_network_device`` function available.
+
+    .. versionadded:: 2017.7.1
+
+multiprocessing: ``False``
+    Overrides the :conf_minion:`multiprocessing` option, per proxy minion.
+    The ``multiprocessing`` option must be turned off for SSH-based proxies.
+    However, some NAPALM drivers (e.g. Arista, NX-OS) are not SSH-based.
+    As multiple proxy minions may share the same configuration file,
+    this option permits the configuration of the ``multiprocessing`` option
+    more specifically, for some proxy minions.
+
+    .. versionadded:: 2017.7.2
+
 
 .. _`NAPALM Read the Docs page`: https://napalm.readthedocs.io/en/latest/#supported-network-operating-systems
 .. _`optional arguments`: http://napalm.readthedocs.io/en/latest/support/index.html#list-of-supported-optional-arguments
 
-
-Example:
+Proxy pillar file example:
 
 .. code-block:: yaml
 
     proxy:
-        proxytype: napalm
-        driver: junos
-        host: core05.nrt02
-        username: my_username
-        passwd: my_password
-        optional_args:
-            port: 12201
-            config_format: set
+      proxytype: napalm
+      driver: junos
+      host: core05.nrt02
+      username: my_username
+      passwd: my_password
+      optional_args:
+        port: 12201
+
+Example using a user-specific library, extending NAPALM's capabilities, e.g. ``custom_napalm_base``:
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: napalm
+      driver: ios
+      fqdn: cr1.th2.par.as1234.net
+      username: salt
+      password: ''
+      provider: custom_napalm_base
 
 .. seealso::
 
     - :mod:`NAPALM grains: select network devices based on their characteristics <salt.grains.napalm>`
     - :mod:`NET module: network basic features <salt.modules.napalm_network>`
+    - :mod:`Network config state: Manage the configuration using arbitrary templates <salt.states.netconfig>`
+    - :mod:`NAPALM YANG state: Manage the configuration according to the YANG models (OpenConfig/IETF) <salt.states.netyang>`
+    - :mod:`Network ACL module: Generate and load ACL (firewall) configuration <salt.modules.napalm_acl>`
+    - :mod:`Network ACL state: Manage the firewall configuration <salt.states.netacl>`
     - :mod:`NTP operational and configuration management module <salt.modules.napalm_ntp>`
     - :mod:`BGP operational and configuration management module <salt.modules.napalm_bgp>`
     - :mod:`Routes details <salt.modules.napalm_route>`
@@ -121,6 +181,35 @@ def init(opts):
     NETWORK_DEVICE.update(salt.utils.napalm.get_device(opts))
     DETAILS['initialized'] = True
     return True
+
+
+def alive(opts):
+    '''
+    Return the connection status with the remote device.
+
+    .. versionadded:: 2017.7.0
+    '''
+    if salt.utils.napalm.not_always_alive(opts):
+        return True  # don't force reconnection for not-always alive proxies
+        # or regular minion
+    is_alive_ret = call('is_alive', **{})
+    if not is_alive_ret.get('result', False):
+        log.debug('[{proxyid}] Unable to execute `is_alive`: {comment}'.format(
+            proxyid=opts.get('id'),
+            comment=is_alive_ret.get('comment')
+        ))
+        # if `is_alive` is not implemented by the underneath driver,
+        # will consider the connection to be still alive
+        # we don't want overly request connection reestablishment
+        # NOTE: revisit this if IOS is still not stable
+        #       and return False to force reconnection
+        return True
+    flag = is_alive_ret.get('out', {}).get('is_alive', False)
+    log.debug('Is {proxyid} still alive? {answ}'.format(
+        proxyid=opts.get('id'),
+        answ='Yes.' if flag else 'No.'
+    ))
+    return flag
 
 
 def ping():
@@ -216,11 +305,11 @@ def call(method, *args, **kwargs):
         * result (True/False): if the operation succeeded
         * out (object): returns the object as-is from the call
         * comment (string): provides more details in case the call failed
-        * traceback (string): complete traceback in case of exeception. Please submit an issue including this traceback
+        * traceback (string): complete traceback in case of exception. Please submit an issue including this traceback
         on the `correct driver repo`_ and make sure to read the FAQ_
 
     .. _`correct driver repo`: https://github.com/napalm-automation/napalm/issues/new
-    .. FAQ_: https://github.com/napalm-automation/napalm#faq
+    .. _FAQ: https://github.com/napalm-automation/napalm#faq
 
     Example:
 

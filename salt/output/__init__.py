@@ -4,20 +4,24 @@ Used to manage the outputter system. This package is the modular system used
 for managing outputters.
 '''
 
-# Import python libs
-from __future__ import print_function
+# Import Python libs
 from __future__ import absolute_import
-import os
-import sys
+from __future__ import print_function
 import errno
 import logging
+import os
+import re
+import sys
 import traceback
 
-# Import salt libs
+# Import Salt libs
 import salt.loader
 import salt.utils
-import salt.ext.six as six
-from salt.utils import print_cli
+import salt.utils.files
+import salt.utils.platform
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # Are you really sure !!!
 # dealing with unicode is not as simple as setting defaultencoding
@@ -96,7 +100,7 @@ def display_output(data, out=None, opts=None, **kwargs):
         # output filename can be either '' or None
         if output_filename:
             if not hasattr(output_filename, 'write'):
-                ofh = salt.utils.fopen(output_filename, 'a')
+                ofh = salt.utils.files.fopen(output_filename, 'a')  # pylint: disable=resource-leakage
                 fh_opened = True
             else:
                 # Filehandle/file-like object
@@ -123,7 +127,7 @@ def display_output(data, out=None, opts=None, **kwargs):
                     ofh.close()
             return
         if display_data:
-            print_cli(display_data)
+            salt.utils.print_cli(display_data)
     except IOError as exc:
         # Only raise if it's NOT a broken pipe
         if exc.errno != errno.EPIPE:
@@ -163,10 +167,17 @@ def get_printout(out, opts=None, **kwargs):
 
         if opts.get('force_color', False):
             opts['color'] = True
-        elif opts.get('no_color', False) or is_pipe() or salt.utils.is_windows():
+        elif opts.get('no_color', False) or is_pipe() or salt.utils.platform.is_windows():
             opts['color'] = False
         else:
             opts['color'] = True
+    else:
+        if opts.get('force_color', False):
+            opts['color'] = True
+        elif opts.get('no_color', False) or salt.utils.platform.is_windows():
+            opts['color'] = False
+        else:
+            pass
 
     outputters = salt.loader.outputters(opts)
     if out not in outputters:
@@ -183,6 +194,23 @@ def out_format(data, out, opts=None, **kwargs):
     Return the formatted outputter string for the passed data
     '''
     return try_printout(data, out, opts, **kwargs)
+
+
+def string_format(data, out, opts=None, **kwargs):
+    '''
+    Return the formatted outputter string, removing the ANSI escape sequences.
+    '''
+    raw_output = try_printout(data, out, opts, **kwargs)
+    ansi_escape = re.compile(r'\x1b[^m]*m')
+    return ansi_escape.sub('', raw_output)
+
+
+def html_format(data, out, opts=None, **kwargs):
+    '''
+    Return the formatted string as HTML.
+    '''
+    ansi_escaped_string = string_format(data, out, opts, **kwargs)
+    return ansi_escaped_string.replace(' ', '&nbsp;').replace('\n', '<br />')
 
 
 def strip_esc_sequence(txt):

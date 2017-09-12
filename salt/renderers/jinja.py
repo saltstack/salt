@@ -14,7 +14,7 @@ from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
@@ -66,11 +66,12 @@ def render(template_file, saltenv='base', sls='', argline='',
                                           sls=sls,
                                           context=context,
                                           tmplpath=tmplpath,
+                                          proxy=__proxy__,
                                           **kws)
     if not tmp_data.get('result', False):
         raise SaltRenderError(
                 tmp_data.get('data', 'Unknown render error in jinja renderer')
         )
-    if six.PY3:
+    if isinstance(tmp_data['data'], bytes):
         tmp_data['data'] = tmp_data['data'].decode(__salt_system_encoding__)
     return StringIO(tmp_data['data'])

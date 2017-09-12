@@ -14,16 +14,21 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import errno
 import logging
 import os
 import re
 import string
-from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.files
 import salt.utils.url
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
+
+# Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -508,13 +513,13 @@ def latest(name,
         A glob expression defining which branches to retrieve when fetching.
         See `git-fetch(1)`_ for more information on how refspecs work.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     refspec_tag : *
         A glob expression defining which tags to retrieve when fetching. See
         `git-fetch(1)`_ for more information on how refspecs work.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     .. _`git-fetch(1)`: http://git-scm.com/docs/git-fetch
 
@@ -569,11 +574,11 @@ def latest(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not remote:
@@ -712,7 +717,7 @@ def latest(name,
         else:
             default_branch = None
     else:
-        head_ref = None
+        head_rev = None
         default_branch = None
 
     desired_upstream = False
@@ -1135,13 +1140,22 @@ def latest(name,
                                            password=password,
                                            https_user=https_user,
                                            https_pass=https_pass)
-                comments.append(
-                    'Remote \'{0}\' changed from {1} to {2}'.format(
-                        remote,
-                        salt.utils.url.redact_http_basic_auth(fetch_url),
-                        redacted_fetch_url
+                if fetch_url is None:
+                    comments.append(
+                        'Remote \'{0}\' set to {1}'.format(
+                            remote,
+                            redacted_fetch_url
+                        )
                     )
-                )
+                    ret['changes']['new'] = name + ' => ' + remote
+                else:
+                    comments.append(
+                        'Remote \'{0}\' changed from {1} to {2}'.format(
+                            remote,
+                            salt.utils.url.redact_http_basic_auth(fetch_url),
+                            redacted_fetch_url
+                        )
+                    )
 
             if remote_rev is not None:
                 if __opts__['test']:
@@ -1289,6 +1303,23 @@ def latest(name,
                         'if it does not already exist).',
                         comments
                     )
+                remote_tags = set([
+                    x.replace('refs/tags/', '') for x in __salt__['git.ls_remote'](
+                        cwd=target,
+                        remote=remote,
+                        opts="--tags",
+                        user=user,
+                        password=password,
+                        identity=identity,
+                        saltenv=__env__,
+                        ignore_retcode=True,
+                    ).keys() if '^{}' not in x
+                ])
+                if set(all_local_tags) != remote_tags:
+                    has_remote_rev = False
+                    ret['changes']['new_tags'] = list(remote_tags.symmetric_difference(
+                        all_local_tags
+                    ))
 
                 if not has_remote_rev:
                     try:
@@ -1444,8 +1475,6 @@ def latest(name,
                                                         user=user,
                                                         password=password,
                                                         ignore_retcode=True):
-                            merge_rev = remote_rev if rev == 'HEAD' \
-                                else desired_upstream
 
                             if git_ver >= _LooseVersion('1.8.1.6'):
                                 # --ff-only added in version 1.8.1.6. It's not
@@ -1462,7 +1491,7 @@ def latest(name,
 
                             __salt__['git.merge'](
                                 target,
-                                rev=merge_rev,
+                                rev=remote_rev,
                                 opts=merge_opts,
                                 user=user,
                                 password=password)
@@ -1571,6 +1600,7 @@ def latest(name,
             return _uptodate(ret, target, _format_comments(comments))
     else:
         if os.path.isdir(target):
+            target_contents = os.listdir(target)
             if force_clone:
                 # Clone is required, and target directory exists, but the
                 # ``force`` option is enabled, so we need to clear out its
@@ -1589,22 +1619,28 @@ def latest(name,
                     'place (force_clone=True set in git.latest state)'
                     .format(target, name)
                 )
-                try:
-                    if os.path.islink(target):
-                        os.unlink(target)
-                    else:
-                        salt.utils.rm_rf(target)
-                except OSError as exc:
+                removal_errors = {}
+                for target_object in target_contents:
+                    target_path = os.path.join(target, target_object)
+                    try:
+                        salt.utils.files.rm_rf(target_path)
+                    except OSError as exc:
+                        if exc.errno != errno.ENOENT:
+                            removal_errors[target_path] = exc
+                if removal_errors:
+                    err_strings = [
+                        '  {0}\n    {1}'.format(k, v)
+                        for k, v in six.iteritems(removal_errors)
+                    ]
                     return _fail(
                         ret,
-                        'Unable to remove {0}: {1}'.format(target, exc),
+                        'Unable to remove\n{0}'.format('\n'.join(err_strings)),
                         comments
                     )
-                else:
-                    ret['changes']['forced clone'] = True
+                ret['changes']['forced clone'] = True
             # Clone is required, but target dir exists and is non-empty. We
             # can't proceed.
-            elif os.listdir(target):
+            elif target_contents:
                 return _fail(
                     ret,
                     'Target \'{0}\' exists, is non-empty and is not a git '
@@ -1940,7 +1976,7 @@ def present(name,
                 if os.path.islink(name):
                     os.unlink(name)
                 else:
-                    salt.utils.rm_rf(name)
+                    salt.utils.files.rm_rf(name)
             except OSError as exc:
                 return _fail(
                     ret,
@@ -2026,7 +2062,7 @@ def detached(name,
         and checked out.
 
     ref
-        .. deprecated:: Nitrogen
+        .. deprecated:: 2017.7.0
             Use ``rev`` instead.
 
     target
@@ -2097,11 +2133,11 @@ def detached(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     ref = kwargs.pop('ref', None)
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if ref is not None:
@@ -2111,7 +2147,7 @@ def detached(name,
             'consistency. Please update your SLS to reflect this.'
         )
         ret.setdefault('warnings', []).append(deprecation_msg)
-        salt.utils.warn_until('Fluorine', deprecation_msg)
+        salt.utils.versions.warn_until('Fluorine', deprecation_msg)
 
     if not rev:
         return _fail(
@@ -2203,7 +2239,7 @@ def detached(name,
 
     # Determine if supplied ref is a hash
     remote_rev_type = 'ref'
-    if len(ref) <= 40 \
+    if len(rev) <= 40 \
             and all(x in string.hexdigits for x in rev):
         rev = rev.lower()
         remote_rev_type = 'hash'
@@ -2219,13 +2255,18 @@ def detached(name,
 
         local_commit_id = _get_local_rev_and_branch(target, user, password)[0]
 
-        if remote_rev_type is 'hash' \
-                and __salt__['git.describe'](target,
-                                             rev,
-                                             user=user,
-                                             password=password):
-            # The rev is a hash and it exists locally so skip to checkout
-            hash_exists_locally = True
+        if remote_rev_type is 'hash':
+            try:
+                __salt__['git.describe'](target,
+                                         rev,
+                                         user=user,
+                                         password=password,
+                                         ignore_retcode=True)
+            except CommandExecutionError:
+                hash_exists_locally = False
+            else:
+                # The rev is a hash and it exists locally so skip to checkout
+                hash_exists_locally = True
         else:
             # Check that remote is present and set to correct url
             remotes = __salt__['git.remotes'](target,
@@ -2289,7 +2330,7 @@ def detached(name,
                     if os.path.islink(target):
                         os.unlink(target)
                     else:
-                        salt.utils.rm_rf(target)
+                        salt.utils.files.rm_rf(target)
                 except OSError as exc:
                     return _fail(
                         ret,
@@ -2409,7 +2450,7 @@ def detached(name,
                 https_pass=https_pass,
                 ignore_retcode=False)
 
-            if 'refs/remotes/'+remote+'/'+ref in all_remote_refs:
+            if 'refs/remotes/'+remote+'/'+rev in all_remote_refs:
                 checkout_commit_id = all_remote_refs['refs/remotes/' + remote + '/' + rev]
             elif 'refs/tags/' + rev in all_remote_refs:
                 checkout_commit_id = all_remote_refs['refs/tags/' + rev]
@@ -2586,13 +2627,13 @@ def config_unset(name,
     # allows us to accept 'global' as an argument to this function without
     # shadowing global(), while also not allowing unwanted arguments to be
     # passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
     all_ = kwargs.pop('all', False)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not global_ and not repo:
@@ -2837,12 +2878,12 @@ def config_set(name,
     # allows us to accept 'global' as an argument to this function without
     # shadowing global(), while also not allowing unwanted arguments to be
     # passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
     if kwargs:
         return _fail(
             ret,
-            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+            salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
 
     if not global_ and not repo:

@@ -17,14 +17,14 @@ the Minion.
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 import json
 import os
-import distutils.version  # pylint: disable=no-name-in-module
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Set up logging
@@ -39,16 +39,19 @@ def __virtual__():
     Set the system module of the kernel is Windows
     '''
     # Verify Windows
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
+        log.debug('Module DSC: Only available on Windows systems')
         return False, 'Module DSC: Only available on Windows systems'
 
-    # Verify PowerShell 5.0
+    # Verify PowerShell
     powershell_info = __salt__['cmd.shell_info']('powershell')
     if not powershell_info['installed']:
-        return False, 'Module DSC: PowerShell not available'
+        log.debug('Module DSC: Requires PowerShell')
+        return False, 'Module DSC: Requires PowerShell'
 
-    if distutils.version.StrictVersion(powershell_info['version']) < \
-            distutils.version.StrictVersion('5.0'):
+    # Verify PowerShell 5.0 or greater
+    if salt.utils.versions.compare(powershell_info['version'], '<', '5.0'):
+        log.debug('Module DSC: Requires PowerShell 5 or later')
         return False, 'Module DSC: Requires PowerShell 5 or later'
 
     return __virtualname__
@@ -121,19 +124,19 @@ def run_config(path,
             file containing the proper hash table or the PowerShell code to
             create the hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         config_data_source (str): The path to the ``.psd1`` file on
             ``file_roots`` to cache at the location specified by
             ``config_data``. If this is specified, ``config_data`` must be a
             local path instead of a hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         script_parameters (str): Any additional parameters expected by the
             configuration script. These must be defined in the script itself.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         salt_env (str): The salt environment to use when copying the source.
             Default is 'base'
@@ -203,19 +206,19 @@ def compile_config(path,
             file containing the proper hash table or the PowerShell code to
             create the hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         config_data_source (str): The path to the ``.psd1`` file on
             ``file_roots`` to cache at the location specified by
             ``config_data``. If this is specified, ``config_data`` must be a
             local path instead of a hash table.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         script_parameters (str): Any additional parameters expected by the
             configuration script. These must be defined in the script itself.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
         salt_env (str): The salt environment to use when copying the source.
             Default is 'base'

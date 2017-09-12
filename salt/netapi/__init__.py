@@ -19,7 +19,7 @@ import salt.client.ssh.client
 import salt.exceptions
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class NetapiClient(object):
@@ -113,6 +113,20 @@ class NetapiClient(object):
         local = salt.client.get_local_client(mopts=self.opts)
         return local.cmd_subset(*args, **kwargs)
 
+    def local_batch(self, *args, **kwargs):
+        '''
+        Run :ref:`execution modules <all-salt.modules>` against batches of minions
+
+        .. versionadded:: 0.8.4
+
+        Wraps :py:meth:`salt.client.LocalClient.cmd_batch`
+
+        :return: Returns the result from the exeuction module for each batch of
+            returns
+        '''
+        local = salt.client.get_local_client(mopts=self.opts)
+        return local.cmd_batch(*args, **kwargs)
+
     def ssh(self, *args, **kwargs):
         '''
         Run salt-ssh commands synchronously
@@ -125,7 +139,7 @@ class NetapiClient(object):
                                                       disable_custom_roster=True)
         return ssh_client.cmd_sync(kwargs)
 
-    def runner(self, fun, timeout=None, **kwargs):
+    def runner(self, fun, timeout=None, full_return=False, **kwargs):
         '''
         Run `runner modules <all-salt.runners>` synchronously
 
@@ -138,7 +152,7 @@ class NetapiClient(object):
         '''
         kwargs['fun'] = fun
         runner = salt.runner.RunnerClient(self.opts)
-        return runner.cmd_sync(kwargs, timeout=timeout)
+        return runner.cmd_sync(kwargs, timeout=timeout, full_return=full_return)
 
     def runner_async(self, fun, **kwargs):
         '''

@@ -6,7 +6,7 @@ connected for a certain period of time.
 
 Requires that the minion_data_cache option be enabled.
 
-.. versionadded: Nitrogen
+.. versionadded: 2017.7.0
 
 :configuration:
 
@@ -17,17 +17,22 @@ Requires that the minion_data_cache option be enabled.
               expire: 86400
 
 '''
+# Import python libs
 from __future__ import absolute_import
-
-import salt.utils.minions
-import salt.config
-import salt.key
-import salt.wheel
-import salt.utils
-import msgpack
 import os
 import time
 import logging
+
+# Import salt libs
+import salt.config
+import salt.key
+import salt.utils.files
+import salt.utils.minions
+import salt.wheel
+
+# Import 3rd-party libs
+from salt.ext import six
+import msgpack
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +40,7 @@ log = logging.getLogger(__name__)
 def __virtual__():
     if not __opts__.get('minion_data_cache'):
         return (False, 'stalekey engine requires minion_data_cache to be enabled')
+    return True
 
 
 def _get_keys():
@@ -45,7 +51,7 @@ def _get_keys():
 
 def start(interval=3600, expire=604800):
     ck = salt.utils.minions.CkMinions(__opts__)
-    presence_file = '{0}/minions/presence.p'.format(__opts__['cachedir'])
+    presence_file = '{0}/presence.p'.format(__opts__['cachedir'])
     wheel = salt.wheel.WheelClient(__opts__)
 
     while True:
@@ -53,7 +59,7 @@ def start(interval=3600, expire=604800):
         minions = {}
         if os.path.exists(presence_file):
             try:
-                with salt.utils.fopen(presence_file, 'r') as f:
+                with salt.utils.files.fopen(presence_file, 'r') as f:
                     minions = msgpack.load(f)
             except IOError as e:
                 log.error('Could not open presence file {0}: {1}'.format(presence_file, e))
@@ -77,7 +83,7 @@ def start(interval=3600, expire=604800):
         log.debug('Finished checking for present minions')
         # Delete old keys
         stale_keys = []
-        for m, seen in minions.iteritems():
+        for m, seen in six.iteritems(minions):
             if now - expire > seen:
                 stale_keys.append(m)
 
@@ -88,7 +94,7 @@ def start(interval=3600, expire=604800):
             del minions[k]
 
         try:
-            with salt.utils.fopen(presence_file, 'w') as f:
+            with salt.utils.files.fopen(presence_file, 'w') as f:
                 msgpack.dump(minions, f)
         except IOError as e:
             log.error('Could not write to presence file {0}: {1}'.format(presence_file, e))

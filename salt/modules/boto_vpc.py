@@ -4,6 +4,11 @@ Connection module for Amazon VPC
 
 .. versionadded:: 2014.7.0
 
+:depends:
+
+- boto >= 2.8.0
+- boto3 >= 1.2.6
+
 :configuration: This module accepts explicit VPC credentials but can also
     utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
@@ -69,8 +74,6 @@ Connection module for Amazon VPC
         error:
           message: error message
 
-:depends: boto
-
 .. versionadded:: 2016.11.0
 
 Functions to request, accept, delete and describe VPC peering connections.
@@ -127,7 +130,6 @@ Deleting VPC peering connection via this module
 from __future__ import absolute_import
 import logging
 import socket
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import time
 import random
 
@@ -135,8 +137,9 @@ import random
 import salt.utils.boto
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.ext.six.moves import range  # pylint: disable=import-error
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # from salt.utils import exactly_one
 # TODO: Uncomment this and s/_exactly_one/exactly_one/
@@ -148,7 +151,8 @@ ACTIVE = 'active'
 log = logging.getLogger(__name__)
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=import-error
 # pylint: disable=import-error
 try:
     #pylint: disable=unused-import
@@ -2283,7 +2287,7 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                                   'must be provided.')
 
     if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id, vpc_peering_connection_id,
-                         interface_id, nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
+                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
         raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
                                   'interface_id, vpc_peering_connection_id, nat_gateway_id, '
                                   'nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')
@@ -2453,9 +2457,10 @@ def describe_route_table(route_table_id=None, route_table_name=None,
 
     '''
 
-    salt.utils.warn_until('Oxygen',
-         'The \'describe_route_table\' method has been deprecated and '
-         'replaced by \'describe_route_tables\'.'
+    salt.utils.versions.warn_until(
+        'Oxygen',
+        'The \'describe_route_table\' method has been deprecated and '
+        'replaced by \'describe_route_tables\'.'
     )
     if not any((route_table_id, route_table_name, tags)):
         raise SaltInvocationError('At least one of the following must be specified: '
@@ -2599,7 +2604,13 @@ def _maybe_set_name_tag(name, obj):
 
 def _maybe_set_tags(tags, obj):
     if tags:
-        obj.add_tags(tags)
+        # Not all objects in Boto have an 'add_tags()' method.
+        try:
+            obj.add_tags(tags)
+
+        except AttributeError:
+            for tag, value in tags.items():
+                obj.add_tag(tag, value)
 
         log.debug('The following tags: {0} were added to {1}'.format(', '.join(tags), obj))
 
@@ -2688,11 +2699,11 @@ def request_vpc_peering_connection(requester_vpc_id=None, requester_vpc_name=Non
         Name tag of the requesting VPC.  Exclusive with requester_vpc_id.
 
     peer_vpc_id
-        ID of the VPC tp crete VPC peering connection with. This can be a VPC in
+        ID of the VPC to create VPC peering connection with. This can be a VPC in
         another account. Exclusive with peer_vpc_name.
 
     peer_vpc_name
-        Name tag of the VPC tp crete VPC peering connection with. This can only
+        Name tag of the VPC to create VPC peering connection with. This can only
         be a VPC in the same account, else resolving it into a vpc ID will almost
         certainly fail. Exclusive with peer_vpc_id.
 

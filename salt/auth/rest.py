@@ -58,7 +58,8 @@ def auth(username, password):
 
     # Post to the API endpoint. If 200 is returned then the result will be the ACLs
     # for this user
-    result = salt.utils.http.query(url, method='POST', data=data)
+    result = salt.utils.http.query(url, method='POST', data=data, status=True,
+                                   decode=True)
     if result['status'] == 200:
         log.debug('eauth REST call returned 200: {0}'.format(result))
         if result['dict'] is not None:

@@ -223,20 +223,56 @@ different grain matches.
 
     class Samba(Map):
         merge = 'samba:lookup'
+        # NOTE: priority is new to 2017.7.0
+        priority = ('os_family', 'os')
+
+        class Ubuntu:
+            __grain__ = 'os'
+            service = 'smbd'
 
         class Debian:
             server = 'samba'
             client = 'samba-client'
             service = 'samba'
 
-        class Ubuntu:
-            __grain__ = 'os'
-            service = 'smbd'
-
-        class RedHat:
+        class RHEL:
+            __match__ = 'RedHat'
             server = 'samba'
             client = 'samba'
             service = 'smb'
+
+.. note::
+    By default, the ``os_family`` grain will be used as the target for
+    matching. This can be overridden by specifying a ``__grain__`` attribute.
+
+    If a ``__match__`` attribute is defined for a given class, then that value
+    will be matched against the targeted grain, otherwise the class name's
+    value will be be matched.
+
+    Given the above example, the following is true:
+
+    1. Minions with an ``os_family`` of **Debian** will be assigned the
+       attributes defined in the **Debian** class.
+    2. Minions with an ``os`` grain of **Ubuntu** will be assigned the
+       attributes defined in the **Ubuntu** class.
+    3. Minions with an ``os_family`` grain of **RedHat** will be assigned the
+       attributes defined in the **RHEL** class.
+
+    That said, sometimes a minion may match more than one class. For instance,
+    in the above example, Ubuntu minions will match both the **Debian** and
+    **Ubuntu** classes, since Ubuntu has an ``os_family`` grain of **Debian**
+    an an ``os`` grain of **Ubuntu**. As of the 2017.7.0 release, the order is
+    dictated by the order of declaration, with classes defined later overriding
+    earlier ones. Addtionally, 2017.7.0 adds support for explicitly defining
+    the ordering using an optional attribute called ``priority``.
+
+    Given the above example, ``os_family`` matches will be processed first,
+    with ``os`` matches processed after. This would have the effect of
+    assigning ``smbd`` as the ``service`` attribute on Ubuntu minions. If the
+    ``priority`` item was not defined, or if the order of the items in the
+    ``priority`` tuple were reversed, Ubuntu minions would have a ``service``
+    attribute of ``samba``, since ``os_family`` matches would have been
+    processed second.
 
 To use this new data you can import it into your state file and then access
 your attributes. To access the data in the map you simply access the attribute
@@ -266,11 +302,11 @@ import re
 
 # Import Salt Libs
 from salt.ext.six import exec_
-import salt.utils
+import salt.utils.files
 import salt.loader
 from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
-import salt.ext.six as six
+from salt.ext import six
 
 # our import regexes
 FROM_RE = re.compile(r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$')
@@ -395,9 +431,10 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
     # not salt state data
     Registry.enabled = False
 
-    def process_template(template, template_globals):
+    def process_template(template):
         template_data = []
-        state_globals = {}
+        # Do not pass our globals to the modules we are including and keep the root _globals untouched
+        template_globals = dict(_globals)
         for line in template.readlines():
             line = line.rstrip('\r\n')
             matched = False
@@ -420,17 +457,16 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
                         'Could not find the file \'{0}\''.format(import_file)
                     )
 
-                state_locals = {}
-                with salt.utils.fopen(state_file) as state_fh:
-                    state_contents, state_locals = process_template(state_fh, template_globals)
-                exec_(state_contents, template_globals, state_locals)
+                with salt.utils.files.fopen(state_file) as state_fh:
+                    state_contents, state_globals = process_template(state_fh)
+                exec_(state_contents, state_globals)
 
                 # if no imports have been specified then we are being imported as: import salt://foo.sls
                 # so we want to stick all of the locals from our state file into the template globals
                 # under the name of the module -> i.e. foo.MapClass
                 if imports is None:
                     import_name = os.path.splitext(os.path.basename(state_file))[0]
-                    state_globals[import_name] = PyobjectsModule(import_name, state_locals)
+                    template_globals[import_name] = PyobjectsModule(import_name, state_globals)
                 else:
                     for name in imports:
                         name = alias = name.strip()
@@ -440,14 +476,14 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
                             name = matches.group(1).strip()
                             alias = matches.group(2).strip()
 
-                        if name not in state_locals:
+                        if name not in state_globals:
                             raise ImportError(
                                 '\'{0}\' was not found in \'{1}\''.format(
                                     name,
                                     import_file
                                 )
                             )
-                        state_globals[alias] = state_locals[name]
+                        template_globals[alias] = state_globals[name]
 
                 matched = True
                 break
@@ -455,11 +491,11 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             if not matched:
                 template_data.append(line)
 
-        return "\n".join(template_data), state_globals
+        return "\n".join(template_data), template_globals
 
     # process the template that triggered the render
-    final_template, final_locals = process_template(template, _globals)
-    _globals.update(final_locals)
+    final_template, final_globals = process_template(template)
+    _globals.update(final_globals)
 
     # re-enable the registry
     Registry.enabled = True

@@ -5,6 +5,8 @@ Minion side functions for salt-cp
 
 # Import python libs
 from __future__ import absolute_import
+import base64
+import errno
 import os
 import logging
 import fnmatch
@@ -14,6 +16,9 @@ import salt.minion
 import salt.fileclient
 import salt.utils
 import salt.utils.files
+import salt.utils.gzip_util
+import salt.utils.locales
+import salt.utils.templates
 import salt.utils.url
 import salt.crypt
 import salt.transport
@@ -21,7 +26,7 @@ from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +51,7 @@ def _gather_pillar(pillarenv, pillar_override):
         __grains__,
         __opts__['id'],
         __opts__['environment'],
-        pillar=pillar_override,
+        pillar_override=pillar_override,
         pillarenv=pillarenv
     )
     ret = pillar.compile_pillar()
@@ -75,13 +80,78 @@ def recv(files, dest):
             return 'Destination unavailable'
 
         try:
-            with salt.utils.fopen(final, 'w+') as fp_:
+            with salt.utils.files.fopen(final, 'w+') as fp_:
                 fp_.write(data)
             ret[final] = True
         except IOError:
             ret[final] = False
 
     return ret
+
+
+def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
+    '''
+    This function receives files copied to the minion using ``salt-cp`` and is
+    not intended to be used directly on the CLI.
+    '''
+    if 'retcode' not in __context__:
+        __context__['retcode'] = 0
+
+    def _error(msg):
+        __context__['retcode'] = 1
+        return msg
+
+    if chunk is None:
+        # dest is an empty dir and needs to be created
+        try:
+            os.makedirs(dest)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST:
+                if os.path.isfile(dest):
+                    return 'Path exists and is a file'
+            else:
+                return _error(exc.__str__())
+        return True
+
+    chunk = base64.b64decode(chunk)
+
+    open_mode = 'ab' if append else 'wb'
+    try:
+        fh_ = salt.utils.files.fopen(dest, open_mode)  # pylint: disable=W8470
+    except (IOError, OSError) as exc:
+        if exc.errno != errno.ENOENT:
+            # Parent dir does not exist, we need to create it
+            return _error(exc.__str__())
+        try:
+            os.makedirs(os.path.dirname(dest))
+        except (IOError, OSError) as makedirs_exc:
+            # Failed to make directory
+            return _error(makedirs_exc.__str__())
+        fh_ = salt.utils.files.fopen(dest, open_mode)  # pylint: disable=W8470
+
+    try:
+        # Write the chunk to disk
+        fh_.write(salt.utils.gzip_util.uncompress(chunk) if compressed
+                  else chunk)
+    except (IOError, OSError) as exc:
+        # Write failed
+        return _error(exc.__str__())
+    else:
+        # Write successful
+        if not append and mode is not None:
+            # If this is the first chunk we're writing, set the mode
+            #log.debug('Setting mode for %s to %s', dest, oct(mode))
+            log.debug('Setting mode for %s to %s', dest, mode)
+            try:
+                os.chmod(dest, mode)
+            except OSError:
+                return _error(exc.__str__())
+        return True
+    finally:
+        try:
+            fh_.close()
+        except AttributeError:
+            pass
 
 
 def _mk_client():
@@ -139,14 +209,14 @@ def _render_filenames(path, dest, saltenv, template, **kw):
         '''
         # write out path to temp file
         tmp_path_fn = salt.utils.files.mkstemp()
-        with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
+        with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
             fp_.write(contents)
         data = salt.utils.templates.TEMPLATE_REGISTRY[template](
             tmp_path_fn,
             to_str=True,
             **kwargs
         )
-        salt.utils.safe_rm(tmp_path_fn)
+        salt.utils.files.safe_rm(tmp_path_fn)
         if not data['result']:
             # Failed to render the template
             raise CommandExecutionError(
@@ -170,6 +240,9 @@ def get_file(path,
              gzip=None,
              **kwargs):
     '''
+    .. versionchanged:: Oxygen
+        ``dest`` can now be a directory
+
     Used to get a single file from the salt master
 
     CLI Example:
@@ -281,6 +354,9 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, **kwargs):
 
 def get_url(path, dest='', saltenv='base', makedirs=False):
     '''
+    .. versionchanged:: Oxygen
+        ``dest`` can now be a directory
+
     Used to get a single file from a URL.
 
     path
@@ -345,9 +421,11 @@ def get_file_str(path, saltenv='base'):
     '''
     fn_ = cache_file(path, saltenv)
     if isinstance(fn_, six.string_types):
-        with salt.utils.fopen(fn_, 'r') as fp_:
-            data = fp_.read()
-        return data
+        try:
+            with salt.utils.files.fopen(fn_, 'r') as fp_:
+                return fp_.read()
+        except IOError:
+            return False
     return fn_
 
 
@@ -380,7 +458,11 @@ def cache_file(path, saltenv='base'):
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
     '''
-    contextkey = '{0}_|-{1}_|-{2}'.format('cp.cache_file', path, saltenv)
+    path = salt.utils.locales.sdecode(path)
+    saltenv = salt.utils.locales.sdecode(saltenv)
+
+    contextkey = u'{0}_|-{1}_|-{2}'.format('cp.cache_file', path, saltenv)
+
     path_is_remote = _urlparse(path).scheme in ('http', 'https', 'ftp')
     try:
         if path_is_remote and contextkey in __context__:
@@ -406,9 +488,8 @@ def cache_file(path, saltenv='base'):
     result = _client().cache_file(path, saltenv)
     if not result:
         log.error(
-            'Unable to cache file \'{0}\' from saltenv \'{1}\'.'.format(
-                path, saltenv
-            )
+            u'Unable to cache file \'%s\' from saltenv \'%s\'.',
+            path, saltenv
         )
     if path_is_remote:
         # Cache was successful, store the result in __context__ to prevent
@@ -632,6 +713,28 @@ def hash_file(path, saltenv='base'):
     return _client().hash_file(path, saltenv)
 
 
+def stat_file(path, saltenv='base', octal=True):
+    '''
+    Return the permissions of a file, to get the permissions of a file on the
+    salt master file server prepend the path with salt://<file on server>
+    otherwise, prepend the file with / for a local file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.stat_file salt://path/to/file
+    '''
+    path, senv = salt.utils.url.split_env(path)
+    if senv:
+        saltenv = senv
+
+    stat = _client().hash_and_stat_file(path, saltenv)[1]
+    if stat is None:
+        return stat
+    return salt.utils.st_mode_to_octal(stat[0]) if octal is True else stat[0]
+
+
 def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     '''
     WARNING Files pushed to the master will have global read permissions..
@@ -699,7 +802,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
             'path': load_path_list,
             'tok': auth.gen_token('salt')}
     channel = salt.transport.Channel.factory(__opts__)
-    with salt.utils.fopen(path, 'rb') as fp_:
+    with salt.utils.files.fopen(path, 'rb') as fp_:
         init_send = False
         while True:
             load['loc'] = fp_.tell()
@@ -707,7 +810,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
             if not load['data'] and init_send:
                 if remove_source:
                     try:
-                        salt.utils.rm_rf(path)
+                        salt.utils.files.rm_rf(path)
                         log.debug('Removing source file \'{0}\''.format(path))
                     except IOError:
                         log.error('cp.push failed to remove file \

@@ -52,10 +52,10 @@ import re
 import sys
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
-def _present_test(user, name, enc, comment, options, source, config):
+def _present_test(user, name, enc, comment, options, source, config, fingerprint_hash_type):
     '''
     Run checks for "present"
     '''
@@ -65,7 +65,8 @@ def _present_test(user, name, enc, comment, options, source, config):
                 user,
                 source,
                 config,
-                saltenv=__env__)
+                saltenv=__env__,
+                fingerprint_hash_type=fingerprint_hash_type)
         if keys:
             comment = ''
             for key, status in six.iteritems(keys):
@@ -111,7 +112,8 @@ def _present_test(user, name, enc, comment, options, source, config):
             enc,
             comment,
             options,
-            config)
+            config=config,
+            fingerprint_hash_type=fingerprint_hash_type)
     if check == 'update':
         comment = (
                 'Key {0} for user {1} is set to be updated'
@@ -128,7 +130,7 @@ def _present_test(user, name, enc, comment, options, source, config):
     return result, comment
 
 
-def _absent_test(user, name, enc, comment, options, source, config):
+def _absent_test(user, name, enc, comment, options, source, config, fingerprint_hash_type):
     '''
     Run checks for "absent"
     '''
@@ -138,13 +140,14 @@ def _absent_test(user, name, enc, comment, options, source, config):
                 user,
                 source,
                 config,
-                saltenv=__env__)
+                saltenv=__env__,
+                fingerprint_hash_type=fingerprint_hash_type)
         if keys:
             comment = ''
             for key, status in list(keys.items()):
-                if status == 'exists':
+                if status == 'add':
                     continue
-                comment += 'Set to {0}: {1}\n'.format(status, key)
+                comment += 'Set to remove: {0}\n'.format(key)
             if comment:
                 return result, comment
         err = sys.modules[
@@ -184,7 +187,8 @@ def _absent_test(user, name, enc, comment, options, source, config):
             enc,
             comment,
             options,
-            config)
+            config=config,
+            fingerprint_hash_type=fingerprint_hash_type)
     if check == 'update' or check == 'exists':
         comment = ('Key {0} for user {1} is set for removal').format(name, user)
     else:
@@ -202,6 +206,7 @@ def present(
         source='',
         options=None,
         config='.ssh/authorized_keys',
+        fingerprint_hash_type=None,
         **kwargs):
     '''
     Verifies that the specified SSH key is present for the specified user
@@ -243,6 +248,17 @@ def present(
         The location of the authorized keys file relative to the user's home
         directory, defaults to ".ssh/authorized_keys". Token expansion %u and
         %h for username and home path supported.
+
+    fingerprint_hash_type
+        The public key fingerprint hash type that the public key fingerprint
+        was originally hashed with. This defaults to ``md5`` if not specified.
+
+        .. versionadded:: 2016.11.7
+
+        .. note::
+
+            The default value of the ``fingerprint_hash_type`` will change to
+            ``sha256`` in Salt 2017.7.0.
     '''
     ret = {'name': name,
            'changes': {},
@@ -279,7 +295,7 @@ def present(
                 options or [],
                 source,
                 config,
-                )
+                fingerprint_hash_type)
         return ret
 
     # Get only the path to the file without env referrences to check if exists
@@ -305,10 +321,11 @@ def present(
                 data = __salt__['ssh.set_auth_key_from_file'](
                         user,
                         source,
-                        config,
-                        saltenv=__env__)
+                        config=config,
+                        saltenv=__env__,
+                        fingerprint_hash_type=fingerprint_hash_type)
             else:
-                # Split keyline to get key und commen
+                # Split keyline to get key und comment
                 keyline = keyline.split(' ')
                 key_type = keyline[0]
                 key_value = keyline[1]
@@ -316,18 +333,20 @@ def present(
                 data = __salt__['ssh.set_auth_key'](
                         user,
                         key_value,
-                        key_type,
-                        key_comment,
-                        options or [],
-                        config)
+                        enc=key_type,
+                        comment=key_comment,
+                        options=options or [],
+                        config=config,
+                        fingerprint_hash_type=fingerprint_hash_type)
     else:
         data = __salt__['ssh.set_auth_key'](
                 user,
                 name,
-                enc,
-                comment,
-                options or [],
-                config)
+                enc=enc,
+                comment=comment,
+                options=options or [],
+                config=config,
+                fingerprint_hash_type=fingerprint_hash_type)
 
     if data == 'replace':
         ret['changes'][name] = 'Updated'
@@ -356,9 +375,9 @@ def present(
             ret['comment'] = ('Failed to add the ssh key. Is the home '
                               'directory available, and/or does the key file '
                               'exist?')
-    elif data == 'invalid':
+    elif data == 'invalid' or data == 'Invalid public key':
         ret['result'] = False
-        ret['comment'] = 'Invalid public ssh key, most likely has spaces'
+        ret['comment'] = 'Invalid public ssh key, most likely has spaces or invalid syntax'
 
     return ret
 
@@ -369,7 +388,8 @@ def absent(name,
            comment='',
            source='',
            options=None,
-           config='.ssh/authorized_keys'):
+           config='.ssh/authorized_keys',
+           fingerprint_hash_type=None):
     '''
     Verifies that the specified SSH key is absent
 
@@ -401,6 +421,17 @@ def absent(name,
         directory, defaults to ".ssh/authorized_keys". Token expansion %u and
         %h for username and home path supported.
 
+    fingerprint_hash_type
+        The public key fingerprint hash type that the public key fingerprint
+        was originally hashed with. This defaults to ``md5`` if not specified.
+
+        .. versionadded:: 2016.11.7
+
+        .. note::
+
+            The default value of the ``fingerprint_hash_type`` will change to
+            ``sha256`` in Salt 2017.7.0.
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -416,7 +447,7 @@ def absent(name,
                 options or [],
                 source,
                 config,
-                )
+                fingerprint_hash_type)
         return ret
 
     # Extract Key from file if source is present
@@ -434,13 +465,15 @@ def absent(name,
                 ret['comment'] = __salt__['ssh.rm_auth_key_from_file'](user,
                                                                        source,
                                                                        config,
-                                                                       saltenv=__env__)
+                                                                       saltenv=__env__,
+                                                                       fingerprint_hash_type=fingerprint_hash_type)
             else:
                 # Split keyline to get key
                 keyline = keyline.split(' ')
                 ret['comment'] = __salt__['ssh.rm_auth_key'](user,
                                                              keyline[1],
-                                                             config)
+                                                             config=config,
+                                                             fingerprint_hash_type=fingerprint_hash_type)
     else:
         # Get just the key
         sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
@@ -461,7 +494,10 @@ def absent(name,
             name = comps[1]
             if len(comps) == 3:
                 comment = comps[2]
-        ret['comment'] = __salt__['ssh.rm_auth_key'](user, name, config)
+        ret['comment'] = __salt__['ssh.rm_auth_key'](user,
+                                                     name,
+                                                     config=config,
+                                                     fingerprint_hash_type=fingerprint_hash_type)
 
     if ret['comment'] == 'User authorized keys file not present':
         ret['result'] = False

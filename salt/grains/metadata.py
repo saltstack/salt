@@ -2,7 +2,7 @@
 '''
 Grains from cloud metadata servers at 169.254.169.254
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: requests
 
@@ -17,6 +17,7 @@ metadata server set `metadata_server_grains: True`.
 from __future__ import absolute_import
 
 # Import python libs
+import json
 import os
 import socket
 
@@ -47,14 +48,30 @@ def _search(prefix="latest/"):
     Recursively look up all grains in the metadata server
     '''
     ret = {}
-    for line in http.query(os.path.join(HOST, prefix))['body'].split('\n'):
+    linedata = http.query(os.path.join(HOST, prefix))
+    if 'body' not in linedata:
+        return ret
+    for line in linedata['body'].split('\n'):
         if line.endswith('/'):
             ret[line[:-1]] = _search(prefix=os.path.join(prefix, line))
+        elif prefix == 'latest/':
+            # (gtmanfred) The first level should have a forward slash since
+            # they have stuff underneath. This will not be doubled up though,
+            # because lines ending with a slash are checked first.
+            ret[line] = _search(prefix=os.path.join(prefix, line + '/'))
+        elif line.endswith(('dynamic', 'meta-data')):
+            ret[line] = _search(prefix=os.path.join(prefix, line))
         elif '=' in line:
             key, value = line.split('=')
             ret[value] = _search(prefix=os.path.join(prefix, key))
         else:
-            ret[line] = http.query(os.path.join(HOST, prefix, line))['body']
+            retdata = http.query(os.path.join(HOST, prefix, line)).get('body', None)
+            # (gtmanfred) This try except block is slightly faster than
+            # checking if the string starts with a curly brace
+            try:
+                ret[line] = json.loads(retdata)
+            except ValueError:
+                ret[line] = retdata
     return ret
 
 

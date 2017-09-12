@@ -11,29 +11,41 @@ import os
 import yaml
 import tarfile
 import shutil
-import msgpack
-import datetime
 import hashlib
 import logging
-import pwd
-import grp
 import sys
+try:
+    import pwd
+    import grp
+except ImportError:
+    pass
 
 # Import Salt libs
+import salt.client
 import salt.config
 import salt.loader
 import salt.cache
-import salt.utils
+import salt.utils.files
 import salt.utils.http as http
 import salt.syspaths as syspaths
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
-from salt.ext.six.moves import zip
 from salt.ext.six.moves import filter
+from salt.template import compile_template
+from salt.utils.yamldumper import SafeOrderedDumper
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+FILE_TYPES = ('c', 'd', 'g', 'l', 'r', 's', 'm')
+# c: config file
+# d: documentation file
+# g: ghost file (i.e. the file contents are not included in the package payload)
+# l: license file
+# r: readme file
+# s: SLS file
+# m: Salt module
 
 
 class SPMException(Exception):
@@ -196,11 +208,12 @@ class SPMClient(object):
                 if args[1] in pkg:
                     version = repo_metadata[repo]['packages'][pkg]['info']['version']
                     release = repo_metadata[repo]['packages'][pkg]['info']['release']
-                    packages.append(
-                        '{0}\t{1}-{2}\t{3}'.format(pkg, version, release, repo)
-                    )
+                    packages.append((pkg, version, release, repo))
         for pkg in sorted(packages):
-            self.ui.status(pkg)
+            self.ui.status(
+                '{0}\t{1}-{2}\t{3}'.format(pkg[0], pkg[1], pkg[2], pkg[3])
+            )
+        return packages
 
     def _repo_list(self, args):
         '''
@@ -219,6 +232,10 @@ class SPMClient(object):
         if len(args) < 2:
             raise SPMInvocationError('A package must be specified')
 
+        caller_opts = self.opts.copy()
+        caller_opts['file_client'] = 'local'
+        self.caller = salt.client.Caller(mopts=caller_opts)
+        self.client = salt.client.get_local_client(self.opts['conf_file'])
         cache = salt.cache.Cache(self.opts)
 
         packages = args[1:]
@@ -272,39 +289,81 @@ class SPMClient(object):
 
         repo_metadata = self._get_repo_metadata()
 
+        dl_list = {}
         for package in to_install:
             if package in file_map:
                 self._install_indv_pkg(package, file_map[package])
             else:
                 for repo in repo_metadata:
                     repo_info = repo_metadata[repo]
-                    if package in repo_metadata[repo]['packages']:
-                        cache_path = '{0}/{1}'.format(
-                            self.opts['spm_cache_dir'],
-                            repo
-                        )
-                        # Download the package
-                        dl_path = '{0}/{1}'.format(
-                            repo_info['info']['url'],
-                            repo_info['packages'][package]['filename']
-                        )
-                        out_file = '{0}/{1}'.format(
-                            cache_path,
-                            repo_info['packages'][package]['filename']
-                        )
-                        if not os.path.exists(cache_path):
-                            os.makedirs(cache_path)
-
-                        if dl_path.startswith('file://'):
-                            dl_path = dl_path.replace('file://', '')
-                            shutil.copyfile(dl_path, out_file)
+                    if package in repo_info['packages']:
+                        dl_package = False
+                        repo_ver = repo_info['packages'][package]['info']['version']
+                        repo_rel = repo_info['packages'][package]['info']['release']
+                        repo_url = repo_info['info']['url']
+                        if package in dl_list:
+                            # Check package version, replace if newer version
+                            if repo_ver == dl_list[package]['version']:
+                                # Version is the same, check release
+                                if repo_rel > dl_list[package]['release']:
+                                    dl_package = True
+                                elif repo_rel == dl_list[package]['release']:
+                                    # Version and release are the same, give
+                                    # preference to local (file://) repos
+                                    if dl_list[package]['source'].startswith('file://'):
+                                        if not repo_url.startswith('file://'):
+                                            dl_package = True
+                            elif repo_ver > dl_list[package]['version']:
+                                dl_package = True
                         else:
-                            response = http.query(dl_path, text=True)
-                            with salt.utils.fopen(out_file, 'w') as outf:
-                                outf.write(response.get("text"))
+                            dl_package = True
 
-                        # Kick off the install
-                        self._install_indv_pkg(package, out_file)
+                        if dl_package is True:
+                            # Put together download directory
+                            cache_path = os.path.join(
+                                self.opts['spm_cache_dir'],
+                                repo
+                            )
+
+                            # Put together download paths
+                            dl_url = '{0}/{1}'.format(
+                                repo_info['info']['url'],
+                                repo_info['packages'][package]['filename']
+                            )
+                            out_file = os.path.join(
+                                cache_path,
+                                repo_info['packages'][package]['filename']
+                            )
+                            dl_list[package] = {
+                                'version': repo_ver,
+                                'release': repo_rel,
+                                'source': dl_url,
+                                'dest_dir': cache_path,
+                                'dest_file': out_file,
+                            }
+
+        for package in dl_list:
+            dl_url = dl_list[package]['source']
+            cache_path = dl_list[package]['dest_dir']
+            out_file = dl_list[package]['dest_file']
+
+            # Make sure download directory exists
+            if not os.path.exists(cache_path):
+                os.makedirs(cache_path)
+
+            # Download the package
+            if dl_url.startswith('file://'):
+                dl_url = dl_url.replace('file://', '')
+                shutil.copyfile(dl_url, out_file)
+            else:
+                with salt.utils.files.fopen(out_file, 'w') as outf:
+                    outf.write(self._query_http(dl_url, repo_info['info']))
+
+        # First we download everything, then we install
+        for package in dl_list:
+            out_file = dl_list[package]['dest_file']
+            # Kick off the install
+            self._install_indv_pkg(package, out_file)
         return
 
     def _local_install(self, args, pkg_name=None):
@@ -404,6 +463,7 @@ class SPMClient(object):
                 raise SPMPackageError('Invalid package: the {0} was not found'.format(field))
 
         pkg_files = formula_tar.getmembers()
+
         # First pass: check for files that already exist
         existing_files = self._pkgfiles_fun('check_existing', pkg_name, pkg_files, formula_def)
 
@@ -415,12 +475,36 @@ class SPMClient(object):
         # We've decided to install
         self._pkgdb_fun('register_pkg', pkg_name, formula_def, self.db_conn)
 
+        # Run the pre_local_state script, if present
+        if 'pre_local_state' in formula_def:
+            high_data = self._render(formula_def['pre_local_state'], formula_def)
+            ret = self.caller.cmd('state.high', data=high_data)
+        if 'pre_tgt_state' in formula_def:
+            log.debug('Executing pre_tgt_state script')
+            high_data = self._render(formula_def['pre_tgt_state']['data'], formula_def)
+            tgt = formula_def['pre_tgt_state']['tgt']
+            ret = self.client.run_job(
+                tgt=formula_def['pre_tgt_state']['tgt'],
+                fun='state.high',
+                tgt_type=formula_def['pre_tgt_state'].get('tgt_type', 'glob'),
+                timout=self.opts['timeout'],
+                data=high_data,
+            )
+
         # No defaults for this in config.py; default to the current running
         # user and group
-        uid = self.opts.get('spm_uid', os.getuid())
-        gid = self.opts.get('spm_gid', os.getgid())
-        uname = pwd.getpwuid(uid)[0]
-        gname = grp.getgrgid(gid)[0]
+        import salt.utils
+        if salt.utils.is_windows():
+            import salt.utils.win_functions
+            uname = gname = salt.utils.win_functions.get_current_user()
+            uname_sid = salt.utils.win_functions.get_sid_from_name(uname)
+            uid = self.opts.get('spm_uid', uname_sid)
+            gid = self.opts.get('spm_gid', uname_sid)
+        else:
+            uid = self.opts.get('spm_uid', os.getuid())
+            gid = self.opts.get('spm_gid', os.getgid())
+            uname = pwd.getpwuid(uid)[0]
+            gname = grp.getgrgid(gid)[0]
 
         # Second pass: install the files
         for member in pkg_files:
@@ -451,6 +535,23 @@ class SPMClient(object):
                                 out_path,
                                 digest,
                                 self.db_conn)
+
+        # Run the post_local_state script, if present
+        if 'post_local_state' in formula_def:
+            log.debug('Executing post_local_state script')
+            high_data = self._render(formula_def['post_local_state'], formula_def)
+            self.caller.cmd('state.high', data=high_data)
+        if 'post_tgt_state' in formula_def:
+            log.debug('Executing post_tgt_state script')
+            high_data = self._render(formula_def['post_tgt_state']['data'], formula_def)
+            tgt = formula_def['post_tgt_state']['tgt']
+            ret = self.client.run_job(
+                tgt=formula_def['post_tgt_state']['tgt'],
+                fun='state.high',
+                tgt_type=formula_def['post_tgt_state'].get('tgt_type', 'glob'),
+                timout=self.opts['timeout'],
+                data=high_data,
+            )
 
         formula_tar.close()
 
@@ -522,7 +623,7 @@ class SPMClient(object):
 
         for repo_file in repo_files:
             repo_path = '{0}.d/{1}'.format(self.opts['spm_repos_config'], repo_file)
-            with salt.utils.fopen(repo_path) as rph:
+            with salt.utils.files.fopen(repo_path) as rph:
                 repo_data = yaml.safe_load(rph)
                 for repo in repo_data:
                     if repo_data[repo].get('enabled', True) is False:
@@ -530,6 +631,45 @@ class SPMClient(object):
                     if repo_name is not None and repo != repo_name:
                         continue
                     callback(repo, repo_data[repo])
+
+    def _query_http(self, dl_path, repo_info):
+        '''
+        Download files via http
+        '''
+        query = None
+        response = None
+
+        try:
+            if 'username' in repo_info:
+                try:
+                    if 'password' in repo_info:
+                        query = http.query(
+                            dl_path, text=True,
+                            username=repo_info['username'],
+                            password=repo_info['password']
+                        )
+                    else:
+                        raise SPMException('Auth defined, but password is not set for username: \'{0}\''
+                                           .format(repo_info['username']))
+                except SPMException as exc:
+                    self.ui.error(str(exc))
+            else:
+                query = http.query(dl_path, text=True)
+        except SPMException as exc:
+            self.ui.error(str(exc))
+
+        try:
+            if query:
+                if 'SPM-METADATA' in dl_path:
+                    response = yaml.safe_load(query.get('text', '{}'))
+                else:
+                    response = query.get('text')
+            else:
+                raise SPMException('Response is empty, please check for Errors above.')
+        except SPMException as exc:
+            self.ui.error(str(exc))
+
+        return response
 
     def _download_repo_metadata(self, args):
         '''
@@ -541,11 +681,10 @@ class SPMClient(object):
             dl_path = '{0}/SPM-METADATA'.format(repo_info['url'])
             if dl_path.startswith('file://'):
                 dl_path = dl_path.replace('file://', '')
-                with salt.utils.fopen(dl_path, 'r') as rpm:
+                with salt.utils.files.fopen(dl_path, 'r') as rpm:
                     metadata = yaml.safe_load(rpm)
             else:
-                response = http.query(dl_path, text=True)
-                metadata = yaml.safe_load(response.get('text', '{}'))
+                metadata = self._query_http(dl_path, repo_info)
 
             cache.store('.', repo, metadata)
 
@@ -581,10 +720,11 @@ class SPMClient(object):
             raise SPMInvocationError('A path to a directory must be specified')
 
         if args[1] == '.':
-            repo_path = os.environ['PWD']
+            repo_path = os.getcwdu()
         else:
             repo_path = args[1]
 
+        old_files = []
         repo_metadata = {}
         for (dirpath, dirnames, filenames) in os.walk(repo_path):
             for spm_file in filenames:
@@ -598,16 +738,100 @@ class SPMClient(object):
                 spm_fh = tarfile.open(spm_path, 'r:bz2')
                 formula_handle = spm_fh.extractfile('{0}/FORMULA'.format(spm_name))
                 formula_conf = yaml.safe_load(formula_handle.read())
-                repo_metadata[spm_name] = {
-                    'info': formula_conf.copy(),
-                }
-                repo_metadata[spm_name]['filename'] = spm_file
+
+                use_formula = True
+                if spm_name in repo_metadata:
+                    # This package is already in the repo; use the latest
+                    cur_info = repo_metadata[spm_name]['info']
+                    new_info = formula_conf
+                    if int(new_info['version']) == int(cur_info['version']):
+                        # Version is the same, check release
+                        if int(new_info['release']) < int(cur_info['release']):
+                            # This is an old release; don't use it
+                            use_formula = False
+                    elif int(new_info['version']) < int(cur_info['version']):
+                        # This is an old version; don't use it
+                        use_formula = False
+
+                    if use_formula is True:
+                        # Ignore/archive/delete the old version
+                        log.debug(
+                            '{0} {1}-{2} had been added, but {3}-{4} will replace it'.format(
+                                spm_name,
+                                cur_info['version'],
+                                cur_info['release'],
+                                new_info['version'],
+                                new_info['release'],
+                            )
+                        )
+                        old_files.append(repo_metadata[spm_name]['filename'])
+                    else:
+                        # Ignore/archive/delete the new version
+                        log.debug(
+                            '{0} {1}-{2} has been found, but is older than {3}-{4}'.format(
+                                spm_name,
+                                new_info['version'],
+                                new_info['release'],
+                                cur_info['version'],
+                                cur_info['release'],
+                            )
+                        )
+                        old_files.append(spm_file)
+
+                if use_formula is True:
+                    log.debug(
+                        'adding {0}-{1}-{2} to the repo'.format(
+                            formula_conf['name'],
+                            formula_conf['version'],
+                            formula_conf['release'],
+                        )
+                    )
+                    repo_metadata[spm_name] = {
+                        'info': formula_conf.copy(),
+                    }
+                    repo_metadata[spm_name]['filename'] = spm_file
 
         metadata_filename = '{0}/SPM-METADATA'.format(repo_path)
-        with salt.utils.fopen(metadata_filename, 'w') as mfh:
-            yaml.dump(repo_metadata, mfh, indent=4, canonical=False, default_flow_style=False)
+        with salt.utils.files.fopen(metadata_filename, 'w') as mfh:
+            yaml.dump(
+                repo_metadata,
+                mfh,
+                indent=4,
+                canonical=False,
+                default_flow_style=False,
+                Dumper=SafeOrderedDumper
+            )
 
         log.debug('Wrote {0}'.format(metadata_filename))
+
+        for file_ in old_files:
+            if self.opts['spm_repo_dups'] == 'ignore':
+                # ignore old packages, but still only add the latest
+                log.debug('{0} will be left in the directory'.format(file_))
+            elif self.opts['spm_repo_dups'] == 'archive':
+                # spm_repo_archive_path is where old packages are moved
+                if not os.path.exists('./archive'):
+                    try:
+                        os.makedirs('./archive')
+                        log.debug('{0} has been archived'.format(file_))
+                    except IOError:
+                        log.error('Unable to create archive directory')
+                try:
+                    shutil.move(file_, './archive')
+                except (IOError, OSError):
+                    log.error(
+                        'Unable to archive {0}'.format(file_)
+                    )
+            elif self.opts['spm_repo_dups'] == 'delete':
+                # delete old packages from the repo
+                try:
+                    os.remove(file_)
+                    log.debug('{0} has been deleted'.format(file_))
+                except IOError:
+                    log.error('Unable to delete {0}'.format(file_))
+                except OSError:
+                    # The file has already been deleted
+                    pass
 
     def _remove(self, args):
         '''
@@ -803,7 +1027,7 @@ class SPMClient(object):
         formula_path = '{0}/FORMULA'.format(self.abspath)
         if not os.path.exists(formula_path):
             raise SPMPackageError('Formula file {0} not found'.format(formula_path))
-        with salt.utils.fopen(formula_path) as fp_:
+        with salt.utils.files.fopen(formula_path) as fp_:
             formula_conf = yaml.safe_load(fp_)
 
         for field in ('name', 'version', 'release', 'summary', 'description'):
@@ -824,12 +1048,31 @@ class SPMClient(object):
 
         formula_tar = tarfile.open(out_path, 'w:bz2')
 
-        try:
-            formula_tar.add(formula_path, formula_conf['name'], filter=self._exclude)
-            formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
-        except TypeError:
-            formula_tar.add(formula_path, formula_conf['name'], exclude=self._exclude)
-            formula_tar.add(self.abspath, formula_conf['name'], exclude=self._exclude)
+        if 'files' in formula_conf:
+            # This allows files to be added to the SPM file in a specific order.
+            # It also allows for files to be tagged as a certain type, as with
+            # RPM files. This tag is ignored here, but is used when installing
+            # the SPM file.
+            if isinstance(formula_conf['files'], list):
+                formula_dir = tarfile.TarInfo(formula_conf['name'])
+                formula_dir.type = tarfile.DIRTYPE
+                formula_tar.addfile(formula_dir)
+                for file_ in formula_conf['files']:
+                    for ftype in FILE_TYPES:
+                        if file_.startswith('{0}|'.format(ftype)):
+                            file_ = file_.lstrip('{0}|'.format(ftype))
+                    formula_tar.add(
+                        os.path.join(os.getcwd(), file_),
+                        os.path.join(formula_conf['name'], file_),
+                    )
+        else:
+            # If no files are specified, then the whole directory will be added.
+            try:
+                formula_tar.add(formula_path, formula_conf['name'], filter=self._exclude)
+                formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
+            except TypeError:
+                formula_tar.add(formula_path, formula_conf['name'], exclude=self._exclude)
+                formula_tar.add(self.abspath, formula_conf['name'], exclude=self._exclude)
         formula_tar.close()
 
         self.ui.status('Built package {0}'.format(out_path))
@@ -847,6 +1090,27 @@ class SPMClient(object):
             elif member.name.startswith('{0}/{1}'.format(self.abspath, item)):
                 return None
         return member
+
+    def _render(self, data, formula_def):
+        '''
+        Render a [pre|post]_local_state or [pre|post]_tgt_state script
+        '''
+        # FORMULA can contain a renderer option
+        renderer = formula_def.get('renderer', self.opts.get('renderer', 'yaml_jinja'))
+        rend = salt.loader.render(self.opts, {})
+        blacklist = self.opts.get('renderer_blacklist')
+        whitelist = self.opts.get('renderer_whitelist')
+        template_vars = formula_def.copy()
+        template_vars['opts'] = self.opts.copy()
+        return compile_template(
+            ':string:',
+            rend,
+            renderer,
+            blacklist,
+            whitelist,
+            input_data=data,
+            **template_vars
+        )
 
 
 class SPMUserInterface(object):

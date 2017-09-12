@@ -20,18 +20,17 @@ import salt.minion
 import salt.output
 import salt.payload
 import salt.transport
+import salt.utils  # Can be removed once print_cli, activate_profile, and output_profile are moved
 import salt.utils.args
+import salt.utils.files
 import salt.utils.jid
+import salt.utils.kinds as kinds
 import salt.utils.minion
 import salt.defaults.exitcodes
-from salt.log import LOG_LEVELS
-from salt.utils import is_windows
-from salt.utils import print_cli
-from salt.utils import kinds
-from salt.utils import activate_profile
-from salt.utils import output_profile
-from salt.utils.process import MultiprocessingProcess
 from salt.cli import daemons
+from salt.log import LOG_LEVELS
+from salt.utils.platform import is_windows
+from salt.utils.process import MultiprocessingProcess
 
 try:
     from raet import raeting, nacling
@@ -46,7 +45,7 @@ except ImportError:
     pass
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Custom exceptions
 from salt.exceptions import (
@@ -114,7 +113,7 @@ class BaseCaller(object):
                     docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts.get('fun', '')):
-                print_cli('{0}:\n{1}\n'.format(name, docs[name]))
+                salt.utils.print_cli('{0}:\n{1}\n'.format(name, docs[name]))
 
     def print_grains(self):
         '''
@@ -129,14 +128,14 @@ class BaseCaller(object):
         '''
         profiling_enabled = self.opts.get('profiling_enabled', False)
         try:
-            pr = activate_profile(profiling_enabled)
+            pr = salt.utils.activate_profile(profiling_enabled)
             try:
                 ret = self.call()
             finally:
-                output_profile(pr,
-                               stats_path=self.opts.get('profiling_path',
-                                                        '/tmp/stats'),
-                               stop=True)
+                salt.utils.output_profile(
+                    pr,
+                    stats_path=self.opts.get('profiling_path', '/tmp/stats'),
+                    stop=True)
             out = ret.get('out', 'nested')
             if self.opts['print_metadata']:
                 print_ret = ret
@@ -158,12 +157,18 @@ class BaseCaller(object):
         '''
         ret = {}
         fun = self.opts['fun']
-        ret['jid'] = salt.utils.jid.gen_jid()
+        ret['jid'] = salt.utils.jid.gen_jid(self.opts)
         proc_fn = os.path.join(
             salt.minion.get_proc_dir(self.opts['cachedir']),
             ret['jid']
         )
         if fun not in self.minion.functions:
+            docs = self.minion.functions['sys.doc']('{0}*'.format(fun))
+            if docs:
+                docs[fun] = self.minion.functions.missing_fun_string(fun)
+                ret['out'] = 'nested'
+                ret['return'] = docs
+                return ret
             sys.stderr.write(self.minion.functions.missing_fun_string(fun))
             mod_name = fun.split('.')[0]
             if mod_name in self.minion.function_errors:
@@ -184,10 +189,12 @@ class BaseCaller(object):
                 sdata['metadata'] = metadata
             args, kwargs = salt.minion.load_args_and_kwargs(
                 self.minion.functions[fun],
-                salt.utils.args.parse_input(self.opts['arg']),
+                salt.utils.args.parse_input(
+                    self.opts['arg'],
+                    no_parse=self.opts.get('no_parse', [])),
                 data=sdata)
             try:
-                with salt.utils.fopen(proc_fn, 'w+b') as fp_:
+                with salt.utils.files.fopen(proc_fn, 'w+b') as fp_:
                     fp_.write(self.serial.dumps(sdata))
             except NameError:
                 # Don't require msgpack with local
@@ -202,7 +209,7 @@ class BaseCaller(object):
                 ret['return'] = func(*args, **kwargs)
             except TypeError as exc:
                 sys.stderr.write('\nPassed invalid arguments: {0}.\n\nUsage:\n'.format(exc))
-                print_cli(func.__doc__)
+                salt.utils.print_cli(func.__doc__)
                 active_level = LOG_LEVELS.get(
                     self.opts['log_level'].lower(), logging.ERROR)
                 if active_level <= logging.DEBUG:

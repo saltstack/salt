@@ -2,7 +2,7 @@
 '''
 Module for sending messages to Mattermost
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :configuration: This module can be used by either passing an api_url and hook
     directly or by specifying both in a configuration profile in the salt
@@ -20,11 +20,12 @@ import json
 import logging
 
 # Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
+from salt.ext import six
 
+# Import Salt libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.utils.mattermost
 # pylint: enable=import-error,no-name-in-module
-
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -169,7 +170,7 @@ def post_event(event,
     log.debug('Event: {0}'.format(str(event)))
     log.debug('Event data: {0}'.format(str(event['data'])))
     message = 'tag: {0}\r\n'.format(event['tag'])
-    for key, value in event['data'].iteritems():
+    for key, value in six.iteritems(event['data']):
         message += '{0}: {1}\r\n'.format(key, value)
     result = post_message(channel,
                           username,

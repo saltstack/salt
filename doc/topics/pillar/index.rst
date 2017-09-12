@@ -90,7 +90,7 @@ by their ``os`` grain:
 
 ``/srv/pillar/packages.sls``
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if grains['os'] == 'RedHat' %}
     apache: httpd
@@ -116,13 +116,13 @@ of ``Foo Industries``.
 Consequently this data can be used from within modules, renderers, State SLS
 files, and more via the shared pillar :ref:`dict <python2:typesmapping>`:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     apache:
       pkg.installed:
         - name: {{ pillar['apache'] }}
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     git:
       pkg.installed:
@@ -149,6 +149,24 @@ And the actual pillar file at '/srv/pillar/common_pillar.sls':
 
     foo: bar
     boo: baz
+
+.. note::
+    When working with multiple pillar environments, assuming that each pillar
+    environment has its own top file, the jinja placeholder ``{{ saltenv }}``
+    can be used in place of the environment name:
+
+    .. code-block:: jinja
+
+        {{ saltenv }}:
+          '*':
+             - common_pillar
+
+    Yes, this is ``{{ saltenv }}``, and not ``{{ pillarenv }}``. The reason for
+    this is because the Pillar top files are parsed using some of the same code
+    which parses top files when :ref:`running states <running-highstate>`, so
+    the pillar environment takes the place of ``{{ saltenv }}`` in the jinja
+    context.
+
 
 Pillar Namespace Flattening
 ===========================
@@ -317,6 +335,7 @@ updated pillar data, but :py:func:`pillar.item <salt.modules.pillar.item>`,
 <salt.modules.pillar.raw>` will not see this data unless refreshed using
 :py:func:`saltutil.refresh_pillar <salt.modules.saltutil.refresh_pillar>`.
 
+.. _pillar-environments:
 
 How Pillar Environments Are Handled
 ===================================
@@ -357,7 +376,7 @@ the ``testing`` environment, without modifying the in-memory pillar data.
     this case would still restrict the states' pillar data to just that of the
     ``testing`` pillar environment.
 
-Starting in the Nitrogen release, it is possible to pin the pillarenv to the
+Starting in the 2017.7.0 release, it is possible to pin the pillarenv to the
 effective saltenv, using the :conf_minion:`pillarenv_from_saltenv` minion
 config option. When this is set to ``True``, if a specific saltenv is specified
 when running states, the ``pillarenv`` will be the same. This essentially makes
@@ -478,7 +497,7 @@ compilation.
 Encrypted Pillar SLS
 --------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Consider the following pillar SLS file:
 

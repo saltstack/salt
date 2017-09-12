@@ -21,14 +21,16 @@ import time
 
 import yaml
 
+import salt.utils.files
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
 import salt.defaults.exitcodes as exitcodes
-import salt.ext.six as six
+from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
-from salttesting import TestCase
-
-import integration
+from tests.support.unit import TestCase
+from tests.support.paths import CODE_DIR
+from tests.support.processes import terminate_process, terminate_process_list
 
 log = logging.getLogger(__name__)
 
@@ -182,7 +184,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
     @property
     def start_pid(self):
-        '''PID of the called script prior to deamonizing.'''
+        '''PID of the called script prior to daemonizing.'''
         return self.process.pid if self.process else None
 
     @property
@@ -208,7 +210,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         if not config:
             return
         cpath = self.abs_path(self.config_file_get(config))
-        with open(cpath, 'w') as cfo:
+        with salt.utils.files.fopen(cpath, 'w') as cfo:
             cfg = self.config_stringify(config)
             log.debug('Writing configuration for {0} to {1}:\n{2}'.format(self.name, cpath, cfg))
             cfo.write(cfg)
@@ -385,8 +387,8 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                     if path not in env_pypath:
                         env_pypath.append(path)
             # Always ensure that the test tree is searched first for python modules
-            if integration.CODE_DIR != env_pypath[0]:
-                env_pypath.insert(0, integration.CODE_DIR)
+            if CODE_DIR != env_pypath[0]:
+                env_pypath.insert(0, CODE_DIR)
             env_delta['PYTHONPATH'] = ':'.join(env_pypath)
 
         cmd_env = dict(os.environ)
@@ -415,10 +417,10 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         elif sys.platform.lower().startswith('win') and timeout is not None:
             raise RuntimeError('Timeout is not supported under windows')
 
-        argv = [self.program]
-        argv.extend(args)
-        log.debug('TestProgram.run: {0} Environment {1}'.format(argv, env_delta))
-        process = subprocess.Popen(argv, **popen_kwargs)
+        self.argv = [self.program]
+        self.argv.extend(args)
+        log.debug('TestProgram.run: %s Environment %s', self.argv, env_delta)
+        process = subprocess.Popen(self.argv, **popen_kwargs)
         self.process = process
 
         if timeout is not None:
@@ -657,8 +659,8 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
     def install_script(self):
         '''Generate the script file that calls python objects and libraries.'''
         lines = []
-        script_source = os.path.join(integration.CODE_DIR, 'scripts', self.script)
-        with open(script_source, 'r') as sso:
+        script_source = os.path.join(CODE_DIR, 'scripts', self.script)
+        with salt.utils.files.fopen(script_source, 'r') as sso:
             lines.extend(sso.readlines())
         if lines[0].startswith('#!'):
             lines.pop(0)
@@ -666,7 +668,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
 
         script_path = self.abs_path(os.path.join(self.script_dir, self.script))
         log.debug('Installing "{0}" to "{1}"'.format(script_source, script_path))
-        with open(script_path, 'w') as sdo:
+        with salt.utils.files.fopen(script_path, 'w') as sdo:
             sdo.write(''.join(lines))
             sdo.flush()
 
@@ -765,17 +767,63 @@ class TestDaemon(TestProgram):
                 pass
         return ret
 
-    def shutdown(self, signum=signal.SIGTERM, timeout=10):
+    def find_orphans(self, cmdline):
+        '''Find orphaned processes matching the specified cmdline'''
+        ret = []
+        if six.PY3:
+            cmdline = ' '.join(cmdline)
+            for proc in psutils.process_iter():
+                try:
+                    for item in proc.cmdline():
+                        if cmdline in item:
+                            ret.append(proc)
+                except psutils.NoSuchProcess:
+                    # Process exited between when process_iter was invoked and
+                    # when we tried to invoke this instance's cmdline() func.
+                    continue
+        else:
+            cmd_len = len(cmdline)
+            for proc in psutils.process_iter():
+                try:
+                    proc_cmdline = proc.cmdline()
+                except psutils.NoSuchProcess:
+                    # Process exited between when process_iter was invoked and
+                    # when we tried to invoke this instance's cmdline() func.
+                    continue
+                if any((cmdline == proc_cmdline[n:n + cmd_len])
+                        for n in range(len(proc_cmdline) - cmd_len + 1)):
+                    ret.append(proc)
+        return ret
+
+    def shutdown(self, signum=signal.SIGTERM, timeout=10, wait_for_orphans=0):
         '''Shutdown a running daemon'''
         if not self._shutdown:
             try:
                 pid = self.wait_for_daemon_pid(timeout)
-                integration.terminate_process_pid(pid)
+                terminate_process(pid=pid, kill_children=True)
             except TimeoutError:
                 pass
         if self.process:
-            integration.terminate_process_pid(self.process.pid)
+            terminate_process(pid=self.process.pid, kill_children=True)
             self.process.wait()
+            if wait_for_orphans:
+                # NOTE: The process for finding orphans is greedy, it just
+                # looks for processes with the same cmdline which are owned by
+                # PID 1.
+                orphans = self.find_orphans(self.argv)
+                last = time.time()
+                while True:
+                    if orphans:
+                        log.debug(
+                            'Terminating orphaned child processes: %s',
+                            orphans
+                        )
+                        terminate_process_list(orphans)
+                        last = time.time()
+                    if (time.time() - last) >= wait_for_orphans:
+                        break
+                    time.sleep(0.25)
+                    orphans = self.find_orphans(self.argv)
             self.process = None
         self._shutdown = True
 

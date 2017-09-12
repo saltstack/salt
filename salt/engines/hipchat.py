@@ -14,23 +14,23 @@ keys make the engine interactive.
     .. code-block:: yaml
 
         engines:
-            hipchat:
-               api_url: http://api.hipchat.myteam.com
-               token: 'XXXXXX'
-               room: 'salt'
-               control: True
-               valid_users:
-                   - SomeUser
-               valid_commands:
-                   - test.ping
-                   - cmd.run
-                   - list_jobs
-                   - list_commands
-               aliases:
-                   list_jobs:
-                       cmd: jobs.list_jobs
-                   list_commands:
-                       cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster tgt_type=list
+            - hipchat:
+                api_url: http://api.hipchat.myteam.com
+                token: 'XXXXXX'
+                room: 'salt'
+                control: True
+                valid_users:
+                    - SomeUser
+                valid_commands:
+                    - test.ping
+                    - cmd.run
+                    - list_jobs
+                    - list_commands
+                aliases:
+                    list_jobs:
+                        cmd: jobs.list_jobs
+                    list_commands:
+                        cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster
                 max_rooms: 0
                 wait_time: 1
 '''
@@ -48,11 +48,15 @@ try:
 except ImportError:
     HAS_HYPCHAT = False
 
-import salt.utils
+import salt.utils.args
+import salt.utils.event
 import salt.utils.files
+import salt.utils.http
 import salt.runner
 import salt.client
 import salt.loader
+import salt.output
+from salt.ext import six
 
 
 def __virtual__():
@@ -65,7 +69,7 @@ _DEFAULT_SLEEP = 5
 _DEFAULT_MAX_ROOMS = 1000
 
 
-def _publish_file(token, room, filepath, message='', api_url=None):
+def _publish_file(token, room, filepath, message='', outputter=None, api_url=None):
     """ Send file to a HipChat room via API version 2
     Parameters
     ----------
@@ -91,7 +95,8 @@ def _publish_file(token, room, filepath, message='', api_url=None):
     headers['Authorization'] = "Bearer " + token
     msg = json.dumps({'message': message})
 
-    payload = """\
+    with salt.utils.files.fopen(filepath, 'rb') as rfh:
+        payload = """\
 --boundary123456
 Content-Type: application/json; charset=UTF-8
 Content-Disposition: attachment; name="metadata"
@@ -104,9 +109,71 @@ Content-Disposition: attachment; name="file"; filename="{1}"
 {2}
 
 --boundary123456--\
-""".format(msg, os.path.basename(filepath), open(filepath, 'rb').read())
+""".format(msg, os.path.basename(filepath), rfh.read())
 
     salt.utils.http.query(url, method='POST', header_dict=headers, data=payload)
+
+
+def _publish_html_message(token, room, data, message='', outputter='nested', api_url=None):
+    '''
+    Publishes the HTML-formatted message.
+    '''
+    url = "{0}/v2/room/{1}/notification".format(api_url, room)
+    headers = {
+        'Content-type': 'text/plain'
+    }
+    headers['Authorization'] = 'Bearer ' + token
+    salt.utils.http.query(
+        url,
+        'POST',
+        data=message,
+        decode=True,
+        status=True,
+        header_dict=headers,
+        opts=__opts__,
+    )
+    headers['Content-type'] = 'text/html'
+    message = salt.output.html_format(data, outputter, opts=__opts__)
+    salt.utils.http.query(
+        url,
+        'POST',
+        data=message,
+        decode=True,
+        status=True,
+        header_dict=headers,
+        opts=__opts__,
+    )
+
+
+def _publish_code_message(token, room, data, message='', outputter='nested', api_url=None):
+    '''
+    Publishes the output format as code.
+    '''
+    url = "{0}/v2/room/{1}/notification".format(api_url, room)
+    headers = {
+        'Content-type': 'text/plain'
+    }
+    headers['Authorization'] = 'Bearer ' + token
+    salt.utils.http.query(
+        url,
+        'POST',
+        data=message,
+        decode=True,
+        status=True,
+        header_dict=headers,
+        opts=__opts__,
+    )
+    message = '/code '
+    message += salt.output.string_format(data, outputter, opts=__opts__)
+    salt.utils.http.query(
+        url,
+        'POST',
+        data=message,
+        decode=True,
+        status=True,
+        header_dict=headers,
+        opts=__opts__,
+    )
 
 
 def start(token,
@@ -120,9 +187,74 @@ def start(token,
           api_key=None,
           api_url=None,
           max_rooms=None,
-          wait_time=None):
+          wait_time=None,
+          output_type='file',
+          outputter='nested'):
     '''
-    Listen to Hipchat messages and forward them to Salt
+    Listen to Hipchat messages and forward them to Salt.
+
+    token
+        The HipChat API key. It requires a key for global usgae,
+        assigned per user, rather than room.
+
+    room
+        The HipChat room name.
+
+    aliases
+        Define custom aliases.
+
+    valid_users
+        Restrict access only to certain users.
+
+    valid_commands
+        Restrict the execution to a limited set of commands.
+
+    control
+        Send commands to the master.
+
+    trigger: ``!``
+        Special character that triggers the execution of salt commands.
+
+    tag: ``salt/engines/hipchat/incoming``
+        The event tag on the Salt bus.
+
+    api_url: ``https://api.hipchat.com``
+        The URL to the HipChat API.
+
+        .. versionadded:: 2017.7.0
+
+    max_rooms: ``1000``
+        Maximum number of rooms allowed to fetch. If set to 0,
+        it is able to retrieve the entire list of rooms.
+
+    wait_time: ``5``
+        Maximum wait time, in seconds.
+
+    output_type: ``file``
+        The type of the output. Choose bewteen:
+
+            - ``file``: save the output into a temporary file and upload
+            - ``html``: send the output as HTML
+            - ``code``: send the output as code
+
+        This can be overriden when executing a command, using the ``--out-type`` argument.
+
+        .. versionadded:: 2017.7.0
+
+    outputter: ``nested``
+        The format to display the data, using the outputters available on the CLI.
+        This argument can also be overriden when executing a command, using the ``--out`` option.
+
+        .. versionadded:: 2017.7.0
+
+    HipChat Example:
+
+    .. code-block:: text
+
+        ! test.ping
+        ! test.ping target=minion1
+        ! test.ping --out=nested
+        ! test.ping --out-type=code --out=table
     '''
     target_room = None
 
@@ -209,13 +341,13 @@ def start(token,
             args = []
             kwargs = {}
 
-            cmdline = salt.utils.shlex_split(text)
+            cmdline = salt.utils.args.shlex_split(text)
             cmd = cmdline[0]
 
             # Evaluate aliases
             if aliases and isinstance(aliases, dict) and cmd in aliases.keys():
                 cmdline = aliases[cmd].get('cmd')
-                cmdline = salt.utils.shlex_split(cmdline)
+                cmdline = salt.utils.args.shlex_split(cmdline)
                 cmd = cmdline[0]
 
             # Parse args and kwargs
@@ -241,6 +373,16 @@ def start(token,
                 tgt_type = kwargs['tgt_type']
                 del kwargs['tgt_type']
 
+            # Check for outputter. Otherwise assume nested
+            if '--out' in kwargs:
+                outputter = kwargs['--out']
+                del kwargs['--out']
+
+            # Check for outputter. Otherwise assume nested
+            if '--out-type' in kwargs:
+                output_type = kwargs['--out-type']
+                del kwargs['--out-type']
+
             # Ensure the command is allowed
             if valid_commands:
                 if cmd not in valid_commands:
@@ -257,10 +399,22 @@ def start(token,
                 local = salt.client.LocalClient()
                 ret = local.cmd('{0}'.format(target), cmd, args, kwargs, tgt_type='{0}'.format(tgt_type))
 
-            tmp_path_fn = salt.utils.files.mkstemp()
-            with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
-                fp_.write(json.dumps(ret, sort_keys=True, indent=4))
-            message_string = '@{0} Results for: {1} {2} {3} on {4}'.format(partner, cmd, args, kwargs, target)
-            _publish_file(token, room, tmp_path_fn, message=message_string, api_url=api_url)
-            salt.utils.safe_rm(tmp_path_fn)
+            nice_args = (' ' + ' '.join(args)) if args else ''
+            nice_kwargs = (' ' + ' '.join('{0}={1}'.format(key, value) for (key, value) in six.iteritems(kwargs))) \
+                          if kwargs else ''
+            message_string = '@{0} Results for: {1}{2}{3} on {4}'.format(partner,
+                                                                         cmd,
+                                                                         nice_args,
+                                                                         nice_kwargs,
+                                                                         target)
+            if output_type == 'html':
+                _publish_html_message(token, room, ret, message=message_string, outputter=outputter, api_url=api_url)
+            elif output_type == 'code':
+                _publish_code_message(token, room, ret, message=message_string, outputter=outputter, api_url=api_url)
+            else:
+                tmp_path_fn = salt.utils.files.mkstemp()
+                with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
+                    fp_.write(json.dumps(ret, sort_keys=True, indent=4))
+                _publish_file(token, room, tmp_path_fn, message=message_string, api_url=api_url)
+                salt.utils.files.safe_rm(tmp_path_fn)
         time.sleep(wait_time or _DEFAULT_SLEEP)

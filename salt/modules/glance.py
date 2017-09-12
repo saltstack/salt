@@ -358,7 +358,7 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     schema = image_schema(profile=profile)
     if len(schema.keys()) == 1:
         schema = schema['image']
-    for key in schema.keys():
+    for key in schema:
         if key in image:
             ret[key] = image[key]
     return ret

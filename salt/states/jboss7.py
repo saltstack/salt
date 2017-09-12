@@ -44,11 +44,11 @@ import re
 import traceback
 
 # Import Salt libs
-from salt.utils import dictdiffer
+import salt.utils.dictdiffer as dictdiffer
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -448,9 +448,9 @@ def __get_artifact(salt_source):
                 log.debug(traceback.format_exc())
                 comment = 'Unable to manage file: {0}'.format(e)
 
-            else:
-                resolved_source = salt_source['target_file']
-                comment = ''
+        else:
+            resolved_source = salt_source['target_file']
+            comment = ''
 
     return resolved_source, comment
 
