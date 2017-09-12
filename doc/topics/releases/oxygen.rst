@@ -51,6 +51,12 @@ New NaCl Renderer
 
 A new renderer has been added for encrypted data.
 
+New support for Cisco UCS Chassis
+---------------------------------
+
+The salt proxy minion now allows for control of Cisco USC chassis. See
+the `cimc` modules for details.
+
 New GitFS Features
 ------------------
 
