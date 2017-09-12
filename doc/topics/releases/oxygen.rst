@@ -55,7 +55,8 @@ New salt-ssh roster
 -------------------
 
 A new roster has been added that allows users to pull in a list of hosts
-for salt-ssh targeting from a ~/.ssh configuration.
+for salt-ssh targeting from a ~/.ssh configuration. For full details,
+please see the `sshconfig` roster.
 
 New GitFS Features
 ------------------
