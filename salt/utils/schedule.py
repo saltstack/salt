@@ -764,7 +764,7 @@ class Schedule(object):
                'fun': func,
                'fun_args': [],
                'schedule': data['name'],
-               'jid': salt.utils.jid.gen_jid()}
+               'jid': salt.utils.jid.gen_jid(self.opts)}
 
         if 'metadata' in data:
             if isinstance(data['metadata'], dict):
@@ -848,7 +848,8 @@ class Schedule(object):
             if argspec.keywords:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in six.iteritems(ret):
-                    kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
+                    if key is not 'kwargs':
+                        kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
 
             ret['return'] = self.functions[func](*args, **kwargs)
 
