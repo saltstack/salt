@@ -499,6 +499,76 @@ def get_ha_config():
     return __proxy__['panos.call'](query)
 
 
+def get_ha_link():
+    '''
+    Show high-availability link-monitoring state.
+
+    CLI Example:
+
+   .. code-block:: bash
+
+        salt '*' panos.get_ha_link
+
+    '''
+    query = {'type': 'op',
+             'cmd': '<show><high-availability><link-monitoring></link-monitoring></high-availability></show>'}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_ha_path():
+    '''
+    Show high-availability path-monitoring state.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_ha_path
+
+    '''
+    query = {'type': 'op',
+             'cmd': '<show><high-availability><path-monitoring></path-monitoring></high-availability></show>'}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_ha_state():
+    '''
+    Show high-availability state information.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_ha_state
+
+    '''
+
+    query = {'type': 'op',
+             'cmd': '<show><high-availability><state></state></high-availability></show>'}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_ha_transitions():
+    '''
+    Show high-availability transition statistic information.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_ha_transitions
+
+    '''
+
+    query = {'type': 'op',
+             'cmd': '<show><high-availability><transitions></transitions></high-availability></show>'}
+
+    return __proxy__['panos.call'](query)
+
+
 def get_hostname():
     '''
     Get the hostname of the device.
@@ -856,6 +926,23 @@ def get_platform():
     return __proxy__['panos.call'](query)
 
 
+def get_session_info():
+    '''
+    Show device session statistics.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_session_info
+
+    '''
+    query = {'type': 'op',
+             'cmd': '<show><session><info></info></session></show>'}
+
+    return __proxy__['panos.call'](query)
+
+
 def get_snmp_config():
     '''
     Get the SNMP configuration from the device.
@@ -975,6 +1062,23 @@ def get_system_state(filter=None):
                  'cmd': '<show><system><state><filter>{0}</filter></state></system></show>'.format(filter)}
     else:
         query = {'type': 'op', 'cmd': '<show><system><state></state></system></show>'}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_uncommitted_changes():
+    '''
+    Retrieve a list of all uncommitted changes on the device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_uncommitted_changes
+
+    '''
+    query = {'type': 'op',
+             'cmd': '<show><config><list><changes></changes></list></config></show>'}
 
     return __proxy__['panos.call'](query)
 
@@ -1261,7 +1365,7 @@ def set_authentication_profile(profile=None, deploy=False):
     query = {'type': 'config',
              'action': 'set',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/'
-                      'authentication-profile/',
+                      'authentication-profile',
              'element': '<authentication-profile>{0}</authentication-profile>'.format(profile)}
 
     ret.update(__proxy__['panos.call'](query))
@@ -1297,7 +1401,7 @@ def set_hostname(hostname=None, deploy=False):
 
     query = {'type': 'config',
              'action': 'set',
-             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system',
              'element': '<hostname>{0}</hostname>'.format(hostname)}
 
     ret.update(__proxy__['panos.call'](query))
@@ -1337,7 +1441,7 @@ def set_management_icmp(enabled=True, deploy=False):
 
     query = {'type': 'config',
              'action': 'set',
-             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service/',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service',
              'element': '<disable-icmp>{0}</disable-icmp>'.format(value)}
 
     ret.update(__proxy__['panos.call'](query))
@@ -1377,7 +1481,7 @@ def set_management_http(enabled=True, deploy=False):
 
     query = {'type': 'config',
              'action': 'set',
-             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service/',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service',
              'element': '<disable-http>{0}</disable-http>'.format(value)}
 
     ret.update(__proxy__['panos.call'](query))
@@ -1417,7 +1521,7 @@ def set_management_https(enabled=True, deploy=False):
 
     query = {'type': 'config',
              'action': 'set',
-             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service/',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service',
              'element': '<disable-https>{0}</disable-https>'.format(value)}
 
     ret.update(__proxy__['panos.call'](query))
@@ -1457,7 +1561,7 @@ def set_management_ocsp(enabled=True, deploy=False):
 
     query = {'type': 'config',
              'action': 'set',
-             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service/',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service',
              'element': '<disable-http-ocsp>{0}</disable-http-ocsp>'.format(value)}
 
     ret.update(__proxy__['panos.call'](query))
@@ -1497,7 +1601,7 @@ def set_management_snmp(enabled=True, deploy=False):
 
     query = {'type': 'config',
              'action': 'set',
-             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service/',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service',
              'element': '<disable-snmp>{0}</disable-snmp>'.format(value)}
 
     ret.update(__proxy__['panos.call'](query))
@@ -1537,7 +1641,7 @@ def set_management_ssh(enabled=True, deploy=False):
 
     query = {'type': 'config',
              'action': 'set',
-             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service/',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service',
              'element': '<disable-ssh>{0}</disable-ssh>'.format(value)}
 
     ret.update(__proxy__['panos.call'](query))
@@ -1577,7 +1681,7 @@ def set_management_telnet(enabled=True, deploy=False):
 
     query = {'type': 'config',
              'action': 'set',
-             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service/',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/service',
              'element': '<disable-telnet>{0}</disable-telnet>'.format(value)}
 
     ret.update(__proxy__['panos.call'](query))
@@ -1770,8 +1874,8 @@ def set_permitted_ip(address=None, deploy=False):
 
     query = {'type': 'config',
              'action': 'set',
-             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/permitted-ip/',
-             'element': '<entry name={0}></entry>'.format(address)}
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/permitted-ip',
+             'element': '<entry name=\'{0}\'></entry>'.format(address)}
 
     ret.update(__proxy__['panos.call'](query))
 
@@ -1806,7 +1910,7 @@ def set_timezone(tz=None, deploy=False):
 
     query = {'type': 'config',
              'action': 'set',
-             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/timezone/',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/timezone',
              'element': '<timezone>{0}</timezone>'.format(tz)}
 
     ret.update(__proxy__['panos.call'](query))
