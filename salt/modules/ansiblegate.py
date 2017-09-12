@@ -21,6 +21,8 @@ import logging
 import importlib
 import yaml
 import fnmatch
+import subprocess
+import json
 
 from salt.exceptions import LoaderError, CommandExecutionError
 try:
@@ -108,7 +110,41 @@ class AnsibleModuleResolver(object):
         return self
 
 
+class AnsibleModuleCaller(object):
+    def __init__(self, resolver):
+        self._resolver = resolver
+
+    def call(self, module, *args, **kwargs):
+        '''
+        Call an Ansible module by invoking it.
+        :param module: the name of the module.
+        :param args: Arguments to the module
+        :param kwargs: keywords to the module
+        :return:
+        '''
+
+        module = self._resolver.load_module(module)
+        if args:
+            kwargs['_raw_params'] = ' '.join(args)
+        js_args = '{{"ANSIBLE_MODULE_ARGS": {args}}}'.format(args=json.dumps(kwargs))
+        js_out = subprocess.Popen(["echo", "{0}".format(js_args)], stdout=subprocess.PIPE)
+        md_exc = subprocess.Popen(['python', module.__file__],
+                                  stdin=js_out.stdout, stdout=subprocess.PIPE)
+        js_out.stdout.close()
+        js_out = md_exc.communicate()[0]
+
+        try:
+            out = json.loads(js_out)
+        except ValueError as ex:
+            return {'Error': str(ex), "JSON": js_out}
+        if 'invocation' in out:
+            del out['invocation']
+
+        return out
+
+
 _resolver = None
+_caller = None
 
 
 def _set_callables(modules):
@@ -153,7 +189,9 @@ def __virtual__():
         log.warning(msg)
     else:
         global _resolver
+        global _caller
         _resolver = AnsibleModuleResolver(__opts__).resolve().install()
+        _caller = AnsibleModuleCaller(_resolver)
     _set_callables(list())
 
     return ret, msg
