@@ -109,6 +109,29 @@ class AnsibleModuleResolver(object):
 
 _resolver = None
 
+
+def _set_callables(modules):
+    '''
+    Set all Ansible modules callables
+    :return:
+    '''
+    def _mkf(cmd_name, doc):
+        '''
+        Create a Salt function for the Ansible module.
+        '''
+        def _cmd(*args, **kw):
+            '''
+            Call an Ansible module as a function from the Salt.
+            '''
+            global _caller
+            return _caller.call(cmd_name)
+        _cmd.__doc__ = doc
+        return _cmd
+
+    for mod in modules:
+        setattr(sys.modules[__name__], mod, _mkf(mod, 'Available'))
+
+
 def __virtual__():
     '''
     Ansible module caller.
@@ -121,6 +144,8 @@ def __virtual__():
     else:
         global _resolver
         _resolver = AnsibleModuleResolver(__opts__).resolve().install()
+    _set_callables(list())
+
     return ret, msg
 
 
