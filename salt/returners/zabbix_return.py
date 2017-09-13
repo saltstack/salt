@@ -26,6 +26,7 @@ import os
 
 # Import Salt libs
 from salt.ext import six
+import salt.utils.files
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ def zbx():
 
 
 def zabbix_send(key, host, output): 
-    f = open('/etc/zabbix/zabbix_agentd.conf','r') 
+    f = open(zbx()['zabbix_config'],'r') 
     for line in f: 
         if "ServerActive" in line: 
             flag = "true" 
