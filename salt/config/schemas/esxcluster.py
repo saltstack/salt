@@ -29,7 +29,7 @@ class EsxclusterProxySchema(Schema):
     additional_properties = False
     proxytype = StringItem(required=True,
                            enum=['esxcluster'])
-    vcenter = StringItem(required=True, pattern='[^\s]+')
+    vcenter = StringItem(required=True, pattern=r'[^\s]+')
     datacenter = StringItem(required=True)
     cluster = StringItem(required=True)
     mechanism = StringItem(required=True, enum=['userpass', 'sspi'])

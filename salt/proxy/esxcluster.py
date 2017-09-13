@@ -159,7 +159,7 @@ import os
 
 # Import Salt Libs
 import salt.exceptions
-from  salt.config.schemas.esxcluster import EsxclusterProxySchema
+from salt.config.schemas.esxcluster import EsxclusterProxySchema
 from salt.utils.dictupdate import merge
 
 # This must be present or the Salt loader won't load this module.
@@ -222,18 +222,18 @@ def init(opts):
             raise salt.exceptions.InvalidConfigError(
                 'Mechanism is set to \'userpass\', but no '
                 '\'username\' key found in proxy config.')
-        if not 'passwords' in proxy_conf:
+        if 'passwords' not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
                 'Mechanism is set to \'userpass\', but no '
                 '\'passwords\' key found in proxy config.')
         for key in ('username', 'passwords'):
             DETAILS[key] = proxy_conf[key]
     else:
-        if not 'domain' in proxy_conf:
+        if 'domain' not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
                 'Mechanism is set to \'sspi\', but no '
                 '\'domain\' key found in proxy config.')
-        if not 'principal' in proxy_conf:
+        if 'principal' not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
                 'Mechanism is set to \'sspi\', but no '
                 '\'principal\' key found in proxy config.')
