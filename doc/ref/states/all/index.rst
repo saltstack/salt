@@ -136,6 +136,7 @@ state modules
     keyboard
     keystone
     kmod
+    kubernetes
     layman
     ldap
     libcloud_dns
@@ -178,6 +179,7 @@ state modules
     netusers
     network
     netyang
+    nfs_export
     nftables
     npm
     ntp
@@ -249,7 +251,6 @@ state modules
     stateconf
     status
     statuspage
-    stormpath_account
     supervisord
     svn
     sysctl

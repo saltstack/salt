@@ -17,17 +17,19 @@ import subprocess
 import json
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.daemons.masterapi
 import salt.utils
 import salt.utils.args
 import salt.utils.files
+import salt.utils.kinds as kinds
+import salt.utils.stringutils
 import salt.transport
 from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
-from salt.utils import kinds, is_windows
+from salt.utils.platform import is_windows
 from salt.utils.event import tagify
 
 from salt.exceptions import (
@@ -59,7 +61,7 @@ def jobber_check(self):
             rms.append(jid)
             data = self.shells.value[jid]
             stdout, stderr = data['proc'].communicate()
-            ret = json.loads(salt.utils.to_str(stdout), object_hook=salt.utils.decode_dict)['local']
+            ret = json.loads(salt.utils.stringutils.to_str(stdout), object_hook=salt.utils.decode_dict)['local']
             route = {'src': (self.stack.value.local.name, 'manor', 'jid_ret'),
                      'dst': (data['msg']['route']['src'][0], None, 'remote_cmd')}
             ret['cmd'] = '_return'
@@ -212,7 +214,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         except (KeyError, AttributeError, TypeError):
             pass
         else:
-            if isinstance(oput, str):
+            if isinstance(oput, six.string_types):
                 ret['out'] = oput
         msg = {'route': route, 'load': ret}
         stack.transmit(msg, stack.fetchUidByName('manor'))

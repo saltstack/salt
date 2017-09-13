@@ -9,15 +9,16 @@ You can add and edit existing tasks.
 You can add and clear triggers and actions.
 You can list all tasks, folders, triggers, and actions.
 '''
-
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
-import salt.utils
-from datetime import datetime
 import logging
 import time
+from datetime import datetime
 
-# Import 3rd Party Libraries
+# Import Salt libs
+import salt.utils.platform
+
+# Import 3rd-party libraries
 try:
     import pythoncom
     import win32com.client
@@ -161,7 +162,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         if not HAS_DEPENDENCIES:
             log.warning('Could not load dependencies for {0}'.format(__virtualname__))
         return __virtualname__
@@ -1259,7 +1260,7 @@ def status(name, location='\\'):
     task_service = win32com.client.Dispatch("Schedule.Service")
     task_service.Connect()
 
-    # get the folder to delete the folder from
+    # get the folder where the task is defined
     task_folder = task_service.GetFolder(location)
     task = task_folder.GetTask(name)
 

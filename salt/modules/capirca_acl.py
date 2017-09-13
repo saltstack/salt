@@ -32,15 +32,15 @@ import datetime
 log = logging.getLogger(__file__)
 
 # Import third party libs
+from salt.ext import six
 try:
     import aclgen
     HAS_CAPIRCA = True
 except ImportError:
     HAS_CAPIRCA = False
 
-# Import Salt modules
+# Import Salt libs
 import salt.utils.files
-from salt.ext import six
 
 # ------------------------------------------------------------------------------
 # module properties

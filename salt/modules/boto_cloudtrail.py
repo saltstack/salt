@@ -54,7 +54,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils

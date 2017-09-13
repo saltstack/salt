@@ -18,12 +18,16 @@ import sys
 
 # Import salt libs
 import salt.client
+import salt.output
+import salt.utils
+import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.itertools
 import salt.utils.minions
-from salt.utils import parsers, to_bytes
-from salt.utils.verify import verify_log
-import salt.output
+import salt.utils.parsers
+import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.verify
 
 # Import 3rd party libs
 from salt.ext import six
@@ -31,7 +35,7 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
-class SaltCPCli(parsers.SaltCPOptionParser):
+class SaltCPCli(salt.utils.parsers.SaltCPOptionParser):
     '''
     Run the salt-cp command line client
     '''
@@ -44,7 +48,7 @@ class SaltCPCli(parsers.SaltCPOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
-        verify_log(self.config)
+        salt.utils.verify.verify_log(self.config)
 
         cp_ = SaltCP(self.config)
         cp_.run()
@@ -56,7 +60,7 @@ class SaltCP(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.is_windows = salt.utils.is_windows()
+        self.is_windows = salt.utils.platform.is_windows()
 
     def _mode(self, path):
         if self.is_windows:
@@ -101,9 +105,69 @@ class SaltCP(object):
             empty_dirs.update(empty_dirs_)
         return files, sorted(empty_dirs)
 
+    def _file_dict(self, fn_):
+        '''
+        Take a path and return the contents of the file as a string
+        '''
+        if not os.path.isfile(fn_):
+            err = 'The referenced file, {0} is not available.'.format(fn_)
+            sys.stderr.write(err + '\n')
+            sys.exit(42)
+        with salt.utils.files.fopen(fn_, 'r') as fp_:
+            data = fp_.read()
+        return {fn_: data}
+
+    def _load_files(self):
+        '''
+        Parse the files indicated in opts['src'] and load them into a python
+        object for transport
+        '''
+        files = {}
+        for fn_ in self.opts['src']:
+            if os.path.isfile(fn_):
+                files.update(self._file_dict(fn_))
+            elif os.path.isdir(fn_):
+                salt.utils.print_cli(fn_ + ' is a directory, only files are supported '
+                                           'in non-chunked mode. Use "--chunked" command '
+                                           'line argument.')
+                sys.exit(1)
+        return files
+
     def run(self):
         '''
         Make the salt client call
+        '''
+        if self.opts['chunked']:
+            ret = self.run_chunked()
+        else:
+            ret = self.run_oldstyle()
+
+        salt.output.display_output(
+                ret,
+                self.opts.get('output', 'nested'),
+                self.opts)
+
+    def run_oldstyle(self):
+        '''
+        Make the salt client call in old-style all-in-one call method
+        '''
+        arg = [self._load_files(), self.opts['dest']]
+        local = salt.client.get_local_client(self.opts['conf_file'])
+        args = [self.opts['tgt'],
+                'cp.recv',
+                arg,
+                self.opts['timeout'],
+                ]
+
+        selected_target_option = self.opts.get('selected_target_option', None)
+        if selected_target_option is not None:
+            args.append(selected_target_option)
+
+        return local.cmd(*args)
+
+    def run_chunked(self):
+        '''
+        Make the salt client call in the new fasion chunked multi-call way
         '''
         files, empty_dirs = self._list_files()
         dest = self.opts['dest']
@@ -120,9 +184,10 @@ class SaltCP(object):
             if gzip \
             else salt.utils.itertools.read_file
 
-        minions = salt.utils.minions.CkMinions(self.opts).check_minions(
+        _res = salt.utils.minions.CkMinions(self.opts).check_minions(
             tgt,
             tgt_type=selected_target_option or 'glob')
+        minions = _res['minions']
 
         local = salt.client.get_local_client(self.opts['conf_file'])
 
@@ -152,7 +217,7 @@ class SaltCP(object):
             index = 1
             failed = {}
             for chunk in reader(fn_, chunk_size=self.opts['salt_cp_chunk_size']):
-                chunk = base64.b64encode(to_bytes(chunk))
+                chunk = base64.b64encode(salt.utils.stringutils.to_bytes(chunk))
                 append = index > 1
                 log.debug(
                     'Copying %s to %starget \'%s\' as %s%s',
@@ -166,7 +231,7 @@ class SaltCP(object):
                 )
                 args = [
                     tgt,
-                    'cp.recv',
+                    'cp.recv_chunked',
                     [remote_path, chunk, append, gzip, mode],
                     timeout,
                 ]
@@ -212,14 +277,11 @@ class SaltCP(object):
                     else '',
                 tgt,
             )
-            args = [tgt, 'cp.recv', [remote_path, None], timeout]
+            args = [tgt, 'cp.recv_chunked', [remote_path, None], timeout]
             if selected_target_option is not None:
                 args.append(selected_target_option)
 
             for minion_id, minion_ret in six.iteritems(local.cmd(*args)):
                 ret.setdefault(minion_id, {})[remote_path] = minion_ret
 
-        salt.output.display_output(
-                ret,
-                self.opts.get('output', 'nested'),
-                self.opts)
+        return ret

@@ -56,6 +56,7 @@ import logging
 # Import Salt libs
 from salt.ext import six
 import salt.utils
+import salt.utils.platform
 import salt.utils.win_update
 
 log = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ def __virtual__():
     '''
     Only valid on Windows machines
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'WUA: Only available on Window systems'
 
     if not salt.utils.win_update.HAS_PYWIN32:

@@ -15,8 +15,8 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils
 import salt.utils.files
+import salt.utils.platform
 import salt.modules.ssh as ssh
 from salt.exceptions import CommandExecutionError
 
@@ -91,10 +91,10 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         options = 'command="/usr/local/lib/ssh-helper"'
         email = 'github.com'
         empty_line = '\n'
-        comment_line = '# this is a comment \n'
+        comment_line = '# this is a comment\n'
 
         # Write out the authorized key to a temporary file
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             temp_file = tempfile.NamedTemporaryFile(delete=False)
         else:
             temp_file = tempfile.NamedTemporaryFile(delete=False, mode='w+')

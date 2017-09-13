@@ -166,13 +166,15 @@ Ubuntu 14.04 LTS and Debian Wheezy (7.x) also have a compatible version packaged
 
     # apt-get install python-git
 
-If your master is running an older version (such as Ubuntu 12.04 LTS or Debian
-Squeeze), then you will need to install GitPython using either pip_ or
-easy_install (it is recommended to use pip). Version 0.3.2.RC1 is now marked as
-the stable release in PyPI, so it should be a simple matter of running ``pip
-install GitPython`` (or ``easy_install GitPython``) as root.
+GitPython_ requires the ``git`` CLI utility to work. If installed from a system
+package, then git should already be installed, but if installed via pip_ then
+it may still be necessary to install git separately. For MacOS users,
+GitPython_ comes bundled in with the Salt installer, but git must still be
+installed for it to work properly. Git can be installed in several ways,
+including by installing XCode_.
 
-.. _`pip`: http://www.pip-installer.org/
+.. _pip: http://www.pip-installer.org/
+.. _XCode: https://developer.apple.com/xcode/
 
 .. warning::
 
@@ -1108,15 +1110,8 @@ Using Git as an External Pillar Source
 The git external pillar (a.k.a. git_pillar) has been rewritten for the 2015.8.0
 release. This rewrite brings with it pygit2_ support (allowing for access to
 authenticated repositories), as well as more granular support for per-remote
-configuration.
-
-To make use of the new features, changes to the git ext_pillar configuration
-must be made. The new configuration schema is detailed :ref:`here
-<git-pillar-2015-8-0-and-later>`.
-
-For Salt releases before 2015.8.0, click :ref:`here <git-pillar-pre-2015-8-0>`
-for documentation.
-
+configuration. This configuration schema is detailed :ref:`here
+<git-pillar-configuration>`.
 
 .. _faq-gitfs-bug:
 

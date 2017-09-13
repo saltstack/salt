@@ -56,7 +56,7 @@ if %Python%==2 (
     Set "PyVerMajor=2"
     Set "PyVerMinor=7"
 ) else (
-    Set "PyDir=C:\Program Files\Python35"
+    Set "PyDir=C:\Python35"
     Set "PyVerMajor=3"
     Set "PyVerMinor=5"
 )
@@ -108,9 +108,9 @@ xcopy /E /Q "%PyDir%" "%BinDir%\"
 @echo Copying configs to buildenv\conf...
 @echo ----------------------------------------------------------------------
 @echo xcopy /E /Q "%SrcDir%\conf\master" "%CnfDir%\"
-xcopy /Q "%SrcDir%\conf\master" "%CnfDir%\"
+xcopy /Q /Y "%SrcDir%\conf\master" "%CnfDir%\"
 @echo xcopy /E /Q "%SrcDir%\conf\minion" "%CnfDir%\"
-xcopy /Q "%SrcDir%\conf\minion" "%CnfDir%\"
+xcopy /Q /Y "%SrcDir%\conf\minion" "%CnfDir%\"
 @echo.
 
 @echo Copying VCRedist to Prerequisites
@@ -581,6 +581,10 @@ If Exist "%BinDir%\Scripts\salt-run*"^
     del /Q "%BinDir%\Scripts\salt-run*" 1>nul
 If Exist "%BldDir%\salt-run.bat"^
     del /Q "%BldDir%\salt-run.bat" 1>nul
+
+:: Remove the master config file
+if Exist "%CnfDir%\master"^
+    del /Q "%CnfDir%\master" 1>nul
 
 :: Make the Salt Minion Installer
 makensis.exe /DSaltVersion=%Version% /DPythonVersion=%Python% "%InsDir%\Salt-Minion-Setup.nsi"

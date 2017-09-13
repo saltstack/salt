@@ -26,8 +26,8 @@ from salt.modules.inspectlib.exceptions import (InspectorQueryException,
                                                 InspectorKiwiProcessorException)
 
 # Import Salt libs
-import salt.utils
 import salt.utils.fsutils
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import get_error_message as _get_error_message
 
@@ -38,7 +38,7 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    return not salt.utils.is_windows() and 'inspector'
+    return not salt.utils.platform.is_windows() and 'inspector'
 
 
 def _(module):

@@ -11,7 +11,7 @@ for :mod:`salt.proxy.nxos<salt.proxy.nxos>`.
 from __future__ import absolute_import
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
 import salt.modules.nxos
 
 import logging
@@ -23,7 +23,7 @@ __virtualname__ = 'nxos'
 
 def __virtual__():
     try:
-        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'nxos':
+        if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'nxos':
             return __virtualname__
     except KeyError:
         pass
