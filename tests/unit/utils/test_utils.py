@@ -9,7 +9,7 @@ from __future__ import absolute_import
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    patch, DEFAULT,
+    patch,
     create_autospec,
     NO_MOCK,
     NO_MOCK_REASON
@@ -20,14 +20,13 @@ import salt.utils
 import salt.utils.jid
 import salt.utils.yamlencoding
 import salt.utils.zeromq
-from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoundError)
+from salt.exceptions import SaltSystemExit, CommandNotFoundError
 
 # Import Python libraries
 import datetime
 import os
 import yaml
 import zmq
-from collections import namedtuple
 
 # Import 3rd-party libs
 try:
@@ -99,35 +98,6 @@ class UtilsTestCase(TestCase):
                          '(?:[\\s]+)?$'
         ret = salt.utils.build_whitespace_split_regex(' '.join(LOREM_IPSUM.split()[:5]))
         self.assertEqual(ret, expected_regex)
-
-    def test_arg_lookup(self):
-        def dummy_func(first, second, third, fourth='fifth'):
-            pass
-
-        expected_dict = {'args': ['first', 'second', 'third'], 'kwargs': {'fourth': 'fifth'}}
-        ret = salt.utils.arg_lookup(dummy_func)
-        self.assertEqual(expected_dict, ret)
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_format_call(self):
-        with patch('salt.utils.arg_lookup') as arg_lookup:
-            def dummy_func(first=None, second=None, third=None):
-                pass
-            arg_lookup.return_value = {'args': ['first', 'second', 'third'], 'kwargs': {}}
-            get_function_argspec = DEFAULT
-            get_function_argspec.return_value = namedtuple('ArgSpec', 'args varargs keywords defaults')(
-                args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
-
-            # Make sure we raise an error if we don't pass in the requisite number of arguments
-            self.assertRaises(SaltInvocationError, salt.utils.format_call, dummy_func, {'1': 2})
-
-            # Make sure we warn on invalid kwargs
-            ret = salt.utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3})
-            self.assertGreaterEqual(len(ret['warnings']), 1)
-
-            ret = salt.utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3},
-                                    expected_extra_kws=('first', 'second', 'third'))
-            self.assertDictEqual(ret, {'args': [], 'kwargs': {}})
 
     def test_isorted(self):
         test_list = ['foo', 'Foo', 'bar', 'Bar']

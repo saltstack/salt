@@ -268,3 +268,17 @@ def shlex_split(s, **kwargs):
         return shlex.split(s, **kwargs)
     else:
         return s
+
+
+def arg_lookup(fun, aspec=None):
+    '''
+    Return a dict containing the arguments and default arguments to the
+    function.
+    '''
+    ret = {'kwargs': {}}
+    if aspec is None:
+        aspec = get_function_argspec(fun)
+    if aspec.defaults:
+        ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+    ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
+    return ret

@@ -860,7 +860,7 @@ def format_call(fun,
 
     aspec = salt.utils.args.get_function_argspec(fun, is_class_method=is_class_method)
 
-    arg_data = arg_lookup(fun, aspec)
+    arg_data = salt.utils.args.arg_lookup(fun, aspec)
     args = arg_data['args']
     kwargs = arg_data['kwargs']
 
@@ -965,21 +965,6 @@ def format_call(fun,
 
         # Lets pack the current extra kwargs as template context
         ret.setdefault('context', {}).update(extra)
-    return ret
-
-
-def arg_lookup(fun, aspec=None):
-    '''
-    Return a dict containing the arguments and default arguments to the
-    function.
-    '''
-    import salt.utils.args
-    ret = {'kwargs': {}}
-    if aspec is None:
-        aspec = salt.utils.args.get_function_argspec(fun)
-    if aspec.defaults:
-        ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
-    ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
     return ret
 
 
@@ -2547,6 +2532,25 @@ def shlex_split(s, **kwargs):
         'warning will be removed in Salt Neon.'
     )
     return salt.utils.args.shlex_split(s, **kwargs)
+
+
+def arg_lookup(fun, aspec=None):
+    '''
+    Return a dict containing the arguments and default arguments to the
+    function.
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.args
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.arg_lookup\' detected. This function has been '
+        'moved to \'salt.utils.args.arg_lookup\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
+    return salt.utils.args.arg_lookup(fun, aspec=aspec)
 
 
 def which(exe=None):

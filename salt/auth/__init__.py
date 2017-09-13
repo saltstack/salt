@@ -29,6 +29,7 @@ import salt.config
 import salt.loader
 import salt.transport.client
 import salt.utils
+import salt.utils.args
 import salt.utils.files
 import salt.utils.minions
 import salt.utils.versions
@@ -69,7 +70,7 @@ class LoadAuth(object):
         if fstr not in self.auth:
             return ''
         try:
-            pname_arg = salt.utils.arg_lookup(self.auth[fstr])['args'][0]
+            pname_arg = salt.utils.args.arg_lookup(self.auth[fstr])['args'][0]
             return load[pname_arg]
         except IndexError:
             return ''
@@ -642,7 +643,7 @@ class Resolver(object):
                    'not available').format(eauth))
             return ret
 
-        args = salt.utils.arg_lookup(self.auth[fstr])
+        args = salt.utils.args.arg_lookup(self.auth[fstr])
         for arg in args['args']:
             if arg in self.opts:
                 ret[arg] = self.opts[arg]
