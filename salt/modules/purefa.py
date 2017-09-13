@@ -41,7 +41,6 @@ from datetime import datetime
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
-from salt.utils import xor
 
 # Import 3rd party modules
 try:
@@ -967,7 +966,7 @@ def pg_create(name, hostgroup=None, host=None, volume=None, enabled=True):
                 return False
         else:
             return False
-    elif xor(hostgroup, host, volume):
+    elif __utils__['value.xor'](hostgroup, host, volume):
         if _get_pgroup(name, array) is None:
             try:
                 array.create_pgroup(name)
