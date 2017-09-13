@@ -886,7 +886,7 @@ def _check_dir_meta(name,
     try:
         stats = __salt__['file.stats'](name, None, follow_symlinks)
     except CommandExecutionError:
-        state = {}
+        stats = {}
 
     changes = {}
     if not stats:
