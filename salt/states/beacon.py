@@ -65,7 +65,7 @@ def present(name,
         else:
             if 'test' in __opts__ and __opts__['test']:
                 kwargs['test'] = True
-                result = __salt__['beacons.modify'](name, beacon_data, **kwargs)
+                result = __salt__['beacons.modify'](name, beacon_data)
                 ret['comment'].append(result['comment'])
                 ret['changes'] = result['changes']
             else:
@@ -97,7 +97,7 @@ def present(name,
 
     if save == True:
         result = __salt__['beacons.save']()
-        ret['comment'].append('Beacons saved'.format(name))
+        ret['comment'].append('Beacon {0} saved'.format(name))
 
     ret['comment'] = '\n'.join(ret['comment'])
     return ret
@@ -143,7 +143,7 @@ def absent(name,
 
     if save == True:
         result = __salt__['beacons.save']()
-        ret['comment'].append('Beacons saved'.format(name))
+        ret['comment'].append('Beacon {0} saved'.format(name))
 
     ret['comment'] = '\n'.join(ret['comment'])
     return ret
