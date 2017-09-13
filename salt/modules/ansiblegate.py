@@ -124,6 +124,10 @@ class AnsibleModuleCaller(object):
         '''
 
         module = self._resolver.load_module(module)
+        if not hasattr(module, 'main'):
+            raise CommandExecutionError('This module is not callable '
+                                        '(see "ansible.help {0}")'.format(module.__name__.replace('ansible.modules.',
+                                                                                                  '')))
         if args:
             kwargs['_raw_params'] = ' '.join(args)
         js_args = '{{"ANSIBLE_MODULE_ARGS": {args}}}'.format(args=json.dumps(kwargs))
