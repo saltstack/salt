@@ -36,7 +36,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         # Setting the environment to be local
         local_opts = salt.config.minion_config(
             os.path.join(syspaths.CONFIG_DIR, u'minion'))
-        local_opts['file_client']= 'local'
+        local_opts['file_client'] = 'local'
         patcher = patch('salt.config.minion_config',
                         MagicMock(return_value=local_opts))
         patcher.start()
