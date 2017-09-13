@@ -572,7 +572,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         behavior of the raw function call
         '''
         know_to_return_none = (
-            'file.chown', 'file.chgrp', 'ssh.recv_known_host'
+            'file.chown', 'file.chgrp', 'ssh.recv_known_host_entries'
         )
         if 'f_arg' in kwargs:
             kwargs['arg'] = kwargs.pop('f_arg')
