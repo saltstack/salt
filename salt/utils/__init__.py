@@ -3331,28 +3331,3 @@ def xor(*vars):
     for value in vars:
         sum = sum ^ bool(value)
     return sum
-
-
-def human_to_bytes(size):
-    '''
-    Given a human-readable byte string (e.g. 2G, 30M),
-    return the number of bytes.  Will return 0 if the argument has
-    unexpected form.
-    '''
-    sbytes = size[:-1]
-    unit = size[-1]
-    if sbytes.isdigit():
-        sbytes = int(sbytes)
-        if unit == 'P':
-            sbytes *= 1125899906842624
-        elif unit == 'T':
-            sbytes *= 1099511627776
-        elif unit == 'G':
-            sbytes *= 1073741824
-        elif unit == 'M':
-            sbytes *= 1048576
-        else:
-            sbytes = 0
-    else:
-        sbytes = 0
-    return sbytes
