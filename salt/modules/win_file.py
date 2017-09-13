@@ -1526,8 +1526,7 @@ def check_perms(path,
 
         ret (dict):
             A dictionary to append changes to and return. If not passed, will
-            create a new dictionary to return. If file is not found, the passed
-            dictionary will be returned, otherwise an error will be raised.
+            create a new dictionary to return.
 
         owner (str):
             The owner of the directory. If not passed, it will be the account
@@ -1580,12 +1579,8 @@ def check_perms(path,
         # Specify advanced attributes with a list
         salt '*' file.check_perms C:\\Temp\\ Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'files_only'}}"
     '''
-    # This is to work with the state module.
     if not os.path.exists(path):
-        if ret:
-            return ret
-        else:
-            raise CommandExecutionError('The directory does not exist.')
+        raise CommandExecutionError('Path not found: {0}'.format(path))
 
     path = os.path.expanduser(path)
 

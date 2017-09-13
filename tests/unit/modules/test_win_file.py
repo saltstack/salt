@@ -33,26 +33,18 @@ class WinFileTestCase(TestCase):
 
     def test_issue_43328_stats(self):
         '''
-        Make sure that an empty dictionary is returned if the file doesn't exist
+        Make sure that a CommandExecutionError is raised if the file does NOT
+        exist
         '''
         with patch('os.path.exists', return_value=False):
             self.assertRaises(CommandExecutionError,
                               win_file.stats,
                               self.FAKE_PATH)
 
-    def test_issue_43328_check_perms_ret_passed(self):
-        '''
-        Make sure that ret is returned if the file doesn't exist and ret is
-        passed
-        '''
-        with patch('os.path.exists', return_value=False):
-            ret = win_file.check_perms(self.FAKE_PATH, ret=self.FAKE_RET)
-            self.assertEqual(ret, self.FAKE_RET)
-
     def test_issue_43328_check_perms_no_ret(self):
         '''
-        Make sure that a CommandExecutionError is raised if the file doesn't
-        exist and ret is NOT passed
+        Make sure that a CommandExecutionError is raised if the file does NOT
+        exist
         '''
         with patch('os.path.exists', return_value=False):
             self.assertRaises(
