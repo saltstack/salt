@@ -2,12 +2,13 @@
 '''
 Functions used for CLI argument handling
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
+import fnmatch
+import inspect
 import re
 import shlex
-import inspect
 
 # Import salt libs
 import salt.utils.jid
@@ -281,4 +282,49 @@ def arg_lookup(fun, aspec=None):
     if aspec.defaults:
         ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
     ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
+    return ret
+
+
+def argspec_report(functions, module=''):
+    '''
+    Pass in a functions dict as it is returned from the loader and return the
+    argspec function signatures
+    '''
+    ret = {}
+    if '*' in module or '.' in module:
+        for fun in fnmatch.filter(functions, module):
+            try:
+                aspec = get_function_argspec(functions[fun])
+            except TypeError:
+                # this happens if not callable
+                continue
+
+            args, varargs, kwargs, defaults = aspec
+
+            ret[fun] = {}
+            ret[fun]['args'] = args if args else None
+            ret[fun]['defaults'] = defaults if defaults else None
+            ret[fun]['varargs'] = True if varargs else None
+            ret[fun]['kwargs'] = True if kwargs else None
+
+    else:
+        # "sys" should just match sys without also matching sysctl
+        module_dot = module + '.'
+
+        for fun in functions:
+            if fun.startswith(module_dot):
+                try:
+                    aspec = get_function_argspec(functions[fun])
+                except TypeError:
+                    # this happens if not callable
+                    continue
+
+                args, varargs, kwargs, defaults = aspec
+
+                ret[fun] = {}
+                ret[fun]['args'] = args if args else None
+                ret[fun]['defaults'] = defaults if defaults else None
+                ret[fun]['varargs'] = True if varargs else None
+                ret[fun]['kwargs'] = True if kwargs else None
+
     return ret

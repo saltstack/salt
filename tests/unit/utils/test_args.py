@@ -11,6 +11,7 @@ import salt.utils.args
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    create_autospec,
     DEFAULT,
     NO_MOCK,
     NO_MOCK_REASON,
@@ -82,3 +83,14 @@ class ArgsTestCase(TestCase):
             ret = salt.utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3},
                                          expected_extra_kws=('first', 'second', 'third'))
             self.assertDictEqual(ret, {'args': [], 'kwargs': {}})
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_argspec_report(self):
+        def _test_spec(arg1, arg2, kwarg1=None):
+            pass
+
+        sys_mock = create_autospec(_test_spec)
+        test_functions = {'test_module.test_spec': sys_mock}
+        ret = salt.utils.args.argspec_report(test_functions, 'test_module.test_spec')
+        self.assertDictEqual(ret, {'test_module.test_spec':
+                                       {'kwargs': True, 'args': None, 'defaults': None, 'varargs': True}})

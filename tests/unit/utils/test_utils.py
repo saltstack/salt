@@ -10,7 +10,6 @@ from __future__ import absolute_import
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
-    create_autospec,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -352,17 +351,6 @@ class UtilsTestCase(TestCase):
         ret = salt.utils.compare_dicts(old={'foo': 'bar'}, new={'foo': 'woz'})
         expected_ret = {'foo': {'new': 'woz', 'old': 'bar'}}
         self.assertDictEqual(ret, expected_ret)
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_argspec_report(self):
-        def _test_spec(arg1, arg2, kwarg1=None):
-            pass
-
-        sys_mock = create_autospec(_test_spec)
-        test_functions = {'test_module.test_spec': sys_mock}
-        ret = salt.utils.argspec_report(test_functions, 'test_module.test_spec')
-        self.assertDictEqual(ret, {'test_module.test_spec':
-                                       {'kwargs': True, 'args': None, 'defaults': None, 'varargs': True}})
 
     def test_decode_list(self):
         test_data = [u'unicode_str', [u'unicode_item_in_list', 'second_item_in_list'], {'dict_key': u'dict_val'}]
