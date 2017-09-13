@@ -1632,9 +1632,14 @@ output for states that failed or states that have changes.
 
 Default: ``full``
 
-The state_output setting changes if the output is the full multi line
-output for each changed state if set to 'full', but if set to 'terse'
-the output will be shortened to a single line.
+The state_output setting controls which results will be output full multi line:
+
+* ``full``, ``terse`` - each state will be full/terse
+* ``mixed`` - only states with errors will be full
+* ``changes`` - states with changes and errors will be full
+
+``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
+when set, the state ID will be used as name in the output.
 
 .. code-block:: yaml
 

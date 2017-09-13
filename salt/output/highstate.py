@@ -16,8 +16,9 @@ state_verbose:
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
-    The highstate outputter has six output modes, ``full``, ``terse``,
-    ``mixed``, ``mixed_id``, ``changes`` and ``filter``.
+    The highstate outputter has six output modes,
+
+    ``full``, ``terse``, ``mixed``, ``changes`` and ``filter``
 
     * The default is set to ``full``, which will display many lines of detailed
       information for each executed chunk.
@@ -25,21 +26,24 @@ state_output:
       only one line.
     * If ``mixed`` is used, then terse output will be used unless a state
       failed, in which case full output will be used.
-    * If ``mixed_id`` is used, then the mixed form will be used, but the value for ``name``
-      will be drawn from the state ID. This is useful for cases where the name
-      value might be very long and hard to read.
     * If ``changes`` is used, then terse output will be used if there was no
       error and no changes, otherwise full output will be used.
     * If ``filter`` is used, then either or both of two different filters can be
       used: ``exclude`` or ``terse``.
-      * for ``exclude``, state.highstate expects a list of states to be excluded
-        (or ``None``)
-        followed by ``True`` for terse output or ``False`` for regular output.
-        Because of parsing nuances, if only one of these is used, it must still
-        contain a comma. For instance: `exclude=True,`.
-      * for ``terse``, state.highstate expects simply ``True`` or ``False``.
+        * for ``exclude``, state.highstate expects a list of states to be excluded (or ``None``)
+          followed by ``True`` for terse output or ``False`` for regular output.
+          Because of parsing nuances, if only one of these is used, it must still
+          contain a comma. For instance: `exclude=True,`.
+        * for ``terse``, state.highstate expects simply ``True`` or ``False``.
       These can be set as such from the command line, or in the Salt config as
       `state_output_exclude` or `state_output_terse`, respectively.
+
+    The output modes have one modifier:
+    ``full_id``, ``terse_id``, ``mixed_id``, ``changes_id`` and ``filter_id``
+
+    If ``_id`` is used, then the corresponding form will be used, but the value for ``name``
+    will be drawn from the state ID. This is useful for cases where the name
+    value might be very long and hard to read.
 state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
     output format.  If you wish to use a custom format, this can be set to a
@@ -241,8 +245,14 @@ def _format_host(host, data):
             if ret['result'] is None:
                 hcolor = colors['LIGHT_YELLOW']
                 tcolor = colors['LIGHT_YELLOW']
+
+            state_output = __opts__.get('state_output', 'full').lower()
             comps = [sdecode(comp) for comp in tname.split('_|-')]
-            if __opts__.get('state_output', 'full').lower() == 'filter':
+            if state_output.endswith('id'):
+                # Swap in the ID for the name. Refs #35137
+                comps[2] = comps[1]
+
+            if state_output.startswith('filter'):
                 # By default, full data is shown for all types. However, return
                 # data may be excluded by setting state_output_exclude to a
                 # comma-separated list of True, False or None, or including the
@@ -275,28 +285,17 @@ def _format_host(host, data):
                     continue
                 if str(ret['result']) in exclude:
                     continue
-            elif __opts__.get('state_output', 'full').lower() == 'terse':
-                # Print this chunk in a terse way and continue in the
-                # loop
+
+            elif any((
+                state_output.startswith('terse'),
+                state_output.startswith('mixed') and ret['result'] is not False,       # only non-error'd
+                state_output.startswith('changes') and ret['result'] and not schanged  # non-error'd non-changed
+            )):
+                # Print this chunk in a terse way and continue in the loop
                 msg = _format_terse(tcolor, comps, ret, colors, tabular)
                 hstrs.append(msg)
                 continue
-            elif __opts__.get('state_output', 'full').lower().startswith('mixed'):
-                if __opts__['state_output'] == 'mixed_id':
-                    # Swap in the ID for the name. Refs #35137
-                    comps[2] = comps[1]
-                # Print terse unless it failed
-                if ret['result'] is not False:
-                    msg = _format_terse(tcolor, comps, ret, colors, tabular)
-                    hstrs.append(msg)
-                    continue
-            elif __opts__.get('state_output', 'full').lower() == 'changes':
-                # Print terse if no error and no changes, otherwise, be
-                # verbose
-                if ret['result'] and not schanged:
-                    msg = _format_terse(tcolor, comps, ret, colors, tabular)
-                    hstrs.append(msg)
-                    continue
+
             state_lines = [
                 u'{tcolor}----------{colors[ENDC]}',
                 u'    {tcolor}      ID: {comps[1]}{colors[ENDC]}',
