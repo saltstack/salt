@@ -101,7 +101,10 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                 optname = None
             # no section header in the file?
             elif cursect is None:
-                raise MissingSectionHeaderError(fpname, lineno, line)  # pylint: disable=undefined-variable
+                raise MissingSectionHeaderError(  # pylint: disable=undefined-variable
+                    salt.utils.stringutils.to_str(fpname),
+                    lineno,
+                    salt.utils.stringutils.to_str(line))
             # an option line?
             else:
                 mo = self._optcre.match(line.lstrip())
@@ -142,12 +145,11 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         if self._optcre is self.OPTCRE or value:
             is_list = isinstance(value, list)
             if is_list and not allow_list:
-                raise TypeError(u'option value cannot be a list unless '
-                                u'allow_list is True')
+                raise TypeError('option value cannot be a list unless allow_list is True')  # future lint: disable=non-unicode-string
             elif not is_list:
                 value = [value]
             if not all(isinstance(x, six.string_types) for x in value):
-                raise TypeError(u'option values must be strings')
+                raise TypeError('option values must be strings')  # future lint: disable=non-unicode-string
 
     def get(self, section, option, as_list=False):
         '''
@@ -183,7 +185,7 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                 sectdict[key] = [sectdict[key]]
                 sectdict[key].append(value)
         else:
-            raise TypeError(u'Expected str or list for option value, got %s' % type(value).__name__)
+            raise TypeError('Expected str or list for option value, got %s' % type(value).__name__)  # future lint: disable=non-unicode-string
 
     def set_multivar(self, section, option, value=u''):
         '''
@@ -201,7 +203,8 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
             try:
                 sectdict = self._sections[section]
             except KeyError:
-                raise NoSectionError(section)  # pylint: disable=undefined-variable
+                raise NoSectionError(  # pylint: disable=undefined-variable
+                    salt.utils.stringutils.to_str(section))
         key = self.optionxform(option)
         self._add_option(sectdict, key, value)
 
@@ -216,7 +219,8 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
             try:
                 sectdict = self._sections[section]
             except KeyError:
-                raise NoSectionError(section)  # pylint: disable=undefined-variable
+                raise NoSectionError(  # pylint: disable=undefined-variable
+                    salt.utils.stringutils.to_str(section))
         option = self.optionxform(option)
         if option not in sectdict:
             return False
