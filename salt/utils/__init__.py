@@ -3321,13 +3321,3 @@ def check_state_result(running, recurse=False, highstate=None):
     return salt.utils.state.check_result(
         running, recurse=recurse, highstate=highstate
     )
-
-
-def xor(*vars):
-    '''
-    XOR definition for multiple variables
-    '''
-    sum = bool(False)
-    for value in vars:
-        sum = sum ^ bool(value)
-    return sum
