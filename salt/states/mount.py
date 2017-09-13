@@ -640,7 +640,6 @@ def mounted(name,
                                                   match_on=match_on)
 
         if update_mount_cache:
-            log.debug('=== opts {} ==='.format(opts))
             cache_result = __salt__['mount.write_mount_cache'](real_name,
                                                                device,
                                                                mkmnt=mkmnt,
