@@ -209,8 +209,8 @@ def help(module=None, *args):
     :return:
     '''
     if not module:
-        raise CommandExecutionError('Please tell me what module you want to have a help on. '
-                                    'Or call ansible.list to know what is available.')
+        raise CommandExecutionError('Please tell me what module you want to have helped with. '
+                                    'Or call "ansible.list" to know what is available.')
     try:
         module = _resolver.load_module(module)
     except (ImportError, LoaderError) as err:
