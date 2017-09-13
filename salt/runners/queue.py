@@ -65,7 +65,6 @@ still running from the last time the process_runner task was executed.
 # Import python libs
 from __future__ import print_function
 from __future__ import absolute_import
-import json
 
 # Import salt libs
 import salt.loader
