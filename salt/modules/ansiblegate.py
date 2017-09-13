@@ -135,12 +135,16 @@ class AnsibleModuleCaller(object):
         md_exc = subprocess.Popen(['python', module.__file__],
                                   stdin=js_out.stdout, stdout=subprocess.PIPE)
         js_out.stdout.close()
-        js_out = md_exc.communicate()[0]
+        js_out, js_err = md_exc.communicate()
 
         try:
             out = json.loads(js_out)
         except ValueError as ex:
-            return {'Error': str(ex), "JSON": js_out}
+            out = {'Error': (js_err and (js_err + '.') or str(ex))}
+            if js_out:
+                out['Given JSON output'] = js_out
+            return out
+
         if 'invocation' in out:
             del out['invocation']
 
