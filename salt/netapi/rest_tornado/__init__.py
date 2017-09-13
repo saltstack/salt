@@ -10,7 +10,7 @@ import os
 import salt.auth
 from salt.utils.versions import StrictVersion as _StrictVersion
 
-__virtualname__ = os.path.abspath(__file__).rsplit('/')[-2] or 'rest_tornado'
+__virtualname__ = os.path.abspath(__file__).rsplit(os.sep)[-2] or 'rest_tornado'
 
 logger = logging.getLogger(__virtualname__)
 
@@ -115,6 +115,7 @@ def start():
             ssl_opts.update({'keyfile': mod_opts['ssl_key']})
         kwargs['ssl_options'] = ssl_opts
 
+    import tornado.httpserver
     http_server = tornado.httpserver.HTTPServer(get_application(__opts__), **kwargs)
     try:
         http_server.bind(mod_opts['port'],

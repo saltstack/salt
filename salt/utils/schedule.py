@@ -842,9 +842,16 @@ class Schedule(object):
             if argspec.keywords:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in six.iteritems(ret):
-                    kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
+                    if key is not 'kwargs':
+                        kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
 
             ret['return'] = self.functions[func](*args, **kwargs)
+
+            # runners do not provide retcode
+            if 'retcode' in self.functions.pack['__context__']:
+                ret['retcode'] = self.functions.pack['__context__']['retcode']
+
+            ret['success'] = True
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
@@ -862,7 +869,6 @@ class Schedule(object):
                 for returner in OrderedDict.fromkeys(rets):
                     ret_str = '{0}.returner'.format(returner)
                     if ret_str in self.returners:
-                        ret['success'] = True
                         self.returners[ret_str](ret)
                     else:
                         log.info(
@@ -871,11 +877,6 @@ class Schedule(object):
                             )
                         )
 
-            # runners do not provide retcode
-            if 'retcode' in self.functions.pack['__context__']:
-                ret['retcode'] = self.functions.pack['__context__']['retcode']
-
-            ret['success'] = True
         except Exception:
             log.exception("Unhandled exception running {0}".format(ret['fun']))
             # Although catch-all exception handlers are bad, the exception here

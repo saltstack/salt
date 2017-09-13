@@ -158,7 +158,7 @@ def create_file_system(name,
     import os
     import base64
     creation_token = base64.b64encode(os.urandom(46), ['-', '_'])
-    tags = {"Key": "Name", "Value": name}
+    tags = [{"Key": "Name", "Value": name}]
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
@@ -223,10 +223,23 @@ def create_mount_target(filesystemid,
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
-    return client.create_mount_point(FileSystemId=filesystemid,
-                                     SubnetId=subnetid,
-                                     IpAddress=ipaddress,
-                                     SecurityGroups=securitygroups)
+    if ipaddress is None and securitygroups is None:
+        return client.create_mount_target(FileSystemId=filesystemid,
+                                          SubnetId=subnetid)
+
+    if ipaddress is None:
+        return client.create_mount_target(FileSystemId=filesystemid,
+                                          SubnetId=subnetid,
+                                          SecurityGroups=securitygroups)
+    if securitygroups is None:
+        return client.create_mount_target(FileSystemId=filesystemid,
+                                          SubnetId=subnetid,
+                                          IpAddress=ipaddress)
+
+    return client.create_mount_target(FileSystemId=filesystemid,
+                                      SubnetId=subnetid,
+                                      IpAddress=ipaddress,
+                                      SecurityGroups=securitygroups)
 
 
 def create_tags(filesystemid,

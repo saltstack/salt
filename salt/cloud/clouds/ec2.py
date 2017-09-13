@@ -3428,34 +3428,7 @@ def list_nodes_full(location=None, call=None):
             'or --function.'
         )
 
-    if not location:
-        ret = {}
-        locations = set(
-            get_location(vm_) for vm_ in six.itervalues(__opts__['profiles'])
-            if _vm_provider_driver(vm_)
-        )
-
-        # If there aren't any profiles defined for EC2, check
-        # the provider config file, or use the default location.
-        if not locations:
-            locations = [get_location()]
-
-        for loc in locations:
-            ret.update(_list_nodes_full(loc))
-        return ret
-
-    return _list_nodes_full(location)
-
-
-def _vm_provider_driver(vm_):
-    alias, driver = vm_['driver'].split(':')
-    if alias not in __opts__['providers']:
-        return None
-
-    if driver not in __opts__['providers'][alias]:
-        return None
-
-    return driver == 'ec2'
+    return _list_nodes_full(location or get_location())
 
 
 def _extract_name_tag(item):

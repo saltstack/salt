@@ -95,7 +95,10 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         local_cache.clean_old_jobs()
 
         # Get the name of the JID directory that was created to test against
-        jid_dir_name = jid_dir.rpartition('/')[2]
+        if salt.utils.is_windows():
+            jid_dir_name = jid_dir.rpartition('\\')[2]
+        else:
+            jid_dir_name = jid_dir.rpartition('/')[2]
 
         # Assert the JID directory is still present to be cleaned after keep_jobs interval
         self.assertEqual([jid_dir_name], os.listdir(TMP_JID_DIR))

@@ -35,8 +35,10 @@ try:
     import yum
     HAS_YUM = True
 except ImportError:
-    from salt.ext.six.moves import configparser
     HAS_YUM = False
+
+from salt.ext.six.moves import configparser
+
 # pylint: enable=import-error,redefined-builtin
 
 # Import salt libs
@@ -181,7 +183,16 @@ def _check_versionlock():
     Ensure that the appropriate versionlock plugin is present
     '''
     if _yum() == 'dnf':
-        vl_plugin = 'python-dnf-plugins-extras-versionlock'
+        if int(__grains__.get('osmajorrelease')) >= 26:
+            if six.PY3:
+                vl_plugin = 'python3-dnf-plugin-versionlock'
+            else:
+                vl_plugin = 'python2-dnf-plugin-versionlock'
+        else:
+            if six.PY3:
+                vl_plugin = 'python3-dnf-plugins-extras-versionlock'
+            else:
+                vl_plugin = 'python-dnf-plugins-extras-versionlock'
     else:
         vl_plugin = 'yum-versionlock' \
             if __grains__.get('osmajorrelease') == '5' \
@@ -846,8 +857,8 @@ def list_repo_pkgs(*args, **kwargs):
                 _parse_output(out['stdout'], strict=True)
     else:
         for repo in repos:
-            cmd = [_yum(), '--quiet', 'repository-packages', repo,
-                   'list', '--showduplicates']
+            cmd = [_yum(), '--quiet', '--showduplicates',
+                   'repository-packages', repo, 'list']
             if cacheonly:
                 cmd.append('-C')
             # Can't concatenate because args is a tuple, using list.extend()
@@ -2699,41 +2710,32 @@ def _parse_repo_file(filename):
     '''
     Turn a single repo file into a dict
     '''
-    repos = {}
-    header = ''
-    repo = ''
-    with salt.utils.fopen(filename, 'r') as rfile:
-        for line in rfile:
-            if line.startswith('['):
-                repo = line.strip().replace('[', '').replace(']', '')
-                repos[repo] = {}
+    parsed = configparser.ConfigParser()
+    config = {}
 
-            # Even though these are essentially uselss, I want to allow the
-            # user to maintain their own comments, etc
-            if not line:
-                if not repo:
-                    header += line
-            if line.startswith('#'):
-                if not repo:
-                    header += line
-                else:
-                    if 'comments' not in repos[repo]:
-                        repos[repo]['comments'] = []
-                    repos[repo]['comments'].append(line.strip())
-                continue
+    try:
+        parsed.read(filename)
+    except configparser.MissingSectionHeaderError as err:
+        log.error(
+            'Failed to parse file {0}, error: {1}'.format(filename, err.message)
+        )
+        return ('', {})
 
-            # These are the actual configuration lines that matter
-            if '=' in line:
-                try:
-                    comps = line.strip().split('=')
-                    repos[repo][comps[0].strip()] = '='.join(comps[1:])
-                except KeyError:
-                    log.error(
-                        'Failed to parse line in %s, offending line was '
-                        '\'%s\'', filename, line.rstrip()
-                    )
+    for section in parsed._sections:
+        section_dict = dict(parsed._sections[section])
+        section_dict.pop('__name__', None)
+        config[section] = section_dict
 
-    return (header, repos)
+    # Try to extract leading comments
+    headers = ''
+    with salt.utils.fopen(filename, 'r') as rawfile:
+        for line in rawfile:
+            if line.strip().startswith('#'):
+                headers += '{0}\n'.format(line.strip())
+            else:
+                break
+
+    return (headers, config)
 
 
 def file_list(*packages):

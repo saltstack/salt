@@ -135,6 +135,7 @@ state modules
     keyboard
     keystone
     kmod
+    kubernetes
     layman
     ldap
     libcloud_dns

@@ -493,8 +493,11 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
                 after_jump.append('--{0} {1}'.format(after_jump_argument, value))
             del kwargs[after_jump_argument]
 
-    for key, value in kwargs.items():
+    for key in kwargs:
         negation = maybe_add_negation(key)
+        # don't use .items() since maybe_add_negation removes the prefix from
+        # the value in the kwargs, thus we need to fetch it after that has run
+        value = kwargs[key]
         flag = '-' if len(key) == 1 else '--'
         value = '' if value in (None, '') else ' {0}'.format(value)
         rule.append('{0}{1}{2}{3}'.format(negation, flag, key, value))
@@ -1452,6 +1455,8 @@ def _parser():
     add_arg('--or-mark', dest='or-mark', action='append')
     add_arg('--xor-mark', dest='xor-mark', action='append')
     add_arg('--set-mark', dest='set-mark', action='append')
+    add_arg('--nfmask', dest='nfmask', action='append')
+    add_arg('--ctmask', dest='ctmask', action='append')
     ## CONNSECMARK
     add_arg('--save', dest='save', action='append')
     add_arg('--restore', dest='restore', action='append')

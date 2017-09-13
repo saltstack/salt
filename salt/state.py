@@ -37,6 +37,7 @@ import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.url
 import salt.utils.process
+import salt.utils.files
 import salt.syspaths as syspaths
 from salt.utils import immutabletypes
 from salt.template import compile_template, compile_template_str
@@ -144,6 +145,13 @@ def _gen_tag(low):
     Generate the running dict tag string from the low data structure
     '''
     return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
+
+
+def _clean_tag(tag):
+    '''
+    Make tag name safe for filenames
+    '''
+    return salt.utils.files.safe_filename_leaf(tag)
 
 
 def _l_tag(name, id_):
@@ -1695,7 +1703,7 @@ class State(object):
                     trb)
             }
         troot = os.path.join(self.opts['cachedir'], self.jid)
-        tfile = os.path.join(troot, tag)
+        tfile = os.path.join(troot, _clean_tag(tag))
         if not os.path.isdir(troot):
             try:
                 os.makedirs(troot)
@@ -2047,7 +2055,7 @@ class State(object):
             proc = running[tag].get('proc')
             if proc:
                 if not proc.is_alive():
-                    ret_cache = os.path.join(self.opts['cachedir'], self.jid, tag)
+                    ret_cache = os.path.join(self.opts['cachedir'], self.jid, _clean_tag(tag))
                     if not os.path.isfile(ret_cache):
                         ret = {'result': False,
                                'comment': 'Parallel process failed to return',
@@ -2122,11 +2130,14 @@ class State(object):
                                 reqs[r_state].append(chunk)
                             continue
                         try:
-                            if (fnmatch.fnmatch(chunk['name'], req_val) or
-                                fnmatch.fnmatch(chunk['__id__'], req_val)):
-                                if req_key == 'id' or chunk['state'] == req_key:
-                                    found = True
-                                    reqs[r_state].append(chunk)
+                            if isinstance(req_val, six.string_types):
+                                if (fnmatch.fnmatch(chunk['name'], req_val) or
+                                        fnmatch.fnmatch(chunk['__id__'], req_val)):
+                                    if req_key == 'id' or chunk['state'] == req_key:
+                                        found = True
+                                        reqs[r_state].append(chunk)
+                            else:
+                                raise KeyError
                         except KeyError as exc:
                             raise SaltRenderError(
                                 'Could not locate requisite of [{0}] present in state with name [{1}]'.format(
@@ -2302,13 +2313,17 @@ class State(object):
                         req_val = lreq[req_key]
                         comment += \
                             '{0}{1}: {2}\n'.format(' ' * 23, req_key, req_val)
-                running[tag] = {'changes': {},
-                                'result': False,
-                                'comment': comment,
-                                '__run_num__': self.__run_num,
-                                '__sls__': low['__sls__']}
+                if low.get('__prereq__'):
+                    run_dict = self.pre
+                else:
+                    run_dict = running
+                run_dict[tag] = {'changes': {},
+                                 'result': False,
+                                 'comment': comment,
+                                 '__run_num__': self.__run_num,
+                                 '__sls__': low['__sls__']}
                 self.__run_num += 1
-                self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
+                self.event(run_dict[tag], len(chunks), fire_event=low.get('fire_event'))
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -3109,7 +3124,7 @@ class BaseHighState(object):
         Returns:
         {'saltenv': ['state1', 'state2', ...]}
         '''
-        matches = {}
+        matches = DefaultOrderedDict(OrderedDict)
         # pylint: disable=cell-var-from-loop
         for saltenv, body in six.iteritems(top):
             if self.opts['environment']:

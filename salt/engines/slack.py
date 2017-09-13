@@ -61,6 +61,7 @@ import logging
 import time
 import re
 import yaml
+import ast
 
 try:
     import slackclient
@@ -181,11 +182,20 @@ def start(token,
                                             if 'aliases' in groups[group]:
                                                 aliases.update(groups[group]['aliases'])
 
+                                if 'user' not in _m:
+                                    if 'message' in _m and 'user' in _m['message']:
+                                        log.debug('Message was edited, '
+                                                  'so we look for user in '
+                                                  'the original message.')
+                                        _user = _m['message']['user']
+                                else:
+                                    _user = _m['user']
+
                                 # Ensure the user is allowed to run commands
                                 if valid_users:
-                                    log.debug('{0} {1}'.format(all_users, _m['user']))
-                                    if _m['user'] not in valid_users and all_users.get(_m['user'], None) not in valid_users:
-                                        channel.send_message('{0} not authorized to run Salt commands'.format(all_users[_m['user']]))
+                                    log.debug('{0} {1}'.format(all_users, _user))
+                                    if _user not in valid_users and all_users.get(_user, None) not in valid_users:
+                                        channel.send_message('{0} not authorized to run Salt commands'.format(all_users[_user]))
                                         return
 
                                 # Trim the ! from the front
@@ -219,7 +229,7 @@ def start(token,
                                 # Ensure the command is allowed
                                 if valid_commands:
                                     if cmd not in valid_commands:
-                                        channel.send_message('{0} is not allowed to use command {1}.'.format(all_users[_m['user']], cmd))
+                                        channel.send_message('{0} is not allowed to use command {1}.'.format(all_users[_user], cmd))
                                         return
 
                                 # Parse args and kwargs
@@ -244,6 +254,10 @@ def start(token,
                                 else:
                                     tgt_type = kwargs['tgt_type']
                                     del kwargs['tgt_type']
+
+                                # Check for pillar string representation of dict and convert it to dict
+                                if 'pillar' in kwargs:
+                                    kwargs.update(pillar=ast.literal_eval(kwargs['pillar']))
 
                                 ret = {}
 

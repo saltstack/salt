@@ -17,11 +17,14 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import grp
-import pwd
 from xml.dom import minidom
 import platform
 import socket
+try:
+    import grp
+    import pwd
+except ImportError:
+    pass
 
 # Import salt libs
 import salt.utils

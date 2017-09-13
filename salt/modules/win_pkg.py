@@ -945,27 +945,51 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             packages listed under ``pkgs`` will be installed via a single
             command.
 
+            You can specify a version by passing the item as a dict:
+
+            CLI Example:
+
+            .. code-block:: bash
+
+                # will install the latest version of foo and bar
+                salt '*' pkg.install pkgs='["foo", "bar"]'
+
+                # will install the latest version of foo and version 1.2.3 of bar
+                salt '*' pkg.install pkgs='["foo", {"bar": "1.2.3"}]'
+
     Kwargs:
 
         version (str):
-            The specific version to install. If omitted, the latest version
-            will be installed. If passed with multiple install, the version
-            will apply to all packages. Recommended for single installation
-            only.
+            The specific version to install. If omitted, the latest version will
+            be installed. Recommend for use when installing a single package.
 
-        cache_file (str):
-            A single file to copy down for use with the installer. Copied to
-            the same location as the installer. Use this over ``cache_dir`` if
-            there are many files in the directory and you only need a specific
-            file and don't want to cache additional files that may reside in
-            the installer directory. Only applies to files on ``salt://``
+            If passed with a list of packages in the ``pkgs`` parameter, the
+            version will be ignored.
 
-        cache_dir (bool):
-            True will copy the contents of the installer directory. This is
-            useful for installations that are not a single file. Only applies
-            to directories on ``salt://``
+            CLI Example:
 
-        saltenv (str): Salt environment. Default 'base'
+             .. code-block:: bash
+
+                # Version is ignored
+                salt '*' pkg.install pkgs="['foo', 'bar']" version=1.2.3
+
+            If passed with a comma separated list in the ``name`` parameter, the
+            version will apply to all packages in the list.
+
+            CLI Example:
+
+             .. code-block:: bash
+
+                # Version 1.2.3 will apply to packages foo and bar
+                salt '*' pkg.install foo,bar version=1.2.3
+
+        extra_install_flags (str):
+            Additional install flags that will be appended to the
+            ``install_flags`` defined in the software definition file. Only
+            applies when single package is passed.
+
+        saltenv (str):
+            Salt environment. Default 'base'
 
         report_reboot_exit_codes (bool):
             If the installer exits with a recognized exit code indicating that
@@ -1061,13 +1085,22 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     # "sources" argument
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs, **kwargs)[0]
 
+    if len(pkg_params) > 1:
+        if kwargs.get('extra_install_flags') is not None:
+            log.warning('\'extra_install_flags\' argument will be ignored for '
+                        'multiple package targets')
+
+    # Windows expects an Options dictionary containing 'version'
+    for pkg in pkg_params:
+        pkg_params[pkg] = {'version': pkg_params[pkg]}
+
     if pkg_params is None or len(pkg_params) == 0:
         log.error('No package definition found')
         return {}
 
     if not pkgs and len(pkg_params) == 1:
-        # Only use the 'version' param if 'name' was not specified as a
-        # comma-separated list
+        # Only use the 'version' param if a single item was passed to the 'name'
+        # parameter
         pkg_params = {
             name: {
                 'version': kwargs.get('version'),
@@ -1236,20 +1269,21 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         #Compute msiexec string
         use_msiexec, msiexec = _get_msiexec(pkginfo[version_num].get('msiexec', False))
 
+        # Build cmd and arguments
+        # cmd and arguments must be separated for use with the task scheduler
+        if use_msiexec:
+            cmd = msiexec
+            arguments = ['/i', cached_pkg]
+            if pkginfo[version_num].get('allusers', True):
+                arguments.append('ALLUSERS="1"')
+            arguments.extend(salt.utils.shlex_split(install_flags))
+        else:
+            cmd = cached_pkg
+            arguments = salt.utils.shlex_split(install_flags)
+
         # Install the software
         # Check Use Scheduler Option
         if pkginfo[version_num].get('use_scheduler', False):
-
-            # Build Scheduled Task Parameters
-            if use_msiexec:
-                cmd = msiexec
-                arguments = ['/i', cached_pkg]
-                if pkginfo['version_num'].get('allusers', True):
-                    arguments.append('ALLUSERS="1"')
-                arguments.extend(salt.utils.shlex_split(install_flags))
-            else:
-                cmd = cached_pkg
-                arguments = salt.utils.shlex_split(install_flags)
 
             # Create Scheduled Task
             __salt__['task.create_task'](name='update-salt-software',
@@ -1264,21 +1298,46 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                                          start_time='01:00',
                                          ac_only=False,
                                          stop_if_on_batteries=False)
+
             # Run Scheduled Task
-            if not __salt__['task.run_wait'](name='update-salt-software'):
-                log.error('Failed to install {0}'.format(pkg_name))
-                log.error('Scheduled Task failed to run')
-                ret[pkg_name] = {'install status': 'failed'}
-        else:
-            # Build the install command
-            cmd = []
-            if use_msiexec:
-                cmd.extend([msiexec, '/i', cached_pkg])
-                if pkginfo[version_num].get('allusers', True):
-                    cmd.append('ALLUSERS="1"')
+            # Special handling for installing salt
+            if re.search(r'salt[\s_.-]*minion',
+                         pkg_name,
+                         flags=re.IGNORECASE + re.UNICODE) is not None:
+                ret[pkg_name] = {'install status': 'task started'}
+                if not __salt__['task.run'](name='update-salt-software'):
+                    log.error('Failed to install {0}'.format(pkg_name))
+                    log.error('Scheduled Task failed to run')
+                    ret[pkg_name] = {'install status': 'failed'}
+                else:
+
+                    # Make sure the task is running, try for 5 secs
+                    from time import time
+                    t_end = time() + 5
+                    while time() < t_end:
+                        task_running = __salt__['task.status'](
+                                'update-salt-software') == 'Running'
+                        if task_running:
+                            break
+
+                    if not task_running:
+                        log.error(
+                            'Failed to install {0}'.format(pkg_name))
+                        log.error('Scheduled Task failed to run')
+                        ret[pkg_name] = {'install status': 'failed'}
+
+            # All other packages run with task scheduler
             else:
-                cmd.append(cached_pkg)
-            cmd.extend(salt.utils.shlex_split(install_flags))
+                if not __salt__['task.run_wait'](name='update-salt-software'):
+                    log.error('Failed to install {0}'.format(pkg_name))
+                    log.error('Scheduled Task failed to run')
+                    ret[pkg_name] = {'install status': 'failed'}
+        else:
+
+            # Combine cmd and arguments
+            cmd = [cmd]
+            cmd.extend(arguments)
+
             # Launch the command
             result = __salt__['cmd.run_all'](cmd,
                                              cache_path,

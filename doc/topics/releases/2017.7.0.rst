@@ -706,6 +706,7 @@ Execution modules
 - :mod:`salt.modules.grafana4 <salt.modules.grafana4>`
 - :mod:`salt.modules.heat <salt.modules.heat>`
 - :mod:`salt.modules.icinga2 <salt.modules.icinga2>`
+- :mod:`salt.modules.kubernetes <salt.modules.kubernetes>`
 - :mod:`salt.modules.logmod <salt.modules.logmod>`
 - :mod:`salt.modules.mattermost <salt.modules.mattermost>`
 - :mod:`salt.modules.namecheap_dns <salt.modules.namecheap_dns>`
@@ -784,6 +785,7 @@ States
 - :mod:`salt.states.icinga2 <salt.states.icinga2>`
 - :mod:`salt.states.influxdb_continuous_query <salt.states.influxdb_continuous_query>`
 - :mod:`salt.states.influxdb_retention_policy <salt.states.influxdb_retention_policy>`
+- :mod:`salt.states.kubernetes <salt.states.kubernetes>`
 - :mod:`salt.states.logadm <salt.states.logadm>`
 - :mod:`salt.states.logrotate <salt.states.logrotate>`
 - :mod:`salt.states.msteams <salt.states.msteams>`

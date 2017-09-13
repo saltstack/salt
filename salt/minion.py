@@ -100,6 +100,7 @@ import salt.defaults.exitcodes
 import salt.cli.daemons
 import salt.log.setup
 
+import salt.utils.dictupdate
 from salt.config import DEFAULT_MINION_OPTS
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.executors import FUNCTION_EXECUTORS
@@ -1251,7 +1252,7 @@ class Minion(MinionBase):
         ret = yield channel.send(load, timeout=timeout)
         raise tornado.gen.Return(ret)
 
-    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True):
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True, timeout_handler=None):
         '''
         Fire an event on the master, or drop message if unable to send.
         '''
@@ -1270,10 +1271,6 @@ class Minion(MinionBase):
         else:
             return
 
-        def timeout_handler(*_):
-            log.info('fire_master failed: master could not be contacted. Request timed out.')
-            return True
-
         if sync:
             try:
                 self._send_req_sync(load, timeout)
@@ -1284,6 +1281,12 @@ class Minion(MinionBase):
                 log.info('fire_master failed: {0}'.format(traceback.format_exc()))
                 return False
         else:
+            if timeout_handler is None:
+                def handle_timeout(*_):
+                    log.info('fire_master failed: master could not be contacted. Request timed out.')
+                    return True
+                timeout_handler = handle_timeout
+
             with tornado.stack_context.ExceptionStackContext(timeout_handler):
                 self._send_req_async(load, timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
         return True
@@ -1985,8 +1988,9 @@ class Minion(MinionBase):
         elif tag.startswith('_minion_mine'):
             self._mine_send(tag, data)
         elif tag.startswith('fire_master'):
-            log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
-            self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+            if self.connected:
+                log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
+                self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
         elif tag.startswith(master_event(type='disconnected')) or tag.startswith(master_event(type='failback')):
             # if the master disconnect event is for a different master, raise an exception
             if tag.startswith(master_event(type='disconnected')) and data['master'] != self.opts['master']:
@@ -2205,13 +2209,15 @@ class Minion(MinionBase):
         if ping_interval > 0 and self.connected:
             def ping_master():
                 try:
-                    if not self._fire_master('ping', 'minion_ping'):
+                    def ping_timeout_handler(*_):
                         if not self.opts.get('auth_safemode', True):
                             log.error('** Master Ping failed. Attempting to restart minion**')
                             delay = self.opts.get('random_reauth_delay', 5)
                             log.info('delaying random_reauth_delay {0}s'.format(delay))
                             # regular sys.exit raises an exception -- which isn't sufficient in a thread
                             os._exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+
+                    self._fire_master('ping', 'minion_ping', sync=False, timeout_handler=ping_timeout_handler)
                 except Exception:
                     log.warning('Attempt to ping master failed.', exc_on_loglevel=logging.DEBUG)
             self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
@@ -2226,7 +2232,7 @@ class Minion(MinionBase):
             except Exception:
                 log.critical('The beacon errored: ', exc_info=True)
             if beacons and self.connected:
-                self._fire_master(events=beacons)
+                self._fire_master(events=beacons, sync=False)
 
         self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
 
@@ -3112,6 +3118,26 @@ class ProxyMinion(Minion):
 
         if 'proxy' not in self.opts:
             self.opts['proxy'] = self.opts['pillar']['proxy']
+
+        if self.opts.get('proxy_merge_pillar_in_opts'):
+            # Override proxy opts with pillar data when the user required.
+            self.opts = salt.utils.dictupdate.merge(self.opts,
+                                                    self.opts['pillar'],
+                                                    strategy=self.opts.get('proxy_merge_pillar_in_opts_strategy'),
+                                                    merge_lists=self.opts.get('proxy_deep_merge_pillar_in_opts', False))
+        elif self.opts.get('proxy_mines_pillar'):
+            # Even when not required, some details such as mine configuration
+            # should be merged anyway whenever possible.
+            if 'mine_interval' in self.opts['pillar']:
+                self.opts['mine_interval'] = self.opts['pillar']['mine_interval']
+            if 'mine_functions' in self.opts['pillar']:
+                general_proxy_mines = self.opts.get('mine_functions', [])
+                specific_proxy_mines = self.opts['pillar']['mine_functions']
+                try:
+                    self.opts['mine_functions'] = general_proxy_mines + specific_proxy_mines
+                except TypeError as terr:
+                    log.error('Unable to merge mine functions from the pillar in the opts, for proxy {}'.format(
+                        self.opts['id']))
 
         fq_proxyname = self.opts['proxy']['proxytype']
 

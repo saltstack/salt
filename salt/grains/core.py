@@ -792,6 +792,8 @@ def _virtual(osdata):
                         grains['virtual_subtype'] = 'ovirt'
                     elif 'Google' in output:
                         grains['virtual'] = 'gce'
+                    elif 'BHYVE' in output:
+                        grains['virtual'] = 'bhyve'
             except IOError:
                 pass
     elif osdata['kernel'] == 'FreeBSD':
@@ -2349,6 +2351,10 @@ def _zpool_data(grains):
     '''
     # quickly return if windows or proxy
     if salt.utils.is_windows() or 'proxyminion' in __opts__:
+        return {}
+
+    # quickly return if NetBSD (ZFS still under development)
+    if salt.utils.is_netbsd():
         return {}
 
     # quickly return if no zpool and zfs command

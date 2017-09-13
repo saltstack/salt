@@ -55,7 +55,7 @@ _DFLT_LOG_DATEFMT = '%H:%M:%S'
 _DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
 _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
-    '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
+    '%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d] %(message)s'
 )
 _DFLT_REFSPECS = ['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']
 
@@ -334,7 +334,7 @@ VALID_OPTS = {
     # Whether or not scheduled mine updates should be accompanied by a job return for the job cache
     'mine_return_job': bool,
 
-    # Schedule a mine update every n number of seconds
+    # The number of minutes between mine updates.
     'mine_interval': int,
 
     # The ipc strategy. (i.e., sockets versus tcp, etc)
@@ -568,6 +568,23 @@ VALID_OPTS = {
     # but this was the default pre 2015.8.2.  This should default to
     # False in 2016.3.0
     'add_proxymodule_to_opts': bool,
+
+    # Merge pillar data into configuration opts.
+    # As multiple proxies can run on the same server, we may need different
+    # configuration options for each, while there's one single configuration file.
+    # The solution is merging the pillar data of each proxy minion into the opts.
+    'proxy_merge_pillar_in_opts': bool,
+
+    # Deep merge of pillar data into configuration opts.
+    # Evaluated only when `proxy_merge_pillar_in_opts` is True.
+    'proxy_deep_merge_pillar_in_opts': bool,
+
+    # The strategy used when merging pillar into opts.
+    # Considered only when `proxy_merge_pillar_in_opts` is True.
+    'proxy_merge_pillar_in_opts_strategy': str,
+
+    # Allow enabling mine details using pillar data.
+    'proxy_mines_pillar': bool,
 
     # In some particular cases, always alive proxies are not beneficial.
     # This option can be used in those less dynamic environments:
@@ -1633,8 +1650,15 @@ DEFAULT_PROXY_MINION_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': True,
-    'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include'],
+    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'proxy', 'extmods'),
+    'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include', 'extension_modules'],
     'default_include': 'proxy.d/*.conf',
+
+    'proxy_merge_pillar_in_opts': False,
+    'proxy_deep_merge_pillar_in_opts': False,
+    'proxy_merge_pillar_in_opts_strategy': 'smart',
+
+    'proxy_mines_pillar': True,
 
     # By default, proxies will preserve the connection.
     # If this option is set to False,
@@ -2282,7 +2306,7 @@ def syndic_config(master_config_path,
         'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir'
     ]
-    for config_key in ('syndic_log_file', 'log_file', 'key_logfile'):
+    for config_key in ('log_file', 'key_logfile', 'syndic_log_file'):
         # If this is not a URI and instead a local path
         if urlparse(opts.get(config_key, '')).scheme == '':
             prepend_root_dirs.append(config_key)
