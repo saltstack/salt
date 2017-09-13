@@ -844,6 +844,10 @@ class LocalClient(object):
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
 
+        Normally :py:meth:`cmd_iter` does not yield results for minions that
+        are not connected. If you want it to return results for disconnected
+        minions set `expect_minions=True` in `kwargs`.
+
         :return: A generator yielding the individual minion returns
 
         .. code-block:: python
