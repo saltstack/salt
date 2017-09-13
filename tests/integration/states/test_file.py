@@ -586,7 +586,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             tmp_dir = os.path.join(TMP, 'pgdata')
             sym_dir = os.path.join(TMP, 'pg_data')
             os.mkdir(tmp_dir, 0o700)
-            os.symlink(tmp_dir, sym_dir)
+            self.run_function('file.symlink', [tmp_dir, sym_dir])
 
             ret = self.run_state(
                 'file.directory', test=True, name=sym_dir, follow_symlinks=True,
@@ -595,9 +595,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
         finally:
             if os.path.isdir(tmp_dir):
-                shutil.rmtree(tmp_dir)
+                self.run_function('file.remove', [tmp_dir])
             if os.path.islink(sym_dir):
-                os.unlink(sym_dir)
+                self.run_function('file.remove', [sym_dir])
 
     @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Mode not available in Windows')
