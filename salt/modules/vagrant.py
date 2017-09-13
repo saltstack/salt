@@ -7,43 +7,19 @@ Work with virtual machines managed by vagrant
 
 
 # Import python libs
-from __future__ import absolute_import
-import os
-import re
-import sys
-import shutil
+from __future__ import absolute_import, print_function
 import subprocess
-import string  # pylint: disable=deprecated-module
 import logging
-import time
-import datetime
-
-# Import third party libs
-import yaml
-import jinja2
-import jinja2.exceptions
-from salt.ext import six
-from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
 
 # Import salt libs
+import salt.cache
 import salt.utils
-import salt.utils.files
-import salt.utils.path
 import salt.utils.stringutils
-import salt.utils.templates
-import salt.utils.validate.net
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltCacheError
 
 log = logging.getLogger(__name__)
 
-# Set up template environment
-JINJA = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(
-        os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, 'virt')
-    )
-)
-
-__virtualname__ = 'varant'
+__virtualname__ = 'vagrant'
 
 
 def __virtual__():
@@ -55,70 +31,36 @@ def __virtual__():
     return __virtualname__
 
 
-def __get_conn():
+def _user(vm_):
     '''
-    Detects what type of dom this node is and attempts to connect to the
-    correct hypervisor via libvirt.
+    prepend "sudo -u username " if _vm['runas'] is defined
+    :param vm_: the virtual machine configuration dictionary
+    :return: "sudo -u <username> " or "" as needed
     '''
-    # This has only been tested on kvm and xen, it needs to be expanded to
-    # support all vm layers supported by libvirt
-
-
-    hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
-
     try:
-        conn = conn_func = NotImplemented # conn_func[hypervisor][0](*conn_func[hypervisor][1])
-    except Exception:
-        raise CommandExecutionError(
-            'Sorry, {0} failed to open a connection to the hypervisor '
-            'software at {1}'.format(
-                __grains__['fqdn'],
-                conn_func[hypervisor][1][0]
-            )
-        )
-    return conn
+        return 'sudo -u {} '.format(vm_['runas'])
+    except KeyError:
+        return ''
 
 
-def _get_domain(*vms, **kwargs):
-    '''
-    Return a domain object for the named VM or return domain object for all VMs.
-    '''
-    ret = list()
-    lookup_vms = list()
-    conn = __get_conn()
-
-    all_vms = list_domains()
-    if not all_vms:
-        raise CommandExecutionError('No virtual machines found.')
-
-    if vms:
-        for vm in vms:
-            if vm not in all_vms:
-                raise CommandExecutionError('The VM "{name}" is not present'.format(name=vm))
-            else:
-                lookup_vms.append(vm)
-    else:
-        lookup_vms = list(all_vms)
-
-    for vm in lookup_vms:
-        ret.append(conn.lookupByName(vm))
-
-    return len(ret) == 1 and not kwargs.get('iterable') and ret[0] or ret
+def _update_cache(name, vm_):
+    vm_cache = salt.cache.Cache(__opts__, expire=13140000)  # keep data for ten years
+    vm_cache.store('vagrant', name, vm_)
 
 
+def _get_cache(name):
+    vm_cache = salt.cache.Cache(__opts__)
+    try:
+        vm_ = vm_cache.fetch('vagrant', name)
+    except SaltCacheError:
+        vm_ = {'name': name, 'machine': '', 'cwd': '.'}
+        log.warn('Trouble reading Salt cache for vagrant[%S]', name)
+    return vm_
 
-def init(name,
-         cwd='',      # path to find Vagrantfile
-         machine='',  # name of machine in Vagrantfile
-         runas=None,  # defaults to SUDO_USER
-         start=True,  # pylint: disable=redefined-outer-name
-         # saltenv='base',
-         # seed=True,
-         install=True,
-         # pub_key=None,
-         # priv_key=None,
-         # seed_cmd='seed.apply',
-         **kwargs):
+
+def init(name,  # Salt id for created VM
+         cwd,   # path to find Vagrantfile
+         **kwargs): # other keyword arguments
     '''
     Initialize a new Vagrant vm
 
@@ -126,42 +68,29 @@ def init(name,
 
     .. code-block:: bash
 
-        salt 'hypervisor' vagrant.init salt_id /path/to/Vagrantfile machine_name
-        salt my_laptop vagrant.init x1 /projects/bevy_master q1
+        salt 'hypervisor' vagrant.init salt_id /path/to/Vagrantfile
+        salt my_laptop vagrant.init x1 /projects/bevy_master machine=q1
 
+        optional keyword arguments:
+         machine='',  # name of machine in Vagrantfile
+         runas=None,  # defaults to SUDO_USER
+         start=True,  # start the machine when initialized
+         deploy=True, # load Salt on the machine
+         vm={},  # a dictionary of configuration settings
     '''
+    vm_ = kwargs.copy()  # any keyword arguments are stored as configuration data
+    if 'vm' in kwargs:   # allow caller to pass in a dictionary
+        vm_.update(kwargs.pop('vm'))
+    vm_.update(name=name, cwd=cwd)
 
-    # if False:
-    #             # Seed only if there is an image specified
-    #             if seed and disk_image:
-    #                 log.debug('Seed command is {0}'.format(seed_cmd))
-    #                 __salt__[seed_cmd](
-    #                     img_dest,
-    #                     id_=name,
-    #                     config=kwargs.get('config'),
-    #                     install=install,
-    #                     pub_key=pub_key,
-    #                     priv_key=priv_key,
-
-
-    # log.debug('Generating VM XML')
-    # kwargs['enable_vnc'] = enable_vnc
-    # xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
-    # try:
-    #     define_xml_str(xml)
-    # except libvirtError as err:
-    #     # check if failure is due to this domain already existing
-    #     if "domain '{}' already exists".format(name) in str(err):
-    #         # continue on to seeding
-    #         log.warning(err)
-    #     else:
-    #         raise err  # a real error we should report upwards
+    _update_cache(name, vm_)
 
     if start:
         log.debug('Starting VM {0}'.format(name))
-        _get_domain(name).create()
-
-    return True
+        ret = start(name, vm_)
+    else:
+        ret = True
+    return ret
 
 
 def list_domains():
@@ -172,11 +101,24 @@ def list_domains():
 
     .. code-block:: bash
 
-        salt '*' virt.list_domains
+        salt '*' vagrant.list_domains
     '''
     vms = []
-    vms.extend(list_active_vms())
-    vms.extend(list_inactive_vms())
+    cmd = 'vagrant global-status {}'
+    log.info('Executing command "%s"', cmd)
+    output = subprocess.check_output(
+        [cmd],
+        shell=True,
+        )
+    reply = salt.utils.stringutils.to_str(output)
+    for line in reply.split('\n'):  # build a list of the text reply
+        print(line)
+        tokens = line.strip().split()
+        try:
+            _ = int(tokens[0], 16)  # valid id numbers are hexadecimal
+            vms.append(tokens)
+        except (ValueError, IndexError):
+            pass
     return vms
 
 
@@ -188,12 +130,22 @@ def list_active_vms():
 
     .. code-block:: bash
 
-        salt '*' virt.list_active_vms
+        salt '*' vagrant.list_active_vms  cwd=/projects/project_1
     '''
-    conn = __get_conn()
     vms = []
-    for id_ in conn.listDomainsID():
-        vms.append(conn.lookupByID(id_).name())
+    cmd = 'vagrant status'
+    log.info('Executing command "%s"', cmd)
+    output = subprocess.check_output(
+        [cmd],
+        shell=True,
+        )
+    reply = salt.utils.stringutils.to_str(output)
+    for line in reply.split('\n'):  # build a list of the text reply
+        print(line)
+        tokens = line.strip().split()
+        if len(tokens) > 1:
+            if tokens[1] == 'running':
+                vms.append(tokens[0])
     return vms
 
 
@@ -205,17 +157,26 @@ def list_inactive_vms():
 
     .. code-block:: bash
 
-        salt '*' virt.list_inactive_vms
+        salt '*' virt.list_inactive_vms cwd=/projects/project_1
     '''
-    conn = __get_conn()
     vms = []
-    for id_ in conn.listDefinedDomains():
-        vms.append(id_)
+    cmd = 'vagrant status'
+    log.info('Executing command "%s"', cmd)
+    output = subprocess.check_output(
+        [cmd],
+        shell=True,
+        )
+    reply = salt.utils.stringutils.to_str(output)
+    for line in reply.split('\n'):  # build a list of the text reply
+        print(line)
+        tokens = line.strip().split()
+        if len(tokens) > 1:
+            if tokens[1] != 'running':
+                vms.append(tokens[0])
     return vms
 
 
-
-def vm_state(vm_=None):
+def vm_state(name=''):
     '''
     Return list of all the vms and their state.
 
@@ -226,26 +187,29 @@ def vm_state(vm_=None):
 
     .. code-block:: bash
 
-        salt '*' virt.vm_state <domain>
+        salt '*' vagrant.vm_state <name>  cwd='/projects/project_1'
     '''
-    def _info(vm_):
-        state = ''
-        dom = _get_domain(vm_)
-        raw = dom.info()
-        state = NotImplemented #.get(raw[0], 'unknown')
-        return state
     info = {}
-    if vm_:
-        info[vm_] = _info(vm_)
-    else:
-        for vm_ in list_domains():
-            info[vm_] = _info(vm_)
+    cmd = 'vagrant status {}'.format(name)
+    log.info('Executing command "%s"', cmd)
+    output = subprocess.check_output(
+        [cmd],
+        shell=True,
+    )
+    reply = salt.utils.stringutils.to_str(output)
+    for line in reply.split('\n'):  # build a list of the text reply
+        print(line)
+        tokens = line.strip().split()
+        if tokens[-1].endswith(')') :
+            try:
+                info[tokens[0]]['state'] = tokens[1]
+                info[tokens[0]]['provider'] = tokens[2] - '(' - ')'
+            except IndexError:
+                pass
     return info
 
 
-
-
-def shutdown(vm_):
+def shutdown(name):
     '''
     Send a soft shutdown signal to the named vm
 
@@ -253,51 +217,94 @@ def shutdown(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.shutdown <domain>
+        salt '*' vagrant.shutdown <name>
     '''
-    dom = _get_domain(vm_)
-    return dom.shutdown() == 0
+    return stop(name)
 
 
-def pause(vm_):
+def pause(name):
     '''
-    Pause the named vm
+    Pause (suspend) the named vm
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' virt.pause <domain>
+        salt '*' vagrant.pause <name>
     '''
-    dom = _get_domain(vm_)
-    return dom.suspend() == 0
+    vm_ = _get_cache(name)
+    machine = vm_['machine']
+
+    cmd = '{}vagrant suspend {}'.format(_user(vm_), machine)
+    log.info('Executing command "%s"', cmd)
+    ret = subprocess.call(
+        [cmd],
+        shell=True,
+        cwd=vm_.get('cwd', None)
+        )
+    return ret
 
 
-def resume(vm_):
+
+def start(name, vm_=None):
     '''
-    Resume the named vm
+    Start a defined virtual machine.  The machine must have been previously defined
+    using "vagrant.init".
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' virt.resume <domain>
+        salt '*' vagrant.start <domain>
     '''
-    dom = _get_domain(vm_)
-    return dom.resume() == 0
+    fudged_opts = __opts__.copy()  # make a mock of cloud configuration info
+    fudged_opts['profiles'] = {}
+    fudged_opts['providers'] = {}
+
+    if vm_ is None:
+        vm_ = _get_cache(name)
+
+    machine = vm_['machine']
+
+    cmd = '{}vagrant up {}'.format(_user(vm_), machine)
+    log.info('Executing command "%s"', cmd)
+    ret = subprocess.call(
+            [cmd],
+            shell=True,
+            cwd=vm_.get('cwd', None)
+            )
+    if ret:
+        raise CommandExecutionError('Error starting Vagrant machine')
+
+    # the ssh address and port are not known until after the machine boots.
+    # so we must detect it and record it then
+    if not vm_['ssh_host']:
+        log.info('requesting vagrant ssh-config for %s', machine or 'Vagrant default')
+        output = subprocess.check_output(
+            ['{}vagrant ssh-config {}'.format(_user(vm_), machine)],
+            shell=True,
+            cwd=vm_.get('cwd', None)
+        )
+        reply = salt.utils.stringutils.to_str(output)
+        ssh_config = {}
+        for line in reply.split('\n'):  # build a dictionary of the text reply
+            tokens = line.strip().split()
+            if len(tokens) == 2:  # each two-token line becomes a key:value pair
+                ssh_config[tokens[0]] = tokens[1]
+        log.debug('ssh_config=%s', repr(ssh_config))
 
 
-def start(name):
-    '''
-    Start a defined domain
+        vm_.setdefault('key_filename', ssh_config['IdentityFile'])
+        vm_.setdefault('ssh_username', ssh_config['User'])
+        vm_['ssh_host'] = ssh_config['HostName']
+        vm_.setdefault('ssh_port', ssh_config['Port'])
+        _update_cache(name, vm_)
 
-    CLI Example:
+    log.info('Provisioning machine %s as node %s using ssh %s',
+             machine, vm_['name'], vm_['ssh_host'])
+    ret = __utils__['cloud.bootstrap'](vm_, fudged_opts)
 
-    .. code-block:: bash
-
-        salt '*' virt.start <domain>
-    '''
-    return _get_domain(name).create() == 0
+    return ret
 
 
 def stop(name):
@@ -308,77 +315,63 @@ def stop(name):
 
     .. code-block:: bash
 
-        salt '*' virt.stop <domain>
+        salt '*' vagrant.stop <name>
     '''
-    return _get_domain(name).destroy() == 0
+    vm_ = _get_cache(name)
+    machine = vm_['machine']
+
+    cmd = '{}vagrant halt {}'.format(_user(vm_), machine)
+    log.info('Executing command "%s"', cmd)
+    ret = subprocess.call(
+        [cmd],
+        shell=True,
+        cwd=vm_.get('cwd', None)
+        )
+    return ret
 
 
 def reboot(name):
     '''
-    Reboot a domain via ACPI request
+    Reboot a VM
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' virt.reboot <domain>
+        salt '*' vagrant.reboot <name>
     '''
-    return _get_domain(name).reboot(NotImplemented) == 0
+    vm_ = _get_cache(name)
+    machine = vm_['machine']
+
+    cmd = '{}vagrant reload {}'.format(_user(vm_), machine)
+    log.info('Executing command "%s"', cmd)
+    ret = subprocess.call(
+        [cmd],
+        shell=True,
+        cwd=vm_.get('cwd', None)
+        )
+    return ret
 
 
-def reset(vm_):
+def destroy(name):
     '''
-    Reset a VM by emulating the reset button on a physical machine
+    Destroy and delete a virtual machine.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' virt.reset <domain>
-    '''
-    dom = _get_domain(vm_)
-
-    # reset takes a flag, like reboot, but it is not yet used
-    # so we just pass in 0
-    # see: http://libvirt.org/html/libvirt-libvirt.html#virDomainReset
-    return dom.reset(0) == 0
-
-
-
-def undefine(vm_):
-    '''
-    Remove a defined vm, this does not purge the virtual machine image, and
-    this only works if the vm is powered down
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.undefine <domain>
-    '''
-    dom = _get_domain(vm_)
-    return dom.undefine() == 0
-
-
-def purge(vm_, dirs=False):
-    '''
-    Recursively destroy and delete a virtual machine, pass True for dir's to
-    also delete the directories containing the virtual machine disk images -
-    USE WITH EXTREME CAUTION!
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.purge <domain>
+        salt '*' vagrant.destroy <name>
     '''
 
-    directories = set()
-    dirs = NotImplemented
+    vm_ = _get_cache(name)
+    machine = vm_['machine']
 
-    if dirs:
-        for dir_ in directories:
-            shutil.rmtree(dir_)
-    undefine(vm_)
-    return True
-
+    cmd = '{}vagrant destroy -f {}'.format(_user(vm_), machine)
+    log.info('Executing command "%s"', cmd)
+    ret = subprocess.call(
+        [cmd],
+        shell=True,
+        cwd=vm_.get('cwd', None)
+        )
+    return ret
