@@ -20,6 +20,7 @@ state:
 
 '''
 from __future__ import absolute_import
+import sys
 try:
     import ansible
 except ImportError as err:
@@ -30,10 +31,26 @@ __virtualname__ = 'ansible'
 
 
 class AnsibleState(object):
-    def __init__(self, available):
-        self.available = available
+    '''
+    Ansible state caller.
+    '''
+    def get_args(self, argset):
+        '''
+        Get args and kwargs from the argset.
 
-    def call(self, **kwargs):
+        :param argset:
+        :return:
+        '''
+        args = []
+        kwargs = {}
+        for element in argset or []:
+            if isinstance(element, dict):
+                kwargs.update(element)
+            else:
+                args.append(element)
+        return args, kwargs
+
+    def __call__(self, **kwargs):
         '''
         Call Ansible module.
 
@@ -47,25 +64,17 @@ class AnsibleState(object):
             'result': None,
         }
 
-        print "\n\n\n>>>", kwargs, "\n\n\n"
+        for mod_name, mod_params in kwargs.items():
+            args, kwargs = self.get_args(mod_params)
+            ans_mod_out = __salt__['ansible.{0}'.format(mod_name)](*args, **kwargs)
+            ret['changes'][mod_name] = ans_mod_out
 
         return ret
-
-
-_ansible_state = AnsibleState(ansible is not None)
 
 
 def __virtual__():
     '''
     Disable, if Ansible is not available around on the Minion.
     '''
-    return _ansible_state.available
-
-
-def call(**kwargs):
-    '''
-    Call the Ansible module.
-    :param kwargs:
-    :return:
-    '''
-    return _ansible_state.call(**kwargs)
+    setattr(sys.modules[__name__], 'call', lambda **kwargs: AnsibleState()(**kwargs))
+    return ansible is not None
