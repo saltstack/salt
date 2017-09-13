@@ -25,6 +25,7 @@ from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves import range
 try:
     import fcntl
     HAS_FCNTL = True
@@ -498,3 +499,42 @@ def safe_filepath(file_path_name):
         return os.sep.join([drive, path])
     else:
         return path
+
+
+@jinja_filter('is_text_file')
+def is_text_file(fp_, blocksize=512):
+    '''
+    Uses heuristics to guess whether the given file is text or binary,
+    by reading a single block of bytes from the file.
+    If more than 30% of the chars in the block are non-text, or there
+    are NUL ('\x00') bytes in the block, assume this is a binary file.
+    '''
+    int2byte = (lambda x: bytes((x,))) if six.PY3 else chr
+    text_characters = (
+        b''.join(int2byte(i) for i in range(32, 127)) +
+        b'\n\r\t\f\b')
+    try:
+        block = fp_.read(blocksize)
+    except AttributeError:
+        # This wasn't an open filehandle, so treat it as a file path and try to
+        # open the file
+        try:
+            with fopen(fp_, 'rb') as fp2_:
+                block = fp2_.read(blocksize)
+        except IOError:
+            # Unable to open file, bail out and return false
+            return False
+    if b'\x00' in block:
+        # Files with null bytes are binary
+        return False
+    elif not block:
+        # An empty file is considered a valid text file
+        return True
+    try:
+        block.decode('utf-8')
+        return True
+    except UnicodeDecodeError:
+        pass
+
+    nontext = block.translate(None, text_characters)
+    return float(len(nontext)) / len(block) <= 0.30

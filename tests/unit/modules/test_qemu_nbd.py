@@ -80,15 +80,14 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(qemu_nbd.__salt__, {'cmd.run': mock}):
             self.assertEqual(qemu_nbd.init('/srv/image.qcow2'), '')
 
-        with patch.object(os.path, 'isfile', mock):
-            with patch.object(glob, 'glob',
-                              MagicMock(return_value=['/dev/nbd0'])):
-                with patch.dict(qemu_nbd.__salt__,
-                                {'cmd.run': mock,
-                                 'mount.mount': mock,
-                                 'cmd.retcode': MagicMock(side_effect=[1, 0])}):
-                    self.assertDictEqual(qemu_nbd.init('/srv/image.qcow2'),
-                                         {'{0}/nbd/nbd0/nbd0'.format(tempfile.gettempdir()): '/dev/nbd0'})
+        with patch.object(os.path, 'isfile', mock),\
+                patch.object(glob, 'glob', MagicMock(return_value=['/dev/nbd0'])),\
+                patch.dict(qemu_nbd.__salt__,
+                           {'cmd.run': mock,
+                            'mount.mount': mock,
+                            'cmd.retcode': MagicMock(side_effect=[1, 0])}):
+            expected = {os.sep.join([tempfile.gettempdir(), 'nbd', 'nbd0', 'nbd0']): '/dev/nbd0'}
+            self.assertDictEqual(qemu_nbd.init('/srv/image.qcow2'), expected)
 
     # 'clear' function tests: 1
 

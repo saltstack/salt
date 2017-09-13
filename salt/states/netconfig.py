@@ -60,6 +60,7 @@ def _update_config(template_name,
                    template_user='root',
                    template_group='root',
                    template_mode='755',
+                   template_attrs='--------------e----',
                    saltenv=None,
                    template_engine='jinja',
                    skip_verify=False,
@@ -83,6 +84,7 @@ def _update_config(template_name,
                                          template_user=template_user,
                                          template_group=template_group,
                                          template_mode=template_mode,
+                                         template_attrs=template_attrs,
                                          saltenv=saltenv,
                                          template_engine=template_engine,
                                          skip_verify=skip_verify,
@@ -107,6 +109,7 @@ def managed(name,
             template_user='root',
             template_group='root',
             template_mode='755',
+            template_attrs='--------------e----',
             saltenv=None,
             template_engine='jinja',
             skip_verify=False,
@@ -178,8 +181,13 @@ def managed(name,
     template_user: root
         Group owner of file.
 
-    template_user: 755
+    template_mode: 755
         Permissions of file
+
+    template_attrs: "--------------e----"
+        Attributes of file (see `man lsattr`)
+
+        .. versionadded:: oxygen
 
     saltenv: base
         Specifies the template environment. This will influence the relative imports inside the templates.
@@ -339,6 +347,7 @@ def managed(name,
                                        template_user=template_user,
                                        template_group=template_group,
                                        template_mode=template_mode,
+                                       template_attrs=template_attrs,
                                        saltenv=saltenv,
                                        template_engine=template_engine,
                                        skip_verify=skip_verify,
