@@ -71,7 +71,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(esxdatacenter.__pillar__,
                         {'proxy': mock_pillar_proxy}):
             with patch('salt.proxy.esxdatacenter.merge', mock_merge):
-                    esxdatacenter.init(opts={'proxy': mock_opts_proxy})
+                esxdatacenter.init(opts={'proxy': mock_opts_proxy})
         mock_merge.assert_called_once_with(mock_opts_proxy, mock_pillar_proxy)
 
     def test_esxdatacenter_schema(self):
