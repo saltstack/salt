@@ -95,7 +95,7 @@ def present(name,
             else:
                 ret['comment'].append('Adding {0} to beacons'.format(name))
 
-    if save == True:
+    if save:
         result = __salt__['beacons.save']()
         ret['comment'].append('Beacon {0} saved'.format(name))
 
@@ -141,7 +141,7 @@ def absent(name,
     else:
         ret['comment'].append('{0} not configured in beacons'.format(name))
 
-    if save == True:
+    if save:
         result = __salt__['beacons.save']()
         ret['comment'].append('Beacon {0} saved'.format(name))
 
