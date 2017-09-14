@@ -20,10 +20,8 @@ import pytest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    Mock,
-    MagicMock,
-    call,
     patch,
+    MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -104,3 +102,12 @@ description:
         with pytest.raises(LoaderError) as loader_error:
             self.resolver.load_module(mod)
         assert 'Module "{0}" was not found'.format(mod) in loader_error.value
+
+    def test_resolver_module_loader(self):
+        '''
+        Test Ansible module loader.
+        :return:
+        '''
+        with patch('salt.modules.ansiblegate.importlib', MagicMock()),\
+            patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
+            assert self.resolver.load_module('four.five.six') == 'ansible.modules.four.five.six'
