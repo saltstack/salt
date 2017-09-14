@@ -1606,34 +1606,37 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         if os.path.isfile(name):
             self.run_function('file.remove', [name])
 
-        # Non existing file get's touched
-        ret = self.run_state(
-            'file.append', name=name, text='cheese', makedirs=True
-        )
-        self.assertSaltTrueReturn(ret)
-
-        if os.path.isfile(name):
-            self.run_function('file.remove', [name])
+        try:
+            # Non existing file get's touched
+            ret = self.run_state(
+                'file.append', name=name, text='cheese', makedirs=True
+            )
+            self.assertSaltTrueReturn(ret)
+        finally:
+            if os.path.isfile(name):
+                self.run_function('file.remove', [name])
 
         # Nested directory and file get's touched
         name = os.path.join(TMP, 'issue_1864', fname)
 
-        ret = self.run_state(
-            'file.append', name=name, text='cheese', makedirs=True
-        )
-        self.assertSaltTrueReturn(ret)
-
-        if os.path.isfile(name):
-            self.run_function('file.remove', [name])
+        try:
+            ret = self.run_state(
+                'file.append', name=name, text='cheese', makedirs=True
+            )
+            self.assertSaltTrueReturn(ret)
+        finally:
+            if os.path.isfile(name):
+                self.run_function('file.remove', [name])
 
         # Parent directory exists but file does not and makedirs is False
-        ret = self.run_state(
-            'file.append', name=name, text='cheese'
-        )
-        self.assertSaltTrueReturn(ret)
-        self.assertTrue(os.path.isfile(name))
-
-        self.run_function('file.remove', [os.path.join(TMP, 'issue_1864')])
+        try:
+            ret = self.run_state(
+                'file.append', name=name, text='cheese'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(name))
+        finally:
+            self.run_function('file.remove', [os.path.join(TMP, 'issue_1864')])
 
     def test_prepend_issue_27401_makedirs(self):
         '''
@@ -1964,29 +1967,30 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             fp_.write(
                 os.linesep.join(sls_template).format(testcase_filedest))
 
-        ret = self.run_function('state.sls', mods='issue-8343')
-        for name, step in six.iteritems(ret):
-            self.assertSaltTrueReturn({name: step})
+        try:
+            ret = self.run_function('state.sls', mods='issue-8343')
+            for name, step in six.iteritems(ret):
+                self.assertSaltTrueReturn({name: step})
 
-        with salt.utils.fopen(testcase_filedest) as fp_:
-            contents = fp_.read().split(os.linesep)
+            with salt.utils.fopen(testcase_filedest) as fp_:
+                contents = fp_.read().split(os.linesep)
 
-        expected = [
-            '#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
-            'foo',
-            '#-- end salt managed zonestart --',
-            '#',
-            '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
-            'bar',
-            '#-- end salt managed zoneend --',
-            '']
+            expected = [
+                '#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
+                'foo',
+                '#-- end salt managed zonestart --',
+                '#',
+                '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
+                'bar',
+                '#-- end salt managed zoneend --',
+                '']
 
-        self.assertEqual(expected, contents)
-
-        if os.path.isdir(testcase_filedest):
-            os.unlink(testcase_filedest)
-        for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
-            os.unlink(filename)
+            self.assertEqual(expected, contents)
+        finally:
+            if os.path.isdir(testcase_filedest):
+                os.unlink(testcase_filedest)
+            for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
+                os.unlink(filename)
 
     def test_issue_11003_immutable_lazy_proxy_sum(self):
         # causes the Import-Module ServerManager error on Windows
