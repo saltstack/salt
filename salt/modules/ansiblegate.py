@@ -174,8 +174,6 @@ def _set_callables(modules):
                     if isinstance(_kw, dict):
                         kwargs = _kw
                         break
-            else:
-                kw = {}
 
             global _caller
             return _caller.call(cmd_name, *args, **kwargs)
