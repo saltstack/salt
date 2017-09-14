@@ -111,3 +111,14 @@ description:
         with patch('salt.modules.ansiblegate.importlib', MagicMock()),\
             patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
             assert self.resolver.load_module('four.five.six') == 'ansible.modules.four.five.six'
+
+    def test_resolver_module_loader_failure(self):
+        '''
+        Test Ansible module loader failure.
+        :return:
+        '''
+        with patch('salt.modules.ansiblegate.importlib', MagicMock()),\
+            patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
+            with pytest.raises(LoaderError) as loader_error:
+                self.resolver.load_module('something.strange')
+            assert 'Module "something.strange" was not found' in loader_error.value
