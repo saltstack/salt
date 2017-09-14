@@ -1,7 +1,7 @@
 # coding: utf-8 -*-
 '''
 This directory contains the object model and utils for the vsan VMware SDK
-extension. 
+extension.
 
-They are governed under their respective licenses. 
+They are governed under their respective licenses.
 '''

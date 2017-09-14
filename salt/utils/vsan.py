@@ -45,10 +45,7 @@ was developed against.
 # Import Python Libs
 from __future__ import absolute_import
 import sys
-import atexit
 import logging
-import time
-import re
 import ssl
 
 # Import Salt Libs
@@ -56,14 +53,14 @@ from salt.exceptions import VMwareApiError, VMwareRuntimeError
 import salt.utils.vmware
 
 try:
-    from pyVmomi import VmomiSupport, SoapStubAdapter, vim, vmodl
+    from pyVmomi import vim, vmodl
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
 
 
 try:
-    from salt.ext.vsan import vsanmgmtObjects, vsanapiutils
+    from salt.ext.vsan import vsanapiutils
     HAS_PYVSAN = True
 except ImportError:
     HAS_PYVSAN = False
@@ -122,7 +119,7 @@ def get_vsan_cluster_config_system(service_instance):
     #connection handshaking rule. We may need turn of the hostname checking
     #and client side cert verification
     context = None
-    if sys.version_info[:3] > (2,7,8):
+    if sys.version_info[:3] > (2, 7, 8):
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE

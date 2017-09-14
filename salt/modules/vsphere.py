@@ -3721,7 +3721,7 @@ def _get_cluster_dict(cluster_name, cluster_ref):
         # XXX The correct way of retrieving the VSAN data (on the if branch)
         #  is not supported before 60u2 vcenter
         vcenter_info = salt.utils.vmware.get_service_info(si)
-        if int(vcenter_info.build) >= 3634794: # 60u2
+        if int(vcenter_info.build) >= 3634794:  # 60u2
             # VSAN API is fully supported by the VC starting with 60u2
             vsan_conf = salt.utils.vsan.get_cluster_vsan_info(cluster_ref)
             log.trace('vsan_conf = {0}'.format(vsan_conf))
@@ -3735,7 +3735,7 @@ def _get_cluster_dict(cluster_name, cluster_ref):
                     'compression_enabled':
                     data_eff.compressionEnabled or False,
                     'dedup_enabled': data_eff.dedupEnabled})
-        else: # before 60u2 (no advanced vsan info)
+        else:  # before 60u2 (no advanced vsan info)
             if props['configurationEx'].vsanConfigInfo:
                 default_config = \
                         props['configurationEx'].vsanConfigInfo.defaultConfig
