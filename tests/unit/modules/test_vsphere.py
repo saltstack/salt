@@ -11,7 +11,8 @@ from __future__ import absolute_import
 
 # Import Salt Libs
 import salt.modules.vsphere as vsphere
-from salt.exceptions import CommandExecutionError, VMwareSaltError
+from salt.exceptions import CommandExecutionError, VMwareSaltError, \
+        ArgumentValueError
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -1151,6 +1152,95 @@ class CreateDatacenterTestCase(TestCase, LoaderModuleMockMixin):
     def test_returned_value(self):
         res = vsphere.create_datacenter('fake_dc1')
         self.assertEqual(res, {'create_datacenter': True})
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
+    '''Tests for salt.modules.vsphere.list_cluster'''
+    def setup_loader_modules(self):
+        return {
+            vsphere: {
+                '__virtual__': MagicMock(return_value='vsphere'),
+                '_get_proxy_connection_details': MagicMock(),
+                '__salt__': {}
+            }
+        }
+
+    def setUp(self):
+        attrs = (('mock_si', MagicMock()),
+                 ('mock_dc', MagicMock()),
+                 ('mock_cl', MagicMock()),
+                 ('mock__get_cluster_dict', MagicMock()))
+        for attr, mock_obj in attrs:
+            setattr(self, attr, mock_obj)
+            self.addCleanup(delattr, self, attr)
+        attrs = (('mock_get_cluster', MagicMock(return_value=self.mock_cl)),)
+        for attr, mock_obj in attrs:
+            setattr(self, attr, mock_obj)
+            self.addCleanup(delattr, self, attr)
+        patches = (
+            ('salt.utils.vmware.get_service_instance',
+             MagicMock(return_value=self.mock_si)),
+            ('salt.modules.vsphere.get_proxy_type',
+             MagicMock(return_value='esxcluster')),
+            ('salt.modules.vsphere._get_proxy_target',
+             MagicMock(return_value=self.mock_cl)),
+            ('salt.utils.vmware.get_cluster', self.mock_get_cluster),
+            ('salt.modules.vsphere._get_cluster_dict',
+             self.mock__get_cluster_dict))
+        for module, mock_obj in patches:
+            patcher = patch(module, mock_obj)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        # Patch __salt__ dunder
+        patcher = patch.dict(vsphere.__salt__,
+                             {'esxcluster.get_details':
+                              MagicMock(return_value={'cluster': 'cl'})})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_supported_proxies(self):
+        supported_proxies = ['esxcluster', 'esxdatacenter']
+        for proxy_type in supported_proxies:
+            with patch('salt.modules.vsphere.get_proxy_type',
+                       MagicMock(return_value=proxy_type)):
+                vsphere.list_cluster(cluster='cl')
+
+    def test_default_service_instance(self):
+        mock__get_proxy_target = MagicMock()
+        with patch('salt.modules.vsphere._get_proxy_target',
+                   mock__get_proxy_target):
+            vsphere.list_cluster()
+        mock__get_proxy_target.assert_called_once_with(self.mock_si)
+
+    def test_defined_service_instance(self):
+        mock_si = MagicMock()
+        mock__get_proxy_target = MagicMock()
+        with patch('salt.modules.vsphere._get_proxy_target',
+                   mock__get_proxy_target):
+            vsphere.list_cluster(service_instance=mock_si)
+        mock__get_proxy_target.assert_called_once_with(mock_si)
+
+    def test_no_cluster_raises_argument_value_error(self):
+        with patch('salt.modules.vsphere.get_proxy_type',
+                   MagicMock(return_value='esxdatacenter')):
+            with patch('salt.modules.vsphere._get_proxy_target', MagicMock()):
+                with self.assertRaises(ArgumentValueError) as excinfo:
+                    vsphere.list_cluster()
+        self.assertEqual(excinfo.exception.strerror,
+                         '\'cluster\' needs to be specified')
+
+    def test_get_cluster_call(self):
+        with patch('salt.modules.vsphere.get_proxy_type',
+                   MagicMock(return_value='esxdatacenter')):
+            with patch('salt.modules.vsphere._get_proxy_target',
+                       MagicMock(return_value=self.mock_dc)):
+                vsphere.list_cluster(cluster='cl')
+        self.mock_get_cluster.assert_called_once_with(self.mock_dc, 'cl')
+
+    def test__get_cluster_dict_call(self):
+        vsphere.list_cluster()
+        self.mock__get_cluster_dict.assert_called_once_with('cl', self.mock_cl)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
