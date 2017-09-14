@@ -176,7 +176,9 @@ import salt.utils.dictupdate as dictupdate
 import salt.utils.http
 import salt.utils.path
 import salt.utils.vmware
-from salt.exceptions import CommandExecutionError, VMwareSaltError
+import salt.utils.vsan
+from salt.exceptions import CommandExecutionError, VMwareSaltError, \
+        ArgumentValueError
 from salt.utils.decorators import depends, ignores_kwargs
 
 # Import Third Party Libs
@@ -3741,6 +3743,52 @@ def _get_cluster_dict(cluster_name, cluster_ref):
                     'enabled': props['configurationEx'].vsanConfigInfo.enabled,
                     'auto_claim_storage': default_config.autoClaimStorage}
     return res
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def list_cluster(datacenter=None, cluster=None, service_instance=None):
+    '''
+    Returns a dict representation of an ESX cluster.
+
+    datacenter
+        Name of datacenter containing the cluster.
+        Ignored if already contained by proxy details.
+        Default value is None.
+
+    cluster
+        Name of cluster.
+        Ignored if already contained by proxy details.
+        Default value is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        # vcenter proxy
+        salt '*' vsphere.list_cluster datacenter=dc1 cluster=cl1
+
+        # esxdatacenter proxy
+        salt '*' vsphere.list_cluster cluster=cl1
+
+        # esxcluster proxy
+        salt '*' vsphere.list_cluster
+    '''
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        dc_ref = _get_proxy_target(service_instance)
+        if not cluster:
+            raise ArgumentValueError('\'cluster\' needs to be specified')
+        cluster_ref = salt.utils.vmware.get_cluster(dc_ref, cluster)
+    elif proxy_type == 'esxcluster':
+        cluster_ref = _get_proxy_target(service_instance)
+        cluster = __salt__['esxcluster.get_details']()['cluster']
+    log.trace('Retrieving representation of cluster \'{0}\' in a '
+              '{1} proxy'.format(cluster, proxy_type))
+    return _get_cluster_dict(cluster, cluster_ref)
 
 
 def _check_hosts(service_instance, host, host_names):
