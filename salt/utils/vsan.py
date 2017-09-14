@@ -130,3 +130,32 @@ def get_vsan_cluster_config_system(service_instance):
     stub = service_instance._stub
     vc_mos = vsanapiutils.GetVsanVcMos(stub, context=context)
     return vc_mos['vsan-cluster-config-system']
+
+
+def get_cluster_vsan_info(cluster_ref):
+    '''
+    Returns the extended cluster vsan configuration object
+    (vim.VsanConfigInfoEx).
+
+    cluster_ref
+        Reference to the cluster
+    '''
+
+    cluster_name = salt.utils.vmware.get_managed_object_name(cluster_ref)
+    log.trace('Retrieving cluster vsan info of cluster '
+              '\'{0}\''.format(cluster_name))
+    si = salt.utils.vmware.get_service_instance_from_managed_object(
+        cluster_ref)
+    vsan_cl_conf_sys = get_vsan_cluster_config_system(si)
+    try:
+        return vsan_cl_conf_sys.VsanClusterGetConfig(cluster_ref)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
