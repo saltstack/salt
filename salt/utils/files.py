@@ -35,9 +35,20 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+LOCAL_PROTOS = ('', 'file')
 REMOTE_PROTOS = ('http', 'https', 'ftp', 'swift', 's3')
 VALID_PROTOS = ('salt', 'file') + REMOTE_PROTOS
 TEMPFILE_PREFIX = '__salt.tmp.'
+
+HASHES = {
+    'sha512': 128,
+    'sha384': 96,
+    'sha256': 64,
+    'sha224': 56,
+    'sha1': 40,
+    'md5': 32,
+}
+HASHES_REVMAP = dict([(y, x) for x, y in six.iteritems(HASHES)])
 
 
 def guess_archive_type(name):
@@ -538,3 +549,14 @@ def is_text_file(fp_, blocksize=512):
 
     nontext = block.translate(None, text_characters)
     return float(len(nontext)) / len(block) <= 0.30
+
+
+def remove(path):
+    '''
+    Runs os.remove(path) and suppresses the OSError if the file doesn't exist
+    '''
+    try:
+        os.remove(path)
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            raise

@@ -60,7 +60,8 @@ def list_(name,
           strip_components=None,
           clean=False,
           verbose=False,
-          saltenv='base'):
+          saltenv='base',
+          source_hash=None):
     '''
     .. versionadded:: 2016.11.0
     .. versionchanged:: 2016.11.2
@@ -149,6 +150,14 @@ def list_(name,
         ``archive``. This is only applicable when ``archive`` is a file from
         the ``salt://`` fileserver.
 
+    source_hash
+        If ``name`` is an http(s)/ftp URL and the file exists in the minion's
+        file cache, this option can be passed to keep the minion from
+        re-downloading the archive if the cached copy matches the specified
+        hash.
+
+        .. versionadded:: Oxygen
+
     .. _tarfile: https://docs.python.org/2/library/tarfile.html
     .. _xz: http://tukaani.org/xz/
 
@@ -160,6 +169,7 @@ def list_(name,
             salt '*' archive.list /path/to/myfile.tar.gz strip_components=1
             salt '*' archive.list salt://foo.tar.gz
             salt '*' archive.list https://domain.tld/myfile.zip
+            salt '*' archive.list https://domain.tld/myfile.zip source_hash=f1d2d2f924e986ac86fdf7b36c94bcdf32beec15
             salt '*' archive.list ftp://10.1.2.3/foo.rar
     '''
     def _list_tar(name, cached, decompress_cmd, failhard=False):
@@ -309,7 +319,7 @@ def list_(name,
                 )
         return dirs, files, []
 
-    cached = __salt__['cp.cache_file'](name, saltenv)
+    cached = __salt__['cp.cache_file'](name, saltenv, source_hash=source_hash)
     if not cached:
         raise CommandExecutionError('Failed to cache {0}'.format(name))
 
@@ -1094,7 +1104,7 @@ def unzip(zip_file,
     return _trim_files(cleaned_files, trim_output)
 
 
-def is_encrypted(name, clean=False, saltenv='base'):
+def is_encrypted(name, clean=False, saltenv='base', source_hash=None):
     '''
     .. versionadded:: 2016.11.0
 
@@ -1113,6 +1123,18 @@ def is_encrypted(name, clean=False, saltenv='base'):
             If there is an error listing the archive's contents, the cached
             file will not be removed, to allow for troubleshooting.
 
+    saltenv : base
+        Specifies the fileserver environment from which to retrieve
+        ``archive``. This is only applicable when ``archive`` is a file from
+        the ``salt://`` fileserver.
+
+    source_hash
+        If ``name`` is an http(s)/ftp URL and the file exists in the minion's
+        file cache, this option can be passed to keep the minion from
+        re-downloading the archive if the cached copy matches the specified
+        hash.
+
+        .. versionadded:: Oxygen
 
     CLI Examples:
 
@@ -1122,9 +1144,10 @@ def is_encrypted(name, clean=False, saltenv='base'):
             salt '*' archive.is_encrypted salt://foo.zip
             salt '*' archive.is_encrypted salt://foo.zip saltenv=dev
             salt '*' archive.is_encrypted https://domain.tld/myfile.zip clean=True
+            salt '*' archive.is_encrypted https://domain.tld/myfile.zip source_hash=f1d2d2f924e986ac86fdf7b36c94bcdf32beec15
             salt '*' archive.is_encrypted ftp://10.1.2.3/foo.zip
     '''
-    cached = __salt__['cp.cache_file'](name, saltenv)
+    cached = __salt__['cp.cache_file'](name, saltenv, source_hash=source_hash)
     if not cached:
         raise CommandExecutionError('Failed to cache {0}'.format(name))
 

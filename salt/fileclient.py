@@ -185,12 +185,13 @@ class Client(object):
         '''
         raise NotImplementedError
 
-    def cache_file(self, path, saltenv=u'base', cachedir=None):
+    def cache_file(self, path, saltenv=u'base', cachedir=None, source_hash=None):
         '''
         Pull a file down from the file server and store it in the minion
         file cache
         '''
-        return self.get_url(path, u'', True, saltenv, cachedir=cachedir)
+        return self.get_url(
+            path, u'', True, saltenv, cachedir=cachedir, source_hash=source_hash)
 
     def cache_files(self, paths, saltenv=u'base', cachedir=None):
         '''
@@ -470,7 +471,7 @@ class Client(object):
         return ret
 
     def get_url(self, url, dest, makedirs=False, saltenv=u'base',
-                no_cache=False, cachedir=None):
+                no_cache=False, cachedir=None, source_hash=None):
         '''
         Get a single file from a URL.
         '''
@@ -525,6 +526,18 @@ class Client(object):
                     return u''
         elif not no_cache:
             dest = self._extrn_path(url, saltenv, cachedir=cachedir)
+            if source_hash is not None:
+                try:
+                    source_hash = source_hash.split('=')[-1]
+                    form = salt.utils.files.HASHES_REVMAP[len(source_hash)]
+                    if salt.utils.get_hash(dest, form) == source_hash:
+                        log.debug(
+                            'Cached copy of %s (%s) matches source_hash %s, '
+                            'skipping download', url, dest, source_hash
+                        )
+                        return dest
+                except (AttributeError, KeyError, IOError, OSError):
+                    pass
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
@@ -532,7 +545,9 @@ class Client(object):
         if url_data.scheme == u's3':
             try:
                 def s3_opt(key, default=None):
-                    u'''Get value of s3.<key> from Minion config or from Pillar'''
+                    '''
+                    Get value of s3.<key> from Minion config or from Pillar
+                    '''
                     if u's3.' + key in self.opts:
                         return self.opts[u's3.' + key]
                     try:
@@ -785,7 +800,7 @@ class Client(object):
 
     def _extrn_path(self, url, saltenv, cachedir=None):
         '''
-        Return the extn_filepath for a given url
+        Return the extrn_filepath for a given url
         '''
         url_data = urlparse(url)
         if salt.utils.platform.is_windows():
