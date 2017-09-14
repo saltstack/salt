@@ -62,3 +62,23 @@ description:
         assert sorted(ret.get('Available sections on module "{0}"'.format(
             Module().__name__))) == ['one', 'two']
         assert ret.get('Description') == 'describe the second part'
+
+    def test_module_resolver_modlist(self):
+        '''
+        Test Ansible resolver modules list.
+        :return:
+        '''
+        resolver = ansible.AnsibleModuleResolver({})
+        resolver._modules_map = {
+            'one.two.three': '/one/two/three.py',
+            'four.five.six': '/four/five/six.py',
+            'three.six.one': '/three/six/one.py',
+        }
+        assert resolver.get_modules_list() == ['four.five.six', 'one.two.three', 'three.six.one']
+        for ptr in ['five', 'fi', 've']:
+            assert resolver.get_modules_list(ptr) == ['four.five.six']
+        for ptr in ['si', 'ix', 'six']:
+            assert resolver.get_modules_list(ptr) == ['four.five.six', 'three.six.one']
+        assert resolver.get_modules_list('one') == ['one.two.three', 'three.six.one']
+        assert resolver.get_modules_list('one.two') == ['one.two.three']
+        assert resolver.get_modules_list('four') == ['four.five.six']
