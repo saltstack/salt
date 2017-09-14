@@ -11,11 +11,10 @@ import re
 import shlex
 
 # Import salt libs
-import salt.utils.jid
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+import salt.utils.jid
 
 
 if six.PY3:
