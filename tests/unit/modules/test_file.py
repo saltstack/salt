@@ -111,8 +111,8 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         os.remove(tfile.name)
 
         # A newline should not be added in empty files
-        tfile = tempfile.NamedTemporaryFile('w+b', delete=False)
-        tfile.close()
+        with tempfile.NamedTemporaryFile('w+b', delete=False) as tfile:
+            pass
         filemod.replace(tfile.name, **args)
         expected = args['repl'] + os.linesep
         with salt.utils.fopen(tfile.name) as tfile2:
@@ -343,8 +343,8 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         os.remove(tfile.name)
 
         # A newline should not be added in empty files
-        tfile = tempfile.NamedTemporaryFile(mode='w+b', delete=False)
-        tfile.close()
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            pass
         filemod.blockreplace(tfile.name, **args)
         with salt.utils.fopen(tfile.name) as tfile2:
             self.assertEqual(tfile2.read(), block)
