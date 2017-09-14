@@ -8,7 +8,7 @@ This is a base library used by a number of VMware services such as VMware
 ESX, ESXi, and vCenter servers.
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
-:codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstaley.com>
+:codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstanley.com>
 
 Dependencies
 ~~~~~~~~~~~~
