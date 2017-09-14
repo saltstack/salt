@@ -16,7 +16,12 @@
 # limitations under the License.
 
 # Import Salt Testing Libs
-import pytest
+try:
+    import pytest
+except ImportError as import_error:
+    pytest = None
+NO_PYTEST = not bool(pytest)
+
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
@@ -31,6 +36,7 @@ from salt.exceptions import LoaderError
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(NO_PYTEST, False)
 class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         self.resolver = ansible.AnsibleModuleResolver({})
