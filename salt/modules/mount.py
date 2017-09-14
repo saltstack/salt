@@ -1289,17 +1289,24 @@ def write_mount_cache(real_name,
                       device,
                       mkmnt,
                       fstype,
-                      opts):
+                      mount_opts):
     '''
     .. versionadded:: Oxygen
 
     Provide information if the path is mounted
 
+    :param real_name:     The real name of the mount point where the device is mounted.
+    :param device:        The device that is being mounted.
+    :param mkmnt:         Whether or not the mount point should be created.
+    :param fstype:        The file system that is used.
+    :param mount_opts:    Additional options used when mounting the device.
+    :return:              Boolean if message was sent successfully.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mount.write_mount_cache /mnt/share
+        salt '*' mount.write_mount_cache /mnt/share /dev/sda1 False ext4 defaults,nosuid
     '''
     cache = salt.utils.mount.read_cache(__opts__)
 

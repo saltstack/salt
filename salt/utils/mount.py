@@ -10,20 +10,13 @@ import os
 import yaml
 
 # Import Salt libs
-import salt.utils  # Can be removed once is_true is moved
 import salt.utils.files
+import salt.utils.stringutils
 import salt.utils.versions
 
 from salt.utils.yamldumper import SafeOrderedDumper
 
 log = logging.getLogger(__name__)
-
-
-def __virtual__():
-    '''
-    Confine this module to Debian based distros
-    '''
-    return True
 
 
 def _read_file(path):
