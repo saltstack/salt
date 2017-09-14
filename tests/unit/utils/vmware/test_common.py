@@ -900,3 +900,50 @@ class GetRootFolderTestCase(TestCase):
     def test_return(self):
         ret = salt.utils.vmware.get_root_folder(self.mock_si)
         self.assertEqual(ret, self.mock_root_folder)
+
+
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class GetServiceInfoTestCase(TestCase):
+    '''Tests for salt.utils.vmware.get_service_info'''
+    def setUp(self):
+        self.mock_about = MagicMock()
+        self.mock_si = MagicMock(content=MagicMock())
+        type(self.mock_si.content).about = \
+                PropertyMock(return_value=self.mock_about)
+
+    def tearDown(self):
+        for attr in ('mock_si', 'mock_about'):
+            delattr(self, attr)
+
+    def test_about_ret(self):
+        ret = salt.utils.vmware.get_service_info(self.mock_si)
+        self.assertEqual(ret, self.mock_about)
+
+    def test_about_raises_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        type(self.mock_si.content).about = \
+                PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.get_service_info(self.mock_si)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_about_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        type(self.mock_si.content).about = \
+                PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareApiError) as excinfo:
+            salt.utils.vmware.get_service_info(self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_about_raises_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        type(self.mock_si.content).about = \
+                PropertyMock(side_effect=exc)
+        with self.assertRaises(excs.VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.get_service_info(self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
