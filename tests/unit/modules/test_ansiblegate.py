@@ -29,6 +29,7 @@ from tests.support.mock import (
 )
 
 import salt.modules.ansiblegate as ansible
+from salt.exceptions import LoaderError
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -94,6 +95,12 @@ description:
         Test Ansible module loader.
         :return:
         '''
+        mod = 'four.five.six'
         with pytest.raises(ImportError) as import_error:
-            self.resolver.load_module('four.five.six')
-        assert 'No module named ansible.modules.four.five.six' in import_error.value
+            self.resolver.load_module(mod)
+        assert 'No module named ansible.modules.{0}'.format(mod) in import_error.value
+
+        mod = 'i.even.do.not.exist.at.all'
+        with pytest.raises(LoaderError) as loader_error:
+            self.resolver.load_module(mod)
+        assert 'Module "{0}" was not found'.format(mod) in loader_error.value
