@@ -88,6 +88,12 @@ environments (i.e. ``saltenvs``) have been added:
    ignore all tags and use branches only, and also to keep SHAs from being made
    available as saltenvs.
 
+Additional output modes
+------------------
+
+The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``terse_id``.
+Just like ``mixed_id``, these use the state ID as name in the highstate output
+
 Salt Cloud Features
 -------------------
 
