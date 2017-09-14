@@ -135,3 +135,84 @@ class GetVsanClusterConfigSystemTestCase(TestCase, LoaderModuleMockMixin):
     def test_return(self):
         ret = vsan.get_vsan_cluster_config_system(self.mock_si)
         self.assertEqual(ret, self.mock_ret)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
+class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
+    '''Tests for salt.utils.vsan.get_cluster_vsan_info'''
+    def setup_loader_modules(self):
+        return {vsan: {
+            '__virtual__': MagicMock(return_value='vsan')}}
+
+    def setUp(self):
+        self.mock_cl_ref = MagicMock()
+        self.mock_si = MagicMock()
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name', MagicMock()),
+            ('salt.utils.vmware.get_service_instance_from_managed_object',
+             MagicMock(return_value=self.mock_si)),
+            ('salt.utils.vsan.get_vsan_cluster_config_system', MagicMock()))
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_si', 'mock_cl_ref'):
+            delattr(self, attr)
+
+    def test_get_managed_object_name_call(self):
+        mock_get_managed_object_name = MagicMock()
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   mock_get_managed_object_name):
+            vsan.get_cluster_vsan_info(self.mock_cl_ref)
+        mock_get_managed_object_name.assert_called_once_with(self.mock_cl_ref)
+
+    def test_get_vsan_cluster_config_system_call(self):
+        mock_get_vsan_cl_syst = MagicMock()
+        with patch('salt.utils.vsan.get_vsan_cluster_config_system',
+                   mock_get_vsan_cl_syst):
+            vsan.get_cluster_vsan_info(self.mock_cl_ref)
+        mock_get_vsan_cl_syst.assert_called_once_with(self.mock_si)
+
+    def test_VsanClusterGetConfig_call(self):
+        mock_vsan_sys = MagicMock()
+        with patch('salt.utils.vsan.get_vsan_cluster_config_system',
+                   MagicMock(return_value=mock_vsan_sys)):
+            vsan.get_cluster_vsan_info(self.mock_cl_ref)
+        mock_vsan_sys.VsanClusterGetConfig.assert_called_once_with(
+            self.mock_cl_ref)
+
+    def test_VsanClusterGetConfig_raises_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        with patch('salt.utils.vsan.get_vsan_cluster_config_system',
+                   MagicMock(return_value=MagicMock(
+                       VsanClusterGetConfig=MagicMock(side_effect=exc)))):
+            with self.assertRaises(VMwareApiError) as excinfo:
+                vsan.get_cluster_vsan_info(self.mock_cl_ref)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_VsanClusterGetConfig_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        with patch('salt.utils.vsan.get_vsan_cluster_config_system',
+                   MagicMock(return_value=MagicMock(
+                       VsanClusterGetConfig=MagicMock(side_effect=exc)))):
+            with self.assertRaises(VMwareApiError) as excinfo:
+                vsan.get_cluster_vsan_info(self.mock_cl_ref)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_VsanClusterGetConfig_raises_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        with patch('salt.utils.vsan.get_vsan_cluster_config_system',
+                   MagicMock(return_value=MagicMock(
+                       VsanClusterGetConfig=MagicMock(side_effect=exc)))):
+            with self.assertRaises(VMwareRuntimeError) as excinfo:
+                vsan.get_cluster_vsan_info(self.mock_cl_ref)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
