@@ -547,6 +547,8 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
                          'retrieved', excinfo.exception.strerror)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetManagedObjectName(TestCase):
     '''Tests for salt.utils.get_managed_object_name'''
 
@@ -902,6 +904,7 @@ class GetRootFolderTestCase(TestCase):
         self.assertEqual(ret, self.mock_root_folder)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class GetServiceInfoTestCase(TestCase):
     '''Tests for salt.utils.vmware.get_service_info'''
