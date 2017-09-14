@@ -12,7 +12,7 @@ import logging
 # Import Salt testing libraries
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call, \
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, \
         PropertyMock
 
 # Import Salt libraries
@@ -102,7 +102,7 @@ class GetVsanClusterConfigSystemTestCase(TestCase, LoaderModuleMockMixin):
             patcher.start()
             self.addCleanup(patcher.stop)
 
-        type(vsan.sys).version_info = PropertyMock(return_value=(2,7,9))
+        type(vsan.sys).version_info = PropertyMock(return_value=(2, 7, 9))
         self.mock_context = MagicMock()
         self.mock_create_default_context = \
                 MagicMock(return_value=self.mock_context)
@@ -120,7 +120,7 @@ class GetVsanClusterConfigSystemTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(self.mock_context.verify_mode, vsan.ssl.CERT_NONE)
 
     def test_ssl_default_context_not_loaded(self):
-        type(vsan.sys).version_info = PropertyMock(return_value=(2,7,8))
+        type(vsan.sys).version_info = PropertyMock(return_value=(2, 7, 8))
         vsan.get_vsan_cluster_config_system(self.mock_si)
         self.assertEqual(self.mock_create_default_context.call_count, 0)
 
