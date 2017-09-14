@@ -106,3 +106,27 @@ def vsan_supported(service_instance):
     if int(api_version.split('.')[0]) < 6:
         return False
     return True
+
+
+def get_vsan_cluster_config_system(service_instance):
+    '''
+    Returns a vim.cluster.VsanVcClusterConfigSystem object
+
+    service_instance
+        Service instance to the host or vCenter
+    '''
+
+    #TODO Replace when better connection mechanism is available
+
+    #For python 2.7.9 and later, the defaul SSL conext has more strict
+    #connection handshaking rule. We may need turn of the hostname checking
+    #and client side cert verification
+    context = None
+    if sys.version_info[:3] > (2,7,8):
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+
+    stub = service_instance._stub
+    vc_mos = vsanapiutils.GetVsanVcMos(stub, context=context)
+    return vc_mos['vsan-cluster-config-system']
