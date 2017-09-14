@@ -32,6 +32,17 @@ import salt.modules.ansiblegate as ansible
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
+    def setUp(self):
+        self.resolver = ansible.AnsibleModuleResolver({})
+        self.resolver._modules_map = {
+            'one.two.three': '/one/two/three.py',
+            'four.five.six': '/four/five/six.py',
+            'three.six.one': '/three/six/one.py',
+        }
+
+    def tearDown(self):
+        self.resolver = None
+
     def setup_loader_modules(self):
         return {ansible: {}}
 
@@ -56,7 +67,7 @@ description:
    describe the second part
         """
 
-        ansible._resolver = ansible.AnsibleModuleResolver({})
+        ansible._resolver = self.resolver
         ansible._resolver.load_module = MagicMock(return_value=Module())
         ret = ansible.help('dummy')
         assert sorted(ret.get('Available sections on module "{0}"'.format(
@@ -68,17 +79,11 @@ description:
         Test Ansible resolver modules list.
         :return:
         '''
-        resolver = ansible.AnsibleModuleResolver({})
-        resolver._modules_map = {
-            'one.two.three': '/one/two/three.py',
-            'four.five.six': '/four/five/six.py',
-            'three.six.one': '/three/six/one.py',
-        }
-        assert resolver.get_modules_list() == ['four.five.six', 'one.two.three', 'three.six.one']
+        assert self.resolver.get_modules_list() == ['four.five.six', 'one.two.three', 'three.six.one']
         for ptr in ['five', 'fi', 've']:
-            assert resolver.get_modules_list(ptr) == ['four.five.six']
+            assert self.resolver.get_modules_list(ptr) == ['four.five.six']
         for ptr in ['si', 'ix', 'six']:
-            assert resolver.get_modules_list(ptr) == ['four.five.six', 'three.six.one']
-        assert resolver.get_modules_list('one') == ['one.two.three', 'three.six.one']
-        assert resolver.get_modules_list('one.two') == ['one.two.three']
-        assert resolver.get_modules_list('four') == ['four.five.six']
+            assert self.resolver.get_modules_list(ptr) == ['four.five.six', 'three.six.one']
+        assert self.resolver.get_modules_list('one') == ['one.two.three', 'three.six.one']
+        assert self.resolver.get_modules_list('one.two') == ['one.two.three']
+        assert self.resolver.get_modules_list('four') == ['four.five.six']
