@@ -67,7 +67,7 @@ class AnsibleState(object):
         for mod_name, mod_params in kwargs.items():
             args, kwargs = self.get_args(mod_params)
             try:
-                ans_mod_out = __salt__['ansible.{0}'.format(mod_name)](*args, **kwargs)
+                ans_mod_out = __salt__['ansible.{0}'.format(mod_name)](**{'__pub_arg': [args, kwargs]})
             except Exception as err:
                 ans_mod_out = 'Module "{0}" failed. Error message: ({1}) {2}'.format(
                     mod_name, err.__class__.__name__, err)
