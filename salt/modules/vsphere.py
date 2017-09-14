@@ -4288,6 +4288,39 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
     return ret
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxcluster', 'esxdatacenter')
+def _get_proxy_target(service_instance):
+    '''
+    Returns the target object of a proxy.
+
+    If the object doesn't exist a VMwareObjectRetrievalError is raised
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+    '''
+    proxy_type = get_proxy_type()
+    if not salt.utils.vmware.is_connection_to_a_vcenter(service_instance):
+        raise CommandExecutionError('\'_get_proxy_target\' not supported '
+                                    'when connected via the ESXi host')
+    reference = None
+    if proxy_type == 'esxcluster':
+        host, username, password, protocol, port, mechanism, principal, \
+            domain, datacenter, cluster = _get_esxcluster_proxy_details()
+
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+        reference = salt.utils.vmware.get_cluster(dc_ref, cluster)
+    elif proxy_type == 'esxdatacenter':
+        # esxdatacenter proxy
+        host, username, password, protocol, port, mechanism, principal, \
+            domain, datacenter = _get_esxdatacenter_proxy_details()
+
+        reference = salt.utils.vmware.get_datacenter(service_instance,
+                                                     datacenter)
+    log.trace('reference = {0}'.format(reference))
+    return reference
+
+
 def _get_esxdatacenter_proxy_details():
     '''
     Returns the running esxdatacenter's proxy details
