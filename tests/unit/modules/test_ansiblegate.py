@@ -56,7 +56,7 @@ description:
    describe the second part
         """
 
-        ansible._resolver = MagicMock()
+        ansible._resolver = ansible.AnsibleModuleResolver({})
         ansible._resolver.load_module = MagicMock(return_value=Module())
         ret = ansible.help('dummy')
         assert sorted(ret.get('Available sections on module "{0}"'.format(
