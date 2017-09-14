@@ -479,6 +479,28 @@ def is_connection_to_a_vcenter(service_instance):
             '\'VirtualCenter/HostAgent\''.format(api_type))
 
 
+def get_service_info(service_instance):
+    '''
+    Returns information of the vCenter or ESXi host
+
+    service_instance
+        The Service Instance from which to obtain managed object references.
+    '''
+    try:
+        return service_instance.content.about
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+
+
 def _get_dvs(service_instance, dvs_name):
     '''
     Return a reference to a Distributed Virtual Switch object.
