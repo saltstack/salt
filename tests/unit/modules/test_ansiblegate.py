@@ -35,8 +35,30 @@ class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {ansible: {}}
 
-    def test_ansible_modules_listing(self):
-        pass
-
     def test_ansible_module_help(self):
-        pass
+        '''
+        Test help extraction from the module
+        :return:
+        '''
+        class Module(object):
+            '''
+            An ansible module mock.
+            '''
+            __name__ = 'foo'
+            DOCUMENTATION = """
+---
+one:
+   text here
+---
+two:
+   text here
+description:
+   describe the second part
+        """
+
+        ansible._resolver = MagicMock()
+        ansible._resolver.load_module = MagicMock(return_value=Module())
+        ret = ansible.help('dummy')
+        assert sorted(ret.get('Available sections on module "{0}"'.format(
+            Module().__name__))) == ['one', 'two']
+        assert ret.get('Description') == 'describe the second part'
