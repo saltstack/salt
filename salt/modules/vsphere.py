@@ -195,7 +195,7 @@ else:
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'vsphere'
-__proxyenabled__ = ['esxi', 'esxdatacenter']
+__proxyenabled__ = ['esxi', 'esxcluster', 'esxdatacenter']
 
 
 def __virtual__():
@@ -227,6 +227,8 @@ def _get_proxy_connection_details():
     proxytype = get_proxy_type()
     if proxytype == 'esxi':
         details = __salt__['esxi.get_details']()
+    elif proxytype == 'esxcluster':
+        details = __salt__['esxcluster.get_details']()
     elif proxytype == 'esxdatacenter':
         details = __salt__['esxdatacenter.get_details']()
     else:
@@ -267,7 +269,7 @@ def gets_service_instance_via_proxy(fn):
     proxy details and passes the connection (vim.ServiceInstance) to
     the decorated function.
 
-    Supported proxies: esxi, esxdatacenter.
+    Supported proxies: esxi, esxcluster, esxdatacenter.
 
     Notes:
         1. The decorated function must have a ``service_instance`` parameter
@@ -354,7 +356,7 @@ def gets_service_instance_via_proxy(fn):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
 def get_service_instance_via_proxy(service_instance=None):
     '''
     Returns a service instance to the proxied endpoint (vCenter/ESXi host).
@@ -374,7 +376,7 @@ def get_service_instance_via_proxy(service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
 def disconnect(service_instance):
     '''
     Disconnects from a vCenter or ESXi host
@@ -1909,7 +1911,7 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
 @gets_service_instance_via_proxy
 def test_vcenter_connection(service_instance=None):
     '''
@@ -3598,7 +3600,7 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxdatacenter')
+@supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
     '''
@@ -4294,3 +4296,14 @@ def _get_esxdatacenter_proxy_details():
     return det.get('vcenter'), det.get('username'), det.get('password'), \
             det.get('protocol'), det.get('port'), det.get('mechanism'), \
             det.get('principal'), det.get('domain'), det.get('datacenter')
+
+
+def _get_esxcluster_proxy_details():
+    '''
+    Returns the running esxcluster's proxy details
+    '''
+    det = __salt__['esxcluster.get_details']()
+    return det.get('vcenter'), det.get('username'), det.get('password'), \
+            det.get('protocol'), det.get('port'), det.get('mechanism'), \
+            det.get('principal'), det.get('domain'), det.get('datacenter'), \
+            det.get('cluster')
