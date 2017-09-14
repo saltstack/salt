@@ -3661,6 +3661,88 @@ def create_datacenter(datacenter_name, service_instance=None):
     return {'create_datacenter': True}
 
 
+def _get_cluster_dict(cluster_name, cluster_ref):
+    '''
+    Returns a cluster dict representation from
+    a vim.ClusterComputeResource object.
+
+    cluster_name
+        Name of the cluster
+
+    cluster_ref
+        Reference to the cluster
+    '''
+
+    log.trace('Building a dictionary representation of cluster '
+              '\'{0}\''.format(cluster_name))
+    props = salt.utils.vmware.get_properties_of_managed_object(
+        cluster_ref,
+        properties=['configurationEx'])
+    res = {'ha': {'enabled': props['configurationEx'].dasConfig.enabled},
+           'drs': {'enabled': props['configurationEx'].drsConfig.enabled}}
+    # Convert HA properties of interest
+    ha_conf = props['configurationEx'].dasConfig
+    log.trace('ha_conf = {0}'.format(ha_conf))
+    res['ha']['admission_control_enabled'] = ha_conf.admissionControlEnabled
+    if ha_conf.admissionControlPolicy and \
+       isinstance(ha_conf.admissionControlPolicy,
+                  vim.ClusterFailoverResourcesAdmissionControlPolicy):
+        pol = ha_conf.admissionControlPolicy
+        res['ha']['admission_control_policy'] = \
+                {'cpu_failover_percent': pol.cpuFailoverResourcesPercent,
+                 'memory_failover_percent': pol.memoryFailoverResourcesPercent}
+    if ha_conf.defaultVmSettings:
+        def_vm_set = ha_conf.defaultVmSettings
+        res['ha']['default_vm_settings'] = \
+                {'isolation_response': def_vm_set.isolationResponse,
+                 'restart_priority': def_vm_set.restartPriority}
+    res['ha']['hb_ds_candidate_policy'] = \
+            ha_conf.hBDatastoreCandidatePolicy
+    if ha_conf.hostMonitoring:
+        res['ha']['host_monitoring'] = ha_conf.hostMonitoring
+    if ha_conf.option:
+        res['ha']['options'] = [{'key': o.key, 'value': o.value}
+                                for o in ha_conf.option]
+    res['ha']['vm_monitoring'] = ha_conf.vmMonitoring
+    # Convert DRS properties
+    drs_conf = props['configurationEx'].drsConfig
+    log.trace('drs_conf = {0}'.format(drs_conf))
+    res['drs']['vmotion_rate'] = 6 - drs_conf.vmotionRate
+    res['drs']['default_vm_behavior'] = drs_conf.defaultVmBehavior
+    # vm_swap_placement
+    res['vm_swap_placement'] = props['configurationEx'].vmSwapPlacement
+    # Convert VSAN properties
+    si = salt.utils.vmware.get_service_instance_from_managed_object(
+        cluster_ref)
+
+    if salt.utils.vsan.vsan_supported(si):
+        # XXX The correct way of retrieving the VSAN data (on the if branch)
+        #  is not supported before 60u2 vcenter
+        vcenter_info = salt.utils.vmware.get_service_info(si)
+        if int(vcenter_info.build) >= 3634794: # 60u2
+            # VSAN API is fully supported by the VC starting with 60u2
+            vsan_conf = salt.utils.vsan.get_cluster_vsan_info(cluster_ref)
+            log.trace('vsan_conf = {0}'.format(vsan_conf))
+            res['vsan'] = {'enabled': vsan_conf.enabled,
+                           'auto_claim_storage':
+                           vsan_conf.defaultConfig.autoClaimStorage}
+            if vsan_conf.dataEfficiencyConfig:
+                data_eff = vsan_conf.dataEfficiencyConfig
+                res['vsan'].update({
+                    # We force compression_enabled to be True/False
+                    'compression_enabled':
+                    data_eff.compressionEnabled or False,
+                    'dedup_enabled': data_eff.dedupEnabled})
+        else: # before 60u2 (no advanced vsan info)
+            if props['configurationEx'].vsanConfigInfo:
+                default_config = \
+                        props['configurationEx'].vsanConfigInfo.defaultConfig
+                res['vsan'] = {
+                    'enabled': props['configurationEx'].vsanConfigInfo.enabled,
+                    'auto_claim_storage': default_config.autoClaimStorage}
+    return res
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
