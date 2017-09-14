@@ -61,12 +61,17 @@ class AnsibleState(object):
             'name': kwargs.pop('name'),
             'changes': {},
             'comment': '',
-            'result': None,
+            'result': True,
         }
 
         for mod_name, mod_params in kwargs.items():
             args, kwargs = self.get_args(mod_params)
-            ans_mod_out = __salt__['ansible.{0}'.format(mod_name)](*args, **kwargs)
+            try:
+                ans_mod_out = __salt__['ansible.{0}'.format(mod_name)](*args, **kwargs)
+            except Exception as err:
+                ans_mod_out = 'Module "{0}" failed. Error message: ({1}) {2}'.format(
+                    mod_name, err.__class__.__name__, err)
+                ret['result'] = False
             ret['changes'][mod_name] = ans_mod_out
 
         return ret
