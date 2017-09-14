@@ -457,7 +457,7 @@ def bootstrap(vm_, opts):
             'wait_for_passwd_maxtries', vm_, opts, default=15
         ),
         'preflight_cmds': salt.config.get_cloud_config_value(
-            'preflight_cmds', vm_, __opts__, default=[]
+            'preflight_cmds', vm_, opts, default=[]
         ),
         'cloud_grains': {'driver': vm_['driver'],
                          'provider': vm_['provider'],
