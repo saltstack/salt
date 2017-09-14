@@ -16,6 +16,7 @@
 # limitations under the License.
 
 # Import Salt Testing Libs
+import pytest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
@@ -87,3 +88,12 @@ description:
         assert self.resolver.get_modules_list('one') == ['one.two.three', 'three.six.one']
         assert self.resolver.get_modules_list('one.two') == ['one.two.three']
         assert self.resolver.get_modules_list('four') == ['four.five.six']
+
+    def test_resolver_module_loader_failure(self):
+        '''
+        Test Ansible module loader.
+        :return:
+        '''
+        with pytest.raises(ImportError) as import_error:
+            self.resolver.load_module('four.five.six')
+        assert 'No module named ansible.modules.four.five.six' in import_error.value
