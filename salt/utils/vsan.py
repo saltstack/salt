@@ -81,3 +81,28 @@ def __virtual__():
     else:
         return False, 'Missing dependency: The salt.utils.vsan module ' \
                 'requires pyvmomi and the pyvsan extension library'
+
+
+def vsan_supported(service_instance):
+    '''
+    Returns whether vsan is supported on the vCenter:
+        api version needs to be 6 or higher
+
+    service_instance
+        Service instance to the host or vCenter
+    '''
+    try:
+        api_version = service_instance.content.about.apiVersion
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
+    if int(api_version.split('.')[0]) < 6:
+        return False
+    return True
