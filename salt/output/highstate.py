@@ -288,11 +288,11 @@ def _format_host(host, data):
                 state_output.startswith('terse'),
                 state_output.startswith('mixed') and ret['result'] is not False,  # only non-error'd
                 state_output.startswith('changes') and ret['result'] and not schanged  # non-error'd non-changed
-                )):
-                    # Print this chunk in a terse way and continue in the loop
-                    msg = _format_terse(tcolor, comps, ret, colors, tabular)
-                    hstrs.append(msg)
-                    continue
+            )):
+                # Print this chunk in a terse way and continue in the loop
+                msg = _format_terse(tcolor, comps, ret, colors, tabular)
+                hstrs.append(msg)
+                continue
 
             state_lines = [
                 u'{tcolor}----------{colors[ENDC]}',
