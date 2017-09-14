@@ -1323,8 +1323,11 @@ def write_mount_cache(real_name,
                                       'mkmnt': mkmnt,
                                       'opts': opts}
 
-    cache = salt.utils.mount.write_cache(cache, __opts__)
-    return True
+    cache_write = salt.utils.mount.write_cache(cache, __opts__)
+    if cache_write:
+        return True
+    else:
+        raise CommandExecutionError('Unable to write mount cache.')
 
 
 def delete_mount_cache(real_name):
@@ -1345,5 +1348,7 @@ def delete_mount_cache(real_name):
         if 'mounts' in cache:
             if real_name in cache['mounts']:
                 del cache['mounts'][real_name]
-                cache = salt.utils.mount.write_cache(cache, __opts__)
+                cache_write = salt.utils.mount.write_cache(cache, __opts__)
+                if not cache_write:
+                    raise CommandExecutionError('Unable to write mount cache.')
     return True
