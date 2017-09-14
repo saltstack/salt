@@ -23,8 +23,6 @@ import salt.modules.portage_config as portage_config
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
     class DummyAtom(object):
-
-
         def __init__(self):
             self.cp = None
             self.repo = None
@@ -39,11 +37,11 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
             atom, self.repo = atom.split('::') if '::' in atom else (atom, None)
 
             # remove '>, >=, <=, =, ~' etc.
-            atom = re.sub('[<>~+=]', '', atom)
+            atom = re.sub(r'[<>~+=]', '', atom)
             # remove slots
-            atom = re.sub(':[0-9][^:]*', '', atom)
+            atom = re.sub(r':[0-9][^:]*', '', atom)
             # remove version
-            atom = re.sub('-[0-9][\.0-9]*', '', atom)
+            atom = re.sub(r'-[0-9][\.0-9]*', '', atom)
 
             self.cp = atom
             return self
@@ -52,7 +50,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
         try:
             import portage
             return {}
-        except:
+        except ImportError:
             dummy_atom = self.DummyAtom()
             self.portage = MagicMock()
             self.portage.dep.Atom = MagicMock(side_effect=dummy_atom)
@@ -122,4 +120,3 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertTrue(atom in line, msg="'{}' not in '{}'".format(addition, line))
                         for addition in additions:
                             self.assertTrue(addition in line, msg="'{}' not in '{}'".format(addition, line))
-
