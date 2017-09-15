@@ -114,11 +114,15 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
             if salt.utils.compare_versions(
                     ver1=installed_version, oper="==", ver2=version):
                 if force:
-                    ret['changes'] = {name: 'Version {0} will be reinstalled'
-                                            ''.format(version)}
+                    ret['changes'] = {
+                        name: 'Version {0} will be reinstalled'.format(version)}
+                    ret['comment'] = 'Reinstall {0} {1}' \
+                                     ''.format(full_name, version)
                 else:
                     ret['comment'] = '{0} {1} is already installed' \
                                      ''.format(name, version)
+                    if __opts__['test']:
+                        ret['result'] = None
                     return ret
             else:
                 if allow_multiple:
@@ -126,19 +130,27 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
                         name: 'Version {0} will be installed side by side with '
                               'Version {1} if supported'
                               ''.format(version, installed_version)}
+                    ret['comment'] = 'Install {0} {1} side-by-side with {0} {2}' \
+                                     ''.format(full_name, version, installed_version)
                 else:
                     ret['changes'] = {
-                        name: 'Version {0} will be installed over Existing '
-                              'Version {1}'.format(version, installed_version)}
+                        name: 'Version {0} will be installed over Version {1} '
+                              ''.format(version, installed_version)}
+                    ret['comment'] = 'Install {0} {1} over {0} {2}' \
+                                     ''.format(full_name, version, installed_version)
                     force = True
         else:
             version = installed_version
             if force:
-                ret['changes'] = {name: 'Version {0} will be reinstalled'
-                                        ''.format(version)}
+                ret['changes'] = {
+                    name: 'Version {0} will be reinstalled'.format(version)}
+                ret['comment'] = 'Reinstall {0} {1}' \
+                                 ''.format(full_name, version)
             else:
                 ret['comment'] = '{0} {1} is already installed' \
                                  ''.format(name, version)
+                if __opts__['test']:
+                    ret['result'] = None
                 return ret
 
     if __opts__['test']:
