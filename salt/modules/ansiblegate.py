@@ -30,7 +30,6 @@ try:
     import ansible
     import ansible.constants
     import ansible.modules
-    from ansible.plugins import module_loader
 except ImportError:
     ansible = None
 
