@@ -256,11 +256,78 @@ def cluster_configured(name, cluster_config):
                     'comment': '\n'.join(comments),
                     'changes': changes})
         return ret
-    except salt.exceptions.CommandExecutionError as exc:
+    except excs.CommandExecutionError as exc:
         log.error('Error: {0}\n{1}'.format(exc, traceback.format_exc()))
         if si:
             __salt__['vsphere.disconnect'](si)
         ret.update({
             'result': False,
             'comment': str(exc)})
+        return ret
+
+
+def vsan_datastore_configured(name, datastore_name):
+    '''
+    Configures the cluster's vsan_datastore
+
+    WARNING: vsan datastores will not exist until there is at least on host in
+    the cluster; the state assumes that the datastore exists and errors out if i
+    it doesn't; it's up to the user to accept the error or enable the state run
+    when de datastore does exist (grain: vsan_datastore_exists)
+    '''
+
+    cluster_name, datacenter_name = \
+            __salt__['esxcluster.get_details']()['cluster'], \
+            __salt__['esxcluster.get_details']()['datacenter']
+    display_name = '{0}/{1}'.format(datacenter_name, cluster_name)
+    log.info('Running vsan_datastore_configured for '
+             '\'{0}\''.format(display_name))
+    ret = {'name': name,
+           'changes': {}, 'result': None,
+           'comment': 'Default'}
+    comments = []
+    changes = {}
+    changes_required = False
+
+    try:
+        si = __salt__['vsphere.get_service_instance_via_proxy']()
+        # Checking if we need to rename the vsan datastore
+        vsan_ds = _get_vsan_datastore(si, cluster_name)
+        if vsan_ds['name'] == datastore_name:
+            comments.append('vSAN datastore is correctly named \'{0}\'. '
+                            'Nothing to be done.'.format(vsan_ds['name']))
+            log.info(comments[-1])
+        else:
+            # vsan_ds needs to be updated
+            changes_required = True
+            if __opts__['test']:
+                comments.append('State {0} will rename the vSAN datastore to '
+                                '\'{1}\'.'.format(name, datastore_name))
+                log.info(comments[-1])
+            else:
+                log.debug('Renaming vSAN datastore \'{0}\' to \'{1}\''
+                          ''.format(vsan_ds['name'], datastore_name))
+                __salt__['vsphere.rename_datastore'](
+                    datastore_name=vsan_ds['name'],
+                    new_datastore_name=datastore_name,
+                    service_instance=si)
+                comments.append('Renamed vSAN datastore to \'{0}\'.'
+                                ''.format(datastore_name))
+                changes = {'vsan_datastore': {'new': {'name': datastore_name},
+                                              'old': {'name': vsan_ds['name']}}}
+                log.info(comments[-1])
+        __salt__['vsphere.disconnect'](si)
+
+        ret.update({'result': True if (not changes_required) else None if \
+                    __opts__['test'] else True,
+                    'comment': '\n'.join(comments),
+                    'changes': changes})
+        return ret
+    except salt.exceptions.CommandExecutionError as exc:
+        log.error('Error: {0}\n{1}'.format(exc, traceback.format_exc()))
+        if si:
+            __salt__['vsphere.disconnect'](si)
+        ret.update({
+            'result': False,
+            'comment': exc.strerror})
         return ret
