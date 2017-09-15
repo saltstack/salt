@@ -322,3 +322,63 @@ class ReconfigureClusterVsanTestCase(TestCase):
                                           self.mock_cl_vsan_spec)
         mock_wait_for_tasks.assert_called_once_with([self.mock_task],
                                                     self.mock_si)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
+class _WaitForTasks(TestCase, LoaderModuleMockMixin):
+    '''Tests for salt.utils.vsan._wait_for_tasks'''
+    def setup_loader_modules(self):
+        return {vsan: {
+            '__virtual__': MagicMock(return_value='vsan')}}
+
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.mock_tasks = MagicMock()
+        patches = (('salt.utils.vsan.vsanapiutils.WaitForTasks', MagicMock()),)
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_si', 'mock_tasks'):
+            delattr(self, attr)
+
+    def test_wait_for_tasks_call(self):
+        mock_wait_for_tasks = MagicMock()
+        with patch('salt.utils.vsan.vsanapiutils.WaitForTasks',
+                   mock_wait_for_tasks):
+            vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
+        mock_wait_for_tasks.assert_called_once_with(self.mock_tasks,
+                                                    self.mock_si)
+
+    def test_wait_for_tasks_raises_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        with patch('salt.utils.vsan.vsanapiutils.WaitForTasks',
+                   MagicMock(side_effect=exc)):
+            with self.assertRaises(VMwareApiError) as excinfo:
+                vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_wait_for_tasks_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        with patch('salt.utils.vsan.vsanapiutils.WaitForTasks',
+                   MagicMock(side_effect=exc)):
+            with self.assertRaises(VMwareApiError) as excinfo:
+                vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_wait_for_tasks_raises_vmodl_runtime_error(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'VimRuntime msg'
+        with patch('salt.utils.vsan.vsanapiutils.WaitForTasks',
+                   MagicMock(side_effect=exc)):
+            with self.assertRaises(VMwareRuntimeError) as excinfo:
+                vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'VimRuntime msg')
