@@ -176,7 +176,6 @@ def _set_callables(modules):
                         kwargs = _kw
                         break
 
-            global _caller
             return _caller.call(cmd_name, *args, **kwargs)
         _cmd.__doc__ = doc
         return _cmd
