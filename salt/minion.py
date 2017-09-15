@@ -103,6 +103,7 @@ import salt.defaults.exitcodes
 import salt.cli.daemons
 import salt.log.setup
 
+import salt.utils.dictupdate
 from salt.config import DEFAULT_MINION_OPTS
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler
@@ -3212,6 +3213,26 @@ class ProxyMinion(Minion):
 
         if u'proxy' not in self.opts:
             self.opts[u'proxy'] = self.opts[u'pillar'][u'proxy']
+
+        if self.opts.get(u'proxy_merge_pillar_in_opts'):
+            # Override proxy opts with pillar data when the user required.
+            self.opts = salt.utils.dictupdate.merge(self.opts,
+                                                    self.opts[u'pillar'],
+                                                    strategy=self.opts.get(u'proxy_merge_pillar_in_opts_strategy'),
+                                                    merge_lists=self.opts.get(u'proxy_deep_merge_pillar_in_opts', False))
+        elif self.opts.get(u'proxy_mines_pillar'):
+            # Even when not required, some details such as mine configuration
+            # should be merged anyway whenever possible.
+            if u'mine_interval' in self.opts[u'pillar']:
+                self.opts[u'mine_interval'] = self.opts[u'pillar'][u'mine_interval']
+            if u'mine_functions' in self.opts[u'pillar']:
+                general_proxy_mines = self.opts.get(u'mine_functions', [])
+                specific_proxy_mines = self.opts[u'pillar'][u'mine_functions']
+                try:
+                    self.opts[u'mine_functions'] = general_proxy_mines + specific_proxy_mines
+                except TypeError as terr:
+                    log.error(u'Unable to merge mine functions from the pillar in the opts, for proxy {}'.format(
+                        self.opts[u'id']))
 
         fq_proxyname = self.opts[u'proxy'][u'proxytype']
 

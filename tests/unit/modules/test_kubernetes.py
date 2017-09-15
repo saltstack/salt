@@ -20,6 +20,8 @@ try:
     from salt.modules import kubernetes
 except ImportError:
     kubernetes = False
+if not kubernetes.HAS_LIBS:
+    kubernetes = False
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
