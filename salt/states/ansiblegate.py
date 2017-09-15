@@ -97,5 +97,5 @@ def __virtual__():
     '''
     Disable, if Ansible is not available around on the Minion.
     '''
-    setattr(sys.modules[__name__], 'call', lambda **kwargs: AnsibleState()(**kwargs))
+    setattr(sys.modules[__name__], 'call', lambda **kwargs: AnsibleState()(**kwargs))   # pylint: disable=W0108
     return ansible is not None
