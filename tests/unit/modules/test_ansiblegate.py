@@ -128,4 +128,4 @@ description:
             patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
             with pytest.raises(LoaderError) as loader_error:
                 self.resolver.load_module('something.strange')
-            assert 'Module "something.strange" was not found' in loader_error.value
+            assert 'Module "something.strange" was not found' in str(loader_error)
