@@ -49,7 +49,8 @@ class LoadAuthTestCase(TestCase):
         self.assertEqual(ret, '', "Did not bail when the auth loader didn't have the auth type.")
 
         # Test a case with valid params
-        with patch('salt.utils.arg_lookup', MagicMock(return_value={'args': ['username', 'password']})) as format_call_mock:
+        with patch('salt.utils.args.arg_lookup',
+                   MagicMock(return_value={'args': ['username', 'password']})) as format_call_mock:
             expected_ret = call('fake_func_str')
             ret = self.lauth.load_name(valid_eauth_load)
             format_call_mock.assert_has_calls((expected_ret,), any_order=True)
