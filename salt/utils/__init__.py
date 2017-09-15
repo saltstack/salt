@@ -38,7 +38,6 @@ from salt.ext import six
 # pylint: disable=import-error
 # pylint: disable=redefined-builtin
 from salt.ext.six.moves import range
-from salt.ext.six.moves import zip
 # pylint: enable=import-error,redefined-builtin
 
 if six.PY3:
@@ -860,7 +859,7 @@ def format_call(fun,
 
     aspec = salt.utils.args.get_function_argspec(fun, is_class_method=is_class_method)
 
-    arg_data = arg_lookup(fun, aspec)
+    arg_data = salt.utils.args.arg_lookup(fun, aspec)
     args = arg_data['args']
     kwargs = arg_data['kwargs']
 
@@ -965,21 +964,6 @@ def format_call(fun,
 
         # Lets pack the current extra kwargs as template context
         ret.setdefault('context', {}).update(extra)
-    return ret
-
-
-def arg_lookup(fun, aspec=None):
-    '''
-    Return a dict containing the arguments and default arguments to the
-    function.
-    '''
-    import salt.utils.args
-    ret = {'kwargs': {}}
-    if aspec is None:
-        aspec = salt.utils.args.get_function_argspec(fun)
-    if aspec.defaults:
-        ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
-    ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
     return ret
 
 
@@ -1705,52 +1689,6 @@ def compare_lists(old=None, new=None):
     for item in old:
         if item not in new:
             ret['old'] = item
-    return ret
-
-
-def argspec_report(functions, module=''):
-    '''
-    Pass in a functions dict as it is returned from the loader and return the
-    argspec function signatures
-    '''
-    import salt.utils.args
-    ret = {}
-    if '*' in module or '.' in module:
-        for fun in fnmatch.filter(functions, module):
-            try:
-                aspec = salt.utils.args.get_function_argspec(functions[fun])
-            except TypeError:
-                # this happens if not callable
-                continue
-
-            args, varargs, kwargs, defaults = aspec
-
-            ret[fun] = {}
-            ret[fun]['args'] = args if args else None
-            ret[fun]['defaults'] = defaults if defaults else None
-            ret[fun]['varargs'] = True if varargs else None
-            ret[fun]['kwargs'] = True if kwargs else None
-
-    else:
-        # "sys" should just match sys without also matching sysctl
-        moduledot = module + '.'
-
-        for fun in functions:
-            if fun.startswith(moduledot):
-                try:
-                    aspec = salt.utils.args.get_function_argspec(functions[fun])
-                except TypeError:
-                    # this happens if not callable
-                    continue
-
-                args, varargs, kwargs, defaults = aspec
-
-                ret[fun] = {}
-                ret[fun]['args'] = args if args else None
-                ret[fun]['defaults'] = defaults if defaults else None
-                ret[fun]['varargs'] = True if varargs else None
-                ret[fun]['kwargs'] = True if kwargs else None
-
     return ret
 
 
@@ -2547,6 +2485,44 @@ def shlex_split(s, **kwargs):
         'warning will be removed in Salt Neon.'
     )
     return salt.utils.args.shlex_split(s, **kwargs)
+
+
+def arg_lookup(fun, aspec=None):
+    '''
+    Return a dict containing the arguments and default arguments to the
+    function.
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.args
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.arg_lookup\' detected. This function has been '
+        'moved to \'salt.utils.args.arg_lookup\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
+    return salt.utils.args.arg_lookup(fun, aspec=aspec)
+
+
+def argspec_report(functions, module=''):
+    '''
+    Pass in a functions dict as it is returned from the loader and return the
+    argspec function signatures
+
+    .. deprecated:: Oxygen
+    '''
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.args
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.argspec_report\' detected. This function has been '
+        'moved to \'salt.utils.args.argspec_report\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
+    return salt.utils.args.argspec_report(functions, module=module)
 
 
 def which(exe=None):
