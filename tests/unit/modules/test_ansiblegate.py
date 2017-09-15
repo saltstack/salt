@@ -16,6 +16,7 @@
 # limitations under the License.
 
 # Import Salt Testing Libs
+from __future__ import absolute_import
 try:
     import pytest
 except ImportError as import_error:
@@ -118,7 +119,7 @@ description:
             patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
             assert self.resolver.load_module('four.five.six') == 'ansible.modules.four.five.six'
 
-    def test_resolver_module_loader_failure(self):
+    def test_resolver_module_loader_import_failure(self):
         '''
         Test Ansible module loader failure.
         :return:
