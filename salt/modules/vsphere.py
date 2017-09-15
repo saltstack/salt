@@ -3791,6 +3791,137 @@ def list_cluster(datacenter=None, cluster=None, service_instance=None):
     return _get_cluster_dict(cluster, cluster_ref)
 
 
+def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None,
+                        vsan_61=True):
+    '''
+    Applies the values of cluster_dict dictionary to a cluster spec
+    (vim.ClusterConfigSpecEx).
+
+    All vsan values (cluster_dict['vsan']) will be applied to
+    vsan_spec (vim.vsan.cluster.ConfigInfoEx). Can be not omitted
+    if not required.
+
+    VSAN 6.1 config needs to be applied differently than the post VSAN 6.1 way.
+    The type of configuration desired is dictated by the flag vsan_61.
+    '''
+    log.trace('Applying cluster dict {0}'.format(cluster_dict))
+    if cluster_dict.get('ha'):
+        ha_dict = cluster_dict['ha']
+        if not cluster_spec.dasConfig:
+            cluster_spec.dasConfig = vim.ClusterDasConfigInfo()
+        das_config = cluster_spec.dasConfig
+        if 'enabled' in ha_dict:
+            das_config.enabled = ha_dict['enabled']
+            if ha_dict['enabled']:
+                # Default values when ha is enabled
+                das_config.failoverLevel = 1
+        if 'admission_control_enabled' in ha_dict:
+            das_config.admissionControlEnabled = \
+                    ha_dict['admission_control_enabled']
+        if 'admission_control_policy' in ha_dict:
+            adm_pol_dict = ha_dict['admission_control_policy']
+            if not das_config.admissionControlPolicy or \
+                not isinstance(
+                    das_config.admissionControlPolicy,
+                    vim.ClusterFailoverResourcesAdmissionControlPolicy):
+
+                das_config.admissionControlPolicy = \
+                        vim.ClusterFailoverResourcesAdmissionControlPolicy(
+                            cpuFailoverResourcesPercent=
+                            adm_pol_dict['cpu_failover_percent'],
+                            memoryFailoverResourcesPercent=
+                            adm_pol_dict['memory_failover_percent'])
+        if 'default_vm_settings' in ha_dict:
+            vm_set_dict = ha_dict['default_vm_settings']
+            if not das_config.defaultVmSettings:
+                das_config.defaultVmSettings = vim.ClusterDasVmSettings()
+            if 'isolation_response' in vm_set_dict:
+                das_config.defaultVmSettings.isolationResponse = \
+                        vm_set_dict['isolation_response']
+            if 'restart_priority' in vm_set_dict:
+                das_config.defaultVmSettings.restartPriority= \
+                        vm_set_dict['restart_priority']
+        if 'hb_ds_candidate_policy' in ha_dict:
+            das_config.hBDatastoreCandidatePolicy = \
+                    ha_dict['hb_ds_candidate_policy']
+        if 'host_monitoring' in ha_dict:
+            das_config.hostMonitoring = ha_dict['host_monitoring']
+        if 'options' in ha_dict:
+            das_config.option = []
+            for opt_dict in ha_dict['options']:
+                das_config.option.append(
+                    vim.OptionValue(key=opt_dict['key']))
+                if 'value' in opt_dict:
+                    das_config.option[-1].value = opt_dict['value']
+        if 'vm_monitoring' in ha_dict:
+            das_config.vmMonitoring = ha_dict['vm_monitoring']
+        cluster_spec.dasConfig = das_config
+    if cluster_dict.get('drs'):
+        drs_dict = cluster_dict['drs']
+        drs_config = vim.ClusterDrsConfigInfo()
+        if 'enabled' in drs_dict:
+            drs_config.enabled = drs_dict['enabled']
+        if 'vmotion_rate' in drs_dict:
+            drs_config.vmotionRate = 6 - drs_dict['vmotion_rate']
+        if 'default_vm_behavior' in drs_dict:
+            drs_config.defaultVmBehavior = \
+                    vim.DrsBehavior(drs_dict['default_vm_behavior'])
+        cluster_spec.drsConfig = drs_config
+    if cluster_dict.get('vm_swap_placement'):
+        cluster_spec.vmSwapPlacement = cluster_dict['vm_swap_placement']
+    if cluster_dict.get('vsan'):
+        vsan_dict = cluster_dict['vsan']
+        if not vsan_61: # VSAN is 6.2 and above
+            if 'enabled' in vsan_dict:
+                if not vsan_spec.vsanClusterConfig:
+                    vsan_spec.vsanClusterConfig = \
+                            vim.vsan.cluster.ConfigInfo()
+                vsan_spec.vsanClusterConfig.enabled = vsan_dict['enabled']
+            if 'auto_claim_storage' in vsan_dict:
+                if not vsan_spec.vsanClusterConfig:
+                    vsan_spec.vsanClusterConfig = \
+                            vim.vsan.cluster.ConfigInfo()
+                if not vsan_spec.vsanClusterConfig.defaultConfig:
+                    vsan_spec.vsanClusterConfig.defaultConfig = \
+                            vim.VsanClusterConfigInfoHostDefaultInfo()
+                elif vsan_spec.vsanClusterConfig.defaultConfig.uuid:
+                    # If this remains set it caused an error
+                    vsan_spec.vsanClusterConfig.defaultConfig.uuid = None
+                vsan_spec.vsanClusterConfig.defaultConfig.autoClaimStorage = \
+                        vsan_dict['auto_claim_storage']
+            if 'compression_enabled' in vsan_dict:
+                if not vsan_spec.dataEfficiencyConfig:
+                    vsan_spec.dataEfficiencyConfig = \
+                            vim.vsan.DataEfficiencyConfig()
+                vsan_spec.dataEfficiencyConfig.compressionEnabled = \
+                        vsan_dict['compression_enabled']
+            if 'dedup_enabled' in vsan_dict:
+                if not vsan_spec.dataEfficiencyConfig:
+                    vsan_spec.dataEfficiencyConfig = \
+                            vim.vsan.DataEfficiencyConfig()
+                vsan_spec.dataEfficiencyConfig.dedupEnabled = \
+                        vsan_dict['dedup_enabled']
+        # In all cases we need to configure the vsan on the cluster
+        # directly so not to have a missmatch between vsan_spec and
+        # cluster_spec
+        if not cluster_spec.vsanConfig:
+            cluster_spec.vsanConfig = \
+                    vim.VsanClusterConfigInfo()
+        vsan_config = cluster_spec.vsanConfig
+        if 'enabled' in vsan_dict:
+            vsan_config.enabled = vsan_dict['enabled']
+        if 'auto_claim_storage' in vsan_dict:
+            if not vsan_config.defaultConfig:
+                vsan_config.defaultConfig = \
+                        vim.VsanClusterConfigInfoHostDefaultInfo()
+            elif vsan_config.defaultConfig.uuid:
+                # If this remains set it caused an error
+                vsan_config.defaultConfig.uuid = None
+            vsan_config.defaultConfig.autoClaimStorage = \
+                    vsan_dict['auto_claim_storage']
+    log.trace('cluster_spec = {0}'.format(cluster_spec))
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
