@@ -73,6 +73,22 @@ def mod_init(low):
     return True
 
 
+def _get_vsan_datastore(si, cluster_name):
+    '''Retrieves the vsan_datastore'''
+
+    log.trace('Retrieving vsan datastore')
+    vsan_datastores = [ds for ds in
+                       __salt__['vsphere.list_datastores_via_proxy'](
+                           service_instance=si)
+                       if ds['type'] == 'vsan']
+
+    if not vsan_datastores:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'No vSAN datastores where retrieved for cluster '
+            '\'{0}\''.format(cluster_name))
+    return vsan_datastores[0]
+
+
 def cluster_configured(name, cluster_config):
     '''
     Configures a cluster. Creates a new cluster, if it doesn't exist on the
