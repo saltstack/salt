@@ -189,3 +189,25 @@ def reconfigure_cluster_vsan(cluster_ref, cluster_vsan_spec):
         log.exception(exc)
         raise VMwareRuntimeError(exc.msg)
     _wait_for_tasks([task], si)
+
+
+def _wait_for_tasks(tasks, service_instance):
+    '''
+    Wait for tasks created via the VSAN API
+    '''
+    log.trace('Waiting for vsan tasks: {0}'
+              ''.format(', '.join([str(t) for t in tasks])))
+    try:
+        vsanapiutils.WaitForTasks(tasks, service_instance)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
+    log.trace('Tasks {0} finished successfully'
+              ''.format(', '.join([str(t) for t in tasks])))
