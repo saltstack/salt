@@ -1013,30 +1013,33 @@ class LocalFuncs(object):
         '''
         Send a master control function back to the runner system
         '''
-        if 'token' in load:
-            auth_type = 'token'
-            err_name = 'TokenAuthenticationError'
-            token = self.loadauth.authenticate_token(load)
-            if not token:
-                return dict(error=dict(name=err_name,
-                                       message='Authentication failure of type "token" occurred.'))
-            username = token['name']
-            auth_list = self.loadauth.get_auth_list(load, token)
-        else:
-            auth_type = 'eauth'
-            err_name = 'EauthAuthenticationError'
-            username = load.get('username', 'UNKNOWN')
-            if not self.loadauth.authenticate_eauth(load):
-                return dict(error=dict(name=err_name,
-                                       message=('Authentication failure of type "eauth" occurred '
-                                                'for user {0}.').format(username)))
-            auth_list = self.loadauth.get_auth_list(load)
+        # All runner opts pass through eauth
+        auth_type, err_name, key = self._prep_auth_info(load)
 
-        if not self.ckminions.runner_check(auth_list, load['fun'], load['kwarg']):
-            return dict(error=dict(name=err_name,
-                                   message=('Authentication failure of type "{0}" occurred '
-                                            'for user {1}.').format(auth_type, username)))
+        # Authenticate
+        auth_check = self.loadauth.check_authentication(load, auth_type)
+        error = auth_check.get('error')
 
+        if error:
+            # Authentication error occurred: do not continue.
+            return {'error': error}
+
+        # Authorize
+        runner_check = self.ckminions.runner_check(
+            auth_check.get('auth_list', []),
+            load['fun'],
+            load['kwarg']
+        )
+        username = auth_check.get('username')
+        if not runner_check:
+            return {'error': {'name': err_name,
+                              'message': 'Authentication failure of type "{0}" occurred '
+                                         'for user {1}.'.format(auth_type, username)}}
+        elif isinstance(runner_check, dict) and 'error' in runner_check:
+            # A dictionary with an error name/message was handled by ckminions.runner_check
+            return runner_check
+
+        # Authorized. Do the job!
         try:
             fun = load.pop('fun')
             runner_client = salt.runner.RunnerClient(self.opts)
@@ -1045,48 +1048,46 @@ class LocalFuncs(object):
                                        username)
         except Exception as exc:
             log.error('Exception occurred while '
-                    'introspecting {0}: {1}'.format(fun, exc))
-            return dict(error=dict(name=exc.__class__.__name__,
-                                   args=exc.args,
-                                   message=str(exc)))
+                      'introspecting {0}: {1}'.format(fun, exc))
+            return {'error': {'name': exc.__class__.__name__,
+                              'args': exc.args,
+                              'message': str(exc)}}
 
     def wheel(self, load):
         '''
         Send a master control function back to the wheel system
         '''
         # All wheel ops pass through eauth
-        if 'token' in load:
-            auth_type = 'token'
-            err_name = 'TokenAuthenticationError'
-            token = self.loadauth.authenticate_token(load)
-            if not token:
-                return dict(error=dict(name=err_name,
-                                       message='Authentication failure of type "token" occurred.'))
-            username = token['name']
-            auth_list = self.loadauth.get_auth_list(load, token)
-        elif 'eauth' in load:
-            auth_type = 'eauth'
-            err_name = 'EauthAuthenticationError'
-            username = load.get('username', 'UNKNOWN')
-            if not self.loadauth.authenticate_eauth(load):
-                return dict(error=dict(name=err_name,
-                                       message=('Authentication failure of type "eauth" occurred for '
-                                                'user {0}.').format(username)))
-            auth_list = self.loadauth.get_auth_list(load)
-        else:
-            auth_type = 'user'
-            err_name = 'UserAuthenticationError'
-            username = load.get('username', 'UNKNOWN')
-            if not self.loadauth.authenticate_key(load, self.key):
-                return dict(error=dict(name=err_name,
-                                       message=('Authentication failure of type "user" occurred for '
-                                                'user {0}.').format(username)))
+        auth_type, err_name, key = self._prep_auth_info(load)
 
+        # Authenticate
+        auth_check = self.loadauth.check_authentication(
+            load,
+            auth_type,
+            key=key,
+            show_username=True
+        )
+        error = auth_check.get('error')
+
+        if error:
+            # Authentication error occurred: do not continue.
+            return {'error': error}
+
+        # Authorize
+        username = auth_check.get('username')
         if auth_type != 'user':
-            if not self.ckminions.wheel_check(auth_list, load['fun'], load['kwarg']):
-                return dict(error=dict(name=err_name,
-                                       message=('Authentication failure of type "{0}" occurred for '
-                                                'user {1}.').format(auth_type, username)))
+            wheel_check = self.ckminions.wheel_check(
+                auth_check.get('auth_list', []),
+                load['fun'],
+                load['kwarg']
+            )
+            if not wheel_check:
+                return {'error': {'name': err_name,
+                                  'message': 'Authentication failure of type "{0}" occurred for '
+                                             'user {1}.'.format(auth_type, username)}}
+            elif isinstance(wheel_check, dict) and 'error' in wheel_check:
+                # A dictionary with an error name/message was handled by ckminions.wheel_check
+                return wheel_check
 
         # Authenticated. Do the job.
         jid = salt.utils.jid.gen_jid(self.opts)
@@ -1106,7 +1107,7 @@ class LocalFuncs(object):
                     'data': data}
         except Exception as exc:
             log.error('Exception occurred while '
-                    'introspecting {0}: {1}'.format(fun, exc))
+                      'introspecting {0}: {1}'.format(fun, exc))
             data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                                         fun,
                                         exc.__class__.__name__,
@@ -1371,3 +1372,18 @@ class LocalFuncs(object):
                     },
                 'pub': pub_load
                 }
+
+    def _prep_auth_info(self, load):
+        key = None
+        if 'token' in load:
+            auth_type = 'token'
+            err_name = 'TokenAuthenticationError'
+        elif 'eauth' in load:
+            auth_type = 'eauth'
+            err_name = 'EauthAuthenticationError'
+        else:
+            auth_type = 'user'
+            err_name = 'UserAuthenticationError'
+            key = self.key
+
+        return auth_type, err_name, key

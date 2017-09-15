@@ -1668,44 +1668,36 @@ class ClearFuncs(object):
         Send a master control function back to the runner system
         '''
         # All runner ops pass through eauth
-        if u'token' in clear_load:
-            # Authenticate
-            token = self.loadauth.authenticate_token(clear_load)
+        auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(clear_load)
 
-            if not token:
-                return dict(error=dict(name=u'TokenAuthenticationError',
-                                       message=u'Authentication failure of type "token" occurred.'))
+        # Authenticate
+        auth_check = self.loadauth.check_authentication(clear_load, auth_type, key=key)
+        error = auth_check.get(u'error')
 
-            # Authorize
-            auth_list = self.loadauth.get_auth_list(clear_load, token)
+        if error:
+            # Authentication error occurred: do not continue.
+            return {u'error': error}
 
-            if not self.ckminions.runner_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
-                return dict(error=dict(name=u'TokenAuthenticationError',
-                                       message=(u'Authentication failure of type "token" occurred for '
-                                                u'user {0}.').format(token[u'name'])))
-            clear_load.pop(u'token')
-            username = token[u'name']
-        elif u'eauth' in clear_load:
-            if not self.loadauth.authenticate_eauth(clear_load):
-                return dict(error=dict(name=u'EauthAuthenticationError',
-                                       message=(u'Authentication failure of type "eauth" occurred for '
-                                                u'user {0}.').format(clear_load.get(u'username', u'UNKNOWN'))))
+        # Authorize
+        username = auth_check.get(u'username')
+        if auth_type != u'user':
+            runner_check = self.ckminions.runner_check(
+                auth_check.get(u'auth_list', []),
+                clear_load[u'fun'],
+                clear_load.get(u'kwarg', {})
+            )
+            if not runner_check:
+                return {u'error': {u'name': err_name,
+                                   u'message': u'Authentication failure of type "{0}" occurred for '
+                                             u'user {1}.'.format(auth_type, username)}}
+            elif isinstance(runner_check, dict) and u'error' in runner_check:
+                # A dictionary with an error name/message was handled by ckminions.runner_check
+                return runner_check
 
-            auth_list = self.loadauth.get_auth_list(clear_load)
-            if not self.ckminions.runner_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
-                return dict(error=dict(name=u'EauthAuthenticationError',
-                                       message=(u'Authentication failure of type "eauth" occurred for '
-                                                u'user {0}.').format(clear_load.get(u'username', u'UNKNOWN'))))
-
-            # No error occurred, consume the password from the clear_load if
-            # passed
-            username = clear_load.pop(u'username', u'UNKNOWN')
-            clear_load.pop(u'password', None)
+            # No error occurred, consume sensitive settings from the clear_load if passed.
+            for item in sensitive_load_keys:
+                clear_load.pop(item, None)
         else:
-            if not self.loadauth.authenticate_key(clear_load, self.key):
-                return dict(error=dict(name=u'UserAuthenticationError',
-                                       message=u'Authentication failure of type "user" occurred'))
-
             if u'user' in clear_load:
                 username = clear_load[u'user']
                 if salt.auth.AuthUser(username).is_sudo():
@@ -1722,52 +1714,45 @@ class ClearFuncs(object):
                                        username)
         except Exception as exc:
             log.error(u'Exception occurred while introspecting %s: %s', fun, exc)
-            return dict(error=dict(name=exc.__class__.__name__,
-                                   args=exc.args,
-                                   message=str(exc)))
+            return {u'error': {u'name': exc.__class__.__name__,
+                               u'args': exc.args,
+                               u'message': str(exc)}}
 
     def wheel(self, clear_load):
         '''
         Send a master control function back to the wheel system
         '''
         # All wheel ops pass through eauth
-        username = None
-        if u'token' in clear_load:
-            # Authenticate
-            token = self.loadauth.authenticate_token(clear_load)
-            if not token:
-                return dict(error=dict(name=u'TokenAuthenticationError',
-                                       message=u'Authentication failure of type "token" occurred.'))
+        auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(clear_load)
 
-            # Authorize
-            auth_list = self.loadauth.get_auth_list(clear_load, token)
-            if not self.ckminions.wheel_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
-                return dict(error=dict(name=u'TokenAuthenticationError',
-                                       message=(u'Authentication failure of type "token" occurred for '
-                                                u'user {0}.').format(token[u'name'])))
-            clear_load.pop(u'token')
-            username = token[u'name']
-        elif u'eauth' in clear_load:
-            if not self.loadauth.authenticate_eauth(clear_load):
-                return dict(error=dict(name=u'EauthAuthenticationError',
-                                       message=(u'Authentication failure of type "eauth" occurred for '
-                                                u'user {0}.').format(clear_load.get(u'username', u'UNKNOWN'))))
+        # Authenticate
+        auth_check = self.loadauth.check_authentication(clear_load, auth_type, key=key)
+        error = auth_check.get(u'error')
 
-            auth_list = self.loadauth.get_auth_list(clear_load)
-            if not self.ckminions.wheel_check(auth_list, clear_load[u'fun'], clear_load.get(u'kwarg', {})):
-                return dict(error=dict(name=u'EauthAuthenticationError',
-                                       message=(u'Authentication failure of type "eauth" occurred for '
-                                                u'user {0}.').format(clear_load.get(u'username', u'UNKNOWN'))))
+        if error:
+            # Authentication error occurred: do not continue.
+            return {u'error': error}
 
-            # No error occurred, consume the password from the clear_load if
-            # passed
-            clear_load.pop(u'password', None)
-            username = clear_load.pop(u'username', u'UNKNOWN')
+        # Authorize
+        username = auth_check.get(u'username')
+        if auth_type != u'user':
+            wheel_check = self.ckminions.wheel_check(
+                auth_check.get(u'auth_list', []),
+                clear_load[u'fun'],
+                clear_load.get(u'kwarg', {})
+            )
+            if not wheel_check:
+                return {u'error': {u'name': err_name,
+                                   u'message': u'Authentication failure of type "{0}" occurred for '
+                                               u'user {1}.'.format(auth_type, username)}}
+            elif isinstance(wheel_check, dict) and u'error' in wheel_check:
+                # A dictionary with an error name/message was handled by ckminions.wheel_check
+                return wheel_check
+
+            # No error occurred, consume sensitive settings from the clear_load if passed.
+            for item in sensitive_load_keys:
+                clear_load.pop(item, None)
         else:
-            if not self.loadauth.authenticate_key(clear_load, self.key):
-                return dict(error=dict(name=u'UserAuthenticationError',
-                                       message=u'Authentication failure of type "user" occurred'))
-
             if u'user' in clear_load:
                 username = clear_load[u'user']
                 if salt.auth.AuthUser(username).is_sudo():
@@ -1962,6 +1947,24 @@ class ClearFuncs(object):
                 u'missing': missing
             }
         }
+
+    def _prep_auth_info(self, clear_load):
+        sensitive_load_keys = []
+        key = None
+        if u'token' in clear_load:
+            auth_type = u'token'
+            err_name = u'TokenAuthenticationError'
+            sensitive_load_keys = [u'token']
+        elif u'eauth' in clear_load:
+            auth_type = u'eauth'
+            err_name = u'EauthAuthenticationError'
+            sensitive_load_keys = [u'username', u'password']
+        else:
+            auth_type = u'user'
+            err_name = u'UserAuthenticationError'
+            key = self.key
+
+        return auth_type, err_name, key, sensitive_load_keys
 
     def _prep_jid(self, clear_load, extra):
         '''

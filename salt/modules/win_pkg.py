@@ -987,18 +987,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 # Version 1.2.3 will apply to packages foo and bar
                 salt '*' pkg.install foo,bar version=1.2.3
 
-        cache_file (str):
-            A single file to copy down for use with the installer. Copied to the
-            same location as the installer. Use this over ``cache_dir`` if there
-            are many files in the directory and you only need a specific file
-            and don't want to cache additional files that may reside in the
-            installer directory. Only applies to files on ``salt://``
-
-        cache_dir (bool):
-            True will copy the contents of the installer directory. This is
-            useful for installations that are not a single file. Only applies to
-            directories on ``salt://``
-
         extra_install_flags (str):
             Additional install flags that will be appended to the
             ``install_flags`` defined in the software definition file. Only
@@ -1290,7 +1278,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         if use_msiexec:
             cmd = msiexec
             arguments = ['/i', cached_pkg]
-            if pkginfo['version_num'].get('allusers', True):
+            if pkginfo[version_num].get('allusers', True):
                 arguments.append('ALLUSERS="1"')
             arguments.extend(salt.utils.shlex_split(install_flags))
         else:
