@@ -868,6 +868,8 @@ class SaltDistribution(distutils.dist.Distribution):
          'Salt\'s pre-configured SPM formulas directory'),
         ('salt-spm-pillar-dir=', None,
          'Salt\'s pre-configured SPM pillar directory'),
+        ('salt-spm-reactor-dir=', None,
+         'Salt\'s pre-configured SPM reactor directory'),
         ('salt-home-dir=', None,
          'Salt\'s pre-configured user home directory'),
     ]
