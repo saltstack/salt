@@ -17,6 +17,11 @@ import salt.cache
 import salt.utils
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltCacheError
+import salt.ext.six as six
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -44,8 +49,12 @@ def _get_cached_vm(name):
     try:
         vm_ = vm_cache.fetch('vagrant', name)
     except SaltCacheError:
-        vm_ = {'name': name, 'machine': '', 'cwd': '.'}
-        log.warn('Trouble reading Salt cache for vagrant[%s]', name)
+        vm_ = {}
+        log.error('Trouble reading Salt cache for vagrant[%s]', name)
+    try:
+        _ = vm_['machine']
+    except KeyError:
+        raise ValueError, 'No Vagrant machine defined for Salt-id {}'.format(name)
     return vm_
 
 
@@ -71,6 +80,30 @@ def _erase_cache(name):
         pass
 
 
+def _vagrant_ssh_config(vm_):
+    '''
+    get the information for ssh communication from the new VM
+    :param vm_: the VM's info as we have it now
+    :return: dictionary of ssh stuff
+    '''
+    machine = vm_['machine']
+    ret = {}
+    log.info('requesting vagrant ssh-config for %s', machine or 'Vagrant default')
+    output = subprocess.check_output(
+        [_runas_sudo(vm_, 'vagrant ssh-config {}'.format(machine))],
+        shell=True,
+        cwd=vm_.get('cwd', None)
+    )
+    reply = salt.utils.stringutils.to_str(output)
+    ssh_config = {}
+    for line in reply.split('\n'):  # build a dictionary of the text reply
+        tokens = line.strip().split()
+        if len(tokens) == 2:  # each two-token line becomes a key:value pair
+            ssh_config[tokens[0]] = tokens[1]
+    log.debug('ssh_config=%s', repr(ssh_config))
+    return ssh_config
+
+
 def version():
     '''
     Return the version of Vagrant on the minion
@@ -82,7 +115,10 @@ def version():
         salt '*' vagrant.version
     '''
     cmd = 'vagrant -v'
-    output = subprocess.check_output([cmd], shell=True)
+    try:
+        output = subprocess.check_output([cmd], shell=True)
+    except subprocess.CalledProcessError:
+        return 'Error: subprocess error calling ' + cmd
     reply = salt.utils.stringutils.to_str(output)
     return reply.strip()
 
@@ -263,7 +299,7 @@ def _runas_sudo(vm_, command):
     return command
 
 
-def start(name, vm_=None, opts=None):
+def start(name, vm_={}):
     '''
     Start (vagrant up) a defined virtual machine by salt_id name.
     The machine must have been previously defined using "vagrant.init".
@@ -274,10 +310,10 @@ def start(name, vm_=None, opts=None):
 
         salt <host> vagrant.start <salt_id>
     '''
-    ret = _start(name, vm_, opts)
+    return _start(name, vm_)
 
 
-def _start(name, vm_, opts):  # internal call name, because "start" is a keyword argument to vagrant.init
+def _start(name, vm_, opts=None):  # internal call name, because "start" is a keyword argument to vagrant.init
     fudged_opts = defaultdict(lambda: None)
     if opts is None:
         fudged_opts.update(__opts__)
@@ -286,10 +322,13 @@ def _start(name, vm_, opts):  # internal call name, because "start" is a keyword
         fudged_opts.setdefault('providers', {})
         fudged_opts.setdefault('deploy_scripts_search_path', vm_.get('deploy_scripts_search_path', []))
 
-    if vm_ is None:
+    if not vm_:
         vm_ = _get_cached_vm(name)
 
-    machine = vm_['machine']
+    try:
+        machine = vm_['machine']
+    except KeyError:
+        raise ValueError, 'No Vagrant machine defined for Salt-id {}'.format(name)
 
     vagrant_provider = vm_.get('vagrant_provider', '')
     provider_ = '--provider={}'.format(vagrant_provider) if vagrant_provider else ''
@@ -300,41 +339,8 @@ def _start(name, vm_, opts):  # internal call name, because "start" is a keyword
             shell=True,
             cwd=vm_.get('cwd', None)
             )
-    if ret:
-        raise CommandExecutionError('Error starting Vagrant machine')
 
-    # the ssh address and port are not known until after the machine boots.
-    # so we must detect it and record it then
-    if 'ssh_host' not in vm_:
-        log.info('requesting vagrant ssh-config for %s', machine or 'Vagrant default')
-        output = subprocess.check_output(
-            [_runas_sudo(vm_, 'vagrant ssh-config {}'.format(machine))],
-            shell=True,
-            cwd=vm_.get('cwd', None)
-        )
-        reply = salt.utils.stringutils.to_str(output)
-        ssh_config = {}
-        for line in reply.split('\n'):  # build a dictionary of the text reply
-            tokens = line.strip().split()
-            if len(tokens) == 2:  # each two-token line becomes a key:value pair
-                ssh_config[tokens[0]] = tokens[1]
-        log.debug('ssh_config=%s', repr(ssh_config))
-
-
-        vm_.setdefault('key_filename', ssh_config['IdentityFile'])
-        vm_.setdefault('ssh_username', ssh_config['User'])
-        vm_['ssh_host'] = ssh_config['HostName']
-        vm_.setdefault('ssh_port', ssh_config['Port'])
-        _update_cache(name, vm_)
-
-    vm_.setdefault('driver', 'vagrant.start')  # provide a dummy value needed in get_cloud_config_value
-    vm_.setdefault('provider', '')  # provide a dummy value needed in get_cloud_config_value
-    vm_.setdefault('profile', '')  # provide a dummy value needed in get_cloud_config_value
-    log.info('Provisioning machine %s as node %s using ssh %s',
-             machine, vm_['name'], vm_['ssh_host'])
-    ret = __utils__['cloud.bootstrap'](vm_, fudged_opts)
-
-    return ret
+    return ret == 0
 
 
 
@@ -432,7 +438,6 @@ def destroy(name):
 
         salt <host> vagrant.destroy <salt_id>
     '''
-
     vm_ = _get_cached_vm(name)
     machine = vm_['machine']
 
@@ -444,4 +449,100 @@ def destroy(name):
         cwd=vm_.get('cwd', None)
         )
     _erase_cache(name)
-    return ret
+    return ret == 0
+
+
+def get_ssh_config(name, network_mask='', get_private_key=False):
+    '''
+    Retrieve hints of how you might connect to a Vagrant VM.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt <host> vagrant.get_ssh_config <salt_id>
+        salt my_laptop vagrant.get_ssh_config quail1 network_mask=10.0.0.0/8 get_private_key=True
+
+    returns a dictionary containing:
+
+    - key_filename:  the name of the private key file on the VM host computer
+    - ssh_username:  the username to be used to log in to the VM
+    - ssh_host:  the IP address used to log in to the VM.  (This will usually be `127.0.0.1`)
+    - ssh_port:  the TCP port used to log in to the VM.  (This will often be `2222`)
+    - \[ip_address:\]  (if `network_mask` is defined. see below)
+    - \[private_key:\]  (if `get_private_key` is True) the private key for ssh_username
+
+    About `network_mask`:
+
+    Vagrant usually uses a redirected TCP port on its host computer to log in to a VM using ssh.
+    This makes it impossible for a third machine (such as a salt-cloud master) to contact the VM
+    unless the VM has another network interface defined.  You will usually want a bridged network
+    defined by having a `config.vm.network "public_network"` statement in your `Vagrantfile`.
+
+    The IP address of the bridged adapter will typically be assigned by DHCP and unknown to you,
+    but you should be able to determine what IP network the address will be chosen from.
+    If you enter a CIDR network mask, the module will attempt to find the VM's address for you.
+    It will send an `ifconfig` command to the VM (using ssh to `ssh_host`:`ssh_port`) and scan the
+    result, returning the IP address of the first interface it can find which matches your mask.
+    '''
+    vm_ = _get_cached_vm(name)
+
+    ssh_config = _vagrant_ssh_config(vm_)
+
+    ans = { 'key_filename': ssh_config['IdentityFile'],
+            'ssh_username': ssh_config['User'],
+            'ssh_host': ssh_config['HostName'],
+            'ssh_port': ssh_config['Port'],
+            }
+
+    if network_mask:
+        #  ask the new VM to report its network address
+        command = 'ssh -i {IdentityFile} -p {Port} ' \
+                  '-oStrictHostKeyChecking={StrictHostKeyChecking} ' \
+                  '-oUserKnownHostsFile={UserKnownHostsFile} ' \
+                  '-oControlPath=none ' \
+                  '{User}@{HostName} ifconfig'.format(**ssh_config)
+
+        log.info('Trying ssh -p {Port} {User}@{HostName} ifconfig'.format(**ssh_config))
+        try:
+            ret = subprocess.check_output([command], shell=True)
+        except subprocess.CalledProcessError as e:
+            raise CommandExecutionError, 'Error trying ssh to %s: %s'.format(name, e)
+        reply = salt.utils.stringutils.to_str(ret)
+        log.info(reply)
+
+        ## TODO: move this code to salt-cloud driver
+        ## target_network = config.get_cloud_config_value(
+        ##    'target_network', vm_, __opts__, default=None)
+        target_network_range = ipaddress.ip_network(network_mask, strict=False)
+
+        for line in reply.split('\n'):
+            try:   # try to find a bridged network address
+                # the lines we are looking for appear like:
+                #    "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
+                # or "inet6 addr: fe80::a00:27ff:fe04:7aac/64 Scope:Link"
+                tokens = line.replace('addr:','',1).split()  # remove "addr:" if it exists, then split
+                found_address = None
+                if "inet" in tokens:
+                    nxt = tokens.index("inet") + 1
+                    found_address = ipaddress.ip_address(tokens[nxt])
+                elif "inet6" in tokens:
+                    nxt = tokens.index("inet6") + 1
+                    found_address = ipaddress.ip_address(tokens[nxt].split('/')[0])
+                if found_address in target_network_range:
+                    ans['ip_address'] = str(found_address)
+                    break  # we have located a good matching address
+            except (IndexError, AttributeError, TypeError):
+                pass  # all syntax and type errors loop here
+            # falling out if the loop leaves us remembering the last candidate
+        log.info('Network IP address in %s detected as: %s',
+                 target_network_range, ans.get('ip_address', '(not found)'))
+
+    if get_private_key:
+        # retrieve the Vagrant private key from the host
+        try:
+            with open(ssh_config['IdentityFile']) as pks:
+                ans['private_key'] = pks.read()
+        except (OSError, IOError) as e:
+            raise CommandExecutionError, "Error processing Vagrant private key file: {}".format(e)
+    return ans
