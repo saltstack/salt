@@ -41,12 +41,12 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     Validate docker module
     '''
     def setup_loader_modules(self):
-        utils = salt.loader.utils(
-            salt.config.DEFAULT_MINION_OPTS,
-            whitelist=['state']
-        )
-        return {docker_mod: {'__context__': {'docker.docker_version': ''},
-                             '__utils__': utils}}
+        return {
+            docker_mod: {
+                '__context__': {'docker.docker_version': ''},
+                '__utils__': {'state.check_result': Mock(return_value=True)},
+            }
+        }
 
     try:
         docker_version = docker_mod.docker.version_info
