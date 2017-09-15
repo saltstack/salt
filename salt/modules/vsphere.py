@@ -178,10 +178,17 @@ import salt.utils.path
 import salt.utils.vmware
 import salt.utils.vsan
 from salt.exceptions import CommandExecutionError, VMwareSaltError, \
-        ArgumentValueError
+        ArgumentValueError, InvalidConfigError
 from salt.utils.decorators import depends, ignores_kwargs
+from salt.config.schemas.esxcluster import ESXClusterConfigSchema
 
 # Import Third Party Libs
+try:
+    import jsonschema
+    HAS_JSONSCHEMA = True
+except ImportError:
+    HAS_JSONSCHEMA = False
+
 try:
     from pyVmomi import vim, vmodl
     HAS_PYVMOMI = True
@@ -3920,6 +3927,102 @@ def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None,
             vsan_config.defaultConfig.autoClaimStorage = \
                     vsan_dict['auto_claim_storage']
     log.trace('cluster_spec = {0}'.format(cluster_spec))
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def create_cluster(cluster_dict, datacenter=None, cluster=None,
+                   service_instance=None):
+    '''
+    Creates a cluster.
+
+    Note: cluster_dict['name'] will be overridden by the cluster param value
+
+    config_dict
+        Dictionary with the config values of the new cluster.
+
+    datacenter
+        Name of datacenter containing the cluster.
+        Ignored if already contained by proxy details.
+        Default value is None.
+
+    cluster
+        Name of cluster.
+        Ignored if already contained by proxy details.
+        Default value is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        # esxdatacenter proxy
+        salt '*' vsphere.create_cluster cluster_dict=$cluster_dict cluster=cl1
+
+        # esxcluster proxy
+        salt '*' vsphere.create_cluster cluster_dict=$cluster_dict
+    '''
+    # Validate cluster dictionary
+    schema = ESXClusterConfigSchema.serialize()
+    try:
+        jsonschema.validate(cluster_dict, schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise InvalidConfigError(exc)
+    # Get required details from the proxy
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+        if not cluster:
+            raise ArgumentValueError('\'cluster\' needs to be specified')
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+        cluster = __salt__['esxcluster.get_details']()['cluster']
+
+    if cluster_dict.get('vsan') and not \
+       salt.utils.vsan.vsan_supported(service_instance):
+
+        raise excs.VMwareApiError('VSAN operations are not supported')
+    si = service_instance
+    cluster_spec = vim.ClusterConfigSpecEx()
+    vsan_spec = None
+    ha_config = None
+    vsan_61 = None
+    if cluster_dict.get('vsan'):
+        # XXX The correct way of retrieving the VSAN data (on the if branch)
+        #  is not supported before 60u2 vcenter
+        vcenter_info = salt.utils.vmware.get_service_info(si)
+        if float(vcenter_info.apiVersion) >= 6.0 and \
+                        int(vcenter_info.build) >= 3634794: # 60u2
+            vsan_spec = vim.vsan.ReconfigSpec(modify=True)
+            vsan_61 = False
+            # We need to keep HA disabled and enable it afterwards
+            if cluster_dict.get('ha',{}).get('enabled'):
+                enable_ha = True
+                ha_config = cluster_dict['ha']
+                del cluster_dict['ha']
+        else:
+            vsan_61 = True
+    # If VSAN is 6.1 the configuration of VSAN happens when configuring the
+    # cluster via the regular endpoint
+    _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec, vsan_61)
+    salt.utils.vmware.create_cluster(dc_ref, cluster, cluster_spec)
+    if not vsan_61:
+        # Only available after VSAN 61
+        if vsan_spec:
+            cluster_ref = salt.utils.vmware.get_cluster(dc_ref, cluster)
+            salt.utils.vsan.reconfigure_cluster_vsan(cluster_ref, vsan_spec)
+        if enable_ha:
+            # Set HA after VSAN has been configured
+            _apply_cluster_dict(cluster_spec, {'ha': ha_config})
+            salt.utils.vmware.update_cluster(cluster_ref, cluster_spec)
+            # Set HA back on the object
+            cluster_dict['ha'] = ha_config
+    return {'create_cluster': True}
 
 
 def _check_hosts(service_instance, host, host_names):
