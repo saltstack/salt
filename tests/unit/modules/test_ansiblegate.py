@@ -74,12 +74,12 @@ description:
    describe the second part
         """
 
-        ansible._resolver = self.resolver
-        ansible._resolver.load_module = MagicMock(return_value=Module())
-        ret = ansible.help('dummy')
-        assert sorted(ret.get('Available sections on module "{0}"'.format(
-            Module().__name__))) == ['one', 'two']
-        assert ret.get('Description') == 'describe the second part'
+        with patch.object(ansible, '_resolver', self.resolver), \
+            patch.object(ansible._resolver, 'load_module', MagicMock(return_value=Module())):
+            ret = ansible.help('dummy')
+            assert sorted(ret.get('Available sections on module "{0}"'.format(
+                Module().__name__))) == ['one', 'two']
+            assert ret.get('Description') == 'describe the second part'
 
     def test_module_resolver_modlist(self):
         '''
