@@ -56,7 +56,8 @@ class AnsibleModuleResolver(object):
             path = root
         for p_el in os.listdir(path):
             p_el_path = os.path.join(path, p_el)
-            if os.path.islink(p_el_path): continue
+            if os.path.islink(p_el_path):
+                continue
             if os.path.isdir(p_el_path):
                 paths.update(self._get_modules_map(p_el_path))
             else:
