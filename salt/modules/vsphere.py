@@ -4025,6 +4025,118 @@ def create_cluster(cluster_dict, datacenter=None, cluster=None,
     return {'create_cluster': True}
 
 
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def update_cluster(cluster_dict, datacenter=None, cluster=None,
+                   service_instance=None):
+    '''
+    Updates a cluster.
+
+    config_dict
+        Dictionary with the config values of the new cluster.
+
+    datacenter
+        Name of datacenter containing the cluster.
+        Ignored if already contained by proxy details.
+        Default value is None.
+
+    cluster
+        Name of cluster.
+        Ignored if already contained by proxy details.
+        Default value is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        # esxdatacenter proxy
+        salt '*' vsphere.update_cluster cluster_dict=$cluster_dict cluster=cl1
+
+        # esxcluster proxy
+        salt '*' vsphere.update_cluster cluster_dict=$cluster_dict
+
+    '''
+    # Validate cluster dictionary
+    schema = ESXClusterConfigSchema.serialize()
+    try:
+        jsonschema.validate(cluster_dict, schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise InvalidConfigError(exc)
+    # Get required details from the proxy
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+        if not cluster:
+            raise ArgumentValueError('\'cluster\' needs to be specified')
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+        cluster = __salt__['esxcluster.get_details']()['cluster']
+
+    if cluster_dict.get('vsan') and not \
+       salt.utils.vsan.vsan_supported(service_instance):
+
+        raise VMwareApiError('VSAN operations are not supported')
+
+    cluster_ref = salt.utils.vmware.get_cluster(dc_ref, cluster)
+    cluster_spec = vim.ClusterConfigSpecEx()
+    props = salt.utils.vmware.get_properties_of_managed_object(
+        cluster_ref, properties=['configurationEx'])
+    # Copy elements we want to update to spec
+    for p in ['dasConfig', 'drsConfig']:
+        setattr(cluster_spec, p, getattr(props['configurationEx'], p))
+    if props['configurationEx'].vsanConfigInfo:
+        cluster_spec.vsanConfig = props['configurationEx'].vsanConfigInfo
+    vsan_spec = None
+    vsan_61 = None
+    if cluster_dict.get('vsan'):
+        # XXX The correct way of retrieving the VSAN data (on the if branch)
+        #  is not supported before 60u2 vcenter
+        vcenter_info = salt.utils.vmware.get_service_info(service_instance)
+        if float(vcenter_info.apiVersion) >= 6.0 and \
+                int(vcenter_info.build) >= 3634794: # 60u2
+            vsan_61 = False
+            vsan_info = salt.utils.vsan.get_cluster_vsan_info(cluster_ref)
+            vsan_spec = vim.vsan.ReconfigSpec(modify=True)
+            # Only interested in the vsanClusterConfig and the
+            # dataEfficiencyConfig
+            # vsan_spec.vsanClusterConfig = vsan_info
+            vsan_spec.dataEfficiencyConfig = vsan_info.dataEfficiencyConfig
+            vsan_info.dataEfficiencyConfig = None
+        else:
+            vsan_61 = True
+
+    _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec, vsan_61)
+    # We try to reconfigure vsan first as it fails if HA is enabled so the
+    # command will abort not having any side-effects
+    # also if HA was previously disabled it can be enabled automatically if
+    # desired
+    if vsan_spec:
+        log.trace('vsan_spec = {0}'.format(vsan_spec))
+        salt.utils.vsan.reconfigure_cluster_vsan(cluster_ref, vsan_spec)
+
+        # We need to retrieve again the properties and reapply them
+        # As the VSAN configuration has changed
+        cluster_spec = vim.ClusterConfigSpecEx()
+        props = salt.utils.vmware.get_properties_of_managed_object(
+            cluster_ref, properties=['configurationEx'])
+        # Copy elements we want to update to spec
+        for p in ['dasConfig', 'drsConfig']:
+            setattr(cluster_spec, p, getattr(props['configurationEx'], p))
+        if props['configurationEx'].vsanConfigInfo:
+            cluster_spec.vsanConfig = props['configurationEx'].vsanConfigInfo
+        # We only need to configure the cluster_spec, as if it were a vsan_61
+        # cluster
+        _apply_cluster_dict(cluster_spec, cluster_dict)
+    salt.utils.vmware.update_cluster(cluster_ref, cluster_spec)
+    return {'update_cluster': True}
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
