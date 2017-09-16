@@ -16,6 +16,7 @@ from __future__ import absolute_import
 from salt.utils.schema import (Schema,
                                DefinitionsSchema,
                                ComplexSchemaItem,
+                               DictItem,
                                ArrayItem,
                                IntegerItem,
                                BooleanItem,
@@ -147,6 +148,46 @@ class ESXClusterConfigSchema(DefinitionsSchema):
     vsan = vSANClusterConfigItem()
     drs = DRSConfigItem()
     vm_swap_placement = StringItem(title='VM Swap Placement')
+
+
+class ESXClusterEntitySchema(Schema):
+    '''Schema of the ESX cluster entity'''
+
+    title = 'ESX Cluster Entity Schema'
+    description = 'ESX cluster entity schema'
+
+    type = StringItem(title='Type',
+                      description='Specifies the entity type',
+                      required=True,
+                      enum=['cluster'])
+
+    datacenter = StringItem(title='Datacenter',
+                            description='Specifies the cluster datacenter',
+                            required=True,
+                            pattern='\w+')
+
+    cluster = StringItem(title='Cluster',
+                         description='Specifies the cluster name',
+                         required=True,
+                         pattern='\w+')
+
+
+class LicenseSchema(Schema):
+    '''
+    Schema item of the ESX cluster vSAN configuration
+    '''
+
+    title = 'Licenses schema'
+    description = 'License configuration schema'
+
+    licenses = DictItem(
+        title='Licenses',
+        description='Dictionary containing the license name to key mapping',
+        required=True,
+        additional_properties=StringItem(
+            title='License Key',
+            description='Specifies the license key',
+            pattern='^(\w{5}-\w{5}-\w{5}-\w{5}-\w{5})$'))
 
 
 class EsxclusterProxySchema(Schema):
