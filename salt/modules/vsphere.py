@@ -4137,6 +4137,91 @@ def update_cluster(cluster_dict, datacenter=None, cluster=None,
     return {'update_cluster': True}
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def list_datastores_via_proxy(datastore_names=None, backing_disk_ids=None,
+                              backing_disk_scsi_addresses=None,
+                              service_instance=None):
+    '''
+    Returns a list of dict representations of the datastores visible to the
+    proxy object. The list of datastores can be filtered by datastore names,
+    backing disk ids (canonical names) or backing disk scsi addresses.
+
+    Supported proxy types: esxi, esxcluster, esxdatacenter
+
+    datastore_names
+        List of the names of datastores to filter on
+
+    backing_disk_ids
+        List of canonical names of the backing disks of the datastores to filer.
+        Default is None.
+
+    backing_disk_scsi_addresses
+        List of scsi addresses of the backing disks of the datastores to filter.
+        Default is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_datastores_via_proxy
+
+        salt '*' vsphere.list_datastores_via_proxy datastore_names=[ds1, ds2]
+    '''
+    target = _get_proxy_target(service_instance)
+    target_name = salt.utils.vmware.get_managed_object_name(target)
+    log.trace('target name = {}'.format(target_name))
+
+    # Default to getting all disks if no filtering is done
+    get_all_datastores = True if \
+            not (datastore_names or backing_disk_ids or
+                 backing_disk_scsi_addresses) else False
+    # Get the ids of the disks with the scsi addresses
+    if backing_disk_scsi_addresses:
+        log.debug('Retrieving disk ids for scsi addresses '
+                  '\'{0}\''.format(backing_disk_scsi_addresses))
+        disk_ids = [d.canonicalName for d in
+                    salt.utils.vmware.get_disks(
+                        target, scsi_addresses=backing_disk_scsi_addresses)]
+        log.debug('Found disk ids \'{}\''.format(disk_ids))
+        backing_disk_ids = backing_disk_ids.extend(disk_ids) if \
+                backing_disk_ids else disk_ids
+    datastores = salt.utils.vmware.get_datastores(service_instance,
+                                                  target,
+                                                  datastore_names,
+                                                  backing_disk_ids,
+                                                  get_all_datastores)
+
+    # Search for disk backed datastores if target is host
+    # to be able to add the backing_disk_ids
+    mount_infos = []
+    if isinstance(target, vim.HostSystem):
+        storage_system = salt.utils.vmware.get_storage_system(
+            service_instance, target, target_name)
+        props = salt.utils.vmware.get_properties_of_managed_object(
+            storage_system, ['fileSystemVolumeInfo.mountInfo'])
+        mount_infos = props.get('fileSystemVolumeInfo.mountInfo', [])
+    ret_dict = []
+    for ds in datastores:
+        ds_dict = {'name': ds.name,
+                   'type': ds.summary.type,
+                   'free_space': ds.summary.freeSpace,
+                   'capacity': ds.summary.capacity}
+        backing_disk_ids = []
+        for vol in [i.volume for i in mount_infos if \
+                    i.volume.name == ds.name and \
+                    isinstance(i.volume, vim.HostVmfsVolume)]:
+
+            backing_disk_ids.extend([e.diskName for e in vol.extent])
+        if backing_disk_ids:
+            ds_dict['backing_disk_ids'] = backing_disk_ids
+        ret_dict.append(ds_dict)
+    return ret_dict
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
