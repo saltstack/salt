@@ -1215,6 +1215,31 @@ def list_datastores(service_instance):
     return list_objects(service_instance, vim.Datastore)
 
 
+def get_storage_system(service_instance, host_ref, hostname=None):
+    '''
+    Returns a host's storage system
+    '''
+
+    if not hostname:
+        hostname = get_managed_object_name(host_ref)
+
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        path='configManager.storageSystem',
+        type=vim.HostSystem,
+        skip=False)
+    objs = get_mors_with_properties(service_instance,
+                                    vim.HostStorageSystem,
+                                    property_list=['systemFile'],
+                                    container_ref=host_ref,
+                                    traversal_spec=traversal_spec)
+    if not objs:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Host\'s \'{0}\' storage system was not retrieved'
+            ''.format(hostname))
+    log.trace('[{0}] Retrieved storage system'.format(hostname))
+    return objs[0]['object']
+
+
 def get_hosts(service_instance, datacenter_name=None, host_names=None,
               cluster_name=None, get_all_hosts=False):
     '''
