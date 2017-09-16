@@ -1215,6 +1215,132 @@ def list_datastores(service_instance):
     return list_objects(service_instance, vim.Datastore)
 
 
+def get_datastores(service_instance, reference, datastore_names=None,
+                   backing_disk_ids=None, get_all_datastores=False):
+    '''
+    Returns a list of vim.Datastore objects representing the datastores visible
+    from a VMware object, filtered by their names, or the backing disk
+    cannonical name or scsi_addresses
+
+    service_instance
+        The Service Instance Object from which to obtain datastores.
+
+    reference
+        The VMware object from which the datastores are visible.
+
+    datastore_names
+        The list of datastore names to be retrieved. Default value is None.
+
+    backing_disk_ids
+        The list of canonical names of the disks backing the datastores
+        to be retrieved. Only supported if reference is a vim.HostSystem.
+        Default value is None
+
+    get_all_datastores
+        Specifies whether to retrieve all disks in the host.
+        Default value is False.
+    '''
+    obj_name = get_managed_object_name(reference)
+    if get_all_datastores:
+        log.trace('Retrieving all datastores visible to '
+                  '\'{0}\''.format(obj_name))
+    else:
+        log.trace('Retrieving datastores visible to \'{0}\': names = ({1}); '
+                  'backing disk ids = ({2})'.format(obj_name, datastore_names,
+                                                    backing_disk_ids))
+        if backing_disk_ids and not isinstance(reference, vim.HostSystem):
+
+            raise salt.exceptions.ArgumentValueError(
+                'Unsupported reference type \'{0}\' when backing disk filter '
+                'is set'.format(reference.__class__.__name__))
+    if (not get_all_datastores) and backing_disk_ids:
+        # At this point we know the reference is a vim.HostSystem
+        log.debug('Filtering datastores with backing disk ids: {}'
+                  ''.format(backing_disk_ids))
+        storage_system = get_storage_system(service_instance, reference,
+                                            obj_name)
+        props = salt.utils.vmware.get_properties_of_managed_object(
+            storage_system, ['fileSystemVolumeInfo.mountInfo'])
+        mount_infos = props.get('fileSystemVolumeInfo.mountInfo', [])
+        disk_datastores = []
+        # Non vmfs volumes aren't backed by a disk
+        for vol in [i.volume for i in mount_infos if \
+                     isinstance(i.volume, vim.HostVmfsVolume)]:
+
+            if not [e for e in vol.extent if e.diskName in backing_disk_ids]:
+                # Skip volume if it doesn't contain an extent with a
+                # canonical name of interest
+                continue
+            log.debug('Found datastore \'{0}\' for disk id(s) \'{1}\''
+                      ''.format(vol.name,
+                                [e.diskName for e in vol.extent]))
+            disk_datastores.append(vol.name)
+        log.debug('Datastore found for disk filter: {}'
+                  ''.format(disk_datastores))
+        if datastore_names:
+            datastore_names.extend(disk_datastores)
+        else:
+            datastore_names = disk_datastores
+
+    if (not get_all_datastores) and (not datastore_names):
+        log.trace('No datastore to be filtered after retrieving the datastores '
+                  'backed by the disk id(s) \'{0}\''.format(backing_disk_ids))
+        return []
+
+    log.trace('datastore_names = {0}'.format(datastore_names))
+
+    # Use the default traversal spec
+    if isinstance(reference, vim.HostSystem):
+        # Create a different traversal spec for hosts because it looks like the
+        # default doesn't retrieve the datastores
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            name='host_datastore_traversal',
+            path='datastore',
+            skip=False,
+            type=vim.HostSystem)
+    elif isinstance(reference, vim.ClusterComputeResource):
+        # Traversal spec for clusters
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            name='cluster_datastore_traversal',
+            path='datastore',
+            skip=False,
+            type=vim.ClusterComputeResource)
+    elif isinstance(reference, vim.Datacenter):
+        # Traversal spec for clusters
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            name='datacenter_datastore_traversal',
+            path='datastore',
+            skip=False,
+            type=vim.Datacenter)
+    elif isinstance(reference, vim.Folder) and \
+            get_managed_object_name(reference) == 'Datacenters':
+        # Traversal of root folder (doesn't support multiple levels of Folders)
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            path='childEntity',
+            selectSet = [
+                vmodl.query.PropertyCollector.TraversalSpec(
+                    path='datastore',
+                    skip=False,
+                    type=vim.Datacenter)],
+            skip=False,
+            type=vim.Folder)
+    else:
+        raise salt.exceptions.ArgumentValueError(
+            'Unsupported reference type \'{0}\''
+            ''.format(reference.__class__.__name__))
+
+    items = get_mors_with_properties(service_instance,
+                                     object_type=vim.Datastore,
+                                     property_list=['name'],
+                                     container_ref=reference,
+                                     traversal_spec=traversal_spec)
+    log.trace('Retrieved {0} datastores'.format(len(items)))
+    items = [i for i in items if get_all_datastores or i['name'] in
+             datastore_names]
+    log.trace('Filtered datastores: {0}'.format([i['name'] for i in items]))
+    return [i['object'] for i in items]
+
+
 def get_storage_system(service_instance, host_ref, hostname=None):
     '''
     Returns a host's storage system
