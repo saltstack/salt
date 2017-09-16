@@ -178,7 +178,7 @@ import salt.utils.path
 import salt.utils.vmware
 import salt.utils.vsan
 from salt.exceptions import CommandExecutionError, VMwareSaltError, \
-        ArgumentValueError, InvalidConfigError
+        ArgumentValueError, InvalidConfigError, VMwareObjectRetrievalError
 from salt.utils.decorators import depends, ignores_kwargs
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema
 
@@ -4220,6 +4220,44 @@ def list_datastores_via_proxy(datastore_names=None, backing_disk_ids=None,
             ds_dict['backing_disk_ids'] = backing_disk_ids
         ret_dict.append(ds_dict)
     return ret_dict
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def rename_datastore(datastore_name, new_datastore_name,
+                     service_instance=None):
+    '''
+    Renames a datastore. The datastore needs to be visible to the proxy.
+
+    datastore_name
+        Current datastore name.
+
+    new_datastore_name
+        New datastore name.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.rename_datastore old_name new_name
+    '''
+    # Argument validation
+    log.trace('Renaming datastore {0} to {1}'
+              ''.format(datastore_name, new_datastore_name))
+    target = _get_proxy_target(service_instance)
+    datastores = salt.utils.vmware.get_datastores(
+        service_instance,
+        target,
+        datastore_names=[datastore_name])
+    if not datastores:
+        raise VMwareObjectRetrievalError('Datastore \'{0}\' was not found'
+                                         ''.format(datastore_name))
+    ds = datastores[0]
+    salt.utils.vmware.rename_datastore(ds, new_datastore_name)
+    return True
 
 
 def _check_hosts(service_instance, host, host_names):
