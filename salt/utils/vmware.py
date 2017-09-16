@@ -1341,6 +1341,34 @@ def get_datastores(service_instance, reference, datastore_names=None,
     return [i['object'] for i in items]
 
 
+def rename_datastore(datastore_ref, new_datastore_name):
+    '''
+    Renames a datastore
+
+    datastore_ref
+        vim.Datastore reference to the datastore object to be changed
+
+    new_datastore_name
+        New datastore name
+    '''
+    ds_name = get_managed_object_name(datastore_ref)
+    log.debug('Renaming datastore \'{0}\' to '
+              '\'{1}\''.format(ds_name, new_datastore_name))
+    try:
+        datastore_ref.RenameDatastore(new_datastore_name)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+
+
 def get_storage_system(service_instance, host_ref, hostname=None):
     '''
     Returns a host's storage system
