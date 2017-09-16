@@ -333,3 +333,66 @@ class GetDatastoresTestCase(TestCase):
             backing_disk_ids= ['fake_disk3'])
         self.assertEqual(res, [self.mock_entries[0]['object'],
                                self.mock_entries[2]['object']])
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class RenameDatastoreTestCase(TestCase):
+    '''Tests for salt.utils.vmware.rename_datastore'''
+
+    def setUp(self):
+        self.mock_ds_ref = MagicMock()
+        self.mock_get_managed_object_name = MagicMock(return_value='fake_ds')
+
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name',
+             self.mock_get_managed_object_name),)
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_ds_ref', 'mock_get_managed_object_name'):
+            delattr(self, attr)
+
+    def test_datastore_name_call(self):
+        salt.utils.vmware.rename_datastore(self.mock_ds_ref,
+                                           'fake_new_name')
+        self.mock_get_managed_object_name.assert_called_once_with(
+            self.mock_ds_ref)
+
+    def test_rename_datastore_raise_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        type(self.mock_ds_ref).RenameDatastore = MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.vmware.rename_datastore(self.mock_ds_ref,
+                                               'fake_new_name')
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_rename_datastore_raise_vim_fault(self):
+        exc = vim.VimFault()
+        exc.msg = 'vim_fault'
+        type(self.mock_ds_ref).RenameDatastore = MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.vmware.rename_datastore(self.mock_ds_ref,
+                                               'fake_new_name')
+        self.assertEqual(excinfo.exception.message, 'vim_fault')
+
+    def test_rename_datastore_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'runtime_fault'
+        type(self.mock_ds_ref).RenameDatastore = MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.rename_datastore(self.mock_ds_ref,
+                                               'fake_new_name')
+        self.assertEqual(excinfo.exception.message, 'runtime_fault')
+
+    def test_rename_datastore(self):
+        ret = salt.utils.vmware.rename_datastore(self.mock_ds_ref,
+                                                'fake_new_name')
+        self.mock_ds_ref.RenameDatastore.assert_called_once_with(
+            'fake_new_name')
