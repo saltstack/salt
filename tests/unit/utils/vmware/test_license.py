@@ -484,3 +484,180 @@ class GetAssignedLicensesTestCase(TestCase):
                                                       self.mock_entity_ref,
                                                       'fake_entity_name')
         self.assertEqual(ret, self.mock_assignments)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class AssignLicenseTestCase(TestCase):
+    '''Tests for salt.utils.vmware.assign_license'''
+
+    def setUp(self):
+        self.mock_ent_id = MagicMock()
+        self.mock_si = MagicMock()
+        type(self.mock_si.content.about).instanceUuid = \
+                PropertyMock(return_value=self.mock_ent_id)
+        self.mock_lic_key = MagicMock()
+        self.mock_moid = MagicMock()
+        self.prop_mock_moid = PropertyMock(return_value=self.mock_moid)
+        self.mock_entity_ref = MagicMock()
+        type(self.mock_entity_ref)._moId = self.prop_mock_moid
+        self.mock_license = MagicMock()
+        self.mock_update_assigned_license = MagicMock(
+            return_value=self.mock_license)
+        self.mock_lic_assign_mgr = MagicMock(
+            UpdateAssignedLicense=self.mock_update_assigned_license)
+        patches = (
+            ('salt.utils.vmware.get_license_assignment_manager',
+             MagicMock(return_value=self.mock_lic_assign_mgr)),)
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def test_no_license_assignment_manager_passed_in(self):
+        mock_get_license_assign_manager = MagicMock()
+        with patch('salt.utils.vmware.get_license_assignment_manager',
+                   mock_get_license_assign_manager):
+            salt.utils.vmware.assign_license(self.mock_si,
+                                             self.mock_lic_key,
+                                             'fake_license_name',
+                                             self.mock_entity_ref,
+                                             'fake_entity_name')
+        mock_get_license_assign_manager.assert_called_once_with(self.mock_si)
+
+    def test_license_assignment_manager_passed_in(self):
+        mock_get_license_assign_manager = MagicMock()
+        with patch('salt.utils.vmware.get_license_assignment_manager',
+                   mock_get_license_assign_manager):
+            salt.utils.vmware.assign_license(
+                self.mock_si, self.mock_lic_key, 'fake_license_name',
+                self.mock_entity_ref, 'fake_entity_name',
+                license_assignment_manager=self.mock_lic_assign_mgr)
+        self.assertEqual(mock_get_license_assign_manager.call_count, 0)
+        self.assertEqual(self.mock_update_assigned_license.call_count, 1)
+
+    def test_entity_name(self):
+        mock_trace = MagicMock()
+        with patch('salt.log.setup.SaltLoggingClass.trace', mock_trace):
+            salt.utils.vmware.assign_license(self.mock_si,
+                                             self.mock_lic_key,
+                                             'fake_license_name',
+                                             self.mock_entity_ref,
+                                             'fake_entity_name')
+        mock_trace.assert_called_once_with('Assigning license to '
+                                           '\'fake_entity_name\'')
+
+    def test_instance_uuid(self):
+        mock_instance_uuid_prop = PropertyMock()
+        type(self.mock_si.content.about).instanceUuid = mock_instance_uuid_prop
+        self.mock_lic_assign_mgr.UpdateAssignedLicense= MagicMock(
+                    return_value=[MagicMock(entityDisplayName='fake_vcenter')])
+        salt.utils.vmware.assign_license(self.mock_si,
+                                         self.mock_lic_key,
+                                         'fake_license_name',
+                                         entity_name='fake_entity_name')
+        self.assertEqual(mock_instance_uuid_prop.call_count, 1)
+
+    def test_instance_uuid_raises_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        type(self.mock_si.content.about).instanceUuid = \
+                PropertyMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.vmware.assign_license(self.mock_si,
+                                             self.mock_lic_key,
+                                             'fake_license_name',
+                                             entity_name='fake_entity_name')
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_instance_uuid_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        type(self.mock_si.content.about).instanceUuid = \
+                PropertyMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.vmware.assign_license(self.mock_si,
+                                             self.mock_lic_key,
+                                             'fake_license_name',
+                                             entity_name='fake_entity_name')
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_instance_uuid_raises_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        type(self.mock_si.content.about).instanceUuid = \
+                PropertyMock(side_effect=exc)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.assign_license(self.mock_si,
+                                             self.mock_lic_key,
+                                             'fake_license_name',
+                                             entity_name='fake_entity_name')
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_update_assigned_licenses_vcenter(self):
+        salt.utils.vmware.assign_license(self.mock_si,
+                                         self.mock_lic_key,
+                                         'fake_license_name',
+                                         entity_name='fake_entity_name')
+        self.mock_update_assigned_license.assert_called_once_with(
+            self.mock_ent_id, self.mock_lic_key)
+
+    def test_update_assigned_licenses_call_with_entity(self):
+        salt.utils.vmware.assign_license(self.mock_si,
+                                         self.mock_lic_key,
+                                         'fake_license_name',
+                                         self.mock_entity_ref,
+                                         'fake_entity_name')
+        self.mock_update_assigned_license.assert_called_once_with(
+            self.mock_moid, self.mock_lic_key)
+
+    def test_update_assigned_licenses_raises_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.mock_lic_assign_mgr.UpdateAssignedLicense = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.vmware.assign_license(self.mock_si,
+                                             self.mock_lic_key,
+                                             'fake_license_name',
+                                             self.mock_entity_ref,
+                                             'fake_entity_name')
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_update_assigned_licenses_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.mock_lic_assign_mgr.UpdateAssignedLicense = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.vmware.assign_license(self.mock_si,
+                                             self.mock_lic_key,
+                                             'fake_license_name',
+                                             self.mock_entity_ref,
+                                             'fake_entity_name')
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_update_assigned_licenses_raises_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.mock_lic_assign_mgr.UpdateAssignedLicense = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.assign_license(self.mock_si,
+                                             self.mock_lic_key,
+                                             'fake_license_name',
+                                             self.mock_entity_ref,
+                                             'fake_entity_name')
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_valid_assignments(self):
+        ret = salt.utils.vmware.assign_license(self.mock_si,
+                                               self.mock_lic_key,
+                                               'fake_license_name',
+                                               self.mock_entity_ref,
+                                               'fake_entity_name')
+        self.assertEqual(ret, self.mock_license)
