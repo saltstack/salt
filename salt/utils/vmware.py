@@ -1005,6 +1005,31 @@ def list_objects(service_instance, vim_object, properties=None):
     return items
 
 
+def get_license_manager(service_instance):
+    '''
+    Returns the license manager.
+
+    service_instance
+        The Service Instance Object from which to obrain the license manager.
+    '''
+
+    log.debug('Retrieving license manager')
+    try:
+        lic_manager = service_instance.content.licenseManager
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    return lic_manager
+
+
 def list_datacenters(service_instance):
     '''
     Returns a list of datacenters associated with a given service instance.
