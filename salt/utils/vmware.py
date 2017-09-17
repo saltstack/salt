@@ -1214,6 +1214,78 @@ def get_assigned_licenses(service_instance, entity_ref=None, entity_name=None,
     return [a.assignedLicense for a in assignments]
 
 
+def assign_license(service_instance, license_key, license_name,
+                   entity_ref=None, entity_name=None,
+                   license_assignment_manager=None):
+    '''
+    Assigns a license to an entity.
+
+    service_instance
+        The Service Instance Object from which to obrain the licenses.
+
+    license_key
+        The key of the license to add.
+
+    license_name
+        The description of the license to add.
+
+    entity_ref
+        VMware entity to assign the license to.
+        If None, the entity is the vCenter itself.
+        Default is None.
+
+    entity_name
+        Entity name used in logging.
+        Default is None.
+
+    license_assignment_manager
+        The LicenseAssignmentManager object of the service instance.
+        If not provided it will be retrieved
+        Default is None.
+    '''
+    if not license_assignment_manager:
+        license_assignment_manager = \
+                get_license_assignment_manager(service_instance)
+    entity_id = None
+
+    if not entity_ref:
+        # vcenter
+        try:
+            entity_id = service_instance.content.about.instanceUuid
+        except vim.fault.NoPermission as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(
+                'Not enough permissions. Required privilege: '
+                '{0}'.format(exc.privilegeId))
+        except vim.fault.VimFault as exc:
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.RuntimeFault as exc:
+            raise salt.exceptions.VMwareRuntimeError(exc.msg)
+        if not entity_name:
+            entity_name = 'vCenter'
+    else:
+        # e.g. vsan cluster or host
+        entity_id = entity_ref._moId
+
+    log.trace('Assigning license to \'{0}\''.format(entity_name))
+    try:
+        license = license_assignment_manager.UpdateAssignedLicense(
+            entity_id,
+            license_key)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    return license
+
+
 def list_datacenters(service_instance):
     '''
     Returns a list of datacenters associated with a given service instance.
