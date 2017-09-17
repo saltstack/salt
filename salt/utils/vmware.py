@@ -1059,6 +1059,36 @@ def get_license_assignment_manager(service_instance):
     return lic_assignment_manager
 
 
+def get_licenses(service_instance, license_manager=None):
+    '''
+    Returns the licenses on a specific instance.
+
+    service_instance
+        The Service Instance Object from which to obrain the licenses.
+
+    license_manager
+        The License Manager object of the service instance. If not provided it
+        will be retrieved.
+    '''
+
+    if not license_manager:
+        license_manager = get_license_manager(service_instance)
+    log.debug('Retrieving licenses')
+    try:
+        return license_manager.licenses
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+
+
 def list_datacenters(service_instance):
     '''
     Returns a list of datacenters associated with a given service instance.
