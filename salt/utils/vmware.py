@@ -1089,6 +1089,45 @@ def get_licenses(service_instance, license_manager=None):
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
 
+def add_license(service_instance, key, description, license_manager=None):
+    '''
+    Adds a license.
+
+    service_instance
+        The Service Instance Object.
+
+    key
+        The key of the license to add.
+
+    description
+        The description of the license to add.
+
+    license_manager
+        The License Manager object of the service instance. If not provided it
+        will be retrieved.
+    '''
+    if not license_manager:
+        license_manager = get_license_manager(service_instance)
+    label = vim.KeyValue()
+    label.key='VpxClientLicenseLabel'
+    label.value=description
+    log.debug('Adding license \'{}\''.format(description))
+    try:
+        license = license_manager.AddLicense(key, [label])
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    return license
+
+
 def list_datacenters(service_instance):
     '''
     Returns a list of datacenters associated with a given service instance.
