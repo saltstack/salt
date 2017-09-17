@@ -135,3 +135,76 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
     def test_valid_assignment_manager(self):
         ret = salt.utils.vmware.get_license_assignment_manager(self.mock_si)
         self.assertEqual(ret, self.mock_lic_assign_mgr)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class GetLicensesTestCase(TestCase):
+    '''Tests for salt.utils.vmware.get_licenses'''
+
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.mock_licenses = [MagicMock(), MagicMock()]
+        self.mock_lic_mgr = MagicMock()
+        type(self.mock_lic_mgr).licenses = \
+                PropertyMock(return_value=self.mock_licenses)
+        patches = (
+            ('salt.utils.vmware.get_license_manager',
+             MagicMock(return_value=self.mock_lic_mgr)),)
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_si', 'mock_lic_mgr', 'mock_licenses'):
+            delattr(self, attr)
+
+    def test_no_license_manager_passed_in(self):
+        mock_get_license_manager = MagicMock()
+        with patch('salt.utils.vmware.get_license_manager',
+                   mock_get_license_manager):
+            salt.utils.vmware.get_licenses(self.mock_si)
+        mock_get_license_manager.assert_called_once_with(self.mock_si)
+
+    def test_license_manager_passed_in(self):
+        mock_licenses = PropertyMock()
+        mock_lic_mgr = MagicMock()
+        type(mock_lic_mgr).licenses = mock_licenses
+        mock_get_license_manager = MagicMock()
+        with patch('salt.utils.vmware.get_license_manager',
+                   mock_get_license_manager):
+            salt.utils.vmware.get_licenses(self.mock_si,
+                                           license_manager=mock_lic_mgr)
+        self.assertEqual(mock_get_license_manager.call_count, 0)
+        self.assertEqual(mock_licenses.call_count, 1)
+
+    def test_raise_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        type(self.mock_lic_mgr).licenses = PropertyMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.vmware.get_licenses(self.mock_si)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_raise_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        type(self.mock_lic_mgr).licenses = PropertyMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.vmware.get_licenses(self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_raise_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        type(self.mock_lic_mgr).licenses = PropertyMock(side_effect=exc)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            salt.utils.vmware.get_licenses(self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_valid_licenses(self):
+        ret = salt.utils.vmware.get_licenses(self.mock_si)
+        self.assertEqual(ret, self.mock_licenses)
