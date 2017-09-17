@@ -35,13 +35,14 @@ try:
 except ImportError:
     import types
     __generated_syspaths = types.ModuleType('salt._syspaths')
-    for key in ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
+
+for key in ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
                 'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'HOME_DIR',
                 'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
                 'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
                 'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH',
                 'SHARE_DIR'):
-        setattr(__generated_syspaths, key, None)
+    setattr(__generated_syspaths, key, None)
 
 
 # Let's find out the path of this module
