@@ -1128,6 +1128,92 @@ def add_license(service_instance, key, description, license_manager=None):
     return license
 
 
+def get_assigned_licenses(service_instance, entity_ref=None, entity_name=None,
+                          license_assignment_manager=None):
+    '''
+    Returns the licenses assigned to an entity. If entity ref is not provided,
+    then entity_name is assumed to be the vcenter. This is later checked if
+    the entity name is provided.
+
+    service_instance
+        The Service Instance Object from which to obtain the licenses.
+
+    entity_ref
+        VMware entity to get the assigned licenses for.
+        If None, the entity is the vCenter itself.
+        Default is None.
+
+    entity_name
+        Entity name used in logging.
+        Default is None.
+
+    license_assignment_manager
+        The LicenseAssignmentManager object of the service instance.
+        If not provided it will be retrieved.
+        Default is None.
+    '''
+    if not license_assignment_manager:
+        license_assignment_manager = \
+                get_license_assignment_manager(service_instance)
+    if not entity_name:
+        raise salt.exceptions.ArgumentValueError('No entity_name passed')
+    # If entity_ref is not defined, then interested in the vcenter
+    entity_id = None
+    entity_type = 'moid'
+    check_name = False
+    if not entity_ref:
+        if entity_name:
+            check_name = True
+        entity_type = 'uuid'
+        try:
+            entity_id = service_instance.content.about.instanceUuid
+        except vim.fault.NoPermission as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(
+                'Not enough permissions. Required privilege: '
+                '{0}'.format(exc.privilegeId))
+        except vim.fault.VimFault as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.RuntimeFault as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    else:
+        entity_id = entity_ref._moId
+
+    log.trace('Retrieving licenses assigned to \'{0}\''.format(entity_name))
+    try:
+        assignments = \
+                license_assignment_manager.QueryAssignedLicenses(entity_id)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+
+    if entity_type == 'uuid' and len(assignments) > 1:
+        log.trace('Unexpectectedly retrieved more than one'
+                  ' VCenter license assignment.')
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Unexpected return. Expect only a single assignment')
+
+    if check_name == True:
+        if entity_name != assignments[0].entityDisplayName:
+            log.trace('Getting license info for wrong vcenter: '
+                      '{0} != {1}'.format(entity_name,
+                                          assignments[0].entityDisplayName))
+            raise salt.exceptions.VMwareObjectRetrievalError(
+                'Got license assignment info for a different vcenter')
+
+    return [a.assignedLicense for a in assignments]
+
+
 def list_datacenters(service_instance):
     '''
     Returns a list of datacenters associated with a given service instance.
