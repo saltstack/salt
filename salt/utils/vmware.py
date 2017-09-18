@@ -1195,6 +1195,35 @@ def get_dvportgroups(parent_ref, portgroup_names=None,
     return items
 
 
+def get_uplink_dvportgroup(dvs_ref):
+    '''
+    Returns the uplink distributed virtual portgroup of a distributed virtual
+    switch (dvs)
+
+    dvs_ref
+        The dvs reference
+    '''
+    dvs_name = get_managed_object_name(dvs_ref)
+    log.trace('Retrieving uplink portgroup of dvs \'{0}\''.format(dvs_name))
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        path='portgroup',
+        skip=False,
+        type=vim.DistributedVirtualSwitch)
+    service_instance = get_service_instance_from_managed_object(dvs_ref)
+    items = [entry['object'] for entry in
+             get_mors_with_properties(service_instance,
+                                      vim.DistributedVirtualPortgroup,
+                                      container_ref=dvs_ref,
+                                      property_list=['tag'],
+                                      traversal_spec=traversal_spec)
+             if entry['tag'] and
+             [t for t in entry['tag'] if t.key == 'SYSTEM/DVS.UPLINKPG']]
+    if not items:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Uplink portgroup of DVS \'{0}\' wasn\'t found'.format(dvs_name))
+    return items[0]
+
+
 def list_objects(service_instance, vim_object, properties=None):
     '''
     Returns a simple list of objects from a given service instance.
