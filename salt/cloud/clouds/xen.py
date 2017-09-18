@@ -157,7 +157,8 @@ def _get_session():
             user,
             'XXX-pw-redacted-XXX',
             originator))
-        session.xenapi.login_with_password(user, password, api_version, originator)
+        session.xenapi.login_with_password(
+            user, password, api_version, originator)
     except XenAPI.Failure as ex:
         '''
         if the server on the url is not the pool master, the pool master's
@@ -172,7 +173,8 @@ def _get_session():
             user,
             'XXX-pw-redacted-XXX',
             originator))
-        session.xenapi.login_with_password(user,password,api_version,originator)
+        session.xenapi.login_with_password(
+            user, password, api_version, originator)
     return session
 
 
@@ -198,12 +200,12 @@ def list_nodes():
                 log.debug('VM {}, doesnt have base_template_name attribute'.format(
                     record['name_label']))
             ret[record['name_label']] = {'id': record['uuid'],
-               'image': base_template_name,
-                'name': record['name_label'],
-                'size': record['memory_dynamic_max'],
-                'state': record['power_state'],
-                'private_ips': get_vm_ip(record['name_label'], session),
-                'public_ips': None}
+                                         'image': base_template_name,
+                                         'name': record['name_label'],
+                                         'size': record['memory_dynamic_max'],
+                                         'state': record['power_state'],
+                                         'private_ips': get_vm_ip(record['name_label'], session),
+                                         'public_ips': None}
     return ret
 
 
