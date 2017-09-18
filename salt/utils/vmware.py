@@ -981,6 +981,45 @@ def get_network_adapter_type(adapter_type):
         return vim.vm.device.VirtualE1000e()
 
 
+def get_dvss(dc_ref, dvs_names=None, get_all_dvss=False):
+    '''
+    Returns distributed virtual switches (DVSs) in a datacenter.
+
+    dc_ref
+        The parent datacenter reference.
+
+    dvs_names
+        The names of the DVSs to return. Default is None.
+
+    get_all_dvss
+        Return all DVSs in the datacenter. Default is False.
+    '''
+    dc_name = get_managed_object_name(dc_ref)
+    log.trace('Retrieving DVSs in datacenter \'{0}\', dvs_names=\'{1}\', '
+              'get_all_dvss={2}'.format(dc_name,
+                                        ','.join(dvs_names) if dvs_names
+                                        else None,
+                                        get_all_dvss))
+    properties = ['name']
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        path='networkFolder',
+        skip=True,
+        type=vim.Datacenter,
+        selectSet=[vmodl.query.PropertyCollector.TraversalSpec(
+            path='childEntity',
+            skip=False,
+            type=vim.Folder)])
+    service_instance = get_service_instance_from_managed_object(dc_ref)
+    items = [i['object'] for i in
+             get_mors_with_properties(service_instance,
+                                      vim.DistributedVirtualSwitch,
+                                      container_ref=dc_ref,
+                                      property_list=properties,
+                                      traversal_spec=traversal_spec)
+             if get_all_dvss or (dvs_names and i['name'] in dvs_names)]
+    return items
+
+
 def list_objects(service_instance, vim_object, properties=None):
     '''
     Returns a simple list of objects from a given service instance.
