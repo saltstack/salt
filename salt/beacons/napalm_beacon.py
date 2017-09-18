@@ -196,14 +196,14 @@ __virtualname__ = 'napalm'
 
 def __virtual__():
     '''
-    This beacon can only work when running under a regular or a proxy minion.
+    This beacon can only work when running under a regular or a proxy minion, managed through napalm.
     '''
     return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 
 def _compare(cur_cmp, cur_struct):
     '''
-    Compares two obejcts and return a boolean value
+    Compares two objects and return a boolean value
     when there's a match.
     '''
     if isinstance(cur_cmp, dict) and isinstance(cur_struct, dict):
@@ -251,11 +251,11 @@ def _compare(cur_cmp, cur_struct):
             found |= _compare(cur_cmp, cur_struct_ele)
         return found
     elif isinstance(cur_cmp, bool) and isinstance(cur_struct, bool):
-        log.debug('Comparing booleans')
+        log.debug('Comparing booleans: %s ? %s', cur_cmp, cur_struct)
         return cur_cmp == cur_struct
     elif isinstance(cur_cmp, (six.string_types, six.text_type)) and \
          isinstance(cur_struct, (six.string_types, six.text_type)):
-        log.debug('Comparing strings (and regex?)')
+        log.debug('Comparing strings (and regex?): %s ? %s', cur_cmp, cur_struct)
         # Trying literal match
         matched = re.match(cur_cmp, cur_struct, re.I)
         if matched:
@@ -263,7 +263,7 @@ def _compare(cur_cmp, cur_struct):
         return False
     elif isinstance(cur_cmp, (six.integer_types, float)) and \
          isinstance(cur_struct, (six.integer_types, float)):
-        log.debug('Comparing numeric values')
+        log.debug('Comparing numeric values: %d ? %d', cur_cmp, cur_struct)
         # numeric compare
         return cur_cmp == cur_struct
     elif isinstance(cur_struct, (six.integer_types, float)) and \
@@ -277,6 +277,23 @@ def _compare(cur_cmp, cur_struct):
             return getattr(float(cur_struct), _numeric_operand[numeric_compare.group(1)])(float(compare_value))
         return False
     return False
+
+
+def validate(config):
+    '''
+    Validate the beacon configuration.
+    '''
+    # Must be a list of dicts.
+    if not isinstance(config, list):
+        return False, 'Configuration for napalm beacon must be a list.'
+    for mod in config:
+        fun = mod.keys()[0]
+        fun_cfg = mod.values()[0]
+        if not isinstance(fun_cfg, dict):
+            return False, 'The match structure for the {} execution function output must be a dictionary'.format(fun)
+        if fun not in __salt__:
+            return False, 'Execution function {} is not availabe!'.format(fun)
+    return True, 'Valid configuration for the napal beacon!'
 
 
 def beacon(config):
