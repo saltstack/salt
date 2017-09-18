@@ -87,13 +87,16 @@ def _vagrant_ssh_config(vm_):
     :return: dictionary of ssh stuff
     '''
     machine = vm_['machine']
-    ret = {}
-    log.info('requesting vagrant ssh-config for %s', machine or 'Vagrant default')
-    output = subprocess.check_output(
-        [_runas_sudo(vm_, 'vagrant ssh-config {}'.format(machine))],
-        shell=True,
-        cwd=vm_.get('cwd', None)
-    )
+    log.info('requesting vagrant ssh-config for VM %s', machine or '(default)')
+    cmd = _runas_sudo(vm_, 'vagrant ssh-config {}'.format(machine))
+    try:
+        output = subprocess.check_output(
+            [cmd],
+            shell=True,
+            cwd=vm_.get('cwd', None)
+            )
+    except subprocess.CalledProcessError as e:
+        output = e.output  # if the return code was non-zero, use the output anyway
     reply = salt.utils.stringutils.to_str(output)
     ssh_config = {}
     for line in reply.split('\n'):  # build a dictionary of the text reply
@@ -256,7 +259,6 @@ def init(name,  # Salt_id for created VM
          deploy=None,  # load Salt onto the virtual machine, default=True
          vagrant_provider='', # vagrant provider engine name
          vm={},  # a dictionary of VM configuration settings
-         opts=None, # a dictionary of master configuration settings
          ):
     '''
     Initialize a new Vagrant vm
@@ -276,13 +278,13 @@ def init(name,  # Salt_id for created VM
     vm_['runas'] = runas or vm_.get('runas', runas)
     vm_['deploy'] = deploy if deploy is not None else vm_.get('deploy', True)
     vm_['vagrant_provider'] = vagrant_provider or vm_.get('vagrant_provider', '')
-    _update_cache(name, vm_, opts)
+    _update_cache(name, vm_)
 
     if start:
         log.debug('Starting VM {0}'.format(name))
-        ret = _start(name, vm_, opts)
+        ret = _start(name, vm_)
     else:
-        ret = True
+        ret = 'Name {} defined using VM {}'.format(name, vm_['machine'] or '(default)')
     return ret
 
 
@@ -313,14 +315,7 @@ def start(name, vm_={}):
     return _start(name, vm_)
 
 
-def _start(name, vm_, opts=None):  # internal call name, because "start" is a keyword argument to vagrant.init
-    fudged_opts = defaultdict(lambda: None)
-    if opts is None:
-        fudged_opts.update(__opts__)
-        fudged_opts.update(_get_cached_opts(name))
-        fudged_opts.setdefault('profiles', defaultdict(lambda: ''))
-        fudged_opts.setdefault('providers', {})
-        fudged_opts.setdefault('deploy_scripts_search_path', vm_.get('deploy_scripts_search_path', []))
+def _start(name, vm_):  # internal call name, because "start" is a keyword argument to vagrant.init
 
     if not vm_:
         vm_ = _get_cached_vm(name)
@@ -489,11 +484,17 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
 
     ssh_config = _vagrant_ssh_config(vm_)
 
-    ans = { 'key_filename': ssh_config['IdentityFile'],
+    try:
+        ans = { 'key_filename': ssh_config['IdentityFile'],
             'ssh_username': ssh_config['User'],
             'ssh_host': ssh_config['HostName'],
             'ssh_port': ssh_config['Port'],
             }
+
+    except KeyError:
+        raise CommandExecutionError(
+                'Insufficient SSH information to contact VM {}. '
+                'Is it running?'.format(vm_.get('machine', '(default)')))
 
     if network_mask:
         #  ask the new VM to report its network address
@@ -511,9 +512,6 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
         reply = salt.utils.stringutils.to_str(ret)
         log.info(reply)
 
-        ## TODO: move this code to salt-cloud driver
-        ## target_network = config.get_cloud_config_value(
-        ##    'target_network', vm_, __opts__, default=None)
         target_network_range = ipaddress.ip_network(network_mask, strict=False)
 
         for line in reply.split('\n'):
