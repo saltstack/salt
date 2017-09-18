@@ -4378,6 +4378,53 @@ def _validate_entity(entity):
         raise excs.InvalidEntityError(exc)
 
 
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def list_assigned_licenses(entity, entity_display_name, license_keys=None,
+                           service_instance=None):
+    '''
+    Lists the licenses assigned to an entity
+
+    entity
+        Dictionary representation of an entity.
+        See ``_get_entity`` docstrings for format.
+
+    entity_display_name
+        Entity name used in logging
+
+    license_keys:
+        List of license keys to be retrieved. Default is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_assigned_licenses
+            entity={type:cluster,datacenter:dc,cluster:cl}
+            entiy_display_name=cl
+    '''
+    log.trace('Listing assigned licenses of entity {0}'
+              ''.format(entity))
+    _validate_entity(entity)
+
+    assigned_licenses = salt.utils.vmware.get_assigned_licenses(
+        service_instance,
+        entity_ref=_get_entity(service_instance, entity),
+        entity_name=entity_display_name)
+
+    return [{'key': l.licenseKey,
+             'name': l.name,
+             'description': l.labels[0].value if l.labels else None,
+             # VMware handles unlimited capacity as 0
+             'capacity': l.total if l.total > 0 else sys.maxsize}
+            for l in assigned_licenses if (license_keys is None) or
+                (l.licenseKey in license_keys)]
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
