@@ -23,6 +23,8 @@ from multiprocessing import Process
 
 # Import Salt Testing libs
 from tests.support.unit import expectedFailure, skipIf, TestCase
+from tests.support.mock import patch
+from tests.support.helpers import TestsLoggingHandler
 
 # Import salt libs
 import salt.utils.event
@@ -336,6 +338,41 @@ class TestSaltEvent(TestCase):
 
             evt = me.get_event(tag='fire_master')
             self.assertGotEvent(evt, {'data': data, 'tag': 'test_master', 'events': None, 'pretag': None})
+
+    @patch.dict(salt.config.DEFAULT_MASTER_OPTS, {'validate_event_schema': False})
+    def test_event_with_schema_with_disabled_config(self):
+        with eventpublisher_process():
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt1, {'data': 'foo1'})
+
+    @patch.dict(salt.config.DEFAULT_MASTER_OPTS, {'validate_event_schema': True, 'raise_on_invalid_schema': True, 'schemas_dirs': [os.path.join(os.path.dirname(os.path.dirname(__file__)), "schemas")]})
+    def test_event_with_schema_with_enabled_config(self):
+        with eventpublisher_process():
+            me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt1, {'data': 'foo1'})
+
+    @patch.dict(salt.config.DEFAULT_MASTER_OPTS, {'validate_event_schema': True, 'raise_on_invalid_schema': True, 'schemas_dirs': [os.path.join(os.path.dirname(os.path.dirname(__file__)), "schemas")]})
+    def test_event_with_invalid_schema_raises(self):
+        with eventpublisher_process():
+            with self.assertRaises(salt.exceptions.InvalidSchema):
+                me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
+                me.fire_event({'data2': 'foo1'}, 'evt1')
+
+    @patch.dict(salt.config.DEFAULT_MASTER_OPTS, {'validate_event_schema': True, 'raise_on_invalid_schema': False, 'schemas_dirs': [os.path.join(os.path.dirname(os.path.dirname(__file__)), "schemas")]})
+    def test_event_with_invalid_schema_logs(self):
+        with eventpublisher_process():
+            with TestsLoggingHandler() as handler:
+                me = salt.utils.event.MasterEvent(SOCK_DIR, listen=True)
+                me.fire_event({'data2': 'foo1'}, 'evt1')
+                for message in handler.messages:
+                    if message.startswith('ERROR:Unable to validate schema'):
+                        break
+                else:
+                    raise AssertionError('Did not log schema invalid error')
 
 
 class TestAsyncEventPublisher(AsyncTestCase):

@@ -325,6 +325,7 @@ import sys
 import inspect
 import textwrap
 import functools
+import re
 
 # Import salt libs
 import salt.utils.args
@@ -685,6 +686,15 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
     #    '''
     #    # TODO: Implement YAML rendering
     #    raise NotImplementedError
+
+
+class EventSchema(Schema):
+
+    tag = None
+
+    @classmethod
+    def match(cls, tag):
+        return re.match(cls.tag, tag) is not None
 
 
 class SchemaItem(six.with_metaclass(BaseSchemaItemMeta, object)):
