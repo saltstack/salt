@@ -27,7 +27,12 @@ Salt engines are configured under an ``engines`` top-level section in your Salt 
          port: 5959
          proto: tcp
 
-Salt engines must be in the Salt path, or you can add the ``engines_dirs`` option in your Salt master configuration with a list of directories under which Salt attempts to find Salt engines.
+Salt engines must be in the Salt path, or you can add the ``engines_dirs`` option in your Salt master configuration with a list of directories under which Salt attempts to find Salt engines. This option should be formatted as a list of directories to search, such as:
+
+.. code-block:: yaml
+
+    engines_dirs:
+      - /home/bob/engines
 
 Writing an Engine
 =================
