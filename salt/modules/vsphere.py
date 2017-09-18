@@ -4289,6 +4289,37 @@ def list_licenses(service_instance=None):
     return ret_dict
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def add_license(key, description, safety_checks=True,
+                service_instance=None):
+    '''
+    Adds a license to the vCenter or ESXi host
+
+    key
+        License key.
+
+    description
+        License description added in as a label.
+
+    safety_checks
+        Specify whether to perform safety check or to skip the checks and try
+        performing the required task
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.add_license key=<license_key> desc='License desc'
+    '''
+    log.trace('Adding license \'{0}\''.format(key))
+    salt.utils.vmware.add_license(service_instance, key, description)
+    return True
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
