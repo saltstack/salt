@@ -1084,6 +1084,35 @@ def create_dvs(dc_ref, dvs_name, dvs_create_spec=None):
     wait_for_task(task, dvs_name, str(task.__class__))
 
 
+def update_dvs(dvs_ref, dvs_config_spec):
+    '''
+    Updates a distributed virtual switch with the config_spec.
+
+    dvs_ref
+        The DVS reference.
+
+    dvs_config_spec
+        The updated config spec (vim.VMwareDVSConfigSpec) to be applied to
+        the DVS.
+    '''
+    dvs_name = get_managed_object_name(dvs_ref)
+    log.trace('Updating dvs \'{0}\''.format(dvs_name))
+    try:
+        task = dvs_ref.ReconfigureDvs_Task(dvs_config_spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, dvs_name, str(task.__class__))
+
+
 def list_objects(service_instance, vim_object, properties=None):
     '''
     Returns a simple list of objects from a given service instance.
