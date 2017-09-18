@@ -9,8 +9,7 @@ from __future__ import absolute_import
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    patch, DEFAULT,
-    create_autospec,
+    patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -20,17 +19,15 @@ import salt.utils
 import salt.utils.jid
 import salt.utils.yamlencoding
 import salt.utils.zeromq
-from salt.utils.odict import OrderedDict
-from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoundError)
+from salt.exceptions import SaltSystemExit, CommandNotFoundError
 
 # Import Python libraries
 import datetime
+import os
 import yaml
 import zmq
-from collections import namedtuple
 
 # Import 3rd-party libs
-from salt.ext import six
 try:
     import timelib  # pylint: disable=import-error,unused-import
     HAS_TIMELIB = True
@@ -100,35 +97,6 @@ class UtilsTestCase(TestCase):
                          '(?:[\\s]+)?$'
         ret = salt.utils.build_whitespace_split_regex(' '.join(LOREM_IPSUM.split()[:5]))
         self.assertEqual(ret, expected_regex)
-
-    def test_arg_lookup(self):
-        def dummy_func(first, second, third, fourth='fifth'):
-            pass
-
-        expected_dict = {'args': ['first', 'second', 'third'], 'kwargs': {'fourth': 'fifth'}}
-        ret = salt.utils.arg_lookup(dummy_func)
-        self.assertEqual(expected_dict, ret)
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_format_call(self):
-        with patch('salt.utils.arg_lookup') as arg_lookup:
-            def dummy_func(first=None, second=None, third=None):
-                pass
-            arg_lookup.return_value = {'args': ['first', 'second', 'third'], 'kwargs': {}}
-            get_function_argspec = DEFAULT
-            get_function_argspec.return_value = namedtuple('ArgSpec', 'args varargs keywords defaults')(
-                args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
-
-            # Make sure we raise an error if we don't pass in the requisite number of arguments
-            self.assertRaises(SaltInvocationError, salt.utils.format_call, dummy_func, {'1': 2})
-
-            # Make sure we warn on invalid kwargs
-            ret = salt.utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3})
-            self.assertGreaterEqual(len(ret['warnings']), 1)
-
-            ret = salt.utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3},
-                                    expected_extra_kws=('first', 'second', 'third'))
-            self.assertDictEqual(ret, {'args': [], 'kwargs': {}})
 
     def test_isorted(self):
         test_list = ['foo', 'Foo', 'bar', 'Bar']
@@ -290,427 +258,6 @@ class UtilsTestCase(TestCase):
         self.assertEqual(salt.utils.sanitize_win_path_string('\\windows\\system'), '\\windows\\system')
         self.assertEqual(salt.utils.sanitize_win_path_string('\\bo:g|us\\p?at*h>'), '\\bo_g_us\\p_at_h_')
 
-    def test_check_state_result(self):
-        self.assertFalse(salt.utils.check_state_result(None), "Failed to handle None as an invalid data type.")
-        self.assertFalse(salt.utils.check_state_result([]), "Failed to handle an invalid data type.")
-        self.assertFalse(salt.utils.check_state_result({}), "Failed to handle an empty dictionary.")
-        self.assertFalse(salt.utils.check_state_result({'host1': []}), "Failed to handle an invalid host data structure.")
-        test_valid_state = {'host1': {'test_state': {'result': 'We have liftoff!'}}}
-        self.assertTrue(salt.utils.check_state_result(test_valid_state))
-        test_valid_false_states = {
-            'test1': OrderedDict([
-                ('host1',
-                 OrderedDict([
-                     ('test_state0', {'result':  True}),
-                     ('test_state', {'result': False}),
-                 ])),
-            ]),
-            'test2': OrderedDict([
-                ('host1',
-                 OrderedDict([
-                     ('test_state0', {'result':  True}),
-                     ('test_state', {'result': True}),
-                 ])),
-                ('host2',
-                 OrderedDict([
-                     ('test_state0', {'result':  True}),
-                     ('test_state', {'result': False}),
-                 ])),
-            ]),
-            'test3': ['a'],
-            'test4': OrderedDict([
-                ('asup', OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('test_state0', {'result':  True}),
-                         ('test_state', {'result': True}),
-                     ])),
-                    ('host2',
-                     OrderedDict([
-                         ('test_state0', {'result':  True}),
-                         ('test_state', {'result': False}),
-                     ]))
-                ]))
-            ]),
-            'test5': OrderedDict([
-                ('asup', OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('test_state0', {'result':  True}),
-                         ('test_state', {'result': True}),
-                     ])),
-                    ('host2', OrderedDict([]))
-                ]))
-            ])
-        }
-        for test, data in six.iteritems(test_valid_false_states):
-            self.assertFalse(
-                salt.utils.check_state_result(data),
-                msg='{0} failed'.format(test))
-        test_valid_true_states = {
-            'test1': OrderedDict([
-                ('host1',
-                 OrderedDict([
-                     ('test_state0', {'result':  True}),
-                     ('test_state', {'result': True}),
-                 ])),
-            ]),
-            'test3': OrderedDict([
-                ('host1',
-                 OrderedDict([
-                     ('test_state0', {'result':  True}),
-                     ('test_state', {'result': True}),
-                 ])),
-                ('host2',
-                 OrderedDict([
-                     ('test_state0', {'result':  True}),
-                     ('test_state', {'result': True}),
-                 ])),
-            ]),
-            'test4': OrderedDict([
-                ('asup', OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('test_state0', {'result':  True}),
-                         ('test_state', {'result': True}),
-                     ])),
-                    ('host2',
-                     OrderedDict([
-                         ('test_state0', {'result':  True}),
-                         ('test_state', {'result': True}),
-                     ]))
-                ]))
-            ]),
-            'test2': OrderedDict([
-                ('host1',
-                 OrderedDict([
-                     ('test_state0', {'result':  None}),
-                     ('test_state', {'result': True}),
-                 ])),
-                ('host2',
-                 OrderedDict([
-                     ('test_state0', {'result':  True}),
-                     ('test_state', {'result': 'abc'}),
-                 ]))
-            ])
-        }
-        for test, data in six.iteritems(test_valid_true_states):
-            self.assertTrue(
-                salt.utils.check_state_result(data),
-                msg='{0} failed'.format(test))
-        test_invalid_true_ht_states = {
-            'test_onfail_simple2': (
-                OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('test_vstate0', {'result':  False}),
-                         ('test_vstate1', {'result': True}),
-                     ])),
-                ]),
-                {
-                    'test_vstate0': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                'run',
-                                {'order': 10002}]},
-                    'test_vstate1': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                OrderedDict([
-                                    ('onfail_stop', True),
-                                    ('onfail',
-                                     [OrderedDict([('cmd', 'test_vstate0')])])
-                                ]),
-                                'run',
-                                {'order': 10004}]},
-                }
-            ),
-            'test_onfail_integ2': (
-                OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('t_|-test_ivstate0_|-echo_|-run', {
-                             'result':  False}),
-                         ('cmd_|-test_ivstate0_|-echo_|-run', {
-                             'result':  False}),
-                         ('cmd_|-test_ivstate1_|-echo_|-run', {
-                             'result': False}),
-                     ])),
-                ]),
-                {
-                    'test_ivstate0': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                'run',
-                                {'order': 10002}],
-                        't': [OrderedDict([('name', '/bin/true')]),
-                              'run',
-                              {'order': 10002}]},
-                    'test_ivstate1': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                OrderedDict([
-                                    ('onfail_stop', False),
-                                    ('onfail',
-                                     [OrderedDict([('cmd', 'test_ivstate0')])])
-                                ]),
-                                'run',
-                                {'order': 10004}]},
-                }
-            ),
-            'test_onfail_integ3': (
-                OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('t_|-test_ivstate0_|-echo_|-run', {
-                             'result':  True}),
-                         ('cmd_|-test_ivstate0_|-echo_|-run', {
-                             'result': False}),
-                         ('cmd_|-test_ivstate1_|-echo_|-run', {
-                             'result': False}),
-                     ])),
-                ]),
-                {
-                    'test_ivstate0': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                'run',
-                                {'order': 10002}],
-                        't': [OrderedDict([('name', '/bin/true')]),
-                              'run',
-                              {'order': 10002}]},
-                    'test_ivstate1': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                OrderedDict([
-                                    ('onfail_stop', False),
-                                    ('onfail',
-                                     [OrderedDict([('cmd', 'test_ivstate0')])])
-                                ]),
-                                'run',
-                                {'order': 10004}]},
-                }
-            ),
-            'test_onfail_integ4': (
-                OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('t_|-test_ivstate0_|-echo_|-run', {
-                             'result':  False}),
-                         ('cmd_|-test_ivstate0_|-echo_|-run', {
-                             'result': False}),
-                         ('cmd_|-test_ivstate1_|-echo_|-run', {
-                             'result': True}),
-                     ])),
-                ]),
-                {
-                    'test_ivstate0': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                'run',
-                                {'order': 10002}],
-                        't': [OrderedDict([('name', '/bin/true')]),
-                              'run',
-                              {'order': 10002}]},
-                    'test_ivstate1': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                OrderedDict([
-                                    ('onfail_stop', False),
-                                    ('onfail',
-                                     [OrderedDict([('cmd', 'test_ivstate0')])])
-                                ]),
-                                'run',
-                                {'order': 10004}]},
-                    'test_ivstate2': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                OrderedDict([
-                                    ('onfail_stop', True),
-                                    ('onfail',
-                                     [OrderedDict([('cmd', 'test_ivstate0')])])
-                                ]),
-                                'run',
-                                {'order': 10004}]},
-                }
-            ),
-            'test_onfail': (
-                OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('test_state0', {'result':  False}),
-                         ('test_state', {'result': True}),
-                     ])),
-                ]),
-                None
-            ),
-            'test_onfail_d': (
-                OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('test_state0', {'result':  False}),
-                         ('test_state', {'result': True}),
-                     ])),
-                ]),
-                {}
-            )
-        }
-        for test, testdata in six.iteritems(test_invalid_true_ht_states):
-            data, ht = testdata
-            for t_ in [a for a in data['host1']]:
-                tdata = data['host1'][t_]
-                if '_|-' in t_:
-                    t_ = t_.split('_|-')[1]
-                tdata['__id__'] = t_
-            self.assertFalse(
-                salt.utils.check_state_result(data, highstate=ht),
-                msg='{0} failed'.format(test))
-
-        test_valid_true_ht_states = {
-            'test_onfail_integ': (
-                OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('cmd_|-test_ivstate0_|-echo_|-run', {
-                             'result':  False}),
-                         ('cmd_|-test_ivstate1_|-echo_|-run', {
-                             'result': True}),
-                     ])),
-                ]),
-                {
-                    'test_ivstate0': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                'run',
-                                {'order': 10002}]},
-                    'test_ivstate1': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                OrderedDict([
-                                    ('onfail_stop', False),
-                                    ('onfail',
-                                     [OrderedDict([('cmd', 'test_ivstate0')])])
-                                ]),
-                                'run',
-                                {'order': 10004}]},
-                }
-            ),
-            'test_onfail_intega3': (
-                OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('t_|-test_ivstate0_|-echo_|-run', {
-                             'result':  True}),
-                         ('cmd_|-test_ivstate0_|-echo_|-run', {
-                             'result': False}),
-                         ('cmd_|-test_ivstate1_|-echo_|-run', {
-                             'result': True}),
-                     ])),
-                ]),
-                {
-                    'test_ivstate0': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                'run',
-                                {'order': 10002}],
-                        't': [OrderedDict([('name', '/bin/true')]),
-                              'run',
-                              {'order': 10002}]},
-                    'test_ivstate1': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                OrderedDict([
-                                    ('onfail_stop', False),
-                                    ('onfail',
-                                     [OrderedDict([('cmd', 'test_ivstate0')])])
-                                ]),
-                                'run',
-                                {'order': 10004}]},
-                }
-            ),
-            'test_onfail_simple': (
-                OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('test_vstate0', {'result':  False}),
-                         ('test_vstate1', {'result': True}),
-                     ])),
-                ]),
-                {
-                    'test_vstate0': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                'run',
-                                {'order': 10002}]},
-                    'test_vstate1': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                OrderedDict([
-                                    ('onfail_stop', False),
-                                    ('onfail',
-                                     [OrderedDict([('cmd', 'test_vstate0')])])
-                                ]),
-                                'run',
-                                {'order': 10004}]},
-                }
-            ),  # order is different
-            'test_onfail_simple_rev': (
-                OrderedDict([
-                    ('host1',
-                     OrderedDict([
-                         ('test_vstate0', {'result':  False}),
-                         ('test_vstate1', {'result': True}),
-                     ])),
-                ]),
-                {
-                    'test_vstate0': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                'run',
-                                {'order': 10002}]},
-                    'test_vstate1': {
-                        '__env__': 'base',
-                        '__sls__': u'a',
-                        'cmd': [OrderedDict([('name', '/bin/true')]),
-                                OrderedDict([
-                                    ('onfail',
-                                     [OrderedDict([('cmd', 'test_vstate0')])])
-                                ]),
-                                OrderedDict([('onfail_stop', False)]),
-                                'run',
-                                {'order': 10004}]},
-                }
-            )
-        }
-        for test, testdata in six.iteritems(test_valid_true_ht_states):
-            data, ht = testdata
-            for t_ in [a for a in data['host1']]:
-                tdata = data['host1'][t_]
-                if '_|-' in t_:
-                    t_ = t_.split('_|-')[1]
-                tdata['__id__'] = t_
-            self.assertTrue(
-                salt.utils.check_state_result(data, highstate=ht),
-                msg='{0} failed'.format(test))
-        test_valid_false_state = {'host1': {'test_state': {'result': False}}}
-        self.assertFalse(salt.utils.check_state_result(test_valid_false_state))
-
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @skipIf(not hasattr(zmq, 'IPC_PATH_MAX_LEN'), "ZMQ does not have max length support.")
     def test_check_ipc_length(self):
@@ -804,17 +351,6 @@ class UtilsTestCase(TestCase):
         ret = salt.utils.compare_dicts(old={'foo': 'bar'}, new={'foo': 'woz'})
         expected_ret = {'foo': {'new': 'woz', 'old': 'bar'}}
         self.assertDictEqual(ret, expected_ret)
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_argspec_report(self):
-        def _test_spec(arg1, arg2, kwarg1=None):
-            pass
-
-        sys_mock = create_autospec(_test_spec)
-        test_functions = {'test_module.test_spec': sys_mock}
-        ret = salt.utils.argspec_report(test_functions, 'test_module.test_spec')
-        self.assertDictEqual(ret, {'test_module.test_spec':
-                                       {'kwargs': True, 'args': None, 'defaults': None, 'varargs': True}})
 
     def test_decode_list(self):
         test_data = [u'unicode_str', [u'unicode_item_in_list', 'second_item_in_list'], {'dict_key': u'dict_val'}]
@@ -919,8 +455,13 @@ class UtilsTestCase(TestCase):
         now = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
         with patch('datetime.datetime'):
             datetime.datetime.now.return_value = now
-            ret = salt.utils.jid.gen_jid()
+            ret = salt.utils.jid.gen_jid({})
             self.assertEqual(ret, '20021225120000000000')
+            salt.utils.jid.LAST_JID_DATETIME = None
+            ret = salt.utils.jid.gen_jid({'unique_jid': True})
+            self.assertEqual(ret, '20021225120000000000_{0}'.format(os.getpid()))
+            ret = salt.utils.jid.gen_jid({'unique_jid': True})
+            self.assertEqual(ret, '20021225120000000001_{0}'.format(os.getpid()))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_check_or_die(self):
