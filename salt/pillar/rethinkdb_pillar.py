@@ -84,7 +84,7 @@ def ext_pillar(minion_id,
     '''
     Collect minion external pillars from a RethinkDB database
 
-Arguments:
+    Arguments:
     * `table`: The RethinkDB table containing external pillar information.
       Defaults to ``'pillar'``
     * `id_field`: Field in document containing the minion id.
