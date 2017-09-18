@@ -43,12 +43,14 @@ Module was developed against.
 from __future__ import absolute_import
 import logging
 import traceback
+import sys
 
 # Import Salt Libs
 import salt.exceptions
 from salt.utils.dictdiffer import recursive_diff
 from salt.utils.listdiffer import list_diff
-from salt.config.schemas.esxcluster import ESXClusterConfigSchema
+from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
+        LicenseSchema
 from salt.utils import dictupdate
 
 # External libraries
@@ -322,6 +324,194 @@ def vsan_datastore_configured(name, datastore_name):
                     __opts__['test'] else True,
                     'comment': '\n'.join(comments),
                     'changes': changes})
+        return ret
+    except salt.exceptions.CommandExecutionError as exc:
+        log.error('Error: {0}\n{1}'.format(exc, traceback.format_exc()))
+        if si:
+            __salt__['vsphere.disconnect'](si)
+        ret.update({
+            'result': False,
+            'comment': exc.strerror})
+        return ret
+
+
+def licenses_configured(name, licenses=None):
+    '''
+    Configures licenses on the cluster entity
+
+    Checks if each license exists on the server:
+        - if it doesn't, it creates it
+    Check if license is assigned to the cluster:
+        - if it's not assigned to the cluster:
+            - assign it to the cluster if there is space
+            - error if there's no space
+        - if it's assigned to the cluster nothing needs to be done
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': 'Default'}
+    if not licenses:
+        raise salt.exceptions.ArgumentValueError('No licenses provided')
+    cluster_name, datacenter_name = \
+            __salt__['esxcluster.get_details']()['cluster'], \
+            __salt__['esxcluster.get_details']()['datacenter']
+    display_name = '{0}/{1}'.format(datacenter_name, cluster_name)
+    log.info('Running licenses configured for \'{0}\''.format(display_name))
+    log.trace('licenses = {0}'.format(licenses))
+    entity = {'type': 'cluster',
+              'datacenter': datacenter_name,
+              'cluster': cluster_name}
+    log.trace('entity = {0}'.format(entity))
+
+    comments = []
+    changes = {}
+    old_licenses = []
+    new_licenses = []
+    has_errors = False
+    needs_changes = False
+    try:
+        # Validate licenses
+        log.debug('Validating licenses')
+        schema = LicenseSchema.serialize()
+        try:
+            jsonschema.validate({'licenses': licenses}, schema)
+        except jsonschema.exceptions.ValidationError as exc:
+            raise salt.exceptions.InvalidLicenseError(exc)
+
+        si = __salt__['vsphere.get_service_instance_via_proxy']()
+        # Retrieve licenses
+        existing_licenses = __salt__['vsphere.list_licenses'](
+            service_instance=si)
+        remaining_licenses = existing_licenses[:]
+        # Cycle through licenses
+        for license_name, license in licenses.items():
+            # Check if license already exists
+            filtered_licenses = [l for l in existing_licenses
+                                 if l['key'] == license]
+            # TODO Update license description - not of interest right now
+            if not filtered_licenses:
+                # License doesn't exist - add and assign to cluster
+                needs_changes = True
+                if __opts__['test']:
+                    # If it doesn't exist it clearly needs to be assigned as
+                    # well so we can stop the check here
+                    comments.append('State {0} will add license \'{1}\', '
+                                    'and assign it to cluster \'{2}\'.'
+                                    ''.format(name, license_name, display_name))
+                    log.info(comments[-1])
+                    continue
+                else:
+                    try:
+                        existing_license = __salt__['vsphere.add_license'](
+                            key=license, description=license_name,
+                            service_instance=si)
+                    except salt.exceptions.VMwareApiError as ex:
+                        comments.append(ex.err_msg)
+                        log.error(comments[-1])
+                        has_errors = True
+                        continue
+                    comments.append('Added license \'{0}\'.'
+                                    ''.format(license_name))
+                    log.info(comments[-1])
+            else:
+                # License exists let's check if it's assigned to the cluster
+                comments.append('License \'{0}\' already exists. '
+                                'Nothing to be done.'.format(license_name))
+                log.info(comments[-1])
+                existing_license = filtered_licenses[0]
+
+            log.debug('Checking licensed entities...'.format(license_name))
+            assigned_licenses = __salt__['vsphere.list_assigned_licenses'](
+                entity=entity,
+                entity_display_name=display_name,
+                service_instance=si)
+
+            # Checking if any of the licenses already assigned have the same
+            # name as the new license; the already assigned license would be
+            # replaced by the new license
+            #
+            # Licenses with different names but matching features would be
+            # replaced as well, but searching for those would be very complex
+            #
+            # the name check if good enough for now
+            already_assigned_license = assigned_licenses[0] if \
+                    assigned_licenses else None
+
+            if already_assigned_license and \
+               already_assigned_license['key'] == license:
+
+                # License is already assigned to entity
+                comments.append('License \'{0}\' already assigned to '
+                                'cluster \'{1}\'. Nothing to be done.'
+                                ''.format(license_name, display_name))
+                log.info(comments[-1])
+                continue
+
+            needs_changes = True
+            # License needs to be assigned to entity
+
+            if existing_license['capacity'] <= existing_license['used']:
+                # License is already fully used
+                comments.append('Cannot assign license \'{0}\' to cluster '
+                                '\'{1}\'. No free capacity available.'
+                                ''.format(license_name, display_name))
+                log.error(comments[-1])
+                has_errors = True
+                continue
+
+            # Assign license
+            if __opts__['test']:
+                comments.append('State {0} will assign license \'{1}\' '
+                                'to cluster \'{2}\'.'.format(
+                                    name, license_name, display_name))
+                log.info(comments[-1])
+            else:
+                try:
+                    __salt__['vsphere.assign_license'](
+                        license_key=license,
+                        license_name=license_name,
+                        entity=entity,
+                        entity_display_name=display_name,
+                        service_instance=si)
+                except salt.exceptions.VMwareApiError as ex:
+                    comments.append(ex.err_msg)
+                    log.error(comments[-1])
+                    has_errors = True
+                    continue
+                comments.append('Assigned license \'{0}\' to cluster \'{1}\'.'
+                                ''.format(license_name, display_name))
+                log.info(comments[-1])
+                # Note: Because the already_assigned_license was retrieved
+                # from the assignment license manager it doesn't have a used
+                # value - that's a limitation from VMware. The license would
+                # need to be retrieved again from the license manager to get
+                # the value
+
+                # Hide license keys
+                assigned_license = __salt__['vsphere.list_assigned_licenses'](
+                    entity=entity,
+                    entity_display_name=display_name,
+                    service_instance=si)[0]
+                assigned_license['key'] = '<hidden>'
+                if already_assigned_license:
+                    already_assigned_license['key'] = '<hidden>'
+                if already_assigned_license and \
+                   already_assigned_license['capacity'] == sys.maxsize:
+
+                    already_assigned_license['capacity'] = 'Unlimited'
+
+                changes[license_name] = {'new': assigned_license,
+                                         'old': already_assigned_license}
+            continue
+        __salt__['vsphere.disconnect'](si)
+
+        ret.update({'result': True if (not needs_changes) else None if \
+                                __opts__['test'] else False if has_errors else \
+                                True,
+                    'comment': '\n'.join(comments),
+                    'changes': changes if not __opts__['test'] else {}})
+
         return ret
     except salt.exceptions.CommandExecutionError as exc:
         log.error('Error: {0}\n{1}'.format(exc, traceback.format_exc()))
