@@ -4320,6 +4320,41 @@ def add_license(key, description, safety_checks=True,
     return True
 
 
+def _get_entity(service_instance, entity):
+    '''
+    Returns the entity associated with the entity dict representation
+
+    Supported entities: cluster, vcenter
+
+    Expected entity format:
+
+    .. code-block:: python
+
+        cluster:
+            {'type': 'cluster',
+             'datacenter': <datacenter_name>,
+             'cluster': <cluster_name>}
+        vcenter:
+            {'type': 'vcenter'}
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+
+    entity
+        Entity dict in the format above
+    '''
+
+    log.trace('Retrieving entity: {0}'.format(entity))
+    if entity['type'] == 'cluster':
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance,
+                                                  entity['datacenter'])
+        return salt.utils.vmware.get_cluster(dc_ref, entity['cluster'])
+    elif entity['type'] == 'vcenter':
+        return None
+    raise ArgumentValueError('Unsupported entity type \'{0}\''
+                             ''.format(entity['type']))
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
