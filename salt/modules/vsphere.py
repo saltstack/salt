@@ -4273,6 +4273,185 @@ def list_uplink_dvportgroup(dvs, service_instance=None):
     return _get_dvportgroup_dict(uplink_pg_ref)
 
 
+def _apply_dvportgroup_out_shaping(pg_name, out_shaping, out_shaping_conf):
+    '''
+    Applies the values in out_shaping_conf to an out_shaping object
+
+    pg_name
+        The name of the portgroup
+
+    out_shaping
+        The vim.DVSTrafficShapingPolicy to apply the config to
+
+    out_shaping_conf
+        The out shaping config
+    '''
+    log.trace('Building portgroup\'s \'{0}\' out shaping '
+              'policy'.format(pg_name))
+    if out_shaping_conf.get('average_bandwidth'):
+        out_shaping.averageBandwidth = vim.LongPolicy()
+        out_shaping.averageBandwidth.value = \
+                out_shaping_conf['average_bandwidth']
+    if out_shaping_conf.get('burst_size'):
+        out_shaping.burstSize = vim.LongPolicy()
+        out_shaping.burstSize.value = out_shaping_conf['burst_size']
+    if 'enabled' in out_shaping_conf:
+        out_shaping.enabled = vim.BoolPolicy()
+        out_shaping.enabled.value = out_shaping_conf['enabled']
+    if out_shaping_conf.get('peak_bandwidth'):
+        out_shaping.peakBandwidth = vim.LongPolicy()
+        out_shaping.peakBandwidth.value = out_shaping_conf['peak_bandwidth']
+
+
+def _apply_dvportgroup_security_policy(pg_name, sec_policy, sec_policy_conf):
+    '''
+    Applies the values in sec_policy_conf to a security policy object
+
+    pg_name
+        The name of the portgroup
+
+    sec_policy
+        The vim.DVSTrafficShapingPolicy to apply the config to
+
+    sec_policy_conf
+        The out shaping config
+    '''
+    log.trace('Building portgroup\'s \'{0}\' security policy '.format(pg_name))
+    if 'allow_promiscuous' in sec_policy_conf:
+        sec_policy.allowPromiscuous = vim.BoolPolicy()
+        sec_policy.allowPromiscuous.value = \
+                sec_policy_conf['allow_promiscuous']
+    if 'forged_transmits' in sec_policy_conf:
+        sec_policy.forgedTransmits = vim.BoolPolicy()
+        sec_policy.forgedTransmits.value = sec_policy_conf['forged_transmits']
+    if 'mac_changes' in sec_policy_conf:
+        sec_policy.macChanges = vim.BoolPolicy()
+        sec_policy.macChanges.value = sec_policy_conf['mac_changes']
+
+
+def _apply_dvportgroup_teaming(pg_name, teaming, teaming_conf):
+    '''
+    Applies the values in teaming_conf to a teaming policy object
+
+    pg_name
+        The name of the portgroup
+
+    teaming
+        The vim.VmwareUplinkPortTeamingPolicy to apply the config to
+
+    teaming_conf
+        The teaming config
+    '''
+    log.trace('Building portgroup\'s \'{0}\' teaming'.format(pg_name))
+    if 'notify_switches' in teaming_conf:
+        teaming.notifySwitches = vim.BoolPolicy()
+        teaming.notifySwitches.value = teaming_conf['notify_switches']
+    if 'policy' in teaming_conf:
+        teaming.policy = vim.StringPolicy()
+        teaming.policy.value = teaming_conf['policy']
+    if 'reverse_policy' in teaming_conf:
+        teaming.reversePolicy = vim.BoolPolicy()
+        teaming.reversePolicy.value = teaming_conf['reverse_policy']
+    if 'rolling_order' in teaming_conf:
+        teaming.rollingOrder = vim.BoolPolicy()
+        teaming.rollingOrder.value = teaming_conf['rolling_order']
+    if 'failure_criteria' in teaming_conf:
+        if not teaming.failureCriteria:
+            teaming.failureCriteria = vim.DVSFailureCriteria()
+        failure_criteria_conf = teaming_conf['failure_criteria']
+        if 'check_beacon' in failure_criteria_conf:
+            teaming.failureCriteria.checkBeacon = vim.BoolPolicy()
+            teaming.failureCriteria.checkBeacon.value = \
+                    failure_criteria_conf['check_beacon']
+        if 'check_duplex' in failure_criteria_conf:
+            teaming.failureCriteria.checkDuplex = vim.BoolPolicy()
+            teaming.failureCriteria.checkDuplex.value = \
+                    failure_criteria_conf['check_duplex']
+        if 'check_error_percent' in failure_criteria_conf:
+            teaming.failureCriteria.checkErrorPercent = vim.BoolPolicy()
+            teaming.failureCriteria.checkErrorPercent.value = \
+                    failure_criteria_conf['check_error_percent']
+        if 'check_speed' in failure_criteria_conf:
+            teaming.failureCriteria.checkSpeed = vim.StringPolicy()
+            teaming.failureCriteria.checkSpeed.value = \
+                    failure_criteria_conf['check_speed']
+        if 'full_duplex' in failure_criteria_conf:
+            teaming.failureCriteria.fullDuplex = vim.BoolPolicy()
+            teaming.failureCriteria.fullDuplex.value = \
+                    failure_criteria_conf['full_duplex']
+        if 'percentage' in failure_criteria_conf:
+            teaming.failureCriteria.percentage = vim.IntPolicy()
+            teaming.failureCriteria.percentage.value = \
+                    failure_criteria_conf['percentage']
+        if 'speed' in failure_criteria_conf:
+            teaming.failureCriteria.speed = vim.IntPolicy()
+            teaming.failureCriteria.speed.value = \
+                    failure_criteria_conf['speed']
+    if 'port_order' in teaming_conf:
+        if not teaming.uplinkPortOrder:
+            teaming.uplinkPortOrder = vim.VMwareUplinkPortOrderPolicy()
+        if 'active' in teaming_conf['port_order']:
+            teaming.uplinkPortOrder.activeUplinkPort = \
+                    teaming_conf['port_order']['active']
+        if 'standby' in teaming_conf['port_order']:
+            teaming.uplinkPortOrder.standbyUplinkPort  = \
+                    teaming_conf['port_order']['standby']
+
+
+def _apply_dvportgroup_config(pg_name, pg_spec, pg_conf):
+    '''
+    Applies the values in conf to a distributed portgroup spec
+
+    pg_name
+        The name of the portgroup
+
+    pg_spec
+        The vim.DVPortgroupConfigSpec to apply the config to
+
+    pg_conf
+        The portgroup config
+    '''
+    log.trace('Building portgroup\'s \'{0}\' spec'.format(pg_name))
+    if 'name' in pg_conf:
+        pg_spec.name = pg_conf['name']
+    if 'description' in pg_conf:
+        pg_spec.description = pg_conf['description']
+    if 'num_ports' in pg_conf:
+        pg_spec.numPorts = pg_conf['num_ports']
+    if 'type' in pg_conf:
+        pg_spec.type = pg_conf['type']
+
+    if not pg_spec.defaultPortConfig:
+        for prop in ['vlan_id', 'out_shaping', 'security_policy', 'teaming']:
+            if prop in pg_conf:
+                pg_spec.defaultPortConfig = vim.VMwareDVSPortSetting()
+    if 'vlan_id' in pg_conf:
+        pg_spec.defaultPortConfig.vlan = \
+                vim.VmwareDistributedVirtualSwitchVlanIdSpec()
+        pg_spec.defaultPortConfig.vlan.vlanId = pg_conf['vlan_id']
+    if 'out_shaping' in pg_conf:
+        if not pg_spec.defaultPortConfig.outShapingPolicy:
+            pg_spec.defaultPortConfig.outShapingPolicy = \
+                    vim.DVSTrafficShapingPolicy()
+        _apply_dvportgroup_out_shaping(
+            pg_name, pg_spec.defaultPortConfig.outShapingPolicy,
+            pg_conf['out_shaping'])
+    if 'security_policy' in pg_conf:
+        if not pg_spec.defaultPortConfig.securityPolicy:
+            pg_spec.defaultPortConfig.securityPolicy = \
+                    vim.DVSSecurityPolicy()
+        _apply_dvportgroup_security_policy(
+            pg_name, pg_spec.defaultPortConfig.securityPolicy,
+            pg_conf['security_policy'])
+    if 'teaming' in pg_conf:
+        if not pg_spec.defaultPortConfig.uplinkTeamingPolicy:
+            pg_spec.defaultPortConfig.uplinkTeamingPolicy = \
+                    vim.VmwareUplinkPortTeamingPolicy()
+        _apply_dvportgroup_teaming(
+            pg_name, pg_spec.defaultPortConfig.uplinkTeamingPolicy,
+            pg_conf['teaming'])
+
+
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
