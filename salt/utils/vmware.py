@@ -1224,6 +1224,37 @@ def get_uplink_dvportgroup(dvs_ref):
     return items[0]
 
 
+def create_dvportgroup(dvs_ref, spec):
+    '''
+    Creates a distributed virtual portgroup on a distributed virtual switch
+    (dvs)
+
+    dvs_ref
+        The dvs reference
+
+    spec
+        Portgroup spec (vim.DVPortgroupConfigSpec)
+    '''
+    dvs_name = get_managed_object_name(dvs_ref)
+    log.trace('Adding portgroup {0} to dvs '
+              '\'{1}\''.format(spec.name, dvs_name))
+    log.trace('spec = {}'.format(spec))
+    try:
+        task = dvs_ref.CreateDVPortgroup_Task(spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, dvs_name, str(task.__class__))
+
+
 def list_objects(service_instance, vim_object, properties=None):
     '''
     Returns a simple list of objects from a given service instance.
