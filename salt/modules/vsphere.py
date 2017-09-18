@@ -4355,6 +4355,29 @@ def _get_entity(service_instance, entity):
                              ''.format(entity['type']))
 
 
+def _validate_entity(entity):
+    '''
+    Validates the entity dict representation
+
+    entity
+        Dictionary representation of an entity.
+        See ``_get_entity`` docstrings for format.
+    '''
+
+    #Validate entity:
+    if entity['type'] == 'cluster':
+        schema = ESXClusterEntitySchema.serialize()
+    elif entity['type'] == 'vcenter':
+        schema = VCenterEntitySchema.serialize()
+    else:
+        raise ArgumentValueError('Unsupported entity type \'{0}\''
+                                 ''.format(entity['type']))
+    try:
+        jsonschema.validate(entity, schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise excs.InvalidEntityError(exc)
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
