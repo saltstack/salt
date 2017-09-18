@@ -389,3 +389,225 @@ def dvs_configured(name, dvs):
             ret.update({'changes': changes,
                         'result': True})
     return ret
+
+
+def _get_diff_dict(dict1, dict2):
+    '''
+    Returns a dictionary with the diffs between two dictionaries
+
+    It will ignore any key that doesn't exist in dict2
+    '''
+    ret_dict = {}
+    for p in dict2.keys():
+        if p not in dict1:
+            ret_dict.update({p: {'val1': None, 'val2': dict2[p]}})
+        elif dict1[p] != dict2[p]:
+            if isinstance(dict1[p], dict) and isinstance(dict2[p], dict):
+                sub_diff_dict = _get_diff_dict(dict1[p], dict2[p])
+                if sub_diff_dict:
+                    ret_dict.update({p: sub_diff_dict})
+            else:
+                ret_dict.update({p: {'val1': dict1[p], 'val2': dict2[p]}})
+    return ret_dict
+
+
+def _get_val2_dict_from_diff_dict(diff_dict):
+    '''
+    Returns a dictionaries with the values stored in val2 of a diff dict.
+    '''
+    ret_dict = {}
+    for p in diff_dict.keys():
+        if not isinstance(diff_dict[p], dict):
+            raise ValueError('Unexpected diff difct \'{0}\''.format(diff_dict))
+        if 'val2' in diff_dict[p].keys():
+            ret_dict.update({p: diff_dict[p]['val2']})
+        else:
+            ret_dict.update(
+                {p: _get_val2_dict_from_diff_dict(diff_dict[p])})
+    return ret_dict
+
+
+def _get_val1_dict_from_diff_dict(diff_dict):
+    '''
+    Returns a dictionaries with the values stored in val1 of a diff dict.
+    '''
+    ret_dict = {}
+    for p in diff_dict.keys():
+        if not isinstance(diff_dict[p], dict):
+            raise ValueError('Unexpected diff difct \'{0}\''.format(diff_dict))
+        if 'val1' in diff_dict[p].keys():
+            ret_dict.update({p: diff_dict[p]['val1']})
+        else:
+            ret_dict.update(
+                {p: _get_val1_dict_from_diff_dict(diff_dict[p])})
+    return ret_dict
+
+
+def _get_changes_from_diff_dict(diff_dict):
+    '''
+    Returns a list of string message of the differences in a diff dict.
+
+    Each inner message is tabulated one tab deeper
+    '''
+    changes_strings = []
+    for p in diff_dict.keys():
+        if not isinstance(diff_dict[p], dict):
+            raise ValueError('Unexpected diff difct \'{0}\''.format(diff_dict))
+        if sorted(diff_dict[p].keys()) == ['val1', 'val2']:
+            # Some string formatting
+            from_str = diff_dict[p]['val1']
+            if isinstance(diff_dict[p]['val1'], str):
+                from_str = '\'{0}\''.format(diff_dict[p]['val1'])
+            elif isinstance(diff_dict[p]['val1'], list):
+                from_str = '\'{0}\''.format(', '.join(diff_dict[p]['val1']))
+            to_str = diff_dict[p]['val2']
+            if isinstance(diff_dict[p]['val2'], str):
+                to_str = '\'{0}\''.format(diff_dict[p]['val2'])
+            elif isinstance(diff_dict[p]['val2'], list):
+                to_str = '\'{0}\''.format(', '.join(diff_dict[p]['val2']))
+            changes_strings.append('{0} from {1} to {2}'.format(
+                p, from_str, to_str))
+        else:
+            sub_changes = _get_changes_from_diff_dict(diff_dict[p])
+            if sub_changes:
+                changes_strings.append('{0}:'.format(p))
+                changes_strings.extend(['\t{0}'.format(c)
+                                       for c in sub_changes])
+    return changes_strings
+
+
+def portgroups_configured(name, dvs, portgroups):
+    '''
+    Configures portgroups on a DVS.
+
+    Creates/updates/removes portgroups in a provided DVS
+
+    dvs
+        Name of the DVS
+
+    portgroups
+        Portgroup dict representations (see module sysdocs)
+    '''
+    datacenter = _get_datacenter_name()
+    log.info('Running state {0} on DVS \'{1}\', datacenter '
+             '\'{2}\''.format(name, dvs, datacenter))
+    changes_required = False
+    ret = {'name': name, 'changes': {}, 'result': None, 'comment': None,
+           'pchanges': {}}
+    comments = []
+    changes = {}
+    changes_required = False
+
+    try:
+        #TODO portroups validation
+        si = __salt__['vsphere.get_service_instance_via_proxy']()
+        current_pgs = __salt__['vsphere.list_dvportgroups'](
+            dvs=dvs, service_instance=si)
+        expected_pg_names = []
+        for pg in portgroups:
+            pg_name = pg['name']
+            expected_pg_names.append(pg_name)
+            del pg['name']
+            log.info('Checking pg \'{0}\''.format(pg_name))
+            filtered_current_pgs = \
+                    [p for p in current_pgs if p.get('name') == pg_name]
+            if not filtered_current_pgs:
+                changes_required = True
+                if __opts__['test']:
+                    comments.append('State {0} will create a new portgroup '
+                                    '\'{1}\' in DVS \'{2}\', datacenter '
+                                    '\'{3}\''.format(name, pg_name, dvs,
+                                                     datacenter))
+                else:
+                    __salt__['vsphere.create_dvportgroup'](
+                        portgroup_dict=pg, portgroup_name=pg_name, dvs=dvs,
+                        service_instance=si)
+                    comments.append('Created a new portgroup \'{0}\' in DVS '
+                                    '\'{1}\', datacenter \'{2}\''
+                                    ''.format(pg_name, dvs, datacenter))
+                log.info(comments[-1])
+                changes.update({pg_name: {'new': pg}})
+            else:
+                # Porgroup already exists. Checking the config
+                log.trace('Portgroup \'{0}\' found in DVS \'{1}\', datacenter '
+                          '\'{2}\'. Checking for any updates.'
+                          ''.format(pg_name, dvs, datacenter))
+                current_pg = filtered_current_pgs[0]
+                diff_dict = _get_diff_dict(current_pg, pg)
+
+                if diff_dict:
+                    changes_required=True
+                    if __opts__['test']:
+                        changes_strings = \
+                                _get_changes_from_diff_dict(diff_dict)
+                        log.trace('changes_strings = '
+                                  '{0}'.format(changes_strings))
+                        comments.append(
+                            'State {0} will update portgroup \'{1}\' in '
+                            'DVS \'{2}\', datacenter \'{3}\':\n{4}'
+                            ''.format(name, pg_name,  dvs, datacenter,
+                                      '\n'.join(['\t{0}'.format(c) for c in
+                                                 changes_strings])))
+                    else:
+                        __salt__['vsphere.update_dvportgroup'](
+                            portgroup_dict=pg, portgroup=pg_name, dvs=dvs,
+                            service_instance=si)
+                        comments.append('Updated portgroup \'{0}\' in DVS '
+                                        '\'{1}\', datacenter \'{2}\''
+                                        ''.format(pg_name, dvs, datacenter))
+                    log.info(comments[-1])
+                    changes.update(
+                        {pg_name: {'new':
+                                   _get_val2_dict_from_diff_dict(diff_dict),
+                                   'old':
+                                   _get_val1_dict_from_diff_dict(diff_dict)}})
+        # Add the uplink portgroup to the expected pg names
+        uplink_pg = __salt__['vsphere.list_uplink_dvportgroup'](
+            dvs=dvs, service_instance=si)
+        expected_pg_names.append(uplink_pg['name'])
+        # Remove any extra portgroups
+        for current_pg in current_pgs:
+            if current_pg['name'] not in expected_pg_names:
+                changes_required=True
+                if __opts__['test']:
+                    comments.append('State {0} will remove '
+                                    'the portgroup \'{1}\' from DVS \'{2}\', '
+                                    'datacenter \'{3}\''
+                                    ''.format(name, current_pg['name'], dvs,
+                                              datacenter))
+                else:
+                    __salt__['vsphere.remove_dvportgroup'](
+                        portgroup=current_pg['name'], dvs=dvs,
+                        service_instance=si)
+                    comments.append('Removed the portgroup \'{0}\' from DVS '
+                                    '\'{1}\', datacenter \'{2}\''
+                                    ''.format(current_pg['name'], dvs,
+                                              datacenter))
+                log.info(comments[-1])
+                changes.update({current_pg['name']:
+                                {'old': current_pg}})
+        __salt__['vsphere.disconnect'](si)
+    except salt.exceptions.CommandExecutionError as exc:
+        log.error('Error: {0}\n{1}'.format(exc, traceback.format_exc()))
+        if si:
+            __salt__['vsphere.disconnect'](si)
+        if not __opts__['test']:
+            ret['result'] = False
+        ret.update({'comment': exc.strerror,
+                    'result': False if not __opts__['test'] else None})
+        return ret
+    if not changes_required:
+        # We have no changes
+        ret.update({'comment': ('All portgroups in DVS \'{0}\', datacenter '
+                                '\'{1}\' exist and are correctly configured. '
+                                'Nothing to be done.'.format(dvs, datacenter)),
+                    'result': True})
+    else:
+        ret.update({'comment': '\n'.join(comments)})
+        if __opts__['test']:
+            ret.update({'pchanges': changes,
+                        'result': None})
+        else:
+            ret.update({'changes': changes,
+                        'result': True})
+    return ret
