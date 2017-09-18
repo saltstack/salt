@@ -2,6 +2,8 @@
 '''
 Provide external pillar data from RethinkDB
 
+.. versionadded:: Oxygen
+
 :depends: rethinkdb (on the salt-master)
 
 
