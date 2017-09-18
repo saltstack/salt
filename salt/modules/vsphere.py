@@ -3793,6 +3793,135 @@ def list_dvss(datacenter=None, dvs_names=None, service_instance=None):
     return ret_dict
 
 
+def _apply_dvs_config(config_spec, config_dict):
+    '''
+    Applies the values of the config dict dictionary to a config spec
+    (vim.VMwareDVSConfigSpec)
+    '''
+    if config_dict.get('name'):
+        config_spec.name = config_dict['name']
+    if config_dict.get('contact_email') or config_dict.get('contact_name'):
+        if not config_spec.contact:
+            config_spec.contact = vim.DVSContactInfo()
+        config_spec.contact.contact = config_dict.get('contact_email')
+        config_spec.contact.name = config_dict.get('contact_name')
+    if config_dict.get('description'):
+        config_spec.description = config_dict.get('description')
+    if config_dict.get('max_mtu'):
+        config_spec.maxMtu = config_dict.get('max_mtu')
+    if config_dict.get('lacp_api_version'):
+        config_spec.lacpApiVersion = config_dict.get('lacp_api_version')
+    if config_dict.get('network_resource_control_version'):
+        config_spec.networkResourceControlVersion = \
+                config_dict.get('network_resource_control_version')
+    if config_dict.get('uplink_names'):
+        if not config_spec.uplinkPortPolicy or \
+           not isinstance(config_spec.uplinkPortPolicy,
+                          vim.DVSNameArrayUplinkPortPolicy):
+
+            config_spec.uplinkPortPolicy = \
+                    vim.DVSNameArrayUplinkPortPolicy()
+        config_spec.uplinkPortPolicy.uplinkPortName = \
+                config_dict['uplink_names']
+
+
+def _apply_dvs_link_discovery_protocol(disc_prot_config, disc_prot_dict):
+    '''
+    Applies the values of the disc_prot_dict dictionary to a link discovery
+    protocol config object (vim.LinkDiscoveryProtocolConfig)
+    '''
+    disc_prot_config.operation = disc_prot_dict['operation']
+    disc_prot_config.protocol = disc_prot_dict['protocol']
+
+
+def _apply_dvs_product_info(product_info_spec, product_info_dict):
+    '''
+    Applies the values of the product_info_dict dictionary to a product info
+    spec (vim.DistributedVirtualSwitchProductSpec)
+    '''
+    if product_info_dict.get('name'):
+        product_info_spec.name = product_info_dict['name']
+    if product_info_dict.get('vendor'):
+        product_info_spec.vendor = product_info_dict['vendor']
+    if product_info_dict.get('version'):
+        product_info_spec.version = product_info_dict['version']
+
+
+def _apply_dvs_capability(capability_spec, capability_dict):
+    '''
+    Applies the values of the capability_dict dictionary to a DVS capability
+    object (vim.vim.DVSCapability)
+    '''
+    if 'operation_supported' in capability_dict:
+        capability_spec.dvsOperationSupported = \
+                capability_dict['operation_supported']
+    if 'port_operation_supported' in capability_dict:
+        capability_spec.dvPortOperationSupported = \
+                capability_dict['port_operation_supported']
+    if 'portgroup_operation_supported' in capability_dict:
+        capability_spec.dvPortGroupOperationSupported = \
+                capability_dict['portgroup_operation_supported']
+
+
+def _apply_dvs_infrastructure_traffic_resources(infra_traffic_resources,
+                                                resource_dicts):
+    '''
+    Applies the values of the resource dictionaries to infra traffic resources,
+    creating the infra traffic resource if required
+    (vim.DistributedVirtualSwitchProductSpec)
+    '''
+    for res_dict in resource_dicts:
+        ress = [r for r in infra_traffic_resources if r.key == res_dict['key']]
+        if ress:
+            res = ress[0]
+        else:
+            res = vim.DvsHostInfrastructureTrafficResource()
+            res.key = res_dict['key']
+            res.allocationInfo = \
+                    vim.DvsHostInfrastructureTrafficResourceAllocation()
+            infra_traffic_resources.append(res)
+        if res_dict.get('limit'):
+            res.allocationInfo.limit = res_dict['limit']
+        if res_dict.get('reservation'):
+            res.allocationInfo.reservation = res_dict['reservation']
+        if res_dict.get('num_shares') or res_dict.get('share_level'):
+            if not res.allocationInfo.shares:
+                res.allocationInfo.shares = vim.SharesInfo()
+        if res_dict.get('share_level'):
+            res.allocationInfo.shares.level = \
+                    vim.SharesLevel(res_dict['share_level'])
+        if res_dict.get('num_shares'):
+            #XXX Even though we always set the number of shares if provided,
+            #the vCenter will ignore it unless the share level is 'custom'.
+            res.allocationInfo.shares.shares=res_dict['num_shares']
+
+
+def _apply_dvs_network_resource_pools(network_resource_pools, resource_dicts):
+    '''
+    Applies the values of the resource dictionaries to network resource pools,
+    creating the resource pools if required
+    (vim.DVSNetworkResourcePoolConfigSpec)
+    '''
+    for res_dict in resource_dicts:
+        ress = [r for r in network_resource_pools if r.key == res_dict['key']]
+        if ress:
+            res = ress[0]
+        else:
+            res = vim.DVSNetworkResourcePoolConfigSpec()
+            res.key = res_dict['key']
+            res.allocationInfo = \
+                    vim.DVSNetworkResourcePoolAllocationInfo()
+            network_resource_pools.append(res)
+        if res_dict.get('limit'):
+            res.allocationInfo.limit = res_dict['limit']
+        if res_dict.get('num_shares') and res_dict.get('share_level'):
+            if not res.allocationInfo.shares:
+                res.allocationInfo.shares = vim.SharesInfo()
+            res.allocationInfo.shares.shares=res_dict['num_shares']
+            res.allocationInfo.shares.level = \
+                    vim.SharesLevel(res_dict['share_level'])
+
+
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
