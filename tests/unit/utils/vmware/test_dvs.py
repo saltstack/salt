@@ -504,3 +504,72 @@ class GetDvportgroupsTestCase(TestCase):
                               dvs_names=['fake_pg1', 'fake_pg3', 'no_pg'])
         self.assertEqual(ret, [self.mock_items[0]['object'],
                                self.mock_items[2]['object']])
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class GetUplinkDvportgroupTestCase(TestCase):
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.mock_dvs_ref = MagicMock(spec=vim.DistributedVirtualSwitch)
+        self.mock_traversal_spec = MagicMock()
+        self.mock_items = [{'object': MagicMock(),
+                            'tag': [MagicMock(key='fake_tag')]},
+                           {'object': MagicMock(),
+                            'tag': [MagicMock(key='SYSTEM/DVS.UPLINKPG')]}]
+        self.mock_get_mors = MagicMock(return_value=self.mock_items)
+
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name',
+             MagicMock(return_value='fake_dvs')),
+            ('salt.utils.vmware.get_mors_with_properties',
+             self.mock_get_mors),
+            ('salt.utils.vmware.get_service_instance_from_managed_object',
+             MagicMock(return_value=self.mock_si)),
+            ('salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec',
+             MagicMock(return_value=self.mock_traversal_spec)))
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_si', 'mock_dvs_ref', 'mock_traversal_spec',
+                     'mock_items', 'mock_get_mors'):
+            delattr(self, attr)
+
+    def test_get_managed_object_name_call(self):
+        mock_get_managed_object_name = MagicMock()
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   mock_get_managed_object_name):
+            vmware.get_uplink_dvportgroup(self.mock_dvs_ref)
+        mock_get_managed_object_name.assert_called_once_with(self.mock_dvs_ref)
+
+    def test_traversal_spec(self):
+        mock_traversal_spec = MagicMock(return_value='traversal_spec')
+        with patch(
+            'salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec',
+            mock_traversal_spec):
+
+            vmware.get_uplink_dvportgroup(self.mock_dvs_ref)
+        mock_traversal_spec.assert_called_once_with(
+            path='portgroup', skip=False, type=vim.DistributedVirtualSwitch)
+
+    def test_get_mors_with_properties(self):
+        vmware.get_uplink_dvportgroup(self.mock_dvs_ref)
+        self.mock_get_mors.assert_called_once_with(
+            self.mock_si, vim.DistributedVirtualPortgroup,
+            container_ref=self.mock_dvs_ref, property_list=['tag'],
+            traversal_spec=self.mock_traversal_spec)
+
+    def test_get_no_uplink_pg(self):
+        with patch('salt.utils.vmware.get_mors_with_properties',
+                   MagicMock(return_value=[])):
+            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                vmware.get_uplink_dvportgroup(self.mock_dvs_ref)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Uplink portgroup of DVS \'fake_dvs\' wasn\'t found')
+
+    def test_get_uplink_pg(self):
+        ret = vmware.get_uplink_dvportgroup(self.mock_dvs_ref)
+        self.assertEqual(ret, self.mock_items[1]['object'])
