@@ -275,7 +275,7 @@ def index_template_present(name, definition, check_definition=False):
             if check_definition:
                 definition_parsed = json.loads(definition)
                 current_template = __salt__['elasticsearch.index_template_get'](name=name)[name]
-                diff = __utils__['dictdiffer.deep_diff'](current_template,definition_parsed)
+                diff = __utils__['dictdiffer.deep_diff'](current_template, definition_parsed)
                 if len(diff) != 0:
                     if __opts__['test']:
                         ret['comment'] = 'Index template {0} exist but need to be updated'.format(name)
