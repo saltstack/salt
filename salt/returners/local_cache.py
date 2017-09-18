@@ -90,7 +90,7 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
         log.error(err)
         raise salt.exceptions.SaltCacheError(err)
     if passed_jid is None:  # this can be a None or an empty string.
-        jid = salt.utils.jid.gen_jid()
+        jid = salt.utils.jid.gen_jid(__opts__)
     else:
         jid = passed_jid
 
@@ -225,10 +225,11 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
         if minions is None:
             ckminions = salt.utils.minions.CkMinions(__opts__)
             # Retrieve the minions list
-            minions = ckminions.check_minions(
+            _res = ckminions.check_minions(
                     clear_load['tgt'],
                     clear_load.get('tgt_type', 'glob')
                     )
+            minions = _res['minions']
         # save the minions to a cache so we can see in the UI
         save_minions(jid, minions)
 
@@ -397,7 +398,6 @@ def clean_old_jobs():
     Clean out the old jobs from the job cache
     '''
     if __opts__['keep_jobs'] != 0:
-        cur = time.time()
         jid_root = _job_dir()
 
         if not os.path.exists(jid_root):
@@ -427,7 +427,7 @@ def clean_old_jobs():
                     shutil.rmtree(t_path)
                 elif os.path.isfile(jid_file):
                     jid_ctime = os.stat(jid_file).st_ctime
-                    hours_difference = (cur - jid_ctime) / 3600.0
+                    hours_difference = (time.time()- jid_ctime) / 3600.0
                     if hours_difference > __opts__['keep_jobs'] and os.path.exists(t_path):
                         # Remove the entire t_path from the original JID dir
                         shutil.rmtree(t_path)
@@ -441,7 +441,7 @@ def clean_old_jobs():
                 # Checking the time again prevents a possible race condition where
                 # t_path JID dirs were created, but not yet populated by a jid file.
                 t_path_ctime = os.stat(t_path).st_ctime
-                hours_difference = (cur - t_path_ctime) / 3600.0
+                hours_difference = (time.time() - t_path_ctime) / 3600.0
                 if hours_difference > __opts__['keep_jobs']:
                     shutil.rmtree(t_path)
 

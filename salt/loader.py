@@ -270,7 +270,7 @@ def raw_mod(opts, name, functions, mod=u'modules'):
         testmod['test.ping']()
     '''
     loader = LazyLoader(
-        _module_dirs(opts, mod, u'rawmodule'),
+        _module_dirs(opts, mod, u'module'),
         opts,
         tag=u'rawmodule',
         virtual_enable=False,
@@ -412,6 +412,19 @@ def serializers(opts):
         _module_dirs(opts, u'serializers'),
         opts,
         tag=u'serializers',
+    )
+
+
+def eauth_tokens(opts):
+    '''
+    Returns the tokens modules
+    :param dict opts: The Salt options dictionary
+    :returns: LazyLoader instance, with only token backends present in the keyspace
+    '''
+    return LazyLoader(
+        _module_dirs(opts, 'tokens'),
+        opts,
+        tag='tokens',
     )
 
 

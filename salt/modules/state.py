@@ -98,8 +98,7 @@ def _set_retcode(ret, highstate=None):
     if isinstance(ret, list):
         __context__['retcode'] = 1
         return
-    if not salt.utils.check_state_result(ret, highstate=highstate):
-
+    if not __utils__['state.check_result'](ret, highstate=highstate):
         __context__['retcode'] = 2
 
 
@@ -121,7 +120,7 @@ def _wait(jid):
     Wait for all previously started state jobs to finish running
     '''
     if jid is None:
-        jid = salt.utils.jid.gen_jid()
+        jid = salt.utils.jid.gen_jid(__opts__)
     states = _prior_running_states(jid)
     while states:
         time.sleep(1)
@@ -273,12 +272,12 @@ def _get_opts(**kwargs):
         else:
             opts['environment'] = kwargs['saltenv']
 
-    if 'pillarenv' in kwargs:
-        pillarenv = kwargs['pillarenv']
+    if 'pillarenv' in kwargs or opts.get('pillarenv_from_saltenv', False):
+        pillarenv = kwargs.get('pillarenv') or kwargs.get('saltenv')
         if pillarenv is not None and not isinstance(pillarenv, six.string_types):
-            opts['pillarenv'] = str(kwargs['pillarenv'])
+            opts['pillarenv'] = str(pillarenv)
         else:
-            opts['pillarenv'] = kwargs['pillarenv']
+            opts['pillarenv'] = pillarenv
 
     return opts
 
@@ -316,7 +315,7 @@ def low(data, queue=False, **kwargs):
     ret = st_.call(data)
     if isinstance(ret, list):
         __context__['retcode'] = 1
-    if salt.utils.check_state_result(ret):
+    if __utils__['state.check_result'](ret):
         __context__['retcode'] = 2
     return ret
 
@@ -397,12 +396,7 @@ def template(tem, queue=False, **kwargs):
         salt '*' state.template '<Path to template on the minion>'
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     conflict = _check_queue(queue, kwargs)
@@ -839,12 +833,7 @@ def highstate(test=None, queue=False, **kwargs):
     opts['test'] = _get_test_value(test, **kwargs)
 
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     if 'saltenv' in kwargs:
@@ -1006,12 +995,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     '''
     concurrent = kwargs.get('concurrent', False)
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     # Modification to __opts__ lost after this if-else
@@ -1463,6 +1447,17 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
     saltenv
         Specify a salt fileserver environment to be used when applying states
 
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. code-block:: bash
+
+            salt '*' state.show_low_sls test pillar='{"foo": "bar"}'
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
+
     pillarenv
         Specify a Pillar environment to be used when applying states. This
         can also be set in the minion config file using the
@@ -1478,12 +1473,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
         salt '*' state.show_low_sls foo saltenv=dev
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     conflict = _check_queue(queue, kwargs)
@@ -1497,12 +1487,26 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
     # the 'base' saltenv if none is configured and none was passed.
     if opts['environment'] is None:
         opts['environment'] = 'base'
+
+    pillar_override = kwargs.get('pillar')
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
+        )
+
     try:
         st_ = salt.state.HighState(opts,
+                                   pillar_override,
                                    proxy=__proxy__,
                                    initial_pillar=_get_initial_pillar(opts))
     except NameError:
-        st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1555,12 +1559,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
         salt '*' state.show_sls core,edit.vim dev
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     conflict = _check_queue(queue, kwargs)
@@ -1631,12 +1630,7 @@ def show_top(queue=False, **kwargs):
         salt '*' state.show_top
     '''
     if 'env' in kwargs:
-        salt.utils.versions.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     conflict = _check_queue(queue, kwargs)

@@ -189,15 +189,14 @@ class LocalClient(object):
             key_user = key_user.replace(u'\\', u'_')
         keyfile = os.path.join(self.opts[u'cachedir'],
                                u'.{0}_key'.format(key_user))
-        # Make sure all key parent directories are accessible
-        salt.utils.verify.check_path_traversal(self.opts[u'cachedir'],
-                                               key_user,
-                                               self.skip_perm_errors)
-
         try:
+            # Make sure all key parent directories are accessible
+            salt.utils.verify.check_path_traversal(self.opts[u'cachedir'],
+                                                   key_user,
+                                                   self.skip_perm_errors)
             with salt.utils.files.fopen(keyfile, u'r') as key:
                 return key.read()
-        except (OSError, IOError):
+        except (OSError, IOError, SaltClientError):
             # Fall back to eauth
             return u''
 
@@ -348,7 +347,8 @@ class LocalClient(object):
         return self._check_pub_data(pub_data)
 
     def gather_minions(self, tgt, expr_form):
-        return salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
+        _res = salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
+        return _res['minions']
 
     @tornado.gen.coroutine
     def run_job_async(
@@ -1142,6 +1142,7 @@ class LocalClient(object):
         minion_timeouts = {}
 
         found = set()
+        missing = []
         # Check to see if the jid is real, if not return the empty dict
         try:
             if self.returners[u'{0}.get_load'.format(self.opts[u'master_job_cache'])](jid) == {}:
@@ -1180,6 +1181,8 @@ class LocalClient(object):
                     break
                 if u'minions' in raw.get(u'data', {}):
                     minions.update(raw[u'data'][u'minions'])
+                    if u'missing' in raw.get(u'data', {}):
+                        missing.extend(raw[u'data'][u'missing'])
                     continue
                 if u'return' not in raw[u'data']:
                     continue
@@ -1320,6 +1323,10 @@ class LocalClient(object):
         if expect_minions:
             for minion in list((minions - found)):
                 yield {minion: {u'failed': True}}
+
+        if missing:
+            for minion in missing:
+                yield {minion: {'failed': True}}
 
     def get_returns(
             self,

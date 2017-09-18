@@ -56,7 +56,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 },
                 '__opts__': {'test': False, 'cachedir': ''},
                 '__instance_id__': '',
-                '__low__': {}
+                '__low__': {},
+                '__utils__': {},
             }
         }
 
@@ -550,7 +551,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                               'G12', 'G12', 'G12', 'G12', 'G12'])
             mock_if = MagicMock(side_effect=[True, False, False, False, False,
                                              False, False, False])
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 mock_ret = MagicMock(return_value=ret)
             else:
                 mock_ret = MagicMock(return_value=(ret, None))
@@ -590,7 +591,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 # Group argument is ignored on Windows systems. Group is set to
                 # user
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     comt = ('User salt is not available Group salt'
                             ' is not available')
                 else:
@@ -732,7 +733,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             mock_perms = MagicMock(return_value=ret)
         else:
             mock_perms = MagicMock(return_value=(ret, ''))
@@ -803,7 +804,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 with patch.object(os.path, 'isfile', mock_f):
                     with patch.dict(filestate.__opts__, {'test': True}):
-                        if salt.utils.is_windows():
+                        if salt.utils.platform.is_windows():
                             comt = 'The directory "{0}" will be changed' \
                                    ''.format(name)
                             p_chg = {'directory': 'new'}
@@ -889,7 +890,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'cp.list_master': mock_l}):
 
             # Group argument is ignored on Windows systems. Group is set to user
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 comt = ('User salt is not available Group salt'
                         ' is not available')
             else:
@@ -1181,7 +1182,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     ret.update({'name': name})
                     with patch.object(salt.utils.files, 'fopen',
                                       MagicMock(mock_open(read_data=''))):
-                        with patch.object(salt.utils, 'istextfile', mock_f):
+                        with patch.dict(filestate.__utils__, {'files.is_text_file': mock_f}):
                             with patch.dict(filestate.__opts__, {'test': True}):
                                 change = {'diff': 'Replace binary file'}
                                 comt = ('File {0} is set to be updated'
@@ -1364,7 +1365,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                     # Group argument is ignored on Windows systems. Group is set
                     # to user
-                    if salt.utils.is_windows():
+                    if salt.utils.platform.is_windows():
                         comt = ('User salt is not available Group salt'
                                 ' is not available')
                     else:

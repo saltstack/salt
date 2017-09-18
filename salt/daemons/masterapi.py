@@ -12,7 +12,6 @@ import os
 import re
 import time
 import stat
-import msgpack
 
 # Import salt libs
 import salt.crypt
@@ -33,6 +32,8 @@ import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gitfs
+import salt.utils.verify
+import salt.utils.minions
 import salt.utils.gzip_util
 import salt.utils.jid
 import salt.utils.minions
@@ -65,44 +66,19 @@ def init_git_pillar(opts):
     ret = []
     for opts_dict in [x for x in opts.get('ext_pillar', [])]:
         if 'git' in opts_dict:
-            if isinstance(opts_dict['git'], six.string_types):
-                # Legacy git pillar code
-                try:
-                    import git
-                except ImportError:
-                    return ret
-                parts = opts_dict['git'].strip().split()
-                try:
-                    br = parts[0]
-                    loc = parts[1]
-                except IndexError:
-                    log.critical(
-                        'Unable to extract external pillar data: {0}'
-                        .format(opts_dict['git'])
-                    )
+            try:
+                pillar = salt.utils.gitfs.GitPillar(opts)
+                pillar.init_remotes(
+                    opts_dict['git'],
+                    git_pillar.PER_REMOTE_OVERRIDES,
+                    git_pillar.PER_REMOTE_ONLY
+                )
+                ret.append(pillar)
+            except FileserverConfigError:
+                if opts.get('git_pillar_verify_config', True):
+                    raise
                 else:
-                    ret.append(
-                        git_pillar._LegacyGitPillar(
-                            br,
-                            loc,
-                            opts
-                        )
-                    )
-            else:
-                # New git_pillar code
-                try:
-                    pillar = salt.utils.gitfs.GitPillar(opts)
-                    pillar.init_remotes(
-                        opts_dict['git'],
-                        git_pillar.PER_REMOTE_OVERRIDES,
-                        git_pillar.PER_REMOTE_ONLY
-                    )
-                    ret.append(pillar)
-                except FileserverConfigError:
-                    if opts.get('git_pillar_verify_config', True):
-                        raise
-                    else:
-                        log.critical('Could not initialize git_pillar')
+                    log.critical('Could not initialize git_pillar')
     return ret
 
 
@@ -152,22 +128,11 @@ def clean_expired_tokens(opts):
     '''
     Clean expired tokens from the master
     '''
-    serializer = salt.payload.Serial(opts)
-    for (dirpath, dirnames, filenames) in os.walk(opts['token_dir']):
-        for token in filenames:
-            token_path = os.path.join(dirpath, token)
-            with salt.utils.files.fopen(token_path, 'rb') as token_file:
-                try:
-                    token_data = serializer.loads(token_file.read())
-                except msgpack.UnpackValueError:
-                    # Bad token file or empty. Remove.
-                    os.remove(token_path)
-                    return
-                if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
-                    try:
-                        os.remove(token_path)
-                    except (IOError, OSError):
-                        pass
+    loadauth = salt.auth.LoadAuth(opts)
+    for tok in loadauth.list_tokens():
+        token_data = loadauth.get_tok(tok)
+        if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
+            loadauth.rm_token(tok)
 
 
 def clean_pub_auth(opts):
@@ -585,11 +550,12 @@ class RemoteFuncs(object):
         if match_type.lower() == 'compound':
             match_type = 'compound_pillar_exact'
         checker = salt.utils.minions.CkMinions(self.opts)
-        minions = checker.check_minions(
+        _res = checker.check_minions(
                 load['tgt'],
                 match_type,
                 greedy=False
                 )
+        minions = _res['minions']
         for minion in minions:
             fdata = self.cache.fetch('minions/{0}'.format(minion), 'mine')
             if isinstance(fdata, dict):
@@ -717,8 +683,7 @@ class RemoteFuncs(object):
                 load.get('ext'),
                 self.mminion.functions,
                 pillar_override=load.get('pillar_override', {}))
-        pillar_dirs = {}
-        data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
+        data = pillar.compile_pillar()
         if self.opts.get('minion_data_cache', False):
             self.cache.store('minions/{0}'.format(load['id']),
                              'data',
@@ -754,7 +719,7 @@ class RemoteFuncs(object):
         Handle the return data sent from the minions
         '''
         # Generate EndTime
-        endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid())
+        endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid(self.opts))
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
             return False
@@ -908,9 +873,10 @@ class RemoteFuncs(object):
                 pub_load['tgt_type'] = load['tgt_type']
         ret = {}
         ret['jid'] = self.local.cmd_async(**pub_load)
-        ret['minions'] = self.ckminions.check_minions(
+        _res = self.ckminions.check_minions(
                 load['tgt'],
                 pub_load['tgt_type'])
+        ret['minions'] = _res['minions']
         auth_cache = os.path.join(
                 self.opts['cachedir'],
                 'publish_auth')
@@ -1047,35 +1013,33 @@ class LocalFuncs(object):
         '''
         Send a master control function back to the runner system
         '''
-        if 'token' in load:
-            auth_type = 'token'
-            err_name = 'TokenAuthenticationError'
-            token = self.loadauth.authenticate_token(load)
-            if not token:
-                return dict(error=dict(name=err_name,
-                                       message='Authentication failure of type "token" occurred.'))
-            username = token['name']
-            if self.opts['keep_acl_in_token'] and 'auth_list' in token:
-                auth_list = token['auth_list']
-            else:
-                load['eauth'] = token['eauth']
-                load['username'] = username
-                auth_list = self.loadauth.get_auth_list(load)
-        else:
-            auth_type = 'eauth'
-            err_name = 'EauthAuthenticationError'
-            username = load.get('username', 'UNKNOWN')
-            if not self.loadauth.authenticate_eauth(load):
-                return dict(error=dict(name=err_name,
-                                       message=('Authentication failure of type "eauth" occurred '
-                                                'for user {0}.').format(username)))
-            auth_list = self.loadauth.get_auth_list(load)
+        # All runner opts pass through eauth
+        auth_type, err_name, key = self._prep_auth_info(load)
 
-        if not self.ckminions.runner_check(auth_list, load['fun']):
-            return dict(error=dict(name=err_name,
-                                   message=('Authentication failure of type "{0}" occurred '
-                                            'for user {1}.').format(auth_type, username)))
+        # Authenticate
+        auth_check = self.loadauth.check_authentication(load, auth_type)
+        error = auth_check.get('error')
 
+        if error:
+            # Authentication error occurred: do not continue.
+            return {'error': error}
+
+        # Authorize
+        runner_check = self.ckminions.runner_check(
+            auth_check.get('auth_list', []),
+            load['fun'],
+            load['kwarg']
+        )
+        username = auth_check.get('username')
+        if not runner_check:
+            return {'error': {'name': err_name,
+                              'message': 'Authentication failure of type "{0}" occurred '
+                                         'for user {1}.'.format(auth_type, username)}}
+        elif isinstance(runner_check, dict) and 'error' in runner_check:
+            # A dictionary with an error name/message was handled by ckminions.runner_check
+            return runner_check
+
+        # Authorized. Do the job!
         try:
             fun = load.pop('fun')
             runner_client = salt.runner.RunnerClient(self.opts)
@@ -1084,56 +1048,49 @@ class LocalFuncs(object):
                                        username)
         except Exception as exc:
             log.error('Exception occurred while '
-                    'introspecting {0}: {1}'.format(fun, exc))
-            return dict(error=dict(name=exc.__class__.__name__,
-                                   args=exc.args,
-                                   message=str(exc)))
+                      'introspecting {0}: {1}'.format(fun, exc))
+            return {'error': {'name': exc.__class__.__name__,
+                              'args': exc.args,
+                              'message': str(exc)}}
 
     def wheel(self, load):
         '''
         Send a master control function back to the wheel system
         '''
         # All wheel ops pass through eauth
-        if 'token' in load:
-            auth_type = 'token'
-            err_name = 'TokenAuthenticationError'
-            token = self.loadauth.authenticate_token(load)
-            if not token:
-                return dict(error=dict(name=err_name,
-                                       message='Authentication failure of type "token" occurred.'))
-            username = token['name']
-            if self.opts['keep_acl_in_token'] and 'auth_list' in token:
-                auth_list = token['auth_list']
-            else:
-                load['eauth'] = token['eauth']
-                load['username'] = username
-                auth_list = self.loadauth.get_auth_list(load)
-        elif 'eauth' in load:
-            auth_type = 'eauth'
-            err_name = 'EauthAuthenticationError'
-            username = load.get('username', 'UNKNOWN')
-            if not self.loadauth.authenticate_eauth(load):
-                return dict(error=dict(name=err_name,
-                                       message=('Authentication failure of type "eauth" occurred for '
-                                                'user {0}.').format(username)))
-            auth_list = self.loadauth.get_auth_list(load)
-        else:
-            auth_type = 'user'
-            err_name = 'UserAuthenticationError'
-            username = load.get('username', 'UNKNOWN')
-            if not self.loadauth.authenticate_key(load, self.key):
-                return dict(error=dict(name=err_name,
-                                       message=('Authentication failure of type "user" occurred for '
-                                                'user {0}.').format(username)))
+        auth_type, err_name, key = self._prep_auth_info(load)
 
+        # Authenticate
+        auth_check = self.loadauth.check_authentication(
+            load,
+            auth_type,
+            key=key,
+            show_username=True
+        )
+        error = auth_check.get('error')
+
+        if error:
+            # Authentication error occurred: do not continue.
+            return {'error': error}
+
+        # Authorize
+        username = auth_check.get('username')
         if auth_type != 'user':
-            if not self.ckminions.wheel_check(auth_list, load['fun']):
-                return dict(error=dict(name=err_name,
-                                       message=('Authentication failure of type "{0}" occurred for '
-                                                'user {1}.').format(auth_type, username)))
+            wheel_check = self.ckminions.wheel_check(
+                auth_check.get('auth_list', []),
+                load['fun'],
+                load['kwarg']
+            )
+            if not wheel_check:
+                return {'error': {'name': err_name,
+                                  'message': 'Authentication failure of type "{0}" occurred for '
+                                             'user {1}.'.format(auth_type, username)}}
+            elif isinstance(wheel_check, dict) and 'error' in wheel_check:
+                # A dictionary with an error name/message was handled by ckminions.wheel_check
+                return wheel_check
 
         # Authenticated. Do the job.
-        jid = salt.utils.jid.gen_jid()
+        jid = salt.utils.jid.gen_jid(self.opts)
         fun = load.pop('fun')
         tag = salt.utils.event.tagify(jid, prefix='wheel')
         data = {'fun': "wheel.{0}".format(fun),
@@ -1150,7 +1107,7 @@ class LocalFuncs(object):
                     'data': data}
         except Exception as exc:
             log.error('Exception occurred while '
-                    'introspecting {0}: {1}'.format(fun, exc))
+                      'introspecting {0}: {1}'.format(fun, exc))
             data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                                         fun,
                                         exc.__class__.__name__,
@@ -1203,11 +1160,12 @@ class LocalFuncs(object):
 
         # Retrieve the minions list
         delimiter = load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
-        minions = self.ckminions.check_minions(
+        _res = self.ckminions.check_minions(
             load['tgt'],
             load.get('tgt_type', 'glob'),
             delimiter
         )
+        minions = _res['minions']
 
         # Check for external auth calls
         if extra.get('token', False):
@@ -1217,12 +1175,7 @@ class LocalFuncs(object):
                 return ''
 
             # Get acl from eauth module.
-            if self.opts['keep_acl_in_token'] and 'auth_list' in token:
-                auth_list = token['auth_list']
-            else:
-                extra['eauth'] = token['eauth']
-                extra['username'] = token['name']
-                auth_list = self.loadauth.get_auth_list(extra)
+            auth_list = self.loadauth.get_auth_list(extra, token)
 
             # Authorize the request
             if not self.ckminions.auth_check(
@@ -1419,3 +1372,18 @@ class LocalFuncs(object):
                     },
                 'pub': pub_load
                 }
+
+    def _prep_auth_info(self, load):
+        key = None
+        if 'token' in load:
+            auth_type = 'token'
+            err_name = 'TokenAuthenticationError'
+        elif 'eauth' in load:
+            auth_type = 'eauth'
+            err_name = 'EauthAuthenticationError'
+        else:
+            auth_type = 'user'
+            err_name = 'UserAuthenticationError'
+            key = self.key
+
+        return auth_type, err_name, key

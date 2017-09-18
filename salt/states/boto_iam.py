@@ -910,7 +910,7 @@ def group_present(name, policies=None, policies_from_pillars=None, managed_polic
         in the policies argument will override the keys defined in
         policies_from_pillars.
 
-    manaaged_policies (list)
+    managed_policies (list)
         A list of policy names or ARNs that should be attached to this group.
 
     users (list)
