@@ -32,19 +32,17 @@ Installation Prerequisites
 :requires: purestorage
 :platform: all
 '''
-from __future__ import absolute_import
 
+# Import Python libs
+from __future__ import absolute_import
 import os
 import platform
 from datetime import datetime
 
-# 3rd party modules
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
+# Import Salt libs
 from salt.exceptions import CommandExecutionError
-from salt.utils import xor, human_to_bytes
-# pylint: enable=import-error,no-name-in-module
 
-
+# Import 3rd party modules
 try:
     import purestorage
     HAS_PURESTORAGE = True
@@ -430,7 +428,7 @@ def volume_extend(name, size):
     array = _get_system()
     vol = _get_volume(name, array)
     if vol is not None:
-        if human_to_bytes(size) > vol['size']:
+        if __utils__['stringutils.human_to_bytes'](size) > vol['size']:
             try:
                 array.extend_volume(name, size)
                 return True
@@ -968,7 +966,7 @@ def pg_create(name, hostgroup=None, host=None, volume=None, enabled=True):
                 return False
         else:
             return False
-    elif xor(hostgroup, host, volume):
+    elif __utils__['value.xor'](hostgroup, host, volume):
         if _get_pgroup(name, array) is None:
             try:
                 array.create_pgroup(name)
