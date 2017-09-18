@@ -410,3 +410,97 @@ class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
             vmware.set_dvs_network_resource_management_enabled(
                 self.mock_dvs_ref, self.mock_enabled)
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class GetDvportgroupsTestCase(TestCase):
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.mock_dc_ref = MagicMock(spec=vim.Datacenter)
+        self.mock_dvs_ref = MagicMock(spec=vim.DistributedVirtualSwitch)
+        self.mock_traversal_spec = MagicMock()
+        self.mock_items = [{'object': MagicMock(),
+                            'name': 'fake_pg1'},
+                           {'object': MagicMock(),
+                            'name': 'fake_pg2'},
+                           {'object': MagicMock(),
+                            'name': 'fake_pg3'}]
+        self.mock_get_mors = MagicMock(return_value=self.mock_items)
+
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name',
+             MagicMock()),
+            ('salt.utils.vmware.get_mors_with_properties',
+             self.mock_get_mors),
+            ('salt.utils.vmware.get_service_instance_from_managed_object',
+             MagicMock(return_value=self.mock_si)),
+            ('salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec',
+             MagicMock(return_value=self.mock_traversal_spec)))
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_si', 'mock_dc_ref', 'mock_dvs_ref',
+                     'mock_traversal_spec', 'mock_items', 'mock_get_mors'):
+            delattr(self, attr)
+
+    def test_unsupported_parrent(self):
+        with self.assertRaises(ArgumentValueError) as excinfo:
+            vmware.get_dvportgroups(MagicMock())
+        self.assertEqual(excinfo.exception.strerror,
+                         'Parent has to be either a datacenter, or a '
+                         'distributed virtual switch')
+
+    def test_get_managed_object_name_call(self):
+        mock_get_managed_object_name = MagicMock()
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   mock_get_managed_object_name):
+            vmware.get_dvportgroups(self.mock_dc_ref)
+        mock_get_managed_object_name.assert_called_once_with(self.mock_dc_ref)
+
+    def test_traversal_spec_datacenter_parent(self):
+        mock_traversal_spec = MagicMock(return_value='traversal_spec')
+        with patch(
+            'salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec',
+            mock_traversal_spec):
+
+            vmware.get_dvportgroups(self.mock_dc_ref)
+        mock_traversal_spec.assert_called(
+            call(path='networkFolder', skip=True, type=vim.Datacenter,
+                 selectSet=['traversal_spec']),
+            call(path='childEntity', skip=False, type=vim.Folder))
+
+    def test_traversal_spec_dvs_parent(self):
+        mock_traversal_spec = MagicMock(return_value='traversal_spec')
+        with patch(
+            'salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec',
+            mock_traversal_spec):
+
+            vmware.get_dvportgroups(self.mock_dvs_ref)
+        mock_traversal_spec.assert_called_once_with(
+            path='portgroup', skip=False, type=vim.DistributedVirtualSwitch)
+
+    def test_get_mors_with_properties(self):
+        vmware.get_dvportgroups(self.mock_dvs_ref)
+        self.mock_get_mors.assert_called_once_with(
+            self.mock_si, vim.DistributedVirtualPortgroup,
+            container_ref=self.mock_dvs_ref, property_list=['name'],
+            traversal_spec=self.mock_traversal_spec)
+
+    def test_get_no_pgs(self):
+        ret = vmware.get_dvportgroups(self.mock_dvs_ref)
+        self.assertEqual(ret, [])
+
+    def test_get_all_pgs(self):
+        ret = vmware.get_dvportgroups(self.mock_dvs_ref,
+                                      get_all_portgroups=True)
+        self.assertEqual(ret, [i['object'] for i in self.mock_items])
+
+    def test_filtered_pgs(self):
+        ret = vmware.get_dvss(self.mock_dc_ref,
+                              dvs_names=['fake_pg1', 'fake_pg3', 'no_pg'])
+        self.assertEqual(ret, [self.mock_items[0]['object'],
+                               self.mock_items[2]['object']])
