@@ -3925,6 +3925,78 @@ def _apply_dvs_network_resource_pools(network_resource_pools, resource_dicts):
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
+def create_dvs(dvs_dict, dvs_name, service_instance=None):
+    '''
+    Creates a distributed virtual switch (DVS).
+
+    Note: The ``dvs_name`` param will override any name set in ``dvs_dict``.
+
+    dvs_dict
+        Dict representation of the new DVS (exmaple in salt.states.dvs)
+
+    dvs_name
+        Name of the DVS to be created.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.create_dvs dvs dict=$dvs_dict dvs_name=dvs_name
+    '''
+    log.trace('Creating dvs \'{0}\' with dict = {1}'.format(dvs_name,
+                                                            dvs_dict))
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    # Make the name of the DVS consistent with the call
+    dvs_dict['name'] = dvs_name
+    # Build the config spec from the input
+    dvs_create_spec = vim.DVSCreateSpec()
+    dvs_create_spec.configSpec = vim.VMwareDVSConfigSpec()
+    _apply_dvs_config(dvs_create_spec.configSpec, dvs_dict)
+    if dvs_dict.get('product_info'):
+        dvs_create_spec.productInfo = vim.DistributedVirtualSwitchProductSpec()
+        _apply_dvs_product_info(dvs_create_spec.productInfo,
+                                dvs_dict['product_info'])
+    if dvs_dict.get('capability'):
+        dvs_create_spec.capability = vim.DVSCapability()
+        _apply_dvs_capability(dvs_create_spec.capability,
+                              dvs_dict['capability'])
+    if dvs_dict.get('link_discovery_protocol'):
+        dvs_create_spec.configSpec.linkDiscoveryProtocolConfig = \
+                vim.LinkDiscoveryProtocolConfig()
+        _apply_dvs_link_discovery_protocol(
+            dvs_create_spec.configSpec.linkDiscoveryProtocolConfig,
+            dvs_dict['link_discovery_protocol'])
+    if dvs_dict.get('infrastructure_traffic_resource_pools'):
+        dvs_create_spec.configSpec.infrastructureTrafficResourceConfig = []
+        _apply_dvs_infrastructure_traffic_resources(
+            dvs_create_spec.configSpec.infrastructureTrafficResourceConfig,
+            dvs_dict['infrastructure_traffic_resource_pools'])
+    log.trace('dvs_create_spec = {}'.format(dvs_create_spec))
+    salt.utils.vmware.create_dvs(dc_ref, dvs_name, dvs_create_spec)
+    if 'network_resource_management_enabled' in dvs_dict:
+        dvs_refs = salt.utils.vmware.get_dvss(dc_ref,
+                                              dvs_names=[dvs_name])
+        if not dvs_refs:
+            raise excs.VMwareObjectRetrievalError(
+                'DVS \'{0}\' wasn\'t found in datacenter \'{1}\''
+                ''.format(dvs_name, datacenter))
+        dvs_ref = dvs_refs[0]
+        salt.utils.vmware.set_dvs_network_resource_management_enabled(
+            dvs_ref, dvs_dict['network_resource_management_enabled'])
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
     '''
     Returns a list of dict representations of VMware datacenters.
