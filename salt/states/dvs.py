@@ -221,3 +221,171 @@ def mod_init(low):
     Init function
     '''
     return True
+
+
+def _get_datacenter_name():
+    '''
+    Returns the datacenter name configured on the proxy
+
+    Supported proxies: esxcluster, esxdatacenter
+    '''
+
+    proxy_type = __salt__['vsphere.get_proxy_type']()
+    details = None
+    if proxy_type == 'esxcluster':
+        details = __salt__['esxcluster.get_details']()
+    elif proxy_type == 'esxdatacenter':
+        details = __salt__['esxdatacenter.get_details']()
+    if not details:
+        raise salt.exceptions.CommandExecutionError(
+            'details for proxy type \'{0}\' not loaded'.format(proxy_type))
+    return details['datacenter']
+
+
+def dvs_configured(name, dvs):
+    '''
+    Configures a DVS.
+
+    Creates a new DVS, if it doesn't exist in the provided datacenter or
+    reconfigures it if configured differently.
+
+    dvs
+        DVS dict representations (see module sysdocs)
+    '''
+    datacenter_name = _get_datacenter_name()
+    dvs_name = dvs['name'] if dvs.get('name') else name
+    log.info('Running state {0} for DVS \'{1}\' in datacenter '
+             '\'{2}\''.format(name, dvs_name, datacenter_name))
+    changes_required = False
+    ret = {'name': name, 'changes': {}, 'result': None, 'comment': None}
+    comments = []
+    changes = {}
+    changes_required = False
+
+    try:
+        #TODO dvs validation
+        si = __salt__['vsphere.get_service_instance_via_proxy']()
+        dvss = __salt__['vsphere.list_dvss'](dvs_names=[dvs_name],
+                                             service_instance=si)
+        if not dvss:
+            changes_required = True
+            if __opts__['test']:
+                comments.append('State {0} will create a new DVS '
+                                '\'{1}\' in datacenter \'{2}\''
+                                ''.format(name, dvs_name, datacenter_name))
+                log.info(comments[-1])
+            else:
+                dvs['name'] = dvs_name
+                __salt__['vsphere.create_dvs'](dvs_dict=dvs,
+                                               dvs_name=dvs_name,
+                                               service_instance=si)
+                comments.append('Created a new DVS \'{0}\' in datacenter '
+                                '\'{1}\''.format(dvs_name, datacenter_name))
+                log.info(comments[-1])
+                changes.update({'dvs': {'new': dvs}})
+        else:
+            # DVS already exists. Checking various aspects of the config
+            props =  ['description', 'contact_email', 'contact_name',
+                      'lacp_api_version', 'link_discovery_protocol',
+                      'max_mtu', 'network_resource_control_version',
+                      'network_resource_management_enabled']
+            log.trace('DVS \'{0}\' found in datacenter \'{1}\'. Checking '
+                      'for any updates in '
+                      '{2}'.format(dvs_name, datacenter_name, props))
+            props_to_original_values = {}
+            props_to_updated_values = {}
+            current_dvs = dvss[0]
+            for prop in props:
+                if prop in dvs and dvs[prop] != current_dvs.get(prop):
+                    props_to_original_values[prop] = current_dvs.get(prop)
+                    props_to_updated_values[prop] = dvs[prop]
+
+            # Simple infrastructure traffic resource control compare doesn't
+            # work because num_shares is optional if share_level is not custom
+            # We need to do a dedicated compare for this property
+            infra_prop = 'infrastructure_traffic_resource_pools'
+            original_infra_res_pools = []
+            updated_infra_res_pools = []
+            if infra_prop in dvs:
+                if not current_dvs.get(infra_prop):
+                    updated_infra_res_pools = dvs[infra_prop]
+                else:
+                    for idx in range(len(dvs[infra_prop])):
+                        if 'num_shares' not in dvs[infra_prop][idx] and \
+                           current_dvs[infra_prop][idx]['share_level'] != \
+                           'custom' and \
+                           'num_shares' in current_dvs[infra_prop][idx]:
+
+                            del current_dvs[infra_prop][idx]['num_shares']
+                        if dvs[infra_prop][idx] != \
+                           current_dvs[infra_prop][idx]:
+
+                            original_infra_res_pools.append(
+                                current_dvs[infra_prop][idx])
+                            updated_infra_res_pools.append(
+                                dict(dvs[infra_prop][idx]))
+            if updated_infra_res_pools:
+                props_to_original_values[
+                    'infrastructure_traffic_resource_pools'] = \
+                        original_infra_res_pools
+                props_to_updated_values[
+                    'infrastructure_traffic_resource_pools'] = \
+                        updated_infra_res_pools
+            if props_to_updated_values:
+                if __opts__['test']:
+                    changes_string = ''
+                    for p in props_to_updated_values.keys():
+                        if p == 'infrastructure_traffic_resource_pools':
+                            changes_string += \
+                                    '\tinfrastructure_traffic_resource_pools:\n'
+                            for idx in range(len(props_to_updated_values [p])):
+                                d = props_to_updated_values[p][idx]
+                                s = props_to_original_values[p][idx]
+                                changes_string += \
+                                        ('\t\t{0} from \'{1}\' to \'{2}\'\n'
+                                         ''.format(d['key'], s, d))
+                        else:
+                            changes_string += \
+                                    ('\t{0} from \'{1}\' to \'{2}\'\n'
+                                     ''.format(p, props_to_original_values[p],
+                                               props_to_updated_values[p]))
+                    comments.append(
+                        'State dvs_configured will update DVS \'{0}\' '
+                        'in datacenter \'{1}\':\n{2}'
+                        ''.format(dvs_name, datacenter_name, changes_string))
+                    log.info(comments[-1])
+                else:
+                    __salt__['vsphere.update_dvs'](
+                        dvs_dict=props_to_updated_values,
+                        dvs=dvs_name,
+                        service_instance=si)
+                    comments.append('Updated DVS \'{0}\' in datacenter \'{1}\''
+                                    ''.format(dvs_name, datacenter_name))
+                    log.info(comments[-1])
+                changes.update({'dvs': {'new': props_to_updated_values,
+                                        'old': props_to_original_values}})
+        __salt__['vsphere.disconnect'](si)
+    except salt.exceptions.CommandExecutionError as exc:
+        log.error('Error: {0}\n{1}'.format(exc, traceback.format_exc()))
+        if si:
+            __salt__['vsphere.disconnect'](si)
+        if not __opts__['test']:
+            ret['result'] = False
+        ret.update({'comment': str(exc),
+                    'result': False if not __opts__['test'] else None})
+        return ret
+    if not comments:
+        # We have no changes
+        ret.update({'comment': ('DVS \'{0}\' in datacenter \'{1}\' is '
+                                'correctly configured. Nothing to be done.'
+                                ''.format(dvs_name, datacenter_name)),
+                    'result': True})
+    else:
+        ret.update({'comment': '\n'.join(comments)})
+        if __opts__['test']:
+            ret.update({'pchanges': changes,
+                        'result': None})
+        else:
+            ret.update({'changes': changes,
+                        'result': True})
+    return ret
