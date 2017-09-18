@@ -344,3 +344,69 @@ class UpdateDvsTestCase(TestCase):
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_dvs',
             '<class \'unit.utils.vmware.test_dvs.FakeTaskClass\'>')
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
+    def setUp(self):
+        self.mock_enabled = MagicMock()
+        self.mock_dvs_ref = MagicMock(
+            EnableNetworkResourceManagement=MagicMock())
+
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name',
+             MagicMock(return_value='fake_dvs')),)
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_dvs_ref', 'mock_enabled'):
+            delattr(self, attr)
+
+    def test_get_managed_object_name_call(self):
+        mock_get_managed_object_name = MagicMock()
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   mock_get_managed_object_name):
+            vmware.set_dvs_network_resource_management_enabled(
+                self.mock_dvs_ref, self.mock_enabled)
+        mock_get_managed_object_name.assert_called_once_with(self.mock_dvs_ref)
+
+    def test_enable_network_resource_management(self):
+        vmware.set_dvs_network_resource_management_enabled(
+            self.mock_dvs_ref, self.mock_enabled)
+        self.mock_dvs_ref.EnableNetworkResourceManagement.assert_called_once_with(
+            enable=self.mock_enabled)
+
+    def test_enable_network_resource_management_raises_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.mock_dvs_ref.EnableNetworkResourceManagement = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            vmware.set_dvs_network_resource_management_enabled(
+                self.mock_dvs_ref, self.mock_enabled)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_enable_network_resource_management_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.mock_dvs_ref.EnableNetworkResourceManagement = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            vmware.set_dvs_network_resource_management_enabled(
+                self.mock_dvs_ref, self.mock_enabled)
+
+    def test_enable_network_resource_management_raises_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.mock_dvs_ref.EnableNetworkResourceManagement = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            vmware.set_dvs_network_resource_management_enabled(
+                self.mock_dvs_ref, self.mock_enabled)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
