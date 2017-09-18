@@ -356,3 +356,39 @@ def assemble(name,
         return cmd
     elif test_mode is False:
         return __salt__['cmd.run'](cmd, python_shell=False)
+
+def examine(device):
+    '''
+    Show detail for a specified RAID component device
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' raid.examine '/dev/sda1'
+    '''
+    res = __salt__['cmd.run_stdout']('mdadm -Y -E {0}'.format(device), output_loglevel='trace', python_shell=False)
+    ret = {}
+
+    for line in res.splitlines():
+        name, var = line.partition("=")[::2]
+        ret[name] = var
+    return ret
+
+
+def add(name, device):
+    '''
+    Add new device to RAID array.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' raid.add /dev/md0 /dev/sda1
+
+    '''
+
+    cmd = 'mdadm --manage {0} --add {1}'.format(name, device)
+    if __salt__['cmd.retcode'](cmd) == 0:
+        return True
+    return False
