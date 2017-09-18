@@ -3730,6 +3730,72 @@ def _get_dvs_infrastructure_traffic_resources(dvs_name,
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
+def list_dvss(datacenter=None, dvs_names=None, service_instance=None):
+    '''
+    Returns a list of distributed virtual switches (DVSs).
+    The list can be filtered by the datacenter or DVS names.
+
+    datacenter
+        The datacenter to look for DVSs in.
+        Default value is None.
+
+    dvs_names
+        List of DVS names to look for. If None, all DVSs are returned.
+        Default value is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_dvss
+
+        salt '*' vsphere.list_dvss dvs_names=[dvs1,dvs2]
+    '''
+    ret_dict = []
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+
+    for dvs in salt.utils.vmware.get_dvss(dc_ref, dvs_names, (not dvs_names)):
+        dvs_dict = {}
+        # XXX: Because of how VMware did DVS object inheritance we can\'t
+        # be more restrictive when retrieving the dvs config, we have to
+        # retrieve the entire object
+        props = salt.utils.vmware.get_properties_of_managed_object(
+            dvs, ['name', 'config', 'capability', 'networkResourcePool'])
+        dvs_dict = _get_dvs_config_dict(props['name'], props['config'])
+        # Product info
+        dvs_dict.update(
+            {'product_info':
+             _get_dvs_product_info(props['name'],
+                                   props['config'].productInfo)})
+        # Link Discovery Protocol
+        if props['config'].linkDiscoveryProtocolConfig:
+            dvs_dict.update(
+                {'link_discovery_protocol':
+                 _get_dvs_link_discovery_protocol(
+                     props['name'],
+                     props['config'].linkDiscoveryProtocolConfig)})
+        # Capability
+        dvs_dict.update({'capability':
+                         _get_dvs_capability(props['name'],
+                                             props['capability'])})
+        # InfrastructureTrafficResourceConfig - available with vSphere 6.0
+        if hasattr(props['config'], 'infrastructureTrafficResourceConfig'):
+            dvs_dict.update({
+                'infrastructure_traffic_resource_pools':
+                _get_dvs_infrastructure_traffic_resources(
+                    props['name'],
+                    props['config'].infrastructureTrafficResourceConfig)})
+        ret_dict.append(dvs_dict)
+    return ret_dict
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
     '''
     Returns a list of dict representations of VMware datacenters.
