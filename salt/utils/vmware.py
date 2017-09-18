@@ -1113,6 +1113,34 @@ def update_dvs(dvs_ref, dvs_config_spec):
     wait_for_task(task, dvs_name, str(task.__class__))
 
 
+def set_dvs_network_resource_management_enabled(dvs_ref, enabled):
+    '''
+    Sets whether NIOC is enabled on a DVS.
+
+    dvs_ref
+        The DVS reference.
+
+    enabled
+        Flag specifying whether NIOC is enabled.
+    '''
+    dvs_name = get_managed_object_name(dvs_ref)
+    log.trace('Setting network resource management enable to {0} on '
+              'dvs \'{1}\''.format(enabled, dvs_name))
+    try:
+        dvs_ref.EnableNetworkResourceManagement(enable=enabled)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+
+
 def list_objects(service_instance, vim_object, properties=None):
     '''
     Returns a simple list of objects from a given service instance.
