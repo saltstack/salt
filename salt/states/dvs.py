@@ -611,3 +611,88 @@ def portgroups_configured(name, dvs, portgroups):
             ret.update({'changes': changes,
                         'result': True})
     return ret
+
+
+def uplink_portgroup_configured(name, dvs, uplink_portgroup):
+    '''
+    Configures the uplink portgroup on a DVS. The state assumes there is only
+    one uplink portgroup.
+
+    dvs
+        Name of the DVS
+
+    upling_portgroup
+        Uplink portgroup dict representations (see module sysdocs)
+
+    '''
+    datacenter = _get_datacenter_name()
+    log.info('Running {0} on DVS \'{1}\', datacenter \'{2}\''
+             ''.format(name, dvs, datacenter))
+    changes_required = False
+    ret = {'name': name, 'changes': {}, 'result': None, 'comment': None,
+           'pchanges': {}}
+    comments = []
+    changes = {}
+    changes_required = False
+
+    try:
+        #TODO portroups validation
+        si = __salt__['vsphere.get_service_instance_via_proxy']()
+        current_uplink_portgroup = __salt__['vsphere.list_uplink_dvportgroup'](
+            dvs=dvs, service_instance=si)
+        log.trace('current_uplink_portgroup = '
+                  '{0}'.format(current_uplink_portgroup))
+        diff_dict = _get_diff_dict(current_uplink_portgroup, uplink_portgroup)
+        if diff_dict:
+            changes_required=True
+            if __opts__['test']:
+                changes_strings = \
+                        _get_changes_from_diff_dict(diff_dict)
+                log.trace('changes_strings = '
+                          '{0}'.format(changes_strings))
+                comments.append(
+                    'State {0} will update the '
+                    'uplink portgroup in DVS \'{1}\', datacenter '
+                    '\'{2}\':\n{3}'
+                    ''.format(name, dvs, datacenter,
+                              '\n'.join(['\t{0}'.format(c) for c in
+                                         changes_strings])))
+            else:
+                __salt__['vsphere.update_dvportgroup'](
+                    portgroup_dict=uplink_portgroup,
+                    portgroup=current_uplink_portgroup['name'],
+                    dvs=dvs,
+                    service_instance=si)
+                comments.append('Updated the uplink portgroup in DVS '
+                                '\'{0}\', datacenter \'{1}\''
+                                ''.format(dvs, datacenter))
+            log.info(comments[-1])
+            changes.update(
+                {'uplink_portgroup':
+                 {'new': _get_val2_dict_from_diff_dict(diff_dict),
+                  'old': _get_val1_dict_from_diff_dict(diff_dict)}})
+        __salt__['vsphere.disconnect'](si)
+    except salt.exceptions.CommandExecutionError as exc:
+        log.error('Error: {0}\n{1}'.format(exc, traceback.format_exc()))
+        if si:
+            __salt__['vsphere.disconnect'](si)
+        if not __opts__['test']:
+            ret['result'] = False
+        ret.update({'comment': exc.strerror,
+                    'result': False if not __opts__['test'] else None})
+        return ret
+    if not changes_required:
+        # We have no changes
+        ret.update({'comment': ('Uplink portgroup in DVS \'{0}\', datacenter '
+                                '\'{1}\' is correctly configured. '
+                                'Nothing to be done.'.format(dvs, datacenter)),
+                    'result': True})
+    else:
+        ret.update({'comment': '\n'.join(comments)})
+        if __opts__['test']:
+            ret.update({'pchanges': changes,
+                        'result': None})
+        else:
+            ret.update({'changes': changes,
+                        'result': True})
+    return ret
