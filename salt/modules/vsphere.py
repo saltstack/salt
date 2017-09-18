@@ -3622,6 +3622,111 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
     return ret
 
 
+def _get_dvs_config_dict(dvs_name, dvs_config):
+    '''
+    Returns the dict representation of the DVS config
+
+    dvs_name
+        The name of the DVS
+
+    dvs_config
+        The DVS config
+    '''
+    log.trace('Building the dict of the DVS \'{0}\' config'.format(dvs_name))
+    conf_dict = {'name': dvs_name,
+                 'contact_email': dvs_config.contact.contact,
+                 'contact_name': dvs_config.contact.name,
+                 'description': dvs_config.description,
+                 'lacp_api_version': dvs_config.lacpApiVersion,
+                 'network_resource_control_version':
+                 dvs_config.networkResourceControlVersion,
+                 'network_resource_management_enabled':
+                 dvs_config.networkResourceManagementEnabled,
+                 'max_mtu': dvs_config.maxMtu}
+    if isinstance(dvs_config.uplinkPortPolicy,
+                  vim.DVSNameArrayUplinkPortPolicy):
+        conf_dict.update(
+            {'uplink_names': dvs_config.uplinkPortPolicy.uplinkPortName})
+    return conf_dict
+
+
+def _get_dvs_link_discovery_protocol(dvs_name, dvs_link_disc_protocol):
+    '''
+    Returns the dict representation of the DVS link discovery protocol
+
+    dvs_name
+        The name of the DVS
+
+    dvs_link_disc_protocl
+        The DVS link discovery protocol
+    '''
+    log.trace('Building the dict of the DVS \'{0}\' link discovery '
+              'protocol'.format(dvs_name))
+    return {'operation': dvs_link_disc_protocol.operation,
+            'protocol': dvs_link_disc_protocol.protocol}
+
+
+def _get_dvs_product_info(dvs_name, dvs_product_info):
+    '''
+    Returns the dict representation of the DVS product_info
+
+    dvs_name
+        The name of the DVS
+
+    dvs_product_info
+        The DVS product info
+    '''
+    log.trace('Building the dict of the DVS \'{0}\' product '
+              'info'.format(dvs_name))
+    return {'name': dvs_product_info.name,
+            'vendor': dvs_product_info.vendor,
+            'version': dvs_product_info.version}
+
+
+def _get_dvs_capability(dvs_name, dvs_capability):
+    '''
+    Returns the dict representation of the DVS product_info
+
+    dvs_name
+        The name of the DVS
+
+    dvs_capability
+        The DVS capability
+    '''
+    log.trace('Building the dict of the DVS \'{0}\' capability'
+              ''.format(dvs_name))
+    return {'operation_supported': dvs_capability.dvsOperationSupported,
+            'portgroup_operation_supported':
+            dvs_capability.dvPortGroupOperationSupported,
+            'port_operation_supported': dvs_capability.dvPortOperationSupported}
+
+
+def _get_dvs_infrastructure_traffic_resources(dvs_name,
+                                              dvs_infra_traffic_ress):
+    '''
+    Returns a list of dict representations of the DVS infrastructure traffic
+    resource
+
+    dvs_name
+        The name of the DVS
+
+    dvs_infra_traffic_ress
+        The DVS infrastructure traffic resources
+    '''
+    log.trace('Building the dicts of the DVS \'{0}\' infrastructure traffic '
+              'resources'.format(dvs_name))
+    res_dicts = []
+    for res in dvs_infra_traffic_ress:
+        res_dict = {'key': res.key,
+                    'limit': res.allocationInfo.limit,
+                    'reservation': res.allocationInfo.reservation}
+        if res.allocationInfo.shares:
+            res_dict.update({'num_shares': res.allocationInfo.shares.shares,
+                             'share_level': res.allocationInfo.shares.level})
+        res_dicts.append(res_dict)
+    return res_dicts
+
+
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
