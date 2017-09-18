@@ -34,8 +34,10 @@ try:
     import yum
     HAS_YUM = True
 except ImportError:
-    from salt.ext.six.moves import configparser
     HAS_YUM = False
+
+from salt.ext.six.moves import configparser
+
 # pylint: enable=import-error,redefined-builtin
 
 # Import Salt libs
@@ -614,7 +616,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': [{'version' : 'version', 'arch' : 'arch'}]}
 
-        Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
 
         If ``all`` is specified, all valid attributes will be returned.
 
@@ -650,7 +653,16 @@ def list_pkgs(versions_as_list=False, **kwargs):
             osarch=__grains__['osarch']
         )
         if pkginfo is not None:
-            all_attr = {'version': pkginfo.version, 'arch': pkginfo.arch, 'install_date': pkginfo.install_date,
+            # see rpm version string rules available at https://goo.gl/UGKPNd
+            pkgver = pkginfo.version
+            epoch = ''
+            release = ''
+            if ':' in pkgver:
+                epoch, pkgver = pkgver.split(":", 1)
+            if '-' in pkgver:
+                pkgver, release = pkgver.split("-", 1)
+            all_attr = {'epoch': epoch, 'version': pkgver, 'release': release,
+                        'arch': pkginfo.arch, 'install_date': pkginfo.install_date,
                         'install_date_time_t': pkginfo.install_date_time_t}
             __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, all_attr)
 
@@ -877,8 +889,8 @@ def list_repo_pkgs(*args, **kwargs):
                 _parse_output(out['stdout'], strict=True)
     else:
         for repo in repos:
-            cmd = [_yum(), '--quiet', 'repository-packages', repo,
-                   'list', '--showduplicates']
+            cmd = [_yum(), '--quiet', '--showduplicates',
+                   'repository-packages', repo, 'list']
             if cacheonly:
                 cmd.append('-C')
             # Can't concatenate because args is a tuple, using list.extend()
@@ -1282,7 +1294,8 @@ def install(name=None,
                     'version': '<new-version>',
                     'arch': '<new-arch>'}}}
 
-        Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
 
         If ``all`` is specified, all valid attributes will be returned.
 
@@ -2814,41 +2827,32 @@ def _parse_repo_file(filename):
     '''
     Turn a single repo file into a dict
     '''
-    repos = {}
-    header = ''
-    repo = ''
-    with salt.utils.files.fopen(filename, 'r') as rfile:
-        for line in rfile:
-            if line.startswith('['):
-                repo = line.strip().replace('[', '').replace(']', '')
-                repos[repo] = {}
+    parsed = configparser.ConfigParser()
+    config = {}
 
-            # Even though these are essentially uselss, I want to allow the
-            # user to maintain their own comments, etc
-            if not line:
-                if not repo:
-                    header += line
-            if line.startswith('#'):
-                if not repo:
-                    header += line
-                else:
-                    if 'comments' not in repos[repo]:
-                        repos[repo]['comments'] = []
-                    repos[repo]['comments'].append(line.strip())
-                continue
+    try:
+        parsed.read(filename)
+    except configparser.MissingSectionHeaderError as err:
+        log.error(
+            'Failed to parse file {0}, error: {1}'.format(filename, err.message)
+        )
+        return ('', {})
 
-            # These are the actual configuration lines that matter
-            if '=' in line:
-                try:
-                    comps = line.strip().split('=')
-                    repos[repo][comps[0].strip()] = '='.join(comps[1:])
-                except KeyError:
-                    log.error(
-                        'Failed to parse line in %s, offending line was '
-                        '\'%s\'', filename, line.rstrip()
-                    )
+    for section in parsed._sections:
+        section_dict = dict(parsed._sections[section])
+        section_dict.pop('__name__', None)
+        config[section] = section_dict
 
-    return (header, repos)
+    # Try to extract leading comments
+    headers = ''
+    with salt.utils.files.fopen(filename, 'r') as rawfile:
+        for line in rawfile:
+            if line.strip().startswith('#'):
+                headers += '{0}\n'.format(line.strip())
+            else:
+                break
+
+    return (headers, config)
 
 
 def file_list(*packages):

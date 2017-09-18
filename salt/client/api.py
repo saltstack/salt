@@ -14,8 +14,9 @@ client applications.
     http://docs.saltstack.com/ref/clients/index.html
 
 '''
-from __future__ import absolute_import
+
 # Import Python libs
+from __future__ import absolute_import
 import os
 
 # Import Salt libs
@@ -24,9 +25,9 @@ import salt.auth
 import salt.client
 import salt.runner
 import salt.wheel
-import salt.utils
+import salt.utils.args
+import salt.utils.event
 import salt.syspaths as syspaths
-from salt.utils.event import tagify
 from salt.exceptions import EauthAuthenticationError
 
 
@@ -229,7 +230,7 @@ class APIClient(object):
                 functions = self.wheelClient.functions
             elif client == u'runner':
                 functions = self.runnerClient.functions
-            result = {u'master': salt.utils.argspec_report(functions, module)}
+            result = {u'master': salt.utils.args.argspec_report(functions, module)}
         return result
 
     def create_token(self, creds):
@@ -322,4 +323,4 @@ class APIClient(object):
         Need to convert this to a master call with appropriate authentication
 
         '''
-        return self.event.fire_event(data, tagify(tag, u'wui'))
+        return self.event.fire_event(data, salt.utils.event.tagify(tag, u'wui'))

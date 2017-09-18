@@ -9,6 +9,7 @@ Management of the Salt beacons
 
     ps:
       beacon.present:
+        - save: True
         - enable: False
         - services:
             salt-master: running
@@ -37,12 +38,15 @@ log = logging.getLogger(__name__)
 
 
 def present(name,
+            save=False,
             **kwargs):
     '''
     Ensure beacon is configured with the included beacon data.
 
     name
         The name of the beacon ensure is configured.
+    save
+        True/False, if True the beacons.conf file be updated too. Default is False.
 
     '''
 
@@ -76,10 +80,11 @@ def present(name,
                         ret['changes'] = result['changes']
                     else:
                         ret['comment'].append(result['comment'])
+
     else:
         if 'test' in __opts__ and __opts__['test']:
             kwargs['test'] = True
-            result = __salt__['beacons.add'](name, beacon_data)
+            result = __salt__['beacons.add'](name, beacon_data, **kwargs)
             ret['comment'].append(result['comment'])
         else:
             result = __salt__['beacons.add'](name, beacon_data)
@@ -90,16 +95,24 @@ def present(name,
             else:
                 ret['comment'].append('Adding {0} to beacons'.format(name))
 
+    if save:
+        result = __salt__['beacons.save']()
+        ret['comment'].append('Beacon {0} saved'.format(name))
+
     ret['comment'] = '\n'.join(ret['comment'])
     return ret
 
 
-def absent(name, **kwargs):
+def absent(name,
+           save=False,
+           **kwargs):
     '''
     Ensure beacon is absent.
 
     name
         The name of the beacon ensured absent.
+    save
+        True/False, if True the beacons.conf file be updated too. Default is False.
 
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
@@ -127,6 +140,10 @@ def absent(name, **kwargs):
                 ret['comment'].append('Removed {0} from beacons'.format(name))
     else:
         ret['comment'].append('{0} not configured in beacons'.format(name))
+
+    if save:
+        result = __salt__['beacons.save']()
+        ret['comment'].append('Beacon {0} saved'.format(name))
 
     ret['comment'] = '\n'.join(ret['comment'])
     return ret

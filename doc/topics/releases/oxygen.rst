@@ -51,6 +51,19 @@ New NaCl Renderer
 
 A new renderer has been added for encrypted data.
 
+New support for Cisco UCS Chassis
+---------------------------------
+
+The salt proxy minion now allows for control of Cisco USC chassis. See
+the `cimc` modules for details.
+
+New salt-ssh roster
+-------------------
+
+A new roster has been added that allows users to pull in a list of hosts
+for salt-ssh targeting from a ~/.ssh configuration. For full details,
+please see the `sshconfig` roster.
+
 New GitFS Features
 ------------------
 
@@ -110,9 +123,15 @@ Support has been added to the ``virtual`` grain for detecting Solaris LDOMs
 running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is 
 populated as a list of domain roles.
 
+Lists of comments in state returns
+----------------------------------
+
+State functions can now return a list of strings for the ``comment`` field,
+as opposed to only a single string.
+This is meant to ease writing states with multiple or multi-part comments.
 
 Beacon configuration changes
-----------------------------------------
+----------------------------
 
 In order to remain consistent and to align with other Salt components such as states,
 support for configuring beacons using dictionary based configuration has been deprecated
@@ -617,6 +636,11 @@ Profitbricks Cloud Updated Dependency
 The minimum version of the ``profitbrick`` python package for the ``profitbricks``
 cloud driver has changed from 3.0.0 to 3.1.0.
 
+Azure Cloud Updated Dependency
+------------------------------
+
+The azure sdk used for the ``azurearm`` cloud driver now depends on ``azure-cli>=2.0.12``
+
 Module Deprecations
 ===================
 
@@ -708,6 +732,13 @@ during blackout. This release adds support for using this feature in the grains
 as well, by using special grains keys ``minion_blackout`` and
 ``minion_blackout_whitelist``.
 
+Pillar Deprecations
+-------------------
+
+The legacy configuration for ``git_pillar`` has been removed. Please use the new
+configuration for ``git_pillar``, which is documented in the external pillar module
+for :mod:`git_pillar <salt.pillar.git_pillar>`.
+
 Utils Deprecations
 ==================
 
@@ -722,3 +753,7 @@ Other Miscellaneous Deprecations
 The ``version.py`` file had the following changes:
 
 - The ``rc_info`` function was removed. Please use ``pre_info`` instead.
+
+Warnings for moving away from the ``env`` option were removed. ``saltenv`` should be
+used instead. The removal of these warnings does not have a behavior change. Only
+the warning text was removed.
