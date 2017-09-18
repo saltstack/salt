@@ -4071,6 +4071,175 @@ def update_dvs(dvs_dict, dvs, service_instance=None):
     return True
 
 
+def _get_dvportgroup_out_shaping(pg_name, pg_default_port_config):
+    '''
+    Returns the out shaping policy of a distributed virtual portgroup
+
+    pg_name
+        The name of the portgroup
+
+    pg_default_port_config
+        The dafault port config of the portgroup
+    '''
+    log.trace('Retrieving portgroup\'s \'{0}\' out shaping '
+              'config'.format(pg_name))
+    out_shaping_policy = pg_default_port_config.outShapingPolicy
+    if not out_shaping_policy:
+        return {}
+    return {'average_bandwidth': out_shaping_policy.averageBandwidth.value,
+            'burst_size': out_shaping_policy.burstSize.value,
+            'enabled': out_shaping_policy.enabled.value,
+            'peak_bandwidth': out_shaping_policy.peakBandwidth.value}
+
+
+def _get_dvportgroup_security_policy(pg_name, pg_default_port_config):
+    '''
+    Returns the security policy of a distributed virtual portgroup
+
+    pg_name
+        The name of the portgroup
+
+    pg_default_port_config
+        The dafault port config of the portgroup
+    '''
+    log.trace('Retrieving portgroup\'s \'{0}\' security policy '
+              'config'.format(pg_name))
+    sec_policy = pg_default_port_config.securityPolicy
+    if not sec_policy:
+        return {}
+    return {'allow_promiscuous': sec_policy.allowPromiscuous.value,
+            'forged_transmits': sec_policy.forgedTransmits.value,
+            'mac_changes': sec_policy.macChanges.value}
+
+
+def _get_dvportgroup_teaming(pg_name, pg_default_port_config):
+    '''
+    Returns the teaming of a distributed virtual portgroup
+
+    pg_name
+        The name of the portgroup
+
+    pg_default_port_config
+        The dafault port config of the portgroup
+    '''
+    log.trace('Retrieving portgroup\'s \'{0}\' teaming'
+              'config'.format(pg_name))
+    teaming_policy = pg_default_port_config.uplinkTeamingPolicy
+    if not teaming_policy:
+        return {}
+    ret_dict = {'notify_switches': teaming_policy.notifySwitches.value,
+                'policy': teaming_policy.policy.value,
+                'reverse_policy': teaming_policy.reversePolicy.value,
+                'rolling_order': teaming_policy.rollingOrder.value}
+    if teaming_policy.failureCriteria:
+        failure_criteria = teaming_policy.failureCriteria
+        ret_dict.update({'failure_criteria': {
+            'check_beacon': failure_criteria.checkBeacon.value,
+            'check_duplex': failure_criteria.checkDuplex.value,
+            'check_error_percent': failure_criteria.checkErrorPercent.value,
+            'check_speed': failure_criteria.checkSpeed.value,
+            'full_duplex': failure_criteria.fullDuplex.value,
+            'percentage': failure_criteria.percentage.value,
+            'speed': failure_criteria.speed.value}})
+    if teaming_policy.uplinkPortOrder:
+        uplink_order = teaming_policy.uplinkPortOrder
+        ret_dict.update({'port_order': {
+            'active': uplink_order.activeUplinkPort,
+            'standby': uplink_order.standbyUplinkPort}})
+    return ret_dict
+
+
+def _get_dvportgroup_dict(pg_ref):
+    '''
+    Returns a dictionary with a distributed virutal portgroup data
+
+
+    pg_ref
+        Portgroup reference
+    '''
+    props = salt.utils.vmware.get_properties_of_managed_object(
+        pg_ref, ['name', 'config.description', 'config.numPorts',
+                 'config.type', 'config.defaultPortConfig'])
+    pg_dict = {'name': props['name'],
+               'description': props.get('config.description'),
+               'num_ports': props['config.numPorts'],
+               'type': props['config.type']}
+    if props['config.defaultPortConfig']:
+        dpg = props['config.defaultPortConfig']
+        if dpg.vlan and \
+           isinstance(dpg.vlan,
+                      vim.VmwareDistributedVirtualSwitchVlanIdSpec):
+
+            pg_dict.update({'vlan_id': dpg.vlan.vlanId})
+        pg_dict.update({'out_shaping':
+                        _get_dvportgroup_out_shaping(
+                            props['name'],
+                            props['config.defaultPortConfig'])})
+        pg_dict.update({'security_policy':
+                        _get_dvportgroup_security_policy(
+                            props['name'],
+                            props['config.defaultPortConfig'])})
+        pg_dict.update({'teaming':
+                        _get_dvportgroup_teaming(
+                            props['name'],
+                            props['config.defaultPortConfig'])})
+    return pg_dict
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
+def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
+    '''
+    Returns a list of distributed virtual switch portgroups.
+    The list can be filtered by the portgroup names or by the DVS.
+
+    dvs
+        Name of the DVS containing the portgroups.
+        Default value is None.
+
+    portgroup_names
+        List of portgroup names to look for. If None, all portgroups are
+        returned.
+        Default value is None
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.list_dvporgroups
+
+        salt '*' vsphere.list_dvportgroups dvs=dvs1
+
+        salt '*' vsphere.list_dvportgroups portgroup_names=[pg1]
+
+        salt '*' vsphere.list_dvportgroups dvs=dvs1 portgroup_names=[pg1]
+    '''
+    ret_dict = []
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    if dvs:
+        dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
+        if not dvs_refs:
+            raise VMwareObjectRetrievalError('DVS \'{0}\' was not '
+                                             'retrieved'.format(dvs))
+        dvs_ref = dvs_refs[0]
+    get_all_portgroups = True if not portgroup_names else False
+    for pg_ref in salt.utils.vmware.get_dvportgroups(
+        parent_ref=dvs_ref if dvs else dc_ref,
+        portgroup_names=portgroup_names,
+        get_all_portgroups=get_all_portgroups):
+
+        ret_dict.append(_get_dvportgroup_dict(pg_ref))
+    return ret_dict
+
+
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
