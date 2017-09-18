@@ -2,6 +2,8 @@
 '''
 Linux File Access Control Lists
 
+The Linux ACL state module requires the `getfacl` and `setfacl` binaries.
+
 Ensure a Linux ACL is present
 
 .. code-block:: yaml
