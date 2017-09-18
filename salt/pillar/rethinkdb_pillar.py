@@ -49,7 +49,7 @@ import logging
 
 # Import 3rd party libraries
 try:
-    import rethinkdb as r
+    import rethinkdb
     HAS_RETHINKDB = True
 except ImportError:
     HAS_RETHINKDB = False
@@ -105,11 +105,11 @@ def ext_pillar(minion_id,
               .format(host, port, username))
 
     # Connect to the database
-    conn = r.connect(host=host,
-                     port=port,
-                     db=database,
-                     user=username,
-                     password=password)
+    conn = rethinkdb.connect(host=host,
+                             port=port,
+                             db=database,
+                             user=username,
+                             password=password)
 
     data = None
 
@@ -121,10 +121,11 @@ def ext_pillar(minion_id,
                           table, id_field, minion_id))
 
             if field:
-                data = r.table(table).filter(
+                data = rethinkdb.table(table).filter(
                     {id_field: minion_id}).pluck(field).run(conn)
             else:
-                data = r.table(table).filter({id_field: minion_id}).run(conn)
+                data = rethinkdb.table(table).filter(
+                    {id_field: minion_id}).run(conn)
 
         else:
             log.debug('ext_pillar.rethinkdb: looking up pillar. '
@@ -132,9 +133,10 @@ def ext_pillar(minion_id,
                           table, minion_id))
 
             if field:
-                data = r.table(table).get(minion_id).pluck(field).run(conn)
+                data = rethinkdb.table(table).get(minion_id).pluck(field).run(
+                    conn)
             else:
-                data = r.table(table).get(minion_id).run(conn)
+                data = rethinkdb.table(table).get(minion_id).run(conn)
 
     finally:
         if conn.is_open():
