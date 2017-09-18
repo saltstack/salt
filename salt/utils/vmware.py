@@ -1255,6 +1255,34 @@ def create_dvportgroup(dvs_ref, spec):
     wait_for_task(task, dvs_name, str(task.__class__))
 
 
+def update_dvportgroup(portgroup_ref, spec):
+    '''
+    Updates a distributed virtual portgroup
+
+    portgroup_ref
+        The portgroup reference
+
+    spec
+        Portgroup spec (vim.DVPortgroupConfigSpec)
+    '''
+    pg_name = get_managed_object_name(portgroup_ref)
+    log.trace('Updating portgrouo {0}'.format(pg_name))
+    try:
+        task = portgroup_ref.ReconfigureDVPortgroup_Task(spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, pg_name, str(task.__class__))
+
+
 def list_objects(service_instance, vim_object, properties=None):
     '''
     Returns a simple list of objects from a given service instance.
