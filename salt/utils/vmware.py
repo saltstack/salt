@@ -1141,6 +1141,60 @@ def set_dvs_network_resource_management_enabled(dvs_ref, enabled):
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
 
+def get_dvportgroups(parent_ref, portgroup_names=None,
+                     get_all_portgroups=False):
+    '''
+    Returns distributed virtual porgroups (dvportgroups).
+    The parent object can be either a datacenter or a dvs.
+
+    parent_ref
+        The parent object reference. Can be either a datacenter or a dvs.
+
+    portgroup_names
+        The names of the dvss to return. Default is None.
+
+    get_all_portgroups
+        Return all portgroups in the parent. Default is False.
+    '''
+    if not (isinstance(parent_ref, vim.Datacenter) or
+            isinstance(parent_ref, vim.DistributedVirtualSwitch)):
+        raise salt.exceptions.ArgumentValueError(
+            'Parent has to be either a datacenter, '
+            'or a distributed virtual switch')
+    parent_name = get_managed_object_name(parent_ref)
+    log.trace('Retrieving portgroup in {0} \'{1}\', portgroups_names=\'{2}\', '
+              'get_all_portgroups={3}'.format(
+                  type(parent_ref).__name__, parent_name,
+                  ','.join(portgroup_names) if portgroup_names else None,
+                  get_all_portgroups))
+    properties = ['name']
+    if isinstance(parent_ref, vim.Datacenter):
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            path='networkFolder',
+            skip=True,
+            type=vim.Datacenter,
+            selectSet=[vmodl.query.PropertyCollector.TraversalSpec(
+                path='childEntity',
+                skip=False,
+                type=vim.Folder)])
+    else: # parent is distributed virtual switch
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            path='portgroup',
+            skip=False,
+            type=vim.DistributedVirtualSwitch)
+
+    service_instance = get_service_instance_from_managed_object(parent_ref)
+    items = [i['object'] for i in
+             get_mors_with_properties(service_instance,
+                                      vim.DistributedVirtualPortgroup,
+                                      container_ref=parent_ref,
+                                      property_list=properties,
+                                      traversal_spec=traversal_spec)
+             if get_all_portgroups or
+             (portgroup_names and i['name'] in portgroup_names)]
+    return items
+
+
 def list_objects(service_instance, vim_object, properties=None):
     '''
     Returns a simple list of objects from a given service instance.
