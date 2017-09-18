@@ -3993,6 +3993,83 @@ def create_dvs(dvs_dict, dvs_name, service_instance=None):
             dvs_ref, dvs_dict['network_resource_management_enabled'])
     return True
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
+def update_dvs(dvs_dict, dvs, service_instance=None):
+    '''
+    Updates a distributed virtual switch (DVS).
+
+    Note: Updating the product info, capability, uplinks of a DVS is not
+          supported so the corresponding entries in ``dvs_dict`` will be
+          ignored.
+
+    dvs_dict
+        Dictionary with the values the DVS should be update with
+        (exmaple in salt.states.dvs)
+
+    dvs
+        Name of the DVS to be updated.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.update_dvs dvs_dict=$dvs_dict dvs=dvs1
+    '''
+    # Remove ignored properties
+    log.trace('Updating dvs \'{0}\' with dict = {1}'.format(dvs, dvs_dict))
+    for prop in ['product_info', 'capability', 'uplink_names', 'name']:
+        if prop in dvs_dict:
+            del dvs_dict[prop]
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
+    if not dvs_refs:
+        raise VMwareObjectRetrievalError('DVS \'{0}\' wasn\'t found in '
+                                         'datacenter \'{1}\''
+                                         ''.format(dvs, datacenter))
+    dvs_ref = dvs_refs[0]
+    # Build the config spec from the input
+    dvs_props = salt.utils.vmware.get_properties_of_managed_object(
+        dvs_ref, ['config', 'capability'])
+    dvs_config = vim.VMwareDVSConfigSpec()
+    # Copy all of the properties in the config of the of the DVS to a
+    # DvsConfigSpec
+    skipped_properties = ['host']
+    for prop in dvs_config.__dict__.keys():
+        if prop in skipped_properties:
+            continue
+        if hasattr(dvs_props['config'], prop):
+            setattr(dvs_config, prop, getattr(dvs_props['config'], prop))
+    _apply_dvs_config(dvs_config, dvs_dict)
+    if dvs_dict.get('link_discovery_protocol'):
+        if not dvs_config.linkDiscoveryProtocolConfig:
+            dvs_config.linkDiscoveryProtocolConfig = \
+                    vim.LinkDiscoveryProtocolConfig()
+        _apply_dvs_link_discovery_protocol(
+            dvs_config.linkDiscoveryProtocolConfig,
+            dvs_dict['link_discovery_protocol'])
+    if dvs_dict.get('infrastructure_traffic_resource_pools'):
+        if not dvs_config.infrastructureTrafficResourceConfig:
+            dvs_config.infrastructureTrafficResourceConfig = []
+        _apply_dvs_infrastructure_traffic_resources(
+            dvs_config.infrastructureTrafficResourceConfig,
+            dvs_dict['infrastructure_traffic_resource_pools'])
+    log.trace('dvs_config= {}'.format(dvs_config))
+    salt.utils.vmware.update_dvs(dvs_ref, dvs_config_spec=dvs_config)
+    if 'network_resource_management_enabled' in dvs_dict:
+        salt.utils.vmware.set_dvs_network_resource_management_enabled(
+            dvs_ref, dvs_dict['network_resource_management_enabled'])
+    return True
+
 
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
