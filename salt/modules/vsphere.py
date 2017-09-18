@@ -180,7 +180,9 @@ import salt.utils.vsan
 from salt.exceptions import CommandExecutionError, VMwareSaltError, \
         ArgumentValueError, InvalidConfigError, VMwareObjectRetrievalError
 from salt.utils.decorators import depends, ignores_kwargs
-from salt.config.schemas.esxcluster import ESXClusterConfigSchema
+from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
+        ESXClusterEntitySchema
+from salt.config.schemas.vcenter import VCenterEntitySchema
 
 # Import Third Party Libs
 try:
