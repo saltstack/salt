@@ -4262,6 +4262,33 @@ def rename_datastore(datastore_name, new_datastore_name,
     return True
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def list_licenses(service_instance=None):
+    '''
+    Lists all licenses on a vCenter.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_licenses
+    '''
+    log.trace('Retrieving all licenses')
+    licenses = salt.utils.vmware.get_licenses(service_instance)
+    ret_dict = [{'key': l.licenseKey,
+                 'name': l.name,
+                 'description': l.labels[0].value if l.labels else None,
+                 # VMware handles unlimited capacity as 0
+                 'capacity': l.total if l.total > 0 else sys.maxsize,
+                 'used': l.used if l.used else 0}
+                 for l in licenses]
+    return ret_dict
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
