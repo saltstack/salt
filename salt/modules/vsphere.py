@@ -4455,6 +4455,57 @@ def _apply_dvportgroup_config(pg_name, pg_spec, pg_conf):
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
+def create_dvportgroup(portgroup_dict, portgroup_name, dvs,
+                       service_instance=None):
+    '''
+    Creates a distributed virtual portgroup.
+
+    Note: The ``portgroup_name`` param will override any name already set
+    in ``portgroup_dict``.
+
+    portgroup_dict
+        Dictionary with the config values the portgroup should be created with
+        (exmaple in salt.states.dvs).
+
+    portgroup_name
+        Name of the portgroup to be created.
+
+    dvs
+        Name of the DVS that will contain the portgroup.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.create_dvportgroup portgroup_dict=<dict>
+            portgroup_name=pg1 dvs=dvs1
+    '''
+    log.trace('Creating portgroup\'{0}\' in dvs \'{1}\' '
+              'with dict = {2}'.format(portgroup_name, dvs, portgroup_dict))
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
+    if not dvs_refs:
+        raise VMwareObjectRetrievalError('DVS \'{0}\' was not '
+                                         'retrieved'.format(dvs))
+    # Make the name of the dvportgroup consistent with the parameter
+    portgroup_dict['name'] = portgroup_name
+    spec = vim.DVPortgroupConfigSpec()
+    _apply_dvportgroup_config(portgroup_name, spec, portgroup_dict)
+    salt.utils.vmware.create_dvportgroup(dvs_refs[0], spec)
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
     '''
     Returns a list of dict representations of VMware datacenters.
