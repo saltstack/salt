@@ -1020,6 +1020,30 @@ def get_dvss(dc_ref, dvs_names=None, get_all_dvss=False):
     return items
 
 
+def get_network_folder(dc_ref):
+    '''
+    Retrieves the network folder of a datacenter
+    '''
+    dc_name = get_managed_object_name(dc_ref)
+    log.trace('Retrieving network folder in datacenter '
+              '\'{0}\''.format(dc_name))
+    service_instance = get_service_instance_from_managed_object(dc_ref)
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        path='networkFolder',
+        skip=False,
+        type=vim.Datacenter)
+    entries = get_mors_with_properties(service_instance,
+                                       vim.Folder,
+                                       container_ref=dc_ref,
+                                       property_list=['name'],
+                                       traversal_spec=traversal_spec)
+    if not entries:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Network folder in datacenter \'{0}\' wasn\'t retrieved'
+            ''.format(dc_name))
+    return entries[0]['object']
+
+
 def list_objects(service_instance, vim_object, properties=None):
     '''
     Returns a simple list of objects from a given service instance.
