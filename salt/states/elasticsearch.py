@@ -230,7 +230,7 @@ def index_template_absent(name):
     return ret
 
 
-def index_template_present(name, definition):
+def index_template_present(name, definition, check_definition=False):
     '''
     Ensure that the named index templat eis present.
 
@@ -238,6 +238,8 @@ def index_template_present(name, definition):
         Name of the index to add
     definition
         Required dict for creation parameters as per https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
+    check_definition
+        If the template already exists and the definition is up to date
 
     **Example:**
 
@@ -270,7 +272,27 @@ def index_template_present(name, definition):
                     ret['result'] = False
                     ret['comment'] = 'Cannot create index template {0}, {1}'.format(name, output)
         else:
-            ret['comment'] = 'Index template {0} is already present'.format(name)
+            if check_definition:
+                definition_parsed = json.loads(definition)
+                current_template = __salt__['elasticsearch.index_template_get'](name=name)[name]
+                diff = __utils__['dictdiffer.deep_diff'](current_template, definition_parsed)
+                if len(diff) != 0:
+                    if __opts__['test']:
+                        ret['comment'] = 'Index template {0} exist but need to be updated'.format(name)
+                        ret['changes'] = diff
+                        ret['result'] = None
+                    else:
+                        output = __salt__['elasticsearch.index_template_create'](name=name, body=definition)
+                        if output:
+                            ret['comment'] = 'Successfully updated index template {0}'.format(name)
+                            ret['changes'] = diff
+                        else:
+                            ret['result'] = False
+                            ret['comment'] = 'Cannot update index template {0}, {1}'.format(name, output)
+                else:
+                    ret['comment'] = 'Index template {0} is already present and up to date'.format(name)
+            else:
+                ret['comment'] = 'Index template {0} is already present'.format(name)
     except Exception as e:
         ret['result'] = False
         ret['comment'] = str(e)
