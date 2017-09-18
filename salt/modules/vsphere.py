@@ -4506,6 +4506,66 @@ def create_dvportgroup(portgroup_dict, portgroup_name, dvs,
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
+def update_dvportgroup(portgroup_dict, portgroup, dvs, service_instance=True):
+    '''
+    Updates a distributed virtual portgroup.
+
+    portgroup_dict
+        Dictionary with the values the portgroup should be update with
+        (exmaple in salt.states.dvs).
+
+    portgroup
+        Name of the portgroup to be updated.
+
+    dvs
+        Name of the DVS containing the portgroups.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.update_dvportgroup portgroup_dict=<dict>
+            portgroup=pg1
+
+        salt '*' vsphere.update_dvportgroup portgroup_dict=<dict>
+            portgroup=pg1 dvs=dvs1
+    '''
+    log.trace('Updating portgroup\'{0}\' in dvs \'{1}\' '
+              'with dict = {2}'.format(portgroup, dvs, portgroup_dict))
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
+    if not dvs_refs:
+        raise VMwareObjectRetrievalError('DVS \'{0}\' was not '
+                                         'retrieved'.format(dvs))
+    pg_refs = salt.utils.vmware.get_dvportgroups(dvs_refs[0],
+                                                 portgroup_names=[portgroup])
+    if not pg_refs:
+        raise VMwareObjectRetrievalError('Portgroup \'{0}\' was not '
+                                         'retrieved'.format(portgroup))
+    pg_props = salt.utils.vmware.get_properties_of_managed_object(pg_refs[0],
+                                                                  ['config'])
+    spec = vim.DVPortgroupConfigSpec()
+    # Copy existing properties in spec
+    for prop in ['autoExpand', 'configVersion', 'defaultPortConfig',
+                 'description', 'name', 'numPorts', 'policy', 'portNameFormat',
+                 'scope', 'type', 'vendorSpecificConfig']:
+        setattr(spec, prop, getattr(pg_props['config'], prop))
+    _apply_dvportgroup_config(portgroup, spec, portgroup_dict)
+    salt.utils.vmware.update_dvportgroup(pg_refs[0], spec)
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
     '''
     Returns a list of dict representations of VMware datacenters.
