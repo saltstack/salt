@@ -1044,6 +1044,46 @@ def get_network_folder(dc_ref):
     return entries[0]['object']
 
 
+def create_dvs(dc_ref, dvs_name, dvs_create_spec=None):
+    '''
+    Creates a distributed virtual switches (DVS) in a datacenter.
+    Returns the reference to the newly created distributed virtual switch.
+
+    dc_ref
+        The parent datacenter reference.
+
+    dvs_name
+        The name of the DVS to create.
+
+    dvs_create_spec
+        The DVS spec (vim.DVSCreateSpec) to use when creating the DVS.
+        Default is None.
+    '''
+    dc_name = get_managed_object_name(dc_ref)
+    log.trace('Creating DVS \'{0}\' in datacenter '
+              '\'{1}\''.format(dvs_name, dc_name))
+    if not dvs_create_spec:
+        dvs_create_spec = vim.DVSCreateSpec()
+    if not dvs_create_spec.configSpec:
+        dvs_create_spec.configSpec = vim.VMwareDVSConfigSpec()
+        dvs_create_spec.configSpec.name = dvs_name
+    netw_folder_ref = get_network_folder(dc_ref)
+    try:
+        task = netw_folder_ref.CreateDVS_Task(dvs_create_spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, dvs_name, str(task.__class__))
+
+
 def list_objects(service_instance, vim_object, properties=None):
     '''
     Returns a simple list of objects from a given service instance.
