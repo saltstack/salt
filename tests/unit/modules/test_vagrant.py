@@ -74,7 +74,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
         testdict['name'] = 'test2'
         self.assertEqual(resp, testdict)
 
-    def test_vagrant_get_vm_info(self):
+    def test_vagrant_init_arg_override(self):
         testdict = dict(cwd='/tmp/there',
                         machine='treetest',
                         runas='anybody',

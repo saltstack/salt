@@ -208,9 +208,9 @@ def init(name,  # Salt_id for created VM
          machine='',  # name of machine in Vagrantfile
          runas=None,  # username who owns Vagrant box
          start=False,  # start the machine when initialized
-         deploy=None,  # load Salt onto the virtual machine, default=True
-         vagrant_provider='', # vagrant provider (default=virtualbox)
-         vm={},  # a dictionary of VM configuration settings   # pylint: disable=W0102
+         deploy=None,  # flag suggesting whether to load Salt onto the VM
+         vagrant_provider='',  # vagrant provider (default=virtualbox)
+         vm=None,  # a dictionary of VM configuration settings
          ):
     '''
     Initialize a new Vagrant vm
@@ -222,9 +222,9 @@ def init(name,  # Salt_id for created VM
         salt <host> vagrant.init <salt_id> /path/to/Vagrantfile
         salt my_laptop vagrant.init x1 /projects/bevy_master machine=quail1
     '''
-    vm_ = vm.copy()  #  passed configuration data
+    vm_ = {} if vm is None else vm.copy()  # passed configuration data
     vm_['name'] = name
-    #  passed-in keyword arguments overwrite vm dictionary values
+    # passed-in keyword arguments overwrite vm dictionary values
     vm_['cwd'] = cwd or vm_.get('cwd')
     if not vm_['cwd']:
         raise SaltInvocationError('Path to Vagrantfile must be defined by \'cwd\' argument')
@@ -369,7 +369,7 @@ def destroy(name):
 
 
 def get_ssh_config(name, network_mask='', get_private_key=False):
-    '''
+    r'''
     Retrieve hints of how you might connect to a Vagrant VM.
 
     CLI Example:
@@ -400,7 +400,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
     If you enter a CIDR network mask, the module will attempt to find the VM's address for you.
     It will send an `ifconfig` command to the VM (using ssh to `ssh_host`:`ssh_port`) and scan the
     result, returning the IP address of the first interface it can find which matches your mask.
-    '''    # pylint: disable=W1401
+    '''
     vm_ = get_vm_info(name)
 
     ssh_config = _vagrant_ssh_config(vm_)
