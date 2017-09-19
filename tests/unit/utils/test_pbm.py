@@ -178,3 +178,74 @@ class GetPlacementSolverTestCase(TestCase):
         with self.assertRaises(VMwareRuntimeError) as excinfo:
             salt.utils.pbm.get_placement_solver(self.mock_si)
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class GetCapabilityDefinitionsTestCase(TestCase):
+    '''Tests for salt.utils.pbm.get_capability_definitions'''
+    def setUp(self):
+        self.mock_res_type = MagicMock()
+        self.mock_cap_cats =[MagicMock(capabilityMetadata=['fake_cap_meta1',
+                                                           'fake_cap_meta2']),
+                             MagicMock(capabilityMetadata=['fake_cap_meta3'])]
+        self.mock_prof_mgr = MagicMock(
+            FetchCapabilityMetadata=MagicMock(return_value=self.mock_cap_cats))
+        patches = (
+            ('salt.utils.pbm.pbm.profile.ResourceType',
+             MagicMock(return_value=self.mock_res_type)),)
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_res_type', 'mock_cap_cats', 'mock_prof_mgr'):
+            delattr(self, attr)
+
+    def test_get_res_type(self):
+        mock_get_res_type = MagicMock()
+        with patch('salt.utils.pbm.pbm.profile.ResourceType',
+                   mock_get_res_type):
+            salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
+        mock_get_res_type.assert_called_once_with(
+            resourceType=pbm.profile.ResourceTypeEnum.STORAGE)
+
+    def test_fetch_capabilities(self):
+        salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
+        self.mock_prof_mgr.FetchCapabilityMetadata.assert_callend_once_with(
+            self.mock_res_type)
+
+    def test_fetch_capabilities_raises_no_permissions(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.mock_prof_mgr.FetchCapabilityMetadata = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_fetch_capabilities_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.mock_prof_mgr.FetchCapabilityMetadata = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_fetch_capabilities_raises_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.mock_prof_mgr.FetchCapabilityMetadata = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_return_cap_definitions(self):
+        ret = salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
+        self.assertEqual(ret, ['fake_cap_meta1', 'fake_cap_meta2',
+                               'fake_cap_meta3'])
