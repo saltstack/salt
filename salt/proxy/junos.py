@@ -128,7 +128,7 @@ def alive(opts):
     '''
 
     dev = conn()
-    
+
     # Check that the underlying netconf connection still exists.
     if dev._conn is None:
         return False
