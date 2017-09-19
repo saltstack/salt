@@ -232,3 +232,30 @@ def create_storage_policy(profile_manager, policy_spec):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise VMwareRuntimeError(exc.msg)
+
+
+def update_storage_policy(profile_manager, policy, policy_spec):
+    '''
+    Updates a storage policy.
+
+    profile_manager
+        Reference to the profile manager.
+
+    policy
+        Reference to the policy to be updated.
+
+    policy_spec
+        Policy update spec.
+    '''
+    try:
+        profile_manager.Update(policy.profileId, policy_spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
