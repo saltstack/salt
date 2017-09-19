@@ -48,6 +48,7 @@ from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
 import salt.utils
 import salt.utils.templates
+from salt.exceptions import TimeoutError
 from salt.ext.six.moves import range  # pylint: disable=import-error
 
 try:
@@ -82,15 +83,11 @@ def __virtual__():
     return False, 'python kubernetes library not found'
 
 
-class TimeoutException(Exception):
-    pass
-
-
 if salt.utils.is_windows():
     @contextmanager
     def _time_limit(seconds):
         def signal_handler(signum, frame):
-            raise TimeoutException
+            raise TimeoutError
         signal.signal(signal.SIGALRM, signal_handler)
         signal.alarm(seconds)
         try:
@@ -723,7 +720,7 @@ def delete_deployment(name, namespace='default', **kwargs):
                         sleep(1)
                     else:  # pylint: disable=useless-else-on-loop
                         mutable_api_response['code'] = 200
-            except TimeoutException:
+            except TimeoutError:
                 pass
         else:
             # Windows has not signal.alarm implementation, so we are just falling
