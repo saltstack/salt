@@ -124,7 +124,7 @@ class MasterPillarUtil(object):
                       'and enfore_mine_cache are both disabled.')
             return mine_data
         if not minion_ids:
-            minion_ids = self.cache.ls('minions')
+            minion_ids = self.cache.list('minions')
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
@@ -143,7 +143,7 @@ class MasterPillarUtil(object):
                       'enabled.')
             return grains, pillars
         if not minion_ids:
-            minion_ids = self.cache.ls('minions')
+            minion_ids = self.cache.list('minions')
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
@@ -248,7 +248,8 @@ class MasterPillarUtil(object):
         # Return a list of minion ids that match the target and tgt_type
         minion_ids = []
         ckminions = salt.utils.minions.CkMinions(self.opts)
-        minion_ids = ckminions.check_minions(self.tgt, self.tgt_type)
+        _res = ckminions.check_minions(self.tgt, self.tgt_type)
+        minion_ids = _res['minions']
         if len(minion_ids) == 0:
             log.debug('No minions matched for tgt="{0}" and tgt_type="{1}"'.format(self.tgt, self.tgt_type))
             return {}
@@ -366,7 +367,7 @@ class MasterPillarUtil(object):
             # in the same file, 'data.p'
             grains, pillars = self._get_cached_minion_data(*minion_ids)
         try:
-            c_minions = self.cache.ls('minions')
+            c_minions = self.cache.list('minions')
             for minion_id in minion_ids:
                 if not salt.utils.verify.valid_id(self.opts, minion_id):
                     continue

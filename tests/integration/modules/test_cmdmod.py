@@ -187,6 +187,34 @@ class CMDModuleTest(ModuleCase):
                                             code]).rstrip(),
                          'cheese')
 
+    def test_exec_code_with_single_arg(self):
+        '''
+        cmd.exec_code
+        '''
+        code = textwrap.dedent('''\
+               import sys
+               sys.stdout.write(sys.argv[1])''')
+        arg = 'cheese'
+        self.assertEqual(self.run_function('cmd.exec_code',
+                                           [AVAILABLE_PYTHON_EXECUTABLE,
+                                            code],
+                                           args=arg).rstrip(),
+                         arg)
+
+    def test_exec_code_with_multiple_args(self):
+        '''
+        cmd.exec_code
+        '''
+        code = textwrap.dedent('''\
+               import sys
+               sys.stdout.write(sys.argv[1])''')
+        arg = 'cheese'
+        self.assertEqual(self.run_function('cmd.exec_code',
+                                           [AVAILABLE_PYTHON_EXECUTABLE,
+                                            code],
+                                           args=[arg, 'test']).rstrip(),
+                         arg)
+
     def test_quotes(self):
         '''
         cmd.run with quoted command

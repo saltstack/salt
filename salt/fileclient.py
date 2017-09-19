@@ -744,12 +744,7 @@ class Client(object):
         Cache a file then process it as a template
         '''
         if u'env' in kwargs:
-            salt.utils.versions.warn_until(
-                u'Oxygen',
-                u'Parameter \'env\' has been detected in the argument list.  This '
-                u'parameter is no longer used and has been replaced by \'saltenv\' '
-                u'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             kwargs.pop(u'env')
 
         kwargs[u'saltenv'] = saltenv
@@ -1300,10 +1295,10 @@ class RemoteClient(Client):
                 hash_type = self.opts.get(u'hash_type', u'md5')
                 ret[u'hsum'] = salt.utils.get_hash(path, form=hash_type)
                 ret[u'hash_type'] = hash_type
-                return ret, list(os.stat(path))
+                return ret
         load = {u'path': path,
                 u'saltenv': saltenv,
-                u'cmd': u'_file_hash_and_stat'}
+                u'cmd': u'_file_hash'}
         return self.channel.send(load)
 
     def hash_file(self, path, saltenv=u'base'):
@@ -1312,14 +1307,33 @@ class RemoteClient(Client):
         master file server prepend the path with salt://<file on server>
         otherwise, prepend the file with / for a local file.
         '''
-        return self.__hash_and_stat_file(path, saltenv)[0]
+        return self.__hash_and_stat_file(path, saltenv)
 
     def hash_and_stat_file(self, path, saltenv=u'base'):
         '''
         The same as hash_file, but also return the file's mode, or None if no
         mode data is present.
         '''
-        return self.__hash_and_stat_file(path, saltenv)
+        hash_result = self.hash_file(path, saltenv)
+        try:
+            path = self._check_proto(path)
+        except MinionError as err:
+            if not os.path.isfile(path):
+                return hash_result, None
+            else:
+                try:
+                    return hash_result, list(os.stat(path))
+                except Exception:
+                    return hash_result, None
+        load = {'path': path,
+                'saltenv': saltenv,
+                'cmd': '_file_find'}
+        fnd = self.channel.send(load)
+        try:
+            stat_result = fnd.get('stat')
+        except AttributeError:
+            stat_result = None
+        return hash_result, stat_result
 
     def list_env(self, saltenv=u'base'):
         '''
