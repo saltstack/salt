@@ -1,6 +1,165 @@
 # -*- coding: utf-8 -*-
 '''
-Manage VMware distributed virtual switches (DVSs).
+Manage VMware distributed virtual switches (DVSs) and their distributed virtual
+portgroups (DVportgroups).
+
+Examples
+========
+
+Several settings can be changed for DVSs and DVporgroups. Here are two examples
+covering all of the settings. Fewer settings can be used
+
+DVS
+---
+
+.. code-block:: python
+
+    'name': 'dvs1',
+    'max_mtu': 1000,
+    'uplink_names': [
+        'dvUplink1',
+        'dvUplink2',
+        'dvUplink3'
+    ],
+    'capability': {
+        'portgroup_operation_supported': false,
+        'operation_supported': true,
+        'port_operation_supported': false
+    },
+    'lacp_api_version': 'multipleLag',
+    'contact_email': 'foo@email.com',
+    'product_info': {
+        'version':
+        '6.0.0',
+        'vendor':
+        'VMware,
+        Inc.',
+        'name':
+        'DVS'
+    },
+    'network_resource_management_enabled': true,
+    'contact_name': 'me@email.com',
+    'infrastructure_traffic_resource_pools': [
+        {
+            'reservation': 0,
+            'limit': 1000,
+            'share_level': 'high',
+            'key': 'management',
+            'num_shares': 100
+        },
+        {
+            'reservation': 0,
+            'limit': -1,
+            'share_level': 'normal',
+            'key': 'faultTolerance',
+            'num_shares': 50
+        },
+        {
+            'reservation': 0,
+            'limit': 32000,
+            'share_level': 'normal',
+            'key': 'vmotion',
+            'num_shares': 50
+        },
+        {
+            'reservation': 10000,
+            'limit': -1,
+            'share_level': 'normal',
+            'key': 'virtualMachine',
+            'num_shares': 50
+        },
+        {
+            'reservation': 0,
+            'limit': -1,
+            'share_level': 'custom',
+            'key': 'iSCSI',
+            'num_shares': 75
+        },
+        {
+            'reservation': 0,
+            'limit': -1,
+            'share_level': 'normal',
+            'key': 'nfs',
+            'num_shares': 50
+        },
+        {
+            'reservation': 0,
+            'limit': -1,
+            'share_level': 'normal',
+            'key': 'hbr',
+            'num_shares': 50
+        },
+        {
+            'reservation': 8750,
+            'limit': 15000,
+            'share_level': 'high',
+            'key': 'vsan',
+            'num_shares': 100
+        },
+        {
+            'reservation': 0,
+            'limit': -1,
+            'share_level': 'normal',
+            'key': 'vdp',
+            'num_shares': 50
+        }
+    ],
+    'link_discovery_protocol': {
+        'operation':
+        'listen',
+        'protocol':
+        'cdp'
+    },
+    'network_resource_control_version': 'version3',
+    'description': 'Managed by Salt. Random settings.'
+
+Note: The mandatory attribute is: ``name``.
+
+Portgroup
+---------
+
+.. code-block:: python
+    'security_policy': {
+        'allow_promiscuous': true,
+        'mac_changes': false,
+        'forged_transmits': true
+    },
+    'name': 'vmotion-v702',
+    'out_shaping': {
+        'enabled': true,
+        'average_bandwidth': 1500,
+        'burst_size': 4096,
+        'peak_bandwidth': 1500
+    },
+    'num_ports': 128,
+    'teaming': {
+        'port_order': {
+            'active': [
+                'dvUplink2'
+            ],
+            'standby': [
+                'dvUplink1'
+            ]
+        },
+        'notify_switches': false,
+        'reverse_policy': true,
+        'rolling_order': false,
+        'policy': 'failover_explicit',
+        'failure_criteria': {
+            'check_error_percent': true,
+            'full_duplex': false,
+            'check_duplex': false,
+            'percentage': 50,
+            'check_speed': 'minimum',
+            'speed': 20,
+            'check_beacon': true
+        }
+    },
+    'type': 'earlyBinding',
+    'vlan_id': 100,
+    'description': 'Managed by Salt. Random settings.'
+
+Note: The mandatory attributes are: ``name``, ``type``.
 
 Dependencies
 ============
