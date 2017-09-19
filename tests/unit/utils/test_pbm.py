@@ -253,7 +253,7 @@ class GetCapabilityDefinitionsTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
-class GetPoliciesById(TestCase):
+class GetPoliciesByIdTestCase(TestCase):
     '''Tests for salt.utils.pbm.get_policies_by_id'''
     def setUp(self):
         self.policy_ids = MagicMock()
@@ -344,7 +344,7 @@ class GetStoragePoliciesTestCase(TestCase):
         mock_retrieve_policy_ids = MagicMock(return_value=self.mock_policy_ids)
         self.mock_prof_mgr.QueryProfile = mock_retrieve_policy_ids
         salt.utils.pbm.get_storage_policies(self.mock_prof_mgr)
-        mock_retrieve_policy_ids.asser_called_once_with(self.mock_res_type)
+        mock_retrieve_policy_ids.assert_called_once_with(self.mock_res_type)
 
     def test_retrieve_policy_ids_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
