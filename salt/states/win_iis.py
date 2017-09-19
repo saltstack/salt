@@ -481,7 +481,6 @@ def container_setting(name, container, settings=None):
     :param str container: The type of IIS container. The container types are:
         AppPools, Sites, SslBindings
     :param str settings: A dictionary of the setting names and their values.
-
     Example of usage for the ``AppPools`` container:
 
     .. code-block:: yaml
@@ -495,6 +494,7 @@ def container_setting(name, container, settings=None):
                     processModel.maxProcesses: 1
                     processModel.userName: TestUser
                     processModel.password: TestPassword
+                    processModel.identityType: SpecificUser
 
     Example of usage for the ``Sites`` container:
 
@@ -509,6 +509,8 @@ def container_setting(name, container, settings=None):
                     logFile.period: Daily
                     limits.maxUrlSegments: 32
     '''
+
+    identityType_map2string = {0: 'LocalSystem', 1: 'LocalService', 2: 'NetworkService', 3: 'SpecificUser', 4: 'ApplicationPoolIdentity'}
     ret = {'name': name,
            'changes': {},
            'comment': str(),
@@ -528,6 +530,10 @@ def container_setting(name, container, settings=None):
                                                                  container=container,
                                                                  settings=settings.keys())
     for setting in settings:
+        # map identity type from numeric to string for comparing
+        if setting == 'processModel.identityType' and settings[setting] in identityType_map2string.keys():
+            settings[setting] = identityType_map2string[settings[setting]]
+
         if str(settings[setting]) != str(current_settings[setting]):
             ret_settings['changes'][setting] = {'old': current_settings[setting],
                                                 'new': settings[setting]}
@@ -540,8 +546,8 @@ def container_setting(name, container, settings=None):
         ret['changes'] = ret_settings
         return ret
 
-    __salt__['win_iis.set_container_setting'](name=name, container=container,
-                                              settings=settings)
+    __salt__['win_iis.set_container_setting'](name=name, container=container, settings=settings)
+
     new_settings = __salt__['win_iis.get_container_setting'](name=name,
                                                              container=container,
                                                              settings=settings.keys())

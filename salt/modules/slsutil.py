@@ -2,11 +2,15 @@
 '''
 Utility functions for use with or in SLS files
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 
+# Import Salt libs
 import salt.exceptions
 import salt.loader
 import salt.template
+import salt.utils.args
 import salt.utils.dictupdate
 
 
@@ -133,4 +137,68 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
             default_renderer,
             __opts__['renderer_blacklist'],
             __opts__['renderer_whitelist'],
+            **kwargs)
+
+
+def _get_serialize_fn(serializer, fn_name):
+    serializers = salt.loader.serializers(__opts__)
+    fns = getattr(serializers, serializer, None)
+    fn = getattr(fns, fn_name, None)
+
+    if not fns:
+        raise salt.exceptions.CommandExecutionError(
+            "Serializer '{0}' not found.".format(serializer))
+
+    if not fn:
+        raise salt.exceptions.CommandExecutionError(
+            "Serializer '{0}' does not implement {1}.".format(serializer,
+                fn_name))
+
+    return fn
+
+
+def serialize(serializer, obj, **mod_kwargs):
+    '''
+    Serialize a Python object using a :py:mod:`serializer module
+    <salt.serializers>`
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' --no-parse=obj slsutil.serialize 'json' obj="{'foo': 'Foo!'}
+
+    Jinja Example:
+
+    .. code-block:: jinja
+
+        {% set json_string = salt.slsutil.serialize('json',
+            {'foo': 'Foo!'}) %}
+    '''
+    kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
+    return _get_serialize_fn(serializer, 'serialize')(obj, **kwargs)
+
+
+def deserialize(serializer, stream_or_string, **mod_kwargs):
+    '''
+    Deserialize a Python object using a :py:mod:`serializer module
+    <salt.serializers>`
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' slsutil.deserialize 'json' '{"foo": "Foo!"}'
+        salt '*' --no-parse=stream_or_string slsutil.deserialize 'json' \\
+            stream_or_string='{"foo": "Foo!"}'
+
+    Jinja Example:
+
+    .. code-block:: jinja
+
+        {% set python_object = salt.slsutil.deserialize('json',
+            '{"foo": "Foo!"}') %}
+    '''
+    kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
+    return _get_serialize_fn(serializer, 'deserialize')(stream_or_string,
             **kwargs)

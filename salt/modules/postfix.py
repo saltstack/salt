@@ -18,7 +18,11 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+
+# Import 3rd-party libs
+from salt.ext import six
 
 SWWS = re.compile(r'^\s')
 
@@ -32,7 +36,7 @@ def __virtual__():
     '''
     Only load the module if Postfix is installed
     '''
-    if salt.utils.which('postfix'):
+    if salt.utils.path.which('postfix'):
         return True
     return (False, 'postfix execution module not loaded: postfix not installed.')
 
@@ -50,7 +54,7 @@ def _parse_master(path=MASTER_CF):
     Returns a dict of the active config lines, and a list of the entire file,
     in order. These compliment each other.
     '''
-    with salt.utils.fopen(path, 'r') as fh_:
+    with salt.utils.files.fopen(path, 'r') as fh_:
         full_conf = fh_.read()
 
     # Condense the file based on line continuations, but keep order, comments
@@ -223,7 +227,7 @@ def _parse_main(path=MAIN_CF):
     * Keys defined in the file may be referred to as variables further down in
         the file.
     '''
-    with salt.utils.fopen(path, 'r') as fh_:
+    with salt.utils.files.fopen(path, 'r') as fh_:
         full_conf = fh_.read()
 
     # Condense the file based on line continuations, but keep order, comments
@@ -238,7 +242,7 @@ def _parse_main(path=MAIN_CF):
                 # This should only happen at the top of the file
                 conf_list.append(line)
                 continue
-            if not isinstance(conf_list[-1], str):
+            if not isinstance(conf_list[-1], six.string_types):
                 conf_list[-1] = ''
             # This line is a continuation of the previous line
             conf_list[-1] = '\n'.join([conf_list[-1], line])
@@ -306,7 +310,7 @@ def _write_conf(conf, path=MAIN_CF):
     '''
     Write out configuration file.
     '''
-    with salt.utils.fopen(path, 'w') as fh_:
+    with salt.utils.files.fopen(path, 'w') as fh_:
         for line in conf:
             if isinstance(line, dict):
                 fh_.write(' '.join(line))

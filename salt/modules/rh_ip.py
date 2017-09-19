@@ -14,10 +14,12 @@ import jinja2
 import jinja2.exceptions
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
-import salt.ext.six as six
+from salt.exceptions import CommandExecutionError
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -666,14 +668,24 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                     bypassfirewall = False
                 else:
                     _raise_error_iface(iface, opts[opt], valid)
+
+        bridgectls = [
+            'net.bridge.bridge-nf-call-ip6tables',
+            'net.bridge.bridge-nf-call-iptables',
+            'net.bridge.bridge-nf-call-arptables',
+            ]
+
         if bypassfirewall:
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-ip6tables', '0')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables', '0')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-arptables', '0')
+            sysctl_value = 0
         else:
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-ip6tables', '1')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-iptables', '1')
-            __salt__['sysctl.persist']('net.bridge.bridge-nf-call-arptables', '1')
+            sysctl_value = 1
+
+        for sysctl in bridgectls:
+            try:
+                __salt__['sysctl.persist'](sysctl, sysctl_value)
+            except CommandExecutionError:
+                log.warning('Failed to set sysctl: {0}'.format(sysctl))
+
     else:
         if 'bridge' in opts:
             result['bridge'] = opts['bridge']
@@ -823,7 +835,7 @@ def _parse_network_settings(opts, current):
         try:
             opts['networking'] = current['networking']
             # If networking option is quoted, use its quote type
-            quote_type = salt.utils.is_quoted(opts['networking'])
+            quote_type = salt.utils.stringutils.is_quoted(opts['networking'])
             _log_default_network('networking', current['networking'])
         except ValueError:
             _raise_error_network('networking', valid)
@@ -833,7 +845,7 @@ def _parse_network_settings(opts, current):
     true_val = '{0}yes{0}'.format(quote_type)
     false_val = '{0}no{0}'.format(quote_type)
 
-    networking = salt.utils.dequote(opts['networking'])
+    networking = salt.utils.stringutils.dequote(opts['networking'])
     if networking in valid:
         if networking in _CONFIG_TRUE:
             result['networking'] = true_val
@@ -851,12 +863,12 @@ def _parse_network_settings(opts, current):
 
     if opts['hostname']:
         result['hostname'] = '{1}{0}{1}'.format(
-            salt.utils.dequote(opts['hostname']), quote_type)
+            salt.utils.stringutils.dequote(opts['hostname']), quote_type)
     else:
         _raise_error_network('hostname', ['server1.example.com'])
 
     if 'nozeroconf' in opts:
-        nozeroconf = salt.utils.dequote(opts['nozeroconf'])
+        nozeroconf = salt.utils.stringutils.dequote(opts['nozeroconf'])
         if nozeroconf in valid:
             if nozeroconf in _CONFIG_TRUE:
                 result['nozeroconf'] = true_val
@@ -868,7 +880,7 @@ def _parse_network_settings(opts, current):
     for opt in opts:
         if opt not in ['networking', 'hostname', 'nozeroconf']:
             result[opt] = '{1}{0}{1}'.format(
-                salt.utils.dequote(opts[opt]), quote_type)
+                salt.utils.stringutils.dequote(opts[opt]), quote_type)
     return result
 
 
@@ -904,7 +916,7 @@ def _read_file(path):
     Reads and returns the contents of a file
     '''
     try:
-        with salt.utils.fopen(path, 'rb') as rfh:
+        with salt.utils.files.fopen(path, 'rb') as rfh:
             contents = rfh.read()
             if six.PY3:
                 contents = contents.encode(__salt_system_encoding__)
@@ -929,7 +941,7 @@ def _write_file_iface(iface, data, folder, pattern):
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.fopen(filename, 'w') as fp_:
+    with salt.utils.files.fopen(filename, 'w') as fp_:
         fp_.write(data)
 
 
@@ -937,7 +949,7 @@ def _write_file_network(data, filename):
     '''
     Writes a file to disk
     '''
-    with salt.utils.fopen(filename, 'w') as fp_:
+    with salt.utils.files.fopen(filename, 'w') as fp_:
         fp_.write(data)
 
 
@@ -1001,7 +1013,10 @@ def build_interface(iface, iface_type, enabled, **settings):
         salt '*' ip.build_interface eth0 eth <settings>
     '''
     if __grains__['os'] == 'Fedora':
-        rh_major = '6'
+        if __grains__['osmajorrelease'] >= 18:
+            rh_major = '7'
+        else:
+            rh_major = '6'
     else:
         rh_major = __grains__['osrelease'][:1]
 

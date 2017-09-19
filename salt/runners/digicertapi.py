@@ -45,9 +45,9 @@ import json
 import re
 import salt.syspaths as syspaths
 import salt.cache
-import salt.utils
+import salt.utils.files
 import salt.utils.http
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.exceptions import (CommandExecutionError, SaltRunnerError)
 from Crypto.PublicKey import RSA
@@ -568,7 +568,7 @@ def gen_csr(
 
     tmppriv = '{0}/priv'.format(tmpdir)
     tmpcsr = '{0}/csr'.format(tmpdir)
-    with salt.utils.fopen(tmppriv, 'w') as if_:
+    with salt.utils.files.fopen(tmppriv, 'w') as if_:
         if_.write(data['private_key'])
 
     subject = '/C={0}/ST={1}/L={2}/O={3}'.format(
@@ -596,7 +596,7 @@ def gen_csr(
             'have a valid Organization established inside CertCentral'
         )
 
-    with salt.utils.fopen(tmpcsr, 'r') as of_:
+    with salt.utils.files.fopen(tmpcsr, 'r') as of_:
         csr = of_.read()
 
     data['minion_id'] = minion_id

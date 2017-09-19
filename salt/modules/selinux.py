@@ -17,12 +17,13 @@ import os
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 _SELINUX_FILETYPES = {
@@ -46,7 +47,7 @@ def __virtual__():
     # Iterate over all of the commands this module uses and make sure
     # each of them are available in the standard PATH to prevent breakage
     for cmd in required_cmds:
-        if not salt.utils.which(cmd):
+        if not salt.utils.path.which(cmd):
             return (False, cmd + ' is not in the path')
     # SELinux only makes sense on Linux *obviously*
     if __grains__['kernel'] == 'Linux':
@@ -94,7 +95,7 @@ def getenforce():
         return 'Disabled'
     try:
         enforce = os.path.join(_selinux_fs_path, 'enforce')
-        with salt.utils.fopen(enforce, 'r') as _fp:
+        with salt.utils.files.fopen(enforce, 'r') as _fp:
             if _fp.readline().strip() == '0':
                 return 'Permissive'
             else:
@@ -115,7 +116,7 @@ def getconfig():
     '''
     try:
         config = '/etc/selinux/config'
-        with salt.utils.fopen(config, 'r') as _fp:
+        with salt.utils.files.fopen(config, 'r') as _fp:
             for line in _fp:
                 if line.strip().startswith('SELINUX='):
                     return line.split('=')[1].capitalize().strip()
@@ -158,7 +159,7 @@ def setenforce(mode):
     if getenforce() != 'Disabled':
         enforce = os.path.join(selinux_fs_path(), 'enforce')
         try:
-            with salt.utils.fopen(enforce, 'w') as _fp:
+            with salt.utils.files.fopen(enforce, 'w') as _fp:
                 _fp.write(mode)
         except (IOError, OSError) as exc:
             msg = 'Could not write SELinux enforce file: {0}'
@@ -166,10 +167,10 @@ def setenforce(mode):
 
     config = '/etc/selinux/config'
     try:
-        with salt.utils.fopen(config, 'r') as _cf:
+        with salt.utils.files.fopen(config, 'r') as _cf:
             conf = _cf.read()
         try:
-            with salt.utils.fopen(config, 'w') as _cf:
+            with salt.utils.files.fopen(config, 'w') as _cf:
                 conf = re.sub(r"\nSELINUX=.*\n", "\nSELINUX=" + modestring + "\n", conf)
                 _cf.write(conf)
         except (IOError, OSError) as exc:
@@ -403,7 +404,7 @@ def _context_string_to_dict(context):
     return ret
 
 
-def _filetype_id_to_string(filetype='a'):
+def filetype_id_to_string(filetype='a'):
     '''
     Translates SELinux filetype single-letter representation
     to a more human-readable version (which is also used in `semanage fcontext -l`).
@@ -444,7 +445,7 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
                   'sel_role': '[^:]+',  # se_role for file context is always object_r
                   'sel_type': sel_type or '[^:]+',
                   'sel_level': sel_level or '[^:]+'}
-    cmd_kwargs['filetype'] = '[[:alpha:] ]+' if filetype is None else _filetype_id_to_string(filetype)
+    cmd_kwargs['filetype'] = '[[:alpha:] ]+' if filetype is None else filetype_id_to_string(filetype)
     cmd = 'semanage fcontext -l | egrep ' + \
           "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}$'".format(**cmd_kwargs)
     current_entry_text = __salt__['cmd.shell'](cmd)

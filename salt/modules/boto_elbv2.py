@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon ALB
 
-.. versionadded:: TBD
+.. versionadded:: 2017.7.0
 
 :configuration: This module accepts explicit elb credentials but can also utilize
     IAM roles assigned to the instance through Instance Profiles. Dynamic
@@ -47,7 +47,7 @@ log = logging.getLogger(__name__)
 # Import Salt libs
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     # pylint: disable=unused-import
@@ -72,11 +72,20 @@ def __virtual__():
     return True
 
 
-def create_target_group(name, protocol, port, vpc_id,
-                        region=None, key=None, keyid=None, profile=None,
-                        health_check_protocol='HTTP', health_check_port='traffic-port',
-                        health_check_path='/', health_check_interval_seconds=30,
-                        health_check_timeout_seconds=5, healthy_threshold_count=5,
+def create_target_group(name,
+                        protocol,
+                        port,
+                        vpc_id,
+                        region=None,
+                        key=None,
+                        keyid=None,
+                        profile=None,
+                        health_check_protocol='HTTP',
+                        health_check_port='traffic-port',
+                        health_check_path='/',
+                        health_check_interval_seconds=30,
+                        health_check_timeout_seconds=5,
+                        healthy_threshold_count=5,
                         unhealthy_threshold_count=2):
     '''
     Create target group if not present.
@@ -125,36 +134,40 @@ def create_target_group(name, protocol, port, vpc_id,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if target_group_exists(name, region, key, keyid, profile):
         return True
-    else:
-        try:
-            lb = conn.create_target_group(Name=name, Protocol=protocol, Port=port,
-                                        VpcId=vpc_id, HealthCheckProtocol=health_check_protocol,
-                                        HealthCheckPort=health_check_port,
-                                        HealthCheckPath=health_check_path,
-                                        HealthCheckIntervalSeconds=health_check_interval_seconds,
-                                        HealthCheckTimeoutSeconds=health_check_timeout_seconds,
-                                        HealthyThresholdCount=healthy_threshold_count,
-                                        UnhealthyThresholdCount=unhealthy_threshold_count)
-            if lb:
-                log.info('Created ALB {0}: {1}'.format(name,
-                                        lb['TargetGroups'][0]['TargetGroupArn']))
-                return True
-            else:
-                log.error('Failed to create ALB {0}'.format(name))
-                return False
-        except ClientError as error:
-            log.debug(error)
-            log.error('Failed to create ALB {0}: {1}: {2}'.format(name,
-                                            error.response['Error']['Code'],
-                                            error.response['Error']['Message']))
+
+    try:
+        alb = conn.create_target_group(Name=name, Protocol=protocol, Port=port,
+                                       VpcId=vpc_id, HealthCheckProtocol=health_check_protocol,
+                                       HealthCheckPort=health_check_port,
+                                       HealthCheckPath=health_check_path,
+                                       HealthCheckIntervalSeconds=health_check_interval_seconds,
+                                       HealthCheckTimeoutSeconds=health_check_timeout_seconds,
+                                       HealthyThresholdCount=healthy_threshold_count,
+                                       UnhealthyThresholdCount=unhealthy_threshold_count)
+        if alb:
+            log.info('Created ALB {0}: {1}'.format(name,
+                                                   alb['TargetGroups'][0]['TargetGroupArn']))
+            return True
+        else:
+            log.error('Failed to create ALB {0}'.format(name))
+            return False
+    except ClientError as error:
+        log.debug(error)
+        log.error('Failed to create ALB {0}: {1}: {2}'.format(name,
+                                                              error.response['Error']['Code'],
+                                                              error.response['Error']['Message']))
 
 
-def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
+def delete_target_group(name,
+                        region=None,
+                        key=None,
+                        keyid=None,
+                        profile=None):
     '''
     Delete target group.
 
     name
-        (string) - The Amazon Resource Name (ARN) of the resource.
+        (string) - Target Group Name or Amazon Resource Name (ARN).
 
     returns
         (bool) - True on success, False on failure.
@@ -167,9 +180,20 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
+    if not target_group_exists(name, region, key, keyid, profile):
+        return True
+
     try:
-        conn.delete_target_group(TargetGroupArn=name)
-        log.info('Deleted target group {0}'.format(name))
+        if name.startswith('arn:aws:elasticloadbalancing'):
+            conn.delete_target_group(TargetGroupArn=name)
+            log.info('Deleted target group {0}'.format(name))
+        else:
+            tg_info = conn.describe_target_groups(Names=[name])
+            if len(tg_info['TargetGroups']) != 1:
+                return False
+            arn = tg_info['TargetGroups'][0]['TargetGroupArn']
+            conn.delete_target_group(TargetGroupArn=arn)
+            log.info('Deleted target group {0} ARN {1}'.format(name, arn))
         return True
     except ClientError as error:
         log.debug(error)
@@ -177,7 +201,11 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def target_group_exists(name, region=None, key=None, keyid=None, profile=None):
+def target_group_exists(name,
+                        region=None,
+                        key=None,
+                        keyid=None,
+                        profile=None):
     '''
     Check to see if an target group exists.
 
@@ -200,11 +228,16 @@ def target_group_exists(name, region=None, key=None, keyid=None, profile=None):
             log.warning('The target group does not exist in region {0}'.format(region))
             return False
     except ClientError as error:
-        log.warning(error)
+        log.warning('target_group_exists check for {0} returned: {1}'.format(name, error))
         return False
 
 
-def describe_target_health(name, targets=None, region=None, key=None, keyid=None, profile=None):
+def describe_target_health(name,
+                           targets=None,
+                           region=None,
+                           key=None,
+                           keyid=None,
+                           profile=None):
     '''
     Get the curret health check status for targets in a target group.
 
@@ -234,8 +267,12 @@ def describe_target_health(name, targets=None, region=None, key=None, keyid=None
         return {}
 
 
-def register_targets(name, targets, region=None, key=None, keyid=None,
-                       profile=None):
+def register_targets(name,
+                     targets,
+                     region=None,
+                     key=None,
+                     keyid=None,
+                     profile=None):
     '''
     Register targets to a target froup of an ALB. ``targets`` is either a
     instance id string or a list of instance id's.
@@ -253,7 +290,7 @@ def register_targets(name, targets, region=None, key=None, keyid=None,
         salt myminion boto_elbv2.register_targets myelb "[instance_id,instance_id]"
     '''
     targetsdict = []
-    if isinstance(targets, str) or isinstance(targets, six.text_type):
+    if isinstance(targets, six.string_types) or isinstance(targets, six.text_type):
         targetsdict.append({"Id": targets})
     else:
         for target in targets:
@@ -264,15 +301,18 @@ def register_targets(name, targets, region=None, key=None, keyid=None,
         registered_targets = conn.register_targets(TargetGroupArn=name, Targets=targetsdict)
         if registered_targets:
             return True
-        else:
-            return False
+        return False
     except ClientError as error:
         log.warning(error)
         return False
 
 
-def deregister_targets(name, targets, region=None, key=None, keyid=None,
-                         profile=None):
+def deregister_targets(name,
+                       targets,
+                       region=None,
+                       key=None,
+                       keyid=None,
+                       profile=None):
     '''
     Deregister targets to a target froup of an ALB. ``targets`` is either a
     instance id string or a list of instance id's.
@@ -290,7 +330,7 @@ def deregister_targets(name, targets, region=None, key=None, keyid=None,
         salt myminion boto_elbv2.deregister_targets myelb "[instance_id,instance_id]"
     '''
     targetsdict = []
-    if isinstance(targets, str) or isinstance(targets, six.text_type):
+    if isinstance(targets, six.string_types) or isinstance(targets, six.text_type):
         targetsdict.append({"Id": targets})
     else:
         for target in targets:
@@ -301,8 +341,7 @@ def deregister_targets(name, targets, region=None, key=None, keyid=None,
         registered_targets = conn.deregister_targets(TargetGroupArn=name, Targets=targetsdict)
         if registered_targets:
             return True
-        else:
-            return False
+        return False
     except ClientError as error:
         log.warning(error)
         return False

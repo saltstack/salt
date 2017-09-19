@@ -44,11 +44,11 @@ import re
 import traceback
 
 # Import Salt libs
-from salt.utils import dictdiffer
+import salt.utils.dictdiffer as dictdiffer
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

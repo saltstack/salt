@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import re
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 
 
 def split(orig, sep=None):
@@ -53,7 +53,7 @@ def read_file(fh_, chunk_size=1048576):
                 chunk = fh_.read(chunk_size)
             except AttributeError:
                 # Open the file and re-attempt the read
-                fh_ = salt.utils.fopen(fh_, 'rb')  # pylint: disable=W8470
+                fh_ = salt.utils.files.fopen(fh_, 'rb')  # pylint: disable=W8470
                 chunk = fh_.read(chunk_size)
             if not chunk:
                 break

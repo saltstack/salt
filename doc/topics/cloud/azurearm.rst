@@ -6,7 +6,7 @@ Getting Started With Azure ARM
 
 Azure is a cloud service by Microsoft providing virtual machines, SQL services,
 media services, and more. Azure ARM (aka, the Azure Resource Manager) is a next
-generatiom version of the Azure portal and API. This document describes how to
+generation version of the Azure portal and API. This document describes how to
 use Salt Cloud to create a virtual machine on Azure ARM, with Salt installed.
 
 More information about Azure is located at `http://www.windowsazure.com/
@@ -15,9 +15,7 @@ More information about Azure is located at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc6
-* `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32
-* The python-requests library, for Python < 2.7.9.
+* Azure Cli ```pip install 'azure-cli>=2.0.12'```
 * A Microsoft Azure account
 * `Salt <https://github.com/saltstack/salt>`_
 

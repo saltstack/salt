@@ -20,10 +20,11 @@ import tempfile
 from salt.exceptions import SaltCacheError
 import salt.utils
 import salt.utils.atomicfile
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
-__func_alias__ = {'list': 'ls'}
+__func_alias__ = {'list_': 'list'}
 
 
 def __cachedir(kwargs=None):
@@ -58,7 +59,7 @@ def store(bank, key, data, cachedir):
     tmpfh, tmpfname = tempfile.mkstemp(dir=base)
     os.close(tmpfh)
     try:
-        with salt.utils.fopen(tmpfname, 'w+b') as fh_:
+        with salt.utils.files.fopen(tmpfname, 'w+b') as fh_:
             fh_.write(__context__['serial'].dumps(data))
         # On Windows, os.rename will fail if the destination file exists.
         salt.utils.atomicfile.atomic_rename(tmpfname, outfile)
@@ -85,7 +86,7 @@ def fetch(bank, key, cachedir):
         log.debug('Cache file "%s" does not exist', key_file)
         return {}
     try:
-        with salt.utils.fopen(key_file, 'rb') as fh_:
+        with salt.utils.files.fopen(key_file, 'rb') as fh_:
             if inkey:
                 return __context__['serial'].load(fh_)[key]
             else:
@@ -143,7 +144,7 @@ def flush(bank, key=None, cachedir=None):
     return True
 
 
-def ls(bank, cachedir):
+def list_(bank, cachedir):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''

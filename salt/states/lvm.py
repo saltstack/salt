@@ -27,15 +27,15 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
-import salt.utils
-import salt.ext.six as six
+import salt.utils.path
+from salt.ext import six
 
 
 def __virtual__():
     '''
     Only load the module if lvm is installed
     '''
-    if salt.utils.which('lvm'):
+    if salt.utils.path.which('lvm'):
         return 'lvm'
     return False
 
@@ -268,7 +268,7 @@ def lv_present(name,
     else:
         lvpath = '/dev/{0}/{1}'.format(vgname, name)
 
-    if __salt__['lvm.lvdisplay'](lvpath):
+    if __salt__['lvm.lvdisplay'](lvpath, quiet=True):
         ret['comment'] = 'Logical Volume {0} already present'.format(name)
     elif __opts__['test']:
         ret['comment'] = 'Logical Volume {0} is set to be created'.format(name)
@@ -290,7 +290,7 @@ def lv_present(name,
             ret['comment'] = 'Created Logical Volume {0}'.format(name)
             ret['changes']['created'] = changes
         else:
-            ret['comment'] = 'Failed to create Logical Volume {0}'.format(name)
+            ret['comment'] = 'Failed to create Logical Volume {0}. Error: {1}'.format(name, changes)
             ret['result'] = False
     return ret
 

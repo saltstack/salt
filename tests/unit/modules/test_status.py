@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
 import salt.modules.status as status
 from salt.exceptions import CommandExecutionError
 
@@ -72,7 +72,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         '''
         m = self._set_up_test_uptime()
 
-        with patch.multiple(salt.utils,
+        with patch.multiple(salt.utils.platform,
                             is_linux=MagicMock(return_value=True),
                             is_sunos=MagicMock(return_value=False),
                             is_darwin=MagicMock(return_value=False),
@@ -83,7 +83,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                 with patch('time.time', MagicMock(return_value=m.now)):
                     with patch('os.path.exists', MagicMock(return_value=True)):
                         proc_uptime = '{0} {1}'.format(m.ut, m.idle)
-                        with patch('salt.utils.fopen', mock_open(read_data=proc_uptime)):
+                        with patch('salt.utils.files.fopen', mock_open(read_data=proc_uptime)):
                             ret = status.uptime()
                             self.assertDictEqual(ret, m.ret)
 
@@ -97,7 +97,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         '''
         m = self._set_up_test_uptime()
         m2 = self._set_up_test_uptime_sunos()
-        with patch.multiple(salt.utils,
+        with patch.multiple(salt.utils.platform,
                             is_linux=MagicMock(return_value=False),
                             is_sunos=MagicMock(return_value=True),
                             is_darwin=MagicMock(return_value=False),
@@ -119,7 +119,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
 
         kern_boottime = ('{{ sec = {0}, usec = {1:0<6} }} Mon Oct 03 03:09:18.23 2016'
                          ''.format(*str(m.now - m.ut).split('.')))
-        with patch.multiple(salt.utils,
+        with patch.multiple(salt.utils.platform,
                             is_linux=MagicMock(return_value=False),
                             is_sunos=MagicMock(return_value=False),
                             is_darwin=MagicMock(return_value=True),
@@ -140,7 +140,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test modules.status.uptime function for other platforms
         '''
-        with patch.multiple(salt.utils,
+        with patch.multiple(salt.utils.platform,
                             is_linux=MagicMock(return_value=False),
                             is_sunos=MagicMock(return_value=False),
                             is_darwin=MagicMock(return_value=False),

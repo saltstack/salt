@@ -101,7 +101,8 @@ import logging
 import os
 
 # Import salt utils
-import salt.utils
+import salt.utils.files
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -158,7 +159,7 @@ def _text(username, password, **kwargs):
     username_field = kwargs['username_field']-1
     password_field = kwargs['password_field']-1
 
-    with salt.utils.fopen(filename, 'r') as pwfile:
+    with salt.utils.files.fopen(filename, 'r') as pwfile:
         for line in pwfile.readlines():
             fields = line.strip().split(field_separator)
 
@@ -199,7 +200,7 @@ def _htpasswd(username, password, **kwargs):
     pwfile = HtpasswdFile(kwargs['filename'])
 
     # passlib below version 1.6 uses 'verify' function instead of 'check_password'
-    if salt.utils.version_cmp(kwargs['passlib_version'], '1.6') < 0:
+    if salt.utils.versions.version_cmp(kwargs['passlib_version'], '1.6') < 0:
         return pwfile.verify(username, password)
     else:
         return pwfile.check_password(username, password)
@@ -221,7 +222,7 @@ def _htdigest(username, password, **kwargs):
     pwfile = HtdigestFile(kwargs['filename'])
 
     # passlib below version 1.6 uses 'verify' function instead of 'check_password'
-    if salt.utils.version_cmp(kwargs['passlib_version'], '1.6') < 0:
+    if salt.utils.versions.version_cmp(kwargs['passlib_version'], '1.6') < 0:
         return pwfile.verify(username, realm, password)
     else:
         return pwfile.check_password(username, realm, password)

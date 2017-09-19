@@ -10,7 +10,7 @@ from tests.support.case import ModuleCase
 from tests.support.paths import FILES
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.files
 
 
 STATE_DIR = os.path.join(FILES, 'file', 'base')
@@ -58,7 +58,7 @@ class EnabledTest(ModuleCase):
         ret_key = 'test_|-shell_enabled_|-{0}_|-configurable_test_state'.format(enabled_ret)
 
         try:
-            with salt.utils.fopen(state_file, 'w') as fp_:
+            with salt.utils.files.fopen(state_file, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
                 {{% set shell_enabled = salt['cmd.shell']("{0}").strip() %}}
 
@@ -87,7 +87,7 @@ class EnabledTest(ModuleCase):
         ret_key = 'test_|-shell_enabled_|-{0}_|-configurable_test_state'.format(disabled_ret)
 
         try:
-            with salt.utils.fopen(state_file, 'w') as fp_:
+            with salt.utils.files.fopen(state_file, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
                 {{% set shell_disabled = salt['cmd.run']("{0}") %}}
 

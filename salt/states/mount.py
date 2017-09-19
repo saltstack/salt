@@ -45,7 +45,7 @@ import re
 from salt.ext.six import string_types
 
 import logging
-import salt.ext.six as six
+from salt.ext import six
 log = logging.getLogger(__name__)
 
 
@@ -75,7 +75,8 @@ def mounted(name,
             extra_mount_invisible_keys=None,
             extra_mount_ignore_fs_keys=None,
             extra_mount_translate_options=None,
-            hidden_opts=None):
+            hidden_opts=None,
+            **kwargs):
     '''
     Verify that a device is mounted
 
@@ -698,7 +699,8 @@ def unmounted(name,
               device=None,
               config='/etc/fstab',
               persist=False,
-              user=None):
+              user=None,
+              **kwargs):
     '''
     .. versionadded:: 0.17.0
 

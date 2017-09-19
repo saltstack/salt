@@ -21,13 +21,14 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 import salt.modules.zypper as zypper
+import salt.modules.pkg_resource as pkg_resource
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext.six.moves import configparser
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.pkg
 
 
@@ -46,7 +47,7 @@ def get_test_data(filename):
     '''
     Return static test data
     '''
-    with salt.utils.fopen(
+    with salt.utils.files.fopen(
             os.path.join(
                 os.path.join(
                     os.path.dirname(os.path.abspath(__file__)), 'zypp'), filename)) as rfh:
@@ -486,30 +487,92 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         :return:
         '''
         def _add_data(data, key, value):
-            data[key] = value
+            data.setdefault(key, []).append(value)
 
         rpm_out = [
-            'protobuf-java_|-2.6.1_|-3.1.develHead_|-',
-            'yast2-ftp-server_|-3.1.8_|-8.1_|-',
-            'jose4j_|-0.4.4_|-2.1.develHead_|-',
-            'apache-commons-cli_|-1.2_|-1.233_|-',
-            'jakarta-commons-discovery_|-0.4_|-129.686_|-',
-            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-',
+            'protobuf-java_|-2.6.1_|-3.1.develHead_|-noarch_|-_|-1499257756',
+            'yast2-ftp-server_|-3.1.8_|-8.1_|-x86_64_|-_|-1499257798',
+            'jose4j_|-0.4.4_|-2.1.develHead_|-noarch_|-_|-1499257756',
+            'apache-commons-cli_|-1.2_|-1.233_|-noarch_|-_|-1498636510',
+            'jakarta-commons-discovery_|-0.4_|-129.686_|-noarch_|-_|-1498636511',
+            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-noarch_|-_|-1498636510',
         ]
-        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}):
-            with patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}):
-                with patch.dict(zypper.__salt__, {'pkg_resource.sort_pkglist': MagicMock()}):
-                    with patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
-                        pkgs = zypper.list_pkgs()
-                        for pkg_name, pkg_version in {
-                            'jakarta-commons-discovery': '0.4-129.686',
-                            'yast2-ftp-server': '3.1.8-8.1',
-                            'protobuf-java': '2.6.1-3.1.develHead',
-                            'susemanager-build-keys-web': '12.0-5.1.develHead',
-                            'apache-commons-cli': '1.2-1.233',
-                            'jose4j': '0.4.4-2.1.develHead'}.items():
-                            self.assertTrue(pkgs.get(pkg_name))
-                            self.assertEqual(pkgs[pkg_name], pkg_version)
+        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
+            pkgs = zypper.list_pkgs(versions_as_list=True)
+            for pkg_name, pkg_version in {
+                'jakarta-commons-discovery': '0.4-129.686',
+                'yast2-ftp-server': '3.1.8-8.1',
+                'protobuf-java': '2.6.1-3.1.develHead',
+                'susemanager-build-keys-web': '12.0-5.1.develHead',
+                'apache-commons-cli': '1.2-1.233',
+                'jose4j': '0.4.4-2.1.develHead'}.items():
+                self.assertTrue(pkgs.get(pkg_name))
+                self.assertEqual(pkgs[pkg_name], [pkg_version])
+
+    def test_list_pkgs_with_attr(self):
+        '''
+        Test packages listing with the attr parameter
+
+        :return:
+        '''
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        rpm_out = [
+            'protobuf-java_|-2.6.1_|-3.1.develHead_|-noarch_|-_|-1499257756',
+            'yast2-ftp-server_|-3.1.8_|-8.1_|-x86_64_|-_|-1499257798',
+            'jose4j_|-0.4.4_|-2.1.develHead_|-noarch_|-_|-1499257756',
+            'apache-commons-cli_|-1.2_|-1.233_|-noarch_|-_|-1498636510',
+            'jakarta-commons-discovery_|-0.4_|-129.686_|-noarch_|-_|-1498636511',
+            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-noarch_|-_|-1498636510',
+        ]
+        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
+            pkgs = zypper.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
+            for pkg_name, pkg_attr in {
+                'jakarta-commons-discovery': {
+                    'version': '0.4',
+                    'release': '129.686',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1498636511,
+                },
+                'yast2-ftp-server': {
+                    'version': '3.1.8',
+                    'release': '8.1',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1499257798,
+                },
+                'protobuf-java': {
+                    'version': '2.6.1',
+                    'release': '3.1.develHead',
+                    'install_date_time_t': 1499257756,
+                    'arch': 'noarch',
+                },
+                'susemanager-build-keys-web': {
+                    'version': '12.0',
+                    'release': '5.1.develHead',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1498636510,
+                },
+                'apache-commons-cli': {
+                    'version': '1.2',
+                    'release': '1.233',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1498636510,
+                },
+                'jose4j': {
+                    'arch': 'noarch',
+                    'version': '0.4.4',
+                    'release': '2.1.develHead',
+                    'install_date_time_t': 1499257756,
+                }}.items():
+                self.assertTrue(pkgs.get(pkg_name))
+                self.assertEqual(pkgs[pkg_name], [pkg_attr])
 
     def test_list_patches(self):
         '''
@@ -1097,7 +1160,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         """
         _zpr = MagicMock()
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
-        assert isinstance(zypper.Wildcard(_zpr)('libzypp', '*.1'), str)
+        assert isinstance(zypper.Wildcard(_zpr)('libzypp', '*.1'), six.string_types)
 
     def test_wildcard_to_query_condition_preservation(self):
         '''
