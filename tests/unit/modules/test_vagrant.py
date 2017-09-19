@@ -10,7 +10,6 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import salt libs
 import salt.modules.vagrant as vagrant
-import salt.modules.config as config
 import salt.exceptions
 
 # Import third party libs
@@ -33,11 +32,9 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
         }
         return {vagrant: vagrant_globals}
 
-
     def test_vagrant_get_vm_info(self):
         with self.assertRaises(salt.exceptions.SaltInvocationError):
             vagrant.get_vm_info('thisNameDoesNotExist')
-
 
     def test_vagrant_init_positional(self):
         resp = vagrant.init(
@@ -58,10 +55,9 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                         runas='nobody',
                         deploy=True,
                         vagrant_provider='french',
-                        different= 'very'
+                        different='very'
                         )
         self.assertEqual(resp, expected)
-
 
     def test_vagrant_init_dict(self):
         testdict = dict(cwd='/tmp/anywhere',
@@ -74,8 +70,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
         testdict['name'] = 'test2'
         self.assertEqual(resp, testdict)
 
-
-    def test_vagrant_get_ssh_config_fails(self):
+    def test_vagrant_get_vm_info(self):
         testdict = dict(cwd='/tmp/there',
                         machine='treetest',
                         runas='anybody',
@@ -97,12 +92,10 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                         vagrant_provider='polish')
         self.assertEqual(resp, expected)
 
-
     def test_vagrant_get_ssh_config_fails(self):
         vagrant.init('test3', cwd='/tmp')
         with self.assertRaises(salt.exceptions.CommandExecutionError):
             vagrant.get_ssh_config('test3')  # has not been started
-
 
     def test_vagrant_destroy_removes_cached_entry(self):
         vagrant.init('test3', cwd='/tmp')

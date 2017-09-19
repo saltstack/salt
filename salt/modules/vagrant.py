@@ -10,7 +10,6 @@ Work with virtual machines managed by vagrant
 from __future__ import absolute_import, print_function
 import subprocess
 import logging
-from collections import defaultdict
 
 # Import salt libs
 import salt.cache
@@ -52,7 +51,7 @@ def get_vm_info(name):
     try:
         _ = vm_['machine']
     except KeyError:
-        raise SaltInvocationError, 'No Vagrant machine defined for Salt-id {}'.format(name)
+        raise SaltInvocationError('No Vagrant machine defined for Salt-id {}'.format(name))
     return vm_
 
 
@@ -230,7 +229,7 @@ def vm_state(name='', cwd=None):
     for line in reply.split('\n'):  # build a list of the text reply
         print(line)
         tokens = line.strip().split()
-        if len(tokens) > 1 and tokens[-1].endswith(')') :
+        if len(tokens) > 1 and tokens[-1].endswith(')'):
             try:
                 info[tokens[0]] = {'state': ' '.join(tokens[1:-1])}
                 info[tokens[0]]['provider'] = tokens[-1].lstrip('(').rstrip(')')
@@ -246,7 +245,7 @@ def init(name,  # Salt_id for created VM
          start=False,  # start the machine when initialized
          deploy=None,  # load Salt onto the virtual machine, default=True
          vagrant_provider='', # vagrant provider (default=virtualbox)
-         vm={},  # a dictionary of VM configuration settings
+         vm={},  # a dictionary of VM configuration settings   # pylint: disable=W0102
          ):
     '''
     Initialize a new Vagrant vm
@@ -291,7 +290,7 @@ def _runas_sudo(vm_, command):
     return command
 
 
-def start(name, vm_={}):
+def start(name):
     '''
     Start (vagrant up) a defined virtual machine by salt_id name.
     The machine must have been previously defined using "vagrant.init".
@@ -302,18 +301,16 @@ def start(name, vm_={}):
 
         salt <host> vagrant.start <salt_id>
     '''
+    vm_ = get_vm_info(name)
     return _start(name, vm_)
 
 
 def _start(name, vm_):  # internal call name, because "start" is a keyword argument to vagrant.init
 
-    if not vm_:
-        vm_ = get_vm_info(name)
-
     try:
         machine = vm_['machine']
     except KeyError:
-        raise ValueError, 'No Vagrant machine defined for Salt-id {}'.format(name)
+        raise SaltInvocationError('No Vagrant machine defined for Salt-id {}'.format(name))
 
     vagrant_provider = vm_.get('vagrant_provider', '')
     provider_ = '--provider={}'.format(vagrant_provider) if vagrant_provider else ''
@@ -326,7 +323,6 @@ def _start(name, vm_):  # internal call name, because "start" is a keyword argum
             )
 
     return ret == 0
-
 
 
 def shutdown(name):
@@ -469,13 +465,13 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
     If you enter a CIDR network mask, the module will attempt to find the VM's address for you.
     It will send an `ifconfig` command to the VM (using ssh to `ssh_host`:`ssh_port`) and scan the
     result, returning the IP address of the first interface it can find which matches your mask.
-    '''
+    '''    # pylint: disable=W1401
     vm_ = get_vm_info(name)
 
     ssh_config = _vagrant_ssh_config(vm_)
 
     try:
-        ans = { 'key_filename': ssh_config['IdentityFile'],
+        ans = {'key_filename': ssh_config['IdentityFile'],
             'ssh_username': ssh_config['User'],
             'ssh_host': ssh_config['HostName'],
             'ssh_port': ssh_config['Port'],
@@ -498,7 +494,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
         try:
             ret = subprocess.check_output([command], shell=True)
         except subprocess.CalledProcessError as e:
-            raise CommandExecutionError, 'Error trying ssh to %s: %s'.format(name, e)
+            raise CommandExecutionError('Error trying ssh to {}: {}'.format(name, e))
         reply = salt.utils.stringutils.to_str(ret)
         log.info(reply)
 
@@ -509,7 +505,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
                 # the lines we are looking for appear like:
                 #    "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
                 # or "inet6 addr: fe80::a00:27ff:fe04:7aac/64 Scope:Link"
-                tokens = line.replace('addr:','',1).split()  # remove "addr:" if it exists, then split
+                tokens = line.replace('addr:', '', 1).split()  # remove "addr:" if it exists, then split
                 found_address = None
                 if "inet" in tokens:
                     nxt = tokens.index("inet") + 1
@@ -529,8 +525,8 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
     if get_private_key:
         # retrieve the Vagrant private key from the host
         try:
-            with open(ssh_config['IdentityFile']) as pks:
+            with salt.utils.fopen(ssh_config['IdentityFile']) as pks:
                 ans['private_key'] = pks.read()
         except (OSError, IOError) as e:
-            raise CommandExecutionError, "Error processing Vagrant private key file: {}".format(e)
+            raise CommandExecutionError("Error processing Vagrant private key file: {}".format(e))
     return ans
