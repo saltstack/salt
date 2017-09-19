@@ -145,3 +145,27 @@ def get_capability_definitions(profile_manager):
     for cat in cap_categories:
         cap_definitions.extend(cat.capabilityMetadata)
     return cap_definitions
+
+
+def get_policies_by_id(profile_manager, policy_ids):
+    '''
+    Returns a list of policies with the specified ids.
+
+    profile_manager
+        Reference to the profile manager.
+
+    policy_ids
+        List of policy ids to retrieve.
+    '''
+    try:
+        return profile_manager.RetrieveContent(policy_ids)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
