@@ -42,6 +42,7 @@ from __future__ import absolute_import
 import logging
 import json
 import yaml
+import time
 
 # Import salt libs
 import salt.ext.six as six
