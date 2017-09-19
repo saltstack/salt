@@ -208,3 +208,27 @@ def get_storage_policies(profile_manager, policy_names=[],
     if get_all_policies:
         return policies
     return [p for p in policies if p.name in policy_names]
+
+
+def create_storage_policy(profile_manager, policy_spec):
+    '''
+    Creates a storage policy.
+
+    profile_manager
+        Reference to the profile manager.
+
+    policy_spec
+        Policy update spec.
+    '''
+    try:
+        profile_manager.Create(policy_spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
