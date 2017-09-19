@@ -687,11 +687,20 @@ def file_query(database, file_name, **connection_args):
 
     .. versionadded:: 2017.7.0
 
+    database
+
+        database to run script inside
+
+    file_name
+
+        File name of the script.  This can be on the minion, or a file that is reachable by the fileserver
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' mysql.file_query mydb file_name=/tmp/sqlfile.sql
+        salt '*' mysql.file_query mydb file_name=salt://sqlfile.sql
 
     Return data:
 
@@ -700,6 +709,9 @@ def file_query(database, file_name, **connection_args):
         {'query time': {'human': '39.0ms', 'raw': '0.03899'}, 'rows affected': 1L}
 
     '''
+    if any(file_name.startswith(proto) for proto in ('salt://', 'http://', 'https://', 'swift://', 's3://')):
+        file_name = __salt__['cp.cache_file'](file_name)
+
     if os.path.exists(file_name):
         with salt.utils.fopen(file_name, 'r') as ifile:
             contents = ifile.read()
@@ -708,7 +720,7 @@ def file_query(database, file_name, **connection_args):
         return False
 
     query_string = ""
-    ret = {'rows returned': 0, 'columns': 0, 'results': 0, 'rows affected': 0, 'query time': {'raw': 0}}
+    ret = {'rows returned': 0, 'columns': [], 'results': [], 'rows affected': 0, 'query time': {'raw': 0}}
     for line in contents.splitlines():
         if re.match(r'--', line):  # ignore sql comments
             continue
@@ -728,16 +740,16 @@ def file_query(database, file_name, **connection_args):
             if 'rows returned' in query_result:
                 ret['rows returned'] += query_result['rows returned']
             if 'columns' in query_result:
-                ret['columns'] += query_result['columns']
+                ret['columns'].append(query_result['columns'])
             if 'results' in query_result:
-                ret['results'] += query_result['results']
+                ret['results'].append(query_result['results'])
             if 'rows affected' in query_result:
                 ret['rows affected'] += query_result['rows affected']
     ret['query time']['human'] = str(round(float(ret['query time']['raw']), 2)) + 's'
     ret['query time']['raw'] = round(float(ret['query time']['raw']), 5)
 
     # Remove empty keys in ret
-    ret = dict((k, v) for k, v in six.iteritems(ret) if v)
+    ret = {k: v for k, v in six.iteritems(ret) if v}
 
     return ret
 
