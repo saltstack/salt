@@ -5,10 +5,8 @@ Work with virtual machines managed by vagrant
     .. versionadded:: Oxygen
 '''
 
-
 # Import python libs
 from __future__ import absolute_import, print_function
-import subprocess
 import logging
 
 # Import salt libs
@@ -75,16 +73,11 @@ def _vagrant_ssh_config(vm_):
     '''
     machine = vm_['machine']
     log.info('requesting vagrant ssh-config for VM %s', machine or '(default)')
-    cmd = _runas_sudo(vm_, 'vagrant ssh-config {}'.format(machine))
-    try:
-        output = subprocess.check_output(
-            [cmd],
-            shell=True,
-            cwd=vm_.get('cwd', None)
-            )
-    except subprocess.CalledProcessError as e:
-        output = e.output  # if the return code was non-zero, use the output anyway
-    reply = salt.utils.stringutils.to_str(output)
+    cmd = 'vagrant ssh-config {}'.format(machine)
+    reply = __salt__['cmd.shell'](cmd,
+                                  runas=vm_.get('runas'),
+                                  cwd=vm_.get('cwd'),
+                                  ignore_retcode=True)
     ssh_config = {}
     for line in reply.split('\n'):  # build a dictionary of the text reply
         tokens = line.strip().split()
@@ -105,12 +98,7 @@ def version():
         salt '*' vagrant.version
     '''
     cmd = 'vagrant -v'
-    try:
-        output = subprocess.check_output([cmd], shell=True)
-    except subprocess.CalledProcessError:
-        return 'Error: subprocess error calling ' + cmd
-    reply = salt.utils.stringutils.to_str(output)
-    return reply.strip()
+    return __salt__['cmd.shell'](cmd)
 
 
 def list_domains():
@@ -122,15 +110,14 @@ def list_domains():
     .. code-block:: bash
 
         salt '*' vagrant.list_domains
+
+    The above shows information about all known Vagrant environments
+    on this machine. This data is cached and may not be completely
+    up-to-date.
     '''
     vms = []
     cmd = 'vagrant global-status {}'
-    log.info('Executing command "%s"', cmd)
-    try:
-        output = subprocess.check_output([cmd], shell=True)
-    except subprocess.CalledProcessError:
-        return []
-    reply = salt.utils.stringutils.to_str(output)
+    reply = __salt__['cmd.shell'](cmd)
     for line in reply.split('\n'):  # build a list of the text reply
         print(line)
         tokens = line.strip().split()
@@ -154,15 +141,7 @@ def list_active_vms(cwd=None):
     '''
     vms = []
     cmd = 'vagrant status'
-    log.info('Executing command "%s"', cmd)
-    try:
-        output = subprocess.check_output(
-            [cmd],
-            shell=True,
-            cwd=cwd)
-    except subprocess.CalledProcessError:
-        return []
-    reply = salt.utils.stringutils.to_str(output)
+    reply = __salt__['cmd.shell'](cmd, cwd=cwd)
     for line in reply.split('\n'):  # build a list of the text reply
         print(line)
         tokens = line.strip().split()
@@ -184,15 +163,7 @@ def list_inactive_vms(cwd=None):
     '''
     vms = []
     cmd = 'vagrant status'
-    log.info('Executing command "%s"', cmd)
-    try:
-        output = subprocess.check_output(
-            [cmd],
-            shell=True,
-            cwd=cwd)
-    except subprocess.CalledProcessError:
-        return []
-    reply = salt.utils.stringutils.to_str(output)
+    reply = __salt__['cmd.shell'](cmd, cwd=cwd)
     for line in reply.split('\n'):  # build a list of the text reply
         print(line)
         tokens = line.strip().split()
@@ -217,19 +188,9 @@ def vm_state(name='', cwd=None):
     '''
 
     machine = get_vm_info(name)['machine'] if name else ''
-
     info = {}
-
     cmd = 'vagrant status {}'.format(machine)
-    log.info('Executing command "%s"', cmd)
-    try:
-        output = subprocess.check_output(
-            [cmd],
-            shell=True,
-            cwd=cwd)
-    except subprocess.CalledProcessError:
-        return {}
-    reply = salt.utils.stringutils.to_str(output)
+    reply = __salt__['cmd.shell'](cmd, cwd)
     for line in reply.split('\n'):  # build a list of the text reply
         print(line)
         tokens = line.strip().split()
@@ -281,19 +242,6 @@ def init(name,  # Salt_id for created VM
     return ret
 
 
-def _runas_sudo(vm_, command):
-    '''
-    prepend "sudo -u <runas> " if _vm['runas'] is defined
-    :param vm_: the virtual machine configuration dictionary
-    :param command: the command line which will be sent
-    :return: "sudo -u <runas> command" or "command" as needed
-    '''
-    runas = vm_.get('runas', False)
-    if runas:
-        return 'sudo -u {} {}'.format(runas, command)
-    return command
-
-
 def start(name):
     '''
     Start (vagrant up) a defined virtual machine by salt_id name.
@@ -318,13 +266,8 @@ def _start(name, vm_):  # internal call name, because "start" is a keyword argum
 
     vagrant_provider = vm_.get('vagrant_provider', '')
     provider_ = '--provider={}'.format(vagrant_provider) if vagrant_provider else ''
-    cmd = _runas_sudo(vm_, 'vagrant up {} {}'.format(machine, provider_))
-    log.info('Executing command "%s"', cmd)
-    ret = subprocess.call(
-            [cmd],
-            shell=True,
-            cwd=vm_.get('cwd', None)
-            )
+    cmd = 'vagrant up {} {}'.format(machine, provider_)
+    ret = __salt__['cmd.retcode'](cmd, runes=vm_.get('runas'), cwd=vm_.get('cwd'))
 
     return ret == 0
 
@@ -357,13 +300,10 @@ def stop(name):
     vm_ = get_vm_info(name)
     machine = vm_['machine']
 
-    cmd = _runas_sudo(vm_, 'vagrant halt {}'.format(machine))
-    log.info('Executing command "%s"', cmd)
-    ret = subprocess.call(
-        [cmd],
-        shell=True,
-        cwd=vm_.get('cwd', None)
-        )
+    cmd = 'vagrant halt {}'.format(machine)
+    ret = __salt__['cmd.retcode'](cmd,
+                                  runas=vm_.get('runas'),
+                                  cwd=vm_.get('cwd'))
     return ret == 0
 
 
@@ -380,13 +320,10 @@ def pause(name):
     vm_ = get_vm_info(name)
     machine = vm_['machine']
 
-    cmd = _runas_sudo(vm_, 'vagrant suspend {}'.format(machine))
-    log.info('Executing command "%s"', cmd)
-    ret = subprocess.call(
-        [cmd],
-        shell=True,
-        cwd=vm_.get('cwd', None)
-        )
+    cmd = 'vagrant suspend {}'.format(machine)
+    ret = __salt__['cmd.retcode'](cmd,
+                                  runas=vm_.get('runas'),
+                                  cwd=vm_.get('cwd'))
     return ret == 0
 
 
@@ -403,13 +340,10 @@ def reboot(name):
     vm_ = get_vm_info(name)
     machine = vm_['machine']
 
-    cmd = _runas_sudo(vm_, 'vagrant reload {}'.format(machine))
-    log.info('Executing command "%s"', cmd)
-    ret = subprocess.call(
-        [cmd],
-        shell=True,
-        cwd=vm_.get('cwd', None)
-        )
+    cmd = 'vagrant reload {}'.format(machine)
+    ret = __salt__['cmd.retcode'](cmd,
+                                  runas=vm_.get('runas'),
+                                  cwd=vm_.get('cwd'))
     return ret == 0
 
 
@@ -426,13 +360,10 @@ def destroy(name):
     vm_ = get_vm_info(name)
     machine = vm_['machine']
 
-    cmd = _runas_sudo(vm_, 'vagrant destroy -f {}'.format(machine))
-    log.info('Executing command "%s"', cmd)
-    ret = subprocess.call(
-        [cmd],
-        shell=True,
-        cwd=vm_.get('cwd', None)
-        )
+    cmd = 'vagrant destroy -f {}'.format(machine)
+    ret = __salt__['cmd.retcode'](cmd,
+                                  runas=vm_.get('runas'),
+                                  cwd=vm_.get('cwd'))
     _erase_cache(name)
     return ret == 0
 
@@ -495,12 +426,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
                   '{User}@{HostName} ifconfig'.format(**ssh_config)
 
         log.info('Trying ssh -p {Port} {User}@{HostName} ifconfig'.format(**ssh_config))
-        try:
-            ret = subprocess.check_output([command], shell=True)
-        except subprocess.CalledProcessError as e:
-            raise CommandExecutionError('Error trying ssh to {}: {}'.format(name, e))
-        reply = salt.utils.stringutils.to_str(ret)
-        log.info(reply)
+        reply = __salt__['cmd.shell'](command)
 
         target_network_range = ipaddress.ip_network(network_mask, strict=False)
 

@@ -10,6 +10,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import salt libs
 import salt.modules.vagrant as vagrant
+import salt.modules.cmdmod as cmd
 import salt.exceptions
 
 # Import third party libs
@@ -28,8 +29,11 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 'extension_modules': '',
                 'cachedir': '/tmp/salt-tests-tmpdir/cache',
                 'cache': 'localfs'
-            }
-        }
+            },
+            '__salt__': {
+                'cmd.shell': cmd.shell,
+                'cmd.retcode': cmd.retcode,
+            }}
         return {vagrant: vagrant_globals}
 
     def test_vagrant_get_vm_info(self):
