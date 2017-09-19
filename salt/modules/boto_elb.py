@@ -544,6 +544,7 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
                 continue
             log.error('ELB {0} does not exist: {1}'.format(name, error.message))
             return {}
+    return {}
 
 
 def set_attributes(name, attributes, region=None, key=None, keyid=None,
