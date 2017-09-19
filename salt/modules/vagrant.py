@@ -215,8 +215,12 @@ def vm_state(name='', cwd=None):
 
         salt '*' vagrant.vm_state <name>  cwd=/projects/project_1
     '''
+
+    machine = get_vm_info(name)['machine'] if name else ''
+
     info = {}
-    cmd = 'vagrant status {}'.format(name)
+
+    cmd = 'vagrant status {}'.format(machine)
     log.info('Executing command "%s"', cmd)
     try:
         output = subprocess.check_output(
@@ -360,7 +364,7 @@ def stop(name):
         shell=True,
         cwd=vm_.get('cwd', None)
         )
-    return ret
+    return ret == 0
 
 
 def pause(name):
@@ -383,7 +387,7 @@ def pause(name):
         shell=True,
         cwd=vm_.get('cwd', None)
         )
-    return ret
+    return ret == 0
 
 
 def reboot(name):
@@ -406,7 +410,7 @@ def reboot(name):
         shell=True,
         cwd=vm_.get('cwd', None)
         )
-    return ret
+    return ret == 0
 
 
 def destroy(name):
