@@ -2148,6 +2148,7 @@ def list_entities_for_policy(policy_name, path_prefix=None, entity_filter=None,
         salt myminion boto_iam.list_entities_for_policy mypolicy
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    retries = 30
 
     params = {}
     for arg in ('path_prefix', 'entity_filter'):
@@ -2155,21 +2156,26 @@ def list_entities_for_policy(policy_name, path_prefix=None, entity_filter=None,
             params[arg] = locals()[arg]
 
     policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
-    try:
-        allret = {
-          'policy_groups': [],
-          'policy_users': [],
-          'policy_roles': [],
-        }
-        for ret in __utils__['boto.paged_call'](conn.list_entities_for_policy, policy_arn=policy_arn, **params):
-            for k, v in six.iteritems(allret):
-                v.extend(ret.get('list_entities_for_policy_response', {}).get('list_entities_for_policy_result', {}).get(k))
-        return allret
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to list {0} policy entities.'
-        log.error(msg.format(policy_name))
-        return {}
+    while retries:
+        try:
+            allret = {
+              'policy_groups': [],
+              'policy_users': [],
+              'policy_roles': [],
+            }
+            for ret in __utils__['boto.paged_call'](conn.list_entities_for_policy, policy_arn=policy_arn, **params):
+                for k, v in six.iteritems(allret):
+                    v.extend(ret.get('list_entities_for_policy_response', {}).get('list_entities_for_policy_result', {}).get(k))
+            return allret
+        except boto.exception.BotoServerError as e:
+            if e.error_code == 'Throttling':
+                log.debug("Throttled by AWS API, will retry in 5 seconds...")
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error('Failed to list {0} policy entities: {1}'.format(policy_name, e.message))
+            return {}
+    return {}
 
 
 def list_attached_user_policies(user_name, path_prefix=None, entity_filter=None,
