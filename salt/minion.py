@@ -100,6 +100,7 @@ import salt.defaults.exitcodes
 import salt.cli.daemons
 import salt.log.setup
 
+import salt.utils.dictupdate
 from salt.config import DEFAULT_MINION_OPTS
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.executors import FUNCTION_EXECUTORS
@@ -1599,13 +1600,24 @@ class Minion(MinionBase):
         minion side execution.
         '''
         salt.utils.appendproctitle('{0}._thread_multi_return {1}'.format(cls.__name__, data['jid']))
-        ret = {
-            'return': {},
-            'retcode': {},
-            'success': {}
-        }
-        for ind in range(0, len(data['fun'])):
-            ret['success'][data['fun'][ind]] = False
+        multifunc_ordered = opts.get('multifunc_ordered', False)
+        num_funcs = len(data['fun'])
+        if multifunc_ordered:
+            ret = {
+                'return': [None] * num_funcs,
+                'retcode': [None] * num_funcs,
+                'success': [False] * num_funcs
+            }
+        else:
+            ret = {
+                'return': {},
+                'retcode': {},
+                'success': {}
+            }
+
+        for ind in range(0, num_funcs):
+            if not multifunc_ordered:
+                ret['success'][data['fun'][ind]] = False
             try:
                 if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar
@@ -1620,12 +1632,20 @@ class Minion(MinionBase):
                     data['arg'][ind],
                     data)
                 minion_instance.functions.pack['__context__']['retcode'] = 0
-                ret['return'][data['fun'][ind]] = func(*args, **kwargs)
-                ret['retcode'][data['fun'][ind]] = minion_instance.functions.pack['__context__'].get(
-                    'retcode',
-                    0
-                )
-                ret['success'][data['fun'][ind]] = True
+                if multifunc_ordered:
+                    ret['return'][ind] = func(*args, **kwargs)
+                    ret['retcode'][ind] = minion_instance.functions.pack['__context__'].get(
+                        'retcode',
+                        0
+                    )
+                    ret['success'][ind] = True
+                else:
+                    ret['return'][data['fun'][ind]] = func(*args, **kwargs)
+                    ret['retcode'][data['fun'][ind]] = minion_instance.functions.pack['__context__'].get(
+                        'retcode',
+                        0
+                    )
+                    ret['success'][data['fun'][ind]] = True
             except Exception as exc:
                 trb = traceback.format_exc()
                 log.warning(
@@ -1633,7 +1653,10 @@ class Minion(MinionBase):
                         exc
                     )
                 )
-                ret['return'][data['fun'][ind]] = trb
+                if multifunc_ordered:
+                    ret['return'][ind] = trb
+                else:
+                    ret['return'][data['fun'][ind]] = trb
             ret['jid'] = data['jid']
             ret['fun'] = data['fun']
             ret['fun_args'] = data['arg']
@@ -2588,6 +2611,8 @@ class SyndicManager(MinionBase):
         '''
         if kwargs is None:
             kwargs = {}
+        successful = False
+        # Call for each master
         for master, syndic_future in self.iter_master_options(master_id):
             if not syndic_future.done() or syndic_future.exception():
                 log.error('Unable to call {0} on {1}, that syndic is not connected'.format(func, master))
@@ -2595,12 +2620,12 @@ class SyndicManager(MinionBase):
 
             try:
                 getattr(syndic_future.result(), func)(*args, **kwargs)
-                return
+                successful = True
             except SaltClientError:
                 log.error('Unable to call {0} on {1}, trying another...'.format(func, master))
                 self._mark_master_dead(master)
-                continue
-        log.critical('Unable to call {0} on any masters!'.format(func))
+        if not successful:
+            log.critical('Unable to call {0} on any masters!'.format(func))
 
     def _return_pub_syndic(self, values, master_id=None):
         '''
@@ -3117,6 +3142,26 @@ class ProxyMinion(Minion):
 
         if 'proxy' not in self.opts:
             self.opts['proxy'] = self.opts['pillar']['proxy']
+
+        if self.opts.get('proxy_merge_pillar_in_opts'):
+            # Override proxy opts with pillar data when the user required.
+            self.opts = salt.utils.dictupdate.merge(self.opts,
+                                                    self.opts['pillar'],
+                                                    strategy=self.opts.get('proxy_merge_pillar_in_opts_strategy'),
+                                                    merge_lists=self.opts.get('proxy_deep_merge_pillar_in_opts', False))
+        elif self.opts.get('proxy_mines_pillar'):
+            # Even when not required, some details such as mine configuration
+            # should be merged anyway whenever possible.
+            if 'mine_interval' in self.opts['pillar']:
+                self.opts['mine_interval'] = self.opts['pillar']['mine_interval']
+            if 'mine_functions' in self.opts['pillar']:
+                general_proxy_mines = self.opts.get('mine_functions', [])
+                specific_proxy_mines = self.opts['pillar']['mine_functions']
+                try:
+                    self.opts['mine_functions'] = general_proxy_mines + specific_proxy_mines
+                except TypeError as terr:
+                    log.error('Unable to merge mine functions from the pillar in the opts, for proxy {}'.format(
+                        self.opts['id']))
 
         fq_proxyname = self.opts['proxy']['proxytype']
 
