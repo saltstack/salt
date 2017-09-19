@@ -103,12 +103,10 @@ description:
         mod = 'four.five.six'
         with pytest.raises(ImportError) as import_error:
             self.resolver.load_module(mod)
-        assert 'No module named ansible.modules.{0}'.format(mod) in str(import_error.value)
 
         mod = 'i.even.do.not.exist.at.all'
         with pytest.raises(LoaderError) as loader_error:
             self.resolver.load_module(mod)
-        assert 'Module "{0}" was not found'.format(mod) in str(loader_error.value)
 
     def test_resolver_module_loader(self):
         '''
@@ -128,4 +126,3 @@ description:
             patch('salt.modules.ansiblegate.importlib.import_module', lambda x: x):
             with pytest.raises(LoaderError) as loader_error:
                 self.resolver.load_module('something.strange')
-            assert 'Module "something.strange" was not found' in str(loader_error)
