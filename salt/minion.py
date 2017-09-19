@@ -2588,6 +2588,8 @@ class SyndicManager(MinionBase):
         '''
         if kwargs is None:
             kwargs = {}
+        successful = False
+        # Call for each master
         for master, syndic_future in self.iter_master_options(master_id):
             if not syndic_future.done() or syndic_future.exception():
                 log.error('Unable to call {0} on {1}, that syndic is not connected'.format(func, master))
@@ -2595,12 +2597,12 @@ class SyndicManager(MinionBase):
 
             try:
                 getattr(syndic_future.result(), func)(*args, **kwargs)
-                return
+                successful = True
             except SaltClientError:
                 log.error('Unable to call {0} on {1}, trying another...'.format(func, master))
                 self._mark_master_dead(master)
-                continue
-        log.critical('Unable to call {0} on any masters!'.format(func))
+        if not successful:
+            log.critical('Unable to call {0} on any masters!'.format(func))
 
     def _return_pub_syndic(self, values, master_id=None):
         '''
