@@ -259,3 +259,36 @@ def update_storage_policy(profile_manager, policy, policy_spec):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise VMwareRuntimeError(exc.msg)
+
+
+def get_default_storage_policy_of_datastore(profile_manager, datastore):
+    '''
+    Returns the default storage policy reference assigned to a datastore.
+
+    profile_manager
+        Reference to the profile manager.
+
+    datastore
+        Reference to the datastore.
+    '''
+    # Retrieve all datastores visible
+    hub = pbm.placement.PlacementHub(
+        hubId=datastore._moId, hubType='Datastore')
+    log.trace('placement_hub = {0}'.format(hub))
+    try:
+        policy_id = profile_manager.QueryDefaultRequirementProfile(hub)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
+    policy_refs = get_policies_by_id(profile_manager, [policy_id])
+    if not policy_refs:
+        raise VMwareObjectRetrievalError('Storage policy with id \'{0}\' was '
+                                         'not found'.format(policy_id))
+    return policy_refs[0]
