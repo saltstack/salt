@@ -249,3 +249,53 @@ class GetCapabilityDefinitionsTestCase(TestCase):
         ret = salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
         self.assertEqual(ret, ['fake_cap_meta1', 'fake_cap_meta2',
                                'fake_cap_meta3'])
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class GetPoliciesById(TestCase):
+    '''Tests for salt.utils.pbm.get_policies_by_id'''
+    def setUp(self):
+        self.policy_ids = MagicMock()
+        self.mock_policies = MagicMock()
+        self.mock_prof_mgr = MagicMock(
+            RetrieveContent=MagicMock(return_value=self.mock_policies))
+
+    def tearDown(self):
+        for attr in ('policy_ids', 'mock_policies', 'mock_prof_mgr'):
+            delattr(self, attr)
+
+    def test_retrieve_policies(self):
+        salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
+        self.mock_prof_mgr.RetrieveContent.assert_callend_once_with(
+            self.policy_ids)
+
+    def test_retrieve_policies_raises_no_permissions(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.mock_prof_mgr.RetrieveContent = MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_retrieve_policies_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.mock_prof_mgr.RetrieveContent = MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_retrieve_policies_raises_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.mock_prof_mgr.RetrieveContent = MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_return_policies(self):
+        ret = salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
+        self.assertEqual(ret, self.mock_policies)
