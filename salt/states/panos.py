@@ -54,6 +54,30 @@ commit to the device.
     panos/commit:
         panos.commit
 
+Version Specific Configurations
+===============================
+Palo Alto devices running different versions will have different supported features and different command structures. In
+order to account for this, the proxy module can be leveraged to check if the panos device is at a specific revision
+level.
+
+The proxy['panos.is_required_version'] method will check if a panos device is currently running a version equal or
+greater than the passed version. For example, proxy['panos.is_required_version']('7.0.0') would match both 7.1.0 and
+8.0.0.
+
+.. code-block:: yaml
+
+    {% if proxy['panos.is_required_version']('8.0.0') %}
+    panos/deviceconfig/system/motd-and-banner:
+      panos.set_config:
+        - xpath: /config/devices/entry[@name='localhost.localdomain']/deviceconfig/system/motd-and-banner
+        - value: |
+          <banner-header>BANNER TEXT</banner-header>
+          <banner-header-color>color2</banner-header-color>
+          <banner-header-text-color>color18</banner-header-text-color>
+          <banner-header-footer-match>yes</banner-header-footer-match>
+        - commit: False
+    {% endif %}
+
 .. seealso::
     :prox:`Palo Alto Proxy Module <salt.proxy.panos>`
 

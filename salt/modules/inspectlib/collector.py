@@ -31,6 +31,7 @@ from salt.modules.inspectlib.entities import (AllowedDir, IgnoredDir, Package,
 import salt.utils  # Can be removed when reinit_crypto is moved
 import salt.utils.files
 import salt.utils.fsutils
+import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
@@ -312,7 +313,7 @@ class Inspector(EnvLoader):
                         continue
                 if not valid or not os.path.exists(obj) or not os.access(obj, os.R_OK):
                     continue
-                if os.path.islink(obj):
+                if salt.utils.path.islink(obj):
                     links.append(obj)
                 elif os.path.isdir(obj):
                     dirs.append(obj)

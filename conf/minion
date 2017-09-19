@@ -373,7 +373,7 @@
 #    interface: eth0
 #    cidr: '10.0.0.0/8'
 
-# The number of seconds a mine update runs.
+# The number of minutes between mine updates.
 #mine_interval: 60
 
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
