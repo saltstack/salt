@@ -118,3 +118,30 @@ def get_placement_solver(service_instance):
         log.exception(exc)
         raise VMwareRuntimeError(exc.msg)
     return profile_manager
+
+
+def get_capability_definitions(profile_manager):
+    '''
+    Returns a list of all capability definitions.
+
+    profile_manager
+        Reference to the profile manager.
+    '''
+    res_type = pbm.profile.ResourceType(
+        resourceType=pbm.profile.ResourceTypeEnum.STORAGE)
+    try:
+        cap_categories = profile_manager.FetchCapabilityMetadata(res_type)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
+    cap_definitions = []
+    for cat in cap_categories:
+        cap_definitions.extend(cat.capabilityMetadata)
+    return cap_definitions
