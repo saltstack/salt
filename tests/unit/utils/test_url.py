@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
+import salt.utils.platform
 import salt.utils.url
 
 # Import Salt Testing Libs
@@ -38,6 +39,8 @@ class UrlTestCase(TestCase):
         '''
         path = '?funny/path with {interesting|chars}'
         url = 'salt://' + path
+        if salt.utils.platform.is_windows():
+            path = '_funny/path with {interesting_chars}'
 
         self.assertEqual(salt.utils.url.parse(url), (path, None))
 
@@ -48,6 +51,8 @@ class UrlTestCase(TestCase):
         saltenv = 'ambience'
         path = '?funny/path&with {interesting|chars}'
         url = 'salt://' + path + '?saltenv=' + saltenv
+        if salt.utils.platform.is_windows():
+            path = '_funny/path&with {interesting_chars}'
 
         self.assertEqual(salt.utils.url.parse(url), (path, saltenv))
 
@@ -59,6 +64,8 @@ class UrlTestCase(TestCase):
         '''
         path = '? interesting/&path.filetype'
         url = 'salt://' + path
+        if salt.utils.platform.is_windows():
+            url = 'salt://_ interesting/&path.filetype'
 
         self.assertEqual(salt.utils.url.create(path), url)
 
@@ -68,6 +75,8 @@ class UrlTestCase(TestCase):
         '''
         saltenv = 'raumklang'
         path = '? interesting/&path.filetype'
+        if salt.utils.platform.is_windows():
+            path = '_ interesting/&path.filetype'
 
         url = 'salt://' + path + '?saltenv=' + saltenv
 
@@ -149,6 +158,8 @@ class UrlTestCase(TestCase):
         '''
         path = 'dir/file.conf'
         escaped_path = '|' + path
+        if salt.utils.platform.is_windows():
+            escaped_path = path
 
         self.assertEqual(salt.utils.url.escape(path), escaped_path)
 
@@ -167,6 +178,8 @@ class UrlTestCase(TestCase):
         path = 'dir/file.conf'
         url = 'salt://' + path
         escaped_url = 'salt://|' + path
+        if salt.utils.platform.is_windows():
+            escaped_url = url
 
         self.assertEqual(salt.utils.url.escape(url), escaped_url)
 

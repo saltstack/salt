@@ -2,12 +2,15 @@
 '''
 Utility functions for use with or in SLS files
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 
+# Import Salt libs
 import salt.exceptions
 import salt.loader
 import salt.template
-import salt.utils
+import salt.utils.args
 import salt.utils.dictupdate
 
 
@@ -172,7 +175,7 @@ def serialize(serializer, obj, **mod_kwargs):
         {% set json_string = salt.slsutil.serialize('json',
             {'foo': 'Foo!'}) %}
     '''
-    kwargs = salt.utils.clean_kwargs(**mod_kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
     return _get_serialize_fn(serializer, 'serialize')(obj, **kwargs)
 
 
@@ -196,6 +199,6 @@ def deserialize(serializer, stream_or_string, **mod_kwargs):
         {% set python_object = salt.slsutil.deserialize('json',
             '{"foo": "Foo!"}') %}
     '''
-    kwargs = salt.utils.clean_kwargs(**mod_kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
     return _get_serialize_fn(serializer, 'deserialize')(stream_or_string,
             **kwargs)
