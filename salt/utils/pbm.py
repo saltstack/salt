@@ -93,3 +93,28 @@ def get_profile_manager(service_instance):
         log.exception(exc)
         raise VMwareRuntimeError(exc.msg)
     return profile_manager
+
+
+def get_placement_solver(service_instance):
+    '''
+    Returns a placement solver
+
+    service_instance
+        Service instance to the host or vCenter
+    '''
+    stub = salt.utils.vmware.get_new_service_instance_stub(
+        service_instance, ns='pbm/2.0', path='/pbm/sdk')
+    pbm_si = pbm.ServiceInstance('ServiceInstance', stub)
+    try:
+        profile_manager = pbm_si.RetrieveContent().placementSolver
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
+    return profile_manager
