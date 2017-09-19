@@ -389,3 +389,51 @@ class GetStoragePoliciesTestCase(TestCase):
         ret = salt.utils.pbm.get_storage_policies(
             self.mock_prof_mgr, policy_names=['fake_policy1', 'fake_policy3'])
         self.assertEqual(ret, [self.mock_policies[1], self.mock_policies[3]])
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class CreateStoragePolicyTestCase(TestCase):
+    '''Tests for salt.utils.pbm.create_storage_policy'''
+    def setUp(self):
+        self.mock_policy_spec = MagicMock()
+        self.mock_prof_mgr = MagicMock()
+
+    def tearDown(self):
+        for attr in ('mock_policy_spec', 'mock_prof_mgr'):
+            delattr(self, attr)
+
+    def test_create_policy(self):
+        salt.utils.pbm.create_storage_policy(self.mock_prof_mgr,
+                                             self.mock_policy_spec)
+        self.mock_prof_mgr.Create.assert_called_once_with(
+            self.mock_policy_spec)
+
+    def test_create_policy_raises_no_permissions(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.mock_prof_mgr.Create = MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.pbm.create_storage_policy(self.mock_prof_mgr,
+                                                 self.mock_policy_spec)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_create_policy_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.mock_prof_mgr.Create = MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.pbm.create_storage_policy(self.mock_prof_mgr,
+                                                 self.mock_policy_spec)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_create_policy_raises_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.mock_prof_mgr.Create = MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            salt.utils.pbm.create_storage_policy(self.mock_prof_mgr,
+                                                 self.mock_policy_spec)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
