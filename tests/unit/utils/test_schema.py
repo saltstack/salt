@@ -136,7 +136,7 @@ class ConfigTestCase(TestCase):
 
     def test_optional_requirements_config(self):
         class BaseRequirements(schema.Schema):
-            driver = schema.StringItem(default='digital_ocean', format='hidden')
+            driver = schema.StringItem(default='digitalocean', format='hidden')
 
         class SSHKeyFileSchema(schema.Schema):
             ssh_key_file = schema.StringItem(
@@ -149,13 +149,13 @@ class ConfigTestCase(TestCase):
             ssh_key_names = schema.StringItem(
                 title='SSH Key Names',
                 description='The names of an SSH key being managed on '
-                            'Digital Ocean account which will be used to '
+                            'DigitalOcean account which will be used to '
                             'authenticate on the deployed VMs',
                 )
 
         class Requirements(BaseRequirements):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             personal_access_token = schema.StringItem(
                 title='Personal Access Token',
@@ -174,12 +174,12 @@ class ConfigTestCase(TestCase):
 
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
-            'title': 'Digital Ocean',
-            'description': 'Digital Ocean Cloud VM configuration requirements.',
+            'title': 'DigitalOcean',
+            'description': 'DigitalOcean Cloud VM configuration requirements.',
             'type': 'object',
             'properties': {
                 'driver': {
-                    'default': 'digital_ocean',
+                    'default': 'digitalocean',
                     'format': 'hidden',
                     'type': 'string',
                     'title': 'driver'
@@ -222,8 +222,8 @@ class ConfigTestCase(TestCase):
         self.assertDictEqual(expected, Requirements.serialize())
 
         class Requirements2(BaseRequirements):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             personal_access_token = schema.StringItem(
                 title='Personal Access Token',
@@ -239,7 +239,7 @@ class ConfigTestCase(TestCase):
             ssh_key_names = schema.StringItem(
                 title='SSH Key Names',
                 description='The names of an SSH key being managed on '
-                            'Digital Ocean account which will be used to '
+                            'DigitalOcean account which will be used to '
                             'authenticate on the deployed VMs')
 
             requirements_definition = schema.AnyOfItem(
@@ -251,12 +251,12 @@ class ConfigTestCase(TestCase):
 
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
-            'title': 'Digital Ocean',
-            'description': 'Digital Ocean Cloud VM configuration requirements.',
+            'title': 'DigitalOcean',
+            'description': 'DigitalOcean Cloud VM configuration requirements.',
             'type': 'object',
             'properties': {
                 'driver': {
-                    'default': 'digital_ocean',
+                    'default': 'digitalocean',
                     'format': 'hidden',
                     'type': 'string',
                     'title': 'driver'
@@ -299,19 +299,19 @@ class ConfigTestCase(TestCase):
         self.assertDictContainsSubset(expected, Requirements2.serialize())
 
         class Requirements3(schema.Schema):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             merge_reqs = Requirements(flatten=True)
 
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
-            'title': 'Digital Ocean',
-            'description': 'Digital Ocean Cloud VM configuration requirements.',
+            'title': 'DigitalOcean',
+            'description': 'DigitalOcean Cloud VM configuration requirements.',
             'type': 'object',
             'properties': {
                 'driver': {
-                    'default': 'digital_ocean',
+                    'default': 'digitalocean',
                     'format': 'hidden',
                     'type': 'string',
                     'title': 'driver'
@@ -354,8 +354,8 @@ class ConfigTestCase(TestCase):
         self.assertDictContainsSubset(expected, Requirements3.serialize())
 
         class Requirements4(schema.Schema):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             merge_reqs = Requirements(flatten=True)
 
@@ -367,7 +367,7 @@ class ConfigTestCase(TestCase):
             ssh_key_names_2 = schema.StringItem(
                 title='SSH Key Names',
                 description='The names of an SSH key being managed on '
-                            'Digital Ocean account which will be used to '
+                            'DigitalOcean account which will be used to '
                             'authenticate on the deployed VMs')
 
             requirements_definition_2 = schema.AnyOfItem(
@@ -379,12 +379,12 @@ class ConfigTestCase(TestCase):
 
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
-            'title': 'Digital Ocean',
-            'description': 'Digital Ocean Cloud VM configuration requirements.',
+            'title': 'DigitalOcean',
+            'description': 'DigitalOcean Cloud VM configuration requirements.',
             'type': 'object',
             'properties': {
                 'driver': {
-                    'default': 'digital_ocean',
+                    'default': 'digitalocean',
                     'format': 'hidden',
                     'type': 'string',
                     'title': 'driver'
@@ -446,7 +446,7 @@ class ConfigTestCase(TestCase):
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_optional_requirements_config_validation(self):
         class BaseRequirements(schema.Schema):
-            driver = schema.StringItem(default='digital_ocean', format='hidden')
+            driver = schema.StringItem(default='digitalocean', format='hidden')
 
         class SSHKeyFileSchema(schema.Schema):
             ssh_key_file = schema.StringItem(
@@ -462,8 +462,8 @@ class ConfigTestCase(TestCase):
                             'authenticate on the deployed VMs')
 
         class Requirements(BaseRequirements):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             personal_access_token = schema.StringItem(
                 title='Personal Access Token',
