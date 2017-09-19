@@ -16,7 +16,7 @@ from collections import defaultdict
 import salt.cache
 import salt.utils
 import salt.utils.stringutils
-from salt.exceptions import CommandExecutionError, SaltCacheError
+from salt.exceptions import CommandExecutionError, SaltCacheError, SaltInvocationError
 import salt.ext.six as six
 if six.PY3:
     import ipaddress
@@ -37,14 +37,12 @@ def __virtual__():
     return __virtualname__
 
 
-def _update_cache(name, vm_, opts=None):
+def _update_cache(name, vm_):
     vm_cache = salt.cache.Cache(__opts__, expire=13140000)  # keep data for ten years
     vm_cache.store('vagrant', name, vm_)
-    if opts:
-        vm_cache.store('vagrant_opts', name, opts)
 
 
-def _get_cached_vm(name):
+def get_vm_info(name):
     vm_cache = salt.cache.Cache(__opts__)
     try:
         vm_ = vm_cache.fetch('vagrant', name)
@@ -54,18 +52,8 @@ def _get_cached_vm(name):
     try:
         _ = vm_['machine']
     except KeyError:
-        raise ValueError, 'No Vagrant machine defined for Salt-id {}'.format(name)
+        raise SaltInvocationError, 'No Vagrant machine defined for Salt-id {}'.format(name)
     return vm_
-
-
-def _get_cached_opts(name):
-    vm_cache = salt.cache.Cache(__opts__)
-    try:
-        opts = vm_cache.fetch('vagrant_opts', name)
-    except SaltCacheError:
-        log.warn('Trouble reading Salt opts cache for vagrant[%s]', name)
-        return None
-    return opts
 
 
 def _erase_cache(name):
@@ -252,12 +240,12 @@ def vm_state(name='', cwd=None):
 
 
 def init(name,  # Salt_id for created VM
-         cwd,   # path to find Vagrantfile
+         cwd=None,   # path to find Vagrantfile
          machine='',  # name of machine in Vagrantfile
          runas=None,  # username who owns Vagrant box
-         start=True,  # start the machine when initialized
+         start=False,  # start the machine when initialized
          deploy=None,  # load Salt onto the virtual machine, default=True
-         vagrant_provider='', # vagrant provider engine name
+         vagrant_provider='', # vagrant provider (default=virtualbox)
          vm={},  # a dictionary of VM configuration settings
          ):
     '''
@@ -272,8 +260,10 @@ def init(name,  # Salt_id for created VM
     '''
     vm_ = vm.copy()  #  passed configuration data
     vm_['name'] = name
-    vm_['cwd'] = cwd
     #  passed-in keyword arguments overwrite vm dictionary values
+    vm_['cwd'] = cwd or vm_.get('cwd')
+    if not vm_['cwd']:
+        raise SaltInvocationError('Path to Vagrantfile must be defined by \'cwd\' argument')
     vm_['machine'] = machine or vm_.get('machine', machine)
     vm_['runas'] = runas or vm_.get('runas', runas)
     vm_['deploy'] = deploy if deploy is not None else vm_.get('deploy', True)
@@ -318,7 +308,7 @@ def start(name, vm_={}):
 def _start(name, vm_):  # internal call name, because "start" is a keyword argument to vagrant.init
 
     if not vm_:
-        vm_ = _get_cached_vm(name)
+        vm_ = get_vm_info(name)
 
     try:
         machine = vm_['machine']
@@ -364,7 +354,7 @@ def stop(name):
 
         salt <host> vagrant.stop <salt_id>
     '''
-    vm_ = _get_cached_vm(name)
+    vm_ = get_vm_info(name)
     machine = vm_['machine']
 
     cmd = _runas_sudo(vm_, 'vagrant halt {}'.format(machine))
@@ -387,7 +377,7 @@ def pause(name):
 
         salt <host> vagrant.pause <salt_id>
     '''
-    vm_ = _get_cached_vm(name)
+    vm_ = get_vm_info(name)
     machine = vm_['machine']
 
     cmd = _runas_sudo(vm_, 'vagrant suspend {}'.format(machine))
@@ -410,7 +400,7 @@ def reboot(name):
 
         salt <host> vagrant.reboot <salt_id>
     '''
-    vm_ = _get_cached_vm(name)
+    vm_ = get_vm_info(name)
     machine = vm_['machine']
 
     cmd = _runas_sudo(vm_, 'vagrant reload {}'.format(machine))
@@ -433,7 +423,7 @@ def destroy(name):
 
         salt <host> vagrant.destroy <salt_id>
     '''
-    vm_ = _get_cached_vm(name)
+    vm_ = get_vm_info(name)
     machine = vm_['machine']
 
     cmd = _runas_sudo(vm_, 'vagrant destroy -f {}'.format(machine))
@@ -480,7 +470,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
     It will send an `ifconfig` command to the VM (using ssh to `ssh_host`:`ssh_port`) and scan the
     result, returning the IP address of the first interface it can find which matches your mask.
     '''
-    vm_ = _get_cached_vm(name)
+    vm_ = get_vm_info(name)
 
     ssh_config = _vagrant_ssh_config(vm_)
 
