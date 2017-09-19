@@ -357,6 +357,7 @@ def assemble(name,
     elif test_mode is False:
         return __salt__['cmd.run'](cmd, python_shell=False)
 
+
 def examine(device):
     '''
     Show detail for a specified RAID component device

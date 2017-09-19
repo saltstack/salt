@@ -25,9 +25,6 @@ import logging
 # Import salt libs
 import salt.utils.path
 
-# Import 3rd-party libs
-from salt.ext import six
-
 # Set up logger
 log = logging.getLogger(__name__)
 
@@ -116,7 +113,7 @@ def present(name,
     elif len(uuid_dict) == 1:
         uuid = uuid_dict.keys()[0]
         if present and present['uuid'] != uuid:
-            ret['comment'] = 'Devices MD_UUIDs: {0} differs from present RAID uuid {1}.'.format(uuid,  present['uuid'])
+            ret['comment'] = 'Devices MD_UUIDs: {0} differs from present RAID uuid {1}.'.format(uuid, present['uuid'])
             ret['result'] = False
             return ret
 
@@ -193,7 +190,7 @@ def present(name,
             ret['comment'] = 'Raid {0} failed to be {1}.'.format(name, verb)
             ret['result'] = False
     else:
-            ret['comment'] = 'Raid {0} already present.'.format(name)
+        ret['comment'] = 'Raid {0} already present.'.format(name)
 
     if (do_assemble or present) and len(new_devices) > 0:
         for d in new_devices:
