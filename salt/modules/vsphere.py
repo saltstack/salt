@@ -3848,7 +3848,7 @@ def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None,
                 das_config.defaultVmSettings.isolationResponse = \
                         vm_set_dict['isolation_response']
             if 'restart_priority' in vm_set_dict:
-                das_config.defaultVmSettings.restartPriority= \
+                das_config.defaultVmSettings.restartPriority = \
                         vm_set_dict['restart_priority']
         if 'hb_ds_candidate_policy' in ha_dict:
             das_config.hBDatastoreCandidatePolicy = \
@@ -3880,7 +3880,7 @@ def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None,
         cluster_spec.vmSwapPlacement = cluster_dict['vm_swap_placement']
     if cluster_dict.get('vsan'):
         vsan_dict = cluster_dict['vsan']
-        if not vsan_61: # VSAN is 6.2 and above
+        if not vsan_61:  # VSAN is 6.2 and above
             if 'enabled' in vsan_dict:
                 if not vsan_spec.vsanClusterConfig:
                     vsan_spec.vsanClusterConfig = \
