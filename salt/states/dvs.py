@@ -3,6 +3,8 @@
 Manage VMware distributed virtual switches (DVSs) and their distributed virtual
 portgroups (DVportgroups).
 
+:codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
+
 Examples
 ========
 
@@ -206,14 +208,13 @@ import traceback
 
 # Import Salt Libs
 import salt.exceptions
-import salt.utils
 
 # Get Logging Started
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return True
+    return 'dvs'
 
 
 def mod_init(low):
