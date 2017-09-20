@@ -177,6 +177,7 @@ import salt.utils.http
 import salt.utils.path
 import salt.utils.vmware
 import salt.utils.vsan
+import salt.utils.pbm
 from salt.exceptions import CommandExecutionError, VMwareSaltError, \
         ArgumentValueError, InvalidConfigError, VMwareObjectRetrievalError, \
         VMwareApiError, InvalidEntityError
@@ -193,7 +194,7 @@ except ImportError:
     HAS_JSONSCHEMA = False
 
 try:
-    from pyVmomi import vim, vmodl, VmomiSupport
+    from pyVmomi import vim, vmodl, pbm, VmomiSupport
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -4606,6 +4607,43 @@ def remove_dvportgroup(portgroup, dvs, service_instance=None):
                                          'retrieved'.format(portgroup))
     salt.utils.vmware.remove_dvportgroup(pg_refs[0])
     return True
+
+
+def _get_policy_dict(policy):
+    '''Returns a dictionary representation of a policy'''
+    profile_dict = {'name': policy.name,
+                    'description': policy.description,
+                    'resource_type': policy.resourceType.resourceType}
+    subprofile_dicts = []
+    if isinstance(policy, pbm.profile.CapabilityBasedProfile) and \
+       isinstance(policy.constraints,
+                  pbm.profile.SubProfileCapabilityConstraints):
+
+        for subprofile in policy.constraints.subProfiles:
+            subprofile_dict = {'name': subprofile.name,
+                               'force_provision': subprofile.forceProvision}
+            cap_dicts = []
+            for cap in subprofile.capability:
+                cap_dict = {'namespace': cap.id.namespace,
+                            'id': cap.id.id}
+                # We assume there is one constraint with one value set
+                val = cap.constraint[0].propertyInstance[0].value
+                if isinstance(val, pbm.capability.types.Range):
+                    val_dict = {'type': 'range',
+                                'min': val.min,
+                                'max': val.max}
+                elif isinstance(val, pbm.capability.types.DiscreteSet):
+                    val_dict = {'type': 'set',
+                                'values': val.values}
+                else:
+                    val_dict = {'type': 'scalar',
+                                'value': val}
+                cap_dict['setting'] = val_dict
+                cap_dicts.append(cap_dict)
+            subprofile_dict['capabilities'] = cap_dicts
+            subprofile_dicts.append(subprofile_dict)
+    profile_dict['subprofiles'] = subprofile_dicts
+    return profile_dict
 
 
 @depends(HAS_PYVMOMI)
