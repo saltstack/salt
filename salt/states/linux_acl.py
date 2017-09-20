@@ -49,7 +49,7 @@ def __virtual__():
     if salt.utils.which('getfacl') and salt.utils.which('setfacl'):
         return __virtualname__
 
-    return False
+    return False, 'The linux_acl state cannot be loaded: the getfacl or setfacl binary is not in the path.'
 
 
 def present(name, acl_type, acl_name='', perms='', recurse=False):
