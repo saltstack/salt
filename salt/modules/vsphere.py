@@ -178,7 +178,8 @@ import salt.utils.path
 import salt.utils.vmware
 import salt.utils.vsan
 from salt.exceptions import CommandExecutionError, VMwareSaltError, \
-        ArgumentValueError, InvalidConfigError, VMwareObjectRetrievalError
+        ArgumentValueError, InvalidConfigError, VMwareObjectRetrievalError, \
+        VMwareApiError, InvalidEntityError
 from salt.utils.decorators import depends, ignores_kwargs
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
         ESXClusterEntitySchema
@@ -3988,7 +3989,7 @@ def create_cluster(cluster_dict, datacenter=None, cluster=None,
     if cluster_dict.get('vsan') and not \
        salt.utils.vsan.vsan_supported(service_instance):
 
-        raise excs.VMwareApiError('VSAN operations are not supported')
+        raise VMwareApiError('VSAN operations are not supported')
     si = service_instance
     cluster_spec = vim.ClusterConfigSpecEx()
     vsan_spec = None
@@ -3999,11 +4000,11 @@ def create_cluster(cluster_dict, datacenter=None, cluster=None,
         #  is not supported before 60u2 vcenter
         vcenter_info = salt.utils.vmware.get_service_info(si)
         if float(vcenter_info.apiVersion) >= 6.0 and \
-                        int(vcenter_info.build) >= 3634794: # 60u2
+                int(vcenter_info.build) >= 3634794:  # 60u2
             vsan_spec = vim.vsan.ReconfigSpec(modify=True)
             vsan_61 = False
             # We need to keep HA disabled and enable it afterwards
-            if cluster_dict.get('ha',{}).get('enabled'):
+            if cluster_dict.get('ha', {}).get('enabled'):
                 enable_ha = True
                 ha_config = cluster_dict['ha']
                 del cluster_dict['ha']
@@ -4101,7 +4102,7 @@ def update_cluster(cluster_dict, datacenter=None, cluster=None,
         #  is not supported before 60u2 vcenter
         vcenter_info = salt.utils.vmware.get_service_info(service_instance)
         if float(vcenter_info.apiVersion) >= 6.0 and \
-                int(vcenter_info.build) >= 3634794: # 60u2
+                int(vcenter_info.build) >= 3634794:  # 60u2
             vsan_61 = False
             vsan_info = salt.utils.vsan.get_cluster_vsan_info(cluster_ref)
             vsan_spec = vim.vsan.ReconfigSpec(modify=True)
@@ -4213,8 +4214,8 @@ def list_datastores_via_proxy(datastore_names=None, backing_disk_ids=None,
                    'free_space': ds.summary.freeSpace,
                    'capacity': ds.summary.capacity}
         backing_disk_ids = []
-        for vol in [i.volume for i in mount_infos if \
-                    i.volume.name == ds.name and \
+        for vol in [i.volume for i in mount_infos if
+                    i.volume.name == ds.name and
                     isinstance(i.volume, vim.HostVmfsVolume)]:
 
             backing_disk_ids.extend([e.diskName for e in vol.extent])
@@ -4375,7 +4376,7 @@ def _validate_entity(entity):
     try:
         jsonschema.validate(entity, schema)
     except jsonschema.exceptions.ValidationError as exc:
-        raise excs.InvalidEntityError(exc)
+        raise InvalidEntityError(exc)
 
 
 @depends(HAS_PYVMOMI)
