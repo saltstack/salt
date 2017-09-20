@@ -4784,6 +4784,47 @@ def _apply_policy_config(policy_spec, policy_dict):
 
 
 @depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def create_storage_policy(policy_name, policy_dict, service_instance=None):
+    '''
+    Creates a storage policy.
+
+    Supported capability types: scalar, set, range.
+
+    policy_name
+        Name of the policy to create.
+        The value of the argument will override any existing name in
+        ``policy_dict``.
+
+    policy_dict
+        Dictionary containing the changes to apply to the policy.
+        (exmaple in salt.states.pbm)
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.create_storage_policy policy_name='policy name'
+            policy_dict="$policy_dict"
+    '''
+    log.trace('create storage policy \'{0}\', dict = {1}'
+              ''.format(policy_name, policy_dict))
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    policy_create_spec = pbm.profile.CapabilityBasedProfileCreateSpec()
+    # Hardcode the storage profile resource type
+    policy_create_spec.resourceType = pbm.profile.ResourceType(
+        resourceType=pbm.profile.ResourceTypeEnum.STORAGE)
+    # Set name argument
+    policy_dict['name'] = policy_name
+    log.trace('Setting policy values in policy_update_spec')
+    _apply_policy_config(policy_create_spec, policy_dict)
+    salt.utils.pbm.create_storage_policy(profile_manager, policy_create_spec)
+    return {'create_storage_policy': True}
+
+
+@depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
