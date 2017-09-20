@@ -370,7 +370,7 @@ def destroy(name):
     finally:
         _erase_cache(name)
     return ret == 0
-ls
+
 
 def get_ssh_config(name, network_mask='', get_private_key=False):
     r'''
