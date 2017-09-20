@@ -21,6 +21,7 @@ import salt.utils.parsers
 import salt.log.setup as log
 import salt.config
 import salt.syspaths
+from salt.utils.parsers import DaemonMixIn
 
 ensure_in_syspath('../../')
 
@@ -804,6 +805,62 @@ class SaltRunOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+class DaemonMixInTestCase(LogSettingsParserTests):
+    '''
+    Tests parsing Salt Master options
+    '''
+    def setUp(self):
+        '''
+        Setting up
+        '''
+        # Set defaults
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+
+        # Log file
+        self.log_file = '/tmp/salt_run_parser_test'
+        # Function to patch
+        self.config_func = 'salt.config.master_config'
+
+        # Mock log setup
+        self.setup_log()
+
+        # Assign parser
+        self.parser = salt.utils.parsers.SaltRunOptionParser
+
+        # Set PID
+        self.pid = '/some/fake.pid'
+
+        # Setup mixin
+        self.mixin = DaemonMixIn()
+        self.mixin.info = None
+        self.mixin.config = {}
+        self.mixin.config['pidfile'] = self.pid
+
+    def test_pid_file_deletion(self):
+        '''
+        PIDfile deletion without exception.
+        '''
+        with patch('os.unlink', MagicMock()) as os_unlink:
+            with patch('os.path.isfile', MagicMock(return_value=True)):
+	        with patch.object(self.mixin, 'info', MagicMock()):
+		    self.mixin._mixin_before_exit()
+	            assert self.mixin.info.call_count == 0
+	            assert os_unlink.call_count == 1
+
+    def test_pid_file_deletion_with_oserror(self):
+        '''
+        PIDfile deletion with exception
+        '''
+        with patch('os.unlink', MagicMock(side_effect=OSError())) as os_unlink:
+            with patch('os.path.isfile', MagicMock(return_value=True)):
+	        with patch.object(self.mixin, 'info', MagicMock()):
+		    self.mixin._mixin_before_exit()
+	            assert os_unlink.call_count == 1
+	            self.mixin.info.assert_called_with(
+                       'PIDfile could not be deleted: {}'.format(self.pid))
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltSSHOptionParserTestCase(LogSettingsParserTests):
     '''
     Tests parsing Salt Master options
@@ -944,4 +1001,5 @@ if __name__ == '__main__':
               SaltCloudParserTestCase,
               SPMParserTestCase,
               SaltAPIParserTestCase,
+              DaemonMixInTestCase,
               needs_daemon=False)
