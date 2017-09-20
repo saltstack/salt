@@ -181,8 +181,8 @@ def cluster_configured(name, cluster_config):
                 ret.update({'result': None,
                             'comment': '\n'.join(comments)})
                 return ret
-            log.debug ('Creating cluster \'{0}\' in datacenter \'{1}\'. '
-                       ''.format(cluster_name, datacenter_name))
+            log.debug('Creating cluster \'{0}\' in datacenter \'{1}\'. '
+                      ''.format(cluster_name, datacenter_name))
             __salt__['vsphere.create_cluster'](cluster_dict,
                                                datacenter_name,
                                                cluster_name,
@@ -258,7 +258,7 @@ def cluster_configured(name, cluster_config):
                     'comment': '\n'.join(comments),
                     'changes': changes})
         return ret
-    except excs.CommandExecutionError as exc:
+    except CommandExecutionError as exc:
         log.error('Error: {0}\n{1}'.format(exc, traceback.format_exc()))
         if si:
             __salt__['vsphere.disconnect'](si)
@@ -320,7 +320,7 @@ def vsan_datastore_configured(name, datastore_name):
                 log.info(comments[-1])
         __salt__['vsphere.disconnect'](si)
 
-        ret.update({'result': True if (not changes_required) else None if \
+        ret.update({'result': True if (not changes_required) else None if
                     __opts__['test'] else True,
                     'comment': '\n'.join(comments),
                     'changes': changes})
