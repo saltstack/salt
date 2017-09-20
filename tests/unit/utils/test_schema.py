@@ -198,9 +198,8 @@ class ConfigTestCase(TestCase):
                 },
                 'ssh_key_names': {
                     'type': 'string',
-                    'description': 'The names of an SSH key being managed on Digital '
-                                   'Ocean account which will be used to authenticate '
-                                   'on the deployed VMs',
+                    'description': 'The names of an SSH key being managed on DigitalOcean '
+                                   'account which will be used to authenticate on the deployed VMs',
                     'title': 'SSH Key Names'
                 }
             },
