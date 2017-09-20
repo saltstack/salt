@@ -4715,6 +4715,26 @@ def _get_capability_definition_dict(cap_metadata):
 
 
 @depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def list_capability_definitions(service_instance=None):
+    '''
+    Returns a list of the metadata of all capabilities in the vCenter.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.list_capabilities
+    '''
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    ret_list = [_get_capability_definition_dict(c) for c in
+                salt.utils.pbm.get_capability_definitions(profile_manager)]
+    return ret_list
+
+
+@depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
