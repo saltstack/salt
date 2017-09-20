@@ -208,6 +208,7 @@ import traceback
 
 # Import Salt Libs
 import salt.exceptions
+from salt.ext.six.moves import range
 
 # Get Logging Started
 log = logging.getLogger(__name__)
