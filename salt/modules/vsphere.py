@@ -4825,6 +4825,47 @@ def create_storage_policy(policy_name, policy_dict, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def update_storage_policy(policy, policy_dict, service_instance=None):
+    '''
+    Updates a storage policy.
+
+    Supported capability types: scalar, set, range.
+
+    policy
+        Name of the policy to update.
+
+    policy_dict
+        Dictionary containing the changes to apply to the policy.
+        (exmaple in salt.states.pbm)
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.update_storage_policy policy='policy name'
+            policy_dict="$policy_dict"
+    '''
+    log.trace('updating storage policy, dict = {0}'.format(policy_dict))
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    policies = salt.utils.pbm.get_storage_policies(profile_manager, [policy])
+    if not policies:
+        raise excs.VMwareObjectRetrievalError('Policy \'{0}\' was not found'
+                                              ''.format(policy))
+    policy_ref = policies[0]
+    policy_update_spec = pbm.profile.CapabilityBasedProfileUpdateSpec()
+    log.trace('Setting policy values in policy_update_spec')
+    for prop in ['description', 'constraints']:
+        setattr(policy_update_spec, prop, getattr(policy_ref, prop))
+    _apply_policy_config(policy_update_spec, policy_dict)
+    salt.utils.pbm.update_storage_policy(profile_manager, policy_ref,
+                                         policy_update_spec)
+    return {'update_storage_policy': True}
+
+
+@depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
