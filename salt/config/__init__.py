@@ -307,6 +307,9 @@ VALID_OPTS = {
     # Whether or not processes should be forked when needed. The alternative is to use threading.
     'multiprocessing': bool,
 
+    # Maximum number of concurrently active processes at any given point in time
+    'process_count_max': int,
+
     # Whether or not the salt minion should run scheduled mine updates
     'mine_enabled': bool,
 
@@ -1100,6 +1103,7 @@ DEFAULT_MINION_OPTS = {
     'auto_accept': True,
     'autosign_timeout': 120,
     'multiprocessing': True,
+    'process_count_max': 20,
     'mine_enabled': True,
     'mine_return_job': False,
     'mine_interval': 60,
