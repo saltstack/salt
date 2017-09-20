@@ -590,3 +590,75 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
         ret = salt.utils.pbm.get_default_storage_policy_of_datastore(
             self.mock_prof_mgr, self.mock_ds)
         self.assertEqual(ret, self.mock_policy_refs[0])
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class AssignDefaultStoragePolicyToDatastoreTestCase(TestCase):
+    '''Tests for salt.utils.pbm.assign_default_storage_policy_to_datastore'''
+    def setUp(self):
+        self.mock_ds = MagicMock(_moId='fake_ds_moid')
+        self.mock_policy = MagicMock()
+        self.mock_hub = MagicMock()
+        self.mock_prof_mgr = MagicMock()
+        patches = (
+            ('salt.utils.pbm.pbm.placement.PlacementHub',
+             MagicMock(return_value=self.mock_hub)),)
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_ds', 'mock_hub', 'mock_policy', 'mock_prof_mgr'):
+            delattr(self, attr)
+
+    def test_get_placement_hub(self):
+        mock_get_placement_hub = MagicMock()
+        with patch('salt.utils.pbm.pbm.placement.PlacementHub',
+                   mock_get_placement_hub):
+            salt.utils.pbm.assign_default_storage_policy_to_datastore(
+                self.mock_prof_mgr, self.mock_policy, self.mock_ds)
+        mock_get_placement_hub.assert_called_once_with(
+            hubId='fake_ds_moid', hubType='Datastore')
+
+    def test_assign_default_requirement_profile(self):
+        mock_assign_prof = MagicMock()
+        self.mock_prof_mgr.AssignDefaultRequirementProfile = \
+                mock_assign_prof
+        salt.utils.pbm.assign_default_storage_policy_to_datastore(
+            self.mock_prof_mgr, self.mock_policy, self.mock_ds)
+        mock_assign_prof.assert_called_once_with(
+            self.mock_policy.profileId, [self.mock_hub])
+
+    def test_assign_default_requirement_profile_raises_no_permissions(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.mock_prof_mgr.AssignDefaultRequirementProfile = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.pbm.assign_default_storage_policy_to_datastore(
+                self.mock_prof_mgr, self.mock_policy, self.mock_ds)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_assign_default_requirement_profile_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.mock_prof_mgr.AssignDefaultRequirementProfile = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            salt.utils.pbm.assign_default_storage_policy_to_datastore(
+                self.mock_prof_mgr, self.mock_policy, self.mock_ds)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_assign_default_requirement_profile_raises_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.mock_prof_mgr.AssignDefaultRequirementProfile = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            salt.utils.pbm.assign_default_storage_policy_to_datastore(
+                self.mock_prof_mgr, self.mock_policy, self.mock_ds)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
