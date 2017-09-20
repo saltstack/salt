@@ -4647,6 +4647,36 @@ def _get_policy_dict(policy):
 
 
 @depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def list_storage_policies(policy_names=None, service_instance=None):
+    '''
+    Returns a list of storage policies.
+
+    policy_names
+        Names of policies to list. If None, all policies are listed.
+        Default is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.list_storage_policies
+
+        salt '*' vsphere.list_storage_policy policy_names=[policy_name]
+    '''
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    if not policy_names:
+        policies = salt.utils.pbm.get_storage_policies(profile_manager,
+                                                       get_all_policies=True)
+    else:
+        policies = salt.utils.pbm.get_storage_policies(profile_manager,
+                                                       policy_names)
+    return [_get_policy_dict(p) for p in policies]
+
+
+@depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
