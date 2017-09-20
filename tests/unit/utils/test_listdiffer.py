@@ -2,7 +2,6 @@
 
 # Import python libs
 from __future__ import absolute_import
-import copy
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
@@ -79,7 +78,6 @@ class ListDictDifferTestCase(TestCase):
                          '\twill be removed\n'
                          '\tidentified by key 5:\n'
                          '\twill be added\n')
-
 
     def test_changes_str2(self):
         self.assertEqual(self.list_diff.changes_str2,

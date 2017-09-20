@@ -164,12 +164,12 @@ class ESXClusterEntitySchema(Schema):
     datacenter = StringItem(title='Datacenter',
                             description='Specifies the cluster datacenter',
                             required=True,
-                            pattern='\w+')
+                            pattern=r'\w+')
 
     cluster = StringItem(title='Cluster',
                          description='Specifies the cluster name',
                          required=True,
-                         pattern='\w+')
+                         pattern=r'\w+')
 
 
 class LicenseSchema(Schema):
@@ -187,7 +187,7 @@ class LicenseSchema(Schema):
         additional_properties=StringItem(
             title='License Key',
             description='Specifies the license key',
-            pattern='^(\w{5}-\w{5}-\w{5}-\w{5}-\w{5})$'))
+            pattern=r'^(\w{5}-\w{5}-\w{5}-\w{5}-\w{5})$'))
 
 
 class EsxclusterProxySchema(Schema):

@@ -46,7 +46,7 @@ import traceback
 import sys
 
 # Import Salt Libs
-from salt.exceptions CommandExecutionError
+from salt.exceptions import CommandExecutionError
 from salt.utils.dictdiffer import recursive_diff
 from salt.utils.listdiffer import list_diff
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
@@ -107,7 +107,7 @@ def cluster_configured(name, cluster_config):
         Complex datastructure following the ESXClusterConfigSchema.
         Valid example is:
 
-.. code-block::yaml
+    .. code-block::yaml
 
         drs:
             default_vm_behavior: fullyAutomated
