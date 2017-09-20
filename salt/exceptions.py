@@ -397,6 +397,18 @@ class TemplateError(SaltException):
     '''
 
 
+class ArgumentValueError(CommandExecutionError):
+    '''
+    Used when an invalid argument was passed to a command execution
+    '''
+
+
+class CheckError(CommandExecutionError):
+    '''
+    Used when a check fails
+    '''
+
+
 # Validation related exceptions
 class InvalidConfigError(CommandExecutionError):
     '''
@@ -455,13 +467,79 @@ class VMwareObjectNotFoundError(VMwareSaltError):
     '''
 
 
+class VMwareObjectExistsError(VMwareSaltError):
+    '''
+    Used when a VMware object already exists
+    '''
+
+
+class VMwareMultipleObjectsError(VMwareObjectRetrievalError):
+    '''
+    Used when multiple objects were retrieived (and one was expected)
+    '''
+
+
+class VMwareNotFoundError(VMwareSaltError):
+    '''
+    Used when a VMware object was not found
+    '''
+
+
 class VMwareApiError(VMwareSaltError):
     '''
     Used when representing a generic VMware API error
     '''
 
 
+class VMwareFileNotFoundError(VMwareApiError):
+    '''
+    Used when representing a generic VMware error if a file not found
+    '''
+
+
 class VMwareSystemError(VMwareSaltError):
     '''
     Used when representing a generic VMware system error
+    '''
+
+
+class VMwareObjectRetrievalException(VMwareSaltError):
+    '''
+    Used when a VMware object is not found
+    '''
+
+
+class VMwareObjectDuplicateException(VMwareSaltError):
+    '''
+    Used when multiple VMware objects exist with the same property and they shouldn't
+    '''
+
+
+class VMwarePowerOnException(VMwareSaltError):
+    '''
+    Used when object is already powered on
+    '''
+
+
+class VMwarePowerOnError(VMwareSaltError):
+    '''
+    Used when error occurred during power on
+    '''
+
+
+class VMwareVmRegisterError(VMwareSaltError):
+    '''
+    Used when a configuration parameter is incorrect
+    '''
+
+
+class VMwareVmCreationError(VMwareSaltError):
+    '''
+    Used when a configuration parameter is incorrect
+    '''
+
+
+class VMwareVmDeviceConfigException(VMwareSaltError):
+    '''
+    Used when a device parameter is incorrect
     '''

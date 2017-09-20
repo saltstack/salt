@@ -2835,6 +2835,53 @@ def list_hosts(service_instance):
     return list_objects(service_instance, vim.HostSystem)
 
 
+def get_resource_pools(service_instance, resource_pool_names, datacenter_name=None,
+                       get_all_resource_pools=False):
+    '''
+    Retrieves resource pool objects
+
+    service_instance
+        The service instance object to query the vCenter
+
+    resource_pool_names
+        Resource pool names
+
+    datacenter_name
+        Name of the datacenter where the resource pool is available
+
+    get_all_resource_pools
+        Boolean
+
+    return
+        Resourcepool managed object reference
+    '''
+
+    properties = ['name']
+    if not resource_pool_names:
+        resource_pool_names = []
+    if datacenter_name:
+        container_ref = get_datacenter(service_instance, datacenter_name)
+    else:
+        container_ref = get_root_folder(service_instance)
+
+    resource_pools = get_mors_with_properties(service_instance,
+                                              vim.ResourcePool,
+                                              container_ref=container_ref,
+                                              property_list=properties)
+
+    selected_pools = []
+    for pool in resource_pools:
+        if get_all_resource_pools or (pool['name'] in resource_pool_names):
+            selected_pools.append(pool['object'])
+    if not selected_pools:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'The resource pools with properties '
+            'names={} get_all={} could not be found'.format(selected_pools,
+                                                            get_all_resource_pools))
+
+    return selected_pools
+
+
 def list_resourcepools(service_instance):
     '''
     Returns a list of resource pools associated with a given service instance.
@@ -2998,3 +3045,375 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
                 exc_message = '{0} ({1})'.format(exc_message,
                                                  exc.faultMessage[0].message)
             raise salt.exceptions.VMwareApiError(exc_message)
+
+
+def get_vm_by_property(service_instance, name, datacenter=None, vm_properties=None,
+                       traversal_spec=None, parent_ref=None):
+    '''
+    Get virtual machine properties based on the traversal specs and properties list,
+    returns Virtual Machine object with properties.
+
+    service_instance
+        Service instance object to access vCenter
+
+    name
+        Name of the virtual machine.
+
+    datacenter
+        Datacenter name
+
+    vm_properties
+        List of vm properties.
+
+    traversal_spec
+        Traversal Spec object(s) for searching.
+
+    parent_ref
+        Container Reference object for searching under a given object.
+    '''
+    if datacenter and not parent_ref:
+        parent_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    if not vm_properties:
+        vm_properties = ['name',
+                         'config.hardware.device',
+                         'summary.storage.committed',
+                         'summary.storage.uncommitted',
+                         'summary.storage.unshared',
+                         'layoutEx.file',
+                         'config.guestFullName',
+                         'config.guestId',
+                         'guest.net',
+                         'config.hardware.memoryMB',
+                         'config.hardware.numCPU',
+                         'config.files.vmPathName',
+                         'summary.runtime.powerState',
+                         'guest.toolsStatus']
+    vm_list = salt.utils.vmware.get_mors_with_properties(service_instance,
+                                                         vim.VirtualMachine,
+                                                         vm_properties,
+                                                         container_ref=parent_ref,
+                                                         traversal_spec=traversal_spec)
+    vm_formatted = [vm for vm in vm_list if vm['name'] == name]
+    if not vm_formatted:
+        raise salt.exceptions.VMwareObjectRetrievalException('The virtual machine was not found.')
+    elif len(vm_formatted) > 1:
+        raise salt.exceptions.VMwareObjectDuplicateException('Multiple virtual machines were found with the '
+                                                  'same name, please specify a container.')
+    return vm_formatted[0]
+
+
+def get_folder(service_instance, datacenter, placement, base_vm_name=None):
+    '''
+    Returns a Folder Object
+
+    service_instance
+        Service instance object
+
+    datacenter
+        Name of the datacenter
+
+    placement
+        Placement dictionary
+
+    base_vm_name
+        Existing virtual machine name (for cloning)
+    '''
+    log.trace('Retrieving folder information')
+    if base_vm_name:
+        vm_object = get_vm_by_property(service_instance, base_vm_name, vm_properties=['name'])
+        vm_props = salt.utils.vmware.get_properties_of_managed_object(vm_object, properties=['parent'])
+        if 'parent' in vm_props:
+            folder_object = vm_props['parent']
+        else:
+            raise salt.exceptions.VMwareObjectRetrievalException('The virtual machine parent '
+                                                      'object is not defined')
+    elif 'folder' in placement:
+        folder_objects = salt.utils.vmware.get_folders(service_instance, [placement['folder']], datacenter)
+        if len(folder_objects) > 1:
+            raise salt.exceptions.VMwareObjectDuplicateException('Multiple instances are available of the '
+                                                      'specified folder {0}'.format(placement['folder']))
+        folder_object = folder_objects[0]
+    elif datacenter:
+        datacenter_object = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+        dc_props = salt.utils.vmware.get_properties_of_managed_object(datacenter_object, properties=['vmFolder'])
+        if 'vmFolder' in dc_props:
+            folder_object = dc_props['vmFolder']
+        else:
+            raise salt.exceptions.VMwareObjectRetrievalException('The datacenter vm folder object is not defined')
+    return folder_object
+
+
+def get_placement(service_instance, datacenter, placement=None):
+    '''
+    To create a virtual machine a resource pool needs to be supplied, we would like to use the strictest as possible.
+
+    datacenter
+        Name of the datacenter
+
+    placement
+        Dictionary with the placement info, cluster, host resource pool name
+
+    return
+        Resource pool, cluster and host object if any applies
+    '''
+    log.trace('Retrieving placement information')
+    resourcepool_object, placement_object = None, None
+    if 'host' in placement:
+        host_objects = get_hosts(service_instance, datacenter_name=datacenter, host_names=[placement['host']])
+        if not host_objects:
+            raise salt.exceptions.VMwareObjectRetrievalException('The specified host {0} cannot be found.'.format(placement['host']))
+        try:
+            host_props = get_properties_of_managed_object(host_objects[0],
+                                                          properties=['resourcePool'])
+            resourcepool_object = host_props['resourcePool']
+        except vmodl.query.InvalidProperty:
+            traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+                path='parent',
+                skip=True,
+                type=vim.HostSystem,
+                selectSet=[vmodl.query.PropertyCollector.TraversalSpec(
+                    path='resourcePool',
+                    skip=False,
+                    type=vim.ClusterComputeResource)])
+            resourcepools = get_mors_with_properties(service_instance,
+                                                     vim.ResourcePool,
+                                                     container_ref=host_objects[0],
+                                                     property_list=['name'],
+                                                     traversal_spec=traversal_spec)
+            if resourcepools:
+                resourcepool_object = resourcepools[0]['object']
+            else:
+                raise salt.exceptions.VMwareObjectRetrievalException(
+                    'The resource pool of host {0} cannot be found.'.format(placement['host']))
+        placement_object = host_objects[0]
+    elif 'resourcepool' in placement:
+        resourcepool_objects = get_resource_pools(service_instance,
+                                                  [placement['resourcepool']],
+                                                  datacenter_name=datacenter)
+        if len(resourcepool_objects) > 1:
+            raise salt.exceptions.VMwareObjectDuplicateException('Multiple instances are available of the '
+                                                      'specified host {}.'.format(placement['host']))
+        resourcepool_object = resourcepool_objects[0]
+        res_props = get_properties_of_managed_object(resourcepool_object,
+                                                     properties=['parent'])
+        if 'parent' in res_props:
+            placement_object = res_props['parent']
+        else:
+            raise salt.exceptions.VMwareObjectRetrievalException('The resource pool\'s parent '
+                                                      'object is not defined')
+    elif 'cluster' in placement:
+        datacenter_object = get_datacenter(service_instance, datacenter)
+        cluster_object = get_cluster(datacenter_object, placement['cluster'])
+        clus_props = get_properties_of_managed_object(cluster_object,
+                                                      properties=['resourcePool'])
+        if 'resourcePool' in clus_props:
+            resourcepool_object = clus_props['resourcePool']
+        else:
+            raise salt.exceptions.VMwareObjectRetrievalException('The cluster\'s resource pool '
+                                                      'object is not defined')
+        placement_object = cluster_object
+    else:
+        # We are checking the schema for this object, this exception should never be raised
+        raise salt.exceptions.VMwareObjectRetrievalException('Placement is not defined.')
+    return (resourcepool_object, placement_object)
+
+
+def power_cycle_vm(virtual_machine, action='on'):
+    '''
+    Powers on/off a virtual machine specified by it's name.
+
+    virtual_machine
+        vim.VirtualMachine object to power on/off virtual machine
+
+    action
+        Operation option to power on/off the machine
+    '''
+    if action == 'on':
+        try:
+            task = virtual_machine.PowerOn()
+            task_name = 'power on'
+        except vim.fault.NoPermission as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(
+                'Not enough permissions. Required privilege: '
+                '{}'.format(exc.privilegeId))
+        except vim.fault.VimFault as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.RuntimeFault as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    elif action == 'off':
+        try:
+            task = virtual_machine.PowerOff()
+            task_name = 'power off'
+        except vim.fault.NoPermission as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(
+                'Not enough permissions. Required privilege: '
+                '{}'.format(exc.privilegeId))
+        except vim.fault.VimFault as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.RuntimeFault as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    else:
+        raise salt.exceptions.ArgumentValueError('The given action is not supported')
+    try:
+        wait_for_task(task, get_managed_object_name(virtual_machine), task_name)
+    except salt.exceptions.VMwareFileNotFoundError as exc:
+        raise salt.exceptions.VMwarePowerOnError('An error occurred during power '
+                                      'operation, a file was not found: {0}'.format(str(exc)))
+    return virtual_machine
+
+
+def register_vm(datacenter, name, vmx_path, host=None, resourcepool=None):
+    '''
+    Registers a virtual machine to the inventory with the given vmx file, on success
+    it returns the vim.VirtualMachine managed object reference
+
+    datacenter
+        Datacenter object of the virtual machine, vim.Datacenter object
+
+    name
+        Name of the virtual machine
+
+    vmx_path:
+        Full path to the vmx file, datastore name should be included
+
+    host
+        Placement host of the virtual machine, vim.HostSystem object
+
+    resourcepool
+        Placement resource pool of the virtual machine, vim.ResourcePool object
+    '''
+    if resourcepool:
+        try:
+            task = datacenter.vmFolder.RegisterVM_Task(path=vmx_path, name=name,
+                                                       asTemplate=False,
+                                                       pool=resourcepool)
+        except vim.fault.NoPermission as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(
+                'Not enough permissions. Required privilege: '
+                '{}'.format(exc.privilegeId))
+        except vim.fault.VimFault as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.RuntimeFault as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    elif host:
+        try:
+            task = datacenter.vmFolder.RegisterVM_Task(path=vmx_path, name=name,
+                                                       asTemplate=False, host=host)
+        except vim.fault.NoPermission as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(
+                'Not enough permissions. Required privilege: '
+                '{}'.format(exc.privilegeId))
+        except vim.fault.VimFault as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.RuntimeFault as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    try:
+        vm_ref = wait_for_task(task, name, 'RegisterVM Task')
+    except salt.exceptions.VMwareNotFoundError as exc:
+        raise salt.exceptions.VMwareVmRegisterError('An error occurred during registration '
+                                         'operation, the configuration file '
+                                         'was not found: {0}'.format(str(exc)))
+    return vm_ref
+
+
+def convert_to_kb(unit, size):
+    '''
+    Converts the given size to KB based on the unit, returns a long integer.
+
+    unit
+        Unit of the size eg. GB; Note: to VMware a GB is the same as GiB = 1024MiB
+    size
+        Number which represents the size
+    '''
+    if unit.lower() == 'gb':
+        target_size = size * 1024L * 1024L
+    elif unit.lower() == 'mb':
+        target_size = size * 1024L
+    elif unit.lower() == 'kb':
+        target_size = long(size)
+    else:
+        raise salt.exceptions.ArgumentValueError('The unit is not specified')
+    return {'size': target_size, 'unit': 'KB'}
+
+
+def update_vm(vm_ref, vm_config_spec):
+    '''
+    Updates the virtual machine configuration with the given object
+
+    vm_ref
+        Virtual machine managed object reference
+
+    vm_config_spec
+        Virtual machine config spec object to update
+    '''
+    vm_name = get_managed_object_name(vm_ref)
+    log.trace('Updating vm \'{0}\''.format(vm_name))
+    try:
+        task = vm_ref.ReconfigVM_Task(vm_config_spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    vm_ref = wait_for_task(task, vm_name, 'ReconfigureVM Task')
+    return vm_ref
+
+
+def delete_vm(vm_ref):
+    '''
+    Destroys the virtual machine
+
+    vm_ref
+        Managed object reference of a virtual machine object
+    '''
+    vm_name = get_managed_object_name(vm_ref)
+    log.trace('Destroying vm \'{0}\''.format(vm_name))
+    try:
+        task = vm_ref.Destroy_Task()
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, vm_name, 'Destroy Task')
+
+
+def unregister_vm(vm_ref):
+    '''
+    Destroys the virtual machine
+
+    vm_ref
+        Managed object reference of a virtual machine object
+    '''
+    vm_name = get_managed_object_name(vm_ref)
+    log.trace('Destroying vm \'{0}\''.format(vm_name))
+    try:
+        vm_ref.UnregisterVM()
+    except vim.fault.VimFault as exc:
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
