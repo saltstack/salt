@@ -4899,6 +4899,51 @@ def list_default_storage_policy_of_datastore(datastore, service_instance=None):
     return _get_policy_dict(policy)
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxcluster', 'esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def assign_default_storage_policy_to_datastore(policy, datastore,
+                                               service_instance=None):
+    '''
+    Assigns a storage policy as the default policy to a datastore.
+
+    policy
+        Name of the policy to assign.
+
+    datastore
+        Name of the datastore to assign.
+        The datastore needs to be visible to the VMware entity the proxy
+        points to.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.assign_storage_policy_to_datastore
+            policy='policy name' datastore=ds1
+    '''
+    log.trace('Assigning policy {0} to datastore {1}'
+              ''.format(policy, datastore))
+    profile_manager = utils_pbm.get_profile_manager(service_instance)
+    # Find policy
+    policies = utils_pbm.get_storage_policies(profile_manager, [policy])
+    if not policies:
+        raise excs.VMwareObjectRetrievalError('Policy \'{0}\' was not found'
+                                              ''.format(policy))
+    policy_ref = policies[0]
+    # Find datastore
+    target_ref = _get_proxy_target(service_instance)
+    ds_refs = salt.utils.vmware.get_datastores(service_instance, target_ref,
+                                               datastore_names=[datastore])
+    if not ds_refs:
+        raise excs.VMwareObjectRetrievalError('Datastore \'{0}\' was not '
+                                              'found'.format(datastore))
+    ds_ref = ds_refs[0]
+    utils_pbm.assign_default_storage_policy_to_datastore(profile_manager,
+                                                         policy_ref, ds_ref)
+    return {'assign_storage_policy_to_datastore': True}
+
 
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
