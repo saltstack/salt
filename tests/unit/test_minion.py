@@ -69,7 +69,7 @@ class MinionTestCase(TestCase):
         mock_jid_queue = [123]
         try:
             minion = salt.minion.Minion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
-            ret = minion._handle_decoded_payload(mock_data)
+            ret = minion._handle_decoded_payload(mock_data).result()
             self.assertEqual(minion.jid_queue, mock_jid_queue)
             self.assertIsNone(ret)
         finally:
@@ -98,7 +98,7 @@ class MinionTestCase(TestCase):
                 # Call the _handle_decoded_payload function and update the mock_jid_queue to include the new
                 # mock_jid. The mock_jid should have been added to the jid_queue since the mock_jid wasn't
                 # previously included. The minion's jid_queue attribute and the mock_jid_queue should be equal.
-                minion._handle_decoded_payload(mock_data)
+                minion._handle_decoded_payload(mock_data).result()
                 mock_jid_queue.append(mock_jid)
                 self.assertEqual(minion.jid_queue, mock_jid_queue)
             finally:
@@ -126,7 +126,7 @@ class MinionTestCase(TestCase):
 
                 # Call the _handle_decoded_payload function and check that the queue is smaller by one item
                 # and contains the new jid
-                minion._handle_decoded_payload(mock_data)
+                minion._handle_decoded_payload(mock_data).result()
                 self.assertEqual(len(minion.jid_queue), 2)
                 self.assertEqual(minion.jid_queue, [456, 789])
             finally:
