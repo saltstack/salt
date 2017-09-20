@@ -4866,6 +4866,41 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
+@supports_proxies('esxcluster', 'esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def list_default_storage_policy_of_datastore(datastore, service_instance=None):
+    '''
+    Returns a list of datastores assign the the storage policies.
+
+    datastore
+        Name of the datastore to assign.
+        The datastore needs to be visible to the VMware entity the proxy
+        points to.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.list_default_storage_policy_of_datastore datastore=ds1
+    '''
+    log.trace('Listing the default storage policy of datastore \'{0}\''
+              ''.format(datastore))
+    # Find datastore
+    target_ref = _get_proxy_target(service_instance)
+    ds_refs = salt.utils.vmware.get_datastores(service_instance, target_ref,
+                                               datastore_names=[datastore])
+    if not ds_refs:
+        raise excs.VMwareObjectRetrievalError('Datastore \'{0}\' was not '
+                                              'found'.format(datastore))
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    policy = salt.utils.pbm.get_default_storage_policy_of_datastore(
+        profile_manager, ds_refs[0])
+    return _get_policy_dict(policy)
+
+
+
+@depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
