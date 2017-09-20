@@ -6495,6 +6495,37 @@ def cached(name,
     saltenv
         Used to specify the environment from which to download a file from the
         Salt fileserver (i.e. those with ``salt://`` URL).
+
+
+    This state will in most cases not be useful in SLS files, but it is useful
+    when writing a state or remote-execution module that needs to make sure
+    that a file at a given URL has been downloaded to the cachedir. One example
+    of this is in the :py:func:`archive.extracted <salt.states.file.extracted>`
+    state:
+
+    .. code-block:: python
+
+        result = __states__['file.cached'](source_match,
+                                           source_hash=source_hash,
+                                           source_hash_name=source_hash_name,
+                                           skip_verify=skip_verify,
+                                           saltenv=__env__)
+
+    This will return a dictionary containing the state's return data, including
+    a ``result`` key which will state whether or not the state was successful.
+    Note that this will not catch exceptions, so it is best used within a
+    try/except.
+
+    Once this state has been run from within another state or remote-execution
+    module, the actual location of the cached file can be obtained using
+    :py:func:`cp.is_cached <salt.modules.cp.is_cached>`:
+
+    .. code-block:: python
+
+        cached = __salt__['cp.is_cached'](source_match)
+
+    This function will return the cached path of the file, or an empty string
+    if the file is not present in the minion cache.
     '''
     ret = {'changes': {},
            'comment': '',
