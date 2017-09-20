@@ -4734,6 +4734,55 @@ def list_capability_definitions(service_instance=None):
     return ret_list
 
 
+def _apply_policy_config(policy_spec, policy_dict):
+    '''Applies a policy dictionary to a policy spec'''
+    log.trace('policy_dict = {0}'.format(policy_dict))
+    if policy_dict.get('name'):
+        policy_spec.name = policy_dict['name']
+    if policy_dict.get('description'):
+        policy_spec.description = policy_dict['description']
+    if policy_dict.get('subprofiles'):
+        # Incremental changes to subprofiles and capabilities are not
+        # supported because they would complicate updates too much
+        # The whole configuration of all sub-profiles is expected and applied
+        policy_spec.constraints = pbm.profile.SubProfileCapabilityConstraints()
+        subprofiles = []
+        for subprofile_dict in policy_dict['subprofiles']:
+            subprofile_spec = \
+                    pbm.profile.SubProfileCapabilityConstraints.SubProfile(
+                        name=subprofile_dict['name'])
+            cap_specs = []
+            if subprofile_dict.get('force_provision'):
+                subprofile_spec.forceProvision = \
+                        subprofile_dict['force_provision']
+            for cap_dict in subprofile_dict['capabilities']:
+                prop_inst_spec = pbm.capability.PropertyInstance(
+                    id=cap_dict['id']
+                )
+                setting_type = cap_dict['setting']['type']
+                if setting_type == 'set':
+                    prop_inst_spec.value = pbm.capability.types.DiscreteSet()
+                    prop_inst_spec.value.values = cap_dict['setting']['values']
+                elif setting_type == 'range':
+                    prop_inst_spec.value = pbm.capability.types.Range()
+                    prop_inst_spec.value.max = cap_dict['setting']['max']
+                    prop_inst_spec.value.min = cap_dict['setting']['min']
+                elif setting_type == 'scalar':
+                    prop_inst_spec.value = cap_dict['setting']['value']
+                cap_spec = pbm.capability.CapabilityInstance(
+                    id=pbm.capability.CapabilityMetadata.UniqueId(
+                        id=cap_dict['id'],
+                        namespace=cap_dict['namespace']),
+                    constraint=[pbm.capability.ConstraintInstance(
+                        propertyInstance=[prop_inst_spec])])
+                cap_specs.append(cap_spec)
+            subprofile_spec.capability = cap_specs
+            subprofiles.append(subprofile_spec)
+        policy_spec.constraints.subProfiles = subprofiles
+    log.trace('updated policy_spec = {0}'.format(policy_spec))
+    return policy_spec
+
+
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
