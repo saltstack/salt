@@ -1109,8 +1109,8 @@ def add_license(service_instance, key, description, license_manager=None):
     if not license_manager:
         license_manager = get_license_manager(service_instance)
     label = vim.KeyValue()
-    label.key='VpxClientLicenseLabel'
-    label.value=description
+    label.key = 'VpxClientLicenseLabel'
+    label.value = description
     log.debug('Adding license \'{}\''.format(description))
     try:
         license = license_manager.AddLicense(key, [label])
@@ -1203,7 +1203,7 @@ def get_assigned_licenses(service_instance, entity_ref=None, entity_name=None,
         raise salt.exceptions.VMwareObjectRetrievalError(
             'Unexpected return. Expect only a single assignment')
 
-    if check_name == True:
+    if check_name:
         if entity_name != assignments[0].entityDisplayName:
             log.trace('Getting license info for wrong vcenter: '
                       '{0} != {1}'.format(entity_name,
@@ -1545,8 +1545,8 @@ def get_datastores(service_instance, reference, datastore_names=None,
         mount_infos = props.get('fileSystemVolumeInfo.mountInfo', [])
         disk_datastores = []
         # Non vmfs volumes aren't backed by a disk
-        for vol in [i.volume for i in mount_infos if \
-                     isinstance(i.volume, vim.HostVmfsVolume)]:
+        for vol in [i.volume for i in mount_infos if
+                    isinstance(i.volume, vim.HostVmfsVolume)]:
 
             if not [e for e in vol.extent if e.diskName in backing_disk_ids]:
                 # Skip volume if it doesn't contain an extent with a
@@ -1598,7 +1598,7 @@ def get_datastores(service_instance, reference, datastore_names=None,
         # Traversal of root folder (doesn't support multiple levels of Folders)
         traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
             path='childEntity',
-            selectSet = [
+            selectSet=[
                 vmodl.query.PropertyCollector.TraversalSpec(
                     path='datastore',
                     skip=False,

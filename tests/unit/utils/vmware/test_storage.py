@@ -11,8 +11,7 @@ import logging
 
 # Import Salt testing libraries
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call, \
-        PropertyMock
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call
 from salt.exceptions import VMwareObjectRetrievalError, VMwareApiError, \
         ArgumentValueError, VMwareRuntimeError
 
@@ -27,6 +26,7 @@ except ImportError:
 
 # Get Logging Started
 log = logging.getLogger(__name__)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -179,7 +179,6 @@ class GetDatastoresTestCase(TestCase):
         self.mock_get_storage_system.assert_called_once_with(
             self.mock_si, self.mock_reference, 'fake_host')
 
-
     def test_get_mount_info_call(self):
         mock_get_properties_of_managed_object = MagicMock()
         with patch('salt.utils.vmware.get_properties_of_managed_object',
@@ -200,7 +199,7 @@ class GetDatastoresTestCase(TestCase):
 
     def test_host_traversal_spec(self):
         # Reference is of type vim.HostSystem
-        mock_traversal_spec_init  = MagicMock()
+        mock_traversal_spec_init = MagicMock()
         with patch(
             'salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec',
             mock_traversal_spec_init):
@@ -330,7 +329,7 @@ class GetDatastoresTestCase(TestCase):
         res = salt.utils.vmware.get_datastores(
             self.mock_si, self.mock_reference,
             datastore_names=['fake_ds1'],
-            backing_disk_ids= ['fake_disk3'])
+            backing_disk_ids=['fake_disk3'])
         self.assertEqual(res, [self.mock_entries[0]['object'],
                                self.mock_entries[2]['object']])
 
@@ -393,6 +392,6 @@ class RenameDatastoreTestCase(TestCase):
 
     def test_rename_datastore(self):
         ret = salt.utils.vmware.rename_datastore(self.mock_ds_ref,
-                                                'fake_new_name')
+                                                 'fake_new_name')
         self.mock_ds_ref.RenameDatastore.assert_called_once_with(
             'fake_new_name')
