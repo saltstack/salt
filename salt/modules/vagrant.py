@@ -361,10 +361,12 @@ def destroy(name):
     machine = vm_['machine']
 
     cmd = 'vagrant destroy -f {}'.format(machine)
-    ret = __salt__['cmd.retcode'](cmd,
+    try:
+        ret = __salt__['cmd.retcode'](cmd,
                                   runas=vm_.get('runas'),
                                   cwd=vm_.get('cwd'))
-    _erase_cache(name)
+    finally:
+        _erase_cache(name)
     return ret == 0
 
 
