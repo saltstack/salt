@@ -270,12 +270,11 @@ def cluster_configured(name, cluster_config):
 
 def vsan_datastore_configured(name, datastore_name):
     '''
-    Configures the cluster's vsan_datastore
+    Configures the cluster's VSAN datastore
 
-    WARNING: vsan datastores will not exist until there is at least on host in
-    the cluster; the state assumes that the datastore exists and errors out if i
-    it doesn't; it's up to the user to accept the error or enable the state run
-    when de datastore does exist (grain: vsan_datastore_exists)
+    WARNING: The VSAN datastore is created automatically after the first
+    ESXi host is added to the cluster; the state assumes that the datastore
+    exists and errors if it doesn't.
     '''
 
     cluster_name, datacenter_name = \
