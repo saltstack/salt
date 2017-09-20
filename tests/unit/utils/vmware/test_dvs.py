@@ -643,3 +643,76 @@ class CreateDvportgroupTestCase(TestCase):
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_dvs',
             '<class \'unit.utils.vmware.test_dvs.FakeTaskClass\'>')
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+class UpdateDvportgroupTestCase(TestCase):
+    def setUp(self):
+        self.mock_pg_spec = MagicMock()
+        self.mock_task = MagicMock(spec=FakeTaskClass)
+        self.mock_pg_ref = \
+                MagicMock(ReconfigureDVPortgroup_Task=MagicMock(
+                    return_value=self.mock_task))
+        self.mock_wait_for_task = MagicMock()
+
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name',
+             MagicMock(return_value='fake_pg')),
+            ('salt.utils.vmware.wait_for_task', self.mock_wait_for_task))
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_pg_spec', 'mock_pg_ref', 'mock_task',
+                     'mock_wait_for_task'):
+            delattr(self, attr)
+
+    def test_get_managed_object_name_call(self):
+        mock_get_managed_object_name = MagicMock()
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   mock_get_managed_object_name):
+            vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
+        mock_get_managed_object_name.assert_called_once_with(self.mock_pg_ref)
+
+    def test_reconfigure_dvporgroup_task(self):
+        vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
+        self.mock_pg_ref.ReconfigureDVPortgroup_Task.assert_called_once_with(
+            self.mock_pg_spec)
+
+    def test_reconfigure_dvporgroup_task_raises_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        self.mock_pg_ref.ReconfigureDVPortgroup_Task = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_reconfigure_dvporgroup_task_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        self.mock_pg_ref.ReconfigureDVPortgroup_Task = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_reconfigure_dvporgroup_task_raises_runtime_fault(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'RuntimeFault msg'
+        self.mock_pg_ref.ReconfigureDVPortgroup_Task = \
+                MagicMock(side_effect=exc)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
+        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+    def test_wait_for_tasks(self):
+        vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
+        self.mock_wait_for_task.assert_called_once_with(
+            self.mock_task, 'fake_pg',
+            '<class \'unit.utils.vmware.test_dvs.FakeTaskClass\'>')
