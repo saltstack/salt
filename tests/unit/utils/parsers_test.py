@@ -966,7 +966,7 @@ class DaemonMixInTestCase(TestCase):
                     self.mixin._mixin_before_exit()
                     assert os_unlink.call_count == 1
                     self.mixin.info.assert_called_with(
-                        'PIDfile could not be deleted: {}'.format(self.pid))
+                        'PIDfile could not be deleted: {0}'.format(self.pid))
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module
 del LogSettingsParserTests
