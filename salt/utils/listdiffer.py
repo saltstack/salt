@@ -224,21 +224,25 @@ class ListDictDiffer(object):
         changed = []
         if selection == 'all':
             for recursive_item in self._get_recursive_difference(type='all'):
+                # We want the unset values as well
+                recursive_item.ignore_unset_values = False
                 key_val = str(recursive_item.past_dict[self._key]) \
                         if self._key in recursive_item.past_dict \
                         else str(recursive_item.current_dict[self._key])
 
-                for change in recursive_item.changed(ignore_unset_values=False):
+                for change in recursive_item.changed():
                     if change != self._key:
                         changed.append('.'.join([self._key, key_val, change]))
             return changed
         elif selection == 'intersect':
+                # We want the unset values as well
             for recursive_item in self._get_recursive_difference(type='intersect'):
+                recursive_item.ignore_unset_values = False
                 key_val = str(recursive_item.past_dict[self._key]) \
                         if self._key in recursive_item.past_dict \
                         else str(recursive_item.current_dict[self._key])
 
-                for change in recursive_item.changed(ignore_unset_values=False):
+                for change in recursive_item.changed():
                     if change != self._key:
                         changed.append('.'.join([self._key, key_val, change]))
             return changed
