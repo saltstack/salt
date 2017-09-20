@@ -898,21 +898,31 @@ def extracted(name,
             )
             return ret
 
-        result = __states__['file.cached'](source_match,
-                                           source_hash=source_hash,
-                                           source_hash_name=source_hash_name,
-                                           skip_verify=skip_verify,
-                                           saltenv=__env__)
-        log.debug('file.cached: {0}'.format(result))
-
-        # Prevent a traceback if errors prevented the above state from getting
-        # off the ground.
-        if isinstance(result, list):
-            try:
-                ret['comment'] = '\n'.join(result)
-            except TypeError:
-                ret['comment'] = '\n'.join([str(x) for x in result])
+        if 'file.cached' not in __states__:
+            # Shouldn't happen unless there is a traceback keeping
+            # salt/states/file.py from being processed through the loader. If
+            # that is the case, we have much more important problems as _all_
+            # file states would be unavailable.
+            ret['comment'] = (
+                'Unable to cache {0}, file.cached state not available'.format(
+                    source_match
+                )
+            )
             return ret
+
+        try:
+            result = __states__['file.cached'](source_match,
+                                               source_hash=source_hash,
+                                               source_hash_name=source_hash_name,
+                                               skip_verify=skip_verify,
+                                               saltenv=__env__)
+        except Exception as exc:
+            msg = 'Failed to cache {0}: {1}'.format(source_match, exc.__str__())
+            log.exception(msg)
+            ret['comment'] = msg
+            return ret
+        else:
+            log.debug('file.cached: {0}'.format(result))
 
         if result['result']:
             # Get the path of the file in the minion cache
