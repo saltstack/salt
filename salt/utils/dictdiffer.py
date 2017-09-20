@@ -160,6 +160,8 @@ class RecursiveDictDiffer(DictDiffer):
         self._diffs = \
                 self._get_diffs(self.current_dict, self.past_dict,
                                 ignore_missing_keys)
+        # Ignores unet values when assessing the changes
+        self.ignore_unset_values = True
 
     @classmethod
     def _get_diffs(cls, dict1, dict2, ignore_missing_keys):
