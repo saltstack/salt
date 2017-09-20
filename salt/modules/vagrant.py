@@ -365,6 +365,8 @@ def destroy(name):
         ret = __salt__['cmd.retcode'](cmd,
                                   runas=vm_.get('runas'),
                                   cwd=vm_.get('cwd'))
+    except (OSError, CommandExecutionError):
+        pass
     finally:
         _erase_cache(name)
     return ret == 0
