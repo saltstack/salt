@@ -78,7 +78,7 @@ class HAConfigItem(ComplexSchemaItem):
     admission_control_policy = AdmissionControlPolicyItem()
     default_vm_settings = DefaultVmSettingsItem()
     hb_ds_candidate_policy = StringItem(
-        title='Hartbeat Datastore Candidate Policy',
+        title='Heartbeat Datastore Candidate Policy',
         enum=['allFeasibleDs', 'allFeasibleDsWithUserPreference',
               'userSelectedDs'])
     host_monitoring = StringItem(title='Host Monitoring',
