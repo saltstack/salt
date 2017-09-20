@@ -11,19 +11,19 @@ def _changes(role, **kwargs):
     return changes
 
 
-def present(name, auth, **kwargs):
+def present(name, auth=None, **kwargs):
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
-    opcloud = __salt__['keystoneng.get_operator_cloud'](auth)
+    __salt__['keystoneng.setup_clouds'](auth)
 
     kwargs['name'] = name
-    role = __salt__['keystoneng.role_get'](cloud=opcloud, **kwargs)
+    role = __salt__['keystoneng.role_get'](**kwargs)
     
     if not role:
-        role = __salt__['keystoneng.role_create'](cloud=opcloud, **kwargs)
+        role = __salt__['keystoneng.role_create'](**kwargs)
         ret['changes']['id'] = role.id
         ret['changes']['name'] = role.name
         #ret['changes']['domain_id'] = role.domain_id
@@ -32,26 +32,26 @@ def present(name, auth, **kwargs):
 
     changes = __salt__['keystoneng.compare_changes'](role, **kwargs)
     if changes:
-        __salt__['keystoneng.role_update'](cloud=opcloud, **kwargs)
+        __salt__['keystoneng.role_update'](**kwargs)
         ret['changes'].update(changes)
         ret['comment'] = 'Updated role'
 
     return ret
 
 
-def absent(name, auth, **kwargs):
+def absent(name, auth=None, **kwargs):
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
-    opcloud = __salt__['keystoneng.get_operator_cloud'](auth)
+    __salt__['keystoneng.setup_clouds'](auth)
 
     kwargs['name'] = name
-    role = __salt__['keystoneng.role_get'](cloud=opcloud, **kwargs)
+    role = __salt__['keystoneng.role_get'](**kwargs)
 
     if role:
-        __salt__['keystoneng.role_delete'](cloud=opcloud, name=role)
+        __salt__['keystoneng.role_delete'](name=role)
         ret['changes']['id'] = role.id
         ret['comment'] = 'Deleted role'
 
