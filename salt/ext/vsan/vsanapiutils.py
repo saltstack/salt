@@ -7,6 +7,7 @@ Copyright 2016 VMware, Inc.  All rights reserved.
 This module defines basic helper functions used in the sampe codes
 """
 
+# pylint: skip-file
 __author__ = 'VMware, Inc'
 
 from pyVmomi import vim, vmodl, SoapStubAdapter
