@@ -206,11 +206,11 @@ import traceback
 
 # Import Salt Libs
 import salt.exceptions
-from salt.utils.dictupdate import update as dict_merge
 import salt.utils
 
 # Get Logging Started
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     return True
@@ -285,10 +285,10 @@ def dvs_configured(name, dvs):
                 changes.update({'dvs': {'new': dvs}})
         else:
             # DVS already exists. Checking various aspects of the config
-            props =  ['description', 'contact_email', 'contact_name',
-                      'lacp_api_version', 'link_discovery_protocol',
-                      'max_mtu', 'network_resource_control_version',
-                      'network_resource_management_enabled']
+            props = ['description', 'contact_email', 'contact_name',
+                     'lacp_api_version', 'link_discovery_protocol',
+                     'max_mtu', 'network_resource_control_version',
+                     'network_resource_management_enabled']
             log.trace('DVS \'{0}\' found in datacenter \'{1}\'. Checking '
                       'for any updates in '
                       '{2}'.format(dvs_name, datacenter_name, props))
@@ -334,11 +334,11 @@ def dvs_configured(name, dvs):
             if props_to_updated_values:
                 if __opts__['test']:
                     changes_string = ''
-                    for p in props_to_updated_values.keys():
+                    for p in props_to_updated_values:
                         if p == 'infrastructure_traffic_resource_pools':
                             changes_string += \
                                     '\tinfrastructure_traffic_resource_pools:\n'
-                            for idx in range(len(props_to_updated_values [p])):
+                            for idx in range(len(props_to_updated_values[p])):
                                 d = props_to_updated_values[p][idx]
                                 s = props_to_original_values[p][idx]
                                 changes_string += \
@@ -536,7 +536,7 @@ def portgroups_configured(name, dvs, portgroups):
                 diff_dict = _get_diff_dict(current_pg, pg)
 
                 if diff_dict:
-                    changes_required=True
+                    changes_required = True
                     if __opts__['test']:
                         changes_strings = \
                                 _get_changes_from_diff_dict(diff_dict)
@@ -545,7 +545,7 @@ def portgroups_configured(name, dvs, portgroups):
                         comments.append(
                             'State {0} will update portgroup \'{1}\' in '
                             'DVS \'{2}\', datacenter \'{3}\':\n{4}'
-                            ''.format(name, pg_name,  dvs, datacenter,
+                            ''.format(name, pg_name, dvs, datacenter,
                                       '\n'.join(['\t{0}'.format(c) for c in
                                                  changes_strings])))
                     else:
@@ -568,7 +568,7 @@ def portgroups_configured(name, dvs, portgroups):
         # Remove any extra portgroups
         for current_pg in current_pgs:
             if current_pg['name'] not in expected_pg_names:
-                changes_required=True
+                changes_required = True
                 if __opts__['test']:
                     comments.append('State {0} will remove '
                                     'the portgroup \'{1}\' from DVS \'{2}\', '
@@ -644,7 +644,7 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
                   '{0}'.format(current_uplink_portgroup))
         diff_dict = _get_diff_dict(current_uplink_portgroup, uplink_portgroup)
         if diff_dict:
-            changes_required=True
+            changes_required = True
             if __opts__['test']:
                 changes_strings = \
                         _get_changes_from_diff_dict(diff_dict)

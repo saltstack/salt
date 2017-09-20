@@ -11,8 +11,7 @@ import logging
 
 # Import Salt testing libraries
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call, \
-        PropertyMock
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call
 from salt.exceptions import VMwareObjectRetrievalError, VMwareApiError, \
         ArgumentValueError, VMwareRuntimeError
 

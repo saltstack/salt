@@ -3893,7 +3893,7 @@ def _apply_dvs_infrastructure_traffic_resources(infra_traffic_resources,
         if res_dict.get('num_shares'):
             #XXX Even though we always set the number of shares if provided,
             #the vCenter will ignore it unless the share level is 'custom'.
-            res.allocationInfo.shares.shares=res_dict['num_shares']
+            res.allocationInfo.shares.shares = res_dict['num_shares']
 
 
 def _apply_dvs_network_resource_pools(network_resource_pools, resource_dicts):
@@ -3917,7 +3917,7 @@ def _apply_dvs_network_resource_pools(network_resource_pools, resource_dicts):
         if res_dict.get('num_shares') and res_dict.get('share_level'):
             if not res.allocationInfo.shares:
                 res.allocationInfo.shares = vim.SharesInfo()
-            res.allocationInfo.shares.shares=res_dict['num_shares']
+            res.allocationInfo.shares.shares = res_dict['num_shares']
             res.allocationInfo.shares.level = \
                     vim.SharesLevel(res_dict['share_level'])
 
@@ -3985,13 +3985,14 @@ def create_dvs(dvs_dict, dvs_name, service_instance=None):
         dvs_refs = salt.utils.vmware.get_dvss(dc_ref,
                                               dvs_names=[dvs_name])
         if not dvs_refs:
-            raise excs.VMwareObjectRetrievalError(
+            raise VMwareObjectRetrievalError(
                 'DVS \'{0}\' wasn\'t found in datacenter \'{1}\''
                 ''.format(dvs_name, datacenter))
         dvs_ref = dvs_refs[0]
         salt.utils.vmware.set_dvs_network_resource_management_enabled(
             dvs_ref, dvs_dict['network_resource_management_enabled'])
     return True
+
 
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
@@ -4394,7 +4395,7 @@ def _apply_dvportgroup_teaming(pg_name, teaming, teaming_conf):
             teaming.uplinkPortOrder.activeUplinkPort = \
                     teaming_conf['port_order']['active']
         if 'standby' in teaming_conf['port_order']:
-            teaming.uplinkPortOrder.standbyUplinkPort  = \
+            teaming.uplinkPortOrder.standbyUplinkPort = \
                     teaming_conf['port_order']['standby']
 
 

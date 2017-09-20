@@ -1177,7 +1177,7 @@ def get_dvportgroups(parent_ref, portgroup_names=None,
                 path='childEntity',
                 skip=False,
                 type=vim.Folder)])
-    else: # parent is distributed virtual switch
+    else:  # parent is distributed virtual switch
         traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
             path='portgroup',
             skip=False,
