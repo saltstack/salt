@@ -4677,6 +4677,33 @@ def list_storage_policies(policy_names=None, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def list_default_vsan_policy(service_instance=None):
+    '''
+    Returns the default vsan storage policy.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.list_storage_policies
+
+        salt '*' vsphere.list_storage_policy policy_names=[policy_name]
+    '''
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    policies = salt.utils.pbm.get_storage_policies(profile_manager,
+                                                   get_all_policies=True)
+    def_policies = [p for p in policies
+                    if p.systemCreatedProfileType == 'VsanDefaultProfile']
+    if not def_policies:
+        raise excs.VMwareObjectRetrievalError('Default VSAN policy was not '
+                                              'retrieved')
+    return _get_policy_dict(def_policies[0])
+
+
+@depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
