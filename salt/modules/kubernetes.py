@@ -83,7 +83,7 @@ def __virtual__():
     return False, 'python kubernetes library not found'
 
 
-if salt.utils.is_windows():
+if not salt.utils.is_windows():
     @contextmanager
     def _time_limit(seconds):
         def signal_handler(signum, frame):
@@ -713,7 +713,7 @@ def delete_deployment(name, namespace='default', **kwargs):
             namespace=namespace,
             body=body)
         mutable_api_response = api_response.to_dict()
-        if salt.utils.is_windows():
+        if not salt.utils.is_windows():
             try:
                 with _time_limit(POLLING_TIME_LIMIT):
                     while show_deployment(name, namespace) is not None:
