@@ -34,13 +34,13 @@ try:
     import salt._syspaths as __generated_syspaths  # pylint: disable=no-name-in-module
 except ImportError:
     import types
-    __generated_syspaths = types.ModuleType('salt._syspaths')  # future lint: disable=non-unicode-string
-    for key in (u'ROOT_DIR', u'CONFIG_DIR', u'CACHE_DIR', u'SOCK_DIR',
-                u'SRV_ROOT_DIR', u'BASE_FILE_ROOTS_DIR',
-                u'BASE_PILLAR_ROOTS_DIR', u'BASE_THORIUM_ROOTS_DIR',
-                u'BASE_MASTER_ROOTS_DIR', u'LOGS_DIR', u'PIDFILE_DIR',
-                u'SPM_FORMULA_PATH', u'SPM_PILLAR_PATH', u'SPM_REACTOR_PATH',
-                u'SHARE_DIR'):
+    __generated_syspaths = types.ModuleType('salt._syspaths')
+    for key in ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
+                'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'HOME_DIR',
+                'BASE_PILLAR_ROOTS_DIR', 'BASE_THORIUM_ROOTS_DIR',
+                'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
+                'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH',
+                'SHARE_DIR'):
         setattr(__generated_syspaths, key, None)
 
 
@@ -138,6 +138,10 @@ if SPM_PILLAR_PATH is None:
 SPM_REACTOR_PATH = __generated_syspaths.SPM_REACTOR_PATH
 if SPM_REACTOR_PATH is None:
     SPM_REACTOR_PATH = os.path.join(SRV_ROOT_DIR, u'spm', u'reactor')
+
+HOME_DIR = __generated_syspaths.HOME_DIR
+if HOME_DIR is None:
+    HOME_DIR = os.path.expanduser('~')
 
 
 __all__ = [

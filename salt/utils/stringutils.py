@@ -89,6 +89,15 @@ def to_num(text):
             return text
 
 
+def to_none(text):
+    '''
+    Convert a string to None if the string is empty or contains only spaces.
+    '''
+    if str(text).strip():
+        return text
+    return None
+
+
 def is_quoted(value):
     '''
     Return a single or double quote, if a string is wrapped in extra quotes.
@@ -161,3 +170,30 @@ def contains_whitespace(text):
     Returns True if there are any whitespace characters in the string
     '''
     return any(x.isspace() for x in text)
+
+
+def human_to_bytes(size):
+    '''
+    Given a human-readable byte string (e.g. 2G, 30M),
+    return the number of bytes.  Will return 0 if the argument has
+    unexpected form.
+
+    .. versionadded:: Oxygen
+    '''
+    sbytes = size[:-1]
+    unit = size[-1]
+    if sbytes.isdigit():
+        sbytes = int(sbytes)
+        if unit == 'P':
+            sbytes *= 1125899906842624
+        elif unit == 'T':
+            sbytes *= 1099511627776
+        elif unit == 'G':
+            sbytes *= 1073741824
+        elif unit == 'M':
+            sbytes *= 1048576
+        else:
+            sbytes = 0
+    else:
+        sbytes = 0
+    return sbytes

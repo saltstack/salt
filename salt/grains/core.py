@@ -543,7 +543,7 @@ def _virtual(osdata):
             command = 'system_profiler'
             args = ['SPDisplaysDataType']
         elif osdata['kernel'] == 'SunOS':
-            virtinfo = salt.utils.which('virtinfo')
+            virtinfo = salt.utils.path.which('virtinfo')
             if virtinfo:
                 try:
                     ret = __salt__['cmd.run_all']('{0} -a'.format(virtinfo))
@@ -2425,4 +2425,46 @@ def get_master():
     #   master
     return {'master': __opts__.get('master', '')}
 
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
+
+def default_gateway():
+    '''
+    Populates grains which describe whether a server has a default gateway
+    configured or not. Uses `ip -4 route show` and `ip -6 route show` and greps
+    for a `default` at the beginning of any line. Assuming the standard
+    `default via <ip>` format for default gateways, it will also parse out the
+    ip address of the default gateway, and put it in ip4_gw or ip6_gw.
+
+    If the `ip` command is unavailable, no grains will be populated.
+
+    Currently does not support multiple default gateways. The grains will be
+    set to the first default gateway found.
+
+    List of grains:
+
+        ip4_gw: True  # ip/True/False if default ipv4 gateway
+        ip6_gw: True  # ip/True/False if default ipv6 gateway
+        ip_gw: True   # True if either of the above is True, False otherwise
+    '''
+    grains = {}
+    if not salt.utils.which('ip'):
+        return {}
+    grains['ip_gw'] = False
+    grains['ip4_gw'] = False
+    grains['ip6_gw'] = False
+    if __salt__['cmd.run']('ip -4 route show | grep "^default"', python_shell=True):
+        grains['ip_gw'] = True
+        grains['ip4_gw'] = True
+        try:
+            gateway_ip = __salt__['cmd.run']('ip -4 route show | grep "^default via"', python_shell=True).split(' ')[2].strip()
+            grains['ip4_gw'] = gateway_ip if gateway_ip else True
+        except Exception as exc:
+            pass
+    if __salt__['cmd.run']('ip -6 route show | grep "^default"', python_shell=True):
+        grains['ip_gw'] = True
+        grains['ip6_gw'] = True
+        try:
+            gateway_ip = __salt__['cmd.run']('ip -6 route show | grep "^default via"', python_shell=True).split(' ')[2].strip()
+            grains['ip6_gw'] = gateway_ip if gateway_ip else True
+        except Exception as exc:
+            pass
+    return grains
