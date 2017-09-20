@@ -4703,6 +4703,17 @@ def list_default_vsan_policy(service_instance=None):
     return _get_policy_dict(def_policies[0])
 
 
+def _get_capability_definition_dict(cap_metadata):
+    # We assume each capability definition has one property with the same id
+    # as the capability so we display its type as belonging to the capability
+    # The object model permits multiple properties
+    return {'namespace': cap_metadata.id.namespace,
+            'id': cap_metadata.id.id,
+            'mandatory': cap_metadata.mandatory,
+            'description': cap_metadata.summary.summary,
+            'type': cap_metadata.propertyMetadata[0].type.typeName}
+
+
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
