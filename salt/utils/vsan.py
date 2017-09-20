@@ -173,7 +173,6 @@ def reconfigure_cluster_vsan(cluster_ref, cluster_vsan_spec):
               ''.format(cluster_name, cluster_vsan_spec))
     si = salt.utils.vmware.get_service_instance_from_managed_object(
         cluster_ref)
-    print salt.utils.vsan.get_vsan_cluster_config_system
     vsan_cl_conf_sys = salt.utils.vsan.get_vsan_cluster_config_system(si)
     try:
         task = vsan_cl_conf_sys.VsanClusterReconfig(cluster_ref,

@@ -46,7 +46,7 @@ import traceback
 import sys
 
 # Import Salt Libs
-import salt.exceptions
+from salt.exceptions CommandExecutionError
 from salt.utils.dictdiffer import recursive_diff
 from salt.utils.listdiffer import list_diff
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
@@ -157,7 +157,7 @@ def cluster_configured(name, cluster_config):
     changes_required = False
 
     try:
-        log.debug('Validating cluster_configured state input')
+        log.trace('Validating cluster_configured state input')
         schema = ESXClusterConfigSchema.serialize()
         log.trace('schema = {0}'.format(schema))
         try:
@@ -181,7 +181,7 @@ def cluster_configured(name, cluster_config):
                 ret.update({'result': None,
                             'comment': '\n'.join(comments)})
                 return ret
-            log.debug('Creating cluster \'{0}\' in datacenter \'{1}\'. '
+            log.trace('Creating cluster \'{0}\' in datacenter \'{1}\'. '
                       ''.format(cluster_name, datacenter_name))
             __salt__['vsphere.create_cluster'](cluster_dict,
                                                datacenter_name,
@@ -307,7 +307,7 @@ def vsan_datastore_configured(name, datastore_name):
                                 '\'{1}\'.'.format(name, datastore_name))
                 log.info(comments[-1])
             else:
-                log.debug('Renaming vSAN datastore \'{0}\' to \'{1}\''
+                log.trace('Renaming vSAN datastore \'{0}\' to \'{1}\''
                           ''.format(vsan_ds['name'], datastore_name))
                 __salt__['vsphere.rename_datastore'](
                     datastore_name=vsan_ds['name'],
@@ -372,7 +372,7 @@ def licenses_configured(name, licenses=None):
     needs_changes = False
     try:
         # Validate licenses
-        log.debug('Validating licenses')
+        log.trace('Validating licenses')
         schema = LicenseSchema.serialize()
         try:
             jsonschema.validate({'licenses': licenses}, schema)
@@ -421,7 +421,7 @@ def licenses_configured(name, licenses=None):
                 log.info(comments[-1])
                 existing_license = filtered_licenses[0]
 
-            log.debug('Checking licensed entities...'.format(license_name))
+            log.trace('Checking licensed entities...')
             assigned_licenses = __salt__['vsphere.list_assigned_licenses'](
                 entity=entity,
                 entity_display_name=display_name,
@@ -506,9 +506,8 @@ def licenses_configured(name, licenses=None):
             continue
         __salt__['vsphere.disconnect'](si)
 
-        ret.update({'result': True if (not needs_changes) else None if \
-                                __opts__['test'] else False if has_errors else \
-                                True,
+        ret.update({'result': True if (not needs_changes) else None if
+                        __opts__['test'] else False if has_errors else True,
                     'comment': '\n'.join(comments),
                     'changes': changes if not __opts__['test'] else {}})
 

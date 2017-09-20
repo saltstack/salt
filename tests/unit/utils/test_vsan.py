@@ -259,7 +259,7 @@ class ReconfigureClusterVsanTestCase(TestCase):
             self.mock_cl_ref)
 
     def test_get_service_instance_call(self):
-        get_service_instance_from_managed_object_mock= MagicMock()
+        get_service_instance_from_managed_object_mock = MagicMock()
         with patch(
             'salt.utils.vmware.get_service_instance_from_managed_object',
             get_service_instance_from_managed_object_mock):
@@ -284,7 +284,7 @@ class ReconfigureClusterVsanTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         with patch('salt.utils.vsan.get_vsan_cluster_config_system',
-                   MagicMock(return_value = MagicMock(
+                   MagicMock(return_value=MagicMock(
                        VsanClusterReconfig=MagicMock(side_effect=exc)))):
             with self.assertRaises(VMwareApiError) as excinfo:
                 vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
@@ -297,7 +297,7 @@ class ReconfigureClusterVsanTestCase(TestCase):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         with patch('salt.utils.vsan.get_vsan_cluster_config_system',
-                   MagicMock(return_value = MagicMock(
+                   MagicMock(return_value=MagicMock(
                        VsanClusterReconfig=MagicMock(side_effect=exc)))):
             with self.assertRaises(VMwareApiError) as excinfo:
                 vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
@@ -308,7 +308,7 @@ class ReconfigureClusterVsanTestCase(TestCase):
         exc = vmodl.RuntimeFault()
         exc.msg = 'VimRuntime msg'
         with patch('salt.utils.vsan.get_vsan_cluster_config_system',
-                   MagicMock(return_value = MagicMock(
+                   MagicMock(return_value=MagicMock(
                        VsanClusterReconfig=MagicMock(side_effect=exc)))):
             with self.assertRaises(VMwareRuntimeError) as excinfo:
                 vsan.reconfigure_cluster_vsan(self.mock_cl_ref,

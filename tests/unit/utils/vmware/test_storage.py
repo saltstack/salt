@@ -391,7 +391,6 @@ class RenameDatastoreTestCase(TestCase):
         self.assertEqual(excinfo.exception.message, 'runtime_fault')
 
     def test_rename_datastore(self):
-        ret = salt.utils.vmware.rename_datastore(self.mock_ds_ref,
-                                                 'fake_new_name')
+        salt.utils.vmware.rename_datastore(self.mock_ds_ref, 'fake_new_name')
         self.mock_ds_ref.RenameDatastore.assert_called_once_with(
             'fake_new_name')

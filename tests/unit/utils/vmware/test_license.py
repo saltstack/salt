@@ -11,7 +11,7 @@ import logging
 
 # Import Salt testing libraries
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call, \
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, \
         PropertyMock
 
 
@@ -550,7 +550,7 @@ class AssignLicenseTestCase(TestCase):
     def test_instance_uuid(self):
         mock_instance_uuid_prop = PropertyMock()
         type(self.mock_si.content.about).instanceUuid = mock_instance_uuid_prop
-        self.mock_lic_assign_mgr.UpdateAssignedLicense= MagicMock(
+        self.mock_lic_assign_mgr.UpdateAssignedLicense = MagicMock(
                     return_value=[MagicMock(entityDisplayName='fake_vcenter')])
         salt.utils.vmware.assign_license(self.mock_si,
                                          self.mock_lic_key,

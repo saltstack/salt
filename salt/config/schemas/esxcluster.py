@@ -28,8 +28,8 @@ class OptionValueItem(ComplexSchemaItem):
     '''Sechma item of the OptionValue'''
 
     title = 'OptionValue'
-    key=StringItem(title='Key', required=True)
-    value=AnyOfItem(items=[StringItem(), BooleanItem(), IntegerItem()])
+    key = StringItem(title='Key', required=True)
+    value = AnyOfItem(items=[StringItem(), BooleanItem(), IntegerItem()])
 
 
 class AdmissionControlPolicyItem(ComplexSchemaItem):
@@ -130,7 +130,7 @@ class DRSConfigItem(ComplexSchemaItem):
         '1 (least aggressive) - 5 (most aggressive)',
         minimum=1,
         maximum=5)
-    default_vm_behavior= StringItem(
+    default_vm_behavior = StringItem(
         title='Default VM DRS Behavior',
         description='Specifies the default VM DRS behavior',
         enum=['fullyAutomated', 'partiallyAutomated', 'manual'])

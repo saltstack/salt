@@ -16,7 +16,7 @@ The following can be retrieved:
 
 Note: All dictionaries keys are expected to be strings
 '''
-
+from __future__ import absolute_import
 from salt.utils.dictdiffer import recursive_diff
 
 
