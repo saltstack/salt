@@ -60,12 +60,29 @@ try:
 except ImportError:
     HAS_JSONSCHEMA = False
 
+try:
+    from pyVmomi import VmomiSupport
+    HAS_PYVMOMI = True
+except ImportError:
+    HAS_PYVMOMI = False
+
 # Get Logging Started
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return HAS_JSONSCHEMA
+    if not HAS_JSONSCHEMA:
+        return False, 'State module did not load: jsonschema not found'
+    if not HAS_PYVMOMI:
+        return False, 'State module did not load: pyVmomi not found'
+
+    # We check the supported vim versions to infer the pyVmomi version
+    if 'vim25/6.0' in VmomiSupport.versionMap and \
+        sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
+
+        return False, ('State module did not load: Incompatible versions '
+                       'of Python and pyVmomi present. See Issue #29537.')
+    return True
 
 
 def mod_init(low):
