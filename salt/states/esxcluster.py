@@ -258,7 +258,7 @@ def cluster_configured(name, cluster_config):
                     'comment': '\n'.join(comments),
                     'changes': changes})
         return ret
-    except CommandExecutionError as exc:
+    except salt.exceptions.CommandExecutionError as exc:
         log.error('Error: {0}\n{1}'.format(exc, traceback.format_exc()))
         if si:
             __salt__['vsphere.disconnect'](si)
