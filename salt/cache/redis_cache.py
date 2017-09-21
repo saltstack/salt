@@ -421,18 +421,17 @@ def list_(bank):
     Lists entries stored in the specified bank.
     '''
     redis_server = _get_redis_server()
-    bank_keys_redis_key = _get_bank_keys_redis_key(bank)
-    bank_keys = None
+    bank_redis_key = _get_bank_redis_key(bank)
     try:
-        bank_keys = redis_server.smembers(bank_keys_redis_key)
+        banks = redis_server.smembers(bank_redis_key)
     except (RedisConnectionError, RedisResponseError) as rerr:
-        mesg = 'Cannot list the Redis cache key {rkey}: {rerr}'.format(rkey=bank_keys_redis_key,
+        mesg = 'Cannot list the Redis cache key {rkey}: {rerr}'.format(rkey=bank_redis_key,
                                                                        rerr=rerr)
         log.error(mesg)
         raise SaltCacheError(mesg)
-    if not bank_keys:
+    if not banks:
         return []
-    return list(bank_keys)
+    return list(banks)
 
 
 def contains(bank, key):
@@ -440,15 +439,14 @@ def contains(bank, key):
     Checks if the specified bank contains the specified key.
     '''
     redis_server = _get_redis_server()
-    bank_keys_redis_key = _get_bank_keys_redis_key(bank)
-    bank_keys = None
+    bank_redis_key = _get_bank_redis_key(bank)
     try:
-        bank_keys = redis_server.smembers(bank_keys_redis_key)
+        banks = redis_server.smembers(bank_redis_key)
     except (RedisConnectionError, RedisResponseError) as rerr:
-        mesg = 'Cannot retrieve the Redis cache key {rkey}: {rerr}'.format(rkey=bank_keys_redis_key,
+        mesg = 'Cannot retrieve the Redis cache key {rkey}: {rerr}'.format(rkey=bank_redis_key,
                                                                            rerr=rerr)
         log.error(mesg)
         raise SaltCacheError(mesg)
-    if not bank_keys:
+    if not banks:
         return False
-    return key in bank_keys
+    return key in banks
