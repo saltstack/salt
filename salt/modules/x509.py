@@ -625,6 +625,8 @@ def read_csr(csr):
         # Get size returns in bytes. The world thinks of key sizes in bits.
         'Subject': _parse_subject(csr.get_subject()),
         'Subject Hash': _dec2hex(csr.get_subject().as_hash()),
+        'Public Key Hash': hashlib.sha1(csr.get_pubkey().get_modulus())\
+        .hexdigest()
     }
 
     ret['X509v3 Extensions'] = _get_csr_extensions(csr)
