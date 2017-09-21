@@ -285,6 +285,16 @@ Section "MainSection" SEC01
     File /r "..\buildenv\"
     nsExec::Exec 'icacls c:\salt /inheritance:r /grant:r "*S-1-5-32-544":(OI)(CI)F /grant:r "*S-1-5-18":(OI)(CI)F'
 
+    ; Extract portable.py script so we can fix paths in pip.exe
+    SetOutPath "$TEMP\"
+    File "..\portable.py"
+
+    ; Update python pip module with correct path.
+    nsExec::Exec '$INSTDIR\bin\python.exe "$TEMP\portable.py" -f "$INSTDIR\bin\Scripts\pip.exe" -s "..\\" -r $INSTDIR\bin\'
+    
+    ; Cleanup
+    Delete "$TEMP\portable.py"
+    
 SectionEnd
 
 
