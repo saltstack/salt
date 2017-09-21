@@ -171,7 +171,7 @@ def get_policies_by_id(profile_manager, policy_ids):
         raise VMwareRuntimeError(exc.msg)
 
 
-def get_storage_policies(profile_manager, policy_names=[],
+def get_storage_policies(profile_manager, policy_names=None,
                          get_all_policies=False):
     '''
     Returns a list of the storage policies, filtered by name.
@@ -181,6 +181,7 @@ def get_storage_policies(profile_manager, policy_names=[],
 
     policy_names
         List of policy names to filter by.
+        Default is None.
 
     get_all_policies
         Flag specifying to return all policies, regardless of the specified
@@ -207,6 +208,8 @@ def get_storage_policies(profile_manager, policy_names=[],
                 pbm.profile.ResourceTypeEnum.STORAGE]
     if get_all_policies:
         return policies
+    if not policy_names:
+        policy_names = []
     return [p for p in policies if p.name in policy_names]
 
 

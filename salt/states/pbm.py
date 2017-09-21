@@ -95,31 +95,20 @@ PyVmomi can be installed via pip:
 
 # Import Python Libs
 from __future__ import absolute_import
-import sys
 import logging
-import json
-import time
 import copy
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError, ArgumentValueError
-import salt.modules.vsphere as vsphere
-from salt.utils import is_proxy
 from salt.utils.dictdiffer import recursive_diff
 from salt.utils.listdiffer import list_diff
-
-# External libraries
-try:
-    import jsonschema
-    HAS_JSONSCHEMA = True
-except ImportError:
-    HAS_JSONSCHEMA = False
 
 # Get Logging Started
 log = logging.getLogger(__name__)
 # TODO change with vcenter
 ALLOWED_PROXY_TYPES = ['esxcluster', 'vcenter']
 LOGIN_DETAILS = {}
+
 
 def __virtual__():
     if HAS_JSONSCHEMA:
@@ -297,7 +286,7 @@ def storage_policies_configured(name, policies):
         # All allowed proxies have a vcenter detail
         vcenter = __salt__['{0}.get_details'.format(proxy_type)]()['vcenter']
         log.info('Running state \'{0}\' on vCenter '
-                 '\'{0}\''.format(name, vcenter))
+                 '\'{1}\''.format(name, vcenter))
         si = __salt__['vsphere.get_service_instance_via_proxy']()
         current_policies = __salt__['vsphere.list_storage_policies'](
             policy_names=[policy['name'] for policy in policies],
@@ -378,7 +367,7 @@ def storage_policies_configured(name, policies):
                         'State {0} will update the storage policy \'{1}\''
                         ' on vCenter \'{2}\':\n{3}'
                         ''.format(name, policy['name'], vcenter,
-                                  '\n'.join( str_changes)))
+                                  '\n'.join(str_changes)))
                 else:
                     __salt__['vsphere.update_storage_policy'](
                         policy=current_policy['name'],
@@ -449,7 +438,7 @@ def default_storage_policy_assigned(name, policy, datastore):
     datastore
         Name of datastore
     '''
-    log.info('Running state {0} for policy \'{1}\, datastore \'{2}\'.'
+    log.info('Running state {0} for policy \'{1}\', datastore \'{2}\'.'
              ''.format(name, policy, datastore))
     changes = {}
     changes_required = False
@@ -470,7 +459,7 @@ def default_storage_policy_assigned(name, policy, datastore):
             changes = {
                 'default_storage_policy': {'old': existing_policy['name'],
                                            'new': policy}}
-            if (__opts__['test']):
+            if __opts__['test']:
                 comment = ('State {0} will assign storage policy \'{1}\' to '
                            'datastore \'{2}\'.').format(name, policy,
                                                         datastore)

@@ -434,7 +434,7 @@ def get_new_service_instance_stub(service_instance, path, ns=None,
     #connection handshaking rule. We may need turn of the hostname checking
     #and client side cert verification
     context = None
-    if sys.version_info[:3] > (2,7,8):
+    if sys.version_info[:3] > (2, 7, 8):
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE

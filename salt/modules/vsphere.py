@@ -4700,8 +4700,8 @@ def list_default_vsan_policy(service_instance=None):
     def_policies = [p for p in policies
                     if p.systemCreatedProfileType == 'VsanDefaultProfile']
     if not def_policies:
-        raise excs.VMwareObjectRetrievalError('Default VSAN policy was not '
-                                              'retrieved')
+        raise VMwareObjectRetrievalError('Default VSAN policy was not '
+                                         'retrieved')
     return _get_policy_dict(def_policies[0])
 
 
@@ -4854,8 +4854,8 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     policies = salt.utils.pbm.get_storage_policies(profile_manager, [policy])
     if not policies:
-        raise excs.VMwareObjectRetrievalError('Policy \'{0}\' was not found'
-                                              ''.format(policy))
+        raise VMwareObjectRetrievalError('Policy \'{0}\' was not found'
+                                         ''.format(policy))
     policy_ref = policies[0]
     policy_update_spec = pbm.profile.CapabilityBasedProfileUpdateSpec()
     log.trace('Setting policy values in policy_update_spec')
@@ -4893,8 +4893,8 @@ def list_default_storage_policy_of_datastore(datastore, service_instance=None):
     ds_refs = salt.utils.vmware.get_datastores(service_instance, target_ref,
                                                datastore_names=[datastore])
     if not ds_refs:
-        raise excs.VMwareObjectRetrievalError('Datastore \'{0}\' was not '
-                                              'found'.format(datastore))
+        raise VMwareObjectRetrievalError('Datastore \'{0}\' was not '
+                                         'found'.format(datastore))
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     policy = salt.utils.pbm.get_default_storage_policy_of_datastore(
         profile_manager, ds_refs[0])
@@ -4927,12 +4927,12 @@ def assign_default_storage_policy_to_datastore(policy, datastore,
     '''
     log.trace('Assigning policy {0} to datastore {1}'
               ''.format(policy, datastore))
-    profile_manager = utils_pbm.get_profile_manager(service_instance)
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     # Find policy
-    policies = utils_pbm.get_storage_policies(profile_manager, [policy])
+    policies = salt.utils.pbm.get_storage_policies(profile_manager, [policy])
     if not policies:
-        raise excs.VMwareObjectRetrievalError('Policy \'{0}\' was not found'
-                                              ''.format(policy))
+        raise VMwareObjectRetrievalError('Policy \'{0}\' was not found'
+                                         ''.format(policy))
     policy_ref = policies[0]
     # Find datastore
     target_ref = _get_proxy_target(service_instance)
@@ -4942,9 +4942,9 @@ def assign_default_storage_policy_to_datastore(policy, datastore,
         raise excs.VMwareObjectRetrievalError('Datastore \'{0}\' was not '
                                               'found'.format(datastore))
     ds_ref = ds_refs[0]
-    utils_pbm.assign_default_storage_policy_to_datastore(profile_manager,
-                                                         policy_ref, ds_ref)
-    return {'assign_storage_policy_to_datastore': True}
+    salt.utils.pbm.assign_default_storage_policy_to_datastore(
+        profile_manager, policy_ref, ds_ref)
+    return True
 
 
 @depends(HAS_PYVMOMI)
