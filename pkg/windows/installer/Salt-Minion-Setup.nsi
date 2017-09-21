@@ -664,9 +664,13 @@ FunctionEnd
 # - Trims spaces, \r, \n, \t
 #
 # Usage:
-#   Push " some string "
+#   Push " some string "  ; String to Trim
 #   Call Trim
-#   Pop $0 ; "some string"
+#   Pop $0                ; Trimmed String: "some string"
+#
+#   or
+#
+#   ${Trim} $0 $1   ; Trimmed String, String to Trim
 #------------------------------------------------------------------------------
 Function Trim
 
@@ -702,6 +706,22 @@ Function Trim
 FunctionEnd
 
 
+#------------------------------------------------------------------------------
+# Explode Function
+# - Splits a string based off the passed separator
+# - Each item in the string is pushed to the stack
+# - The last item pushed to the stack is the length of the array
+#
+# Usage:
+#   Push ","                    ; Separator
+#   Push "string,to,separate"   ; String to explode
+#   Call Explode
+#   Pop $0                      ; Number of items in the array
+#
+#   or
+#
+#   ${Explode} $0 $1 $2         ; Length, Separator, String
+#------------------------------------------------------------------------------
 Function Explode
     # Initialize variables
     Var /GLOBAL explString
@@ -1093,27 +1113,26 @@ Function updateMinionConfig
     FileRead $0 $2                                       # read line from target file
     IfErrors done                                        # end if errors are encountered (end of line)
 
-
     ${If} $MasterHost_State != ""                        # if master is empty
     ${AndIf} $MasterHost_State != "salt"                 # and if master is not 'salt'
         ${StrLoc} $3 $2 "master:" ">"                    # where is 'master:' in this line
         ${If} $3 == 0                                    # is it in the first...
         ${OrIf} $3 == 1                                  # or second position (account for comments)
 
-            ${Explode} $9 "," $MasterHost_state
-            ${If} $9 == 1
+            ${Explode} $9 "," $MasterHost_state          # Split the hostname on commas, $9 is the number of items found
+            ${If} $9 == 1                                # 1 means only a single master was passed
                 StrCpy $2 "master: $MasterHost_State$\r$\n"  # write the master
-            ${Else}
-                StrCpy $2 "master:"
+            ${Else}                                      # Make a multi-master entry
+                StrCpy $2 "master:"                      # Make the first line "master:"
 
-                loop_explode:
-                pop $8
-                ${Trim} $8 $8
-                StrCpy $2 "$2$\r$\n  - $8"
-                IntOp $9 $9 - 1
-                ${If} $9 >= 1
-                    Goto loop_explode
-                ${EndIf}
+                loop_explode:                            # Start a loop to go through the list in the config
+                pop $8                                   # Pop the next item off the stack
+                ${Trim} $8 $8                            # Trim any whitespace
+                StrCpy $2 "$2$\r$\n  - $8"               # Add it to the master variable ($2)
+                IntOp $9 $9 - 1                          # Decrement the list count
+                ${If} $9 >= 1                            # If it's not 0
+                    Goto loop_explode                    # Do it again
+                ${EndIf}                                 # close if statement
             ${EndIf}                                     # close if statement
         ${EndIf}                                         # close if statement
     ${EndIf}                                             # close if statement
