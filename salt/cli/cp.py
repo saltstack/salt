@@ -184,9 +184,10 @@ class SaltCP(object):
             if gzip \
             else salt.utils.itertools.read_file
 
-        minions = salt.utils.minions.CkMinions(self.opts).check_minions(
+        _res = salt.utils.minions.CkMinions(self.opts).check_minions(
             tgt,
             tgt_type=selected_target_option or 'glob')
+        minions = _res['minions']
 
         local = salt.client.get_local_client(self.opts['conf_file'])
 
