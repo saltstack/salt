@@ -160,7 +160,6 @@ def extracted(name,
               source_hash_name=None,
               source_hash_update=False,
               skip_verify=False,
-              cache_source=True,
               password=None,
               options=None,
               list_options=None,
@@ -405,7 +404,7 @@ def extracted(name,
 
         .. versionadded:: 2016.3.4
 
-    cache_source : True
+    keep_source : True
         For ``source`` archives not local to the minion (i.e. from the Salt
         fileserver or a remote source such as ``http(s)`` or ``ftp``), Salt
         will need to download the archive to the minion cache before they can
@@ -415,8 +414,11 @@ def extracted(name,
         .. versionadded:: 2017.7.3
 
     keep : True
-        .. deprecated:: 2017.7.3
-            Use ``cache_source`` instead
+        Same as ``keep_source``.
+
+        .. note::
+            If both ``keep_source`` and ``keep`` are used, ``keep`` will be
+            ignored.
 
     password
         **For ZIP archives only.** Password used for extraction.
@@ -646,13 +648,20 @@ def extracted(name,
     # Remove pub kwargs as they're irrelevant here.
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
-    if 'keep' in kwargs:
-        cache_source = bool(kwargs.pop('keep'))
+    if 'keep_source' in kwargs and 'keep' in kwargs:
         ret.setdefault('warnings', []).append(
-            'The \'keep\' argument has been renamed to \'cache_source\'. '
-            'Assumed cache_source={0}. Please update your SLS to get rid of '
-            'this warning.'.format(cache_source)
+            'Both \'keep_source\' and \'keep\' were used. Since these both '
+            'do the same thing, \'keep\' was ignored.'
         )
+        keep_source = bool(kwargs.pop('keep_source'))
+        kwargs.pop('keep')
+    elif 'keep_source' in kwargs:
+        keep_source = bool(kwargs.pop('keep_source'))
+    elif 'keep' in kwargs:
+        keep_source = bool(kwargs.pop('keep'))
+    else:
+        # Neither was passed, default is True
+        keep_source = True
 
     if not _path_is_abs(name):
         ret['comment'] = '{0} is not an absolute path'.format(name)
@@ -1492,7 +1501,7 @@ def extracted(name,
         for item in enforce_failed:
             ret['comment'] += '\n- {0}'.format(item)
 
-    if not cache_source and not source_is_local:
+    if not keep_source and not source_is_local:
         log.debug('Cleaning cached source file %s', cached)
         result = __states__['file.not_cached'](source_match, saltenv=__env__)
         if not result['result']:

@@ -1531,7 +1531,7 @@ def managed(name,
             source=None,
             source_hash='',
             source_hash_name=None,
-            cache_source=True,
+            keep_source=True,
             user=None,
             group=None,
             mode=None,
@@ -1731,7 +1731,7 @@ def managed(name,
 
         .. versionadded:: 2016.3.5
 
-    cache_source : True
+    keep_source : True
         Set to ``False`` to discard the cached copy of the source file once the
         state completes. This can be useful for larger files to keep them from
         taking up space in minion cache. However, keep in mind that discarding
@@ -2452,7 +2452,7 @@ def managed(name,
             ret['changes'] = {}
             log.debug(traceback.format_exc())
             salt.utils.files.remove(tmp_filename)
-            if not cache_source and sfn:
+            if not keep_source and sfn:
                 salt.utils.files.remove(sfn)
             return _error(ret, 'Unable to check_cmd file: {0}'.format(exc))
 
@@ -2524,7 +2524,7 @@ def managed(name,
         finally:
             if tmp_filename:
                 salt.utils.files.remove(tmp_filename)
-            if not cache_source and sfn:
+            if not keep_source and sfn:
                 salt.utils.files.remove(sfn)
 
 
@@ -3054,7 +3054,7 @@ def directory(name,
 
 def recurse(name,
             source,
-            cache_source=True,
+            keep_source=True,
             clean=False,
             require=None,
             user=None,
@@ -3087,7 +3087,7 @@ def recurse(name,
         located on the master in the directory named spam, and is called eggs,
         the source string is salt://spam/eggs
 
-    cache_source : True
+    keep_source : True
         Set to ``False`` to discard the cached copy of the source file once the
         state completes. This can be useful for larger files to keep them from
         taking up space in minion cache. However, keep in mind that discarding
@@ -3376,7 +3376,7 @@ def recurse(name,
         _ret = managed(
             path,
             source=source,
-            cache_source=cache_source,
+            keep_source=keep_source,
             user=user,
             group=group,
             mode='keep' if keep_mode else file_mode,
