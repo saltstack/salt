@@ -107,7 +107,8 @@ def present(name,
             new_devices.append(dev)
 
     if len(uuid_dict) > 1:
-        ret['comment'] = 'Devices are a mix of RAID constituents with multiple MD_UUIDs: {0}.'.format(uuid_dict.keys())
+        ret['comment'] = 'Devices are a mix of RAID constituents with multiple MD_UUIDs: {0}.'.format(
+                         sorted(uuid_dict.keys()))
         ret['result'] = False
         return ret
     elif len(uuid_dict) == 1:
@@ -192,7 +193,7 @@ def present(name,
     else:
         ret['comment'] = 'Raid {0} already present.'.format(name)
 
-    if (do_assemble or present) and len(new_devices) > 0:
+    if (do_assemble or present) and len(new_devices) > 0 and ret['result']:
         for d in new_devices:
             res = __salt__['raid.add'](name, d)
             if not res:
