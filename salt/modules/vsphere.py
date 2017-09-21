@@ -3749,7 +3749,7 @@ def list_dvss(datacenter=None, dvs_names=None, service_instance=None):
 
         salt '*' vsphere.list_dvss dvs_names=[dvs1,dvs2]
     '''
-    ret_dict = []
+    ret_list = []
     proxy_type = get_proxy_type()
     if proxy_type == 'esxdatacenter':
         datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
@@ -3789,8 +3789,8 @@ def list_dvss(datacenter=None, dvs_names=None, service_instance=None):
                 _get_dvs_infrastructure_traffic_resources(
                     props['name'],
                     props['config'].infrastructureTrafficResourceConfig)})
-        ret_dict.append(dvs_dict)
-    return ret_dict
+        ret_list.append(dvs_dict)
+    return ret_list
 
 
 def _apply_dvs_config(config_spec, config_dict):
@@ -3871,29 +3871,30 @@ def _apply_dvs_infrastructure_traffic_resources(infra_traffic_resources,
     (vim.DistributedVirtualSwitchProductSpec)
     '''
     for res_dict in resource_dicts:
-        ress = [r for r in infra_traffic_resources if r.key == res_dict['key']]
-        if ress:
-            res = ress[0]
+        filtered_traffic_resources = \
+                [r for r in infra_traffic_resources if r.key == res_dict['key']]
+        if filtered_traffic_resources:
+            traffic_res = filtered_traffic_resources[0]
         else:
-            res = vim.DvsHostInfrastructureTrafficResource()
-            res.key = res_dict['key']
-            res.allocationInfo = \
+            traffic_res = vim.DvsHostInfrastructureTrafficResource()
+            traffic_res.key = res_dict['key']
+            traffic_res.allocationInfo = \
                     vim.DvsHostInfrastructureTrafficResourceAllocation()
-            infra_traffic_resources.append(res)
+            infra_traffic_resources.append(traffic_res)
         if res_dict.get('limit'):
-            res.allocationInfo.limit = res_dict['limit']
+            traffic_res.allocationInfo.limit = res_dict['limit']
         if res_dict.get('reservation'):
-            res.allocationInfo.reservation = res_dict['reservation']
+            traffic_res.allocationInfo.reservation = res_dict['reservation']
         if res_dict.get('num_shares') or res_dict.get('share_level'):
-            if not res.allocationInfo.shares:
-                res.allocationInfo.shares = vim.SharesInfo()
+            if not traffic_res.allocationInfo.shares:
+                traffic_res.allocationInfo.shares = vim.SharesInfo()
         if res_dict.get('share_level'):
-            res.allocationInfo.shares.level = \
+            traffic_res.allocationInfo.shares.level = \
                     vim.SharesLevel(res_dict['share_level'])
         if res_dict.get('num_shares'):
             #XXX Even though we always set the number of shares if provided,
             #the vCenter will ignore it unless the share level is 'custom'.
-            res.allocationInfo.shares.shares = res_dict['num_shares']
+            traffic_res.allocationInfo.shares.shares = res_dict['num_shares']
 
 
 def _apply_dvs_network_resource_pools(network_resource_pools, resource_dicts):
