@@ -618,20 +618,41 @@ class GitProvider(object):
             log.error('Failed to read from git config file %s', git_config)
         else:
             # We are currently enforcing the following git config items:
-            # 1. refspecs used in fetch
-            # 2. http.sslVerify
+            # 1. Fetch URL
+            # 2. refspecs used in fetch
+            # 3. http.sslVerify
             conf_changed = False
+            remote_section = 'remote "origin"'
 
-            # 1. refspecs
+            # 1. URL
             try:
-                refspecs = sorted(
-                    conf.get('remote "origin"', 'fetch', as_list=True))
+                url = conf.get(remote_section, 'url')
             except salt.utils.configparser.NoSectionError:
                 # First time we've init'ed this repo, we need to add the
                 # section for the remote to the git config
-                conf.add_section('remote "origin"')
-                conf.set('remote "origin"', 'url', self.url)
+                conf.add_section(remote_section)
                 conf_changed = True
+                url = None
+            log.debug(
+                'Current fetch URL for %s remote \'%s\': %s (desired: %s)',
+                self.role, self.id, url, self.url
+            )
+            if url != self.url:
+                conf.set(remote_section, 'url', self.url)
+                log.debug(
+                    'Fetch URL for %s remote \'%s\' set to %s',
+                    self.role, self.id, self.url
+                )
+                conf_changed = True
+
+            # 2. refspecs
+            try:
+                refspecs = sorted(
+                    conf.get(remote_section, 'fetch', as_list=True))
+            except salt.utils.configparser.NoOptionError:
+                # No 'fetch' option present in the remote section. Should never
+                # happen, but if it does for some reason, don't let it cause a
+                # traceback.
                 refspecs = []
             desired_refspecs = sorted(self.refspecs)
             log.debug(
@@ -639,14 +660,14 @@ class GitProvider(object):
                 self.role, self.id, refspecs, desired_refspecs
             )
             if refspecs != desired_refspecs:
-                conf.set_multivar('remote "origin"', 'fetch', self.refspecs)
+                conf.set_multivar(remote_section, 'fetch', self.refspecs)
                 log.debug(
                     'Refspecs for %s remote \'%s\' set to %s',
                     self.role, self.id, desired_refspecs
                 )
                 conf_changed = True
 
-            # 2. http.sslVerify
+            # 3. http.sslVerify
             try:
                 ssl_verify = conf.get('http', 'sslVerify')
             except salt.utils.configparser.NoSectionError:
