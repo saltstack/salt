@@ -208,7 +208,7 @@ else:
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'vsphere'
-__proxyenabled__ = ['esxi', 'esxcluster', 'esxdatacenter']
+__proxyenabled__ = ['esxi', 'esxcluster', 'esxdatacenter', 'vcenter']
 
 
 def __virtual__():
@@ -255,6 +255,8 @@ def _get_proxy_connection_details():
         details = __salt__['esxcluster.get_details']()
     elif proxytype == 'esxdatacenter':
         details = __salt__['esxdatacenter.get_details']()
+    elif proxytype == 'vcenter':
+        details = __salt__['vcenter.get_details']()
     else:
         raise CommandExecutionError('\'{0}\' proxy is not supported'
                                     ''.format(proxytype))
@@ -380,7 +382,7 @@ def gets_service_instance_via_proxy(fn):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter', 'vcenter')
 def get_service_instance_via_proxy(service_instance=None):
     '''
     Returns a service instance to the proxied endpoint (vCenter/ESXi host).
@@ -400,7 +402,7 @@ def get_service_instance_via_proxy(service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter', 'vcenter')
 def disconnect(service_instance):
     '''
     Disconnects from a vCenter or ESXi host
@@ -1935,7 +1937,7 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter', 'vcenter')
 @gets_service_instance_via_proxy
 def test_vcenter_connection(service_instance=None):
     '''
@@ -4946,7 +4948,7 @@ def assign_default_storage_policy_to_datastore(policy, datastore,
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxdatacenter', 'esxcluster')
+@supports_proxies('esxdatacenter', 'esxcluster', 'vcenter')
 @gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
     '''
@@ -4984,7 +4986,7 @@ def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxdatacenter')
+@supports_proxies('esxdatacenter', 'vcenter')
 @gets_service_instance_via_proxy
 def create_datacenter(datacenter_name, service_instance=None):
     '''
@@ -6439,7 +6441,7 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxcluster', 'esxdatacenter')
+@supports_proxies('esxcluster', 'esxdatacenter', 'vcenter')
 def _get_proxy_target(service_instance):
     '''
     Returns the target object of a proxy.
@@ -6467,6 +6469,9 @@ def _get_proxy_target(service_instance):
 
         reference = salt.utils.vmware.get_datacenter(service_instance,
                                                      datacenter)
+    elif proxy_type == 'vcenter':
+        # vcenter proxy - the target is the root folder
+        reference = salt.utils.vmware.get_root_folder(service_instance)
     log.trace('reference = {0}'.format(reference))
     return reference
 
