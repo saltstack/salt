@@ -1,6 +1,6 @@
 ===============================
-salt.cloud.clouds.digital_ocean
+salt.cloud.clouds.digitalocean
 ===============================
 
-.. automodule:: salt.cloud.clouds.digital_ocean
+.. automodule:: salt.cloud.clouds.digitalocean
     :members:

@@ -2721,7 +2721,7 @@ def old_to_new(opts):
     providers = (
         'AWS',
         'CLOUDSTACK',
-        'DIGITAL_OCEAN',
+        'DIGITALOCEAN',
         'EC2',
         'GOGRID',
         'IBMSCE',
