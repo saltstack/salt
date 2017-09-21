@@ -111,9 +111,7 @@ LOGIN_DETAILS = {}
 
 
 def __virtual__():
-    if HAS_JSONSCHEMA:
-        return True
-    return False
+    return True
 
 
 def mod_init(low):
