@@ -80,10 +80,10 @@ class GetDvssTestCase(TestCase):
             mock_traversal_spec):
 
             vmware.get_dvss(self.mock_dc_ref)
-        mock_traversal_spec.assert_called(
-            call(path='networkFolder', skip=True, type=vim.Datacenter,
-                 selectSet=['traversal_spec']),
-            call(path='childEntity', skip=False, type=vim.Folder))
+        mock_traversal_spec.assert_has_calls(
+            [call(path='childEntity', skip=False, type=vim.Folder),
+             call(path='networkFolder', skip=True, type=vim.Datacenter,
+                  selectSet=['traversal_spec'])])
 
     def test_get_mors_with_properties(self):
         vmware.get_dvss(self.mock_dc_ref)
@@ -467,10 +467,10 @@ class GetDvportgroupsTestCase(TestCase):
             mock_traversal_spec):
 
             vmware.get_dvportgroups(self.mock_dc_ref)
-        mock_traversal_spec.assert_called(
-            call(path='networkFolder', skip=True, type=vim.Datacenter,
-                 selectSet=['traversal_spec']),
-            call(path='childEntity', skip=False, type=vim.Folder))
+        mock_traversal_spec.assert_has_calls(
+            [call(path='childEntity', skip=False, type=vim.Folder),
+             call(path='networkFolder', skip=True, type=vim.Datacenter,
+                  selectSet=['traversal_spec'])])
 
     def test_traversal_spec_dvs_parent(self):
         mock_traversal_spec = MagicMock(return_value='traversal_spec')
