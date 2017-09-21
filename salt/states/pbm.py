@@ -437,3 +437,64 @@ def storage_policies_configured(name, policies):
             ret.update({'changes': {'storage_policies': changes},
                         'result': True})
     return ret
+
+
+def default_storage_policy_assigned(name, policy, datastore):
+    '''
+    Assigns a default storage policy to a datastore
+
+    policy
+        Name of storage policy
+
+    datastore
+        Name of datastore
+    '''
+    log.info('Running state {0} for policy \'{1}\, datastore \'{2}\'.'
+             ''.format(name, policy, datastore))
+    changes = {}
+    changes_required = False
+    ret = {'name': name, 'changes': {}, 'result': None, 'comment': None,
+           'pchanges': {}}
+    si = None
+    try:
+        si = __salt__['vsphere.get_service_instance_via_proxy']()
+        existing_policy = \
+            __salt__['vsphere.list_default_storage_policy_of_datastore'](
+                datastore=datastore, service_instance=si)
+        if existing_policy['name'] == policy:
+            comment = ('Storage policy \'{0}\' is already assigned to '
+                       'datastore \'{1}\'. Nothing to be done.'
+                       ''.format(policy, datastore))
+        else:
+            changes_required = True
+            changes = {
+                'default_storage_policy': {'old': existing_policy['name'],
+                                           'new': policy}}
+            if (__opts__['test']):
+                comment = ('State {0} will assign storage policy \'{1}\' to '
+                           'datastore \'{2}\'.').format(name, policy,
+                                                        datastore)
+            else:
+                __salt__['vsphere.assign_default_storage_policy_to_datastore'](
+                    policy=policy, datastore=datastore, service_instance=si)
+                comment = ('Storage policy \'{0} was assigned to datastore '
+                           '\'{1}\'.').format(policy, name)
+        log.info(comment)
+    except CommandExecutionError as exc:
+        log.error('Error: {}'.format(exc))
+        if si:
+            __salt__['vsphere.disconnect'](si)
+        ret.update({'comment': exc.strerror,
+                    'result': False if not __opts__['test'] else None})
+        return ret
+    ret['comment'] = comment
+    if changes_required:
+        if __opts__['test']:
+            ret.update({'result': None,
+                        'pchanges': changes})
+        else:
+            ret.update({'result': True,
+                        'changes': changes})
+    else:
+        ret['result'] = True
+    return ret
