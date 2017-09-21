@@ -294,6 +294,7 @@ if salt.utils.is_windows():
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import zip_longest
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 if salt.utils.is_windows():
     import pywintypes
     import win32com.client
@@ -1519,6 +1520,7 @@ def managed(name,
             source=None,
             source_hash='',
             source_hash_name=None,
+            keep_source=True,
             user=None,
             group=None,
             mode=None,
@@ -1716,6 +1718,15 @@ def managed(name,
             example above, simply using ``foo.txt`` would not match.
 
         .. versionadded:: 2016.3.5
+
+    keep_source : True
+        Set to ``False`` to discard the cached copy of the source file once the
+        state completes. This can be useful for larger files to keep them from
+        taking up space in minion cache. However, keep in mind that discarding
+        the source file will result in the state needing to re-download the
+        source file if the state is run again.
+
+        .. versionadded:: 2017.7.3
 
     user
         The user to own the file, this defaults to the user salt is running as
@@ -2415,8 +2426,9 @@ def managed(name,
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
-            if os.path.isfile(tmp_filename):
-                os.remove(tmp_filename)
+            salt.utils.files.remove(tmp_filename)
+            if not keep_source and sfn:
+                salt.utils.files.remove(sfn)
             return _error(ret, 'Unable to check_cmd file: {0}'.format(exc))
 
         # file being updated to verify using check_cmd
@@ -2434,14 +2446,8 @@ def managed(name,
             cret = mod_run_check_cmd(check_cmd, tmp_filename, **check_cmd_opts)
             if isinstance(cret, dict):
                 ret.update(cret)
-                if os.path.isfile(tmp_filename):
-                    os.remove(tmp_filename)
-                if sfn and os.path.isfile(sfn):
-                    os.remove(sfn)
+                salt.utils.files.remove(tmp_filename)
                 return ret
-
-            if sfn and os.path.isfile(sfn):
-                os.remove(sfn)
 
             # Since we generated a new tempfile and we are not returning here
             # lets change the original sfn to the new tempfile or else we will
@@ -2490,10 +2496,10 @@ def managed(name,
             log.debug(traceback.format_exc())
             return _error(ret, 'Unable to manage file: {0}'.format(exc))
         finally:
-            if tmp_filename and os.path.isfile(tmp_filename):
-                os.remove(tmp_filename)
-            if sfn and os.path.isfile(sfn):
-                os.remove(sfn)
+            if tmp_filename:
+                salt.utils.files.remove(tmp_filename)
+            if not keep_source and sfn:
+                salt.utils.files.remove(sfn)
 
 
 _RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']
@@ -3022,6 +3028,7 @@ def directory(name,
 
 def recurse(name,
             source,
+            keep_source=True,
             clean=False,
             require=None,
             user=None,
@@ -3052,6 +3059,15 @@ def recurse(name,
         server and is specified with the salt:// protocol. If the directory is
         located on the master in the directory named spam, and is called eggs,
         the source string is salt://spam/eggs
+
+    keep_source : True
+        Set to ``False`` to discard the cached copy of the source file once the
+        state completes. This can be useful for larger files to keep them from
+        taking up space in minion cache. However, keep in mind that discarding
+        the source file will result in the state needing to re-download the
+        source file if the state is run again.
+
+        .. versionadded:: 2017.7.3
 
     clean
         Make sure that only files that are set up by salt and required by this
@@ -3333,6 +3349,7 @@ def recurse(name,
         _ret = managed(
             path,
             source=source,
+            keep_source=keep_source,
             user=user,
             group=group,
             mode='keep' if keep_mode else file_mode,
@@ -6422,4 +6439,377 @@ def shortcut(
                 ret['result'] = False
                 ret['comment'] += (', but was unable to set ownership to '
                                    '{0}'.format(user))
+    return ret
+
+
+def cached(name,
+           source_hash='',
+           source_hash_name=None,
+           skip_verify=False,
+           saltenv='base'):
+    '''
+    .. versionadded:: 2017.7.3
+
+    Ensures that a file is saved to the minion's cache. This state is primarily
+    invoked by other states to ensure that we do not re-download a source file
+    if we do not need to.
+
+    name
+        The URL of the file to be cached. To cache a file from an environment
+        other than ``base``, either use the ``saltenv`` argument or include the
+        saltenv in the URL (e.g. ``salt://path/to/file.conf?saltenv=dev``).
+
+        .. note::
+            A list of URLs is not supported, this must be a single URL. If a
+            local file is passed here, then the state will obviously not try to
+            download anything, but it will compare a hash if one is specified.
+
+    source_hash
+        See the documentation for this same argument in the
+        :py:func:`file.managed <salt.states.file.managed>` state.
+
+        .. note::
+            For remote files not originating from the ``salt://`` fileserver,
+            such as http(s) or ftp servers, this state will not re-download the
+            file if the locally-cached copy matches this hash. This is done to
+            prevent unnecessary downloading on repeated runs of this state. To
+            update the cached copy of a file, it is necessary to update this
+            hash.
+
+    source_hash_name
+        See the documentation for this same argument in the
+        :py:func:`file.managed <salt.states.file.managed>` state.
+
+    skip_verify
+        See the documentation for this same argument in the
+        :py:func:`file.managed <salt.states.file.managed>` state.
+
+        .. note::
+            Setting this to ``True`` will result in a copy of the file being
+            downloaded from a remote (http(s), ftp, etc.) source each time the
+            state is run.
+
+    saltenv
+        Used to specify the environment from which to download a file from the
+        Salt fileserver (i.e. those with ``salt://`` URL).
+
+
+    This state will in most cases not be useful in SLS files, but it is useful
+    when writing a state or remote-execution module that needs to make sure
+    that a file at a given URL has been downloaded to the cachedir. One example
+    of this is in the :py:func:`archive.extracted <salt.states.file.extracted>`
+    state:
+
+    .. code-block:: python
+
+        result = __states__['file.cached'](source_match,
+                                           source_hash=source_hash,
+                                           source_hash_name=source_hash_name,
+                                           skip_verify=skip_verify,
+                                           saltenv=__env__)
+
+    This will return a dictionary containing the state's return data, including
+    a ``result`` key which will state whether or not the state was successful.
+    Note that this will not catch exceptions, so it is best used within a
+    try/except.
+
+    Once this state has been run from within another state or remote-execution
+    module, the actual location of the cached file can be obtained using
+    :py:func:`cp.is_cached <salt.modules.cp.is_cached>`:
+
+    .. code-block:: python
+
+        cached = __salt__['cp.is_cached'](source_match)
+
+    This function will return the cached path of the file, or an empty string
+    if the file is not present in the minion cache.
+
+    This state will in most cases not be useful in SLS files, but it is useful
+    when writing a state or remote-execution module that needs to make sure
+    that a file at a given URL has been downloaded to the cachedir. One example
+    of this is in the :py:func:`archive.extracted <salt.states.file.extracted>`
+    state:
+
+    .. code-block:: python
+
+        result = __states__['file.cached'](source_match,
+                                           source_hash=source_hash,
+                                           source_hash_name=source_hash_name,
+                                           skip_verify=skip_verify,
+                                           saltenv=__env__)
+
+    This will return a dictionary containing the state's return data, including
+    a ``result`` key which will state whether or not the state was successful.
+    Note that this will not catch exceptions, so it is best used within a
+    try/except.
+
+    Once this state has been run from within another state or remote-execution
+    module, the actual location of the cached file can be obtained using
+    :py:func:`cp.is_cached <salt.modules.cp.is_cached>`:
+
+    .. code-block:: python
+
+        cached = __salt__['cp.is_cached'](source_match)
+
+    This function will return the cached path of the file, or an empty string
+    if the file is not present in the minion cache.
+    '''
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': False}
+
+    try:
+        parsed = _urlparse(name)
+    except Exception:
+        ret['comment'] = 'Only URLs or local file paths are valid input'
+        return ret
+
+    # This if statement will keep the state from proceeding if a remote source
+    # is specified and no source_hash is presented (unless we're skipping hash
+    # verification).
+    if not skip_verify \
+            and not source_hash \
+            and parsed.scheme in salt.utils.files.REMOTE_PROTOS:
+        ret['comment'] = (
+            'Unable to verify upstream hash of source file {0}, please set '
+            'source_hash or set skip_verify to True'.format(name)
+        )
+        return ret
+
+    if source_hash:
+        # Get the hash and hash type from the input. This takes care of parsing
+        # the hash out of a file containing checksums, if that is how the
+        # source_hash was specified.
+        try:
+            source_sum = __salt__['file.get_source_sum'](
+                source=name,
+                source_hash=source_hash,
+                source_hash_name=source_hash_name,
+                saltenv=saltenv)
+        except CommandExecutionError as exc:
+            ret['comment'] = exc.strerror
+            return ret
+        else:
+            if not source_sum:
+                # We shouldn't get here, problems in retrieving the hash in
+                # file.get_source_sum should result in a CommandExecutionError
+                # being raised, which we catch above. Nevertheless, we should
+                # provide useful information in the event that
+                # file.get_source_sum regresses.
+                ret['comment'] = (
+                    'Failed to get source hash from {0}. This may be a bug. '
+                    'If this error persists, please report it and set '
+                    'skip_verify to True to work around it.'.format(source_hash)
+                )
+                return ret
+    else:
+        source_sum = {}
+
+    if parsed.scheme in salt.utils.files.LOCAL_PROTOS:
+        # Source is a local file path
+        full_path = os.path.realpath(os.path.expanduser(parsed.path))
+        if os.path.exists(full_path):
+            if not skip_verify and source_sum:
+                # Enforce the hash
+                local_hash = __salt__['file.get_hash'](
+                    full_path,
+                    source_sum.get('hash_type', __opts__['hash_type']))
+                if local_hash == source_sum['hsum']:
+                    ret['result'] = True
+                    ret['comment'] = (
+                        'File {0} is present on the minion and has hash '
+                        '{1}'.format(full_path, local_hash)
+                    )
+                else:
+                    ret['comment'] = (
+                        'File {0} is present on the minion, but the hash ({1}) '
+                        'does not match the specified hash ({2})'.format(
+                            full_path, local_hash, source_sum['hsum']
+                        )
+                    )
+                return ret
+            else:
+                ret['result'] = True
+                ret['comment'] = 'File {0} is present on the minion'.format(
+                    full_path
+                )
+                return ret
+        else:
+            ret['comment'] = 'File {0} is not present on the minion'.format(
+                full_path
+            )
+            return ret
+
+    local_copy = __salt__['cp.is_cached'](name, saltenv=saltenv)
+
+    if local_copy:
+        # File is already cached
+        pre_hash = __salt__['file.get_hash'](
+            local_copy,
+            source_sum.get('hash_type', __opts__['hash_type']))
+
+        if not skip_verify and source_sum:
+            # Get the local copy's hash to compare with the hash that was
+            # specified via source_hash. If it matches, we can exit early from
+            # the state without going any further, because the file is cached
+            # with the correct hash.
+            if pre_hash == source_sum['hsum']:
+                ret['result'] = True
+                ret['comment'] = (
+                    'File is already cached to {0} with hash {1}'.format(
+                        local_copy, pre_hash
+                    )
+                )
+    else:
+        pre_hash = None
+
+    def _try_cache(path, checksum):
+        '''
+        This helper is not needed anymore in develop as the fileclient in the
+        develop branch now has means of skipping a download if the existing
+        hash matches one passed to cp.cache_file. Remove this helper and the
+        code that invokes it, once we have merged forward into develop.
+        '''
+        if not path or not checksum:
+            return True
+        form = salt.utils.files.HASHES_REVMAP.get(len(checksum))
+        if form is None:
+            # Shouldn't happen, an invalid checksum length should be caught
+            # before we get here. But in the event this gets through, don't let
+            # it cause any trouble, and just return True.
+            return True
+        try:
+            return salt.utils.get_hash(path, form=form) != checksum
+        except (IOError, OSError, ValueError):
+            # Again, shouldn't happen, but don't let invalid input/permissions
+            # in the call to get_hash blow this up.
+            return True
+
+    # Cache the file. Note that this will not actually download the file if
+    # either of the following is true:
+    #   1. source is a salt:// URL and the fileserver determines that the hash
+    #      of the minion's copy matches that of the fileserver.
+    #   2. File is remote (http(s), ftp, etc.) and the specified source_hash
+    #      matches the cached copy.
+    # Remote, non salt:// sources _will_ download if a copy of the file was
+    # not already present in the minion cache.
+    if _try_cache(local_copy, source_sum.get('hsum')):
+        # The _try_cache helper is obsolete in the develop branch. Once merged
+        # forward, remove the helper as well as this if statement, and dedent
+        # the below block.
+        try:
+            local_copy = __salt__['cp.cache_file'](
+                name,
+                saltenv=saltenv)
+                # Once this is merged into develop, uncomment the source_hash
+                # line below and add it to the list of arguments to
+                # cp.cache_file (note that this also means removing the
+                # close-parenthesis above and replacing it with a comma). The
+                # develop branch has modifications to the fileclient which will
+                # allow it to skip the download if the source_hash matches what
+                # is passed to cp.cache_file, so the helper is just a stopgap
+                # for the 2017.7 release cycle.
+                #source_hash=source_sum.get('hsum'))
+        except Exception as exc:
+            ret['comment'] = exc.__str__()
+            return ret
+
+    if not local_copy:
+        ret['comment'] = (
+            'Failed to cache {0}, check minion log for more '
+            'information'.format(name)
+        )
+        return ret
+
+    post_hash = __salt__['file.get_hash'](
+        local_copy,
+        source_sum.get('hash_type', __opts__['hash_type']))
+
+    if pre_hash != post_hash:
+        ret['changes']['hash'] = {'old': pre_hash, 'new': post_hash}
+
+    # Check the hash, if we're enforcing one. Note that this will be the first
+    # hash check if the file was not previously cached, and the 2nd hash check
+    # if it was cached and the
+    if not skip_verify and source_sum:
+        if post_hash == source_sum['hsum']:
+            ret['result'] = True
+            ret['comment'] = (
+                'File is already cached to {0} with hash {1}'.format(
+                    local_copy, post_hash
+                )
+            )
+        else:
+            ret['comment'] = (
+                'File is cached to {0}, but the hash ({1}) does not match '
+                'the specified hash ({2})'.format(
+                    local_copy, post_hash, source_sum['hsum']
+                )
+            )
+        return ret
+
+    # We're not enforcing a hash, and we already know that the file was
+    # successfully cached, so we know the state was successful.
+    ret['result'] = True
+    ret['comment'] = 'File is cached to {0}'.format(local_copy)
+    return ret
+
+
+def not_cached(name, saltenv='base'):
+    '''
+    Ensures that a file is saved to the minion's cache. This state is primarily
+    invoked by other states to ensure that we do not re-download a source file
+    if we do not need to.
+
+    name
+        The URL of the file to be cached. To cache a file from an environment
+        other than ``base``, either use the ``saltenv`` argument or include the
+        saltenv in the URL (e.g. ``salt://path/to/file.conf?saltenv=dev``).
+
+        .. note::
+            A list of URLs is not supported, this must be a single URL. If a
+            local file is passed here, the state will take no action.
+
+    saltenv
+        Used to specify the environment from which to download a file from the
+        Salt fileserver (i.e. those with ``salt://`` URL).
+    '''
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': False}
+
+    try:
+        parsed = _urlparse(name)
+    except Exception:
+        ret['comment'] = 'Only URLs or local file paths are valid input'
+        return ret
+    else:
+        if parsed.scheme in salt.utils.files.LOCAL_PROTOS:
+            full_path = os.path.realpath(os.path.expanduser(parsed.path))
+            ret['result'] = True
+            ret['comment'] = (
+                'File {0} is a local path, no action taken'.format(
+                    full_path
+                )
+            )
+            return ret
+
+    local_copy = __salt__['cp.is_cached'](name, saltenv=saltenv)
+
+    if local_copy:
+        try:
+            os.remove(local_copy)
+        except Exception as exc:
+            ret['comment'] = 'Failed to delete {0}: {1}'.format(
+                local_copy, exc.__str__()
+            )
+        else:
+            ret['result'] = True
+            ret['changes']['deleted'] = True
+            ret['comment'] = '{0} was deleted'.format(local_copy)
+    else:
+        ret['result'] = True
+        ret['comment'] = '{0} is not cached'.format(name)
     return ret
