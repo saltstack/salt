@@ -25,7 +25,7 @@ import salt.utils.vmware
 from salt.ext import six
 
 try:
-    from pyVmomi import vim, vmodl, VmomiSupport
+    from pyVmomi import vim, vmodl
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
