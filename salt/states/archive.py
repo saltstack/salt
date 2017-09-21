@@ -1501,12 +1501,15 @@ def extracted(name,
         for item in enforce_failed:
             ret['comment'] += '\n- {0}'.format(item)
 
-    if not keep_source and not source_is_local:
-        log.debug('Cleaning cached source file %s', cached)
-        result = __states__['file.not_cached'](source_match, saltenv=__env__)
-        if not result['result']:
-            # Don't let failure to delete cached file cause the state itself ot
-            # fail, just drop it in the warnings.
-            ret.setdefault('warnings', []).append(result['comment'])
+    if not source_is_local:
+        if keep_source:
+            log.debug('Keeping cached source file %s', cached)
+        else:
+            log.debug('Cleaning cached source file %s', cached)
+            result = __states__['file.not_cached'](source_match, saltenv=__env__)
+            if not result['result']:
+                # Don't let failure to delete cached file cause the state
+                # itself to fail, just drop it in the warnings.
+                ret.setdefault('warnings', []).append(result['comment'])
 
     return ret
