@@ -33,8 +33,10 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 from tests.support.paths import TMP, FILES
 
 # Import salt libs
-import salt.utils.gitfs
 import salt.fileserver.gitfs as gitfs
+import salt.utils.gitfs
+import salt.utils.platform
+import salt.utils.win_functions
 
 log = logging.getLogger(__name__)
 
@@ -227,9 +229,7 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
 
         if 'USERNAME' not in os.environ:
             try:
-                import salt.utils
-                if salt.utils.is_windows():
-                    import salt.utils.win_functions
+                if salt.utils.platform.is_windows():
                     os.environ['USERNAME'] = salt.utils.win_functions.get_current_user()
                 else:
                     os.environ['USERNAME'] = pwd.getpwuid(os.geteuid()).pw_name
