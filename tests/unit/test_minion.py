@@ -18,6 +18,7 @@ import salt.utils.event as event
 from salt.exceptions import SaltSystemExit
 import salt.syspaths
 import tornado
+from salt.ext.six.moves import range
 
 __opts__ = {}
 
@@ -129,5 +130,51 @@ class MinionTestCase(TestCase):
                 minion._handle_decoded_payload(mock_data).result()
                 self.assertEqual(len(minion.jid_queue), 2)
                 self.assertEqual(minion.jid_queue, [456, 789])
+            finally:
+                minion.destroy()
+
+    def test_process_count_max(self):
+        '''
+        Tests that the _handle_decoded_payload function does not spawn more than the configured amount of processes,
+        as per process_count_max.
+        '''
+        with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
+                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)), \
+                patch('salt.utils.minion.running', MagicMock(return_value=[])), \
+                patch('tornado.gen.sleep', MagicMock(return_value=tornado.concurrent.Future())):
+            process_count_max = 10
+            mock_opts = salt.config.DEFAULT_MINION_OPTS
+            mock_opts['minion_jid_queue_hwm'] = 100
+            mock_opts["process_count_max"] = process_count_max
+
+            try:
+                io_loop = tornado.ioloop.IOLoop()
+                minion = salt.minion.Minion(mock_opts, jid_queue=[], io_loop=io_loop)
+
+                # mock gen.sleep to throw a special Exception when called, so that we detect it
+                class SleepCalledEception(Exception):
+                    """Thrown when sleep is called"""
+                    pass
+                tornado.gen.sleep.return_value.set_exception(SleepCalledEception())
+
+                # up until process_count_max: gen.sleep does not get called, processes are started normally
+                for i in range(process_count_max):
+                    mock_data = {'fun': 'foo.bar',
+                                 'jid': i}
+                    io_loop.run_sync(lambda data=mock_data: minion._handle_decoded_payload(data))
+                    self.assertEqual(salt.utils.process.SignalHandlingMultiprocessingProcess.start.call_count, i + 1)
+                    self.assertEqual(len(minion.jid_queue), i + 1)
+                    salt.utils.minion.running.return_value += [i]
+
+                # above process_count_max: gen.sleep does get called, JIDs are created but no new processes are started
+                mock_data = {'fun': 'foo.bar',
+                             'jid': process_count_max + 1}
+
+                self.assertRaises(SleepCalledEception,
+                                  lambda: io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data)))
+                self.assertEqual(salt.utils.process.SignalHandlingMultiprocessingProcess.start.call_count,
+                                 process_count_max)
+                self.assertEqual(len(minion.jid_queue), process_count_max + 1)
             finally:
                 minion.destroy()
