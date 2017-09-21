@@ -6495,3 +6495,19 @@ def _get_esxcluster_proxy_details():
             det.get('protocol'), det.get('port'), det.get('mechanism'), \
             det.get('principal'), det.get('domain'), det.get('datacenter'), \
             det.get('cluster')
+
+
+def _get_esxi_proxy_details():
+    '''
+    Returns the running esxi's proxy details
+    '''
+    det = __proxy__['esxi.get_details']()
+    host = det.get('host')
+    if det.get('vcenter'):
+        host = det['vcenter']
+    esxi_hosts = None
+    if det.get('esxi_host'):
+        esxi_hosts = [det['esxi_host']]
+    return host, det.get('username'), det.get('password'), \
+            det.get('protocol'), det.get('port'), det.get('mechanism'), \
+            det.get('principal'), det.get('domain'), esxi_hosts
