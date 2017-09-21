@@ -329,16 +329,6 @@ def paged_call(function, *args, **kwargs):
         kwargs[marker_arg] = marker
 
 
-def get_role_arn(name, region=None, key=None, keyid=None, profile=None):
-    if name.startswith('arn:aws:iam:'):
-        return name
-
-    account_id = __salt__['boto_iam.get_account_id'](
-        region=region, key=key, keyid=keyid, profile=profile
-    )
-    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
-
-
 def ordered(obj):
     if isinstance(obj, (list, tuple)):
         return sorted(ordered(x) for x in obj)
