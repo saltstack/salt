@@ -536,13 +536,13 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
             ret['connection_draining']['timeout'] = cd.timeout
             ret['connecting_settings']['idle_timeout'] = cs.idle_timeout
             return ret
-        except boto.exception.BotoServerError as error:
+        except boto.exception.BotoServerError as e:
             if e.error_code == 'Throttling':
                 log.debug("Throttled by AWS API, will retry in 5 seconds...")
                 time.sleep(5)
                 retries -= 1
                 continue
-            log.error('ELB {0} does not exist: {1}'.format(name, error.message))
+            log.error('ELB {0} does not exist: {1}'.format(name, e.message))
             return {}
     return {}
 
