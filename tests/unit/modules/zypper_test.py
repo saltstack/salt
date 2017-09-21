@@ -462,15 +462,15 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         :return:
         '''
         def _add_data(data, key, value):
-            data[key] = value
+            data.setdefault(key, []).append(value)
 
         rpm_out = [
-            'protobuf-java_|-2.6.1_|-3.1.develHead_|-',
-            'yast2-ftp-server_|-3.1.8_|-8.1_|-',
-            'jose4j_|-0.4.4_|-2.1.develHead_|-',
-            'apache-commons-cli_|-1.2_|-1.233_|-',
-            'jakarta-commons-discovery_|-0.4_|-129.686_|-',
-            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-',
+            'protobuf-java_|-2.6.1_|-3.1.develHead_|-noarch_|-_|-1499257756',
+            'yast2-ftp-server_|-3.1.8_|-8.1_|-x86_64_|-_|-1499257798',
+            'jose4j_|-0.4.4_|-2.1.develHead_|-noarch_|-_|-1499257756',
+            'apache-commons-cli_|-1.2_|-1.233_|-noarch_|-_|-1498636510',
+            'jakarta-commons-discovery_|-0.4_|-129.686_|-noarch_|-_|-1498636511',
+            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-noarch_|-_|-1498636510',
         ]
         with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}):
             with patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}):
@@ -485,7 +485,111 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                             'apache-commons-cli': '1.2-1.233',
                             'jose4j': '0.4.4-2.1.develHead'}.items():
                             self.assertTrue(pkgs.get(pkg_name))
-                            self.assertEqual(pkgs[pkg_name], pkg_version)
+                            self.assertEqual(pkgs[pkg_name], [pkg_version])
+
+    def test_list_pkgs_with_attr(self):
+        '''
+        Test packages listing with the attr parameter
+
+        :return:
+        '''
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        rpm_out = [
+            'protobuf-java_|-2.6.1_|-3.1.develHead_|-noarch_|-_|-1499257756',
+            'yast2-ftp-server_|-3.1.8_|-8.1_|-x86_64_|-_|-1499257798',
+            'jose4j_|-0.4.4_|-2.1.develHead_|-noarch_|-_|-1499257756',
+            'apache-commons-cli_|-1.2_|-1.233_|-noarch_|-_|-1498636510',
+            'jakarta-commons-discovery_|-0.4_|-129.686_|-noarch_|-_|-1498636511',
+            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-noarch_|-_|-1498636510',
+        ]
+        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}):
+            with patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}):
+                pkgs = zypper.list_pkgs(attr=['arch', 'install_date_time_t'])
+                for pkg_name, pkg_attr in {
+                    'jakarta-commons-discovery': {
+                        'version': '0.4-129.686',
+                        'arch': 'noarch',
+                        'install_date_time_t': 1498636511,
+                    },
+                    'yast2-ftp-server': {
+                        'version': '3.1.8-8.1',
+                        'arch': 'x86_64',
+                        'install_date_time_t': 1499257798,
+                    },
+                    'protobuf-java': {
+                        'version': '2.6.1-3.1.develHead',
+                        'arch': 'noarch',
+                        'install_date_time_t': 1499257756,
+                    },
+                    'susemanager-build-keys-web': {
+                        'version': '12.0-5.1.develHead',
+                        'arch': 'noarch',
+                        'install_date_time_t': 1498636510,
+                    },
+                    'apache-commons-cli': {
+                        'version': '1.2-1.233',
+                        'arch': 'noarch',
+                        'install_date_time_t': 1498636510,
+                    },
+                    'jose4j': {
+                        'version': '0.4.4-2.1.develHead',
+                        'arch': 'noarch',
+                        'install_date_time_t': 1499257756,
+                    }}.items():
+                    self.assertTrue(pkgs.get(pkg_name))
+                    self.assertEqual(pkgs[pkg_name], [pkg_attr])
+
+    def test_list_patches(self):
+        '''
+        Test advisory patches listing.
+
+        :return:
+        '''
+
+        ref_out = {
+            'stdout': get_test_data('zypper-patches.xml'),
+            'stderr': None,
+            'retcode': 0
+        }
+
+        PATCHES_RET = {
+            'SUSE-SLE-SERVER-12-SP2-2017-97': {'installed': False, 'summary': 'Recommended update for ovmf'},
+            'SUSE-SLE-SERVER-12-SP2-2017-98': {'installed': True, 'summary': 'Recommended update for kmod'},
+            'SUSE-SLE-SERVER-12-SP2-2017-99': {'installed': False, 'summary': 'Security update for apache2'}
+        }
+
+        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
+            list_patches = zypper.list_patches(refresh=False)
+            self.assertEqual(len(list_patches), 3)
+            self.assertDictEqual(list_patches, PATCHES_RET)
+
+    @patch('os.walk', MagicMock(return_value=[('test', 'test', 'test')]))
+    @patch('os.path.getsize', MagicMock(return_value=123456))
+    @patch('os.path.getctime', MagicMock(return_value=1234567890.123456))
+    @patch('fnmatch.filter', MagicMock(return_value=['/var/cache/zypper/packages/foo/bar/test_package.rpm']))
+    def test_list_downloaded(self):
+        '''
+        Test downloaded packages listing.
+
+        :return:
+        '''
+        DOWNLOADED_RET = {
+            'test-package': {
+                '1.0': {
+                    'path': '/var/cache/zypper/packages/foo/bar/test_package.rpm',
+                    'size': 123456,
+                    'creation_date_time_t': 1234567890,
+                    'creation_date_time': '2009-02-13T23:31:30',
+                }
+            }
+        }
+
+        with patch.dict(zypper.__salt__, {'lowpkg.bin_pkg_info': MagicMock(return_value={'name': 'test-package', 'version': '1.0'})}):
+            list_downloaded = zypper.list_downloaded()
+            self.assertEqual(len(list_downloaded), 1)
+            self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
 
     def test_download(self):
         '''
