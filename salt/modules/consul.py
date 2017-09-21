@@ -42,12 +42,14 @@ def _get_config():
     return __salt__['config.get']('consul.url') or \
         __salt__['config.get']('consul:url')
 
+
 def _get_token():
     '''
     Retrieve Consul configuration
     '''
     return __salt__['config.get']('consul.token') or \
         __salt__['config.get']('consul:token')
+
 
 def _query(function,
            consul_url,
@@ -76,7 +78,7 @@ def _query(function,
     if not token:
         token = _get_token()
 
-    headers = {"X-Consul-Token": token,"Content-Type": "application/json"}
+    headers = {"X-Consul-Token": token, "Content-Type": "application/json"}
     base_url = _urljoin(consul_url, '{0}/'.format(api_version))
     url = _urljoin(base_url, function, False)
 
@@ -112,7 +114,7 @@ def _query(function,
     return ret
 
 
-def list_(consul_url=None,token=None, key=None, **kwargs):
+def list_(consul_url=None, token=None, key=None, **kwargs):
     '''
     List keys in Consul
 
@@ -130,7 +132,6 @@ def list_(consul_url=None,token=None, key=None, **kwargs):
 
     '''
     ret = {}
-
 
     if not consul_url:
         consul_url = _get_config()
@@ -161,7 +162,7 @@ def list_(consul_url=None,token=None, key=None, **kwargs):
     return ret
 
 
-def get(consul_url=None, key=None, token=None,recurse=False, decode=False, raw=False):
+def get(consul_url=None, key=None, token=None, recurse=False, decode=False, raw=False):
     '''
     Get key from Consul
 
@@ -224,7 +225,7 @@ def get(consul_url=None, key=None, token=None,recurse=False, decode=False, raw=F
     return ret
 
 
-def put(consul_url=None, token=None,key=None, value=None, **kwargs):
+def put(consul_url=None, token=None, key=None, value=None, **kwargs):
     '''
     Put values into Consul
 
@@ -409,7 +410,7 @@ def delete(consul_url=None, token=None, key=None, **kwargs):
     return ret
 
 
-def agent_checks(consul_url=None,token=None):
+def agent_checks(consul_url=None, token=None):
     '''
     Returns the checks the local agent is managing
 
@@ -440,7 +441,7 @@ def agent_checks(consul_url=None,token=None):
     return ret
 
 
-def agent_services(consul_url=None,token=None):
+def agent_services(consul_url=None, token=None):
     '''
     Returns the services the local agent is managing
 
@@ -507,7 +508,7 @@ def agent_members(consul_url=None, token=None, **kwargs):
     return ret
 
 
-def agent_self(consul_url=None,token=None):
+def agent_self(consul_url=None, token=None):
     '''
     Returns the local node configuration
 
@@ -540,7 +541,7 @@ def agent_self(consul_url=None,token=None):
     return ret
 
 
-def agent_maintenance(consul_url=None,token=None, **kwargs):
+def agent_maintenance(consul_url=None, token=None, **kwargs):
     '''
     Manages node maintenance mode
 
@@ -597,7 +598,7 @@ def agent_maintenance(consul_url=None,token=None, **kwargs):
     return ret
 
 
-def agent_join(consul_url=None,token=None, address=None, **kwargs):
+def agent_join(consul_url=None, token=None, address=None, **kwargs):
     '''
     Triggers the local agent to join a node
 
@@ -644,7 +645,7 @@ def agent_join(consul_url=None,token=None, address=None, **kwargs):
     return ret
 
 
-def agent_leave(consul_url=None,token=None, node=None):
+def agent_leave(consul_url=None, token=None, node=None):
     '''
     Used to instruct the agent to force a node into the left state.
 
@@ -687,7 +688,7 @@ def agent_leave(consul_url=None,token=None, node=None):
     return ret
 
 
-def agent_check_register(consul_url=None,token=None, **kwargs):
+def agent_check_register(consul_url=None, token=None, **kwargs):
     '''
     The register endpoint is used to add a new check to the local agent.
 
@@ -730,7 +731,7 @@ def agent_check_register(consul_url=None,token=None, **kwargs):
     else:
         raise SaltInvocationError('Required argument "name" is missing.')
 
-    if True not in [True for item in ('script', 'http','ttl') if item in kwargs]:
+    if True not in [True for item in ('script', 'http', 'ttl') if item in kwargs]:
         ret['message'] = 'Required parameter "script" or "http" is missing.'
         ret['res'] = False
         return ret
@@ -776,7 +777,7 @@ def agent_check_register(consul_url=None,token=None, **kwargs):
     return ret
 
 
-def agent_check_deregister(consul_url=None,token=None, checkid=None):
+def agent_check_deregister(consul_url=None, token=None, checkid=None):
     '''
     The agent will take care of deregistering the check from the Catalog.
 
@@ -817,7 +818,7 @@ def agent_check_deregister(consul_url=None,token=None, checkid=None):
     return ret
 
 
-def agent_check_pass(consul_url=None, token=None,checkid=None, **kwargs):
+def agent_check_pass(consul_url=None, token=None, checkid=None, **kwargs):
     '''
     This endpoint is used with a check that is of the TTL type. When this
     is called, the status of the check is set to passing and the TTL
@@ -867,7 +868,7 @@ def agent_check_pass(consul_url=None, token=None,checkid=None, **kwargs):
     return ret
 
 
-def agent_check_warn(consul_url=None, token=None,checkid=None, **kwargs):
+def agent_check_warn(consul_url=None, token=None, checkid=None, **kwargs):
     '''
     This endpoint is used with a check that is of the TTL type. When this
     is called, the status of the check is set to warning and the TTL
@@ -917,7 +918,7 @@ def agent_check_warn(consul_url=None, token=None,checkid=None, **kwargs):
     return ret
 
 
-def agent_check_fail(consul_url=None, token=None,checkid=None, **kwargs):
+def agent_check_fail(consul_url=None, token=None, checkid=None, **kwargs):
     '''
     This endpoint is used with a check that is of the TTL type. When this
     is called, the status of the check is set to critical and the
@@ -967,7 +968,7 @@ def agent_check_fail(consul_url=None, token=None,checkid=None, **kwargs):
     return ret
 
 
-def agent_service_register(consul_url=None,token=None, **kwargs):
+def agent_service_register(consul_url=None, token=None, **kwargs):
     '''
     The used to add a new service, with an optional
     health check, to the local agent.
@@ -1083,7 +1084,7 @@ def agent_service_register(consul_url=None,token=None, **kwargs):
     return ret
 
 
-def agent_service_deregister(consul_url=None, token=None,serviceid=None):
+def agent_service_deregister(consul_url=None, token=None, serviceid=None):
     '''
     Used to remove a service.
 
@@ -1126,7 +1127,7 @@ def agent_service_deregister(consul_url=None, token=None,serviceid=None):
     return ret
 
 
-def agent_service_maintenance(consul_url=None, token=None,serviceid=None, **kwargs):
+def agent_service_maintenance(consul_url=None, token=None, serviceid=None, **kwargs):
     '''
     Used to place a service into maintenance mode.
 
@@ -1185,7 +1186,7 @@ def agent_service_maintenance(consul_url=None, token=None,serviceid=None, **kwar
     return ret
 
 
-def session_create(consul_url=None, token=None,**kwargs):
+def session_create(consul_url=None, token=None, **kwargs):
     '''
     Used to create a session.
 
@@ -1277,7 +1278,7 @@ def session_create(consul_url=None, token=None,**kwargs):
     return ret
 
 
-def session_list(consul_url=None, token=None,return_list=False, **kwargs):
+def session_list(consul_url=None, token=None, return_list=False, **kwargs):
     '''
     Used to list sessions.
 
@@ -1324,7 +1325,7 @@ def session_list(consul_url=None, token=None,return_list=False, **kwargs):
     return ret
 
 
-def session_destroy(consul_url=None, token=None,session=None, **kwargs):
+def session_destroy(consul_url=None, token=None, session=None, **kwargs):
     '''
     Destroy session
 
@@ -1372,7 +1373,7 @@ def session_destroy(consul_url=None, token=None,session=None, **kwargs):
     return ret
 
 
-def session_info(consul_url=None,token=None, session=None, **kwargs):
+def session_info(consul_url=None, token=None, session=None, **kwargs):
     '''
     Information about a session
 
@@ -1414,7 +1415,7 @@ def session_info(consul_url=None,token=None, session=None, **kwargs):
     return ret
 
 
-def catalog_register(consul_url=None,token=None,**kwargs):
+def catalog_register(consul_url=None, token=None, **kwargs):
     '''
     Registers a new node, service, or check
 
@@ -1565,20 +1566,19 @@ def catalog_register(consul_url=None,token=None,**kwargs):
                  token=token,
                  method='PUT',
                  data=data)
-    if res['res'] and res['data'] is True:
+    if res['res']:
         ret['res'] = True
         ret['message'] = ('Catalog registration '
                           'for {0} successful.'.format(kwargs['node']))
     else:
         ret['res'] = False
         ret['message'] = ('Catalog registration '
-                          'for {0} failed {1}.'.format(kwargs['node'],res['data']['error']))
+                          'for {0} failed.'.format(kwargs['node']))
     ret['data'] = data
     return ret
 
 
-
-def catalog_deregister(consul_url=None,token=None, **kwargs):
+def catalog_deregister(consul_url=None, token=None, **kwargs):
     '''
     Deregisters a node, service, or check
 
@@ -1631,18 +1631,17 @@ def catalog_deregister(consul_url=None,token=None, **kwargs):
                  method='PUT',
                  data=data)
 
-    if res['res'] and res['data'] is True:
+    if res['res']:
         ret['res'] = True
-        ret['message'] = ('Catalog deregistration '
-                          'for {0} successful.'.format(kwargs['node']))
+        ret['message'] = 'Catalog item {0} removed.'.format(kwargs['node'])
     else:
         ret['res'] = False
-        ret['message'] = ('Catalog deregistration '
-                          'for {0} failed {1}.'.format(kwargs['node'],res['data']['error']))
+        ret['message'] = ('Removing Catalog '
+                          'item {0} failed.'.format(kwargs['node']))
     return ret
 
 
-def catalog_datacenters(consul_url=None,token=None):
+def catalog_datacenters(consul_url=None, token=None):
     '''
     Return list of available datacenters from catalog.
 
@@ -1672,7 +1671,7 @@ def catalog_datacenters(consul_url=None,token=None):
     return ret
 
 
-def catalog_nodes(consul_url=None,token=None, **kwargs):
+def catalog_nodes(consul_url=None, token=None, **kwargs):
     '''
     Return list of available nodes from catalog.
 
@@ -1709,7 +1708,7 @@ def catalog_nodes(consul_url=None,token=None, **kwargs):
     return ret
 
 
-def catalog_services(consul_url=None,token=None, **kwargs):
+def catalog_services(consul_url=None, token=None, **kwargs):
     '''
     Return list of available services rom catalog.
 
@@ -1746,7 +1745,7 @@ def catalog_services(consul_url=None,token=None, **kwargs):
     return ret
 
 
-def catalog_service(consul_url=None, token=None,service=None, **kwargs):
+def catalog_service(consul_url=None, token=None, service=None, **kwargs):
     '''
     Information about the registered service.
 
@@ -1790,7 +1789,7 @@ def catalog_service(consul_url=None, token=None,service=None, **kwargs):
     return ret
 
 
-def catalog_node(consul_url=None,token=None, node=None, **kwargs):
+def catalog_node(consul_url=None, token=None, node=None, **kwargs):
     '''
     Information about the registered node.
 
@@ -1831,7 +1830,7 @@ def catalog_node(consul_url=None,token=None, node=None, **kwargs):
     return ret
 
 
-def health_node(consul_url=None, token=None,node=None, **kwargs):
+def health_node(consul_url=None, token=None, node=None, **kwargs):
     '''
     Health information about the registered node.
 
@@ -1872,7 +1871,7 @@ def health_node(consul_url=None, token=None,node=None, **kwargs):
     return ret
 
 
-def health_checks(consul_url=None,token=None, service=None, **kwargs):
+def health_checks(consul_url=None, token=None, service=None, **kwargs):
     '''
     Health information about the registered service.
 
@@ -1913,7 +1912,7 @@ def health_checks(consul_url=None,token=None, service=None, **kwargs):
     return ret
 
 
-def health_service(consul_url=None, token=None,service=None, **kwargs):
+def health_service(consul_url=None, token=None, service=None, **kwargs):
     '''
     Health information about the registered service.
 
@@ -1965,7 +1964,7 @@ def health_service(consul_url=None, token=None,service=None, **kwargs):
     return ret
 
 
-def health_state(consul_url=None,token=None, state=None, **kwargs):
+def health_state(consul_url=None, token=None, state=None, **kwargs):
     '''
     Returns the checks in the state provided on the path.
 
@@ -2016,7 +2015,7 @@ def health_state(consul_url=None,token=None, state=None, **kwargs):
     return ret
 
 
-def status_leader(consul_url=None,token=None):
+def status_leader(consul_url=None, token=None):
     '''
     Returns the current Raft leader
 
@@ -2046,7 +2045,7 @@ def status_leader(consul_url=None,token=None):
     return ret
 
 
-def status_peers(consul_url,token=None):
+def status_peers(consul_url, token=None):
     '''
     Returns the current Raft peer set
 
@@ -2077,7 +2076,7 @@ def status_peers(consul_url,token=None):
     return ret
 
 
-def acl_create(consul_url=None,token=None, **kwargs):
+def acl_create(consul_url=None, token=None, **kwargs):
     '''
     Create a new ACL token.
 
@@ -2202,7 +2201,7 @@ def acl_update(consul_url=None, token=None, **kwargs):
     return ret
 
 
-def acl_delete(consul_url=None,token=None, **kwargs):
+def acl_delete(consul_url=None, token=None, **kwargs):
     '''
     Delete an ACL token.
 
@@ -2288,7 +2287,7 @@ def acl_info(consul_url=None, **kwargs):
     return ret
 
 
-def acl_clone(consul_url=None,token=None, **kwargs):
+def acl_clone(consul_url=None, token=None, **kwargs):
     '''
     Information about an ACL token.
 
@@ -2336,7 +2335,7 @@ def acl_clone(consul_url=None,token=None, **kwargs):
     return ret
 
 
-def acl_list(consul_url=None, token=None,**kwargs):
+def acl_list(consul_url=None, token=None, **kwargs):
     '''
     List the ACL tokens.
 
@@ -2367,14 +2366,14 @@ def acl_list(consul_url=None, token=None,**kwargs):
 
     function = 'acl/list'
     ret = _query(consul_url=consul_url,
-                token=token,
+                 token=token,
                  data=data,
                  method='PUT',
                  function=function)
     return ret
 
 
-def event_fire(consul_url=None,token=None, name=None, **kwargs):
+def event_fire(consul_url=None, token=None, name=None, **kwargs):
     '''
     List the ACL tokens.
 
@@ -2437,7 +2436,7 @@ def event_fire(consul_url=None,token=None, name=None, **kwargs):
     return ret
 
 
-def event_list(consul_url=None, token=None,**kwargs):
+def event_list(consul_url=None, token=None, **kwargs):
     '''
     List the recent events.
 
