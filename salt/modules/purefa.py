@@ -31,6 +31,9 @@ Installation Prerequisites
 :maturity: new
 :requires: purestorage
 :platform: all
+
+.. versionadded:: Oxygen
+
 '''
 
 # Import Python libs
@@ -203,8 +206,8 @@ def snap_create(name, suffix=None):
 
     .. code-block:: bash
 
-        salt '*' pure.snap_create foo
-        salt '*' pure.snap_create foo suffix=bar
+        salt '*' purefa.snap_create foo
+        salt '*' purefa.snap_create foo suffix=bar
 
     '''
     array = _get_system()
@@ -241,7 +244,7 @@ def snap_delete(name, suffix=None, eradicate=False):
 
     .. code-block:: bash
 
-        salt '*' pure.snap_delete foo suffix=snap eradicate=True
+        salt '*' purefa.snap_delete foo suffix=snap eradicate=True
 
     '''
     array = _get_system()
@@ -281,7 +284,7 @@ def snap_eradicate(name, suffix=None):
 
     .. code-block:: bash
 
-        salt '*' pure.snap_delete foo suffix=snap eradicate=True
+        salt '*' purefa.snap_delete foo suffix=snap eradicate=True
 
     '''
     array = _get_system()
@@ -315,8 +318,8 @@ def volume_create(name, size=None):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_create foo
-        salt '*' pure.volume_create foo size=10T
+        salt '*' purefa.volume_create foo
+        salt '*' purefa.volume_create foo size=10T
 
     '''
     if len(name) > 63:
@@ -352,7 +355,7 @@ def volume_delete(name, eradicate=False):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_delete foo eradicate=True
+        salt '*' purefa.volume_delete foo eradicate=True
 
     '''
     array = _get_system()
@@ -389,7 +392,7 @@ def volume_eradicate(name):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_eradicate foo
+        salt '*' purefa.volume_eradicate foo
 
     '''
     array = _get_system()
@@ -422,7 +425,7 @@ def volume_extend(name, size):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_extend foo 10T
+        salt '*' purefa.volume_extend foo 10T
 
     '''
     array = _get_system()
@@ -461,7 +464,7 @@ def snap_volume_create(name, target, overwrite=False):
 
     .. code-block:: bash
 
-        salt '*' pure.snap_volume_create foo.bar clone overwrite=True
+        salt '*' purefa.snap_volume_create foo.bar clone overwrite=True
 
     '''
     array = _get_system()
@@ -507,7 +510,7 @@ def volume_clone(name, target, overwrite=False):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_clone foo bar overwrite=True
+        salt '*' purefa.volume_clone foo bar overwrite=True
 
     '''
     array = _get_system()
@@ -549,7 +552,7 @@ def volume_attach(name, host):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_attach foo bar
+        salt '*' purefa.volume_attach foo bar
 
     '''
     array = _get_system()
@@ -582,7 +585,7 @@ def volume_detach(name, host):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_detach foo bar
+        salt '*' purefa.volume_detach foo bar
 
     '''
     array = _get_system()
@@ -618,7 +621,7 @@ def host_create(name, iqn=None, wwn=None):
 
     .. code-block:: bash
 
-        salt '*' pure.host_create foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
+        salt '*' purefa.host_create foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
 
     '''
     array = _get_system()
@@ -669,7 +672,7 @@ def host_update(name, iqn=None, wwn=None):
 
     .. code-block:: bash
 
-        salt '*' pure.host_update foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
+        salt '*' purefa.host_update foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
 
     '''
     array = _get_system()
@@ -705,7 +708,7 @@ def host_delete(name):
 
     .. code-block:: bash
 
-        salt '*' pure.host_delete foo
+        salt '*' purefa.host_delete foo
 
     '''
     array = _get_system()
@@ -745,7 +748,7 @@ def hg_create(name, host=None, volume=None):
 
     .. code-block:: bash
 
-        salt '*' pure.hg_create foo host=bar volume=vol
+        salt '*' purefa.hg_create foo host=bar volume=vol
 
     '''
     array = _get_system()
@@ -801,7 +804,7 @@ def hg_update(name, host=None, volume=None):
 
     .. code-block:: bash
 
-        salt '*' pure.hg_update foo host=bar volume=vol
+        salt '*' purefa.hg_update foo host=bar volume=vol
 
     '''
     array = _get_system()
@@ -843,7 +846,7 @@ def hg_delete(name):
 
     .. code-block:: bash
 
-        salt '*' pure.hg_delete foo
+        salt '*' purefa.hg_delete foo
 
     '''
     array = _get_system()
@@ -885,7 +888,7 @@ def hg_remove(name, volume=None, host=None):
 
     .. code-block:: bash
 
-        salt '*' pure.hg_remove foo volume=test host=bar
+        salt '*' purefa.hg_remove foo volume=test host=bar
 
     '''
     array = _get_system()
@@ -948,7 +951,7 @@ def pg_create(name, hostgroup=None, host=None, volume=None, enabled=True):
 
     .. code-block:: bash
 
-        salt '*' pure.pg_create foo [hostgroup=foo | host=bar | volume=vol] enabled=[true | false]
+        salt '*' purefa.pg_create foo [hostgroup=foo | host=bar | volume=vol] enabled=[true | false]
 
     '''
     array = _get_system()
@@ -1041,7 +1044,7 @@ def pg_update(name, hostgroup=None, host=None, volume=None):
 
     .. code-block:: bash
 
-        salt '*' pure.pg_update foo [hostgroup=foo | host=bar | volume=vol]
+        salt '*' purefa.pg_update foo [hostgroup=foo | host=bar | volume=vol]
 
     '''
     array = _get_system()
@@ -1125,7 +1128,7 @@ def pg_delete(name, eradicate=False):
 
     .. code-block:: bash
 
-        salt '*' pure.pg_delete foo
+        salt '*' purefa.pg_delete foo
 
     '''
     array = _get_system()
@@ -1162,7 +1165,7 @@ def pg_eradicate(name):
 
     .. code-block:: bash
 
-        salt '*' pure.pg_eradicate foo
+        salt '*' purefa.pg_eradicate foo
 
     '''
     array = _get_system()
@@ -1200,7 +1203,7 @@ def pg_remove(name, hostgroup=None, host=None, volume=None):
 
     .. code-block:: bash
 
-        salt '*' pure.pg_remove foo [hostgroup=bar | host=test | volume=bar]
+        salt '*' purefa.pg_remove foo [hostgroup=bar | host=test | volume=bar]
 
     '''
     array = _get_system()
