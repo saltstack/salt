@@ -10,7 +10,6 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt testing libraries
-from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, \
         PropertyMock
@@ -18,6 +17,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, \
 # Import Salt libraries
 from salt.exceptions import VMwareApiError, VMwareRuntimeError, \
         VMwareObjectRetrievalError
+from salt.ext.six.moves import range
 import salt.utils.pbm
 
 try:
@@ -187,9 +187,9 @@ class GetCapabilityDefinitionsTestCase(TestCase):
     '''Tests for salt.utils.pbm.get_capability_definitions'''
     def setUp(self):
         self.mock_res_type = MagicMock()
-        self.mock_cap_cats =[MagicMock(capabilityMetadata=['fake_cap_meta1',
-                                                           'fake_cap_meta2']),
-                             MagicMock(capabilityMetadata=['fake_cap_meta3'])]
+        self.mock_cap_cats = [MagicMock(capabilityMetadata=['fake_cap_meta1',
+                                                            'fake_cap_meta2']),
+                              MagicMock(capabilityMetadata=['fake_cap_meta3'])]
         self.mock_prof_mgr = MagicMock(
             FetchCapabilityMetadata=MagicMock(return_value=self.mock_cap_cats))
         patches = (
@@ -312,7 +312,7 @@ class GetStoragePoliciesTestCase(TestCase):
         self.mock_prof_mgr = MagicMock(
             QueryProfile=MagicMock(return_value=self.mock_policy_ids))
         # Policies
-        self.mock_policies=[]
+        self.mock_policies = []
         for i in range(4):
             mock_obj = MagicMock(resourceType=MagicMock(
                 resourceType=pbm.profile.ResourceTypeEnum.STORAGE))
@@ -576,7 +576,7 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
 
     def test_no_policy_refs(self):
         mock_get_policies_by_id = MagicMock()
-        with path('salt.utils.pbm.get_policies_by_id',
+        with patch('salt.utils.pbm.get_policies_by_id',
                   MagicMock(return_value=None)):
             with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
                 salt.utils.pbm.get_default_storage_policy_of_datastore(
@@ -585,7 +585,7 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
                          'Storage policy with id \'fake_policy_id\' was not '
                          'found')
 
-    def test_no_policy_refs(self):
+    def test_return_policy_ref(self):
         mock_get_policies_by_id = MagicMock()
         ret = salt.utils.pbm.get_default_storage_policy_of_datastore(
             self.mock_prof_mgr, self.mock_ds)
