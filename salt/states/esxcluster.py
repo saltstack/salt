@@ -46,7 +46,7 @@ import traceback
 import sys
 
 # Import Salt Libs
-from salt.exceptions
+import salt.exceptions
 from salt.utils.dictdiffer import recursive_diff
 from salt.utils.listdiffer import list_diff
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
