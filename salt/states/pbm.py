@@ -273,3 +273,167 @@ def default_vsan_policy_configured(name, policy):
             ret.update({'changes': changes,
                         'result': True})
     return ret
+
+
+def storage_policies_configured(name, policies):
+    '''
+    Configures storage policies on a vCenter.
+
+    policies
+        List of dict representation of the required storage policies
+    '''
+    comments = []
+    changes = []
+    changes_required = False
+    ret = {'name': name, 'changes': {}, 'result': None, 'comment': None,
+           'pchanges': {}}
+    log.trace('policies = {0}'.format(policies))
+    si = None
+    try:
+        proxy_type = __salt__['vsphere.get_proxy_type']()
+        log.trace('proxy_type = {0}'.format(proxy_type))
+        # All allowed proxies have a shim execution module with the same
+        # name which implementes a get_details function
+        # All allowed proxies have a vcenter detail
+        vcenter = __salt__['{0}.get_details'.format(proxy_type)]()['vcenter']
+        log.info('Running state \'{0}\' on vCenter '
+                 '\'{0}\''.format(name, vcenter))
+        si = __salt__['vsphere.get_service_instance_via_proxy']()
+        current_policies = __salt__['vsphere.list_storage_policies'](
+            policy_names=[policy['name'] for policy in policies],
+            service_instance=si)
+        log.trace('current_policies = {0}'.format(current_policies))
+        # TODO Refactor when recurse_differ supports list_differ
+        # It's going to make the whole thing much easier
+        for policy in policies:
+            policy_copy = copy.deepcopy(policy)
+            filtered_policies = [p for p in current_policies
+                                 if p['name'] == policy['name']]
+            current_policy = filtered_policies[0] \
+                    if filtered_policies else None
+
+            if not current_policy:
+                changes_required = True
+                if __opts__['test']:
+                    comments.append('State {0} will create the storage policy '
+                                    '\'{1}\' on vCenter \'{2}\''
+                                    ''.format(name, policy['name'], vcenter))
+                else:
+                    __salt__['vsphere.create_storage_policy'](
+                        policy['name'], policy, service_instance=si)
+                    comments.append('Created storage policy \'{0}\' on '
+                                    'vCenter \'{1}\''.format(policy['name'],
+                                                             vcenter))
+                    changes.append({'new': policy, 'old': None})
+                log.trace(comments[-1])
+                # Continue with next
+                continue
+
+            # Building all diffs between the current and expected policy
+            # XXX We simplify the comparison by assuming we have at most 1
+            # sub_profile
+            if policy.get('subprofiles'):
+                if len(policy['subprofiles']) > 1:
+                    raise ArgumentValueError('Multiple sub_profiles ({0}) are not '
+                                             'supported in the input policy')
+                subprofile = policy['subprofiles'][0]
+                current_subprofile = current_policy['subprofiles'][0]
+                capabilities_differ = list_diff(current_subprofile['capabilities'],
+                                                subprofile.get('capabilities', []),
+                                                key='id')
+                del policy['subprofiles']
+                if subprofile.get('capabilities'):
+                    del subprofile['capabilities']
+                del current_subprofile['capabilities']
+                # Get the subprofile diffs without the capability keys
+                subprofile_differ = recursive_diff(current_subprofile,
+                                                   dict(subprofile))
+
+            del current_policy['subprofiles']
+            policy_differ = recursive_diff(current_policy, policy)
+            if policy_differ.diffs or capabilities_differ.diffs or \
+               subprofile_differ.diffs:
+
+                changes_required = True
+                if __opts__['test']:
+                    str_changes = []
+                    if policy_differ.diffs:
+                        str_changes.extend(
+                            [change for change in
+                             policy_differ.changes_str.split('\n')])
+                    if subprofile_differ.diffs or \
+                        capabilities_differ.diffs:
+
+                        str_changes.append('subprofiles:')
+                        if subprofile_differ.diffs:
+                            str_changes.extend(
+                                ['  {0}'.format(change) for change in
+                                 subprofile_differ.changes_str.split('\n')])
+                        if capabilities_differ.diffs:
+                            str_changes.append('  capabilities:')
+                            str_changes.extend(
+                                ['  {0}'.format(change) for change in
+                                 capabilities_differ.changes_str2.split('\n')])
+                    comments.append(
+                        'State {0} will update the storage policy \'{1}\''
+                        ' on vCenter \'{2}\':\n{3}'
+                        ''.format(name, policy['name'], vcenter,
+                                  '\n'.join( str_changes)))
+                else:
+                    __salt__['vsphere.update_storage_policy'](
+                        policy=current_policy['name'],
+                        policy_dict=policy_copy,
+                        service_instance=si)
+                    comments.append('Updated the storage policy \'{0}\''
+                                    'in vCenter \'{1}\''
+                                    ''.format(policy['name'], vcenter))
+                log.info(comments[-1])
+
+                # Build new/old values to report what was changed
+                new_values = policy_differ.new_values
+                new_values['subprofiles'] = [subprofile_differ.new_values]
+                new_values['subprofiles'][0]['capabilities'] = \
+                        capabilities_differ.new_values
+                if not new_values['subprofiles'][0]['capabilities']:
+                    del new_values['subprofiles'][0]['capabilities']
+                if not new_values['subprofiles'][0]:
+                    del new_values['subprofiles']
+                old_values = policy_differ.old_values
+                old_values['subprofiles'] = [subprofile_differ.old_values]
+                old_values['subprofiles'][0]['capabilities'] = \
+                        capabilities_differ.old_values
+                if not old_values['subprofiles'][0]['capabilities']:
+                    del old_values['subprofiles'][0]['capabilities']
+                if not old_values['subprofiles'][0]:
+                    del old_values['subprofiles']
+                changes.append({'new': new_values,
+                                'old': old_values})
+            else:
+                # No diffs found - no updates required
+                comments.append('Storage policy \'{0}\' is up to date. '
+                                'Nothing to be done.'.format(policy['name']))
+        __salt__['vsphere.disconnect'](si)
+    except CommandExecutionError as exc:
+        log.error('Error: {0}'.format(exc))
+        if si:
+            __salt__['vsphere.disconnect'](si)
+        if not __opts__['test']:
+            ret['result'] = False
+        ret.update({'comment': exc.strerror,
+                    'result': False if not __opts__['test'] else None})
+        return ret
+    if not changes_required:
+        # We have no changes
+        ret.update({'comment': ('All storage policy in vCenter '
+                                '\'{0}\' is correctly configured. '
+                                'Nothing to be done.'.format(vcenter)),
+                    'result': True})
+    else:
+        ret.update({'comment': '\n'.join(comments)})
+        if __opts__['test']:
+            ret.update({'pchanges': {'storage_policies': changes},
+                        'result': None})
+        else:
+            ret.update({'changes': {'storage_policies': changes},
+                        'result': True})
+    return ret
