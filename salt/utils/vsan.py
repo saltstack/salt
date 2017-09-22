@@ -156,3 +156,57 @@ def get_cluster_vsan_info(cluster_ref):
     except vmodl.RuntimeFault as exc:
         log.exception(exc)
         raise VMwareRuntimeError(exc.msg)
+
+
+def reconfigure_cluster_vsan(cluster_ref, cluster_vsan_spec):
+    '''
+    Reconfigures the VSAN system of a cluster.
+
+    cluster_ref
+        Reference to the cluster
+
+    cluster_vsan_spec
+        Cluster VSAN reconfigure spec (vim.vsan.ReconfigSpec).
+    '''
+    cluster_name = salt.utils.vmware.get_managed_object_name(cluster_ref)
+    log.trace('Reconfiguring vsan on cluster \'{0}\': {1}'
+              ''.format(cluster_name, cluster_vsan_spec))
+    si = salt.utils.vmware.get_service_instance_from_managed_object(
+        cluster_ref)
+    vsan_cl_conf_sys = salt.utils.vsan.get_vsan_cluster_config_system(si)
+    try:
+        task = vsan_cl_conf_sys.VsanClusterReconfig(cluster_ref,
+                                                    cluster_vsan_spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
+    _wait_for_tasks([task], si)
+
+
+def _wait_for_tasks(tasks, service_instance):
+    '''
+    Wait for tasks created via the VSAN API
+    '''
+    log.trace('Waiting for vsan tasks: {0}'
+              ''.format(', '.join([str(t) for t in tasks])))
+    try:
+        vsanapiutils.WaitForTasks(tasks, service_instance)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
+    log.trace('Tasks {0} finished successfully'
+              ''.format(', '.join([str(t) for t in tasks])))

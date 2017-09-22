@@ -216,3 +216,169 @@ class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
             with self.assertRaises(VMwareRuntimeError) as excinfo:
                 vsan.get_cluster_vsan_info(self.mock_cl_ref)
         self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
+class ReconfigureClusterVsanTestCase(TestCase):
+    '''Tests for salt.utils.vsan.reconfigure_cluster_vsan'''
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.mock_task = MagicMock()
+        self.mock_cl_reconf = MagicMock(return_value=self.mock_task)
+        self.mock_get_vsan_conf_sys = MagicMock(
+            return_value=MagicMock(VsanClusterReconfig=self.mock_cl_reconf))
+        self.mock_cl_ref = MagicMock()
+        self.mock_cl_vsan_spec = MagicMock()
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name', MagicMock()),
+            ('salt.utils.vmware.get_service_instance_from_managed_object',
+             MagicMock(return_value=self.mock_si)),
+            ('salt.utils.vsan.get_vsan_cluster_config_system',
+             self.mock_get_vsan_conf_sys),
+            ('salt.utils.vsan._wait_for_tasks', MagicMock()))
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_si', 'mock_cl_reconf', 'mock_get_vsan_conf_sys',
+                     'mock_cl_ref', 'mock_cl_vsan_spec', 'mock_task'):
+            delattr(self, attr)
+
+    def test_get_cluster_name_call(self):
+        get_managed_object_name_mock = MagicMock()
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   get_managed_object_name_mock):
+
+            vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
+                                          self.mock_cl_vsan_spec)
+        get_managed_object_name_mock.assert_called_once_with(
+            self.mock_cl_ref)
+
+    def test_get_service_instance_call(self):
+        get_service_instance_from_managed_object_mock = MagicMock()
+        with patch(
+            'salt.utils.vmware.get_service_instance_from_managed_object',
+            get_service_instance_from_managed_object_mock):
+
+            vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
+                                          self.mock_cl_vsan_spec)
+        get_service_instance_from_managed_object_mock.assert_called_once_with(
+            self.mock_cl_ref)
+
+    def test_get_vsan_cluster_config_system_call(self):
+        vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
+                                      self.mock_cl_vsan_spec)
+        self.mock_get_vsan_conf_sys.assert_called_once_with(self.mock_si)
+
+    def test_cluster_reconfig_call(self):
+        vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
+                                      self.mock_cl_vsan_spec)
+        self.mock_cl_reconf.assert_called_once_with(
+            self.mock_cl_ref, self.mock_cl_vsan_spec)
+
+    def test_cluster_reconfig_raises_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        with patch('salt.utils.vsan.get_vsan_cluster_config_system',
+                   MagicMock(return_value=MagicMock(
+                       VsanClusterReconfig=MagicMock(side_effect=exc)))):
+            with self.assertRaises(VMwareApiError) as excinfo:
+                vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
+                                              self.mock_cl_vsan_spec)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_cluster_reconfig_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        with patch('salt.utils.vsan.get_vsan_cluster_config_system',
+                   MagicMock(return_value=MagicMock(
+                       VsanClusterReconfig=MagicMock(side_effect=exc)))):
+            with self.assertRaises(VMwareApiError) as excinfo:
+                vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
+                                              self.mock_cl_vsan_spec)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_cluster_reconfig_raises_vmodl_runtime_error(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'VimRuntime msg'
+        with patch('salt.utils.vsan.get_vsan_cluster_config_system',
+                   MagicMock(return_value=MagicMock(
+                       VsanClusterReconfig=MagicMock(side_effect=exc)))):
+            with self.assertRaises(VMwareRuntimeError) as excinfo:
+                vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
+                                              self.mock_cl_vsan_spec)
+        self.assertEqual(excinfo.exception.strerror, 'VimRuntime msg')
+
+    def test__wait_for_tasks_call(self):
+        mock_wait_for_tasks = MagicMock()
+        with patch('salt.utils.vsan._wait_for_tasks', mock_wait_for_tasks):
+            vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
+                                          self.mock_cl_vsan_spec)
+        mock_wait_for_tasks.assert_called_once_with([self.mock_task],
+                                                    self.mock_si)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
+class _WaitForTasks(TestCase, LoaderModuleMockMixin):
+    '''Tests for salt.utils.vsan._wait_for_tasks'''
+    def setup_loader_modules(self):
+        return {vsan: {
+            '__virtual__': MagicMock(return_value='vsan')}}
+
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.mock_tasks = MagicMock()
+        patches = (('salt.utils.vsan.vsanapiutils.WaitForTasks', MagicMock()),)
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_si', 'mock_tasks'):
+            delattr(self, attr)
+
+    def test_wait_for_tasks_call(self):
+        mock_wait_for_tasks = MagicMock()
+        with patch('salt.utils.vsan.vsanapiutils.WaitForTasks',
+                   mock_wait_for_tasks):
+            vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
+        mock_wait_for_tasks.assert_called_once_with(self.mock_tasks,
+                                                    self.mock_si)
+
+    def test_wait_for_tasks_raises_no_permission(self):
+        exc = vim.fault.NoPermission()
+        exc.privilegeId = 'Fake privilege'
+        with patch('salt.utils.vsan.vsanapiutils.WaitForTasks',
+                   MagicMock(side_effect=exc)):
+            with self.assertRaises(VMwareApiError) as excinfo:
+                vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_wait_for_tasks_raises_vim_fault(self):
+        exc = vim.fault.VimFault()
+        exc.msg = 'VimFault msg'
+        with patch('salt.utils.vsan.vsanapiutils.WaitForTasks',
+                   MagicMock(side_effect=exc)):
+            with self.assertRaises(VMwareApiError) as excinfo:
+                vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+
+    def test_wait_for_tasks_raises_vmodl_runtime_error(self):
+        exc = vmodl.RuntimeFault()
+        exc.msg = 'VimRuntime msg'
+        with patch('salt.utils.vsan.vsanapiutils.WaitForTasks',
+                   MagicMock(side_effect=exc)):
+            with self.assertRaises(VMwareRuntimeError) as excinfo:
+                vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
+        self.assertEqual(excinfo.exception.strerror, 'VimRuntime msg')

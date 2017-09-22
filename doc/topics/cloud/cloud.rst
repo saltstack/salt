@@ -183,7 +183,7 @@ imports should be absent from the Salt Cloud module.
 
 A good example of a non-libcloud driver is the DigitalOcean driver:
 
-https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/digital_ocean.py
+https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/digitalocean.py
 
 The ``create()`` Function
 -------------------------

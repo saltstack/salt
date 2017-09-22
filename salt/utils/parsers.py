@@ -1547,7 +1547,7 @@ class CloudQueriesMixIn(six.with_metaclass(MixInMeta, object)):
             action='store',
             help='Display a list of configured profiles. Pass in a cloud '
                  'provider to view the provider\'s associated profiles, '
-                 'such as digital_ocean, or pass in "all" to list all the '
+                 'such as digitalocean, or pass in "all" to list all the '
                  'configured profiles.'
         )
         self.add_option_group(group)

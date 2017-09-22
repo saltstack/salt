@@ -161,10 +161,9 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_elb.exists myelb region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    wait = 60
-    orig_wait = wait
+    retries = 30
 
-    while True:
+    while retries:
         try:
             lb = conn.get_all_load_balancers(load_balancer_names=[name])
             lb = lb[0]
@@ -205,16 +204,15 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
             ret['policies'] = policies
             return ret
         except boto.exception.BotoServerError as error:
-            if getattr(error, 'error_code', '') == 'Throttling':
-                if wait > 0:
-                    sleep = wait if wait % 5 == wait else 5
-                    log.info('Throttled by AWS API, will retry in 5 seconds.')
-                    time.sleep(sleep)
-                    wait -= sleep
-                    continue
-            log.error('API still throttling us after {0} seconds!'.format(orig_wait))
+            if error.error_code == 'Throttling':
+                log.debug('Throttled by AWS API, will retry in 5 seconds.')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error('Error fetching config for ELB {0}: {1}'.format(name, error.message))
             log.error(error)
             return {}
+    return {}
 
 
 def listener_dict_to_tuple(listener):
@@ -515,31 +513,38 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_elb.get_attributes myelb
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    retries = 30
 
-    try:
-        lbattrs = conn.get_all_lb_attributes(name)
-        ret = odict.OrderedDict()
-        ret['access_log'] = odict.OrderedDict()
-        ret['cross_zone_load_balancing'] = odict.OrderedDict()
-        ret['connection_draining'] = odict.OrderedDict()
-        ret['connecting_settings'] = odict.OrderedDict()
-        al = lbattrs.access_log
-        czlb = lbattrs.cross_zone_load_balancing
-        cd = lbattrs.connection_draining
-        cs = lbattrs.connecting_settings
-        ret['access_log']['enabled'] = al.enabled
-        ret['access_log']['s3_bucket_name'] = al.s3_bucket_name
-        ret['access_log']['s3_bucket_prefix'] = al.s3_bucket_prefix
-        ret['access_log']['emit_interval'] = al.emit_interval
-        ret['cross_zone_load_balancing']['enabled'] = czlb.enabled
-        ret['connection_draining']['enabled'] = cd.enabled
-        ret['connection_draining']['timeout'] = cd.timeout
-        ret['connecting_settings']['idle_timeout'] = cs.idle_timeout
-        return ret
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        log.error('ELB {0} does not exist: {1}'.format(name, error))
-        return {}
+    while retries:
+        try:
+            lbattrs = conn.get_all_lb_attributes(name)
+            ret = odict.OrderedDict()
+            ret['access_log'] = odict.OrderedDict()
+            ret['cross_zone_load_balancing'] = odict.OrderedDict()
+            ret['connection_draining'] = odict.OrderedDict()
+            ret['connecting_settings'] = odict.OrderedDict()
+            al = lbattrs.access_log
+            czlb = lbattrs.cross_zone_load_balancing
+            cd = lbattrs.connection_draining
+            cs = lbattrs.connecting_settings
+            ret['access_log']['enabled'] = al.enabled
+            ret['access_log']['s3_bucket_name'] = al.s3_bucket_name
+            ret['access_log']['s3_bucket_prefix'] = al.s3_bucket_prefix
+            ret['access_log']['emit_interval'] = al.emit_interval
+            ret['cross_zone_load_balancing']['enabled'] = czlb.enabled
+            ret['connection_draining']['enabled'] = cd.enabled
+            ret['connection_draining']['timeout'] = cd.timeout
+            ret['connecting_settings']['idle_timeout'] = cs.idle_timeout
+            return ret
+        except boto.exception.BotoServerError as e:
+            if e.error_code == 'Throttling':
+                log.debug("Throttled by AWS API, will retry in 5 seconds...")
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error('ELB {0} does not exist: {1}'.format(name, e.message))
+            return {}
+    return {}
 
 
 def set_attributes(name, attributes, region=None, key=None, keyid=None,

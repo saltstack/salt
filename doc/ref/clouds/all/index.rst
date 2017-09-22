@@ -13,7 +13,7 @@ Full list of Salt Cloud modules
     aliyun
     azurearm
     cloudstack
-    digital_ocean
+    digitalocean
     dimensiondata
     ec2
     gce

@@ -60,22 +60,13 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
+from salt.utils.files import HASHES, HASHES_REVMAP
 
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'makedirs_': 'makedirs'
 }
-
-HASHES = {
-    'sha512': 128,
-    'sha384': 96,
-    'sha256': 64,
-    'sha224': 56,
-    'sha1': 40,
-    'md5': 32,
-}
-HASHES_REVMAP = dict([(y, x) for x, y in six.iteritems(HASHES)])
 
 
 def __virtual__():
@@ -3767,14 +3758,8 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith('http') or proto == 'ftp':
-                    try:
-                        if __salt__['cp.cache_file'](single_src):
-                            ret = (single_src, single_hash)
-                            break
-                    except MinionError as exc:
-                        # Error downloading file. Log the caught exception and
-                        # continue on to the next source.
-                        log.exception(exc)
+                    ret = (single_src, single_hash)
+                    break
                 elif proto == 'file' and os.path.exists(urlparsed_single_src.path):
                     ret = (single_src, single_hash)
                     break
@@ -3794,9 +3779,8 @@ def source_list(source, source_hash, saltenv):
                     ret = (single, source_hash)
                     break
                 elif proto.startswith('http') or proto == 'ftp':
-                    if __salt__['cp.cache_file'](single):
-                        ret = (single, source_hash)
-                        break
+                    ret = (single, source_hash)
+                    break
                 elif single.startswith('/') and os.path.exists(single):
                     ret = (single, source_hash)
                     break
@@ -4007,11 +3991,14 @@ def get_managed(
             else:
                 sfn = cached_dest
 
-        # If we didn't have the template or remote file, let's get it
-        # Similarly when the file has been updated and the cache has to be refreshed
+        # If we didn't have the template or remote file, or the file has been
+        # updated and the cache has to be refreshed, download the file.
         if not sfn or cache_refetch:
             try:
-                sfn = __salt__['cp.cache_file'](source, saltenv)
+                sfn = __salt__['cp.cache_file'](
+                    source,
+                    saltenv,
+                    source_hash=source_sum.get('hsum'))
             except Exception as exc:
                 # A 404 or other error code may raise an exception, catch it
                 # and return a comment that will fail the calling state.
@@ -4675,7 +4662,7 @@ def check_file_meta(
     '''
     changes = {}
     if not source_sum:
-        source_sum = dict()
+        source_sum = {}
     lstats = stats(name, hash_type=source_sum.get('hash_type', None), follow_symlinks=False)
     if not lstats:
         changes['newfile'] = name
@@ -4683,7 +4670,10 @@ def check_file_meta(
     if 'hsum' in source_sum:
         if source_sum['hsum'] != lstats['sum']:
             if not sfn and source:
-                sfn = __salt__['cp.cache_file'](source, saltenv)
+                sfn = __salt__['cp.cache_file'](
+                    source,
+                    saltenv,
+                    source_hash=source_sum['hsum'])
             if sfn:
                 try:
                     changes['diff'] = get_diff(
@@ -4750,7 +4740,9 @@ def get_diff(file1,
              saltenv='base',
              show_filenames=True,
              show_changes=True,
-             template=False):
+             template=False,
+             source_hash_file1=None,
+             source_hash_file2=None):
     '''
     Return unified diff of two files
 
@@ -4785,6 +4777,22 @@ def get_diff(file1,
 
         .. versionadded:: Oxygen
 
+    source_hash_file1
+        If ``file1`` is an http(s)/ftp URL and the file exists in the minion's
+        file cache, this option can be passed to keep the minion from
+        re-downloading the archive if the cached copy matches the specified
+        hash.
+
+        .. versionadded:: Oxygen
+
+    source_hash_file2
+        If ``file2`` is an http(s)/ftp URL and the file exists in the minion's
+        file cache, this option can be passed to keep the minion from
+        re-downloading the archive if the cached copy matches the specified
+        hash.
+
+        .. versionadded:: Oxygen
+
     CLI Examples:
 
     .. code-block:: bash
@@ -4793,14 +4801,17 @@ def get_diff(file1,
         salt '*' file.get_diff /tmp/foo.txt /tmp/bar.txt
     '''
     files = (file1, file2)
+    source_hashes = (source_hash_file1, source_hash_file2)
     paths = []
     errors = []
 
-    for filename in files:
+    for filename, source_hash in zip(files, source_hashes):
         try:
             # Local file paths will just return the same path back when passed
             # to cp.cache_file.
-            cached_path = __salt__['cp.cache_file'](filename, saltenv)
+            cached_path = __salt__['cp.cache_file'](filename,
+                                                    saltenv,
+                                                    source_hash=source_hash)
             if cached_path is False:
                 errors.append(
                     u'File {0} not found'.format(

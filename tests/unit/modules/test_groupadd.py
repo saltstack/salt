@@ -16,12 +16,12 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-import salt.utils
 import salt.modules.groupadd as groupadd
+import salt.utils.platform
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), "Module not available on Windows")
+@skipIf(salt.utils.platform.is_windows(), "Module not available on Windows")
 class GroupAddTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.groupadd
