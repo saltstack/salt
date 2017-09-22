@@ -19,7 +19,7 @@ import time
 import salt.utils.files
 
 # Import 3rd-party libs
-from salt.ext import six
+import salt.ext.six
 # pylint: disable=import-error
 from salt.ext.six.moves import map
 # pylint: enable=import-error
@@ -189,7 +189,7 @@ def beacon(config):
             event = {}
             for ind, field in enumerate(FIELDS):
                 event[field] = pack[ind]
-                if isinstance(event[field], six.string_types):
+                if isinstance(event[field], salt.ext.six.string_types):
                     if isinstance(event[field], bytes):
                         event[field] = event[field].decode()
                         event[field] = event[field].strip('b\x00')
