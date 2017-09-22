@@ -4939,8 +4939,8 @@ def assign_default_storage_policy_to_datastore(policy, datastore,
     ds_refs = salt.utils.vmware.get_datastores(service_instance, target_ref,
                                                datastore_names=[datastore])
     if not ds_refs:
-        raise excs.VMwareObjectRetrievalError('Datastore \'{0}\' was not '
-                                              'found'.format(datastore))
+        raise VMwareObjectRetrievalError('Datastore \'{0}\' was not '
+                                         'found'.format(datastore))
     ds_ref = ds_refs[0]
     salt.utils.pbm.assign_default_storage_policy_to_datastore(
         profile_manager, policy_ref, ds_ref)
