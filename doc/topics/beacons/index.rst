@@ -253,9 +253,8 @@ in ``/etc/salt/master.d/reactor.conf``:
 
 .. note::
     You can have only one top level ``reactor`` section, so if one already
-    exists, add this code to the existing section. See :ref:`Understanding the
-    Structure of Reactor Formulas <reactor-structure>` to learn more about
-    reactor SLS syntax.
+    exists, add this code to the existing section. See :ref:`here
+    <reactor-sls>` to learn more about reactor SLS syntax.
 
 
 Start the Salt Master in Debug Mode
