@@ -11,6 +11,7 @@ import logging
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +22,14 @@ def shell():
     '''
     # Provides:
     #   shell
-    return {'shell': os.environ.get('SHELL', '/bin/sh')}
+    if salt.utils.platform.is_windows():
+        env_var = 'COMSPEC'
+        default = r'C:\Windows\system32\cmd.exe'
+    else:
+        env_var = 'SHELL'
+        default = '/bin/sh'
+
+    return {'shell': os.environ.get(env_var, default)}
 
 
 def config():

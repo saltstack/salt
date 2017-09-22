@@ -31,6 +31,9 @@ Installation Prerequisites
 :maturity: new
 :requires: purestorage
 :platform: all
+
+.. versionadded:: Oxygen
+
 '''
 
 # Import Python libs
