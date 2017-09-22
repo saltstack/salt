@@ -97,20 +97,34 @@ PyVmomi can be installed via pip:
 from __future__ import absolute_import
 import logging
 import copy
+import sys
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError, ArgumentValueError
 from salt.utils.dictdiffer import recursive_diff
 from salt.utils.listdiffer import list_diff
 
+# External libraries
+try:
+    from pyVmomi import VmomiSupport
+    HAS_PYVMOMI = True
+except ImportError:
+    HAS_PYVMOMI = False
+
 # Get Logging Started
 log = logging.getLogger(__name__)
-# TODO change with vcenter
-ALLOWED_PROXY_TYPES = ['esxcluster', 'vcenter']
-LOGIN_DETAILS = {}
 
 
 def __virtual__():
+    if not HAS_PYVMOMI:
+        return False, 'State module did not load: pyVmomi not found'
+
+    # We check the supported vim versions to infer the pyVmomi version
+    if 'vim25/6.0' in VmomiSupport.versionMap and \
+        sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
+
+        return False, ('State module did not load: Incompatible versions '
+                       'of Python and pyVmomi present. See Issue #29537.')
     return True
 
 
