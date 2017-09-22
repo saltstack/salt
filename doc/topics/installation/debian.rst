@@ -18,7 +18,7 @@ Installation from official Debian and Raspbian repositories is described
 Installation from the Official SaltStack Repository
 ===================================================
 
-Packages for Debian 8 (Jessie) and Debian 7 (Wheezy) are available in the
+Packages for Debian 9 (Stretch) and Debian 8 (Jessie) are available in the
 Official SaltStack repository.
 
 Instructions are at https://repo.saltstack.com/#debian.
