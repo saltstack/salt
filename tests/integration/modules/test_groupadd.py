@@ -34,10 +34,11 @@ class GroupModuleTest(ModuleCase):
         self._no_group = self.__random_string()
         self._gid = 64989
         self._new_gid = 64998
-        os_grain = self.run_function('grains.item', ['kernel'])
-        if os_grain['kernel'] not in 'Linux':
+        os_grain = self.run_function('grains.item', ['kernel', 'os_family'])
+        if any(os_grain['kernel'] is not 'Linux',
+               os_grain['os_family'] is 'Synology'):
             self.skipTest(
-                'Test not applicable to \'{kernel}\' kernel'.format(
+                'Test not applicable to \'{kernel}\' kernel on \'{os_family}\' family'.format(
                     **os_grain
                 )
             )

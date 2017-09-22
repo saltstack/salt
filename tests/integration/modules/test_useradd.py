@@ -28,10 +28,11 @@ class UseraddModuleTestLinux(ModuleCase):
 
     def setUp(self):
         super(UseraddModuleTestLinux, self).setUp()
-        os_grain = self.run_function('grains.item', ['kernel'])
-        if os_grain['kernel'] not in ('Linux', 'Darwin'):
+        os_grain = self.run_function('grains.item', ['kernel', 'os_family'])
+        if any(os_grain['kernel'] not in ('Linux', 'Darwin'),
+               os_grain['os_family'] is 'Synology'):
             self.skipTest(
-                'Test not applicable to \'{kernel}\' kernel'.format(
+                'Test not applicable to \'{kernel}\' kernel on \'{os_family}\' family'.format(
                     **os_grain
                 )
             )
