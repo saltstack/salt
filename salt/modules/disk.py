@@ -17,22 +17,27 @@ from salt.ext import six
 from salt.ext.six.moves import zip
 
 # Import salt libs
-import salt.utils
-import salt.utils.decorators as decorators
-from salt.utils.decorators import depends
+import salt.utils.decorators
+import salt.utils.decorators.path
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
+
+__func_alias__ = {
+    'format_': 'format'
+}
 
 log = logging.getLogger(__name__)
 
-HAS_HDPARM = salt.utils.which('hdparm') is not None
-HAS_IOSTAT = salt.utils.which('iostat') is not None
+HAS_HDPARM = salt.utils.path.which('hdparm') is not None
+HAS_IOSTAT = salt.utils.path.which('iostat') is not None
 
 
 def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return False, 'This module doesn\'t work on Windows.'
     return True
 
@@ -253,7 +258,7 @@ def percent(args=None):
     return ret
 
 
-@decorators.which('blkid')
+@salt.utils.decorators.path.which('blkid')
 def blkid(device=None):
     '''
     Return block device attributes: UUID, LABEL, etc. This function only works
@@ -402,8 +407,8 @@ def resize2fs(device):
         return True
 
 
-@decorators.which('sync')
-@decorators.which('mkfs')
+@salt.utils.decorators.path.which('sync')
+@salt.utils.decorators.path.which('mkfs')
 def format_(device,
             fs_type='ext4',
             inode_size=None,
@@ -470,7 +475,7 @@ def format_(device,
     return all([mkfs_success, sync_success])
 
 
-@decorators.which_bin(['lsblk', 'df'])
+@salt.utils.decorators.path.which_bin(['lsblk', 'df'])
 def fstype(device):
     '''
     Return the filesystem name of the specified device
@@ -486,14 +491,14 @@ def fstype(device):
 
         salt '*' disk.fstype /dev/sdX1
     '''
-    if salt.utils.which('lsblk'):
+    if salt.utils.path.which('lsblk'):
         lsblk_out = __salt__['cmd.run']('lsblk -o fstype {0}'.format(device)).splitlines()
         if len(lsblk_out) > 1:
             fs_type = lsblk_out[1].strip()
             if fs_type:
                 return fs_type
 
-    if salt.utils.which('df'):
+    if salt.utils.path.which('df'):
         # the fstype was not set on the block device, so inspect the filesystem
         # itself for its type
         if __grains__['kernel'] == 'AIX' and os.path.isfile('/usr/sysv/bin/df'):
@@ -512,7 +517,7 @@ def fstype(device):
     return ''
 
 
-@depends(HAS_HDPARM)
+@salt.utils.decorators.depends(HAS_HDPARM)
 def _hdparm(args, failhard=True):
     '''
     Execute hdparm
@@ -531,7 +536,7 @@ def _hdparm(args, failhard=True):
     return result['stdout']
 
 
-@depends(HAS_HDPARM)
+@salt.utils.decorators.depends(HAS_HDPARM)
 def hdparms(disks, args=None):
     '''
     Retrieve all info's for all disks
@@ -608,7 +613,7 @@ def hdparms(disks, args=None):
     return out
 
 
-@depends(HAS_HDPARM)
+@salt.utils.decorators.depends(HAS_HDPARM)
 def hpa(disks, size=None):
     '''
     Get/set Host Protected Area settings
@@ -737,7 +742,7 @@ def smart_attributes(dev, attributes=None, values=None):
     return smart_attr
 
 
-@depends(HAS_IOSTAT)
+@salt.utils.decorators.depends(HAS_IOSTAT)
 def iostat(interval=1, count=5, disks=None):
     '''
     Gather and return (averaged) IO stats.
@@ -753,11 +758,11 @@ def iostat(interval=1, count=5, disks=None):
 
         salt '*' disk.iostat 1 5 disks=sda
     '''
-    if salt.utils.is_linux():
+    if salt.utils.platform.is_linux():
         return _iostat_linux(interval, count, disks)
-    elif salt.utils.is_freebsd():
+    elif salt.utils.platform.is_freebsd():
         return _iostat_fbsd(interval, count, disks)
-    elif salt.utils.is_aix():
+    elif salt.utils.platform.is_aix():
         return _iostat_aix(interval, count, disks)
 
 

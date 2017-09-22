@@ -16,16 +16,16 @@ import fnmatch
 import tempfile
 
 # Import salt libs
-import salt.utils
+import salt.utils.platform
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 SYS_TMP_DIR = os.path.realpath(
     # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
     # for unix sockets: ``error: AF_UNIX path too long``
     # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
-    os.environ.get('TMPDIR', tempfile.gettempdir()) if not salt.utils.is_darwin() else '/tmp'
+    os.environ.get('TMPDIR', tempfile.gettempdir()) if not salt.utils.platform.is_darwin() else '/tmp'
 )
 # This tempdir path is defined on tests.integration.__init__
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
@@ -51,9 +51,13 @@ def get_invalid_docs():
     allow_failure = (
         'cmd.win_runas',
         'cp.recv',
+        'cp.recv_chunked',
         'glance.warn_until',
         'ipset.long_range',
+        'libcloud_compute.get_driver',
         'libcloud_dns.get_driver',
+        'libcloud_loadbalancer.get_driver',
+        'libcloud_storage.get_driver',
         'log.critical',
         'log.debug',
         'log.error',
@@ -73,6 +77,7 @@ def get_invalid_docs():
         'state.apply',
         'status.list2cmdline',
         'swift.head',
+        'test.rand_str',
         'travisci.parse_qs',
         'vsphere.clean_kwargs',
         'vsphere.disconnect',

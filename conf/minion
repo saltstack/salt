@@ -151,7 +151,11 @@
 # Set the default outputter used by the salt-call command. The default is
 # "nested".
 #output: nested
-#
+
+# To set a list of additional directories to search for salt outputters, set the
+# outputter_dirs option.
+#outputter_dirs: []
+
 # By default output is colored. To disable colored output, set the color value
 # to False.
 #color: True
@@ -231,7 +235,7 @@
 # cause sub minion process to restart.
 #auth_safemode: False
 
-# Ping Master to ensure connection is alive (minutes).
+# Ping Master to ensure connection is alive (seconds).
 #ping_interval: 0
 
 # To auto recover minions if master changes IP address (DDNS)
@@ -368,6 +372,9 @@
 #  network.ip_addrs:
 #    interface: eth0
 #    cidr: '10.0.0.0/8'
+
+# The number of minutes between mine updates.
+#mine_interval: 60
 
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems
@@ -613,6 +620,9 @@
 # you do so at your own risk!
 #open_mode: False
 
+# The size of key that should be generated when creating new keys.
+#keysize: 2048
+
 # Enable permissive access to the salt keys.  This allows you to run the
 # master or minion as root, but have a non-root group be given access to
 # your pki_dir.  To make the access explicit, root must belong to the group
@@ -652,6 +662,21 @@
 #    keyfile: <path_to_keyfile>
 #    certfile: <path_to_certfile>
 #    ssl_version: PROTOCOL_TLSv1_2
+
+
+######        Reactor Settings        #####
+###########################################
+# Define a salt reactor. See https://docs.saltstack.com/en/latest/topics/reactor/
+#reactor: []
+
+#Set the TTL for the cache of the reactor configuration.
+#reactor_refresh_interval: 60
+
+#Configure the number of workers for the runner/wheel in the reactor.
+#reactor_worker_threads: 10
+
+#Define the queue size for workers in the reactor.
+#reactor_worker_hwm: 10000
 
 
 ######         Thread settings        #####

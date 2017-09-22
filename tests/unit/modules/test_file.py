@@ -14,7 +14,9 @@ from tests.support.unit import TestCase
 from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
-import salt.utils
+import salt.config
+import salt.loader
+import salt.utils.files
 import salt.modules.file as filemod
 import salt.modules.config as configmod
 import salt.modules.cmdmod as cmdmod
@@ -45,7 +47,8 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'cachedir': 'tmp',
                     'grains': {},
                 },
-                '__grains__': {'kernel': 'Linux'}
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {'files.is_text_file': MagicMock(return_value=True)},
             }
         }
 
@@ -77,7 +80,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
     def test_replace(self):
         filemod.replace(self.tfile.name, r'Etiam', 'Salticus', backup=False)
 
-        with salt.utils.fopen(self.tfile.name, 'r') as fp:
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             self.assertIn('Salticus', fp.read())
 
     def test_replace_append_if_not_found(self):
@@ -96,19 +99,19 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
             tfile.write(base + '\n')
             tfile.flush()
             filemod.replace(tfile.name, **args)
-            with salt.utils.fopen(tfile.name) as tfile2:
+            with salt.utils.files.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), expected)
         # File not ending with a newline, no match
         with tempfile.NamedTemporaryFile('w+') as tfile:
             tfile.write(base)
             tfile.flush()
             filemod.replace(tfile.name, **args)
-            with salt.utils.fopen(tfile.name) as tfile2:
+            with salt.utils.files.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), expected)
         # A newline should not be added in empty files
         with tempfile.NamedTemporaryFile('w+') as tfile:
             filemod.replace(tfile.name, **args)
-            with salt.utils.fopen(tfile.name) as tfile2:
+            with salt.utils.files.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), args['repl'] + '\n')
         # Using not_found_content, rather than repl
         with tempfile.NamedTemporaryFile('w+') as tfile:
@@ -117,7 +120,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
             tfile.write(base)
             tfile.flush()
             filemod.replace(tfile.name, **args)
-            with salt.utils.fopen(tfile.name) as tfile2:
+            with salt.utils.files.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), expected)
         # not appending if matches
         with tempfile.NamedTemporaryFile('w+') as tfile:
@@ -126,7 +129,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
             tfile.write(base)
             tfile.flush()
             filemod.replace(tfile.name, **args)
-            with salt.utils.fopen(tfile.name) as tfile2:
+            with salt.utils.files.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), expected)
 
     def test_backup(self):
@@ -203,7 +206,8 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'cachedir': 'tmp',
                     'grains': {},
                 },
-                '__grains__': {'kernel': 'Linux'}
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {'files.is_text_file': MagicMock(return_value=True)},
             }
         }
 
@@ -257,7 +261,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                              new_multiline_content,
                              backup=False)
 
-        with salt.utils.fopen(self.tfile.name, 'r') as fp:
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             filecontent = fp.read()
         self.assertIn('#-- START BLOCK 1'
                       + "\n" + new_multiline_content
@@ -279,7 +283,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             append_if_not_found=False,
             backup=False
         )
-        with salt.utils.fopen(self.tfile.name, 'r') as fp:
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             self.assertNotIn('#-- START BLOCK 2'
                              + "\n" + new_content
                              + '#-- END BLOCK 2', fp.read())
@@ -291,7 +295,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                              backup=False,
                              append_if_not_found=True)
 
-        with salt.utils.fopen(self.tfile.name, 'r') as fp:
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             self.assertIn('#-- START BLOCK 2'
                           + "\n" + new_content
                           + '#-- END BLOCK 2', fp.read())
@@ -315,19 +319,19 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             tfile.write(base + '\n')
             tfile.flush()
             filemod.blockreplace(tfile.name, **args)
-            with salt.utils.fopen(tfile.name) as tfile2:
+            with salt.utils.files.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), expected)
         # File not ending with a newline
         with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             tfile.write(base)
             tfile.flush()
             filemod.blockreplace(tfile.name, **args)
-            with salt.utils.fopen(tfile.name) as tfile2:
+            with salt.utils.files.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), expected)
         # A newline should not be added in empty files
         with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             filemod.blockreplace(tfile.name, **args)
-            with salt.utils.fopen(tfile.name) as tfile2:
+            with salt.utils.files.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), block)
 
     def test_replace_prepend(self):
@@ -343,7 +347,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             prepend_if_not_found=False,
             backup=False
         )
-        with salt.utils.fopen(self.tfile.name, 'r') as fp:
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             self.assertNotIn(
                 '#-- START BLOCK 2' + "\n"
                 + new_content + '#-- END BLOCK 2',
@@ -355,7 +359,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                              backup=False,
                              prepend_if_not_found=True)
 
-        with salt.utils.fopen(self.tfile.name, 'r') as fp:
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             self.assertTrue(
                 fp.read().startswith(
                     '#-- START BLOCK 2'
@@ -369,7 +373,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                              'new content 1',
                              backup=False)
 
-        with salt.utils.fopen(self.tfile.name, 'r') as fp:
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             filecontent = fp.read()
         self.assertIn('new content 1', filecontent)
         self.assertNotIn('to be removed', filecontent)
@@ -489,7 +493,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
             filemod.sed(path, before, after, limit=limit)
 
-            with salt.utils.fopen(path, 'r') as newfile:
+            with salt.utils.files.fopen(path, 'r') as newfile:
                 self.assertEqual(
                     SED_CONTENT.replace(before, ''),
                     newfile.read()
@@ -505,19 +509,19 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             tfile.write('foo\n')
             tfile.flush()
             filemod.append(tfile.name, 'bar')
-            with salt.utils.fopen(tfile.name) as tfile2:
+            with salt.utils.files.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), 'foo\nbar\n')
         # File not ending with a newline
         with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             tfile.write('foo')
             tfile.flush()
             filemod.append(tfile.name, 'bar')
-            with salt.utils.fopen(tfile.name) as tfile2:
+            with salt.utils.files.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), 'foo\nbar\n')
         # A newline should not be added in empty files
         with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             filemod.append(tfile.name, 'bar')
-            with salt.utils.fopen(tfile.name) as tfile2:
+            with salt.utils.files.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), 'bar\n')
 
     def test_extract_hash(self):
@@ -641,7 +645,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_patch(self):
         with patch('os.path.isdir', return_value=False) as mock_isdir, \
-                patch('salt.utils.which', return_value='/bin/patch') as mock_which:
+                patch('salt.utils.path.which', return_value='/bin/patch') as mock_which:
             cmd_mock = MagicMock(return_value='test_retval')
             with patch.dict(filemod.__salt__, {'cmd.run_all': cmd_mock}):
                 ret = filemod.patch('/path/to/file', '/path/to/patch')
@@ -652,7 +656,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_patch_dry_run(self):
         with patch('os.path.isdir', return_value=False) as mock_isdir, \
-                patch('salt.utils.which', return_value='/bin/patch') as mock_which:
+                patch('salt.utils.path.which', return_value='/bin/patch') as mock_which:
             cmd_mock = MagicMock(return_value='test_retval')
             with patch.dict(filemod.__salt__, {'cmd.run_all': cmd_mock}):
                 ret = filemod.patch('/path/to/file', '/path/to/patch', dry_run=True)
@@ -663,7 +667,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_patch_dir(self):
         with patch('os.path.isdir', return_value=True) as mock_isdir, \
-                patch('salt.utils.which', return_value='/bin/patch') as mock_which:
+                patch('salt.utils.path.which', return_value='/bin/patch') as mock_which:
             cmd_mock = MagicMock(return_value='test_retval')
             with patch.dict(filemod.__salt__, {'cmd.run_all': cmd_mock}):
                 ret = filemod.patch('/path/to/dir', '/path/to/patch')
@@ -769,7 +773,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(os.remove, self.tfile.name)
         self.addCleanup(delattr, self, 'tfile')
         self.myfile = os.path.join(TMP, 'myfile')
-        with salt.utils.fopen(self.myfile, 'w+') as fp:
+        with salt.utils.files.fopen(self.myfile, 'w+') as fp:
             fp.write('Hello\n')
         self.addCleanup(os.remove, self.myfile)
         self.addCleanup(delattr, self, 'myfile')

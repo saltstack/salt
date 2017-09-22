@@ -6,11 +6,11 @@ import sys
 import types
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, Mock, patch, ANY
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, ANY
 
 # wmi and pythoncom modules are platform specific...
 wmi = types.ModuleType('wmi')
@@ -29,7 +29,9 @@ if NO_MOCK is False:
 import salt.modules.win_status as status
 
 
-@skipIf(NO_MOCK or sys.stdin.encoding != 'UTF8', 'Mock is not installed or encoding not supported')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(sys.stdin.encoding != 'UTF-8', 'UTF-8 encoding required for this test is not supported')
+@skipIf(status.HAS_WMI is False, 'This test requires Windows')
 class TestProcsBase(TestCase):
     def __init__(self, *args, **kwargs):
         TestCase.__init__(self, *args, **kwargs)

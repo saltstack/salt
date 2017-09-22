@@ -28,7 +28,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         base_virtualenv_mock = MagicMock()
         base_virtualenv_mock.__version__ = '1.9.1'
-        patcher = patch('salt.utils.which', lambda exe: exe)
+        patcher = patch('salt.utils.path.which', lambda exe: exe)
         patcher.start()
         self.addCleanup(patcher.stop)
         return {
@@ -109,10 +109,9 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
 
                 # Are we logging the deprecation information?
                 self.assertIn(
-                    'INFO:The virtualenv \'--never-download\' option has been '
-                    'deprecated in virtualenv(>=1.10), as such, the '
-                    '\'never_download\' option to `virtualenv.create()` has '
-                    'also been deprecated and it\'s not necessary anymore.',
+                    'INFO:--never-download was deprecated in 1.10.0, '
+                    'but reimplemented in 14.0.0. If this feature is needed, '
+                    'please install a supported virtualenv version.',
                     handler.messages
                 )
 

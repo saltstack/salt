@@ -122,7 +122,7 @@ def _load_config():
     config = {}
 
     if os.path.isfile('/usbkey/config'):
-        with salt.utils.fopen('/usbkey/config', 'r') as config_file:
+        with salt.utils.files.fopen('/usbkey/config', 'r') as config_file:
             for optval in config_file:
                 if optval[0] == '#':
                     continue

@@ -50,7 +50,7 @@ Module to provide Elasticsearch compatibility to Salt
 '''
 
 from __future__ import absolute_import
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import Python libs
 import logging
@@ -83,10 +83,12 @@ def _get_instance(hosts=None, profile=None):
     Return the elasticsearch instance
     '''
     es = None
-    proxies = {}
+    proxies = None
     use_ssl = False
-    ca_certs = False
-    verify_certs = False
+    ca_certs = None
+    verify_certs = True
+    http_auth = None
+    timeout = 10
 
     if profile is None:
         profile = 'elasticsearch'
@@ -96,37 +98,26 @@ def _get_instance(hosts=None, profile=None):
     elif isinstance(profile, dict):
         _profile = profile
     if _profile:
-        hosts = _profile.get('host', None)
+        hosts = _profile.get('host', hosts)
         if not hosts:
-            hosts = _profile.get('hosts', None)
-        proxies = _profile.get('proxies', {})
+            hosts = _profile.get('hosts', hosts)
+        proxies = _profile.get('proxies', None)
         use_ssl = _profile.get('use_ssl', False)
-        ca_certs = _profile.get('ca_certs', False)
-        verify_certs = _profile.get('verify_certs', False)
+        ca_certs = _profile.get('ca_certs', None)
+        verify_certs = _profile.get('verify_certs', True)
         username = _profile.get('username', None)
         password = _profile.get('password', None)
+        timeout = _profile.get('timeout', 10)
+
+        if username and password:
+            http_auth = (username, password)
 
     if not hosts:
         hosts = ['127.0.0.1:9200']
     if isinstance(hosts, string_types):
         hosts = [hosts]
     try:
-        if proxies == {}:
-            es = elasticsearch.Elasticsearch(
-                    hosts,
-                    use_ssl=use_ssl,
-                    ca_certs=ca_certs,
-                    verify_certs=verify_certs,
-                )
-        elif username and password:
-            es = elasticsearch.Elasticsearch(
-                    hosts,
-                    use_ssl=use_ssl,
-                    ca_certs=ca_certs,
-                    verify_certs=verify_certs,
-                    http_auth=(username, password)
-                )
-        else:
+        if proxies:
             # Custom connection class to use requests module with proxies
             class ProxyConnection(RequestsHttpConnection):
                 def __init__(self, *args, **kwargs):
@@ -137,14 +128,25 @@ def _get_instance(hosts=None, profile=None):
             es = elasticsearch.Elasticsearch(
                 hosts,
                 connection_class=ProxyConnection,
-                proxies=_profile.get('proxies', {}),
+                proxies=proxies,
                 use_ssl=use_ssl,
                 ca_certs=ca_certs,
                 verify_certs=verify_certs,
+                http_auth=http_auth,
+                timeout=timeout,
             )
+        else:
+            es = elasticsearch.Elasticsearch(
+                    hosts,
+                    use_ssl=use_ssl,
+                    ca_certs=ca_certs,
+                    verify_certs=verify_certs,
+                    http_auth=http_auth,
+                    timeout=timeout,
+                )
 
-        if not es.ping():
-            raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}, is it unhealthy?'.format(hosts))
+        # Try the connection
+        es.info()
     except elasticsearch.exceptions.TransportError as e:
         raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0} due to {1}'.format(hosts, str(e)))
     return es
@@ -261,7 +263,7 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
         raise CommandExecutionError("Cannot retrieve cluster stats, server returned code {0} with message {1}".format(e.status_code, e.error))
 
 
-def alias_create(indices, alias, hosts=None, body=None, profile=None):
+def alias_create(indices, alias, hosts=None, body=None, profile=None, source=None):
     '''
     Create an alias for a specific index/indices
 
@@ -271,13 +273,21 @@ def alias_create(indices, alias, hosts=None, body=None, profile=None):
         Alias name
     body
         Optional definition such as routing or filter as defined in https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-aliases.html
+    source
+        URL of file specifying optional definition such as routing or filter. Cannot be used in combination with ``body``.
 
     CLI example::
 
         salt myminion elasticsearch.alias_create testindex_v1 testindex
     '''
     es = _get_instance(hosts, profile)
-
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        body = __salt__['cp.get_file_str'](
+                  source,
+                  saltenv=__opts__.get('saltenv', 'base'))
     try:
         result = es.indices.put_alias(index=indices, name=alias, body=body)
         return result.get('acknowledged', False)
@@ -285,7 +295,7 @@ def alias_create(indices, alias, hosts=None, body=None, profile=None):
         raise CommandExecutionError("Cannot create alias {0} in index {1}, server returned code {2} with message {3}".format(alias, indices, e.status_code, e.error))
 
 
-def alias_delete(indices, aliases, hosts=None, body=None, profile=None):
+def alias_delete(indices, aliases, hosts=None, body=None, profile=None, source=None):
     '''
     Delete an alias of an index
 
@@ -299,7 +309,13 @@ def alias_delete(indices, aliases, hosts=None, body=None, profile=None):
         salt myminion elasticsearch.alias_delete testindex_v1 testindex
     '''
     es = _get_instance(hosts, profile)
-
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        body = __salt__['cp.get_file_str'](
+                  source,
+                  saltenv=__opts__.get('saltenv', 'base'))
     try:
         result = es.indices.delete_alias(index=indices, name=aliases)
 
@@ -355,7 +371,7 @@ def alias_get(indices=None, aliases=None, hosts=None, profile=None):
         raise CommandExecutionError("Cannot get alias {0} in index {1}, server returned code {2} with message {3}".format(aliases, indices, e.status_code, e.error))
 
 
-def document_create(index, doc_type, body=None, id=None, hosts=None, profile=None):
+def document_create(index, doc_type, body=None, id=None, hosts=None, profile=None, source=None):
     '''
     Create a document in a specified index
 
@@ -365,6 +381,8 @@ def document_create(index, doc_type, body=None, id=None, hosts=None, profile=Non
         Type of the document
     body
         Document to store
+    source
+        URL of file specifying document to store. Cannot be used in combination with ``body``.
     id
         Optional unique document identifier for specified doc_type (empty for random)
 
@@ -373,7 +391,13 @@ def document_create(index, doc_type, body=None, id=None, hosts=None, profile=Non
         salt myminion elasticsearch.document_create testindex doctype1 '{}'
     '''
     es = _get_instance(hosts, profile)
-
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        body = __salt__['cp.get_file_str'](
+                  source,
+                  saltenv=__opts__.get('saltenv', 'base'))
     try:
         return es.index(index=index, doc_type=doc_type, body=body, id=id)
     except elasticsearch.TransportError as e:
@@ -455,7 +479,7 @@ def document_get(index, id, doc_type='_all', hosts=None, profile=None):
         raise CommandExecutionError("Cannot retrieve document {0} from index {1}, server returned code {2} with message {3}".format(id, index, e.status_code, e.error))
 
 
-def index_create(index, body=None, hosts=None, profile=None):
+def index_create(index, body=None, hosts=None, profile=None, source=None):
     '''
     Create an index
 
@@ -463,6 +487,8 @@ def index_create(index, body=None, hosts=None, profile=None):
         Index name
     body
         Index definition, such as settings and mappings as defined in https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-create-index.html
+    source
+        URL to file specifying index definition. Cannot be used in combination with ``body``.
 
     CLI example::
 
@@ -470,7 +496,13 @@ def index_create(index, body=None, hosts=None, profile=None):
         salt myminion elasticsearch.index_create testindex2 '{"settings" : {"index" : {"number_of_shards" : 3, "number_of_replicas" : 2}}}'
     '''
     es = _get_instance(hosts, profile)
-
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        body = __salt__['cp.get_file_str'](
+                  source,
+                  saltenv=__opts__.get('saltenv', 'base'))
     try:
         result = es.indices.create(index=index, body=body)
         return result.get('acknowledged', False) and result.get("shards_acknowledged", True)
@@ -604,7 +636,7 @@ def index_close(index, allow_no_indices=True, expand_wildcards='open', ignore_un
         raise CommandExecutionError("Cannot close index {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
-def mapping_create(index, doc_type, body, hosts=None, profile=None):
+def mapping_create(index, doc_type, body=None, hosts=None, profile=None, source=None):
     '''
     Create a mapping in a given index
 
@@ -614,12 +646,21 @@ def mapping_create(index, doc_type, body, hosts=None, profile=None):
         Name of the document type
     body
         Mapping definition as specified in https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-put-mapping.html
+    source
+        URL to file specifying mapping definition. Cannot be used in combination with ``body``.
 
     CLI example::
 
         salt myminion elasticsearch.mapping_create testindex user '{ "user" : { "properties" : { "message" : {"type" : "string", "store" : true } } } }'
     '''
     es = _get_instance(hosts, profile)
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        body = __salt__['cp.get_file_str'](
+                  source,
+                  saltenv=__opts__.get('saltenv', 'base'))
     try:
         result = es.indices.put_mapping(index=index, doc_type=doc_type, body=body)
 
@@ -677,23 +718,33 @@ def mapping_get(index, doc_type, hosts=None, profile=None):
         raise CommandExecutionError("Cannot retrieve mapping {0}, server returned code {1} with message {2}".format(index, e.status_code, e.error))
 
 
-def index_template_create(name, body, hosts=None, profile=None):
+def index_template_create(name, body=None, hosts=None, profile=None, source=None):
     '''
     Create an index template
 
     name
         Index template name
+
     body
         Template definition as specified in http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
+
+    source
+        URL to file specifying template definition. Cannot be used in combination with ``body``.
 
     CLI example::
 
         salt myminion elasticsearch.index_template_create testindex_templ '{ "template": "logstash-*", "order": 1, "settings": { "number_of_shards": 1 } }'
     '''
     es = _get_instance(hosts, profile)
+    if source and body:
+        message = 'Either body or source should be specified but not both.'
+        raise SaltInvocationError(message)
+    if source:
+        body = __salt__['cp.get_file_str'](
+                  source,
+                  saltenv=__opts__.get('saltenv', 'base'))
     try:
         result = es.indices.put_template(name=name, body=body)
-
         return result.get('acknowledged', False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot create template {0}, server returned code {1} with message {2}".format(name, e.status_code, e.error))

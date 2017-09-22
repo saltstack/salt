@@ -15,7 +15,7 @@ import salt.utils.validate.net
 import salt.exceptions
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import pyconnman
     HAS_PYCONNMAN = True
@@ -183,10 +183,10 @@ def _get_service_info(service):
             except Exception as exc:
                 log.warning('Unable to get IPv6 {0} for service {1}\n'.format(info, service))
 
-        domains = []
-        for x in service_info.get_property('Domains'):
-            domains.append(str(x))
-        data['ipv4']['dns'] = domains
+        nameservers = []
+        for x in service_info.get_property('Nameservers'):
+            nameservers.append(str(x))
+        data['ipv4']['dns'] = nameservers
     else:
         data['up'] = False
 
@@ -351,13 +351,13 @@ def set_dhcp_linklocal_all(interface):
     ipv4['Gateway'] = dbus.String('', variant_level=1)
     try:
         service.set_property('IPv4.Configuration', ipv4)
-        service.set_property('Domains.Configuration', [''])  # reset domains list
+        service.set_property('Nameservers.Configuration', [''])  # reset nameservers list
     except Exception as exc:
         raise salt.exceptions.CommandExecutionError('Couldn\'t set dhcp linklocal for service: {0}\nError: {1}\n'.format(service, exc))
     return True
 
 
-def set_static_all(interface, address, netmask, gateway, domains):
+def set_static_all(interface, address, netmask, gateway, nameservers):
     '''
     Configure specified adapter to use ipv4 manual settings
 
@@ -365,7 +365,7 @@ def set_static_all(interface, address, netmask, gateway, domains):
     :param str address: ipv4 address
     :param str netmask: ipv4 netmask
     :param str gateway: ipv4 gateway
-    :param str domains: list of domains servers separated by spaces
+    :param str nameservers: list of nameservers servers separated by spaces
     :return: True if the settings were applied, otherwise an exception will be thrown.
     :rtype: bool
 
@@ -373,7 +373,7 @@ def set_static_all(interface, address, netmask, gateway, domains):
 
     .. code-block:: bash
 
-        salt '*' ip.set_static_all interface-label address netmask gateway domains
+        salt '*' ip.set_static_all interface-label address netmask gateway nameservers
     '''
     service = _interface_to_service(interface)
     if not service:
@@ -381,9 +381,15 @@ def set_static_all(interface, address, netmask, gateway, domains):
     validate, msg = _validate_ipv4([address, netmask, gateway])
     if not validate:
         raise salt.exceptions.CommandExecutionError(msg)
-    validate, msg = _space_delimited_list(domains)
-    if not validate:
-        raise salt.exceptions.CommandExecutionError(msg)
+    if nameservers:
+        validate, msg = _space_delimited_list(nameservers)
+        if not validate:
+            raise salt.exceptions.CommandExecutionError(msg)
+        if not isinstance(nameservers, list):
+            nameservers = nameservers.split(' ')
+    service = _interface_to_service(interface)
+    if not service:
+        raise salt.exceptions.CommandExecutionError('Invalid interface name: {0}'.format(interface))
     service = pyconnman.ConnService(_add_path(service))
     ipv4 = service.get_property('IPv4.Configuration')
     ipv4['Method'] = dbus.String('manual', variant_level=1)
@@ -392,10 +398,8 @@ def set_static_all(interface, address, netmask, gateway, domains):
     ipv4['Gateway'] = dbus.String('{0}'.format(gateway), variant_level=1)
     try:
         service.set_property('IPv4.Configuration', ipv4)
-        if not isinstance(domains, list):
-            dns = domains.split(' ')
-            domains = dns
-        service.set_property('Domains.Configuration', [dbus.String('{0}'.format(d)) for d in domains])
+        if nameservers:
+            service.set_property('Nameservers.Configuration', [dbus.String('{0}'.format(d)) for d in nameservers])
     except Exception as exc:
         raise salt.exceptions.CommandExecutionError('Couldn\'t set manual settings for service: {0}\nError: {1}\n'.format(service, exc))
     return True

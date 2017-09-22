@@ -32,10 +32,13 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
+
+# Impot salt exceptions
+from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 __virtualname__ = 'acl'
 
@@ -44,7 +47,7 @@ def __virtual__():
     '''
     Ensure getfacl & setfacl exist
     '''
-    if salt.utils.which('getfacl') and salt.utils.which('setfacl'):
+    if salt.utils.path.which('getfacl') and salt.utils.path.which('setfacl'):
         return __virtualname__
 
     return False
@@ -57,6 +60,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
     ret = {'name': name,
            'result': True,
            'changes': {},
+           'pchanges': {},
            'comment': ''}
 
     _octal = {'r': 4, 'w': 2, 'x': 1, '-': 0}
@@ -99,21 +103,54 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
             if user[_search_name]['octal'] == sum([_octal.get(i, i) for i in perms]):
                 ret['comment'] = 'Permissions are in the desired state'
             else:
-                ret['comment'] = 'Permissions have been updated'
+                changes = {'new': {'acl_name': acl_name,
+                                   'acl_type': acl_type,
+                                   'perms': perms},
+                           'old': {'acl_name': acl_name,
+                                   'acl_type': acl_type,
+                                   'perms': str(user[_search_name]['octal'])}}
 
                 if __opts__['test']:
-                    ret['result'] = None
+                    ret.update({'comment': 'Updated permissions will be applied for '
+                                '{0}: {1} -> {2}'.format(
+                                    acl_name,
+                                    str(user[_search_name]['octal']),
+                                    perms),
+                                'result': None, 'pchanges': changes})
                     return ret
-
-                __salt__['acl.modfacl'](acl_type, acl_name, perms, name, recursive=recurse)
+                try:
+                    __salt__['acl.modfacl'](acl_type, acl_name, perms, name,
+                                            recursive=recurse, raise_err=True)
+                    ret.update({'comment': 'Updated permissions for '
+                                '{0}'.format(acl_name),
+                                'result': True, 'changes': changes})
+                except CommandExecutionError as exc:
+                    ret.update({'comment': 'Error updating permissions for '
+                                '{0}: {1}'.format(acl_name, exc.strerror),
+                                'result': False})
         else:
-            ret['comment'] = 'Permissions will be applied'
+            changes = {'new': {'acl_name': acl_name,
+                               'acl_type': acl_type,
+                               'perms': perms}}
 
             if __opts__['test']:
+                ret.update({'comment': 'New permissions will be applied for '
+                            '{0}: {1}'.format(acl_name, perms),
+                            'result': None, 'pchanges': changes})
                 ret['result'] = None
                 return ret
 
-            __salt__['acl.modfacl'](acl_type, acl_name, perms, name, recursive=recurse)
+            try:
+                __salt__['acl.modfacl'](acl_type, acl_name, perms, name,
+                                        recursive=recurse, raise_err=True)
+                ret.update({'comment': 'Applied new permissions for '
+                            '{0}'.format(acl_name),
+                            'result': True, 'changes': changes})
+            except CommandExecutionError as exc:
+                ret.update({'comment': 'Error updating permissions for {0}: '
+                            '{1}'.format(acl_name, exc.strerror),
+                            'result': False})
+
     else:
         ret['comment'] = 'ACL Type does not exist'
         ret['result'] = False

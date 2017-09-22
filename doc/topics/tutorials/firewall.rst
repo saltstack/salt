@@ -91,8 +91,6 @@ firewall.
 
    yast2 firewall
 
-.. _linux-iptables:
-
 
 Windows
 =======
@@ -136,6 +134,8 @@ following command from the command line or a run prompt:
 
     netsh advfirewall firewall add rule name="Salt" dir=in action=allow protocol=TCP localport=4505-4506
 
+
+.. _linux-iptables:
 
 iptables
 ========

@@ -90,7 +90,7 @@ from salt.log.mixins import NewStyleClassMixIn
 import salt.utils.network
 
 # Import Third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

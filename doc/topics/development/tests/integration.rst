@@ -371,6 +371,7 @@ on a minion event bus.
 .. code-block:: python
 
     import tests.integration as integration
+    import salt.utils.event
 
     class TestEvent(integration.SaltEventAssertsMixin):
         '''
@@ -443,7 +444,7 @@ to test states:
     from tests.support.mixins import SaltReturnAssertsMixin
 
     # Import salt libs
-    import salt.utils
+    import salt.utils.files
 
     HFILE = os.path.join(TMP, 'hosts')
 
@@ -470,7 +471,7 @@ to test states:
             ip = '10.10.10.10'
             ret = self.run_state('host.present', name=name, ip=ip)
             self.assertSaltTrueReturn(ret)
-            with salt.utils.fopen(HFILE) as fp_:
+            with salt.utils.files.fopen(HFILE) as fp_:
                 output = fp_.read()
                 self.assertIn('{0}\t\t{1}'.format(ip, name), output)
 
@@ -540,7 +541,7 @@ provider configuration file in the integration test file directory located at
 ``tests/integration/files/conf/cloud.*.d/``.
 
 The following is an example of the default profile configuration file for Digital
-Ocean, located at: ``tests/integration/files/conf/cloud.profiles.d/digital_ocean.conf``:
+Ocean, located at: ``tests/integration/files/conf/cloud.profiles.d/digitalocean.conf``:
 
 .. code-block:: yaml
 
@@ -556,12 +557,12 @@ be provided by the user by editing the provider configuration file before runnin
 tests.
 
 The following is an example of the default provider configuration file for Digital
-Ocean, located at: ``tests/integration/files/conf/cloud.providers.d/digital_ocean.conf``:
+Ocean, located at: ``tests/integration/files/conf/cloud.providers.d/digitalocean.conf``:
 
 .. code-block:: yaml
 
     digitalocean-config:
-      driver: digital_ocean
+      driver: digitalocean
       client_key: ''
       api_key: ''
       location: New York 1

@@ -10,7 +10,8 @@ import yaml
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +22,14 @@ def shell():
     '''
     # Provides:
     #   shell
-    return {'shell': os.environ.get('SHELL', '/bin/sh')}
+    if salt.utils.platform.is_windows():
+        env_var = 'COMSPEC'
+        default = r'C:\Windows\system32\cmd.exe'
+    else:
+        env_var = 'SHELL'
+        default = '/bin/sh'
+
+    return {'shell': os.environ.get(env_var, default)}
 
 
 def config():
@@ -41,7 +49,7 @@ def config():
                 'grains'
                 )
     if os.path.isfile(gfn):
-        with salt.utils.fopen(gfn, 'rb') as fp_:
+        with salt.utils.files.fopen(gfn, 'rb') as fp_:
             try:
                 return yaml.safe_load(fp_.read())
             except Exception:

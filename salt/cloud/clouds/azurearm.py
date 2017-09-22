@@ -59,11 +59,14 @@ import logging
 import pprint
 import base64
 import yaml
+import collections
 import salt.cache
 import salt.config as config
 import salt.utils
 import salt.utils.cloud
-import salt.ext.six as six
+import salt.utils.files
+from salt.utils.versions import LooseVersion
+from salt.ext import six
 import salt.version
 from salt.exceptions import (
     SaltCloudSystemExit,
@@ -77,7 +80,6 @@ HAS_LIBS = False
 try:
     import salt.utils.msazure
     from salt.utils.msazure import object_to_dict
-    import azure.storage
     from azure.common.credentials import (
         UserPassCredentials,
         ServicePrincipalCredentials,
@@ -103,6 +105,7 @@ try:
     from azure.mgmt.network.models import (
         IPAllocationMethod,
         NetworkInterface,
+        NetworkInterfaceDnsSettings,
         NetworkInterfaceIPConfiguration,
         NetworkSecurityGroup,
         PublicIPAddress,
@@ -112,7 +115,9 @@ try:
     from azure.mgmt.storage import StorageManagementClient
     from azure.mgmt.web import WebSiteManagementClient
     from msrestazure.azure_exceptions import CloudError
-    HAS_LIBS = True
+    from azure.multiapi.storage.v2016_05_31 import CloudStorageAccount
+    from azure.cli import core
+    HAS_LIBS = LooseVersion(core.__version__) >= LooseVersion("2.0.12")
 except ImportError:
     pass
 # pylint: enable=wrong-import-position,wrong-import-order
@@ -249,7 +254,9 @@ def avail_locations(conn=None, call=None):  # pylint: disable=unused-argument
 
     ret = {}
     regions = webconn.global_model.get_subscription_geo_regions()
-    for location in regions.value:  # pylint: disable=no-member
+    if hasattr(regions, 'value'):
+        regions = regions.value
+    for location in regions:  # pylint: disable=no-member
         lowername = str(location.name).lower().replace(' ', '')
         ret[lowername] = object_to_dict(location)
     return ret
@@ -419,13 +426,14 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
     for group in list_resource_groups():
         nodes = compconn.virtual_machines.list(group)
         for node in nodes:
+            private_ips, public_ips = __get_ips_from_node(group, node)
             ret[node.name] = object_to_dict(node)
             ret[node.name]['id'] = node.id
             ret[node.name]['name'] = node.name
             ret[node.name]['size'] = node.hardware_profile.vm_size
             ret[node.name]['state'] = node.provisioning_state
-            ret[node.name]['private_ips'] = node.network_profile.network_interfaces
-            ret[node.name]['public_ips'] = node.network_profile.network_interfaces
+            ret[node.name]['private_ips'] = private_ips
+            ret[node.name]['public_ips'] = public_ips
             ret[node.name]['storage_profile']['data_disks'] = []
             ret[node.name]['resource_group'] = group
             for disk in node.storage_profile.data_disks:
@@ -443,6 +451,30 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
                 except TypeError:
                     ret[node.name]['image'] = None
     return ret
+
+
+def __get_ips_from_node(resource_group, node):
+    '''
+    List private and public IPs from a VM interface
+    '''
+    global netconn  # pylint: disable=global-statement,invalid-name
+    if not netconn:
+        netconn = get_conn(NetworkManagementClient)
+
+    private_ips = []
+    public_ips = []
+    for node_iface in node.network_profile.network_interfaces:
+        node_iface_name = node_iface.id.split('/')[-1]
+        network_interface = netconn.network_interfaces.get(resource_group, node_iface_name)
+        for ip_configuration in network_interface.ip_configurations:
+            if ip_configuration.private_ip_address:
+                private_ips.append(ip_configuration.private_ip_address)
+            if ip_configuration.public_ip_address and ip_configuration.public_ip_address.id:
+                public_iface_name = ip_configuration.public_ip_address.id.split('/')[-1]
+                public_iface = netconn.public_ip_addresses.get(resource_group, public_iface_name)
+                public_ips.append(public_iface.ip_address)
+
+    return private_ips, public_ips
 
 
 def list_resource_groups(conn=None, call=None):  # pylint: disable=unused-argument
@@ -911,6 +943,17 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
             )
         ]
 
+    dns_settings = None
+    if kwargs.get('dns_servers') is not None:
+        if isinstance(kwargs['dns_servers'], list):
+            dns_settings = NetworkInterfaceDnsSettings(
+                dns_servers=kwargs['dns_servers'],
+                applied_dns_servers=kwargs['dns_servers'],
+                internal_dns_name_label=None,
+                internal_fqdn=None,
+                internal_domain_name_suffix=None,
+            )
+
     network_security_group = None
     if kwargs.get('security_group') is not None:
         network_security_group = netconn.network_security_groups.get(
@@ -922,6 +965,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         location=kwargs['location'],
         network_security_group=network_security_group,
         ip_configurations=ip_configurations,
+        dns_settings=dns_settings,
     )
 
     poller = netconn.network_interfaces.create_or_update(
@@ -986,7 +1030,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
     else:
         if os.path.exists(userdata_file):
-            with salt.utils.fopen(userdata_file, 'r') as fh_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
     userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
@@ -1289,6 +1333,15 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
             '-a or --action.'
         )
 
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
     global compconn  # pylint: disable=global-statement,invalid-name
     if not compconn:
         compconn = get_conn()
@@ -1381,6 +1434,15 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
                     call='function',
                 )
             )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroyed instance',
+        'salt/cloud/{0}/destroyed'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
     return ret
 
@@ -1630,9 +1692,14 @@ def pages_to_list(items):
     while True:
         try:
             page = items.next()  # pylint: disable=incompatible-py3-code
-            for item in page:
-                objs.append(item)
+            if isinstance(page, collections.Iterable):
+                for item in page:
+                    objs.append(item)
+            else:
+                objs.append(page)
         except GeneratorExit:
+            break
+        except StopIteration:
             break
     return objs
 
@@ -1663,7 +1730,7 @@ def list_containers(call=None, kwargs=None):  # pylint: disable=unused-argument
     if not storconn:
         storconn = get_conn(StorageManagementClient)
 
-    storageaccount = azure.storage.CloudStorageAccount(
+    storageaccount = CloudStorageAccount(
         config.get_cloud_config_value(
             'storage_account',
             get_configured_provider(), __opts__, search_global=False
@@ -1704,7 +1771,7 @@ def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
             'A container must be specified'
         )
 
-    storageaccount = azure.storage.CloudStorageAccount(
+    storageaccount = CloudStorageAccount(
         config.get_cloud_config_value(
             'storage_account',
             get_configured_provider(), __opts__, search_global=False
@@ -1744,7 +1811,7 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
             'A blob must be specified'
         )
 
-    storageaccount = azure.storage.CloudStorageAccount(
+    storageaccount = CloudStorageAccount(
         config.get_cloud_config_value(
             'storage_account',
             get_configured_provider(), __opts__, search_global=False

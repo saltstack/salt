@@ -100,7 +100,7 @@ except ImportError:
 # Import Salt libs
 import salt.utils.jid
 import salt.returners
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 # Define the module's virtual name
@@ -213,4 +213,4 @@ def prep_jid(nocache=False,
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

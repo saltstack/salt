@@ -24,9 +24,10 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.ext.six import string_types
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -114,7 +115,7 @@ def _write_options(name, configuration):
                 'Unable to make {0}: {1}'.format(dirname, exc)
             )
 
-    with salt.utils.fopen(os.path.join(dirname, 'options'), 'w') as fp_:
+    with salt.utils.files.fopen(os.path.join(dirname, 'options'), 'w') as fp_:
         sorted_options = list(conf_ptr.keys())
         sorted_options.sort()
         fp_.write(

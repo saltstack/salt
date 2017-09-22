@@ -23,21 +23,24 @@ Module for managing Windows Users
 .. note::
     This currently only works with local user accounts, not domain accounts
 '''
+# Import Python libs
 from __future__ import absolute_import
-from datetime import datetime
+import logging
 import time
+from datetime import datetime
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except:  # pylint: disable=W0702
     from pipes import quote as _cmd_quote
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
+import salt.utils.args
+import salt.utils.platform
 from salt.ext import six
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +67,7 @@ def __virtual__():
     '''
     Requires Windows and Windows Modules
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Module win_useradd: Windows Only'
 
     if not HAS_WIN32NET_MODS:
@@ -587,10 +590,10 @@ def chhome(name, home, **kwargs):
         name = _to_unicode(name)
         home = _to_unicode(home)
 
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     persist = kwargs.pop('persist', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
     if persist:
         log.info('Ignoring unsupported \'persist\' argument to user.chhome')
 

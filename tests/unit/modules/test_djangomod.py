@@ -25,7 +25,7 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.djangomod
     '''
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', lambda exe: exe)
+        patcher = patch('salt.utils.path.which', lambda exe: exe)
         patcher.start()
         self.addCleanup(patcher.stop)
         return {djangomod: {'_get_django_admin': MagicMock(return_value=True)}}
@@ -92,7 +92,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.djangomod
     '''
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', lambda exe: exe)
+        patcher = patch('salt.utils.path.which', lambda exe: exe)
         patcher.start()
         self.addCleanup(patcher.stop)
         return {djangomod: {}}
@@ -189,7 +189,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
             djangomod.createsuperuser(
                 'settings.py', 'testuser', 'user@example.com'
             )
-            mock.assert_called_once()
+            self.assertEqual(mock.call_count, 1)
             args, kwargs = mock.call_args
             # cmdline arguments are extracted from a kwargs dict so order isn't guaranteed.
             self.assertEqual(len(args), 1)

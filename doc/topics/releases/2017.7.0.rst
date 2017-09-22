@@ -4,6 +4,45 @@
 Salt 2017.7.0 Release Notes - Codename Nitrogen
 ===============================================
 
+
+========
+Python 3
+========
+
+The 2017.7 Salt Release adds initial Python 3 support.
+
+The default Python version of Salt will remain Python 2, although Python 3 packages will be supplied for users who want to help test this new feature.
+
+======================
+Python 2.6 Deprecation
+======================
+
+Salt will no longer support Python 2.6. We will provide python2.7 packages on our repo_ for RedHat and CentOS 6 to ensure users can still run Salt on these platforms.
+
+.. _repo: https://repo.saltstack.com/
+
+============
+Known Issues
+============
+The following salt-cloud drivers have known issues running with Python 3. These drivers will not work with Python 3, and Python 2.7 should be used instead:
+
+- Joyent
+
+- When running under Python 3, users who require Unicode support should ensure that a locale is set on their machines.
+  Users using the `C` locale are advised to switch to a UTF-aware locale to ensure proper functionality with Salt with Python 3.
+
+
+Remember to update the Salt Master first
+========================================
+Salt's policy has always been that when upgrading, the minion should never be
+on a newer version than the master.  Specifically with this update, because of
+changes in the fileclient, the 2017.7 minion requires a 2017.7 master.
+
+Backwards compatiblity is still maintained, so older minions can still be used.
+
+More information can be found in the :ref:`Salt FAQ<which-version>`
+
+
 States Added for Management of systemd Unit Masking
 ===================================================
 
@@ -83,12 +122,11 @@ State Module Changes
       # After
       run_something:
         module.run:
-          mymodule.something:
+          - mymodule.something:
             - name: some name
             - first_arg: one
             - second_arg: two
             - do_stuff: True
-
 
   Since a lot of users are already using :py:func:`module.run
   <salt.states.module.run>` states, this new behavior must currently be
@@ -97,6 +135,36 @@ State Module Changes
   the next feature release of Salt (Oxygen) and the old usage will no longer be
   supported at that time.
 
+  Another feature of the new :py:func:`module.run <salt.states.module.run>` is that
+  it allows calling many functions in a single batch, such as:
+
+  .. code-block:: yaml
+
+      run_something:
+        module.run:
+          - mymodule.function_without_parameters:
+          - mymodule.another_function:
+            - myparam
+            - my_other_param
+
+  In a rare case that you have a function that needs to be called several times but
+  with the different parameters, an additional feature of "tagging" is to the
+  rescue. In order to tag a function, use a colon delimeter. For example:
+
+  .. code-block:: yaml
+
+      run_something:
+        module.run:
+          - mymodule.same_function:1:
+          - mymodule.same_function:2:
+            - myparam
+            - my_other_param
+          - mymodule.same_function:3:
+            - foo: bar
+
+  The example above will run `mymodule.same_function` three times with the
+  different parameters.
+
   To enable the new behavior for :py:func:`module.run <salt.states.module.run>`,
   add the following to the minion config file:
 
@@ -104,6 +172,7 @@ State Module Changes
 
       use_superseded:
         - module.run
+
 - The default for the ``fingerprint_hash_type`` option used in the ``present``
   function in the :mod:`ssh <salt.states.ssh_know_hosts>` state changed from
   ``md5`` to ``sha256``.
@@ -161,6 +230,7 @@ Wildcard Versions in :py:func:`pkg.installed <salt.states.pkg.installed>` States
 - The :py:func:`pkg.installed <salt.states.pkg.installed>` state now supports
   wildcards in package versions, for the following platforms:
 
+  - SUSE/openSUSE Leap/Thumbleweed
   - Debian/Ubuntu
   - RHEL/CentOS
   - Arch Linux
@@ -542,6 +612,38 @@ Using the new ``roster_order`` configuration syntax it's now possible to compose
 of grains, pillar and mine data and even Salt SDB URLs.
 The new release is also fully IPv4 and IPv6 enabled and even has support for CIDR ranges.
 
+Salt-SSH Default Options
+========================
+
+Defaults for rosters can now be set, so that they don't have to be set on every
+entry in a roster or specified from the commandline.
+
+The new option is :ref:`roster_defaults<roster-defaults>` and is specified in
+the master config file.
+
+.. code-block:: yaml
+
+    roster_defaults:
+      user: daniel
+      sudo: True
+      priv: /root/.ssh/id_rsa
+      tty: True
+
+Blacklist or Whitelist Extmod Sync
+==================================
+
+The modules that are synced to minions can now be limited.
+
+The following configuration options have been added for the master:
+
+- :conf_master:`extmod_whitelist`
+- :conf_master:`extmod_blacklist`
+
+and for the minion:
+
+- :conf_minion:`extmod_whitelist`
+- :conf_minion:`extmod_blacklist`
+
 Additional Features
 ===================
 
@@ -604,6 +706,7 @@ Execution modules
 - :mod:`salt.modules.grafana4 <salt.modules.grafana4>`
 - :mod:`salt.modules.heat <salt.modules.heat>`
 - :mod:`salt.modules.icinga2 <salt.modules.icinga2>`
+- :mod:`salt.modules.kubernetes <salt.modules.kubernetes>`
 - :mod:`salt.modules.logmod <salt.modules.logmod>`
 - :mod:`salt.modules.mattermost <salt.modules.mattermost>`
 - :mod:`salt.modules.namecheap_dns <salt.modules.namecheap_dns>`
@@ -682,6 +785,7 @@ States
 - :mod:`salt.states.icinga2 <salt.states.icinga2>`
 - :mod:`salt.states.influxdb_continuous_query <salt.states.influxdb_continuous_query>`
 - :mod:`salt.states.influxdb_retention_policy <salt.states.influxdb_retention_policy>`
+- :mod:`salt.states.kubernetes <salt.states.kubernetes>`
 - :mod:`salt.states.logadm <salt.states.logadm>`
 - :mod:`salt.states.logrotate <salt.states.logrotate>`
 - :mod:`salt.states.msteams <salt.states.msteams>`
@@ -871,3 +975,13 @@ The ``glusterfs`` state had the following function removed:
 The ``openvswitch_port`` state had the following change:
 
 - The ``type`` option was removed from the ``present`` function. Please use ``tunnel_type`` instead.
+
+Build Notes
+===========
+
+Windows Installer Packages
+--------------------------
+
+Windows Installer packages have been patched with the following PR: 42347_
+
+.. _42347: https://github.com/saltstack/salt/pull/42347

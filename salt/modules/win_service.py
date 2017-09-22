@@ -5,13 +5,15 @@ Windows Service module.
 .. versionchanged:: 2016.11.0 - Rewritten to use PyWin32
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
-import salt.utils
-import time
-import logging
 import fnmatch
+import logging
 import re
+import time
+
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd party libs
@@ -93,7 +95,7 @@ def __virtual__():
     '''
     Only works on Windows systems with PyWin32 installed
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Module win_service: module only works on Windows.'
 
     if not HAS_WIN32_MODS:
@@ -811,12 +813,26 @@ def modify(name,
     return changes
 
 
-def enable(name, **kwargs):
+def enable(name, start_type='auto', start_delayed=False, **kwargs):
     '''
     Enable the named service to start at boot
 
     Args:
         name (str): The name of the service to enable.
+
+        start_type (str): Specifies the service start type. Valid options are as
+            follows:
+
+            - boot: Device driver that is loaded by the boot loader
+            - system: Device driver that is started during kernel initialization
+            - auto: Service that automatically starts
+            - manual: Service must be started manually
+            - disabled: Service cannot be started
+
+        start_delayed (bool): Set the service to Auto(Delayed Start). Only valid
+            if the start_type is set to ``Auto``. If service_type is not passed,
+            but the service is already set to ``Auto``, then the flag will be
+            set.
 
     Returns:
         bool: ``True`` if successful, ``False`` otherwise
@@ -827,8 +843,13 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     '''
-    modify(name, start_type='Auto')
-    return info(name)['StartType'] == 'Auto'
+
+    modify(name, start_type=start_type, start_delayed=start_delayed)
+    svcstat = info(name)
+    if start_type.lower() == 'auto':
+        return svcstat['StartType'].lower() == start_type.lower() and svcstat['StartTypeDelayed'] == start_delayed
+    else:
+        return svcstat['StartType'].lower() == start_type.lower()
 
 
 def disable(name, **kwargs):

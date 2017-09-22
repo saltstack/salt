@@ -19,6 +19,7 @@ except ImportError:
 # Import Salt libs
 import salt.utils
 import salt.utils.aws
+import salt.utils.files
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError
@@ -150,7 +151,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
     try:
         if method == 'PUT':
             if local_file:
-                data = salt.utils.fopen(local_file, 'r')  # pylint: disable=resource-leakage
+                data = salt.utils.files.fopen(local_file, 'r')  # pylint: disable=resource-leakage
             result = requests.request(method,
                                       requesturl,
                                       headers=headers,
@@ -233,7 +234,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
                 'Failed to get file. {0}: {1}'.format(err_code, err_msg))
 
         log.debug('Saving to local file: {0}'.format(local_file))
-        with salt.utils.fopen(local_file, 'wb') as out:
+        with salt.utils.files.fopen(local_file, 'wb') as out:
             for chunk in result.iter_content(chunk_size=chunk_size):
                 out.write(chunk)
         return 'Saved to local file: {0}'.format(local_file)

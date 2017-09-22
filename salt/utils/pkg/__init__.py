@@ -10,7 +10,9 @@ import os
 import re
 
 # Import Salt libs
-import salt.utils
+import salt.utils  # Can be removed once is_true is moved
+import salt.utils.files
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +45,7 @@ def write_rtag(opts):
     rtag_file = rtag(opts)
     if not os.path.exists(rtag_file):
         try:
-            with salt.utils.fopen(rtag_file, 'w+'):
+            with salt.utils.files.fopen(rtag_file, 'w+'):
                 pass
         except OSError as exc:
             log.warning('Encountered error writing rtag: %s', exc.__str__())
@@ -85,7 +87,7 @@ def match_version(desired, available, cmp_func=None, ignore_epoch=False):
     if not oper:
         oper = '=='
     for candidate in available:
-        if salt.utils.compare_versions(ver1=candidate,
+        if salt.utils.versions.compare(ver1=candidate,
                                        oper=oper,
                                        ver2=version,
                                        cmp_func=cmp_func,

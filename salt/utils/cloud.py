@@ -7,7 +7,6 @@ Utility functions for salt.cloud
 from __future__ import absolute_import
 import errno
 import os
-import sys
 import stat
 import codecs
 import shutil
@@ -25,16 +24,6 @@ import copy
 import re
 import uuid
 
-
-# Let's import pwd and catch the ImportError. We'll raise it if this is not
-# Windows
-try:
-    import pwd
-except ImportError:
-    if not sys.platform.lower().startswith('win'):
-        # We can't use salt.utils.is_windows() from the import a little down
-        # because that will cause issues under windows at install time.
-        raise
 
 try:
     import salt.utils.smb
@@ -57,9 +46,12 @@ import salt.client
 import salt.config
 import salt.loader
 import salt.template
-import salt.utils
+import salt.utils  # Can be removed when pem_finger is moved
+import salt.utils.compat
 import salt.utils.event
-from salt.utils import vt
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.vt
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.utils.yamldumper import SafeOrderedDumper
 from salt.utils.validate.path import is_writeable
@@ -75,11 +67,19 @@ from salt.exceptions import (
     SaltCloudPasswordError
 )
 
-# Import third party libs
-import salt.ext.six as six
+# Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin,W0611
 from jinja2 import Template
 import yaml
+
+# Let's import pwd and catch the ImportError. We'll raise it if this is not
+# Windows. This import has to be below where we import salt.utils.platform!
+try:
+    import pwd
+except ImportError:
+    if not salt.utils.platform.is_windows():
+        raise
 
 try:
     import getpass
@@ -109,12 +109,12 @@ def __render_script(path, vm_=None, opts=None, minion=''):
     '''
     log.info('Rendering deploy script: {0}'.format(path))
     try:
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             template = Template(fp_.read())
             return str(template.render(opts=opts, vm=vm_, minion=minion))
     except AttributeError:
         # Specified renderer was not found
-        with salt.utils.fopen(path, 'r') as fp_:
+        with salt.utils.files.fopen(path, 'r') as fp_:
             return fp_.read()
 
 
@@ -161,9 +161,9 @@ def gen_keys(keysize=2048):
     salt.crypt.gen_keys(tdir, 'minion', keysize)
     priv_path = os.path.join(tdir, 'minion.pem')
     pub_path = os.path.join(tdir, 'minion.pub')
-    with salt.utils.fopen(priv_path) as fp_:
+    with salt.utils.files.fopen(priv_path) as fp_:
         priv = fp_.read()
-    with salt.utils.fopen(pub_path) as fp_:
+    with salt.utils.files.fopen(pub_path) as fp_:
         pub = fp_.read()
     shutil.rmtree(tdir)
     return priv, pub
@@ -181,12 +181,12 @@ def accept_key(pki_dir, pub, id_):
             os.makedirs(key_path)
 
     key = os.path.join(pki_dir, 'minions', id_)
-    with salt.utils.fopen(key, 'w+') as fp_:
+    with salt.utils.files.fopen(key, 'w+') as fp_:
         fp_.write(pub)
 
     oldkey = os.path.join(pki_dir, 'minions_pre', id_)
     if os.path.isfile(oldkey):
-        with salt.utils.fopen(oldkey) as fp_:
+        with salt.utils.files.fopen(oldkey) as fp_:
             if fp_.read() == pub:
                 os.remove(oldkey)
 
@@ -292,12 +292,14 @@ def salt_config_to_yaml(configuration, line_break='\n'):
                      Dumper=SafeOrderedDumper)
 
 
-def bootstrap(vm_, opts):
+def bootstrap(vm_, opts=None):
     '''
     This is the primary entry point for logging into any system (POSIX or
     Windows) to install Salt. It will make the decision on its own as to which
     deploy function to call.
     '''
+    if opts is None:
+        opts = __opts__
     deploy_config = salt.config.get_cloud_config_value(
         'deploy',
         vm_, opts, default=False)
@@ -310,6 +312,11 @@ def bootstrap(vm_, opts):
                 'No Deploy': '\'deploy\' is not enabled. Not deploying.'
             }
         }
+
+    if vm_.get('driver') == 'saltify':
+        saltify_driver = True
+    else:
+        saltify_driver = False
 
     key_filename = salt.config.get_cloud_config_value(
         'key_filename', vm_, opts, search_global=False,
@@ -346,7 +353,7 @@ def bootstrap(vm_, opts):
 
     ret = {}
 
-    minion_conf = salt.utils.cloud.minion_config(opts, vm_)
+    minion_conf = minion_config(opts, vm_)
     deploy_script_code = os_script(
         salt.config.get_cloud_config_value(
             'os', vm_, opts, default='bootstrap-salt'
@@ -405,10 +412,7 @@ def bootstrap(vm_, opts):
         'tmp_dir': salt.config.get_cloud_config_value(
             'tmp_dir', vm_, opts, default='/tmp/.saltcloud'
         ),
-        'deploy_command': salt.config.get_cloud_config_value(
-            'deploy_command', vm_, opts,
-            default='/tmp/.saltcloud/deploy.sh',
-        ),
+        'vm_': vm_,
         'start_action': opts['start_action'],
         'parallel': opts['parallel'],
         'sock_dir': opts['sock_dir'],
@@ -438,6 +442,9 @@ def bootstrap(vm_, opts):
             'script_env', vm_, opts
         ),
         'minion_conf': minion_conf,
+        'force_minion_config': salt.config.get_cloud_config_value(
+            'force_minion_config', vm_, opts, default=False
+        ),
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
         'display_ssh_output': salt.config.get_cloud_config_value(
             'display_ssh_output', vm_, opts, default=True
@@ -451,9 +458,16 @@ def bootstrap(vm_, opts):
         'maxtries': salt.config.get_cloud_config_value(
             'wait_for_passwd_maxtries', vm_, opts, default=15
         ),
+        'preflight_cmds': salt.config.get_cloud_config_value(
+            'preflight_cmds', vm_, opts, default=[]
+        ),
+        'cloud_grains': {'driver': vm_['driver'],
+                         'provider': vm_['provider'],
+                         'profile': vm_['profile']
+                         }
     }
 
-    inline_script_kwargs = deploy_kwargs
+    inline_script_kwargs = deploy_kwargs.copy()  # make a copy at this point
 
     # forward any info about possible ssh gateway to deploy script
     # as some providers need also a 'gateway' configuration
@@ -465,7 +479,7 @@ def bootstrap(vm_, opts):
         deploy_kwargs['make_master'] = True
         deploy_kwargs['master_pub'] = vm_['master_pub']
         deploy_kwargs['master_pem'] = vm_['master_pem']
-        master_conf = salt.utils.cloud.master_config(opts, vm_)
+        master_conf = master_config(opts, vm_)
         deploy_kwargs['master_conf'] = master_conf
 
         if master_conf.get('syndic_master', None):
@@ -475,6 +489,9 @@ def bootstrap(vm_, opts):
         'make_minion', vm_, opts, default=True
     )
 
+    if saltify_driver:
+        deploy_kwargs['wait_for_passwd_maxtries'] = 0  # No need to wait/retry with Saltify
+
     win_installer = salt.config.get_cloud_config_value(
         'win_installer', vm_, opts
     )
@@ -483,7 +500,7 @@ def bootstrap(vm_, opts):
             'smb_port', vm_, opts, default=445
         )
         deploy_kwargs['win_installer'] = win_installer
-        minion = salt.utils.cloud.minion_config(opts, vm_)
+        minion = minion_config(opts, vm_)
         deploy_kwargs['master'] = minion['master']
         deploy_kwargs['username'] = salt.config.get_cloud_config_value(
             'win_username', vm_, opts, default='Administrator'
@@ -500,8 +517,13 @@ def bootstrap(vm_, opts):
             'winrm_port', vm_, opts, default=5986
         )
         deploy_kwargs['winrm_use_ssl'] = salt.config.get_cloud_config_value(
-        'winrm_use_ssl', vm_, opts, default=True
+            'winrm_use_ssl', vm_, opts, default=True
         )
+        deploy_kwargs['winrm_verify_ssl'] = salt.config.get_cloud_config_value(
+            'winrm_verify_ssl', vm_, opts, default=True
+        )
+        if saltify_driver:
+            deploy_kwargs['port_timeout'] = 1  # No need to wait/retry with Saltify
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
@@ -809,24 +831,24 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
                 log.debug('winexe connected...')
                 return True
             log.debug('Return code was {0}'.format(ret_code))
-            time.sleep(1)
         except socket.error as exc:
             log.debug('Caught exception in wait_for_winexesvc: {0}'.format(exc))
-            time.sleep(1)
-            if time.time() - start > timeout:
-                log.error('winexe connection timed out: {0}'.format(timeout))
-                return False
-            log.debug(
-                'Retrying winexe connection to host {0} on port {1} '
-                '(try {2})'.format(
-                    host,
-                    port,
-                    try_count
-                )
+
+        if time.time() - start > timeout:
+            log.error('winexe connection timed out: {0}'.format(timeout))
+            return False
+        log.debug(
+            'Retrying winexe connection to host {0} on port {1} '
+            '(try {2})'.format(
+                host,
+                port,
+                try_count
             )
+        )
+        time.sleep(1)
 
 
-def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
+def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True, verify=True):
     '''
     Wait until WinRM connection can be established.
     '''
@@ -836,14 +858,20 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
             host, port
         )
     )
+    transport = 'ssl'
+    if not use_ssl:
+        transport = 'plaintext'
     trycount = 0
     while True:
         trycount += 1
         try:
-            transport = 'ssl'
-            if not use_ssl:
-                transport = 'plaintext'
-            s = winrm.Session(host, auth=(username, password), transport=transport)
+            winrm_kwargs = {'target': host,
+                            'auth': (username, password),
+                            'transport': transport}
+            if not verify:
+                log.debug("SSL validation for WinRM disabled.")
+                winrm_kwargs['server_cert_validation'] = 'ignore'
+            s = winrm.Session(**winrm_kwargs)
             if hasattr(s.protocol, 'set_timeout'):
                 s.protocol.set_timeout(15)
             log.trace('WinRM endpoint url: {0}'.format(s.url))
@@ -852,19 +880,19 @@ def wait_for_winrm(host, port, username, password, timeout=900, use_ssl=True):
                 log.debug('WinRM session connected...')
                 return s
             log.debug('Return code was {0}'.format(r.status_code))
-            time.sleep(1)
         except WinRMTransportError as exc:
             log.debug('Caught exception in wait_for_winrm: {0}'.format(exc))
-            if time.time() - start > timeout:
-                log.error('WinRM connection timed out: {0}'.format(timeout))
-                return None
-            log.debug(
-                'Retrying WinRM connection to host {0} on port {1} '
-                '(try {2})'.format(
-                    host, port, trycount
-                )
+
+        if time.time() - start > timeout:
+            log.error('WinRM connection timed out: {0}'.format(timeout))
+            return None
+        log.debug(
+            'Retrying WinRM connection to host {0} on port {1} '
+            '(try {2})'.format(
+                host, port, trycount
             )
-            time.sleep(1)
+        )
+        time.sleep(1)
 
 
 def validate_windows_cred(host,
@@ -885,7 +913,7 @@ def validate_windows_cred(host,
         host
     )
 
-    for i in xrange(retries):
+    for i in range(retries):
         ret_code = win_cmd(
             cmd,
             logging_command=logging_cmd
@@ -991,6 +1019,7 @@ def deploy_windows(host,
                    use_winrm=False,
                    winrm_port=5986,
                    winrm_use_ssl=True,
+                   winrm_verify_ssl=True,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
@@ -1017,7 +1046,8 @@ def deploy_windows(host,
     if HAS_WINRM and use_winrm:
         winrm_session = wait_for_winrm(host=host, port=winrm_port,
                                        username=username, password=password,
-                                       timeout=port_timeout * 60, use_ssl=winrm_use_ssl)
+                                       timeout=port_timeout * 60, use_ssl=winrm_use_ssl,
+                                       verify=winrm_verify_ssl)
         if winrm_session is not None:
             service_available = True
     else:
@@ -1065,7 +1095,7 @@ def deploy_windows(host,
             # Read master-sign.pub file
             log.debug("Copying master_sign.pub file from {0} to minion".format(master_sign_pub_file))
             try:
-                with salt.utils.fopen(master_sign_pub_file, 'rb') as master_sign_fh:
+                with salt.utils.files.fopen(master_sign_pub_file, 'rb') as master_sign_fh:
                     smb_conn.putFile('C$', 'salt\\conf\\pki\\minion\\master_sign.pub', master_sign_fh.read)
             except Exception as e:
                 log.debug("Exception copying master_sign.pub file {0} to minion".format(master_sign_pub_file))
@@ -1077,7 +1107,7 @@ def deploy_windows(host,
         comps = win_installer.split('/')
         local_path = '/'.join(comps[:-1])
         installer = comps[-1]
-        with salt.utils.fopen(win_installer, 'rb') as inst_fh:
+        with salt.utils.files.fopen(win_installer, 'rb') as inst_fh:
             smb_conn.putFile('C$', 'salttemp/{0}'.format(installer), inst_fh.read)
 
         if use_winrm:
@@ -1211,20 +1241,26 @@ def deploy_script(host,
                   sudo_password=None,
                   sudo=False,
                   tty=None,
-                  deploy_command='/tmp/.saltcloud/deploy.sh',
+                  vm_=None,
                   opts=None,
                   tmp_dir='/tmp/.saltcloud',
                   file_map=None,
                   master_sign_pub_file=None,
+                  cloud_grains=None,
+                  force_minion_config=False,
                   **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
     '''
     if not isinstance(opts, dict):
         opts = {}
+    vm_ = vm_ or {}  # if None, default to empty dict
+    cloud_grains = cloud_grains or {}
 
     tmp_dir = '{0}-{1}'.format(tmp_dir.rstrip('/'), uuid.uuid4())
-    deploy_command = os.path.join(tmp_dir, 'deploy.sh')
+    deploy_command = salt.config.get_cloud_config_value(
+        'deploy_command', vm_, opts,
+        default=os.path.join(tmp_dir, 'deploy.sh'))
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined key_filename \'{0}\' does not exist'.format(
@@ -1236,9 +1272,11 @@ def deploy_script(host,
     if 'gateway' in kwargs:
         gateway = kwargs['gateway']
 
-    starttime = time.mktime(time.localtime())
-    log.debug('Deploying {0} at {1}'.format(host, starttime))
-
+    starttime = time.localtime()
+    log.debug('Deploying {0} at {1}'.format(
+        host,
+        time.strftime('%Y-%m-%d %H:%M:%S', starttime))
+    )
     known_hosts_file = kwargs.get('known_hosts_file', '/dev/null')
     hard_timeout = opts.get('hard_timeout', None)
 
@@ -1370,6 +1408,8 @@ def deploy_script(host,
                         salt_config_to_yaml(minion_grains),
                         ssh_kwargs
                     )
+                if cloud_grains and opts.get('enable_cloud_grains', True):
+                    minion_conf['grains'] = {'salt-cloud': cloud_grains}
                 ssh_file(
                     opts,
                     '{0}/minion'.format(tmp_dir),
@@ -1453,6 +1493,15 @@ def deploy_script(host,
                             'Can\'t set ownership for {0}'.format(
                                 preseed_minion_keys_tempdir))
 
+            # Run any pre-flight commands before running deploy scripts
+            preflight_cmds = kwargs.get('preflight_cmds', [])
+            for command in preflight_cmds:
+                cmd_ret = root_cmd(command, tty, sudo, **ssh_kwargs)
+                if cmd_ret:
+                    raise SaltCloudSystemExit(
+                        'Pre-flight command failed: \'{0}\''.format(command)
+                    )
+
             # The actual deploy script
             if script:
                 # got strange escaping issues with sudoer, going onto a
@@ -1466,7 +1515,8 @@ def deploy_script(host,
                     raise SaltCloudSystemExit(
                         'Can\'t set perms on {0}/deploy.sh'.format(tmp_dir))
 
-            newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+            time_used = time.mktime(time.localtime()) - time.mktime(starttime)
+            newtimeout = timeout - time_used
             queue = None
             process = None
             # Consider this code experimental. It causes Salt Cloud to wait
@@ -1487,6 +1537,8 @@ def deploy_script(host,
             if script:
                 if 'bootstrap-salt' in script:
                     deploy_command += ' -c \'{0}\''.format(tmp_dir)
+                    if force_minion_config:
+                        deploy_command += ' -F'
                     if make_syndic is True:
                         deploy_command += ' -S'
                     if make_master is True:
@@ -1771,18 +1823,10 @@ def filter_event(tag, data, defaults):
     return ret
 
 
-def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
+def fire_event(key, msg, tag, sock_dir, args=None, transport='zeromq'):
     '''
     Fire deploy action
     '''
-    if sock_dir is None:
-        salt.utils.warn_until(
-            'Oxygen',
-            '`salt.utils.cloud.fire_event` requires that the `sock_dir`'
-            'parameter be passed in when calling the function.'
-        )
-        sock_dir = __opts__['sock_dir']
-
     event = salt.utils.event.get_event(
         'master',
         sock_dir,
@@ -1810,7 +1854,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
     password_retries = kwargs.get('password_retries', 3)
     try:
         stdout, stderr = None, None
-        proc = vt.Terminal(
+        proc = salt.utils.vt.Terminal(
             cmd,
             shell=True,
             log_stdout=True,
@@ -1850,7 +1894,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
                 )
             )
         return proc.exitstatus
-    except vt.TerminalException as err:
+    except salt.utils.vt.TerminalException as err:
         trace = traceback.format_exc()
         log.error(error_msg.format(cmd, err, trace))
     finally:
@@ -2001,7 +2045,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         if contents is not None:
             try:
                 tmpfd, file_to_upload = tempfile.mkstemp()
-                if isinstance(contents, str):
+                if isinstance(contents, six.string_types):
                     os.write(tmpfd, contents.encode(__salt_system_encoding__))
                 else:
                     os.write(tmpfd, contents)
@@ -2503,7 +2547,7 @@ def lock_file(filename, interval=.5, timeout=15):
         else:
             break
 
-    with salt.utils.fopen(lock, 'a'):
+    with salt.utils.files.fopen(lock, 'a'):
         pass
 
 
@@ -2543,7 +2587,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
 
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
-        with salt.utils.fopen(index_file, mode) as fh_:
+        with salt.utils.files.fopen(index_file, mode) as fh_:
             index = msgpack.load(fh_)
     else:
         index = {}
@@ -2560,7 +2604,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     })
 
     mode = 'wb' if six.PY3 else 'w'
-    with salt.utils.fopen(index_file, mode) as fh_:
+    with salt.utils.files.fopen(index_file, mode) as fh_:
         msgpack.dump(index, fh_)
 
     unlock_file(index_file)
@@ -2577,7 +2621,7 @@ def cachedir_index_del(minion_id, base=None):
 
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
-        with salt.utils.fopen(index_file, mode) as fh_:
+        with salt.utils.files.fopen(index_file, mode) as fh_:
             index = msgpack.load(fh_)
     else:
         return
@@ -2586,7 +2630,7 @@ def cachedir_index_del(minion_id, base=None):
         del index[minion_id]
 
     mode = 'wb' if six.PY3 else 'w'
-    with salt.utils.fopen(index_file, mode) as fh_:
+    with salt.utils.files.fopen(index_file, mode) as fh_:
         msgpack.dump(index, fh_)
 
     unlock_file(index_file)
@@ -2643,7 +2687,7 @@ def request_minion_cachedir(
 
     fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, 'requested', fname)
-    with salt.utils.fopen(path, 'w') as fh_:
+    with salt.utils.files.fopen(path, 'w') as fh_:
         msgpack.dump(data, fh_)
 
 
@@ -2675,12 +2719,12 @@ def change_minion_cachedir(
     fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, cachedir, fname)
 
-    with salt.utils.fopen(path, 'r') as fh_:
+    with salt.utils.files.fopen(path, 'r') as fh_:
         cache_data = msgpack.load(fh_)
 
     cache_data.update(data)
 
-    with salt.utils.fopen(path, 'w') as fh_:
+    with salt.utils.files.fopen(path, 'w') as fh_:
         msgpack.dump(cache_data, fh_)
 
 
@@ -2753,7 +2797,7 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
                 # Finally, get a list of full minion data
                 fpath = os.path.join(min_dir, fname)
                 minion_id = fname[:-2]  # strip '.p' from end of msgpack filename
-                with salt.utils.fopen(fpath, 'r') as fh_:
+                with salt.utils.files.fopen(fpath, 'r') as fh_:
                     minions[driver][prov][minion_id] = msgpack.load(fh_)
 
     return minions
@@ -2764,6 +2808,11 @@ def cache_nodes_ip(opts, base=None):
     Retrieve a list of all nodes from Salt Cloud cache, and any associated IP
     addresses. Returns a dict.
     '''
+    salt.utils.warn_until(
+        'Flourine',
+        'This function is incomplete and non-functional '
+        'and will be removed in Salt Flourine.'
+    )
     if base is None:
         base = opts['cachedir']
 
@@ -2810,7 +2859,7 @@ def update_bootstrap(config, url=None):
         else:
             script_name = os.path.basename(url)
     elif os.path.exists(url):
-        with salt.utils.fopen(url) as fic:
+        with salt.utils.files.fopen(url) as fic:
             script_content = fic.read()
         script_name = os.path.basename(url)
     # in last case, assuming we got a script content
@@ -2899,7 +2948,7 @@ def update_bootstrap(config, url=None):
         deploy_path = os.path.join(entry, script_name)
         try:
             finished_full.append(deploy_path)
-            with salt.utils.fopen(deploy_path, 'w') as fp_:
+            with salt.utils.files.fopen(deploy_path, 'w') as fp_:
                 fp_.write(script_content)
         except (OSError, IOError) as err:
             log.debug(
@@ -2932,7 +2981,7 @@ def cache_node_list(nodes, provider, opts):
     for node in nodes:
         diff_node_cache(prov_dir, node, nodes[node], opts)
         path = os.path.join(prov_dir, '{0}.p'.format(node))
-        with salt.utils.fopen(path, 'w') as fh_:
+        with salt.utils.files.fopen(path, 'w') as fh_:
             msgpack.dump(nodes[node], fh_)
 
 
@@ -2957,7 +3006,7 @@ def cache_node(node, provider, opts):
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
     path = os.path.join(prov_dir, '{0}.p'.format(node['name']))
-    with salt.utils.fopen(path, 'w') as fh_:
+    with salt.utils.files.fopen(path, 'w') as fh_:
         msgpack.dump(node, fh_)
 
 
@@ -3031,7 +3080,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
         )
         return
 
-    with salt.utils.fopen(path, 'r') as fh_:
+    with salt.utils.files.fopen(path, 'r') as fh_:
         try:
             cache_data = msgpack.load(fh_)
         except ValueError:
@@ -3041,7 +3090,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
     # Perform a simple diff between the old and the new data, and if it differs,
     # return both dicts.
     # TODO: Return an actual diff
-    diff = cmp(new_data, cache_data)
+    diff = salt.utils.compat.cmp(new_data, cache_data)
     if diff != 0:
         fire_event(
             'event',

@@ -7,24 +7,37 @@ import contextlib
 import errno
 import logging
 import os
+import re
 import shutil
+import stat
 import subprocess
 import tempfile
 import time
+import urllib
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils  # Can be removed when backup_minion is moved
+import salt.utils.path
+import salt.utils.platform
 import salt.modules.selinux
 from salt.exceptions import CommandExecutionError, FileLockError, MinionError
+from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves import range
+try:
+    import fcntl
+    HAS_FCNTL = True
+except ImportError:
+    # fcntl is not available on windows
+    HAS_FCNTL = False
 
 log = logging.getLogger(__name__)
 
-TEMPFILE_PREFIX = '__salt.tmp.'
 REMOTE_PROTOS = ('http', 'https', 'ftp', 'swift', 's3')
 VALID_PROTOS = ('salt', 'file') + REMOTE_PROTOS
+TEMPFILE_PREFIX = '__salt.tmp.'
 
 
 def guess_archive_type(name):
@@ -44,20 +57,20 @@ def guess_archive_type(name):
 
 def mkstemp(*args, **kwargs):
     '''
-    Helper function which does exactly what `tempfile.mkstemp()` does but
-    accepts another argument, `close_fd`, which, by default, is true and closes
+    Helper function which does exactly what ``tempfile.mkstemp()`` does but
+    accepts another argument, ``close_fd``, which, by default, is true and closes
     the fd before returning the file path. Something commonly done throughout
     Salt's code.
     '''
     if 'prefix' not in kwargs:
-        kwargs['prefix'] = TEMPFILE_PREFIX
+        kwargs['prefix'] = '__salt.tmp.'
     close_fd = kwargs.pop('close_fd', True)
-    fd_, fpath = tempfile.mkstemp(*args, **kwargs)
+    fd_, f_path = tempfile.mkstemp(*args, **kwargs)
     if close_fd is False:
-        return (fd_, fpath)
+        return fd_, f_path
     os.close(fd_)
     del fd_
-    return fpath
+    return f_path
 
 
 def recursive_copy(source, dest):
@@ -68,7 +81,7 @@ def recursive_copy(source, dest):
     (identical to cp -r on a unix machine)
     '''
     for root, _, files in os.walk(source):
-        path_from_source = root.replace(source, '').lstrip('/')
+        path_from_source = root.replace(source, '').lstrip(os.sep)
         target_directory = os.path.join(dest, path_from_source)
         if not os.path.exists(target_directory):
             os.makedirs(target_directory)
@@ -107,7 +120,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     # Get current file stats to they can be replicated after the new file is
     # moved to the destination path.
     fstat = None
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         try:
             fstat = os.stat(dest)
         except OSError:
@@ -117,7 +130,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         os.chown(dest, fstat.st_uid, fstat.st_gid)
         os.chmod(dest, fstat.st_mode)
     # If SELINUX is available run a restorecon on the file
-    rcon = salt.utils.which('restorecon')
+    rcon = salt.utils.path.which('restorecon')
     if rcon:
         policy = False
         try:
@@ -125,7 +138,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         except (ImportError, CommandExecutionError):
             pass
         if policy == 'Enforcing':
-            with salt.utils.fopen(os.devnull, 'w') as dev_null:
+            with fopen(os.devnull, 'w') as dev_null:
                 cmd = [rcon, dest]
                 subprocess.call(cmd, stdout=dev_null, stderr=dev_null)
     if os.path.isfile(tgt):
@@ -253,3 +266,275 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         if obtained_lock:
             os.remove(lock_fn)
             log.trace('Write lock for %s (%s) released', path, lock_fn)
+
+
+@contextlib.contextmanager
+def set_umask(mask):
+    '''
+    Temporarily set the umask and restore once the contextmanager exits
+    '''
+    if salt.utils.platform.is_windows():
+        # Don't attempt on Windows
+        yield
+    else:
+        try:
+            orig_mask = os.umask(mask)
+            yield
+        finally:
+            os.umask(orig_mask)
+
+
+def fopen(*args, **kwargs):
+    '''
+    Wrapper around open() built-in to set CLOEXEC on the fd.
+
+    This flag specifies that the file descriptor should be closed when an exec
+    function is invoked;
+
+    When a file descriptor is allocated (as with open or dup), this bit is
+    initially cleared on the new file descriptor, meaning that descriptor will
+    survive into the new program after exec.
+
+    NB! We still have small race condition between open and fcntl.
+    '''
+    binary = None
+    # ensure 'binary' mode is always used on Windows in Python 2
+    if ((six.PY2 and salt.utils.platform.is_windows() and 'binary' not in kwargs) or
+            kwargs.pop('binary', False)):
+        if len(args) > 1:
+            args = list(args)
+            if 'b' not in args[1]:
+                args[1] += 'b'
+        elif kwargs.get('mode', None):
+            if 'b' not in kwargs['mode']:
+                kwargs['mode'] += 'b'
+        else:
+            # the default is to read
+            kwargs['mode'] = 'rb'
+    elif six.PY3 and 'encoding' not in kwargs:
+        # In Python 3, if text mode is used and the encoding
+        # is not specified, set the encoding to 'utf-8'.
+        binary = False
+        if len(args) > 1:
+            args = list(args)
+            if 'b' in args[1]:
+                binary = True
+        if kwargs.get('mode', None):
+            if 'b' in kwargs['mode']:
+                binary = True
+        if not binary:
+            kwargs['encoding'] = __salt_system_encoding__
+
+    if six.PY3 and not binary and not kwargs.get('newline', None):
+        kwargs['newline'] = ''
+
+    f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
+
+    if is_fcntl_available():
+        # modify the file descriptor on systems with fcntl
+        # unix and unix-like systems only
+        try:
+            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
+        except AttributeError:
+            FD_CLOEXEC = 1                  # pylint: disable=C0103
+        old_flags = fcntl.fcntl(f_handle.fileno(), fcntl.F_GETFD)
+        fcntl.fcntl(f_handle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
+
+    return f_handle
+
+
+@contextlib.contextmanager
+def flopen(*args, **kwargs):
+    '''
+    Shortcut for fopen with lock and context manager.
+    '''
+    with fopen(*args, **kwargs) as f_handle:
+        try:
+            if is_fcntl_available(check_sunos=True):
+                fcntl.flock(f_handle.fileno(), fcntl.LOCK_SH)
+            yield f_handle
+        finally:
+            if is_fcntl_available(check_sunos=True):
+                fcntl.flock(f_handle.fileno(), fcntl.LOCK_UN)
+
+
+@contextlib.contextmanager
+def fpopen(*args, **kwargs):
+    '''
+    Shortcut for fopen with extra uid, gid, and mode options.
+
+    Supported optional Keyword Arguments:
+
+    mode
+        Explicit mode to set. Mode is anything os.chmod would accept
+        as input for mode. Works only on unix/unix-like systems.
+
+    uid
+        The uid to set, if not set, or it is None or -1 no changes are
+        made. Same applies if the path is already owned by this uid.
+        Must be int. Works only on unix/unix-like systems.
+
+    gid
+        The gid to set, if not set, or it is None or -1 no changes are
+        made. Same applies if the path is already owned by this gid.
+        Must be int. Works only on unix/unix-like systems.
+
+    '''
+    # Remove uid, gid and mode from kwargs if present
+    uid = kwargs.pop('uid', -1)  # -1 means no change to current uid
+    gid = kwargs.pop('gid', -1)  # -1 means no change to current gid
+    mode = kwargs.pop('mode', None)
+    with fopen(*args, **kwargs) as f_handle:
+        path = args[0]
+        d_stat = os.stat(path)
+
+        if hasattr(os, 'chown'):
+            # if uid and gid are both -1 then go ahead with
+            # no changes at all
+            if (d_stat.st_uid != uid or d_stat.st_gid != gid) and \
+                    [i for i in (uid, gid) if i != -1]:
+                os.chown(path, uid, gid)
+
+        if mode is not None:
+            mode_part = stat.S_IMODE(d_stat.st_mode)
+            if mode_part != mode:
+                os.chmod(path, (d_stat.st_mode ^ mode_part) | mode)
+
+        yield f_handle
+
+
+def safe_rm(tgt):
+    '''
+    Safely remove a file
+    '''
+    try:
+        os.remove(tgt)
+    except (IOError, OSError):
+        pass
+
+
+def rm_rf(path):
+    '''
+    Platform-independent recursive delete. Includes code from
+    http://stackoverflow.com/a/2656405
+    '''
+    def _onerror(func, path, exc_info):
+        '''
+        Error handler for `shutil.rmtree`.
+
+        If the error is due to an access error (read only file)
+        it attempts to add write permission and then retries.
+
+        If the error is for another reason it re-raises the error.
+
+        Usage : `shutil.rmtree(path, onerror=onerror)`
+        '''
+        if salt.utils.platform.is_windows() and not os.access(path, os.W_OK):
+            # Is the error an access error ?
+            os.chmod(path, stat.S_IWUSR)
+            func(path)
+        else:
+            raise  # pylint: disable=E0704
+    if os.path.islink(path) or not os.path.isdir(path):
+        os.remove(path)
+    else:
+        shutil.rmtree(path, onerror=_onerror)
+
+
+@jinja_filter('is_empty')
+def is_empty(filename):
+    '''
+    Is a file empty?
+    '''
+    try:
+        return os.stat(filename).st_size == 0
+    except OSError:
+        # Non-existent file or permission denied to the parent dir
+        return False
+
+
+def is_fcntl_available(check_sunos=False):
+    '''
+    Simple function to check if the ``fcntl`` module is available or not.
+
+    If ``check_sunos`` is passed as ``True`` an additional check to see if host is
+    SunOS is also made. For additional information see: http://goo.gl/159FF8
+    '''
+    if check_sunos and salt.utils.platform.is_sunos():
+        return False
+    return HAS_FCNTL
+
+
+def safe_filename_leaf(file_basename):
+    '''
+    Input the basename of a file, without the directory tree, and returns a safe name to use
+    i.e. only the required characters are converted by urllib.quote
+    If the input is a PY2 String, output a PY2 String. If input is Unicode output Unicode.
+    For consistency all platforms are treated the same. Hard coded to utf8 as its ascii compatible
+    windows is \\ / : * ? " < > | posix is /
+
+    .. versionadded:: 2017.7.2
+    '''
+    def _replace(re_obj):
+        return urllib.quote(re_obj.group(0), safe=u'')
+    if not isinstance(file_basename, six.text_type):
+        # the following string is not prefixed with u
+        return re.sub('[\\\\:/*?"<>|]',
+                      _replace,
+                      six.text_type(file_basename, 'utf8').encode('ascii', 'backslashreplace'))
+    # the following string is prefixed with u
+    return re.sub(u'[\\\\:/*?"<>|]', _replace, file_basename, flags=re.UNICODE)
+
+
+def safe_filepath(file_path_name):
+    '''
+    Input the full path and filename, splits on directory separator and calls safe_filename_leaf for
+    each part of the path.
+
+    .. versionadded:: 2017.7.2
+    '''
+    (drive, path) = os.path.splitdrive(file_path_name)
+    path = os.sep.join([safe_filename_leaf(file_section) for file_section in file_path_name.rsplit(os.sep)])
+    if drive:
+        return os.sep.join([drive, path])
+    else:
+        return path
+
+
+@jinja_filter('is_text_file')
+def is_text_file(fp_, blocksize=512):
+    '''
+    Uses heuristics to guess whether the given file is text or binary,
+    by reading a single block of bytes from the file.
+    If more than 30% of the chars in the block are non-text, or there
+    are NUL ('\x00') bytes in the block, assume this is a binary file.
+    '''
+    int2byte = (lambda x: bytes((x,))) if six.PY3 else chr
+    text_characters = (
+        b''.join(int2byte(i) for i in range(32, 127)) +
+        b'\n\r\t\f\b')
+    try:
+        block = fp_.read(blocksize)
+    except AttributeError:
+        # This wasn't an open filehandle, so treat it as a file path and try to
+        # open the file
+        try:
+            with fopen(fp_, 'rb') as fp2_:
+                block = fp2_.read(blocksize)
+        except IOError:
+            # Unable to open file, bail out and return false
+            return False
+    if b'\x00' in block:
+        # Files with null bytes are binary
+        return False
+    elif not block:
+        # An empty file is considered a valid text file
+        return True
+    try:
+        block.decode('utf-8')
+        return True
+    except UnicodeDecodeError:
+        pass
+
+    nontext = block.translate(None, text_characters)
+    return float(len(nontext)) / len(block) <= 0.30

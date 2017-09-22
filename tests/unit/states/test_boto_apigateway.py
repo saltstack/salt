@@ -16,6 +16,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 # Import Salt libs
 import salt.config
 import salt.loader
+import salt.utils.files
 from salt.utils.versions import LooseVersion
 
 # pylint: disable=import-error,no-name-in-module
@@ -369,7 +370,7 @@ class TempSwaggerFile(object):
 
     def __enter__(self):
         self.swaggerfile = 'temp-swagger-sample.yaml'
-        with salt.utils.fopen(self.swaggerfile, 'w') as f:
+        with salt.utils.files.fopen(self.swaggerfile, 'w') as f:
             f.write(yaml.dump(self.swaggerdict))
         return self.swaggerfile
 

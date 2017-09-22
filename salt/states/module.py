@@ -163,10 +163,11 @@ functions at once the following way:
           - user: myuser
           - opts: '--all'
 
-By default this behaviour is not turned on. In ordder to do so, please add the following
+By default this behaviour is not turned on. In order to do so, please add the following
 configuration to the minion:
 
 .. code-block:: yaml
+
     use_superseded:
       - module.run
 
@@ -214,11 +215,12 @@ def wait(name, **kwargs):
 watch = salt.utils.alias_function(wait, 'watch')
 
 
-@with_deprecated(globals(), "Fluorine", policy=with_deprecated.OPT_IN)
+@with_deprecated(globals(), "Sodium", policy=with_deprecated.OPT_IN)
 def run(**kwargs):
     '''
     Run a single module function or a range of module functions in a batch.
-    Supersedes `module.run` function, which requires `m_` prefix to function-specific parameters.
+    Supersedes ``module.run`` function, which requires ``m_`` prefix to
+    function-specific parameters.
 
     :param returner:
         Specify a common returner for the whole batch to send the return data
@@ -227,8 +229,9 @@ def run(**kwargs):
         Pass any arguments needed to execute the function(s)
 
     .. code-block:: yaml
+
       some_id_of_state:
-        module.xrun:
+        module.run:
           - network.ip_addrs:
             - interface: eth0
           - cloud.create:
@@ -259,6 +262,7 @@ def run(**kwargs):
     missing = []
     tests = []
     for func in functions:
+        func = func.split(':')[0]
         if func not in __salt__:
             missing.append(func)
         elif __opts__['test']:
@@ -281,8 +285,9 @@ def run(**kwargs):
         failures = []
         success = []
         for func in functions:
+            _func = func.split(':')[0]
             try:
-                func_ret = _call_function(func, returner=kwargs.get('returner'),
+                func_ret = _call_function(_func, returner=kwargs.get('returner'),
                                           func_args=kwargs.get(func))
                 if not _get_result(func_ret, ret['changes'].get('ret', {})):
                     if isinstance(func_ret, dict):
@@ -310,27 +315,40 @@ def _call_function(name, returner=None, **kwargs):
     '''
     argspec = salt.utils.args.get_function_argspec(__salt__[name])
     func_kw = dict(zip(argspec.args[-len(argspec.defaults or []):],  # pylint: disable=incompatible-py3-code
-                       argspec.defaults or []))
-    func_args = []
-    for funcset in kwargs.get('func_args') or {}:
-        if isinstance(funcset, dict):
-            func_kw.update(funcset)
+                   argspec.defaults or []))
+    arg_type, na_type, kw_type = [], {}, False
+    for funcset in reversed(kwargs.get('func_args') or []):
+        if not isinstance(funcset, dict):
+            kw_type = True
+        if kw_type:
+            if isinstance(funcset, dict):
+                arg_type += funcset.values()
+                na_type.update(funcset)
+            else:
+                arg_type.append(funcset)
         else:
-            func_args.append(funcset)
+            func_kw.update(funcset)
+    arg_type.reverse()
 
+    _exp_prm = len(argspec.args or []) - len(argspec.defaults or [])
+    _passed_prm = len(arg_type)
     missing = []
-    for arg in argspec.args:
-        if arg not in func_kw:
-            missing.append(arg)
+    if na_type and _exp_prm > _passed_prm:
+        for arg in argspec.args:
+            if arg not in func_kw:
+                missing.append(arg)
     if missing:
         raise SaltInvocationError('Missing arguments: {0}'.format(', '.join(missing)))
+    elif _exp_prm > _passed_prm:
+        raise SaltInvocationError('Function expects {0} parameters, got only {1}'.format(
+            _exp_prm, _passed_prm))
 
-    mret = __salt__[name](*func_args, **func_kw)
+    mret = __salt__[name](*arg_type, **func_kw)
     if returner is not None:
         returners = salt.loader.returners(__opts__, __salt__)
         if returner in returners:
             returners[returner]({'id': __opts__['id'], 'ret': mret,
-                                 'fun': name, 'jid': salt.utils.jid.gen_jid()})
+                                 'fun': name, 'jid': salt.utils.jid.gen_jid(__opts__)})
 
     return mret
 
@@ -424,16 +442,30 @@ def _run(name, **kwargs):
         ret['result'] = False
         return ret
 
-    if aspec.varargs and aspec.varargs in kwargs:
-        varargs = kwargs.pop(aspec.varargs)
+    if aspec.varargs:
+        if aspec.varargs == 'name':
+            rarg = 'm_name'
+        elif aspec.varargs == 'fun':
+            rarg = 'm_fun'
+        elif aspec.varargs == 'names':
+            rarg = 'm_names'
+        elif aspec.varargs == 'state':
+            rarg = 'm_state'
+        elif aspec.varargs == 'saltenv':
+            rarg = 'm_saltenv'
+        else:
+            rarg = aspec.varargs
 
-        if not isinstance(varargs, list):
-            msg = "'{0}' must be a list."
-            ret['comment'] = msg.format(aspec.varargs)
-            ret['result'] = False
-            return ret
+        if rarg in kwargs:
+            varargs = kwargs.pop(rarg)
 
-        args.extend(varargs)
+            if not isinstance(varargs, list):
+                msg = "'{0}' must be a list."
+                ret['comment'] = msg.format(aspec.varargs)
+                ret['result'] = False
+                return ret
+
+            args.extend(varargs)
 
     nkwargs = {}
     if aspec.keywords and aspec.keywords in kwargs:
@@ -463,7 +495,7 @@ def _run(name, **kwargs):
                 'id': __opts__['id'],
                 'ret': mret,
                 'fun': name,
-                'jid': salt.utils.jid.gen_jid()}
+                'jid': salt.utils.jid.gen_jid(__opts__)}
         returners = salt.loader.returners(__opts__, __salt__)
         if kwargs['returner'] in returners:
             returners[kwargs['returner']](ret_ret)
