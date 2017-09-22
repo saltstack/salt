@@ -20,7 +20,9 @@ import salt.utils.files
 
 # Import 3rd-party libs
 from salt.ext import six
+# pylint: disable=import-error
 from salt.ext.six.moves import map
+# pylint: enable=import-error
 
 __virtualname__ = 'wtmp'
 WTMP = '/var/log/wtmp'
