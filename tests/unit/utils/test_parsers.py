@@ -1002,4 +1002,3 @@ class DaemonMixInTestCase(TestCase):
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module
 del LogSettingsParserTests
-
