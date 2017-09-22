@@ -1049,8 +1049,7 @@ class Single(object):
                     opts_pkg[u'id'],
                     opts_pkg.get(u'environment', u'base')
                     )
-            pillar_dirs = {}
-            pillar_data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
+            pillar_data = pillar.compile_pillar()
 
             # TODO: cache minion opts in datap in master.py
             data = {u'opts': opts_pkg,

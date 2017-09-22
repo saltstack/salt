@@ -1110,15 +1110,8 @@ Using Git as an External Pillar Source
 The git external pillar (a.k.a. git_pillar) has been rewritten for the 2015.8.0
 release. This rewrite brings with it pygit2_ support (allowing for access to
 authenticated repositories), as well as more granular support for per-remote
-configuration.
-
-To make use of the new features, changes to the git ext_pillar configuration
-must be made. The new configuration schema is detailed :ref:`here
-<git-pillar-2015-8-0-and-later>`.
-
-For Salt releases before 2015.8.0, click :ref:`here <git-pillar-pre-2015-8-0>`
-for documentation.
-
+configuration. This configuration schema is detailed :ref:`here
+<git-pillar-configuration>`.
 
 .. _faq-gitfs-bug:
 

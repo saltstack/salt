@@ -185,12 +185,13 @@ class Client(object):
         '''
         raise NotImplementedError
 
-    def cache_file(self, path, saltenv=u'base', cachedir=None):
+    def cache_file(self, path, saltenv=u'base', cachedir=None, source_hash=None):
         '''
         Pull a file down from the file server and store it in the minion
         file cache
         '''
-        return self.get_url(path, u'', True, saltenv, cachedir=cachedir)
+        return self.get_url(
+            path, u'', True, saltenv, cachedir=cachedir, source_hash=source_hash)
 
     def cache_files(self, paths, saltenv=u'base', cachedir=None):
         '''
@@ -470,7 +471,7 @@ class Client(object):
         return ret
 
     def get_url(self, url, dest, makedirs=False, saltenv=u'base',
-                no_cache=False, cachedir=None):
+                no_cache=False, cachedir=None, source_hash=None):
         '''
         Get a single file from a URL.
         '''
@@ -525,6 +526,18 @@ class Client(object):
                     return u''
         elif not no_cache:
             dest = self._extrn_path(url, saltenv, cachedir=cachedir)
+            if source_hash is not None:
+                try:
+                    source_hash = source_hash.split('=')[-1]
+                    form = salt.utils.files.HASHES_REVMAP[len(source_hash)]
+                    if salt.utils.get_hash(dest, form) == source_hash:
+                        log.debug(
+                            'Cached copy of %s (%s) matches source_hash %s, '
+                            'skipping download', url, dest, source_hash
+                        )
+                        return dest
+                except (AttributeError, KeyError, IOError, OSError):
+                    pass
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
@@ -532,7 +545,9 @@ class Client(object):
         if url_data.scheme == u's3':
             try:
                 def s3_opt(key, default=None):
-                    u'''Get value of s3.<key> from Minion config or from Pillar'''
+                    '''
+                    Get value of s3.<key> from Minion config or from Pillar
+                    '''
                     if u's3.' + key in self.opts:
                         return self.opts[u's3.' + key]
                     try:
@@ -744,12 +759,7 @@ class Client(object):
         Cache a file then process it as a template
         '''
         if u'env' in kwargs:
-            salt.utils.versions.warn_until(
-                u'Oxygen',
-                u'Parameter \'env\' has been detected in the argument list.  This '
-                u'parameter is no longer used and has been replaced by \'saltenv\' '
-                u'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             kwargs.pop(u'env')
 
         kwargs[u'saltenv'] = saltenv
@@ -790,7 +800,7 @@ class Client(object):
 
     def _extrn_path(self, url, saltenv, cachedir=None):
         '''
-        Return the extn_filepath for a given url
+        Return the extrn_filepath for a given url
         '''
         url_data = urlparse(url)
         if salt.utils.platform.is_windows():
@@ -1300,10 +1310,10 @@ class RemoteClient(Client):
                 hash_type = self.opts.get(u'hash_type', u'md5')
                 ret[u'hsum'] = salt.utils.get_hash(path, form=hash_type)
                 ret[u'hash_type'] = hash_type
-                return ret, list(os.stat(path))
+                return ret
         load = {u'path': path,
                 u'saltenv': saltenv,
-                u'cmd': u'_file_hash_and_stat'}
+                u'cmd': u'_file_hash'}
         return self.channel.send(load)
 
     def hash_file(self, path, saltenv=u'base'):
@@ -1312,14 +1322,33 @@ class RemoteClient(Client):
         master file server prepend the path with salt://<file on server>
         otherwise, prepend the file with / for a local file.
         '''
-        return self.__hash_and_stat_file(path, saltenv)[0]
+        return self.__hash_and_stat_file(path, saltenv)
 
     def hash_and_stat_file(self, path, saltenv=u'base'):
         '''
         The same as hash_file, but also return the file's mode, or None if no
         mode data is present.
         '''
-        return self.__hash_and_stat_file(path, saltenv)
+        hash_result = self.hash_file(path, saltenv)
+        try:
+            path = self._check_proto(path)
+        except MinionError as err:
+            if not os.path.isfile(path):
+                return hash_result, None
+            else:
+                try:
+                    return hash_result, list(os.stat(path))
+                except Exception:
+                    return hash_result, None
+        load = {'path': path,
+                'saltenv': saltenv,
+                'cmd': '_file_find'}
+        fnd = self.channel.send(load)
+        try:
+            stat_result = fnd.get('stat')
+        except AttributeError:
+            stat_result = None
+        return hash_result, stat_result
 
     def list_env(self, saltenv=u'base'):
         '''

@@ -451,7 +451,7 @@ For example:
         '''
         Only load if git exists on the system
         '''
-        if salt.utils.which('git') is None:
+        if salt.utils.path.which('git') is None:
             return (False,
                     'The git execution module cannot be loaded: git unavailable.')
         else:

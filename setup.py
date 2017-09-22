@@ -234,6 +234,7 @@ class GenerateSaltSyspaths(Command):
                 spm_formula_path=self.distribution.salt_spm_formula_dir,
                 spm_pillar_path=self.distribution.salt_spm_pillar_dir,
                 spm_reactor_path=self.distribution.salt_spm_reactor_dir,
+                home_dir=self.distribution.salt_home_dir,
             )
         )
 
@@ -724,6 +725,7 @@ PIDFILE_DIR = {pidfile_dir!r}
 SPM_FORMULA_PATH = {spm_formula_path!r}
 SPM_PILLAR_PATH = {spm_pillar_path!r}
 SPM_REACTOR_PATH = {spm_reactor_path!r}
+HOME_DIR = {home_dir!r}
 '''
 
 
@@ -868,6 +870,8 @@ class SaltDistribution(distutils.dist.Distribution):
          'Salt\'s pre-configured SPM pillar directory'),
         ('salt-spm-reactor-dir=', None,
          'Salt\'s pre-configured SPM reactor directory'),
+        ('salt-home-dir=', None,
+         'Salt\'s pre-configured user home directory'),
     ]
 
     def __init__(self, attrs=None):
@@ -892,6 +896,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_spm_formula_dir = None
         self.salt_spm_pillar_dir = None
         self.salt_spm_reactor_dir = None
+        self.salt_home_dir = None
 
         self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
         self.salt_version = __version__  # pylint: disable=undefined-variable

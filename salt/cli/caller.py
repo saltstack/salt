@@ -157,7 +157,7 @@ class BaseCaller(object):
         '''
         ret = {}
         fun = self.opts['fun']
-        ret['jid'] = salt.utils.jid.gen_jid()
+        ret['jid'] = salt.utils.jid.gen_jid(self.opts)
         proc_fn = os.path.join(
             salt.minion.get_proc_dir(self.opts['cachedir']),
             ret['jid']

@@ -20,7 +20,6 @@ from tests.support.mock import (
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.modules.timezone as timezone
 from salt.ext import six
-import salt.utils
 import salt.utils.platform
 import salt.utils.stringutils
 
@@ -193,7 +192,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
             assert args == ('/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="UTC"')
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
     @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())

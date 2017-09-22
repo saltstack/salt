@@ -342,7 +342,6 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             return git_pillar.ext_pillar(
                 'minion',
                 ext_pillar_opts['ext_pillar'][0]['git'],
-                {}
             )
 
     def make_repo(self, root_dir, user='root'):

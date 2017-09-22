@@ -529,7 +529,7 @@ def sync_roster(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_eauth_tokens(saltenv='base', extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: 2017.7.2
+    .. versionadded:: Oxygen
 
     Sync eauth token modules from ``salt://_tokens`` to the master
 
