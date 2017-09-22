@@ -598,9 +598,14 @@ def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None,
     try:
         vpc_ids = _find_vpcs(vpc_id=vpc_id, vpc_name=name, cidr=cidr, tags=tags,
                              region=region, key=key, keyid=keyid, profile=profile)
-        return {'exists': bool(vpc_ids)}
-    except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+    except BotoServerError as err:
+        boto_err = salt.utils.boto.get_error(err)
+        if boto_err.get('aws', {}).get('code') == 'InvalidVpcID.NotFound':
+            # VPC was not found: handle the error and return False.
+            return {'exists': False}
+        return {'error': boto_err}
+
+    return {'exists': bool(vpc_ids)}
 
 
 def create(cidr_block, instance_tenancy=None, vpc_name=None,
@@ -722,27 +727,34 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
-        if not vpc_id:
+    except BotoServerError as err:
+        boto_err = salt.utils.boto.get_error(err)
+        if boto_err.get('aws', {}).get('code') == 'InvalidVpcID.NotFound':
+            # VPC was not found: handle the error and return None.
             return {'vpc': None}
+        return {'error': boto_err}
 
-        filter_parameters = {'vpc_ids': vpc_id}
+    if not vpc_id:
+        return {'vpc': None}
 
+    filter_parameters = {'vpc_ids': vpc_id}
+
+    try:
         vpcs = conn.get_all_vpcs(**filter_parameters)
+    except BotoServerError as err:
+        return {'error': salt.utils.boto.get_error(err)}
 
-        if vpcs:
-            vpc = vpcs[0]  # Found!
-            log.debug('Found VPC: {0}'.format(vpc.id))
+    if vpcs:
+        vpc = vpcs[0]  # Found!
+        log.debug('Found VPC: {0}'.format(vpc.id))
 
-            keys = ('id', 'cidr_block', 'is_default', 'state', 'tags',
-                    'dhcp_options_id', 'instance_tenancy')
-            _r = dict([(k, getattr(vpc, k)) for k in keys])
-            _r.update({'region': getattr(vpc, 'region').name})
-            return {'vpc': _r}
-        else:
-            return {'vpc': None}
-
-    except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        keys = ('id', 'cidr_block', 'is_default', 'state', 'tags',
+                'dhcp_options_id', 'instance_tenancy')
+        _r = dict([(k, getattr(vpc, k)) for k in keys])
+        _r.update({'region': getattr(vpc, 'region').name})
+        return {'vpc': _r}
+    else:
+        return {'vpc': None}
 
 
 def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
@@ -808,7 +820,7 @@ def _find_subnets(subnet_name=None, vpc_id=None, cidr=None, tags=None, conn=None
     Given subnet properties, find and return matching subnet ids
     '''
 
-    if not any(subnet_name, tags, cidr):
+    if not any([subnet_name, tags, cidr]):
         raise SaltInvocationError('At least one of the following must be '
                                   'specified: subnet_name, cidr or tags.')
 
@@ -926,34 +938,38 @@ def subnet_exists(subnet_id=None, name=None, subnet_name=None, cidr=None,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        filter_parameters = {'filters': {}}
+    except BotoServerError as err:
+        return {'error': salt.utils.boto.get_error(err)}
 
-        if subnet_id:
-            filter_parameters['subnet_ids'] = [subnet_id]
+    filter_parameters = {'filters': {}}
+    if subnet_id:
+        filter_parameters['subnet_ids'] = [subnet_id]
+    if subnet_name:
+        filter_parameters['filters']['tag:Name'] = subnet_name
+    if cidr:
+        filter_parameters['filters']['cidr'] = cidr
+    if tags:
+        for tag_name, tag_value in six.iteritems(tags):
+            filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+    if zones:
+        filter_parameters['filters']['availability_zone'] = zones
 
-        if subnet_name:
-            filter_parameters['filters']['tag:Name'] = subnet_name
-
-        if cidr:
-            filter_parameters['filters']['cidr'] = cidr
-
-        if tags:
-            for tag_name, tag_value in six.iteritems(tags):
-                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
-
-        if zones:
-            filter_parameters['filters']['availability_zone'] = zones
-
+    try:
         subnets = conn.get_all_subnets(**filter_parameters)
-        log.debug('The filters criteria {0} matched the following subnets:{1}'.format(filter_parameters, subnets))
-        if subnets:
-            log.info('Subnet {0} exists.'.format(subnet_name or subnet_id))
-            return {'exists': True}
-        else:
-            log.info('Subnet {0} does not exist.'.format(subnet_name or subnet_id))
+    except BotoServerError as err:
+        boto_err = salt.utils.boto.get_error(err)
+        if boto_err.get('aws', {}).get('code') == 'InvalidSubnetID.NotFound':
+            # Subnet was not found: handle the error and return False.
             return {'exists': False}
-    except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': boto_err}
+
+    log.debug('The filters criteria {0} matched the following subnets:{1}'.format(filter_parameters, subnets))
+    if subnets:
+        log.info('Subnet {0} exists.'.format(subnet_name or subnet_id))
+        return {'exists': True}
+    else:
+        log.info('Subnet {0} does not exist.'.format(subnet_name or subnet_id))
+        return {'exists': False}
 
 
 def get_subnet_association(subnets, region=None, key=None, keyid=None,
