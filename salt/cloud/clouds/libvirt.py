@@ -100,7 +100,8 @@ __virtualname__ = 'libvirt'
 # Set up logging
 log = logging.getLogger(__name__)
 
-def libvirtErrorHandler(ctx, error):
+
+def libvirt_error_handler(ctx, error):  # pylint: disable=unused-argument
     '''
     Redirect stderr prints from libvirt to salt logging.
     '''
@@ -108,7 +109,8 @@ def libvirtErrorHandler(ctx, error):
 
 
 if HAS_LIBVIRT:
-    libvirt.registerErrorHandler(f=libvirtErrorHandler, ctx=None)
+    libvirt.registerErrorHandler(f=libvirt_error_handler, ctx=None)
+
 
 def __virtual__():
     '''
