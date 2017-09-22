@@ -49,7 +49,7 @@ class RecursiveDictDifferTestCase(TestCase):
     def test_changed_without_ignore_unset_values(self):
         self.recursive_diff.ignore_unset_values = False
         self.assertEqual(self.recursive_diff.changed(),
-                         ['a.c', 'a.e', 'a.g', 'a.f', 'h', 'i'])
+                         ['a.c', 'a.e', 'a.f', 'a.g', 'h', 'i'])
 
     def test_unchanged(self):
         self.assertEqual(self.recursive_diff.unchanged(),
