@@ -1206,10 +1206,10 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             arguments = ['/i', cached_pkg]
             if pkginfo[version_num].get('allusers', True):
                 arguments.append('ALLUSERS="1"')
-            arguments.extend(salt.utils.shlex_split(install_flags))
+            arguments.extend(salt.utils.shlex_split(install_flags, posix=False))
         else:
             cmd = cached_pkg
-            arguments = salt.utils.shlex_split(install_flags)
+            arguments = salt.utils.shlex_split(install_flags, posix=False)
 
         # Install the software
         # Check Use Scheduler Option
@@ -1513,10 +1513,10 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 if use_msiexec:
                     cmd = msiexec
                     arguments = ['/x']
-                    arguments.extend(salt.utils.shlex_split(uninstall_flags))
+                    arguments.extend(salt.utils.shlex_split(uninstall_flags, posix=False))
                 else:
                     cmd = expanded_cached_pkg
-                    arguments = salt.utils.shlex_split(uninstall_flags)
+                    arguments = salt.utils.shlex_split(uninstall_flags, posix=False)
 
                 # Create Scheduled Task
                 __salt__['task.create_task'](name='update-salt-software',
@@ -1543,7 +1543,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                     cmd.extend([msiexec, '/x', expanded_cached_pkg])
                 else:
                     cmd.append(expanded_cached_pkg)
-                cmd.extend(salt.utils.shlex_split(uninstall_flags))
+                cmd.extend(salt.utils.shlex_split(uninstall_flags, posix=False))
                 # Launch the command
                 result = __salt__['cmd.run_all'](cmd,
                                                  output_loglevel='trace',

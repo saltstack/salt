@@ -129,7 +129,7 @@ fi
 ###############################################################################
 # Remove the salt from the paths.d
 ###############################################################################
-if [ ! -f "/etc/paths.d/salt" ]; then
+if [ -f "/etc/paths.d/salt" ]; then
     echo "Path: Removing salt from the path..." >> "$TEMP_DIR/preinstall.txt"
     rm "/etc/paths.d/salt"
     echo "Path: Removed Successfully" >> "$TEMP_DIR/preinstall.txt"
