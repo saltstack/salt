@@ -163,4 +163,3 @@ def WaitForTasks(tasks, si):
    finally:
       if filter:
          filter.Destroy()
-

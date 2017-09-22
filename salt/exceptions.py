@@ -403,6 +403,12 @@ class ArgumentValueError(CommandExecutionError):
     '''
 
 
+class InvalidEntityError(CommandExecutionError):
+    '''
+    Used when an entity fails validation
+    '''
+
+
 # VMware related exceptions
 class VMwareSaltError(CommandExecutionError):
     '''
