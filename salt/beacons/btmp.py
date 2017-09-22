@@ -19,8 +19,10 @@ import time
 import salt.utils.files
 
 # Import 3rd-party libs
-from salt.ext import six
+import salt.ext.six
+# pylint: disable=import-error
 from salt.ext.six.moves import map
+# pylint: enable=import-error
 
 __virtualname__ = 'btmp'
 BTMP = '/var/log/btmp'
