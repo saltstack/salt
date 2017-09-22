@@ -182,8 +182,8 @@ PyVmomi can be installed via pip:
 .. note::
 
     Version 6.0 of pyVmomi has some problems with SSL error handling on certain
-    versions of Python. If using version 6.0 of pyVmomi, Python 2.6,
-    Python 2.7.9, or newer must be present. This is due to an upstream dependency
+    versions of Python. If using version 6.0 of pyVmomi, Python 2.7.9,
+    or newer must be present. This is due to an upstream dependency
     in pyVmomi 6.0 that is not supported in Python versions 2.7 to 2.7.8. If the
     version of Python is not in the supported range, you will need to install an
     earlier version of pyVmomi. See `Issue #29537`_ for more information.
@@ -205,16 +205,33 @@ Module was developed against.
 from __future__ import absolute_import
 import logging
 import traceback
+import sys
 
 # Import Salt Libs
 import salt.exceptions
 from salt.ext.six.moves import range
+
+# Import Third Party Libs
+try:
+    from pyVmomi import VmomiSupport
+    HAS_PYVMOMI = True
+except ImportError:
+    HAS_PYVMOMI = False
 
 # Get Logging Started
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
+    if not HAS_PYVMOMI:
+        return False, 'State module did not load: pyVmomi not found'
+
+    # We check the supported vim versions to infer the pyVmomi version
+    if 'vim25/6.0' in VmomiSupport.versionMap and \
+        sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
+
+        return False, ('State module did not load: Incompatible versions '
+                       'of Python and pyVmomi present. See Issue #29537.')
     return 'dvs'
 
 
