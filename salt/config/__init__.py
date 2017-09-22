@@ -717,6 +717,10 @@ VALID_OPTS = {
     'fileserver_limit_traversal': bool,
     'fileserver_verify_config': bool,
 
+    # Optionally apply '*' permissioins to any user. By default '*' is a fallback case that is
+    # applied only if the user didn't matched by other matchers.
+    'permissive_acl': bool,
+
     # Optionally enables keeping the calculated user's auth list in the token file.
     'keep_acl_in_token': bool,
 
@@ -1466,6 +1470,7 @@ DEFAULT_MASTER_OPTS = {
     'external_auth': {},
     'token_expire': 43200,
     'token_expire_user_override': False,
+    'permissive_acl': False,
     'keep_acl_in_token': False,
     'eauth_acl_module': '',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
