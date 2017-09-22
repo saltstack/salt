@@ -26,7 +26,7 @@ _XCCDF_MAP = {
         'cmd_pattern': (
             "oscap xccdf eval "
             "--oval-results --results results.xml --report report.html "
-            "--profile {0} {1}"
+            "--profile {0} {1} {2}"
         )
     }
 }
@@ -73,6 +73,7 @@ def xccdf(params):
     '''
     params = shlex.split(params)
     policy = params[-1]
+    del params[-1]
 
     success = True
     error = None
@@ -89,7 +90,7 @@ def xccdf(params):
         error = str(err)
 
     if success:
-        cmd = _XCCDF_MAP[action]['cmd_pattern'].format(args.profile, policy)
+        cmd = _XCCDF_MAP[action]['cmd_pattern'].format(args.profile, " ".join(argv), policy)
         tempdir = tempfile.mkdtemp()
         proc = Popen(
             shlex.split(cmd), stdout=PIPE, stderr=PIPE, cwd=tempdir)

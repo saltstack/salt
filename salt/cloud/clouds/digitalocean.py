@@ -20,7 +20,7 @@ under the "SSH Keys" section.
       personal_access_token: xxx
       ssh_key_file: /path/to/ssh/key/file
       ssh_key_names: my-key-name,my-key-name-2
-      driver: digital_ocean
+      driver: digitalocean
 
 :depends: requests
 '''
@@ -59,10 +59,11 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'digital_ocean'
+__virtualname__ = 'digitalocean'
+__virtual_aliases__ = ('digital_ocean', 'do')
 
 
-# Only load in this module if the DIGITAL_OCEAN configurations are in place
+# Only load in this module if the DIGITALOCEAN configurations are in place
 def __virtual__():
     '''
     Check for DigitalOcean configurations
@@ -274,7 +275,7 @@ def create(vm_):
     try:
         # Check for required profile parameters before sending any API calls.
         if vm_['profile'] and config.is_profile_configured(__opts__,
-                                                           __active_provider_name__ or 'digital_ocean',
+                                                           __active_provider_name__ or 'digitalocean',
                                                            vm_['profile'],
                                                            vm_=vm_) is False:
             return False
@@ -441,7 +442,7 @@ def create(vm_):
         ret = create_node(kwargs)
     except Exception as exc:
         log.error(
-            'Error creating {0} on DIGITAL_OCEAN\n\n'
+            'Error creating {0} on DIGITALOCEAN\n\n'
             'The following exception was thrown when trying to '
             'run the initial deployment: {1}'.format(
                 vm_['name'],
@@ -716,12 +717,12 @@ def import_keypair(kwargs=None, call=None):
     with salt.utils.files.fopen(kwargs['file'], 'r') as public_key_filename:
         public_key_content = public_key_filename.read()
 
-    digital_ocean_kwargs = {
+    digitalocean_kwargs = {
         'name': kwargs['keyname'],
         'public_key': public_key_content
     }
 
-    created_result = create_key(digital_ocean_kwargs, call=call)
+    created_result = create_key(digitalocean_kwargs, call=call)
     return created_result
 
 
@@ -938,11 +939,11 @@ def show_pricing(kwargs=None, call=None):
     if not profile:
         return {'Error': 'The requested profile was not found'}
 
-    # Make sure the profile belongs to Digital Ocean
+    # Make sure the profile belongs to DigitalOcean
     provider = profile.get('provider', '0:0')
     comps = provider.split(':')
-    if len(comps) < 2 or comps[1] != 'digital_ocean':
-        return {'Error': 'The requested profile does not belong to Digital Ocean'}
+    if len(comps) < 2 or comps[1] != 'digitalocean':
+        return {'Error': 'The requested profile does not belong to DigitalOcean'}
 
     raw = {}
     ret = {}
@@ -968,7 +969,7 @@ def list_floating_ips(call=None):
 
     CLI Examples:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f list_floating_ips my-digitalocean-config
     '''
@@ -1008,7 +1009,7 @@ def show_floating_ip(kwargs=None, call=None):
 
     CLI Examples:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f show_floating_ip my-digitalocean-config floating_ip='45.55.96.47'
     '''
@@ -1041,7 +1042,7 @@ def create_floating_ip(kwargs=None, call=None):
 
     CLI Examples:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f create_floating_ip my-digitalocean-config region='NYC2'
 
@@ -1083,7 +1084,7 @@ def delete_floating_ip(kwargs=None, call=None):
 
     CLI Examples:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f delete_floating_ip my-digitalocean-config floating_ip='45.55.96.47'
     '''
@@ -1118,7 +1119,7 @@ def assign_floating_ip(kwargs=None, call=None):
 
     CLI Examples:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f assign_floating_ip my-digitalocean-config droplet_id=1234567 floating_ip='45.55.96.47'
     '''
@@ -1151,7 +1152,7 @@ def unassign_floating_ip(kwargs=None, call=None):
 
     CLI Examples:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f unassign_floating_ip my-digitalocean-config floating_ip='45.55.96.47'
     '''

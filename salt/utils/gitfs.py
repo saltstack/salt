@@ -21,6 +21,7 @@ from datetime import datetime
 
 # Import salt libs
 import salt.utils
+import salt.utils.configparser
 import salt.utils.files
 import salt.utils.itertools
 import salt.utils.path
@@ -29,13 +30,12 @@ import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 import salt.fileserver
-from salt.config import DEFAULT_MASTER_OPTS as __DEFAULT_MASTER_OPTS
+from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running as pid_exists
 from salt.exceptions import (
     FileserverConfigError,
     GitLockError,
-    GitRemoteError,
     get_error_message
 )
 from salt.utils.event import tagify
@@ -44,8 +44,7 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 # Import third party libs
 from salt.ext import six
 
-VALID_PROVIDERS = ('pygit2', 'gitpython')
-VALID_REF_TYPES = __DEFAULT_MASTER_OPTS['gitfs_ref_types']
+VALID_REF_TYPES = _DEFAULT_MASTER_OPTS['gitfs_ref_types']
 
 # Optional per-remote params that can only be used on a per-remote basis, and
 # thus do not have defaults in salt/config.py.
@@ -176,7 +175,7 @@ class GitProvider(object):
     directly.
 
     self.provider should be set in the sub-class' __init__ function before
-    invoking GitProvider.__init__().
+    invoking the parent class' __init__.
     '''
     def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
                  override_params, cache_root, role='gitfs'):
@@ -327,6 +326,28 @@ class GitProvider(object):
             if key != 'ref':
                 setattr(self, '_' + key, self.conf[key])
             self.add_conf_overlay(key)
+
+        if not hasattr(self, 'refspecs'):
+            # This was not specified as a per-remote overrideable parameter
+            # when instantiating an instance of a GitBase subclass. Make sure
+            # that we set this attribute so we at least have a sane default and
+            # are able to fetch.
+            key = '{0}_refspecs'.format(self.role)
+            try:
+                default_refspecs = _DEFAULT_MASTER_OPTS[key]
+            except KeyError:
+                log.critical(
+                    'The \'%s\' option has no default value in '
+                    'salt/config/__init__.py.', key
+                )
+                failhard(self.role)
+
+            setattr(self, 'refspecs', default_refspecs)
+            log.debug(
+                'The \'refspecs\' option was not explicitly defined as a '
+                'configurable parameter. Falling back to %s for %s remote '
+                '\'%s\'.', default_refspecs, self.role, self.id
+            )
 
         for item in ('env_whitelist', 'env_blacklist'):
             val = getattr(self, item, None)
@@ -494,12 +515,6 @@ class GitProvider(object):
                 return strip_sep(getattr(self, '_' + name))
         setattr(cls, name, _getconf)
 
-    def add_refspecs(self, *refspecs):
-        '''
-        This function must be overridden in a sub-class
-        '''
-        raise NotImplementedError()
-
     def check_root(self):
         '''
         Check if the relative root path exists in the checked-out copy of the
@@ -592,55 +607,95 @@ class GitProvider(object):
             success.append(msg)
         return success, failed
 
-    def configure_refspecs(self):
+    def enforce_git_config(self):
         '''
-        Ensure that the configured refspecs are set
+        For the config options which need to be maintained in the git config,
+        ensure that the git config file is configured as desired.
         '''
-        try:
-            refspecs = set(self.get_refspecs())
-        except (git.exc.GitCommandError, GitRemoteError) as exc:
-            log.error(
-                'Failed to get refspecs for %s remote \'%s\': %s',
-                self.role,
-                self.id,
-                exc
-            )
-            return
-
-        desired_refspecs = set(self.refspecs)
-        to_delete = refspecs - desired_refspecs if refspecs else set()
-        if to_delete:
-            # There is no native unset support in Pygit2, and GitPython just
-            # wraps the CLI anyway. So we'll just use the git CLI to
-            # --unset-all the config value. Then, we will add back all
-            # configured refspecs. This is more foolproof than trying to remove
-            # specific refspecs, as removing specific ones necessitates
-            # formulating a regex to match, and the fact that slashes and
-            # asterisks are in refspecs complicates this.
-            cmd_str = 'git config --unset-all remote.origin.fetch'
-            cmd = subprocess.Popen(
-                shlex.split(cmd_str),
-                close_fds=not salt.utils.platform.is_windows(),
-                cwd=os.path.dirname(self.gitdir),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT)
-            output = cmd.communicate()[0]
-            if cmd.returncode != 0:
-                log.error(
-                    'Failed to unset git config value for %s remote \'%s\'. '
-                    'Output from \'%s\' follows:\n%s',
-                    self.role, self.id, cmd_str, output
-                )
-                return
-            # Since we had to remove all refspecs, we now need to add all
-            # desired refspecs to achieve the desired configuration.
-            to_add = desired_refspecs
+        git_config = os.path.join(self.gitdir, 'config')
+        conf = salt.utils.configparser.GitConfigParser()
+        if not conf.read(git_config):
+            log.error('Failed to read from git config file %s', git_config)
         else:
-            # We didn't need to delete any refspecs, so we'll only need to add
-            # the desired refspecs that aren't currently configured.
-            to_add = desired_refspecs - refspecs
+            # We are currently enforcing the following git config items:
+            # 1. Fetch URL
+            # 2. refspecs used in fetch
+            # 3. http.sslVerify
+            conf_changed = False
+            remote_section = 'remote "origin"'
 
-        self.add_refspecs(*to_add)
+            # 1. URL
+            try:
+                url = conf.get(remote_section, 'url')
+            except salt.utils.configparser.NoSectionError:
+                # First time we've init'ed this repo, we need to add the
+                # section for the remote to the git config
+                conf.add_section(remote_section)
+                conf_changed = True
+                url = None
+            log.debug(
+                'Current fetch URL for %s remote \'%s\': %s (desired: %s)',
+                self.role, self.id, url, self.url
+            )
+            if url != self.url:
+                conf.set(remote_section, 'url', self.url)
+                log.debug(
+                    'Fetch URL for %s remote \'%s\' set to %s',
+                    self.role, self.id, self.url
+                )
+                conf_changed = True
+
+            # 2. refspecs
+            try:
+                refspecs = sorted(
+                    conf.get(remote_section, 'fetch', as_list=True))
+            except salt.utils.configparser.NoOptionError:
+                # No 'fetch' option present in the remote section. Should never
+                # happen, but if it does for some reason, don't let it cause a
+                # traceback.
+                refspecs = []
+            desired_refspecs = sorted(self.refspecs)
+            log.debug(
+                'Current refspecs for %s remote \'%s\': %s (desired: %s)',
+                self.role, self.id, refspecs, desired_refspecs
+            )
+            if refspecs != desired_refspecs:
+                conf.set_multivar(remote_section, 'fetch', self.refspecs)
+                log.debug(
+                    'Refspecs for %s remote \'%s\' set to %s',
+                    self.role, self.id, desired_refspecs
+                )
+                conf_changed = True
+
+            # 3. http.sslVerify
+            try:
+                ssl_verify = conf.get('http', 'sslVerify')
+            except salt.utils.configparser.NoSectionError:
+                conf.add_section('http')
+                ssl_verify = None
+            except salt.utils.configparser.NoOptionError:
+                ssl_verify = None
+            desired_ssl_verify = six.text_type(self.ssl_verify).lower()
+            log.debug(
+                'Current http.sslVerify for %s remote \'%s\': %s (desired: %s)',
+                self.role, self.id, ssl_verify, desired_ssl_verify
+            )
+            if ssl_verify != desired_ssl_verify:
+                conf.set('http', 'sslVerify', desired_ssl_verify)
+                log.debug(
+                    'http.sslVerify for %s remote \'%s\' set to %s',
+                    self.role, self.id, desired_ssl_verify
+                )
+                conf_changed = True
+
+            # Write changes, if necessary
+            if conf_changed:
+                with salt.utils.files.fopen(git_config, 'w') as fp_:
+                    conf.write(fp_)
+                    log.debug(
+                        'Config updates for %s remote \'%s\' written to %s',
+                        self.role, self.id, git_config
+                    )
 
     def fetch(self):
         '''
@@ -854,12 +909,6 @@ class GitProvider(object):
                 else target
         return self.branch
 
-    def get_refspecs(self):
-        '''
-        This function must be overridden in a sub-class
-        '''
-        raise NotImplementedError()
-
     def get_tree(self, tgt_env):
         '''
         Return a tree object for the specified environment
@@ -931,25 +980,10 @@ class GitPython(GitProvider):
     def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
                  override_params, cache_root, role='gitfs'):
         self.provider = 'gitpython'
-        GitProvider.__init__(self, opts, remote, per_remote_defaults,
-                             per_remote_only, override_params, cache_root, role)
-
-    def add_refspecs(self, *refspecs):
-        '''
-        Add the specified refspecs to the "origin" remote
-        '''
-        for refspec in refspecs:
-            try:
-                self.repo.git.config('--add', 'remote.origin.fetch', refspec)
-                log.debug(
-                    'Added refspec \'%s\' to %s remote \'%s\'',
-                    refspec, self.role, self.id
-                )
-            except git.exc.GitCommandError as exc:
-                log.error(
-                    'Failed to add refspec \'%s\' to %s remote \'%s\': %s',
-                    refspec, self.role, self.id, exc
-                )
+        super(GitPython, self).__init__(
+            opts, remote, per_remote_defaults, per_remote_only,
+            override_params, cache_root, role
+        )
 
     def checkout(self):
         '''
@@ -1038,29 +1072,7 @@ class GitPython(GitProvider):
                 return new
 
         self.gitdir = salt.utils.path.join(self.repo.working_dir, '.git')
-
-        if not self.repo.remotes:
-            try:
-                self.repo.create_remote('origin', self.url)
-            except os.error:
-                # This exception occurs when two processes are trying to write
-                # to the git config at once, go ahead and pass over it since
-                # this is the only write. This should place a lock down.
-                pass
-            else:
-                new = True
-
-            try:
-                ssl_verify = self.repo.git.config('--get', 'http.sslVerify')
-            except git.exc.GitCommandError:
-                ssl_verify = ''
-            desired_ssl_verify = str(self.ssl_verify).lower()
-            if ssl_verify != desired_ssl_verify:
-                self.repo.git.config('http.sslVerify', desired_ssl_verify)
-
-            # Ensure that refspecs for the "origin" remote are set up as configured
-            if hasattr(self, 'refspecs'):
-                self.configure_refspecs()
+        self.enforce_git_config()
 
         return new
 
@@ -1133,7 +1145,7 @@ class GitPython(GitProvider):
                 new_objs = True
 
         cleaned = self.clean_stale_refs()
-        return bool(new_objs or cleaned)
+        return True if (new_objs or cleaned) else None
 
     def file_list(self, tgt_env):
         '''
@@ -1212,13 +1224,6 @@ class GitPython(GitProvider):
             return blob, blob.hexsha, blob.mode
         return None, None, None
 
-    def get_refspecs(self):
-        '''
-        Return the configured refspecs
-        '''
-        refspecs = self.repo.git.config('--get-all', 'remote.origin.fetch')
-        return [x.strip() for x in refspecs.splitlines()]
-
     def get_tree_from_branch(self, ref):
         '''
         Return a git.Tree object matching a head ref fetched into
@@ -1266,29 +1271,10 @@ class Pygit2(GitProvider):
     def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
                  override_params, cache_root, role='gitfs'):
         self.provider = 'pygit2'
-        GitProvider.__init__(self, opts, remote, per_remote_defaults,
-                             per_remote_only, override_params, cache_root, role)
-
-    def add_refspecs(self, *refspecs):
-        '''
-        Add the specified refspecs to the "origin" remote
-        '''
-        for refspec in refspecs:
-            try:
-                self.repo.config.set_multivar(
-                    'remote.origin.fetch',
-                    'FOO',
-                    refspec
-                )
-                log.debug(
-                    'Added refspec \'%s\' to %s remote \'%s\'',
-                    refspec, self.role, self.id
-                )
-            except Exception as exc:
-                log.error(
-                    'Failed to add refspec \'%s\' to %s remote \'%s\': %s',
-                    refspec, self.role, self.id, exc
-                )
+        super(Pygit2, self).__init__(
+            opts, remote, per_remote_defaults, per_remote_only,
+            override_params, cache_root, role
+        )
 
     def checkout(self):
         '''
@@ -1516,30 +1502,7 @@ class Pygit2(GitProvider):
                 return new
 
         self.gitdir = salt.utils.path.join(self.repo.workdir, '.git')
-
-        if not self.repo.remotes:
-            try:
-                self.repo.create_remote('origin', self.url)
-            except os.error:
-                # This exception occurs when two processes are trying to write
-                # to the git config at once, go ahead and pass over it since
-                # this is the only write. This should place a lock down.
-                pass
-            else:
-                new = True
-
-            try:
-                ssl_verify = self.repo.config.get_bool('http.sslVerify')
-            except KeyError:
-                ssl_verify = None
-            if ssl_verify != self.ssl_verify:
-                self.repo.config.set_multivar('http.sslVerify',
-                                            '',
-                                            str(self.ssl_verify).lower())
-
-            # Ensure that refspecs for the "origin" remote are set up as configured
-            if hasattr(self, 'refspecs'):
-                self.configure_refspecs()
+        self.enforce_git_config()
 
         return new
 
@@ -1658,7 +1621,9 @@ class Pygit2(GitProvider):
             log.debug('%s remote \'%s\' is up-to-date', self.role, self.id)
         refs_post = self.repo.listall_references()
         cleaned = self.clean_stale_refs(local_refs=refs_post)
-        return bool(received_objects or refs_pre != refs_post or cleaned)
+        return True \
+            if (received_objects or refs_pre != refs_post or cleaned) \
+            else None
 
     def file_list(self, tgt_env):
         '''
@@ -1756,14 +1721,6 @@ class Pygit2(GitProvider):
         if isinstance(blob, pygit2.Blob):
             return blob, blob.hex, mode
         return None, None, None
-
-    def get_refspecs(self):
-        '''
-        Return the configured refspecs
-        '''
-        if not [x for x in self.repo.config if x.startswith('remote.origin.')]:
-            raise GitRemoteError('\'origin\' remote not not present')
-        return list(self.repo.config.get_multivar('remote.origin.fetch'))
 
     def get_tree_from_branch(self, ref):
         '''
@@ -1952,11 +1909,17 @@ class Pygit2(GitProvider):
             fp_.write(blob.data)
 
 
+GIT_PROVIDERS = {
+    'pygit2': Pygit2,
+    'gitpython': GitPython,
+}
+
+
 class GitBase(object):
     '''
     Base class for gitfs/git_pillar
     '''
-    def __init__(self, opts, valid_providers=VALID_PROVIDERS, cache_root=None):
+    def __init__(self, opts, git_providers=None, cache_root=None):
         '''
         IMPORTANT: If specifying a cache_root, understand that this is also
         where the remotes will be cloned. A non-default cache_root is only
@@ -1964,8 +1927,9 @@ class GitBase(object):
         out into the winrepo locations and not within the cachedir.
         '''
         self.opts = opts
-        self.valid_providers = valid_providers
-        self.get_provider()
+        self.git_providers = git_providers if git_providers is not None \
+            else GIT_PROVIDERS
+        self.verify_provider()
         if cache_root is not None:
             self.cache_root = self.remote_root = cache_root
         else:
@@ -2023,7 +1987,7 @@ class GitBase(object):
 
         self.remotes = []
         for remote in remotes:
-            repo_obj = self.provider_class(
+            repo_obj = self.git_providers[self.provider](
                 self.opts,
                 remote,
                 per_remote_defaults,
@@ -2277,7 +2241,7 @@ class GitBase(object):
             # Hash file won't exist if no files have yet been served up
             pass
 
-    def get_provider(self):
+    def verify_provider(self):
         '''
         Determine which provider to use
         '''
@@ -2298,12 +2262,12 @@ class GitBase(object):
                     # Should only happen if someone does something silly like
                     # set the provider to a numeric value.
                     desired_provider = str(desired_provider).lower()
-                if desired_provider not in self.valid_providers:
+                if desired_provider not in self.git_providers:
                     log.critical(
                         'Invalid {0}_provider \'{1}\'. Valid choices are: {2}'
                         .format(self.role,
                                 desired_provider,
-                                ', '.join(self.valid_providers))
+                                ', '.join(self.git_providers))
                     )
                     failhard(self.role)
                 elif desired_provider == 'pygit2' and self.verify_pygit2():
@@ -2316,17 +2280,13 @@ class GitBase(object):
                 .format(self.role)
             )
             failhard(self.role)
-        if self.provider == 'pygit2':
-            self.provider_class = Pygit2
-        elif self.provider == 'gitpython':
-            self.provider_class = GitPython
 
     def verify_gitpython(self, quiet=False):
         '''
         Check if GitPython is available and at a compatible version (>= 0.3.0)
         '''
         def _recommend():
-            if HAS_PYGIT2 and 'pygit2' in self.valid_providers:
+            if HAS_PYGIT2 and 'pygit2' in self.git_providers:
                 log.error(_RECOMMEND_PYGIT2.format(self.role))
 
         if not HAS_GITPYTHON:
@@ -2337,7 +2297,7 @@ class GitBase(object):
                 )
                 _recommend()
             return False
-        elif 'gitpython' not in self.valid_providers:
+        elif 'gitpython' not in self.git_providers:
             return False
 
         # pylint: disable=no-member
@@ -2377,7 +2337,7 @@ class GitBase(object):
         Pygit2 must be at least 0.20.3 and libgit2 must be at least 0.20.0.
         '''
         def _recommend():
-            if HAS_GITPYTHON and 'gitpython' in self.valid_providers:
+            if HAS_GITPYTHON and 'gitpython' in self.git_providers:
                 log.error(_RECOMMEND_GITPYTHON.format(self.role))
 
         if not HAS_PYGIT2:
@@ -2388,7 +2348,7 @@ class GitBase(object):
                 )
                 _recommend()
             return False
-        elif 'pygit2' not in self.valid_providers:
+        elif 'pygit2' not in self.git_providers:
             return False
 
         # pylint: disable=no-member
@@ -2507,7 +2467,7 @@ class GitFS(GitBase):
     '''
     def __init__(self, opts):
         self.role = 'gitfs'
-        GitBase.__init__(self, opts)
+        super(GitFS, self).__init__(opts)
 
     def dir_list(self, load):
         '''
@@ -2636,12 +2596,7 @@ class GitFS(GitBase):
         Return a chunk from a file based on the data received
         '''
         if 'env' in load:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         ret = {'data': '',
@@ -2676,12 +2631,7 @@ class GitFS(GitBase):
         Return a file hash, the hash type is set in the master config file
         '''
         if 'env' in load:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         if not all(x in load for x in ('path', 'saltenv')):
@@ -2710,12 +2660,7 @@ class GitFS(GitBase):
         Return a dict containing the file lists for files and dirs
         '''
         if 'env' in load:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         if not os.path.isdir(self.file_list_cachedir):
@@ -2784,12 +2729,7 @@ class GitFS(GitBase):
         Return a dict of all symlinks based on a given path in the repo
         '''
         if 'env' in load:
-            salt.utils.versions.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             load.pop('env')
 
         if not salt.utils.stringutils.is_hex(load['saltenv']) \
@@ -2811,7 +2751,7 @@ class GitPillar(GitBase):
     '''
     def __init__(self, opts):
         self.role = 'git_pillar'
-        GitBase.__init__(self, opts)
+        super(GitPillar, self).__init__(opts)
 
     def checkout(self):
         '''
@@ -2901,7 +2841,7 @@ class WinRepo(GitBase):
     '''
     def __init__(self, opts, winrepo_dir):
         self.role = 'winrepo'
-        GitBase.__init__(self, opts, cache_root=winrepo_dir)
+        super(WinRepo, self).__init__(opts, cache_root=winrepo_dir)
 
     def checkout(self):
         '''

@@ -14,6 +14,7 @@ import salt.utils  # Can be removed once test_mode is moved
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.mount
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
 # Import 3rd-party libs
@@ -1262,3 +1263,91 @@ def is_mounted(name):
         return True
     else:
         return False
+
+
+def read_mount_cache(name):
+    '''
+    .. versionadded:: Oxygen
+
+    Provide information if the path is mounted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.read_mount_cache /mnt/share
+    '''
+    cache = salt.utils.mount.read_cache(__opts__)
+    if cache:
+        if 'mounts' in cache and cache['mounts']:
+            if name in cache['mounts']:
+                return cache['mounts'][name]
+    return {}
+
+
+def write_mount_cache(real_name,
+                      device,
+                      mkmnt,
+                      fstype,
+                      mount_opts):
+    '''
+    .. versionadded:: Oxygen
+
+    Provide information if the path is mounted
+
+    :param real_name:     The real name of the mount point where the device is mounted.
+    :param device:        The device that is being mounted.
+    :param mkmnt:         Whether or not the mount point should be created.
+    :param fstype:        The file system that is used.
+    :param mount_opts:    Additional options used when mounting the device.
+    :return:              Boolean if message was sent successfully.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.write_mount_cache /mnt/share /dev/sda1 False ext4 defaults,nosuid
+    '''
+    cache = salt.utils.mount.read_cache(__opts__)
+
+    if not cache:
+        cache = {}
+        cache['mounts'] = {}
+    else:
+        if 'mounts' not in cache:
+            cache['mounts'] = {}
+
+    cache['mounts'][real_name] = {'device': device,
+                                  'fstype': fstype,
+                                  'mkmnt': mkmnt,
+                                  'opts': mount_opts}
+
+    cache_write = salt.utils.mount.write_cache(cache, __opts__)
+    if cache_write:
+        return True
+    else:
+        raise CommandExecutionError('Unable to write mount cache.')
+
+
+def delete_mount_cache(real_name):
+    '''
+    .. versionadded:: Oxygen
+
+    Provide information if the path is mounted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.delete_mount_cache /mnt/share
+    '''
+    cache = salt.utils.mount.read_cache(__opts__)
+
+    if cache:
+        if 'mounts' in cache:
+            if real_name in cache['mounts']:
+                del cache['mounts'][real_name]
+                cache_write = salt.utils.mount.write_cache(cache, __opts__)
+                if not cache_write:
+                    raise CommandExecutionError('Unable to write mount cache.')
+    return True

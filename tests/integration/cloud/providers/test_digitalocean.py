@@ -17,7 +17,7 @@ from salt.config import cloud_providers_config
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
-PROVIDER_NAME = 'digital_ocean'
+PROVIDER_NAME = 'digitalocean'
 
 
 class DigitalOceanTest(ShellCase):
@@ -66,7 +66,7 @@ class DigitalOceanTest(ShellCase):
 
     def test_list_images(self):
         '''
-        Tests the return of running the --list-images command for digital ocean
+        Tests the return of running the --list-images command for digitalocean
         '''
         image_list = self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
         self.assertIn(
@@ -76,7 +76,7 @@ class DigitalOceanTest(ShellCase):
 
     def test_list_locations(self):
         '''
-        Tests the return of running the --list-locations command for digital ocean
+        Tests the return of running the --list-locations command for digitalocean
         '''
         _list_locations = self.run_cloud('--list-locations {0}'.format(PROVIDER_NAME))
         self.assertIn(
@@ -86,7 +86,7 @@ class DigitalOceanTest(ShellCase):
 
     def test_list_sizes(self):
         '''
-        Tests the return of running the --list-sizes command for digital ocean
+        Tests the return of running the --list-sizes command for digitalocean
         '''
         _list_sizes = self.run_cloud('--list-sizes {0}'.format(PROVIDER_NAME))
         self.assertIn(

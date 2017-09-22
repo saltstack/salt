@@ -393,7 +393,19 @@ class TemplateError(SaltException):
 # Validation related exceptions
 class InvalidConfigError(CommandExecutionError):
     '''
-    Used when the input is invalid
+    Used when the config is invalid
+    '''
+
+
+class ArgumentValueError(CommandExecutionError):
+    '''
+    Used when an invalid argument was passed to a command execution
+    '''
+
+
+class InvalidEntityError(CommandExecutionError):
+    '''
+    Used when an entity fails validation
     '''
 
 

@@ -24,8 +24,8 @@ PyVmomi can be installed via pip:
 .. note::
 
     Version 6.0 of pyVmomi has some problems with SSL error handling on certain
-    versions of Python. If using version 6.0 of pyVmomi, Python 2.6,
-    Python 2.7.9, or newer must be present. This is due to an upstream dependency
+    versions of Python. If using version 6.0 of pyVmomi, Python 2.7.9,
+    or newer must be present. This is due to an upstream dependency
     in pyVmomi 6.0 that is not supported in Python versions 2.7 to 2.7.8. If the
     version of Python is not in the supported range, you will need to install an
     earlier version of pyVmomi. See `Issue #29537`_ for more information.
@@ -176,12 +176,24 @@ import salt.utils.dictupdate as dictupdate
 import salt.utils.http
 import salt.utils.path
 import salt.utils.vmware
-from salt.exceptions import CommandExecutionError, VMwareSaltError
+import salt.utils.vsan
+from salt.exceptions import CommandExecutionError, VMwareSaltError, \
+        ArgumentValueError, InvalidConfigError, VMwareObjectRetrievalError, \
+        VMwareApiError, InvalidEntityError
 from salt.utils.decorators import depends, ignores_kwargs
+from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
+        ESXClusterEntitySchema
+from salt.config.schemas.vcenter import VCenterEntitySchema
 
 # Import Third Party Libs
 try:
-    from pyVmomi import vim, vmodl
+    import jsonschema
+    HAS_JSONSCHEMA = True
+except ImportError:
+    HAS_JSONSCHEMA = False
+
+try:
+    from pyVmomi import vim, vmodl, VmomiSupport
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -195,10 +207,21 @@ else:
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'vsphere'
-__proxyenabled__ = ['esxi', 'esxdatacenter']
+__proxyenabled__ = ['esxi', 'esxcluster', 'esxdatacenter']
 
 
 def __virtual__():
+    if not HAS_JSONSCHEMA:
+        return False, 'Execution module did not load: jsonschema not found'
+    if not HAS_PYVMOMI:
+        return False, 'Execution module did not load: pyVmomi not found'
+
+    # We check the supported vim versions to infer the pyVmomi version
+    if 'vim25/6.0' in VmomiSupport.versionMap and \
+        sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
+
+        return False, ('Execution module did not load: Incompatible versions '
+                       'of Python and pyVmomi present. See Issue #29537.')
     return __virtualname__
 
 
@@ -227,6 +250,8 @@ def _get_proxy_connection_details():
     proxytype = get_proxy_type()
     if proxytype == 'esxi':
         details = __salt__['esxi.get_details']()
+    elif proxytype == 'esxcluster':
+        details = __salt__['esxcluster.get_details']()
     elif proxytype == 'esxdatacenter':
         details = __salt__['esxdatacenter.get_details']()
     else:
@@ -267,7 +292,7 @@ def gets_service_instance_via_proxy(fn):
     proxy details and passes the connection (vim.ServiceInstance) to
     the decorated function.
 
-    Supported proxies: esxi, esxdatacenter.
+    Supported proxies: esxi, esxcluster, esxdatacenter.
 
     Notes:
         1. The decorated function must have a ``service_instance`` parameter
@@ -354,7 +379,7 @@ def gets_service_instance_via_proxy(fn):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
 def get_service_instance_via_proxy(service_instance=None):
     '''
     Returns a service instance to the proxied endpoint (vCenter/ESXi host).
@@ -374,7 +399,7 @@ def get_service_instance_via_proxy(service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
 def disconnect(service_instance):
     '''
     Disconnects from a vCenter or ESXi host
@@ -1909,7 +1934,7 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
 @gets_service_instance_via_proxy
 def test_vcenter_connection(service_instance=None):
     '''
@@ -3598,7 +3623,7 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxdatacenter')
+@supports_proxies('esxdatacenter', 'esxcluster')
 @gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
     '''
@@ -3657,6 +3682,810 @@ def create_datacenter(datacenter_name, service_instance=None):
     '''
     salt.utils.vmware.create_datacenter(service_instance, datacenter_name)
     return {'create_datacenter': True}
+
+
+def _get_cluster_dict(cluster_name, cluster_ref):
+    '''
+    Returns a cluster dict representation from
+    a vim.ClusterComputeResource object.
+
+    cluster_name
+        Name of the cluster
+
+    cluster_ref
+        Reference to the cluster
+    '''
+
+    log.trace('Building a dictionary representation of cluster '
+              '\'{0}\''.format(cluster_name))
+    props = salt.utils.vmware.get_properties_of_managed_object(
+        cluster_ref,
+        properties=['configurationEx'])
+    res = {'ha': {'enabled': props['configurationEx'].dasConfig.enabled},
+           'drs': {'enabled': props['configurationEx'].drsConfig.enabled}}
+    # Convert HA properties of interest
+    ha_conf = props['configurationEx'].dasConfig
+    log.trace('ha_conf = {0}'.format(ha_conf))
+    res['ha']['admission_control_enabled'] = ha_conf.admissionControlEnabled
+    if ha_conf.admissionControlPolicy and \
+       isinstance(ha_conf.admissionControlPolicy,
+                  vim.ClusterFailoverResourcesAdmissionControlPolicy):
+        pol = ha_conf.admissionControlPolicy
+        res['ha']['admission_control_policy'] = \
+                {'cpu_failover_percent': pol.cpuFailoverResourcesPercent,
+                 'memory_failover_percent': pol.memoryFailoverResourcesPercent}
+    if ha_conf.defaultVmSettings:
+        def_vm_set = ha_conf.defaultVmSettings
+        res['ha']['default_vm_settings'] = \
+                {'isolation_response': def_vm_set.isolationResponse,
+                 'restart_priority': def_vm_set.restartPriority}
+    res['ha']['hb_ds_candidate_policy'] = \
+            ha_conf.hBDatastoreCandidatePolicy
+    if ha_conf.hostMonitoring:
+        res['ha']['host_monitoring'] = ha_conf.hostMonitoring
+    if ha_conf.option:
+        res['ha']['options'] = [{'key': o.key, 'value': o.value}
+                                for o in ha_conf.option]
+    res['ha']['vm_monitoring'] = ha_conf.vmMonitoring
+    # Convert DRS properties
+    drs_conf = props['configurationEx'].drsConfig
+    log.trace('drs_conf = {0}'.format(drs_conf))
+    res['drs']['vmotion_rate'] = 6 - drs_conf.vmotionRate
+    res['drs']['default_vm_behavior'] = drs_conf.defaultVmBehavior
+    # vm_swap_placement
+    res['vm_swap_placement'] = props['configurationEx'].vmSwapPlacement
+    # Convert VSAN properties
+    si = salt.utils.vmware.get_service_instance_from_managed_object(
+        cluster_ref)
+
+    if salt.utils.vsan.vsan_supported(si):
+        # XXX The correct way of retrieving the VSAN data (on the if branch)
+        #  is not supported before 60u2 vcenter
+        vcenter_info = salt.utils.vmware.get_service_info(si)
+        if int(vcenter_info.build) >= 3634794:  # 60u2
+            # VSAN API is fully supported by the VC starting with 60u2
+            vsan_conf = salt.utils.vsan.get_cluster_vsan_info(cluster_ref)
+            log.trace('vsan_conf = {0}'.format(vsan_conf))
+            res['vsan'] = {'enabled': vsan_conf.enabled,
+                           'auto_claim_storage':
+                           vsan_conf.defaultConfig.autoClaimStorage}
+            if vsan_conf.dataEfficiencyConfig:
+                data_eff = vsan_conf.dataEfficiencyConfig
+                res['vsan'].update({
+                    # We force compression_enabled to be True/False
+                    'compression_enabled':
+                    data_eff.compressionEnabled or False,
+                    'dedup_enabled': data_eff.dedupEnabled})
+        else:  # before 60u2 (no advanced vsan info)
+            if props['configurationEx'].vsanConfigInfo:
+                default_config = \
+                        props['configurationEx'].vsanConfigInfo.defaultConfig
+                res['vsan'] = {
+                    'enabled': props['configurationEx'].vsanConfigInfo.enabled,
+                    'auto_claim_storage': default_config.autoClaimStorage}
+    return res
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def list_cluster(datacenter=None, cluster=None, service_instance=None):
+    '''
+    Returns a dict representation of an ESX cluster.
+
+    datacenter
+        Name of datacenter containing the cluster.
+        Ignored if already contained by proxy details.
+        Default value is None.
+
+    cluster
+        Name of cluster.
+        Ignored if already contained by proxy details.
+        Default value is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        # vcenter proxy
+        salt '*' vsphere.list_cluster datacenter=dc1 cluster=cl1
+
+        # esxdatacenter proxy
+        salt '*' vsphere.list_cluster cluster=cl1
+
+        # esxcluster proxy
+        salt '*' vsphere.list_cluster
+    '''
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        dc_ref = _get_proxy_target(service_instance)
+        if not cluster:
+            raise ArgumentValueError('\'cluster\' needs to be specified')
+        cluster_ref = salt.utils.vmware.get_cluster(dc_ref, cluster)
+    elif proxy_type == 'esxcluster':
+        cluster_ref = _get_proxy_target(service_instance)
+        cluster = __salt__['esxcluster.get_details']()['cluster']
+    log.trace('Retrieving representation of cluster \'{0}\' in a '
+              '{1} proxy'.format(cluster, proxy_type))
+    return _get_cluster_dict(cluster, cluster_ref)
+
+
+def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None,
+                        vsan_61=True):
+    '''
+    Applies the values of cluster_dict dictionary to a cluster spec
+    (vim.ClusterConfigSpecEx).
+
+    All vsan values (cluster_dict['vsan']) will be applied to
+    vsan_spec (vim.vsan.cluster.ConfigInfoEx). Can be not omitted
+    if not required.
+
+    VSAN 6.1 config needs to be applied differently than the post VSAN 6.1 way.
+    The type of configuration desired is dictated by the flag vsan_61.
+    '''
+    log.trace('Applying cluster dict {0}'.format(cluster_dict))
+    if cluster_dict.get('ha'):
+        ha_dict = cluster_dict['ha']
+        if not cluster_spec.dasConfig:
+            cluster_spec.dasConfig = vim.ClusterDasConfigInfo()
+        das_config = cluster_spec.dasConfig
+        if 'enabled' in ha_dict:
+            das_config.enabled = ha_dict['enabled']
+            if ha_dict['enabled']:
+                # Default values when ha is enabled
+                das_config.failoverLevel = 1
+        if 'admission_control_enabled' in ha_dict:
+            das_config.admissionControlEnabled = \
+                    ha_dict['admission_control_enabled']
+        if 'admission_control_policy' in ha_dict:
+            adm_pol_dict = ha_dict['admission_control_policy']
+            if not das_config.admissionControlPolicy or \
+                not isinstance(
+                    das_config.admissionControlPolicy,
+                    vim.ClusterFailoverResourcesAdmissionControlPolicy):
+
+                das_config.admissionControlPolicy = \
+                        vim.ClusterFailoverResourcesAdmissionControlPolicy(
+                            cpuFailoverResourcesPercent=
+                            adm_pol_dict['cpu_failover_percent'],
+                            memoryFailoverResourcesPercent=
+                            adm_pol_dict['memory_failover_percent'])
+        if 'default_vm_settings' in ha_dict:
+            vm_set_dict = ha_dict['default_vm_settings']
+            if not das_config.defaultVmSettings:
+                das_config.defaultVmSettings = vim.ClusterDasVmSettings()
+            if 'isolation_response' in vm_set_dict:
+                das_config.defaultVmSettings.isolationResponse = \
+                        vm_set_dict['isolation_response']
+            if 'restart_priority' in vm_set_dict:
+                das_config.defaultVmSettings.restartPriority = \
+                        vm_set_dict['restart_priority']
+        if 'hb_ds_candidate_policy' in ha_dict:
+            das_config.hBDatastoreCandidatePolicy = \
+                    ha_dict['hb_ds_candidate_policy']
+        if 'host_monitoring' in ha_dict:
+            das_config.hostMonitoring = ha_dict['host_monitoring']
+        if 'options' in ha_dict:
+            das_config.option = []
+            for opt_dict in ha_dict['options']:
+                das_config.option.append(
+                    vim.OptionValue(key=opt_dict['key']))
+                if 'value' in opt_dict:
+                    das_config.option[-1].value = opt_dict['value']
+        if 'vm_monitoring' in ha_dict:
+            das_config.vmMonitoring = ha_dict['vm_monitoring']
+        cluster_spec.dasConfig = das_config
+    if cluster_dict.get('drs'):
+        drs_dict = cluster_dict['drs']
+        drs_config = vim.ClusterDrsConfigInfo()
+        if 'enabled' in drs_dict:
+            drs_config.enabled = drs_dict['enabled']
+        if 'vmotion_rate' in drs_dict:
+            drs_config.vmotionRate = 6 - drs_dict['vmotion_rate']
+        if 'default_vm_behavior' in drs_dict:
+            drs_config.defaultVmBehavior = \
+                    vim.DrsBehavior(drs_dict['default_vm_behavior'])
+        cluster_spec.drsConfig = drs_config
+    if cluster_dict.get('vm_swap_placement'):
+        cluster_spec.vmSwapPlacement = cluster_dict['vm_swap_placement']
+    if cluster_dict.get('vsan'):
+        vsan_dict = cluster_dict['vsan']
+        if not vsan_61:  # VSAN is 6.2 and above
+            if 'enabled' in vsan_dict:
+                if not vsan_spec.vsanClusterConfig:
+                    vsan_spec.vsanClusterConfig = \
+                            vim.vsan.cluster.ConfigInfo()
+                vsan_spec.vsanClusterConfig.enabled = vsan_dict['enabled']
+            if 'auto_claim_storage' in vsan_dict:
+                if not vsan_spec.vsanClusterConfig:
+                    vsan_spec.vsanClusterConfig = \
+                            vim.vsan.cluster.ConfigInfo()
+                if not vsan_spec.vsanClusterConfig.defaultConfig:
+                    vsan_spec.vsanClusterConfig.defaultConfig = \
+                            vim.VsanClusterConfigInfoHostDefaultInfo()
+                elif vsan_spec.vsanClusterConfig.defaultConfig.uuid:
+                    # If this remains set it caused an error
+                    vsan_spec.vsanClusterConfig.defaultConfig.uuid = None
+                vsan_spec.vsanClusterConfig.defaultConfig.autoClaimStorage = \
+                        vsan_dict['auto_claim_storage']
+            if 'compression_enabled' in vsan_dict:
+                if not vsan_spec.dataEfficiencyConfig:
+                    vsan_spec.dataEfficiencyConfig = \
+                            vim.vsan.DataEfficiencyConfig()
+                vsan_spec.dataEfficiencyConfig.compressionEnabled = \
+                        vsan_dict['compression_enabled']
+            if 'dedup_enabled' in vsan_dict:
+                if not vsan_spec.dataEfficiencyConfig:
+                    vsan_spec.dataEfficiencyConfig = \
+                            vim.vsan.DataEfficiencyConfig()
+                vsan_spec.dataEfficiencyConfig.dedupEnabled = \
+                        vsan_dict['dedup_enabled']
+        # In all cases we need to configure the vsan on the cluster
+        # directly so not to have a missmatch between vsan_spec and
+        # cluster_spec
+        if not cluster_spec.vsanConfig:
+            cluster_spec.vsanConfig = \
+                    vim.VsanClusterConfigInfo()
+        vsan_config = cluster_spec.vsanConfig
+        if 'enabled' in vsan_dict:
+            vsan_config.enabled = vsan_dict['enabled']
+        if 'auto_claim_storage' in vsan_dict:
+            if not vsan_config.defaultConfig:
+                vsan_config.defaultConfig = \
+                        vim.VsanClusterConfigInfoHostDefaultInfo()
+            elif vsan_config.defaultConfig.uuid:
+                # If this remains set it caused an error
+                vsan_config.defaultConfig.uuid = None
+            vsan_config.defaultConfig.autoClaimStorage = \
+                    vsan_dict['auto_claim_storage']
+    log.trace('cluster_spec = {0}'.format(cluster_spec))
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def create_cluster(cluster_dict, datacenter=None, cluster=None,
+                   service_instance=None):
+    '''
+    Creates a cluster.
+
+    Note: cluster_dict['name'] will be overridden by the cluster param value
+
+    config_dict
+        Dictionary with the config values of the new cluster.
+
+    datacenter
+        Name of datacenter containing the cluster.
+        Ignored if already contained by proxy details.
+        Default value is None.
+
+    cluster
+        Name of cluster.
+        Ignored if already contained by proxy details.
+        Default value is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        # esxdatacenter proxy
+        salt '*' vsphere.create_cluster cluster_dict=$cluster_dict cluster=cl1
+
+        # esxcluster proxy
+        salt '*' vsphere.create_cluster cluster_dict=$cluster_dict
+    '''
+    # Validate cluster dictionary
+    schema = ESXClusterConfigSchema.serialize()
+    try:
+        jsonschema.validate(cluster_dict, schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise InvalidConfigError(exc)
+    # Get required details from the proxy
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+        if not cluster:
+            raise ArgumentValueError('\'cluster\' needs to be specified')
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+        cluster = __salt__['esxcluster.get_details']()['cluster']
+
+    if cluster_dict.get('vsan') and not \
+       salt.utils.vsan.vsan_supported(service_instance):
+
+        raise VMwareApiError('VSAN operations are not supported')
+    si = service_instance
+    cluster_spec = vim.ClusterConfigSpecEx()
+    vsan_spec = None
+    ha_config = None
+    vsan_61 = None
+    if cluster_dict.get('vsan'):
+        # XXX The correct way of retrieving the VSAN data (on the if branch)
+        #  is not supported before 60u2 vcenter
+        vcenter_info = salt.utils.vmware.get_service_info(si)
+        if float(vcenter_info.apiVersion) >= 6.0 and \
+                int(vcenter_info.build) >= 3634794:  # 60u2
+            vsan_spec = vim.vsan.ReconfigSpec(modify=True)
+            vsan_61 = False
+            # We need to keep HA disabled and enable it afterwards
+            if cluster_dict.get('ha', {}).get('enabled'):
+                enable_ha = True
+                ha_config = cluster_dict['ha']
+                del cluster_dict['ha']
+        else:
+            vsan_61 = True
+    # If VSAN is 6.1 the configuration of VSAN happens when configuring the
+    # cluster via the regular endpoint
+    _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec, vsan_61)
+    salt.utils.vmware.create_cluster(dc_ref, cluster, cluster_spec)
+    if not vsan_61:
+        # Only available after VSAN 61
+        if vsan_spec:
+            cluster_ref = salt.utils.vmware.get_cluster(dc_ref, cluster)
+            salt.utils.vsan.reconfigure_cluster_vsan(cluster_ref, vsan_spec)
+        if enable_ha:
+            # Set HA after VSAN has been configured
+            _apply_cluster_dict(cluster_spec, {'ha': ha_config})
+            salt.utils.vmware.update_cluster(cluster_ref, cluster_spec)
+            # Set HA back on the object
+            cluster_dict['ha'] = ha_config
+    return {'create_cluster': True}
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def update_cluster(cluster_dict, datacenter=None, cluster=None,
+                   service_instance=None):
+    '''
+    Updates a cluster.
+
+    config_dict
+        Dictionary with the config values of the new cluster.
+
+    datacenter
+        Name of datacenter containing the cluster.
+        Ignored if already contained by proxy details.
+        Default value is None.
+
+    cluster
+        Name of cluster.
+        Ignored if already contained by proxy details.
+        Default value is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        # esxdatacenter proxy
+        salt '*' vsphere.update_cluster cluster_dict=$cluster_dict cluster=cl1
+
+        # esxcluster proxy
+        salt '*' vsphere.update_cluster cluster_dict=$cluster_dict
+
+    '''
+    # Validate cluster dictionary
+    schema = ESXClusterConfigSchema.serialize()
+    try:
+        jsonschema.validate(cluster_dict, schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise InvalidConfigError(exc)
+    # Get required details from the proxy
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+        if not cluster:
+            raise ArgumentValueError('\'cluster\' needs to be specified')
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+        cluster = __salt__['esxcluster.get_details']()['cluster']
+
+    if cluster_dict.get('vsan') and not \
+       salt.utils.vsan.vsan_supported(service_instance):
+
+        raise VMwareApiError('VSAN operations are not supported')
+
+    cluster_ref = salt.utils.vmware.get_cluster(dc_ref, cluster)
+    cluster_spec = vim.ClusterConfigSpecEx()
+    props = salt.utils.vmware.get_properties_of_managed_object(
+        cluster_ref, properties=['configurationEx'])
+    # Copy elements we want to update to spec
+    for p in ['dasConfig', 'drsConfig']:
+        setattr(cluster_spec, p, getattr(props['configurationEx'], p))
+    if props['configurationEx'].vsanConfigInfo:
+        cluster_spec.vsanConfig = props['configurationEx'].vsanConfigInfo
+    vsan_spec = None
+    vsan_61 = None
+    if cluster_dict.get('vsan'):
+        # XXX The correct way of retrieving the VSAN data (on the if branch)
+        #  is not supported before 60u2 vcenter
+        vcenter_info = salt.utils.vmware.get_service_info(service_instance)
+        if float(vcenter_info.apiVersion) >= 6.0 and \
+                int(vcenter_info.build) >= 3634794:  # 60u2
+            vsan_61 = False
+            vsan_info = salt.utils.vsan.get_cluster_vsan_info(cluster_ref)
+            vsan_spec = vim.vsan.ReconfigSpec(modify=True)
+            # Only interested in the vsanClusterConfig and the
+            # dataEfficiencyConfig
+            # vsan_spec.vsanClusterConfig = vsan_info
+            vsan_spec.dataEfficiencyConfig = vsan_info.dataEfficiencyConfig
+            vsan_info.dataEfficiencyConfig = None
+        else:
+            vsan_61 = True
+
+    _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec, vsan_61)
+    # We try to reconfigure vsan first as it fails if HA is enabled so the
+    # command will abort not having any side-effects
+    # also if HA was previously disabled it can be enabled automatically if
+    # desired
+    if vsan_spec:
+        log.trace('vsan_spec = {0}'.format(vsan_spec))
+        salt.utils.vsan.reconfigure_cluster_vsan(cluster_ref, vsan_spec)
+
+        # We need to retrieve again the properties and reapply them
+        # As the VSAN configuration has changed
+        cluster_spec = vim.ClusterConfigSpecEx()
+        props = salt.utils.vmware.get_properties_of_managed_object(
+            cluster_ref, properties=['configurationEx'])
+        # Copy elements we want to update to spec
+        for p in ['dasConfig', 'drsConfig']:
+            setattr(cluster_spec, p, getattr(props['configurationEx'], p))
+        if props['configurationEx'].vsanConfigInfo:
+            cluster_spec.vsanConfig = props['configurationEx'].vsanConfigInfo
+        # We only need to configure the cluster_spec, as if it were a vsan_61
+        # cluster
+        _apply_cluster_dict(cluster_spec, cluster_dict)
+    salt.utils.vmware.update_cluster(cluster_ref, cluster_spec)
+    return {'update_cluster': True}
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def list_datastores_via_proxy(datastore_names=None, backing_disk_ids=None,
+                              backing_disk_scsi_addresses=None,
+                              service_instance=None):
+    '''
+    Returns a list of dict representations of the datastores visible to the
+    proxy object. The list of datastores can be filtered by datastore names,
+    backing disk ids (canonical names) or backing disk scsi addresses.
+
+    Supported proxy types: esxi, esxcluster, esxdatacenter
+
+    datastore_names
+        List of the names of datastores to filter on
+
+    backing_disk_ids
+        List of canonical names of the backing disks of the datastores to filer.
+        Default is None.
+
+    backing_disk_scsi_addresses
+        List of scsi addresses of the backing disks of the datastores to filter.
+        Default is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_datastores_via_proxy
+
+        salt '*' vsphere.list_datastores_via_proxy datastore_names=[ds1, ds2]
+    '''
+    target = _get_proxy_target(service_instance)
+    target_name = salt.utils.vmware.get_managed_object_name(target)
+    log.trace('target name = {}'.format(target_name))
+
+    # Default to getting all disks if no filtering is done
+    get_all_datastores = True if \
+            not (datastore_names or backing_disk_ids or
+                 backing_disk_scsi_addresses) else False
+    # Get the ids of the disks with the scsi addresses
+    if backing_disk_scsi_addresses:
+        log.debug('Retrieving disk ids for scsi addresses '
+                  '\'{0}\''.format(backing_disk_scsi_addresses))
+        disk_ids = [d.canonicalName for d in
+                    salt.utils.vmware.get_disks(
+                        target, scsi_addresses=backing_disk_scsi_addresses)]
+        log.debug('Found disk ids \'{}\''.format(disk_ids))
+        backing_disk_ids = backing_disk_ids.extend(disk_ids) if \
+                backing_disk_ids else disk_ids
+    datastores = salt.utils.vmware.get_datastores(service_instance,
+                                                  target,
+                                                  datastore_names,
+                                                  backing_disk_ids,
+                                                  get_all_datastores)
+
+    # Search for disk backed datastores if target is host
+    # to be able to add the backing_disk_ids
+    mount_infos = []
+    if isinstance(target, vim.HostSystem):
+        storage_system = salt.utils.vmware.get_storage_system(
+            service_instance, target, target_name)
+        props = salt.utils.vmware.get_properties_of_managed_object(
+            storage_system, ['fileSystemVolumeInfo.mountInfo'])
+        mount_infos = props.get('fileSystemVolumeInfo.mountInfo', [])
+    ret_dict = []
+    for ds in datastores:
+        ds_dict = {'name': ds.name,
+                   'type': ds.summary.type,
+                   'free_space': ds.summary.freeSpace,
+                   'capacity': ds.summary.capacity}
+        backing_disk_ids = []
+        for vol in [i.volume for i in mount_infos if
+                    i.volume.name == ds.name and
+                    isinstance(i.volume, vim.HostVmfsVolume)]:
+
+            backing_disk_ids.extend([e.diskName for e in vol.extent])
+        if backing_disk_ids:
+            ds_dict['backing_disk_ids'] = backing_disk_ids
+        ret_dict.append(ds_dict)
+    return ret_dict
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def rename_datastore(datastore_name, new_datastore_name,
+                     service_instance=None):
+    '''
+    Renames a datastore. The datastore needs to be visible to the proxy.
+
+    datastore_name
+        Current datastore name.
+
+    new_datastore_name
+        New datastore name.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.rename_datastore old_name new_name
+    '''
+    # Argument validation
+    log.trace('Renaming datastore {0} to {1}'
+              ''.format(datastore_name, new_datastore_name))
+    target = _get_proxy_target(service_instance)
+    datastores = salt.utils.vmware.get_datastores(
+        service_instance,
+        target,
+        datastore_names=[datastore_name])
+    if not datastores:
+        raise VMwareObjectRetrievalError('Datastore \'{0}\' was not found'
+                                         ''.format(datastore_name))
+    ds = datastores[0]
+    salt.utils.vmware.rename_datastore(ds, new_datastore_name)
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def list_licenses(service_instance=None):
+    '''
+    Lists all licenses on a vCenter.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_licenses
+    '''
+    log.trace('Retrieving all licenses')
+    licenses = salt.utils.vmware.get_licenses(service_instance)
+    ret_dict = [{'key': l.licenseKey,
+                 'name': l.name,
+                 'description': l.labels[0].value if l.labels else None,
+                 # VMware handles unlimited capacity as 0
+                 'capacity': l.total if l.total > 0 else sys.maxsize,
+                 'used': l.used if l.used else 0}
+                 for l in licenses]
+    return ret_dict
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def add_license(key, description, safety_checks=True,
+                service_instance=None):
+    '''
+    Adds a license to the vCenter or ESXi host
+
+    key
+        License key.
+
+    description
+        License description added in as a label.
+
+    safety_checks
+        Specify whether to perform safety check or to skip the checks and try
+        performing the required task
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.add_license key=<license_key> desc='License desc'
+    '''
+    log.trace('Adding license \'{0}\''.format(key))
+    salt.utils.vmware.add_license(service_instance, key, description)
+    return True
+
+
+def _get_entity(service_instance, entity):
+    '''
+    Returns the entity associated with the entity dict representation
+
+    Supported entities: cluster, vcenter
+
+    Expected entity format:
+
+    .. code-block:: python
+
+        cluster:
+            {'type': 'cluster',
+             'datacenter': <datacenter_name>,
+             'cluster': <cluster_name>}
+        vcenter:
+            {'type': 'vcenter'}
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+
+    entity
+        Entity dict in the format above
+    '''
+
+    log.trace('Retrieving entity: {0}'.format(entity))
+    if entity['type'] == 'cluster':
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance,
+                                                  entity['datacenter'])
+        return salt.utils.vmware.get_cluster(dc_ref, entity['cluster'])
+    elif entity['type'] == 'vcenter':
+        return None
+    raise ArgumentValueError('Unsupported entity type \'{0}\''
+                             ''.format(entity['type']))
+
+
+def _validate_entity(entity):
+    '''
+    Validates the entity dict representation
+
+    entity
+        Dictionary representation of an entity.
+        See ``_get_entity`` docstrings for format.
+    '''
+
+    #Validate entity:
+    if entity['type'] == 'cluster':
+        schema = ESXClusterEntitySchema.serialize()
+    elif entity['type'] == 'vcenter':
+        schema = VCenterEntitySchema.serialize()
+    else:
+        raise ArgumentValueError('Unsupported entity type \'{0}\''
+                                 ''.format(entity['type']))
+    try:
+        jsonschema.validate(entity, schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise InvalidEntityError(exc)
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def list_assigned_licenses(entity, entity_display_name, license_keys=None,
+                           service_instance=None):
+    '''
+    Lists the licenses assigned to an entity
+
+    entity
+        Dictionary representation of an entity.
+        See ``_get_entity`` docstrings for format.
+
+    entity_display_name
+        Entity name used in logging
+
+    license_keys:
+        List of license keys to be retrieved. Default is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_assigned_licenses
+            entity={type:cluster,datacenter:dc,cluster:cl}
+            entiy_display_name=cl
+    '''
+    log.trace('Listing assigned licenses of entity {0}'
+              ''.format(entity))
+    _validate_entity(entity)
+
+    assigned_licenses = salt.utils.vmware.get_assigned_licenses(
+        service_instance,
+        entity_ref=_get_entity(service_instance, entity),
+        entity_name=entity_display_name)
+
+    return [{'key': l.licenseKey,
+             'name': l.name,
+             'description': l.labels[0].value if l.labels else None,
+             # VMware handles unlimited capacity as 0
+             'capacity': l.total if l.total > 0 else sys.maxsize}
+            for l in assigned_licenses if (license_keys is None) or
+                (l.licenseKey in license_keys)]
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def assign_license(license_key, license_name, entity, entity_display_name,
+                   safety_checks=True, service_instance=None):
+    '''
+    Assigns a license to an entity
+
+    license_key
+        Key of the license to assign
+        See ``_get_entity`` docstrings for format.
+
+    license_name
+        Display name of license
+
+    entity
+        Dictionary representation of an entity
+
+    entity_display_name
+        Entity name used in logging
+
+    safety_checks
+        Specify whether to perform safety check or to skip the checks and try
+        performing the required task. Default is False.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.assign_license license_key=00000:00000
+            license name=test entity={type:cluster,datacenter:dc,cluster:cl}
+    '''
+    log.trace('Assigning license {0} to entity {1}'
+              ''.format(license_key, entity))
+    _validate_entity(entity)
+    if safety_checks:
+        licenses = salt.utils.vmware.get_licenses(service_instance)
+        if not [l for l in licenses if l.licenseKey == license_key]:
+            raise VMwareObjectRetrievalError('License \'{0}\' wasn\'t found'
+                                             ''.format(license_name))
+    salt.utils.vmware.assign_license(
+        service_instance,
+        license_key,
+        license_name,
+        entity_ref=_get_entity(service_instance, entity),
+        entity_name=entity_display_name)
 
 
 def _check_hosts(service_instance, host, host_names):
@@ -4286,6 +5115,39 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
     return ret
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxcluster', 'esxdatacenter')
+def _get_proxy_target(service_instance):
+    '''
+    Returns the target object of a proxy.
+
+    If the object doesn't exist a VMwareObjectRetrievalError is raised
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+    '''
+    proxy_type = get_proxy_type()
+    if not salt.utils.vmware.is_connection_to_a_vcenter(service_instance):
+        raise CommandExecutionError('\'_get_proxy_target\' not supported '
+                                    'when connected via the ESXi host')
+    reference = None
+    if proxy_type == 'esxcluster':
+        host, username, password, protocol, port, mechanism, principal, \
+            domain, datacenter, cluster = _get_esxcluster_proxy_details()
+
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+        reference = salt.utils.vmware.get_cluster(dc_ref, cluster)
+    elif proxy_type == 'esxdatacenter':
+        # esxdatacenter proxy
+        host, username, password, protocol, port, mechanism, principal, \
+            domain, datacenter = _get_esxdatacenter_proxy_details()
+
+        reference = salt.utils.vmware.get_datacenter(service_instance,
+                                                     datacenter)
+    log.trace('reference = {0}'.format(reference))
+    return reference
+
+
 def _get_esxdatacenter_proxy_details():
     '''
     Returns the running esxdatacenter's proxy details
@@ -4294,3 +5156,14 @@ def _get_esxdatacenter_proxy_details():
     return det.get('vcenter'), det.get('username'), det.get('password'), \
             det.get('protocol'), det.get('port'), det.get('mechanism'), \
             det.get('principal'), det.get('domain'), det.get('datacenter')
+
+
+def _get_esxcluster_proxy_details():
+    '''
+    Returns the running esxcluster's proxy details
+    '''
+    det = __salt__['esxcluster.get_details']()
+    return det.get('vcenter'), det.get('username'), det.get('password'), \
+            det.get('protocol'), det.get('port'), det.get('mechanism'), \
+            det.get('principal'), det.get('domain'), det.get('datacenter'), \
+            det.get('cluster')
