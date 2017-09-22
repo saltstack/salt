@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Support for Linux File Access Control Lists
+
+The Linux ACL module requires the `getfacl` and `setfacl` binaries.
+
 '''
 from __future__ import absolute_import
 

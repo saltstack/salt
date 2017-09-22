@@ -1,5 +1,5 @@
-salt.runners.digicertapi module
-===============================
+salt.runners.digicertapi
+========================
 
 .. automodule:: salt.runners.digicertapi
     :members:

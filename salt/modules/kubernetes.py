@@ -40,11 +40,16 @@ import base64
 import logging
 import yaml
 import tempfile
+import signal
+from time import sleep
+from contextlib import contextmanager
 
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
 import salt.utils
 import salt.utils.templates
+from salt.exceptions import TimeoutError
+from salt.ext.six.moves import range  # pylint: disable=import-error
 
 try:
     import kubernetes  # pylint: disable=import-self
@@ -76,6 +81,21 @@ def __virtual__():
         return __virtualname__
 
     return False, 'python kubernetes library not found'
+
+
+if not salt.utils.is_windows():
+    @contextmanager
+    def _time_limit(seconds):
+        def signal_handler(signum, frame):
+            raise TimeoutError
+        signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
+
+    POLLING_TIME_LIMIT = 30
 
 
 # pylint: disable=no-member
@@ -692,7 +712,30 @@ def delete_deployment(name, namespace='default', **kwargs):
             name=name,
             namespace=namespace,
             body=body)
-        return api_response.to_dict()
+        mutable_api_response = api_response.to_dict()
+        if not salt.utils.is_windows():
+            try:
+                with _time_limit(POLLING_TIME_LIMIT):
+                    while show_deployment(name, namespace) is not None:
+                        sleep(1)
+                    else:  # pylint: disable=useless-else-on-loop
+                        mutable_api_response['code'] = 200
+            except TimeoutError:
+                pass
+        else:
+            # Windows has not signal.alarm implementation, so we are just falling
+            # back to loop-counting.
+            for i in range(60):
+                if show_deployment(name, namespace) is None:
+                    mutable_api_response['code'] = 200
+                    break
+                else:
+                    sleep(1)
+        if mutable_api_response['code'] != 200:
+            log.warning('Reached polling time limit. Deployment is not yet '
+                        'deleted, but we are backing off. Sorry, but you\'ll '
+                        'have to check manually.')
+        return mutable_api_response
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None

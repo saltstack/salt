@@ -97,29 +97,61 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
             ret['changes'] = {name: 'Version {0} will be installed'
                                     ''.format(version)}
         else:
-            ret['changes'] = {name: 'Will be installed'}
+            ret['changes'] = {name: 'Latest version will be installed'}
+
     # Package installed
     else:
         version_info = __salt__['chocolatey.version'](name, check_remote=True)
 
         full_name = name
-        lower_name = name.lower()
         for pkg in version_info:
-            if lower_name == pkg.lower():
+            if name.lower() == pkg.lower():
                 full_name = pkg
 
-        available_version = version_info[full_name]['available'][0]
-        version = version if version else available_version
+        installed_version = version_info[full_name]['installed'][0]
 
-        if force:
-            ret['changes'] = {name: 'Version {0} will be forcibly installed'
-                                    ''.format(version)}
-        elif allow_multiple:
-            ret['changes'] = {name: 'Version {0} will be installed side by side'
-                                    ''.format(version)}
+        if version:
+            if salt.utils.compare_versions(
+                    ver1=installed_version, oper="==", ver2=version):
+                if force:
+                    ret['changes'] = {
+                        name: 'Version {0} will be reinstalled'.format(version)}
+                    ret['comment'] = 'Reinstall {0} {1}' \
+                                     ''.format(full_name, version)
+                else:
+                    ret['comment'] = '{0} {1} is already installed' \
+                                     ''.format(name, version)
+                    if __opts__['test']:
+                        ret['result'] = None
+                    return ret
+            else:
+                if allow_multiple:
+                    ret['changes'] = {
+                        name: 'Version {0} will be installed side by side with '
+                              'Version {1} if supported'
+                              ''.format(version, installed_version)}
+                    ret['comment'] = 'Install {0} {1} side-by-side with {0} {2}' \
+                                     ''.format(full_name, version, installed_version)
+                else:
+                    ret['changes'] = {
+                        name: 'Version {0} will be installed over Version {1} '
+                              ''.format(version, installed_version)}
+                    ret['comment'] = 'Install {0} {1} over {0} {2}' \
+                                     ''.format(full_name, version, installed_version)
+                    force = True
         else:
-            ret['comment'] = 'The Package {0} is already installed'.format(name)
-            return ret
+            version = installed_version
+            if force:
+                ret['changes'] = {
+                    name: 'Version {0} will be reinstalled'.format(version)}
+                ret['comment'] = 'Reinstall {0} {1}' \
+                                 ''.format(full_name, version)
+            else:
+                ret['comment'] = '{0} {1} is already installed' \
+                                 ''.format(name, version)
+                if __opts__['test']:
+                    ret['result'] = None
+                return ret
 
     if __opts__['test']:
         ret['result'] = None
