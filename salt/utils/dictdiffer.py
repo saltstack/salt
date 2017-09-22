@@ -267,7 +267,7 @@ class RecursiveDictDiffer(DictDiffer):
                         keys.append('{0}{1}'.format(prefix, key))
             return keys
 
-        return _added(self._diffs, prefix='')
+        return sorted(_added(self._diffs, prefix=''))
 
     def removed(self):
         '''
@@ -290,7 +290,7 @@ class RecursiveDictDiffer(DictDiffer):
                                  prefix='{0}{1}.'.format(prefix, key)))
             return keys
 
-        return _removed(self._diffs, prefix='')
+        return sorted(_removed(self._diffs, prefix=''))
 
     def changed(self):
         '''
@@ -338,7 +338,7 @@ class RecursiveDictDiffer(DictDiffer):
 
             return keys
 
-        return _changed(self._diffs, prefix='')
+        return sorted(_changed(self._diffs, prefix=''))
 
     def unchanged(self):
         '''
@@ -363,7 +363,7 @@ class RecursiveDictDiffer(DictDiffer):
                                        prefix='{0}{1}.'.format(prefix, key)))
 
             return keys
-        return _unchanged(self.current_dict, self._diffs, prefix='')
+        return sorted(_unchanged(self.current_dict, self._diffs, prefix=''))
 
     @property
     def diffs(self):
