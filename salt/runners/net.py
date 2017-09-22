@@ -812,7 +812,25 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
     ip = ''  # pylint: disable=invalid-name
     ipnet = None
 
-    results = {}
+    results = {
+        'int_net': [],
+        'int_descr': [],
+        'int_name': [],
+        'int_ip': [],
+        'int_mac': [],
+        'int_device': [],
+        'lldp_descr': [],
+        'lldp_int': [],
+        'lldp_device': [],
+        'lldp_mac': [],
+        'lldp_device_int': [],
+        'mac_device': [],
+        'mac_int': [],
+        'arp_device': [],
+        'arp_int': [],
+        'arp_mac': [],
+        'arp_ip': []
+    }
 
     if isinstance(addr, int):
         results['mac'] = findmac(vlan=addr, display=display)
