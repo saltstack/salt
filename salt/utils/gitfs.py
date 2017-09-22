@@ -1145,7 +1145,7 @@ class GitPython(GitProvider):
                 new_objs = True
 
         cleaned = self.clean_stale_refs()
-        return bool(new_objs or cleaned)
+        return True if (new_objs or cleaned) else None
 
     def file_list(self, tgt_env):
         '''
@@ -1621,7 +1621,9 @@ class Pygit2(GitProvider):
             log.debug('%s remote \'%s\' is up-to-date', self.role, self.id)
         refs_post = self.repo.listall_references()
         cleaned = self.clean_stale_refs(local_refs=refs_post)
-        return bool(received_objects or refs_pre != refs_post or cleaned)
+        return True \
+            if (received_objects or refs_pre != refs_post or cleaned) \
+            else None
 
     def file_list(self, tgt_env):
         '''

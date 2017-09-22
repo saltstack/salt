@@ -969,7 +969,7 @@ def list_floating_ips(call=None):
 
     CLI Examples:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f list_floating_ips my-digitalocean-config
     '''
@@ -1009,7 +1009,7 @@ def show_floating_ip(kwargs=None, call=None):
 
     CLI Examples:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f show_floating_ip my-digitalocean-config floating_ip='45.55.96.47'
     '''
@@ -1042,7 +1042,7 @@ def create_floating_ip(kwargs=None, call=None):
 
     CLI Examples:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f create_floating_ip my-digitalocean-config region='NYC2'
 
@@ -1084,7 +1084,7 @@ def delete_floating_ip(kwargs=None, call=None):
 
     CLI Examples:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f delete_floating_ip my-digitalocean-config floating_ip='45.55.96.47'
     '''
@@ -1119,7 +1119,7 @@ def assign_floating_ip(kwargs=None, call=None):
 
     CLI Examples:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f assign_floating_ip my-digitalocean-config droplet_id=1234567 floating_ip='45.55.96.47'
     '''
@@ -1152,7 +1152,7 @@ def unassign_floating_ip(kwargs=None, call=None):
 
     CLI Examples:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f unassign_floating_ip my-digitalocean-config floating_ip='45.55.96.47'
     '''
