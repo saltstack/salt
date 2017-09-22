@@ -133,6 +133,7 @@ syslog_levels = {
     'DEBUG': 7
 }
 
+
 def setup(tag, **kwargs):
     host = kwargs.get('host', 'localhost')
     port = kwargs.get('port', 24224)
@@ -238,7 +239,7 @@ class MessageFormatter(logging.Formatter, NewStyleClassMixIn):
                 # These are already handled above or explicitly pruned.
                 continue
 
-            if isinstance(value, (six.string_types, bool, dict, float, int, list, types.NoneType)):
+            if isinstance(value, (six.string_types, bool, dict, float, int, list, types.NoneType)):  # pylint: disable=W1699
                 val = value
             else:
                 val = repr(value)
@@ -271,7 +272,7 @@ class MessageFormatter(logging.Formatter, NewStyleClassMixIn):
                 # These are already handled above or explicitly avoided.
                 continue
 
-            if isinstance(value, (six.string_types, bool, dict, float, int, list, types.NoneType)):
+            if isinstance(value, (six.string_types, bool, dict, float, int, list, types.NoneType)):  # pylint: disable=W1699
                 val = value
             else:
                 val = repr(value)
