@@ -1262,6 +1262,7 @@ def install(name=None,
     to_install = []
     to_downgrade = []
     to_reinstall = []
+    _available = {}
     # The above three lists will be populated with tuples containing the
     # package name and the string being used for this particular package
     # modification. The reason for this method is that the string we use for
@@ -1281,7 +1282,8 @@ def install(name=None,
     if pkg_type == 'repository':
         has_wildcards = [x for x, y in six.iteritems(pkg_params)
                          if y is not None and '*' in y]
-        _available = list_repo_pkgs(*has_wildcards, byrepo=False, **kwargs)
+        if has_wildcards:
+            _available = list_repo_pkgs(*has_wildcards, byrepo=False, **kwargs)
         pkg_params_items = six.iteritems(pkg_params)
     elif pkg_type == 'advisory':
         pkg_params_items = []
