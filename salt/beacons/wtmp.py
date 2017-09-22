@@ -20,6 +20,7 @@ import salt.utils.files
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves import map
 
 __virtualname__ = 'wtmp'
 WTMP = '/var/log/wtmp'
