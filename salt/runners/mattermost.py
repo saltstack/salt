@@ -6,9 +6,10 @@ Module for sending messages to Mattermost
 
 :configuration: This module can be used by either passing an api_url and hook
     directly or by specifying both in a configuration profile in the salt
-    master/minion config.
-    For example:
+    master/minion config. For example:
+
     .. code-block:: yaml
+
         mattermost:
           hook: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
           api_url: https://example.com

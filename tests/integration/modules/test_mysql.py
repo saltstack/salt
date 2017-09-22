@@ -1280,6 +1280,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
     testdb1 = 'tes.t\'"saltdb'
     testdb2 = 't_st `(:=salt%b)'
     testdb3 = 'test `(:=salteeb)'
+    test_file_query_db = 'test_query'
     table1 = 'foo'
     table2 = "foo `\'%_bar"
     users = {
@@ -1391,13 +1392,19 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             name=self.testdb1,
             connection_user=self.user,
             connection_pass=self.password,
-       )
+        )
         self.run_function(
             'mysql.db_remove',
             name=self.testdb2,
             connection_user=self.user,
             connection_pass=self.password,
-       )
+        )
+        self.run_function(
+            'mysql.db_remove',
+            name=self.test_file_query_db,
+            connection_user=self.user,
+            connection_pass=self.password,
+        )
 
     def _userCreation(self,
                       uname,
@@ -1627,3 +1634,123 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             "GRANT USAGE ON *.* TO ''@'localhost'",
             "GRANT DELETE ON `test ``(:=salteeb)`.* TO ''@'localhost'"
         ])
+
+
+@skipIf(
+    NO_MYSQL,
+    'Please install MySQL bindings and a MySQL Server before running'
+    'MySQL integration tests.'
+)
+class MysqlModuleFileQueryTest(ModuleCase, SaltReturnAssertsMixin):
+    '''
+    Test file query module
+    '''
+
+    user = 'root'
+    password = 'poney'
+    testdb = 'test_file_query'
+
+    @destructiveTest
+    def setUp(self):
+        '''
+        Test presence of MySQL server, enforce a root password, create users
+        '''
+        super(MysqlModuleFileQueryTest, self).setUp()
+        NO_MYSQL_SERVER = True
+        # now ensure we know the mysql root password
+        # one of theses two at least should work
+        ret1 = self.run_state(
+            'cmd.run',
+             name='mysqladmin --host="localhost" -u '
+               + self.user
+               + ' flush-privileges password "'
+               + self.password
+               + '"'
+        )
+        ret2 = self.run_state(
+            'cmd.run',
+             name='mysqladmin --host="localhost" -u '
+               + self.user
+               + ' --password="'
+               + self.password
+               + '" flush-privileges password "'
+               + self.password
+               + '"'
+        )
+        key, value = ret2.popitem()
+        if value['result']:
+            NO_MYSQL_SERVER = False
+        else:
+            self.skipTest('No MySQL Server running, or no root access on it.')
+        # Create some users and a test db
+        self.run_function(
+            'mysql.db_create',
+            name=self.testdb,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_db='mysql',
+        )
+
+    @destructiveTest
+    def tearDown(self):
+        '''
+        Removes created users and db
+        '''
+        self.run_function(
+            'mysql.db_remove',
+            name=self.testdb,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_db='mysql',
+       )
+
+    @destructiveTest
+    def test_update_file_query(self):
+        '''
+        Test query without any output
+        '''
+        ret = self.run_function(
+          'mysql.file_query',
+          database=self.testdb,
+          file_name='salt://mysql/update_query.sql',
+          character_set='utf8',
+          collate='utf8_general_ci',
+          connection_user=self.user,
+          connection_pass=self.password
+        )
+        self.assertTrue('query time' in ret)
+        ret.pop('query time')
+        self.assertEqual(ret, {'rows affected': 2})
+
+    @destructiveTest
+    def test_select_file_query(self):
+        '''
+        Test query with table output
+        '''
+        ret = self.run_function(
+          'mysql.file_query',
+          database=self.testdb,
+          file_name='salt://mysql/select_query.sql',
+          character_set='utf8',
+          collate='utf8_general_ci',
+          connection_user=self.user,
+          connection_pass=self.password
+        )
+        expected = {
+            'rows affected': 5,
+            'rows returned': 4,
+            'results': [
+                [
+                    ['2'],
+                    ['3'],
+                    ['4'],
+                    ['5']
+                ]
+            ],
+            'columns': [
+                ['a']
+            ],
+        }
+        self.assertTrue('query time' in ret)
+        ret.pop('query time')
+        self.assertEqual(ret, expected)
