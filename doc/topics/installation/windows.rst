@@ -48,7 +48,7 @@ Salt Minion Installation
 If the system is missing the appropriate version of the Visual C++
 Redistributable (vcredist) the user will be prompted to install it. Click ``OK``
 to install the vcredist. Click ``Cancel`` to abort the installation without
-making modifications to the systeml.
+making modifications to the system.
 
 If Salt is already installed on the system the user will be prompted to remove
 the previous installation. Click ``OK`` to uninstall Salt without removing the
