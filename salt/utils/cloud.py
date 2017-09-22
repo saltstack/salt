@@ -1017,7 +1017,7 @@ def deploy_windows(host,
     log.debug('Deploying {0} at {1} (Windows)'.format(host, starttime))
     log.trace('HAS_WINRM: {0}, use_winrm: {1}'.format(HAS_WINRM, use_winrm))
 
-    attempts_deployment = 128
+    attempts_deployment = 1024
     for count in range(attempts_deployment):
         log.debug("Attempting "+str(count))
         try:
