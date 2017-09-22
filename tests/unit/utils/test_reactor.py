@@ -10,7 +10,6 @@ import yaml
 
 import salt.loader
 import salt.utils
-import salt.utils.files
 import salt.utils.reactor as reactor
 
 from tests.support.unit import TestCase, skipIf
@@ -378,41 +377,6 @@ WRAPPER_CALLS = {
 }
 
 log = logging.getLogger(__name__)
-
-
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestReactorBasic(TestCase, AdaptedConfigurationTestCaseMixin):
-    def setUp(self):
-        self.opts = self.get_temp_config('master')
-        self.tempdir = tempfile.mkdtemp(dir=TMP)
-        self.sls_name = os.path.join(self.tempdir, 'test.sls')
-        with salt.utils.files.fopen(self.sls_name, 'w') as fh:
-            fh.write('''
-update_fileserver:
-  runner.fileserver.update
-''')
-
-    def tearDown(self):
-        if os.path.isdir(self.tempdir):
-            shutil.rmtree(self.tempdir)
-        del self.opts
-        del self.tempdir
-        del self.sls_name
-
-    def test_basic(self):
-        reactor_config = [
-            {'salt/tagA': ['/srv/reactor/A.sls']},
-            {'salt/tagB': ['/srv/reactor/B.sls']},
-            {'*': ['/srv/reactor/all.sls']},
-        ]
-        wrap = reactor.ReactWrap(self.opts)
-        with patch.object(reactor.ReactWrap, 'local', MagicMock(side_effect=_args_sideffect)):
-            ret = wrap.run({'fun': 'test.ping',
-                            'state': 'local',
-                            'order': 1,
-                            'name': 'foo_action',
-                            '__id__': 'foo_action'})
-            raise Exception(ret)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
