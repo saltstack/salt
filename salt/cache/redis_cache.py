@@ -441,12 +441,9 @@ def contains(bank, key):
     redis_server = _get_redis_server()
     bank_redis_key = _get_bank_redis_key(bank)
     try:
-        banks = redis_server.smembers(bank_redis_key)
+        return redis_server.sismember(bank_redis_key, key)
     except (RedisConnectionError, RedisResponseError) as rerr:
         mesg = 'Cannot retrieve the Redis cache key {rkey}: {rerr}'.format(rkey=bank_redis_key,
                                                                            rerr=rerr)
         log.error(mesg)
         raise SaltCacheError(mesg)
-    if not banks:
-        return False
-    return key in banks
