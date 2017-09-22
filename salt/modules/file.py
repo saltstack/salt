@@ -54,23 +54,14 @@ import salt.utils.files
 import salt.utils.locales
 import salt.utils.templates
 import salt.utils.url
-from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
+from salt.exceptions import CommandExecutionError, SaltInvocationError, get_error_message as _get_error_message
+from salt.utils.files import HASHES, HASHES_REVMAP
 
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'makedirs_': 'makedirs'
 }
-
-HASHES = {
-    'sha512': 128,
-    'sha384': 96,
-    'sha256': 64,
-    'sha224': 56,
-    'sha1': 40,
-    'md5': 32,
-}
-HASHES_REVMAP = dict([(y, x) for x, y in six.iteritems(HASHES)])
 
 
 def __virtual__():
@@ -3627,14 +3618,8 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith('http') or proto == 'ftp':
-                    try:
-                        if __salt__['cp.cache_file'](single_src):
-                            ret = (single_src, single_hash)
-                            break
-                    except MinionError as exc:
-                        # Error downloading file. Log the caught exception and
-                        # continue on to the next source.
-                        log.exception(exc)
+                    ret = (single_src, single_hash)
+                    break
                 elif proto == 'file' and os.path.exists(urlparsed_single_src.path):
                     ret = (single_src, single_hash)
                     break
@@ -3654,9 +3639,8 @@ def source_list(source, source_hash, saltenv):
                     ret = (single, source_hash)
                     break
                 elif proto.startswith('http') or proto == 'ftp':
-                    if __salt__['cp.cache_file'](single):
-                        ret = (single, source_hash)
-                        break
+                    ret = (single, source_hash)
+                    break
                 elif single.startswith('/') and os.path.exists(single):
                     ret = (single, source_hash)
                     break
@@ -4478,7 +4462,7 @@ def check_file_meta(
     '''
     changes = {}
     if not source_sum:
-        source_sum = dict()
+        source_sum = {}
     lstats = stats(name, hash_type=source_sum.get('hash_type', None), follow_symlinks=False)
     if not lstats:
         changes['newfile'] = name
