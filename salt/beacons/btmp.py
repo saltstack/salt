@@ -183,17 +183,17 @@ def beacon(config):
             raw = fp_.read(SIZE)
             if len(raw) != SIZE:
                 return ret
-            else:
-                log.debug(raw)
             __context__[LOC_KEY] = fp_.tell()
             pack = struct.unpack(FMT, raw)
-            log.debug(pack)
             event = {}
             for ind, field in enumerate(FIELDS):
-                log.debug('{} {}'.format(ind, field))
                 event[field] = pack[ind]
                 if isinstance(event[field], six.string_types):
-                    event[field] = event[field].strip('\x00')
+                    if isinstance(event[field], bytes):
+                        event[field] = event[field].decode()
+                        event[field] = event[field].strip('b\x00')
+                    else:
+                        event[field] = event[field].strip('\x00')
 
             if users:
                 if event['user'] in users:
