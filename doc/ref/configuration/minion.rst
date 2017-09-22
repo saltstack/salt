@@ -2426,16 +2426,16 @@ executed in a thread.
 
 .. versionadded:: Oxygen
 
-Default: ``20``
+Default: ``-1``
 
 Limit the maximum amount of processes or threads created by ``salt-minion``.
 This is useful to avoid resource exhaustion in case the minion receives more
 publications than it is able to handle, as it limits the number of spawned
-processes or threads. ``-1`` disables the limit.
+processes or threads. ``-1`` is the default and disables the limit.
 
 .. code-block:: yaml
 
-    process_count_max: 20
+    process_count_max: -1
 
 .. _minion-logging-settings:
 
