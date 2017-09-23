@@ -328,4 +328,3 @@ def remove(path):
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
-
