@@ -343,8 +343,8 @@ def version(*names, **kwargs):
             ret[name] = 'not available'
 
     # TODO: This is always returning a dict vs other pkg implementation which return a
-    # string for a single packge name. If this is changed to follow the standard
-    # upgrade_available will need to be changed sligtly as well as it calls this
+    # string for a single package name. If this is changed to follow the standard
+    # upgrade_available will need to be changed slightly as well as it calls this
     # with a single package name expecting a dict to be return
 
     return ret
@@ -748,8 +748,8 @@ def genrepo(**kwargs):
 
         verbose (bool):
             Return verbose data structure which includes 'success_list', a list
-            of all sls files and the package names contained within. Default
-            'False'
+            of all sls files and the package names contained within.
+            Default ``False``.
 
         failhard (bool):
             If ``True``, an error will be raised if any repo SLS files failed
@@ -970,7 +970,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         refresh (bool):
             Boolean value representing whether or not to refresh the winrepo db.
-            Default False.
+            Default ``False``.
 
         pkgs (list):
             A list of packages to install from a software repository. All
@@ -1452,7 +1452,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
 
     Args:
         name (str): The name(s) of the package(s) to be uninstalled. Can be a
-            single package or a comma delimted list of packages, no spaces.
+            single package or a comma delimited list of packages, no spaces.
         version (str):
             The version of the package to be uninstalled. If this option is
             used to to uninstall multiple packages, then this version will be
