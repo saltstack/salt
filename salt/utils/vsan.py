@@ -153,6 +153,35 @@ def get_vsan_disk_management_system(service_instance):
     return vc_mos['vsan-disk-management-system']
 
 
+def get_host_vsan_system(service_instance, host_ref, hostname=None):
+    '''
+    Returns a host's vsan system
+
+    service_instance
+        Service instance to the host or vCenter
+
+    host_ref
+        Refernce to ESXi host
+
+    hostname
+        Name of ESXi host. Default value is None.
+    '''
+    if not hostname:
+        hostname = salt.utils.vmware.get_managed_object_name(host_ref)
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        path='configManager.vsanSystem',
+        type=vim.HostSystem,
+        skip=False)
+    objs = salt.utils.vmware.get_mors_with_properties(
+        service_instance, vim.HostVsanSystem, property_list=['config.enabled'],
+        container_ref=host_ref, traversal_spec=traversal_spec)
+    if not objs:
+        raise VMwareObjectRetrievalError('Host\'s \'{0}\' VSAN system was '
+                                         'not retrieved'.format(hostname))
+    log.trace('[{0}] Retrieved VSAN system'.format(hostname))
+    return objs[0]['object']
+
+
 def get_cluster_vsan_info(cluster_ref):
     '''
     Returns the extended cluster vsan configuration object
