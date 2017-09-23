@@ -23,9 +23,20 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
+LOCAL_PROTOS = ('', 'file')
 REMOTE_PROTOS = ('http', 'https', 'ftp', 'swift', 's3')
 VALID_PROTOS = ('salt', 'file') + REMOTE_PROTOS
 TEMPFILE_PREFIX = '__salt.tmp.'
+
+HASHES = {
+    'sha512': 128,
+    'sha384': 96,
+    'sha256': 64,
+    'sha224': 56,
+    'sha1': 40,
+    'md5': 32,
+}
+HASHES_REVMAP = dict([(y, x) for x, y in six.iteritems(HASHES)])
 
 
 def guess_archive_type(name):
@@ -306,3 +317,15 @@ def safe_filepath(file_path_name, dir_sep=None):
     if drive:
         path = dir_sep.join([drive, path])
     return path
+
+
+def remove(path):
+    '''
+    Runs os.remove(path) and suppresses the OSError if the file doesn't exist
+    '''
+    try:
+        os.remove(path)
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            raise
+
