@@ -182,6 +182,63 @@ def get_host_vsan_system(service_instance, host_ref, hostname=None):
     return objs[0]['object']
 
 
+def create_diskgroup(service_instance, vsan_disk_mgmt_system,
+                     host_ref, cache_disk, capacity_disks):
+    '''
+    Creates a disk group
+
+    service_instance
+        Service instance to the host or vCenter
+
+    vsan_disk_mgmt_system
+        vim.VimClusterVsanVcDiskManagemenetSystem representing the vSan disk
+        management system retrieved from the vsan endpoint.
+
+    host_ref
+        vim.HostSystem object representing the target host the disk group will
+        be created on
+
+    cache_disk
+        The vim.HostScsidisk to be used as a cache disk. It must be an ssd disk.
+
+    capacity_disks
+        List of vim.HostScsiDisk objects representing of disks to be used as
+        capacity disks. Can be either ssd or non-ssd. There must be a minimum
+        of 1 capacity disk in the list.
+    '''
+    hostname = salt.utils.vmware.get_managed_object_name(host_ref)
+    cache_disk_id = cache_disk.canonicalName
+    log.debug('Creating a new disk group with cache disk \'{0}\' on host '
+              '\'{1}\''.format(cache_disk_id, hostname))
+    log.trace('capacity_disk_ids = {0}'.format([c.canonicalName for c in
+                                                capacity_disks]))
+    spec = vim.VimVsanHostDiskMappingCreationSpec()
+    spec.cacheDisks = [cache_disk]
+    spec.capacityDisks = capacity_disks
+    # All capacity disks must be either ssd or non-ssd (mixed disks are not
+    # supported)
+    spec.creationType = 'allFlash' if getattr(capacity_disks[0], 'ssd') \
+            else 'hybrid'
+    spec.host = host_ref
+    try:
+        task = vsan_disk_mgmt_system.InitializeDiskMappings(spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.fault.MethodNotFound as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError('Method \'{0}\' not found'.format(exc.method))
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
+    _wait_for_tasks([task], service_instance)
+    return True
+
+
 def get_cluster_vsan_info(cluster_ref):
     '''
     Returns the extended cluster vsan configuration object
