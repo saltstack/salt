@@ -328,7 +328,7 @@ def version(*names, **kwargs):
     '''
     saltenv = kwargs.get('saltenv', 'base')
 
-    installed_pkgs = list_pkgs(refresh=kwargs.get('refresh', False))
+    installed_pkgs = list_pkgs(saltenv=saltenv, refresh=kwargs.get('refresh', False))
     available_pkgs = get_repo_data(saltenv).get('repo')
 
     ret = {}
