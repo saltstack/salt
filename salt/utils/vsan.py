@@ -129,6 +129,30 @@ def get_vsan_cluster_config_system(service_instance):
     return vc_mos['vsan-cluster-config-system']
 
 
+def get_vsan_disk_management_system(service_instance):
+    '''
+    Returns a vim.VimClusterVsanVcDiskManagementSystem object
+
+    service_instance
+        Service instance to the host or vCenter
+    '''
+
+    #TODO Replace when better connection mechanism is available
+
+    #For python 2.7.9 and later, the defaul SSL conext has more strict
+    #connection handshaking rule. We may need turn of the hostname checking
+    #and client side cert verification
+    context = None
+    if sys.version_info[:3] > (2, 7, 8):
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+
+    stub = service_instance._stub
+    vc_mos = vsanapiutils.GetVsanVcMos(stub, context=context)
+    return vc_mos['vsan-disk-management-system']
+
+
 def get_cluster_vsan_info(cluster_ref):
     '''
     Returns the extended cluster vsan configuration object
