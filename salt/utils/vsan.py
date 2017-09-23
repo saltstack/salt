@@ -370,6 +370,67 @@ def remove_capacity_from_diskgroup(service_instance, host_ref, diskgroup,
     return True
 
 
+def remove_diskgroup(service_instance, host_ref, diskgroup, hostname=None,
+                     host_vsan_system=None, erase_disk_partitions=False,
+                     data_accessibility=True):
+    '''
+    Removes a disk group.
+
+    service_instance
+        Service instance to the host or vCenter
+
+    host_ref
+        Reference to the ESXi host
+
+    diskgroup
+        The vsan.HostDiskMapping object representing the host's diskgroup from
+        where the capacity needs to be removed
+
+    hostname
+        Name of ESXi host. Default value is None.
+
+    host_vsan_system
+        ESXi host's VSAN system. Default value is None.
+
+    data_accessibility
+        Specifies whether to ensure data accessibility. Default value is True.
+    '''
+    if not hostname:
+        hostname = salt.utils.vmware.get_managed_object_name(host_ref)
+    cache_disk_id = diskgroup.ssd.canonicalName
+    log.debug('Removing disk group with cache disk \'{0}\' on '
+              'host \'{1}\''.format(cache_disk_id, hostname))
+    if not host_vsan_system:
+        host_vsan_system = get_host_vsan_system(
+            service_instance, host_ref, hostname)
+    # Set to evacuate all data before removing the disks
+    maint_spec = vim.HostMaintenanceSpec()
+    maint_spec.vsanMode = vim.VsanHostDecommissionMode()
+    object_action = vim.VsanHostDecommissionModeObjectAction
+    if data_accessibility:
+        maint_spec.vsanMode.objectAction = \
+                object_action.ensureObjectAccessibility
+    else:
+        maint_spec.vsanMode.objectAction = object_action.noAction
+    try:
+        task = host_vsan_system.RemoveDiskMapping_Task(
+            mapping=[diskgroup], maintenanceSpec=maint_spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
+    salt.utils.vmware.wait_for_task(task, hostname, 'remove_diskgroup')
+    log.debug('Removed disk group with cache disk \'{0}\' '
+              'on host \'{1}\''.format(cache_disk_id, hostname))
+    return True
+
+
 def get_cluster_vsan_info(cluster_ref):
     '''
     Returns the extended cluster vsan configuration object
