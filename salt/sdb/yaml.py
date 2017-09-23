@@ -33,6 +33,10 @@ Optional configuration:
       merge:
         strategy: smart
         merge_list: false
+      gpg: true
+
+Setting the ``gpg`` option to ``true`` (default is ``false``) will decrypt embedded
+GPG-encrypted data using the :py:mod:`GPG renderer <salt.renderers.gpg>`.
 '''
 
 # import python libs
@@ -45,7 +49,6 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.dictupdate
 import salt.renderers.gpg
-from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)
 
@@ -73,12 +76,12 @@ def get(key, profile=None):  # pylint: disable=W0613
     Get a value from the dictionary
     '''
     data = _get_values(profile)
-    try:
-        # Attempt to render GPG data. This will fail if the installation does not have GPG configured.
+
+    # Decrypt SDB data if specified in the profile
+    if profile and profile.get('gpg', False):
         return salt.utils.data.traverse_dict_and_list(salt.renderers.gpg.render(data), key, None)
-    except SaltRenderError:
-        # If GPG rendering fails, assume the data is plaintext.
-        return salt.utils.traverse_dict_and_list(data, key, None)
+
+    return salt.utils.traverse_dict_and_list(data, key, None)
 
 
 def _get_values(profile=None):
