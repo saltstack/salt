@@ -44,6 +44,8 @@ import salt.loader
 import salt.utils.data
 import salt.utils.files
 import salt.utils.dictupdate
+import salt.renderers.gpg
+from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +54,14 @@ __func_alias__ = {
 }
 
 
-def set_(*args, **kwargs):
+def __virtual__():
+    # Pack magic dunders into GPG renderer
+    setattr(salt.renderers.gpg, '__salt__', {})
+    setattr(salt.renderers.gpg, '__opts__', __opts__)
+    return True
+
+
+def set_(*args, **kwargs):  # pylint: disable=W0613
     '''
     Setting a value is not supported; edit the YAML files directly
     '''
@@ -61,10 +70,15 @@ def set_(*args, **kwargs):
 
 def get(key, profile=None):  # pylint: disable=W0613
     '''
-    Get a value from the REST interface
+    Get a value from the dictionary
     '''
     data = _get_values(profile)
-    return salt.utils.data.traverse_dict_and_list(data, key, None)
+    try:
+        # Attempt to render GPG data. This will fail if the installation does not have GPG configured.
+        return salt.utils.data.traverse_dict_and_list(salt.renderers.gpg.render(data), key, None)
+    except SaltRenderError:
+        # If GPG rendering fails, assume the data is plaintext.
+        return salt.utils.traverse_dict_and_list(data, key, None)
 
 
 def _get_values(profile=None):
@@ -77,10 +91,10 @@ def _get_values(profile=None):
     ret = {}
     for fname in profile.get('files', []):
         try:
-            with salt.utils.files.flopen(fname) as f:
-                contents = serializers.yaml.deserialize(f)
-                ret = salt.utils.dictupdate.merge(ret, contents,
-                        **profile.get('merge', {}))
+            with salt.utils.files.flopen(fname) as yamlfile:
+                contents = serializers.yaml.deserialize(yamlfile)
+                ret = salt.utils.dictupdate.merge(
+                    ret, contents, **profile.get('merge', {}))
         except IOError:
             log.error("File not found '{0}'".format(fname))
         except TypeError:
