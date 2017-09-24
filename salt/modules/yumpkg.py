@@ -61,7 +61,7 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-__HOLD_PATTERN = r'\w+(?:[.-][^-]+)*'
+__HOLD_PATTERN = r'[\w+]+(?:[.-][^-]+)*'
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'

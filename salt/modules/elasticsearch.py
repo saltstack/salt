@@ -88,6 +88,7 @@ def _get_instance(hosts=None, profile=None):
     ca_certs = None
     verify_certs = True
     http_auth = None
+    timeout = 10
 
     if profile is None:
         profile = 'elasticsearch'
@@ -106,6 +107,7 @@ def _get_instance(hosts=None, profile=None):
         verify_certs = _profile.get('verify_certs', True)
         username = _profile.get('username', None)
         password = _profile.get('password', None)
+        timeout = _profile.get('timeout', 10)
 
         if username and password:
             http_auth = (username, password)
@@ -131,6 +133,7 @@ def _get_instance(hosts=None, profile=None):
                 ca_certs=ca_certs,
                 verify_certs=verify_certs,
                 http_auth=http_auth,
+                timeout=timeout,
             )
         else:
             es = elasticsearch.Elasticsearch(
@@ -139,6 +142,7 @@ def _get_instance(hosts=None, profile=None):
                     ca_certs=ca_certs,
                     verify_certs=verify_certs,
                     http_auth=http_auth,
+                    timeout=timeout,
                 )
 
         # Try the connection
