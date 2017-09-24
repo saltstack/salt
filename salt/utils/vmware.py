@@ -2572,6 +2572,78 @@ def get_disk_partition_info(host_ref, disk_id, storage_system=None):
     return partition_info
 
 
+def erase_disk_partitions(service_instance, host_ref, disk_id,
+                          hostname=None, storage_system=None):
+    '''
+    Erases all partitions on a disk
+
+    in a vcenter filtered by their names and/or datacenter, cluster membership
+
+    service_instance
+        The Service Instance Object from which to obtain all information
+
+    host_ref
+        The reference of the ESXi host containing the disk
+
+    disk_id
+        The canonical name of the disk whose partitions are to be removed
+
+    hostname
+        The ESXi hostname. Default is None.
+
+    storage_system
+        The ESXi host's storage system. Default is None.
+    '''
+
+    if not hostname:
+        hostname = get_managed_object_name(host_ref)
+    if not storage_system:
+        storage_system = get_storage_system(service_instance, host_ref,
+                                            hostname)
+
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        path='configManager.storageSystem',
+        type=vim.HostSystem,
+        skip=False)
+    results = get_mors_with_properties(service_instance,
+                                       vim.HostStorageSystem,
+                                       ['storageDeviceInfo.scsiLun'],
+                                       container_ref=host_ref,
+                                       traversal_spec=traversal_spec)
+    if not results:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Host\'s \'{0}\' devices were not retrieved'.format(hostname))
+    log.trace('[{0}] Retrieved {1} devices: {2}'.format(
+        hostname, len(results[0].get('storageDeviceInfo.scsiLun', [])),
+        ', '.join([l.canonicalName for l in
+                   results[0].get('storageDeviceInfo.scsiLun', [])])))
+    disks = [l for l in results[0].get('storageDeviceInfo.scsiLun', [])
+             if isinstance(l, vim.HostScsiDisk) and
+             l.canonicalName == disk_id]
+    if not disks:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Disk \'{0}\' was not found in host \'{1}\''
+            ''.format(disk_id, hostname))
+    log.trace('[{0}] device_path = {1}'.format(hostname, disks[0].devicePath))
+    # Erase the partitions by setting an empty partition spec
+    try:
+        storage_system.UpdateDiskPartitions(disks[0].devicePath,
+                                            vim.HostDiskPartitionSpec())
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    log.trace('[{0}] Erased partitions on disk \'{1}\''
+              ''.format(hostname, disk_id))
+
+
 def list_hosts(service_instance):
     '''
     Returns a list of hosts associated with a given service instance.
