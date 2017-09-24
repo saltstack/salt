@@ -1909,7 +1909,7 @@ def get_datastores(service_instance, reference, datastore_names=None,
                 'is set'.format(reference.__class__.__name__))
     if (not get_all_datastores) and backing_disk_ids:
         # At this point we know the reference is a vim.HostSystem
-        log.debug('Filtering datastores with backing disk ids: {}'
+        log.trace('Filtering datastores with backing disk ids: {}'
                   ''.format(backing_disk_ids))
         storage_system = get_storage_system(service_instance, reference,
                                             obj_name)
@@ -1925,11 +1925,11 @@ def get_datastores(service_instance, reference, datastore_names=None,
                 # Skip volume if it doesn't contain an extent with a
                 # canonical name of interest
                 continue
-            log.debug('Found datastore \'{0}\' for disk id(s) \'{1}\''
+            log.trace('Found datastore \'{0}\' for disk id(s) \'{1}\''
                       ''.format(vol.name,
                                 [e.diskName for e in vol.extent]))
             disk_datastores.append(vol.name)
-        log.debug('Datastore found for disk filter: {}'
+        log.trace('Datastore found for disk filter: {}'
                   ''.format(disk_datastores))
         if datastore_names:
             datastore_names.extend(disk_datastores)
