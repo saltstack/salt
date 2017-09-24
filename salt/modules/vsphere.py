@@ -5913,6 +5913,61 @@ def list_disks(disk_ids=None, scsi_addresses=None, service_instance=None):
     return ret_list
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def erase_disk_partitions(disk_id=None, scsi_address=None,
+                          service_instance=None):
+    '''
+    Erases the partitions on a disk.
+    The disk can be specified either by the canonical name, or by the
+    scsi_address.
+
+    disk_id
+        Canonical name of the disk.
+        Either ``disk_id`` or ``scsi_address`` needs to be specified
+        (``disk_id`` supersedes ``scsi_address``.
+
+    scsi_address`
+        Scsi address of the disk.
+        ``disk_id`` or ``scsi_address`` needs to be specified
+        (``disk_id`` supersedes ``scsi_address``.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.erase_disk_partitions scsi_address='vmhaba0:C0:T0:L0'
+
+        salt '*' vsphere.erase_disk_partitions disk_id='naa.000000000000001'
+    '''
+    if not disk_id and not scsi_address:
+        raise ArgumentValueError('Either \'disk_id\' or \'scsi_address\' '
+                                 'needs to be specified')
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    if not disk_id:
+        scsi_address_to_lun = \
+                salt.utils.vmware.get_scsi_address_to_lun_map(host_ref)
+        if scsi_address not in scsi_address_to_lun:
+            raise VMwareObjectRetrievalError(
+                'Scsi lun with address \'{0}\' was not found on host \'{1}\''
+                ''.format(scsi_address, hostname))
+        disk_id = scsi_address_to_lun[scsi_address].canonicalName
+        log.trace('[{0}] Got disk id \'{1}\' for scsi address \'{2}\''
+                  ''.format(hostname, disk_id, scsi_address))
+    log.trace('Erasing disk partitions on disk \'{0}\' in host \'{1}\''
+              ''.format(disk_id, hostname))
+    salt.utils.vmware.erase_disk_partitions(service_instance,
+                                            host_ref, disk_id,
+                                            hostname=hostname)
+    log.info('Erased disk partitions on disk \'{0}\' on host \'{1}\''
+             ''.format(disk_id, esxi_host))
+    return True
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
