@@ -2644,6 +2644,66 @@ def erase_disk_partitions(service_instance, host_ref, disk_id,
               ''.format(hostname, disk_id))
 
 
+def get_diskgroups(host_ref, cache_disk_ids=None, get_all_disk_groups=False):
+    '''
+    Returns a list of vim.VsanHostDiskMapping objects representing disks
+    in a ESXi host, filtered by their cannonical names.
+
+    host_ref
+        The vim.HostSystem object representing the host that contains the
+        requested disks.
+
+    cache_disk_ids
+        The list of cannonical names of the cache disks to be retrieved. The
+        canonical name of the cache disk is enough to identify the disk group
+        because it is guaranteed to have one and only one cache disk.
+        Default is None.
+
+    get_all_disk_groups
+        Specifies whether to retrieve all disks groups in the host.
+        Default value is False.
+    '''
+    hostname = get_managed_object_name(host_ref)
+    if get_all_disk_groups:
+        log.trace('Retrieving all disk groups on host \'{0}\''
+                  ''.format(hostname))
+    else:
+        log.trace('Retrieving disk groups from host \'{0}\', with cache disk '
+                  'ids : ({1})'.format(hostname, cache_disk_ids))
+        if not cache_disk_ids:
+            return []
+    try:
+        vsan_host_config = host_ref.config.vsanHostConfig
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    if not vsan_host_config:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'No host config found on host \'{0}\''.format(hostname))
+    vsan_storage_info = vsan_host_config.storageInfo
+    if not vsan_storage_info:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'No vsan storage info found on host \'{0}\''.format(hostname))
+    vsan_disk_mappings = vsan_storage_info.diskMapping
+    if not vsan_disk_mappings:
+        return []
+    disk_groups =  [dm for dm in vsan_disk_mappings if \
+                    (get_all_disk_groups or \
+                     (dm.ssd.canonicalName in cache_disk_ids))]
+    log.trace('Retrieved disk groups on host \'{0}\', with cache disk ids : '
+              '{1}'.format(hostname,
+                           [d.ssd.canonicalName for d in disk_groups]))
+    return disk_groups
+
+
 def list_hosts(service_instance):
     '''
     Returns a list of hosts associated with a given service instance.
