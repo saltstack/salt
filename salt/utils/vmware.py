@@ -2445,6 +2445,35 @@ def get_all_luns(host_ref, storage_system=None, hostname=None):
     return []
 
 
+def get_scsi_address_to_lun_map(host_ref, storage_system=None, hostname=None):
+    '''
+    Returns a map of all vim.ScsiLun objects on a ESXi host keyed by their
+    scsi address
+
+    host_ref
+        The vim.HostSystem object representing the host that contains the
+        requested disks.
+
+    storage_system
+        The host's storage system. Default is None.
+
+    hostname
+        Name of the host. This argument is optional.
+    '''
+    if not hostname:
+        hostname = get_managed_object_name(host_ref)
+    si = get_service_instance_from_managed_object(host_ref, name=hostname)
+    if not storage_system:
+        storage_system = get_storage_system(si, host_ref, hostname)
+    lun_ids_to_scsi_addr_map = \
+            _get_scsi_address_to_lun_key_map(si, host_ref, storage_system,
+                                             hostname)
+    luns_to_key_map = {d.key: d for d in
+                       get_all_luns(host_ref, storage_system, hostname)}
+    return {scsi_addr: luns_to_key_map[lun_key] for scsi_addr, lun_key in
+            lun_ids_to_scsi_addr_map.iteritems()}
+
+
 def list_hosts(service_instance):
     '''
     Returns a list of hosts associated with a given service instance.
