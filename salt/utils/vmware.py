@@ -2006,7 +2006,7 @@ def rename_datastore(datastore_ref, new_datastore_name):
         New datastore name
     '''
     ds_name = get_managed_object_name(datastore_ref)
-    log.debug('Renaming datastore \'{0}\' to '
+    log.trace('Renaming datastore \'{0}\' to '
               '\'{1}\''.format(ds_name, new_datastore_name))
     try:
         datastore_ref.RenameDatastore(new_datastore_name)
