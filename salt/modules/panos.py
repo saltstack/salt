@@ -926,6 +926,30 @@ def get_platform():
     return __proxy__['panos.call'](query)
 
 
+def get_security_rule(rulename=None, vsys='1'):
+    '''
+    Get the candidate configuration for the specified rule.
+
+    rulename(str): The name of the security rule.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_security_rule rule01
+        salt '*' panos.get_security_rule rule01 3
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'rulebase/security/rules/entry[@name=\'{1}\']'.format(vsys, rulename)}
+
+    return __proxy__['panos.call'](query)
+
+
 def get_session_info():
     '''
     Show device session statistics.
