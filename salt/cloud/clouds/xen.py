@@ -162,8 +162,7 @@ def _get_session():
             user, password, api_version, originator)
     except XenAPI.Failure as ex:
         '''
-        if the server on the url is not the pool master, the pool master's
-        address will be rturned in the exception message
+        get the pool master's address from the XenAPI raised exception
         '''
         pool_master_addr = str(ex.__dict__['details'][1])
         slash_parts = url.split('/')
@@ -193,10 +192,10 @@ def list_nodes():
     ret = {}
     for vm in vms:
         record = session.xenapi.VM.get_record(vm)
-        if not(record['is_a_template']) and not(record['is_control_domain']):
+        if not record['is_a_template'] and not record['is_control_domain']:
             try:
                 base_template_name = record['other_config']['base_template_name']
-            except Exception as KeyError:
+            except Exception:
                 base_template_name = None
                 log.debug('VM {}, doesnt have base_template_name attribute'.format(
                     record['name_label']))
@@ -316,7 +315,7 @@ def list_nodes_full(session=None):
             # deal with cases where the VM doesn't have 'base_template_name' attribute
             try:
                 base_template_name = record['other_config']['base_template_name']
-            except Exception as KeyError:
+            except Exception:
                 base_template_name = None
                 log.debug('VM {}, doesnt have base_template_name attribute'.format(
                     record['name_label']))
@@ -481,7 +480,7 @@ def show_instance(name, session=None, call=None):
     if not record['is_a_template'] and not record['is_control_domain']:
         try:
             base_template_name = record['other_config']['base_template_name']
-        except Exception as KeyError:
+        except Exception:
             base_template_name = None
             log.debug('VM {}, doesnt have base_template_name attribute'.format(
                 record['name_label']))
