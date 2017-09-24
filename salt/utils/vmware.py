@@ -2725,6 +2725,47 @@ def _check_disks_in_diskgroup(disk_group, cache_disk_id, capacity_disk_ids):
     return True
 
 
+#TODO Support host caches on multiple datastores
+def get_host_cache(host_ref, host_cache_manager=None):
+    '''
+    Returns a vim.HostScsiDisk if the host cache is configured on the specified
+    host, other wise returns None
+
+    host_ref
+        The vim.HostSystem object representing the host that contains the
+        requested disks.
+
+    host_cache_manager
+        The vim.HostCacheConfigurationManager object representing the cache
+        configuration manager on the specified host. Default is None. If None,
+        it will be retrieved in the method
+    '''
+    hostname = get_managed_object_name(host_ref)
+    service_instance = get_service_instance_from_managed_object(host_ref)
+    log.trace('Retrieving the host cache on host \'{0}\''.format(hostname))
+    if not host_cache_manager:
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            path='configManager.cacheConfigurationManager',
+            type=vim.HostSystem,
+            skip=False)
+        results = get_mors_with_properties(service_instance,
+                                           vim.HostCacheConfigurationManager,
+                                           ['cacheConfigurationInfo'],
+                                           container_ref=host_ref,
+                                           traversal_spec=traversal_spec)
+        if not results or not results[0].get('cacheConfigurationInfo'):
+            log.trace('Host \'{0}\' has no host cache'.format(hostname))
+            return None
+        return results[0]['cacheConfigurationInfo'][0]
+    else:
+        results = get_properties_of_managed_object(host_cache_manager,
+                                                   ['cacheConfigurationInfo'])
+        if not results:
+            log.trace('Host \'{0}\' has no host cache'.format(hostname))
+            return None
+        return results['cacheConfigurationInfo'][0]
+
+
 def list_hosts(service_instance):
     '''
     Returns a list of hosts associated with a given service instance.
