@@ -2292,39 +2292,42 @@ def get_hosts(service_instance, datacenter_name=None, host_names=None,
     properties = ['name']
     if not host_names:
         host_names = []
-    if cluster_name:
-        properties.append('parent')
-    if datacenter_name:
-        start_point = get_datacenter(service_instance, datacenter_name)
-        if cluster_name:
-            # Retrieval to test if cluster exists. Cluster existence only makes
-            # sense if the cluster has been specified
-            cluster = get_cluster(start_point, cluster_name)
-    else:
+    if get_all_hosts or not datacenter_name:
         # Assume the root folder is the starting point
         start_point = get_root_folder(service_instance)
+    else:
+        if cluster_name:
+            properties.append('parent')
+        if datacenter_name:
+            start_point = get_datacenter(service_instance, datacenter_name)
+            if cluster_name:
+                # Retrieval to test if cluster exists. Cluster existence only makes
+                # sense if the cluster has been specified
+                cluster = get_cluster(start_point, cluster_name)
 
     # Search for the objects
     hosts = get_mors_with_properties(service_instance,
                                      vim.HostSystem,
                                      container_ref=start_point,
                                      property_list=properties)
+    log.trace('Retrieved hosts: {0}'.format(h['name'] for h in hosts))
     filtered_hosts = []
     for h in hosts:
         # Complex conditions checking if a host should be added to the
         # filtered list (either due to its name and/or cluster membership)
-        name_condition = get_all_hosts or (h['name'] in host_names)
-        # the datacenter_name needs to be set in order for the cluster
-        # condition membership to be checked, otherwise the condition is
-        # ignored
-        cluster_condition = \
-                (not datacenter_name or not cluster_name or
-                 (isinstance(h['parent'], vim.ClusterComputeResource) and
-                  h['parent'].name == cluster_name))
 
-        if name_condition and cluster_condition:
+        if get_all_hosts:
             filtered_hosts.append(h['object'])
+            continue
 
+        if cluster_name:
+            if not isinstance(h['parent'], vim.ClusterComputeResource):
+                continue
+            parent_name = get_managed_object_name(h['parent'])
+            if parent_name != cluster_name:
+                continue
+        if h['name'] in host_names:
+            filtered_hosts.append(h['object'])
     return filtered_hosts
 
 
