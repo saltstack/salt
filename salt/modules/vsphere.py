@@ -6037,6 +6037,46 @@ def list_disk_partitions(disk_id=None, scsi_address=None,
     return ret_list
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def list_diskgroups(cache_disk_ids=None, service_instance=None):
+    '''
+    Returns a list of disk group dict representation on an ESXi host.
+    The list of disk groups can be filtered by the cache disks
+    canonical names. If no filtering is applied, all disk groups are returned.
+
+    cache_disk_ids:
+        List of cache disk canonical names of the disk groups to be retrieved.
+        Default is None.
+
+    use_proxy_details
+        Specify whether to use the proxy minion's details instead of the
+        arguments
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_diskgroups
+
+        salt '*' vsphere.list_diskgroups cache_disk_ids='[naa.000000000000001]'
+    '''
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    log.trace('Listing diskgroups in \'{0}\''.format(hostname))
+    get_all_diskgroups = True if not cache_disk_ids else False
+    ret_list = []
+    for dg in salt.utils.vmware.get_diskgroups(host_ref, cache_disk_ids,
+                                               get_all_diskgroups):
+        ret_list.append(
+            {'cache_disk': dg.ssd.canonicalName,
+             'capacity_disks': [d.canonicalName for d in dg.nonSsd]})
+    return ret_list
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
