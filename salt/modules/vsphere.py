@@ -5813,6 +5813,57 @@ def assign_license(license_key, license_name, entity, entity_display_name,
         entity_name=entity_display_name)
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def list_hosts_via_proxy(hostnames=None, datacenter=None,
+                         cluster=None, service_instance=None):
+    '''
+    Returns a list of hosts for the the specified VMware environment. The list
+    of hosts can be filtered by datacenter name and/or cluster name
+
+    hostnames
+        Hostnames to filter on.
+
+    datacenter_name
+        Name of datacenter. Only hosts in this datacenter will be retrieved.
+        Default is None.
+
+    cluster_name
+        Name of cluster. Only hosts in this cluster will be retrieved. If a
+        datacenter is not specified the first cluster with this name will be
+        considerred. Default is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_hosts_via_proxy
+
+        salt '*' vsphere.list_hosts_via_proxy hostnames=[esxi1.example.com]
+
+        salt '*' vsphere.list_hosts_via_proxy datacenter=dc1 cluster=cluster1
+    '''
+    if cluster:
+        if not datacenter:
+            raise salt.exceptions.ArgumentValueError(
+                'Datacenter is required when cluster is specified')
+    get_all_hosts = False
+    if not hostnames and not datacenter and not cluster:
+        get_all_hosts = True
+    hosts = salt.utils.vmware.get_hosts(service_instance,
+                                        datacenter_name=datacenter,
+                                        host_names=hostnames,
+                                        cluster_name=cluster,
+                                        get_all_hosts=get_all_hosts)
+    return [salt.utils.vmware.get_managed_object_name(h) for h in hosts]
+
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
