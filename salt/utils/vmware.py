@@ -2395,6 +2395,56 @@ def _get_scsi_address_to_lun_key_map(service_instance,
     return lun_key_by_scsi_addr
 
 
+def get_all_luns(host_ref, storage_system=None, hostname=None):
+    '''
+    Returns a list of all vim.HostScsiDisk objects in a disk
+
+    host_ref
+        The vim.HostSystem object representing the host that contains the
+        requested disks.
+
+    storage_system
+        The host's storage system. Default is None.
+
+    hostname
+        Name of the host. This argument is optional.
+    '''
+    if not hostname:
+        hostname = get_managed_object_name(host_ref)
+    if not storage_system:
+        si = get_service_instance_from_managed_object(host_ref, name=hostname)
+        storage_system = get_storage_system(si, host_ref, hostname)
+        if not storage_system:
+            raise salt.exceptions.VMwareObjectRetrievalError(
+                'Host\'s \'{0}\' storage system was not retrieved'
+                ''.format(hostname))
+    try:
+        device_info = storage_system.storageDeviceInfo
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    if not device_info:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Host\'s \'{0}\' storage device info was not retrieved'
+            ''.format(hostname))
+
+    scsi_luns = device_info.scsiLun
+    if scsi_luns:
+        log.trace('Retrieved scsi luns in host \'{0}\': {1}'
+                  ''.format(hostname, [l.canonicalName for l in scsi_luns]))
+        return scsi_luns
+    log.trace('Retrieved no scsi_luns in host \'{0}\''.format(hostname))
+    return []
+
+
 def list_hosts(service_instance):
     '''
     Returns a list of hosts associated with a given service instance.
