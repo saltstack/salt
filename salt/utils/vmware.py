@@ -2766,6 +2766,62 @@ def get_host_cache(host_ref, host_cache_manager=None):
         return results['cacheConfigurationInfo'][0]
 
 
+#TODO Support host caches on multiple datastores
+def configure_host_cache(host_ref, datastore_ref, swap_size_MiB,
+                         host_cache_manager=None):
+    '''
+    Configures the host cahe of the specified host
+
+    host_ref
+        The vim.HostSystem object representing the host that contains the
+        requested disks.
+
+    datastore_ref
+        The vim.Datastore opject representing the datastore the host cache will
+        be configured on.
+
+    swap_size_MiB
+        The size in Mibibytes of the swap.
+
+    host_cache_manager
+        The vim.HostCacheConfigurationManager object representing the cache
+        configuration manager on the specified host. Default is None. If None,
+        it will be retrieved in the method
+    '''
+    hostname = get_managed_object_name(host_ref)
+    if not host_cache_manager:
+        props = get_properties_of_managed_object(
+            host_ref, ['configManager.cacheConfigurationManager'])
+        if not props.get('configManager.cacheConfigurationManager'):
+            raise salt.exceptions.VMwareObjectRetrievalError(
+                'Host \'{0}\' has no host cache'.format(hostname))
+        host_cache_manager = props['configManager.cacheConfigurationManager']
+    log.trace('Configuring the host cache on host \'{0}\', datastore \'{1}\', '
+              'swap size={2} MiB'.format(hostname, datastore_ref.name,
+                                         swap_size_MiB))
+
+    spec = vim.HostCacheConfigurationSpec(
+        datastore=datastore_ref,
+        swapSize=swap_size_MiB)
+    log.trace('host_cache_spec={0}'.format(spec))
+    try:
+        task = host_cache_manager.ConfigureHostCache_Task(spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, hostname, 'HostCacheConfigurationTask')
+    log.trace('Configured host cache on host \'{0}\''.format(hostname))
+    return True
+
+
 def list_hosts(service_instance):
     '''
     Returns a list of hosts associated with a given service instance.
