@@ -7,6 +7,7 @@ XenServer Cloud Driver
 The XenServer driver is designed to work with a Citrix XenServer.
 
 Requires XenServer SDK
+(can be downloaded from https://www.citrix.com/downloads/xenserver/product-software/ )
 
 Place a copy of the XenAPI.py in the Python site-packages folder.
 
