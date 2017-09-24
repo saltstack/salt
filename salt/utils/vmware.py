@@ -2530,6 +2530,48 @@ def get_disks(host_ref, disk_ids=None, scsi_addresses=None,
     return scsi_disks
 
 
+def get_disk_partition_info(host_ref, disk_id, storage_system=None):
+    '''
+    Returns all partitions on a disk
+
+    host_ref
+        The reference of the ESXi host containing the disk
+
+    disk_id
+        The canonical name of the disk whose partitions are to be removed
+
+    storage_system
+        The ESXi host's storage system. Default is None.
+    '''
+    hostname = get_managed_object_name(host_ref)
+    service_instance = get_service_instance_from_managed_object(host_ref)
+    if not storage_system:
+        storage_system = get_storage_system(service_instance, host_ref,
+                                            hostname)
+
+    props = get_properties_of_managed_object(storage_system,
+                                             ['storageDeviceInfo.scsiLun'])
+    if not props.get('storageDeviceInfo.scsiLun'):
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'No devices were retrieved in host \'{0}\''.format(hostname))
+    log.trace('[{0}] Retrieved {1} devices: {2}'.format(
+        hostname, len(props['storageDeviceInfo.scsiLun']),
+        ', '.join([l.canonicalName
+                   for l in props['storageDeviceInfo.scsiLun']])))
+    disks = [l for l in props['storageDeviceInfo.scsiLun']
+             if isinstance(l, vim.HostScsiDisk) and
+             l.canonicalName == disk_id]
+    if not disks:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Disk \'{0}\' was not found in host \'{1}\''
+            ''.format(disk_id, hostname))
+    log.trace('[{0}] device_path = {1}'.format(hostname, disks[0].devicePath))
+    partition_info = _get_partition_info(storage_system, disks[0].devicePath)
+    log.trace('[{0}] Retrieved {1} partition(s) on disk \'{2}\''
+              ''.format(hostname, len(partition_info.spec.partition), disk_id))
+    return partition_info
+
+
 def list_hosts(service_instance):
     '''
     Returns a list of hosts associated with a given service instance.
