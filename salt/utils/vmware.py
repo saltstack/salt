@@ -2331,6 +2331,70 @@ def get_hosts(service_instance, datacenter_name=None, host_names=None,
     return filtered_hosts
 
 
+def _get_scsi_address_to_lun_key_map(service_instance,
+                                     host_ref,
+                                     storage_system=None,
+                                     hostname=None):
+    '''
+    Returns a map between the scsi addresses and the keys of all luns on an ESXi
+    host.
+        map[<scsi_address>] = <lun key>
+
+    service_instance
+        The Service Instance Object from which to obtain the hosts
+
+    host_ref
+        The vim.HostSystem object representing the host that contains the
+        requested disks.
+
+    storage_system
+        The host's storage system. Default is None.
+
+    hostname
+        Name of the host. Default is None.
+    '''
+    map = {}
+    if not hostname:
+        hostname = get_managed_object_name(host_ref)
+    if not storage_system:
+        storage_system = get_storage_system(service_instance, host_ref,
+                                            hostname)
+    try:
+        device_info = storage_system.storageDeviceInfo
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    if not device_info:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Host\'s \'{0}\' storage device '
+            'info was not retrieved'.format(hostname))
+    multipath_info = device_info.multipathInfo
+    if not multipath_info:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Host\'s \'{0}\' multipath info was not retrieved'
+            ''.format(hostname))
+    if multipath_info.lun is None:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'No luns were retrieved from host \'{0}\''.format(hostname))
+    lun_key_by_scsi_addr = {}
+    for l in multipath_info.lun:
+        # The vmware scsi_address may have multiple comma separated values
+        # The first one is the actual scsi address
+        lun_key_by_scsi_addr.update({p.name.split(',')[0]: l.lun
+                                     for p in l.path})
+    log.trace('Scsi address to lun id map on host \'{0}\': '
+              '{1}'.format(hostname, lun_key_by_scsi_addr))
+    return lun_key_by_scsi_addr
+
+
 def list_hosts(service_instance):
     '''
     Returns a list of hosts associated with a given service instance.
