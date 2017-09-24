@@ -2474,6 +2474,62 @@ def get_scsi_address_to_lun_map(host_ref, storage_system=None, hostname=None):
             lun_ids_to_scsi_addr_map.iteritems()}
 
 
+def get_disks(host_ref, disk_ids=None, scsi_addresses=None,
+              get_all_disks=False):
+    '''
+    Returns a list of vim.HostScsiDisk objects representing disks
+    in a ESXi host, filtered by their cannonical names and scsi_addresses
+
+    host_ref
+        The vim.HostSystem object representing the host that contains the
+        requested disks.
+
+    disk_ids
+        The list of canonical names of the disks to be retrieved. Default value
+        is None
+
+    scsi_addresses
+        The list of scsi addresses of the disks to be retrieved. Default value
+        is None
+
+    get_all_disks
+        Specifies whether to retrieve all disks in the host.
+        Default value is False.
+    '''
+    hostname = get_managed_object_name(host_ref)
+    if get_all_disks:
+        log.trace('Retrieving all disks in host \'{0}\''.format(hostname))
+    else:
+        log.trace('Retrieving disks in host \'{0}\': ids = ({1}); scsi '
+                  'addresses = ({2})'.format(hostname, disk_ids,
+                                            scsi_addresses))
+        if not (disk_ids or scsi_addresses):
+            return []
+    si = get_service_instance_from_managed_object(host_ref, name=hostname)
+    storage_system = get_storage_system(si, host_ref, hostname)
+    disk_keys = []
+    if scsi_addresses:
+        # convert the scsi addresses to disk keys
+        lun_key_by_scsi_addr = _get_scsi_address_to_lun_key_map(si, host_ref,
+                                                                storage_system,
+                                                                hostname)
+        disk_keys = [key for scsi_addr, key in lun_key_by_scsi_addr.iteritems()
+                     if scsi_addr in  scsi_addresses]
+        log.trace('disk_keys based on scsi_addresses = {0}'.format(disk_keys))
+
+    scsi_luns = get_all_luns(host_ref, storage_system)
+    scsi_disks = [disk for disk in scsi_luns
+                  if isinstance(disk, vim.HostScsiDisk) and (
+                      get_all_disks or
+                      # Filter by canonical name
+                      (disk_ids and (disk.canonicalName in disk_ids)) or
+                      # Filter by disk keys from scsi addresses
+                      (disk.key in disk_keys))]
+    log.trace('Retrieved disks in host \'{0}\': {1}'
+              ''.format(hostname, [d.canonicalName for d in scsi_disks]))
+    return scsi_disks
+
+
 def list_hosts(service_instance):
     '''
     Returns a list of hosts associated with a given service instance.
