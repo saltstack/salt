@@ -5863,6 +5863,55 @@ def list_hosts_via_proxy(hostnames=None, datacenter=None,
     return [salt.utils.vmware.get_managed_object_name(h) for h in hosts]
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def list_disks(disk_ids=None, scsi_addresses=None, service_instance=None):
+    '''
+    Returns a list of dict representations of the disks in an ESXi host.
+    The list of disks can be filtered by disk canonical names or
+    scsi addresses.
+
+    disk_ids:
+        List of disk canonical names to be retrieved. Default is None.
+
+    scsi_addresses
+        List of scsi addresses of disks to be retrieved. Default is None
+
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_disks
+
+        salt '*' vsphere.list_disks disk_ids='[naa.00, naa.001]'
+
+        salt '*' vsphere.list_disks
+            scsi_addresses='[vmhba0:C0:T0:L0, vmhba1:C0:T0:L0]'
+    '''
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    log.trace('Retrieving disks if host \'{0}\''.format(hostname))
+    log.trace('disk ids = {0}'.format(disk_ids))
+    log.trace('scsi_addresses = {0}'.format(scsi_addresses))
+    # Default to getting all disks if no filtering is done
+    get_all_disks = True if not (disk_ids or scsi_addresses) else False
+    ret_list = []
+    scsi_address_to_lun = salt.utils.vmware.get_scsi_address_to_lun_map(
+        host_ref, hostname=hostname)
+    canonical_name_to_scsi_address = {
+        lun.canonicalName: scsi_addr
+        for scsi_addr, lun in scsi_address_to_lun.iteritems()}
+    for d in salt.utils.vmware.get_disks(host_ref, disk_ids, scsi_addresses,
+                                         get_all_disks):
+        ret_list.append({'id': d.canonicalName,
+                         'scsi_address':
+                         canonical_name_to_scsi_address[d.canonicalName]})
+    return ret_list
+
 
 def _check_hosts(service_instance, host, host_names):
     '''
