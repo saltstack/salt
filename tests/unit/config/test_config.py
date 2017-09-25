@@ -727,8 +727,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Tests passing in valid provider and profile config files successfully
         '''
         providers = {'test-provider':
-                         {'digital_ocean':
-                              {'driver': 'digital_ocean', 'profiles': {}}}}
+                         {'digitalocean':
+                              {'driver': 'digitalocean', 'profiles': {}}}}
         overrides = {'test-profile':
                          {'provider': 'test-provider',
                           'image': 'Ubuntu 12.10 x64',
@@ -736,7 +736,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                      'conf_file': PATH}
         ret = {'test-profile':
                    {'profile': 'test-profile',
-                    'provider': 'test-provider:digital_ocean',
+                    'provider': 'test-provider:digitalocean',
                     'image': 'Ubuntu 12.10 x64',
                     'size': '512MB'}}
         self.assertEqual(sconfig.apply_vm_profiles_config(providers,

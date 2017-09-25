@@ -106,9 +106,9 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
                 mock_kubernetes_lib.client.V1DeleteOptions = Mock(return_value="")
                 mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
-                    **{"delete_namespaced_deployment.return_value.to_dict.return_value": {}}
+                    **{"delete_namespaced_deployment.return_value.to_dict.return_value": {'code': 200}}
                 )
-                self.assertEqual(kubernetes.delete_deployment("test"), {})
+                self.assertEqual(kubernetes.delete_deployment("test"), {'code': 200})
                 self.assertTrue(
                     kubernetes.kubernetes.client.ExtensionsV1beta1Api().
                     delete_namespaced_deployment().to_dict.called)

@@ -51,7 +51,7 @@ def rehash():
 
     CLI Example:
 
-    ... code-block:: bash
+    .. code-block:: bash
 
         salt '*' win_path.rehash
     '''

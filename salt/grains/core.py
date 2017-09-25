@@ -1205,6 +1205,10 @@ _OS_FAMILY_MAP = {
     'Raspbian': 'Debian',
     'Devuan': 'Debian',
     'antiX': 'Debian',
+    'Kali': 'Debian',
+    'neon': 'Debian',
+    'Cumulus': 'Debian',
+    'Deepin': 'Debian',
     'NILinuxRT': 'NILinuxRT',
     'NILinuxRT-XFCE': 'NILinuxRT',
     'KDE neon': 'Debian',
@@ -2446,7 +2450,7 @@ def default_gateway():
         ip_gw: True   # True if either of the above is True, False otherwise
     '''
     grains = {}
-    if not salt.utils.which('ip'):
+    if not salt.utils.path.which('ip'):
         return {}
     grains['ip_gw'] = False
     grains['ip4_gw'] = False

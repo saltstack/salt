@@ -12,7 +12,7 @@ from __future__ import absolute_import
 # Import Salt Libs
 import salt.modules.vsphere as vsphere
 from salt.exceptions import CommandExecutionError, VMwareSaltError, \
-        ArgumentValueError
+        ArgumentValueError, VMwareObjectRetrievalError
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -1241,6 +1241,87 @@ class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
     def test__get_cluster_dict_call(self):
         vsphere.list_cluster()
         self.mock__get_cluster_dict.assert_called_once_with('cl', self.mock_cl)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class RenameDatastoreTestCase(TestCase, LoaderModuleMockMixin):
+    '''Tests for salt.modules.vsphere.rename_datastore'''
+    def setup_loader_modules(self):
+        return {
+            vsphere: {
+                '__virtual__': MagicMock(return_value='vsphere'),
+                '_get_proxy_connection_details': MagicMock(),
+                'get_proxy_type': MagicMock(return_value='esxdatacenter')
+            }
+        }
+
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.mock_target = MagicMock()
+        self.mock_ds_ref = MagicMock()
+        self.mock_get_datastores = MagicMock(return_value=[self.mock_ds_ref])
+        self.mock_rename_datastore = MagicMock()
+        patches = (
+            ('salt.utils.vmware.get_service_instance',
+             MagicMock(return_value=self.mock_si)),
+            ('salt.modules.vsphere._get_proxy_target',
+             MagicMock(return_value=self.mock_target)),
+            ('salt.utils.vmware.get_datastores',
+             self.mock_get_datastores),
+            ('salt.utils.vmware.rename_datastore',
+             self.mock_rename_datastore))
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        for attr in ('mock_si', 'mock_target', 'mock_ds_ref',
+                     'mock_get_datastores', 'mock_rename_datastore'):
+            delattr(self, attr)
+
+    def test_supported_proxes(self):
+        supported_proxies = ['esxi', 'esxcluster', 'esxdatacenter']
+        for proxy_type in supported_proxies:
+            with patch('salt.modules.vsphere.get_proxy_type',
+                       MagicMock(return_value=proxy_type)):
+                vsphere.rename_datastore('current_ds_name', 'new_ds_name')
+
+    def test_default_service_instance(self):
+        mock__get_proxy_target = MagicMock()
+        with patch('salt.modules.vsphere._get_proxy_target',
+                   mock__get_proxy_target):
+            vsphere.rename_datastore('current_ds_name', 'new_ds_name')
+        mock__get_proxy_target.assert_called_once_with(self.mock_si)
+
+    def test_defined_service_instance(self):
+        mock_si = MagicMock()
+        mock__get_proxy_target = MagicMock()
+        with patch('salt.modules.vsphere._get_proxy_target',
+                   mock__get_proxy_target):
+            vsphere.rename_datastore('current_ds_name', 'new_ds_name',
+                                     service_instance=mock_si)
+
+        mock__get_proxy_target.assert_called_once_with(mock_si)
+
+    def test_get_datastore_call(self):
+        vsphere.rename_datastore('current_ds_name', 'new_ds_name')
+        self.mock_get_datastores.assert_called_once_with(
+            self.mock_si, self.mock_target,
+            datastore_names=['current_ds_name'])
+
+    def test_get_no_datastores(self):
+        with patch('salt.utils.vmware.get_datastores',
+                   MagicMock(return_value=[])):
+            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                vsphere.rename_datastore('current_ds_name', 'new_ds_name')
+        self.assertEqual(excinfo.exception.strerror,
+                         'Datastore \'current_ds_name\' was not found')
+
+    def test_rename_datastore_call(self):
+        vsphere.rename_datastore('current_ds_name', 'new_ds_name')
+        self.mock_rename_datastore.assert_called_once_with(
+            self.mock_ds_ref, 'new_ds_name')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

@@ -327,6 +327,7 @@ execution modules
     ps
     publish
     puppet
+    purefa
     pushbullet
     pushover_notify
     pw_group
