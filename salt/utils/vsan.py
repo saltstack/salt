@@ -239,6 +239,65 @@ def create_diskgroup(service_instance, vsan_disk_mgmt_system,
     return True
 
 
+def add_capacity_to_diskgroup(service_instance, vsan_disk_mgmt_system,
+                              host_ref, diskgroup, new_capacity_disks):
+    '''
+    Adds capacity disk(s) to a disk group.
+
+    service_instance
+        Service instance to the host or vCenter
+
+    vsan_disk_mgmt_system
+        vim.VimClusterVsanVcDiskManagemenetSystem representing the vSan disk
+        management system retrieved from the vsan endpoint.
+
+    host_ref
+        vim.HostSystem object representing the target host the disk group will
+        be created on
+
+    diskgroup
+        The vsan.HostDiskMapping object representing the host's diskgroup where
+        the additional capacity needs to be added
+
+    new_capacity_disks
+        List of vim.HostScsiDisk objects representing the disks to be added as
+        capacity disks. Can be either ssd or non-ssd. There must be a minimum
+        of 1 new capacity disk in the list.
+    '''
+    hostname = salt.utils.vmware.get_managed_object_name(host_ref)
+    cache_disk = diskgroup.ssd
+    cache_disk_id = cache_disk.canonicalName
+    log.debug('Adding capacity to disk group with cache disk \'{0}\' on host '
+              '\'{1}\''.format(cache_disk_id, hostname))
+    log.trace('new_capacity_disk_ids = {0}'.format([c.canonicalName for c in
+                                                    new_capacity_disks]))
+    spec = vim.VimVsanHostDiskMappingCreationSpec()
+    spec.cacheDisks = [cache_disk]
+    spec.capacityDisks = new_capacity_disks
+    # All new capacity disks must be either ssd or non-ssd (mixed disks are not
+    # supported); also they need to match the type of the existing capacity
+    # disks; we assume disks are already validated
+    spec.creationType = 'allFlash' if getattr(new_capacity_disks[0], 'ssd') \
+            else 'hybrid'
+    spec.host = host_ref
+    try:
+        task = vsan_disk_mgmt_system.InitializeDiskMappings(spec)
+    except fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.fault.MethodNotFound as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError('Method \'{0}\' not found'.format(exc.method))
+    except vmodl.RuntimeFault as exc:
+        raise VMwareRuntimeError(exc.msg)
+    _wait_for_tasks([task], service_instance)
+    return True
+
+
 def get_cluster_vsan_info(cluster_ref):
     '''
     Returns the extended cluster vsan configuration object
