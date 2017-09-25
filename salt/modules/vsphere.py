@@ -6211,6 +6211,74 @@ def add_capacity_to_diskgroup(cache_disk_id, capacity_disk_ids,
     return True
 
 
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def remove_capacity_from_diskgroup(cache_disk_id, capacity_disk_ids,
+                                   data_evacuation=True, safety_checks=True,
+                                   service_instance=None):
+    '''
+    Remove capacity disks from the disk group with the specified cache disk.
+
+    cache_disk_id
+        The canonical name of the cache disk.
+
+    capacity_disk_ids
+        A list containing canonical names of the capacity disks to add.
+
+    data_evacuation
+        Specifies whether to gracefully evacuate the data on the capacity disks
+        before removing them from the disk group. Default value is True.
+
+    safety_checks
+        Specify whether to perform safety check or to skip the checks and try
+        performing the required task. Default value is True.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.remove_capacity_from_diskgroup
+            cache_disk_id='naa.000000000000001'
+            capacity_disk_ids='[naa.000000000000002, naa.000000000000003]'
+    '''
+    log.trace('Validating diskgroup input')
+    schema = DiskGroupsDiskIdSchema.serialize()
+    try:
+        jsonschema.validate(
+            {'diskgroups': [{'cache_id': cache_disk_id,
+                             'capacity_ids': capacity_disk_ids}]},
+            schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise ArgumentValueError(exc)
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    disks = salt.utils.vmware.get_disks(host_ref, disk_ids=capacity_disk_ids)
+    if safety_checks:
+        for id in capacity_disk_ids:
+            if not [d for d in disks if d.canonicalName == id]:
+                raise VMwareObjectRetrievalError(
+                    'No disk with id \'{0}\' was found in ESXi host \'{1}\''
+                    ''.format(id, hostname))
+    diskgroups = \
+            salt.utils.vmware.get_diskgroups(host_ref,
+                                             cache_disk_ids=[cache_disk_id])
+    if not diskgroups:
+        raise VMwareObjectRetrievalError(
+            'No diskgroup with cache disk id \'{0}\' was found in ESXi '
+            'host \'{1}\''.format(cache_disk_id, hostname))
+    log.trace('data_evacuation = {0}'.format(data_evacuation))
+    salt.utils.vsan.remove_capacity_from_diskgroup(
+        service_instance, host_ref, diskgroups[0],
+        capacity_disks=[d for d in disks
+                        if d.canonicalName in capacity_disk_ids],
+        data_evacuation=data_evacuation)
+    return True
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
