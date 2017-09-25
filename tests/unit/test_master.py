@@ -63,7 +63,7 @@ class ClearFuncsTestCase(TestCase):
                                u'message': u'A command invocation error occurred: Check syntax.'}}
 
         with patch('salt.auth.LoadAuth.authenticate_token', MagicMock(return_value=mock_token)), \
-             patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
+             patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.clear_funcs.runner(clear_load)
 
         self.assertDictEqual(mock_ret, ret)
