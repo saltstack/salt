@@ -20,6 +20,7 @@
 #proxy_port:
 #proxy_username:
 #proxy_password:
+#no_proxy: []
 
 # If multiple masters are specified in the 'master' setting, the default behavior
 # is to always try to connect to them in the order they are listed. If random_master is

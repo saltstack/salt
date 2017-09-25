@@ -17,6 +17,7 @@ import io
 import zlib
 import gzip
 import re
+from urlparse import urlparse
 
 import ssl
 try:
@@ -500,6 +501,13 @@ def query(url,
         proxy_port = opts.get('proxy_port', None)
         proxy_username = opts.get('proxy_username', None)
         proxy_password = opts.get('proxy_password', None)
+        no_proxy = opts.get('proxy_host', [])
+
+        # Since tornado doesnt support no_proxy, we'll always hand it empty proxies or valid ones
+        # except we remove the valid ones if a url has a no_proxy hostname in it
+        if urlparse(url_full).hostname in no_proxy:
+          proxy_host = None
+          proxy_port = None
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
