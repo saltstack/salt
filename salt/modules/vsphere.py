@@ -188,6 +188,8 @@ from salt.config.schemas.vcenter import VCenterEntitySchema
 from salt.config.schemas.esxi import DiskGroupsDiskIdSchema, \
         VmfsDatastoreSchema, SimpleHostCacheSchema
 
+log = logging.getLogger(__name__)
+
 # Import Third Party Libs
 try:
     import jsonschema
@@ -197,6 +199,14 @@ except ImportError:
 
 try:
     from pyVmomi import vim, vmodl, pbm, VmomiSupport
+
+    # We check the supported vim versions to infer the pyVmomi version
+    if 'vim25/6.0' in VmomiSupport.versionMap and \
+        sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
+
+        log.error('pyVmomi not loaded: Incompatible versions '
+                  'of Python. See Issue #29537.')
+        raise ImportError()
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -207,24 +217,11 @@ if esx_cli:
 else:
     HAS_ESX_CLI = False
 
-log = logging.getLogger(__name__)
-
 __virtualname__ = 'vsphere'
 __proxyenabled__ = ['esxi', 'esxcluster', 'esxdatacenter', 'vcenter']
 
 
 def __virtual__():
-    if not HAS_JSONSCHEMA:
-        return False, 'Execution module did not load: jsonschema not found'
-    if not HAS_PYVMOMI:
-        return False, 'Execution module did not load: pyVmomi not found'
-
-    # We check the supported vim versions to infer the pyVmomi version
-    if 'vim25/6.0' in VmomiSupport.versionMap and \
-        sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
-
-        return False, ('Execution module did not load: Incompatible versions '
-                       'of Python and pyVmomi present. See Issue #29537.')
     return __virtualname__
 
 
