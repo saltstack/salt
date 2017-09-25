@@ -18,6 +18,7 @@ from salt.utils.schema import (DefinitionsSchema,
                                ComplexSchemaItem,
                                ArrayItem,
                                IntegerItem,
+                               BooleanItem,
                                StringItem)
 
 
@@ -55,6 +56,22 @@ class DiskGroupsDiskIdSchema(DefinitionsSchema):
         min_items = 1,
         items=DiskGroupDiskIdItem(),
         required=True)
+
+
+class SimpleHostCacheSchema(Schema):
+    '''
+    Simplified Schema of ESXi host cache
+    '''
+
+    title = 'Simple Host Cache Schema'
+    description = 'Simplified schema of the ESXi host cache'
+    enabled = BooleanItem(
+        title='Enabled',
+        required=True)
+    datastore_name = StringItem(title='Datastore Name',
+                                required=True)
+    swap_size_MiB = IntegerItem(title='Host cache swap size in MiB',
+                                minimum=1)
 
 
 class EsxiProxySchema(Schema):
