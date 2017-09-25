@@ -166,13 +166,15 @@ Ubuntu 14.04 LTS and Debian Wheezy (7.x) also have a compatible version packaged
 
     # apt-get install python-git
 
-If your master is running an older version (such as Ubuntu 12.04 LTS or Debian
-Squeeze), then you will need to install GitPython using either pip_ or
-easy_install (it is recommended to use pip). Version 0.3.2.RC1 is now marked as
-the stable release in PyPI, so it should be a simple matter of running ``pip
-install GitPython`` (or ``easy_install GitPython``) as root.
+GitPython_ requires the ``git`` CLI utility to work. If installed from a system
+package, then git should already be installed, but if installed via pip_ then
+it may still be necessary to install git separately. For MacOS users,
+GitPython_ comes bundled in with the Salt installer, but git must still be
+installed for it to work properly. Git can be installed in several ways,
+including by installing XCode_.
 
-.. _`pip`: http://www.pip-installer.org/
+.. _pip: http://www.pip-installer.org/
+.. _XCode: https://developer.apple.com/xcode/
 
 .. warning::
 
@@ -330,6 +332,8 @@ configured gitfs remotes):
 * :conf_master:`gitfs_privkey` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
 * :conf_master:`gitfs_refspecs` (new in 2017.7.0)
+* :conf_master:`gitfs_disable_saltenv_mapping` (new in Oxygen)
+* :conf_master:`gitfs_ref_types` (new in Oxygen)
 
 .. note::
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
@@ -355,11 +359,17 @@ tremendous amount of customization. Here's some example usage:
         - root: other/salt
         - mountpoint: salt://other/bar
         - base: salt-base
+        - ref_types:
+          - branch
       - http://foo.com/baz.git:
         - root: salt/states
         - user: joe
         - password: mysupersecretpassword
         - insecure_auth: True
+        - disable_saltenv_mapping: True
+        - saltenv:
+          - foo:
+            - ref: foo
       - http://foo.com/quux.git:
         - all_saltenvs: master
 
@@ -391,18 +401,24 @@ In the example configuration above, the following is true:
    will only serve files from the ``salt/states`` directory (and its
    subdirectories).
 
-3. The first and fourth remotes will have files located under the root of the
+3. The third remote will only serve files from branches, and not from tags or
+   SHAs.
+
+4. The fourth remote will only have two saltenvs available: ``base`` (pointed
+   at ``develop``), and ``foo`` (pointed at ``foo``).
+
+5. The first and fourth remotes will have files located under the root of the
    Salt fileserver namespace (``salt://``). The files from the second remote
    will be located under ``salt://bar``, while the files from the third remote
    will be located under ``salt://other/bar``.
 
-4. The second and third remotes reference the same repository and unique names
+6. The second and third remotes reference the same repository and unique names
    need to be declared for duplicate gitfs remotes.
 
-5. The fourth remote overrides the default behavior of :ref:`not authenticating
+7. The fourth remote overrides the default behavior of :ref:`not authenticating
    to insecure (non-HTTPS) remotes <gitfs-insecure-auth>`.
 
-6. Because ``all_saltenvs`` is configured for the fifth remote, files from the
+8. Because ``all_saltenvs`` is configured for the fifth remote, files from the
    branch/tag ``master`` will appear in every fileserver environment.
 
    .. note::
@@ -1094,15 +1110,8 @@ Using Git as an External Pillar Source
 The git external pillar (a.k.a. git_pillar) has been rewritten for the 2015.8.0
 release. This rewrite brings with it pygit2_ support (allowing for access to
 authenticated repositories), as well as more granular support for per-remote
-configuration.
-
-To make use of the new features, changes to the git ext_pillar configuration
-must be made. The new configuration schema is detailed :ref:`here
-<git-pillar-2015-8-0-and-later>`.
-
-For Salt releases before 2015.8.0, click :ref:`here <git-pillar-pre-2015-8-0>`
-for documentation.
-
+configuration. This configuration schema is detailed :ref:`here
+<git-pillar-configuration>`.
 
 .. _faq-gitfs-bug:
 

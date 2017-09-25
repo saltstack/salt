@@ -2,23 +2,61 @@
 '''
 Functions used for CLI argument handling
 '''
-from __future__ import absolute_import
 
 # Import python libs
-import re
+from __future__ import absolute_import
+import fnmatch
 import inspect
+import re
+import shlex
 
 # Import salt libs
+from salt.exceptions import SaltInvocationError
+from salt.ext import six
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 import salt.utils.jid
-
-# Import 3rd-party libs
-import salt.ext.six as six
 
 
 if six.PY3:
     KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)
 else:
     KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
+
+
+def clean_kwargs(**kwargs):
+    '''
+    Return a dict without any of the __pub* keys (or any other keys starting
+    with a dunder) from the kwargs dict passed into the execution module
+    functions. These keys are useful for tracking what was used to invoke
+    the function call, but they may not be desirable to have if passing the
+    kwargs forward wholesale.
+    '''
+    ret = {}
+    for key, val in six.iteritems(kwargs):
+        if not key.startswith('__'):
+            ret[key] = val
+    return ret
+
+
+def invalid_kwargs(invalid_kwargs, raise_exc=True):
+    '''
+    Raise a SaltInvocationError if invalid_kwargs is non-empty
+    '''
+    if invalid_kwargs:
+        if isinstance(invalid_kwargs, dict):
+            new_invalid = [
+                '{0}={1}'.format(x, y)
+                for x, y in six.iteritems(invalid_kwargs)
+            ]
+            invalid_kwargs = new_invalid
+    msg = (
+        'The following keyword arguments are not valid: {0}'
+        .format(', '.join(invalid_kwargs))
+    )
+    if raise_exc:
+        raise SaltInvocationError(msg)
+    else:
+        return msg
 
 
 def condition_input(args, kwargs):
@@ -220,3 +258,72 @@ def get_function_argspec(func, is_class_method=None):
                 'Cannot inspect argument list for \'{0}\''.format(func)
             )
     return aspec
+
+
+def shlex_split(s, **kwargs):
+    '''
+    Only split if variable is a string
+    '''
+    if isinstance(s, six.string_types):
+        return shlex.split(s, **kwargs)
+    else:
+        return s
+
+
+def arg_lookup(fun, aspec=None):
+    '''
+    Return a dict containing the arguments and default arguments to the
+    function.
+    '''
+    ret = {'kwargs': {}}
+    if aspec is None:
+        aspec = get_function_argspec(fun)
+    if aspec.defaults:
+        ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+    ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
+    return ret
+
+
+def argspec_report(functions, module=''):
+    '''
+    Pass in a functions dict as it is returned from the loader and return the
+    argspec function signatures
+    '''
+    ret = {}
+    if '*' in module or '.' in module:
+        for fun in fnmatch.filter(functions, module):
+            try:
+                aspec = get_function_argspec(functions[fun])
+            except TypeError:
+                # this happens if not callable
+                continue
+
+            args, varargs, kwargs, defaults = aspec
+
+            ret[fun] = {}
+            ret[fun]['args'] = args if args else None
+            ret[fun]['defaults'] = defaults if defaults else None
+            ret[fun]['varargs'] = True if varargs else None
+            ret[fun]['kwargs'] = True if kwargs else None
+
+    else:
+        # "sys" should just match sys without also matching sysctl
+        module_dot = module + '.'
+
+        for fun in functions:
+            if fun.startswith(module_dot):
+                try:
+                    aspec = get_function_argspec(functions[fun])
+                except TypeError:
+                    # this happens if not callable
+                    continue
+
+                args, varargs, kwargs, defaults = aspec
+
+                ret[fun] = {}
+                ret[fun]['args'] = args if args else None
+                ret[fun]['defaults'] = defaults if defaults else None
+                ret[fun]['varargs'] = True if varargs else None
+                ret[fun]['kwargs'] = True if kwargs else None
+
+    return ret

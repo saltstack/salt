@@ -19,11 +19,14 @@ import logging
 import copy
 
 # Import salt libs
-import salt.utils
-import salt.utils.decorators as decorators
-from salt.ext import six
+import salt.utils  # Can be removed when get_group_list is moved
+import salt.utils.files
+import salt.utils.decorators.path
+import salt.utils.locales
 from salt.exceptions import CommandExecutionError
-from salt.utils import locales
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -59,10 +62,10 @@ def _get_gecos(name):
         # Assign empty strings for any unspecified trailing GECOS fields
         while len(gecos_field) < 4:
             gecos_field.append('')
-        return {'fullname': locales.sdecode(gecos_field[0]),
-                'roomnumber': locales.sdecode(gecos_field[1]),
-                'workphone': locales.sdecode(gecos_field[2]),
-                'homephone': locales.sdecode(gecos_field[3])}
+        return {'fullname': salt.utils.locales.sdecode(gecos_field[0]),
+                'roomnumber': salt.utils.locales.sdecode(gecos_field[1]),
+                'workphone': salt.utils.locales.sdecode(gecos_field[2]),
+                'homephone': salt.utils.locales.sdecode(gecos_field[3])}
 
 
 def _build_gecos(gecos_dict):
@@ -138,7 +141,7 @@ def add(name,
         defs_file = '/etc/login.defs'
         if __grains__['kernel'] != 'OpenBSD':
             try:
-                with salt.utils.fopen(defs_file) as fp_:
+                with salt.utils.files.fopen(defs_file) as fp_:
                     for line in fp_:
                         if 'USERGROUPS_ENAB' not in line[:15]:
                             continue
@@ -158,7 +161,7 @@ def add(name,
         else:
             usermgmt_file = '/etc/usermgmt.conf'
             try:
-                with salt.utils.fopen(usermgmt_file) as fp_:
+                with salt.utils.files.fopen(usermgmt_file) as fp_:
                     for line in fp_:
                         if 'group' not in line[:5]:
                             continue
@@ -594,7 +597,7 @@ def _format_info(data):
             'homephone': gecos_field[3]}
 
 
-@decorators.which('id')
+@salt.utils.decorators.path.which('id')
 def primary_group(name):
     '''
     Return the primary group of the named user

@@ -5,24 +5,32 @@ Template render systems
 
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import codecs
 import os
-import imp
 import logging
 import tempfile
 import traceback
 import sys
 
-# Import third party libs
+# Import 3rd-party libs
 import jinja2
 import jinja2.ext
-import salt.ext.six as six
+from salt.ext import six
 
-# Import salt libs
+if sys.version_info[:2] >= (3, 5):
+    import importlib.machinery  # pylint: disable=no-name-in-module,import-error
+    import importlib.util  # pylint: disable=no-name-in-module,import-error
+    USE_IMPORTLIB = True
+else:
+    import imp
+    USE_IMPORTLIB = False
+
+# Import Salt libs
 import salt.utils
 import salt.utils.http
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.yamlencoding
 import salt.utils.locales
 import salt.utils.hashutils
@@ -32,7 +40,7 @@ from salt.exceptions import (
 import salt.utils.jinja
 import salt.utils.network
 from salt.utils.odict import OrderedDict
-from salt.utils.decorators import JinjaFilter, JinjaTest
+from salt.utils.decorators.jinja import JinjaFilter, JinjaTest, JinjaGlobal
 from salt import __path__ as saltpath
 
 log = logging.getLogger(__name__)
@@ -65,6 +73,9 @@ class AliasedLoader(object):
 
     def __getattr__(self, name):
         return getattr(self.wrapped, name)
+
+    def __contains__(self, name):
+        return name in self.wrapped
 
 
 class AliasedModule(object):
@@ -158,7 +169,7 @@ def wrap_tmpl_func(render_str):
             output = render_str(tmplstr, context, tmplpath)
             if six.PY2:
                 output = output.encode(SLS_ENCODING)
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
 
@@ -262,7 +273,7 @@ def _get_jinja_error(trace, context=None):
     if add_log:
         if template_path:
             out = '\n{0}\n'.format(msg.splitlines()[0])
-            with salt.utils.fopen(template_path) as fp_:
+            with salt.utils.files.fopen(template_path) as fp_:
                 template_contents = fp_.read()
             out += salt.utils.get_context(
                 template_contents,
@@ -322,6 +333,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.tests.update(JinjaTest.salt_jinja_tests)
     jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
+    jinja_env.globals.update(JinjaGlobal.salt_jinja_globals)
 
     # globals
     jinja_env.globals['odict'] = OrderedDict
@@ -346,9 +358,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
-        raise SaltRenderError('Jinja syntax error: {0}{1}'.format(exc, out),
-                              line,
-                              tmplstr)
+        raise SaltRenderError(
+            'Jinja syntax error: {0}{1}'.format(exc, out),
+            line,
+            tmplstr)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         out = _get_jinja_error(trace, context=decoded_context)[1]
@@ -483,10 +496,22 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     if not os.path.isfile(sfn):
         return {}
 
-    mod = imp.load_source(
-            os.path.basename(sfn).split('.')[0],
-            sfn
-            )
+    base_fname = os.path.basename(sfn)
+    name = base_fname.split('.')[0]
+
+    if USE_IMPORTLIB:
+        # pylint: disable=no-member
+        loader = importlib.machinery.SourceFileLoader(name, sfn)
+        spec = importlib.util.spec_from_file_location(name, sfn, loader=loader)
+        if spec is None:
+            raise ImportError()
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        # pylint: enable=no-member
+        sys.modules[name] = mod
+    else:
+        mod = imp.load_source(name, sfn)
+
     # File templates need these set as __var__
     if '__env__' not in kwargs and 'saltenv' in kwargs:
         setattr(mod, '__env__', kwargs['saltenv'])
@@ -504,7 +529,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             return {'result': True,
                     'data': data}
         tgt = salt.utils.files.mkstemp()
-        with salt.utils.fopen(tgt, 'w+') as target:
+        with salt.utils.files.fopen(tgt, 'w+') as target:
             target.write(data)
         return {'result': True,
                 'data': tgt}

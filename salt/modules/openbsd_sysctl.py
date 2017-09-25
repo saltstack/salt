@@ -6,7 +6,7 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -98,13 +98,13 @@ def persist(name, value, config='/etc/sysctl.conf'):
     # create /etc/sysctl.conf if not present
     if not os.path.isfile(config):
         try:
-            with salt.utils.fopen(config, 'w+'):
+            with salt.utils.files.fopen(config, 'w+'):
                 pass
         except (IOError, OSError):
             msg = 'Could not create {0}'
             raise CommandExecutionError(msg.format(config))
 
-    with salt.utils.fopen(config, 'r') as ifile:
+    with salt.utils.files.fopen(config, 'r') as ifile:
         for line in ifile:
             if not line.startswith('{0}='.format(name)):
                 nlines.append(line)
@@ -125,7 +125,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
                 edited = True
     if not edited:
         nlines.append('{0}={1}\n'.format(name, value))
-    with salt.utils.fopen(config, 'w+') as ofile:
+    with salt.utils.files.fopen(config, 'w+') as ofile:
         ofile.writelines(nlines)
 
     assign(name, value)

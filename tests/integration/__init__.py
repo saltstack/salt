@@ -49,10 +49,14 @@ import salt.minion
 import salt.runner
 import salt.output
 import salt.version
-import salt.utils
+import salt.utils  # Can be removed once appendproctitle is moved
+import salt.utils.color
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.process
+import salt.utils.stringutils
 import salt.log.setup as salt_log_setup
-from salt.ext import six
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.utils.nb_popen import NonBlockingPopen
@@ -67,7 +71,7 @@ except ImportError:
 # Import 3rd-party libs
 import yaml
 import msgpack
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import cStringIO
 
 try:
@@ -185,8 +189,8 @@ class TestDaemon(object):
 
     def __init__(self, parser):
         self.parser = parser
-        self.colors = salt.utils.get_colors(self.parser.options.no_colors is False)
-        if salt.utils.is_windows():
+        self.colors = salt.utils.color.get_colors(self.parser.options.no_colors is False)
+        if salt.utils.platform.is_windows():
             # There's no shell color support on windows...
             for key in self.colors:
                 self.colors[key] = ''
@@ -527,8 +531,8 @@ class TestDaemon(object):
                 **self.colors
             )
         )
-        keygen = salt.utils.which('ssh-keygen')
-        sshd = salt.utils.which('sshd')
+        keygen = salt.utils.path.which('ssh-keygen')
+        sshd = salt.utils.path.which('sshd')
 
         if not (keygen and sshd):
             print('WARNING: Could not initialize SSH subsystem. Tests for salt-ssh may break!')
@@ -561,7 +565,7 @@ class TestDaemon(object):
         )
         _, keygen_err = keygen_process.communicate()
         if keygen_err:
-            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_err)))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_err)))
         sshd_config_path = os.path.join(FILES, 'conf/_ssh/sshd_config')
         shutil.copy(sshd_config_path, RUNTIME_VARS.TMP_CONF_DIR)
         auth_key_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test.pub')
@@ -604,7 +608,7 @@ class TestDaemon(object):
         )
         _, keygen_dsa_err = keygen_process_dsa.communicate()
         if keygen_dsa_err:
-            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_dsa_err)))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_dsa_err)))
 
         keygen_process_ecdsa = subprocess.Popen(
             [keygen, '-t',
@@ -624,7 +628,7 @@ class TestDaemon(object):
         )
         _, keygen_escda_err = keygen_process_ecdsa.communicate()
         if keygen_escda_err:
-            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_escda_err)))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_escda_err)))
 
         keygen_process_ed25519 = subprocess.Popen(
             [keygen, '-t',
@@ -644,9 +648,9 @@ class TestDaemon(object):
         )
         _, keygen_ed25519_err = keygen_process_ed25519.communicate()
         if keygen_ed25519_err:
-            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_ed25519_err)))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_ed25519_err)))
 
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
             if not keygen_dsa_err:
                 ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
@@ -665,12 +669,12 @@ class TestDaemon(object):
         )
         _, sshd_err = self.sshd_process.communicate()
         if sshd_err:
-            print('sshd had errors on startup: {0}'.format(salt.utils.to_str(sshd_err)))
+            print('sshd had errors on startup: {0}'.format(salt.utils.stringutils.to_str(sshd_err)))
         else:
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
         shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
             roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
             roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
         sys.stdout.write(
@@ -724,7 +728,7 @@ class TestDaemon(object):
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR)
         print(' * Transplanting configuration files to \'{0}\''.format(RUNTIME_VARS.TMP_CONF_DIR))
         tests_known_hosts_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'salt_ssh_known_hosts')
-        with salt.utils.fopen(tests_known_hosts_file, 'w') as known_hosts:
+        with salt.utils.files.fopen(tests_known_hosts_file, 'w') as known_hosts:
             known_hosts.write('')
 
         # This master connects to syndic_master via a syndic
@@ -825,7 +829,7 @@ class TestDaemon(object):
         for opts_dict in (master_opts, syndic_master_opts):
             if 'ext_pillar' not in opts_dict:
                 opts_dict['ext_pillar'] = []
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 opts_dict['ext_pillar'].append(
                     {'cmd_yaml': 'type {0}'.format(os.path.join(FILES, 'ext.yaml'))})
             else:
@@ -898,22 +902,22 @@ class TestDaemon(object):
 
         for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
-            with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), 'w') as fp_:
+            with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), 'w') as fp_:
                 fp_.write(yaml.dump(computed_config, default_flow_style=False))
         sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'), 'w') as wfh:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'), 'w') as wfh:
             wfh.write(
                 yaml.dump(sub_minion_computed_config, default_flow_style=False)
             )
         shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'master'))
 
         syndic_master_computed_config = copy.deepcopy(syndic_master_opts)
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w') as wfh:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w') as wfh:
             wfh.write(
                 yaml.dump(syndic_master_computed_config, default_flow_style=False)
             )
         syndic_computed_config = copy.deepcopy(syndic_opts)
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w') as wfh:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w') as wfh:
             wfh.write(
                 yaml.dump(syndic_computed_config, default_flow_style=False)
             )
@@ -1061,7 +1065,7 @@ class TestDaemon(object):
             except OSError as exc:
                 if exc.errno != 3:
                     raise
-            with salt.utils.fopen(self.sshd_pidfile) as fhr:
+            with salt.utils.files.fopen(self.sshd_pidfile) as fhr:
                 try:
                     os.kill(int(fhr.read()), signal.SIGKILL)
                 except OSError as exc:

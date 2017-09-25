@@ -40,7 +40,7 @@ and the interaction with the network device does not rely on a particular vendor
 
 .. image:: /_static/napalm_logo.png
 
-Beginning with Nitrogen, the NAPALM modules have been transformed so they can
+Beginning with 2017.7.0, the NAPALM modules have been transformed so they can
 run in both proxy and regular minions. That means, if the operating system
 allows, the salt-minion package can be installed directly on the network gear.
 The interface between the network operating system and Salt in that case would
@@ -50,7 +50,7 @@ For example, if the user installs the
 salt-minion on a Arista switch, the only requirement is
 `napalm-eos <https://github.com/napalm-automation/napalm-eos>`_.
 
-The following modules are available in Nitrogen:
+The following modules are available in 2017.7.0:
 
 - :mod:`NAPALM grains <salt.grains.napalm>`
 - :mod:`NET execution module <salt.modules.napalm_network>` - Networking basic

@@ -12,7 +12,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.loader
 from salt.utils.versions import LooseVersion
 import salt.states.boto_elasticsearch_domain as boto_elasticsearch_domain

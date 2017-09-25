@@ -13,6 +13,7 @@ from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 # from salt.modules import linux_acl as acl
 
 
@@ -28,7 +29,7 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         # Blindly copied from tests.integration.modules.file; Refactoring?
         self.myfile = os.path.join(TMP, 'myfile')
-        with salt.utils.fopen(self.myfile, 'w+') as fp:
+        with salt.utils.files.fopen(self.myfile, 'w+') as fp:
             fp.write('Hello\n')
         self.mydir = os.path.join(TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):

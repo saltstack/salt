@@ -73,15 +73,15 @@ def orchestrate(mods,
     minion = salt.minion.MasterMinion(__opts__)
     running = minion.functions['state.sls'](
             mods,
-            saltenv,
             test,
             exclude,
             pillar=pillar,
+            saltenv=saltenv,
             pillarenv=pillarenv,
             pillar_enc=pillar_enc,
             orchestration_jid=orchestration_jid)
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
-    res = salt.utils.check_state_result(ret['data'])
+    res = __utils__['state.check_result'](ret['data'])
     if res:
         ret['retcode'] = 0
     else:

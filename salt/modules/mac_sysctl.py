@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -155,13 +155,13 @@ def persist(name, value, config='/etc/sysctl.conf', apply_change=False):
     # If the sysctl.conf is not present, add it
     if not os.path.isfile(config):
         try:
-            with salt.utils.fopen(config, 'w+') as _fh:
+            with salt.utils.files.fopen(config, 'w+') as _fh:
                 _fh.write('#\n# Kernel sysctl configuration\n#\n')
         except (IOError, OSError):
             msg = 'Could not write to file: {0}'
             raise CommandExecutionError(msg.format(config))
 
-    with salt.utils.fopen(config, 'r') as ifile:
+    with salt.utils.files.fopen(config, 'r') as ifile:
         for line in ifile:
             if not line.startswith('{0}='.format(name)):
                 nlines.append(line)
@@ -184,7 +184,7 @@ def persist(name, value, config='/etc/sysctl.conf', apply_change=False):
     if not edited:
         nlines.append('{0}={1}'.format(name, value))
         nlines.append('\n')
-    with salt.utils.fopen(config, 'w+') as ofile:
+    with salt.utils.files.fopen(config, 'w+') as ofile:
         ofile.writelines(nlines)
     # If apply_change=True, apply edits to system
     if apply_change is True:

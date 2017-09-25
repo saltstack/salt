@@ -3,7 +3,7 @@
 integration tests for nilirt_ip
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import time
 
@@ -12,12 +12,12 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 
 @skip_if_not_root
-@skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
+@skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
 class Nilrt_ipModuleTest(ModuleCase):
     '''
     Validate the nilrt_ip module

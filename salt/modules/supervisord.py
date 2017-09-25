@@ -15,6 +15,7 @@ from salt.ext.six.moves import configparser  # pylint: disable=import-error
 
 # Import salt libs
 import salt.utils
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -408,7 +409,7 @@ def options(name, conf_file=None):
         raise CommandExecutionError('Process \'{0}\' not found'.format(name))
     ret = {}
     for key, val in config.items(section_name):
-        val = salt.utils.str_to_num(val.split(';')[0].strip())
+        val = salt.utils.stringutils.to_num(val.split(';')[0].strip())
         # pylint: disable=maybe-no-member
         if isinstance(val, string_types):
             if val.lower() == 'true':

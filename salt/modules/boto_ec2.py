@@ -54,7 +54,7 @@ import json
 # Import Salt libs
 import salt.utils
 import salt.utils.compat
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -1858,7 +1858,7 @@ def get_all_tags(filters=None, region=None, key=None, keyid=None, profile=None):
     '''
     Describe all tags matching the filter criteria, or all tags in the account otherwise.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: Oxygen
 
     filters
         (dict) - Additional constraints on which volumes to return.  Note that valid filters vary

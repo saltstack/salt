@@ -9,7 +9,7 @@ import os
 import stat
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.ext.six import string_types
 
 PLUGINDIR = '/etc/munin/plugins/'
@@ -25,7 +25,7 @@ def __virtual__():
 
 
 def _get_conf(fname='/etc/munin/munin-node.cfg'):
-    with salt.utils.fopen(fname, 'r') as fp_:
+    with salt.utils.files.fopen(fname, 'r') as fp_:
         return fp_.read()
 
 

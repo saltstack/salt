@@ -9,6 +9,7 @@ import threading
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.stringutils
 from salt.netapi.rest_tornado import saltnado
 from salt.utils.versions import StrictVersion
 
@@ -18,7 +19,7 @@ from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import zmq
     from zmq.eventloop.ioloop import ZMQIOLoop
@@ -574,7 +575,7 @@ class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
             self.assertIn('headers', event['data'])
             self.assertEqual(
                 event['data']['post'],
-                {'foo': salt.utils.to_bytes('bar')}
+                {'foo': salt.utils.stringutils.to_bytes('bar')}
             )
         finally:
             self._future_resolved.clear()
