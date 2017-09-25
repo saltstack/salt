@@ -47,7 +47,6 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
             'onetest',
             'nobody',
             False,
-            True,
             'french',
             {'different': 'very'}
             )
@@ -57,7 +56,6 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                         cwd='/tmp/nowhere',
                         machine='onetest',
                         runas='nobody',
-                        deploy=True,
                         vagrant_provider='french',
                         different='very'
                         )
@@ -67,7 +65,6 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
         testdict = dict(cwd='/tmp/anywhere',
                         machine='twotest',
                         runas='somebody',
-                        deploy=True,
                         vagrant_provider='english')
         vagrant.init('test2', vm=testdict)
         resp = vagrant.get_vm_info('test2')
@@ -78,13 +75,11 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
         testdict = dict(cwd='/tmp/there',
                         machine='treetest',
                         runas='anybody',
-                        deploy=False,
                         vagrant_provider='spansh')
         vagrant.init('test3',
                         cwd='/tmp',
                         machine='threetest',
                         runas='him',
-                        deploy=True,
                         vagrant_provider='polish',
                         vm=testdict)
         resp = vagrant.get_vm_info('test3')
@@ -92,7 +87,6 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                         cwd='/tmp',
                         machine='threetest',
                         runas='him',
-                        deploy=True,
                         vagrant_provider='polish')
         self.assertEqual(resp, expected)
 
