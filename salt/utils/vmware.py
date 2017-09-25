@@ -2135,6 +2135,67 @@ def _get_new_computed_partition_spec(hostname, storage_system, device_path,
     return (partition_numbers[0], computed_partition_info.spec)
 
 
+def create_vmfs_datastore(host_ref, datastore_name, disk_ref,
+                          vmfs_major_version, storage_system=None):
+    '''
+    Creates a VMFS datastore from a disk_id
+
+    host_ref
+        vim.HostSystem object referencing a host to create the datastore on
+
+    datastore_name
+        Name of the datastore
+
+    disk_ref
+        vim.HostScsiDislk on which the datastore is created
+
+    vmfs_major_version
+        VMFS major version to use
+    '''
+    # TODO Support variable sized partitions
+    hostname = get_managed_object_name(host_ref)
+    disk_id = disk_ref.canonicalName
+    log.debug('Creating datastore \'{0}\' on host \'{1}\', scsi disk \'{2}\', '
+              'vmfs v{3}'.format(datastore_name, hostname, disk_id,
+                                vmfs_major_version))
+    if not storage_system:
+        si = get_service_instance_from_managed_object(host_ref, name=hostname)
+        storage_system = get_storage_system(si, host_ref, hostname)
+
+    target_disk = disk_ref
+    partition_info = _get_partition_info(storage_system,
+                                         target_disk.devicePath)
+    log.trace('partition_info = {0}'.format(partition_info))
+    new_partition_number, partition_spec = _get_new_computed_partition_spec(
+        hostname, storage_system, target_disk.devicePath, partition_info)
+    spec = vim.VmfsDatastoreCreateSpec(
+        vmfs=vim.HostVmfsSpec(
+            majorVersion=vmfs_major_version,
+            volumeName=datastore_name,
+            extent=vim.HostScsiDiskPartition(
+                diskName=disk_id,
+                partition=new_partition_number)),
+        diskUuid=target_disk.uuid,
+        partition=partition_spec)
+    try:
+        ds_ref = \
+                host_ref.configManager.datastoreSystem.CreateVmfsDatastore(spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    log.debug('Created datastore \'{0}\' on host '
+              '\'{1}\''.format(datastore_name, hostname))
+    return ds_ref
+
+
 def get_hosts(service_instance, datacenter_name=None, host_names=None,
               cluster_name=None, get_all_hosts=False):
     '''
