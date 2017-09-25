@@ -2048,6 +2048,30 @@ def get_storage_system(service_instance, host_ref, hostname=None):
     return objs[0]['object']
 
 
+def _get_partition_info(storage_system, device_path):
+    '''
+    Returns partition informations for a device path, of type
+    vim.HostDiskPartitionInfo
+    '''
+    try:
+        partition_infos = \
+                storage_system.RetrieveDiskPartitionInfo(
+                    devicePath=[device_path])
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    log.trace('partition_info = {0}'.format(partition_infos[0]))
+    return partition_infos[0]
+
+
 def get_hosts(service_instance, datacenter_name=None, host_names=None,
               cluster_name=None, get_all_hosts=False):
     '''
