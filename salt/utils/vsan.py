@@ -298,6 +298,78 @@ def add_capacity_to_diskgroup(service_instance, vsan_disk_mgmt_system,
     return True
 
 
+def remove_capacity_from_diskgroup(service_instance, host_ref, diskgroup,
+                                   capacity_disks, data_evacuation=True,
+                                   hostname=None,
+                                   host_vsan_system=None):
+    '''
+    Removes capacity disk(s) from a disk group.
+
+    service_instance
+        Service instance to the host or vCenter
+
+    host_vsan_system
+        ESXi host's VSAN system
+
+    host_ref
+        Reference to the ESXi host
+
+    diskgroup
+        The vsan.HostDiskMapping object representing the host's diskgroup from
+        where the capacity needs to be removed
+
+    capacity_disks
+        List of vim.HostScsiDisk objects representing the capacity disks to be
+        removed. Can be either ssd or non-ssd. There must be a minimum
+        of 1 capacity disk in the list.
+
+    data_evacuation
+        Specifies whether to gracefully evacuate the data on the capacity disks
+        before removing them from the disk group. Default value is True.
+
+    hostname
+        Name of ESXi host. Default value is None.
+
+    host_vsan_system
+        ESXi host's VSAN system. Default value is None.
+    '''
+    if not hostname:
+        hostname = salt.utils.vmware.get_managed_object_name(host_ref)
+    cache_disk = diskgroup.ssd
+    cache_disk_id = cache_disk.canonicalName
+    log.debug('Removing capacity from disk group with cache disk \'{0}\' on '
+              'host \'{1}\''.format(cache_disk_id, hostname))
+    log.trace('capacity_disk_ids = {0}'.format([c.canonicalName for c in
+                                                capacity_disks]))
+    if not host_vsan_system:
+        host_vsan_system = get_host_vsan_system(service_instance,
+                                                host_ref, hostname)
+    # Set to evacuate all data before removing the disks
+    maint_spec = vim.HostMaintenanceSpec()
+    maint_spec.vsanMode = vim.VsanHostDecommissionMode()
+    if data_evacuation:
+        maint_spec.vsanMode.objectAction = \
+                vim.VsanHostDecommissionModeObjectAction.evacuateAllData
+    else:
+        maint_spec.vsanMode.objectAction = \
+                vim.VsanHostDecommissionModeObjectAction.noAction
+    try:
+        task = host_vsan_system.RemoveDisk_Task(disk=capacity_disks,
+                                                maintenanceSpec=maint_spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise VMwareApiError('Not enough permissions. Required privilege: '
+                             '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise VMwareRuntimeError(exc.msg)
+    salt.utils.vmware.wait_for_task(task, hostname, 'remove_capacity')
+    return True
+
+
 def get_cluster_vsan_info(cluster_ref):
     '''
     Returns the extended cluster vsan configuration object
