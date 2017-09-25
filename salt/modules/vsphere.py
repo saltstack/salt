@@ -6279,6 +6279,47 @@ def remove_capacity_from_diskgroup(cache_disk_id, capacity_disk_ids,
     return True
 
 
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def remove_diskgroup(cache_disk_id, data_accessibility=True,
+                     service_instance=None):
+    '''
+    Remove the diskgroup with the specified cache disk.
+
+    cache_disk_id
+        The canonical name of the cache disk.
+
+    data_accessibility
+        Specifies whether to ensure data accessibility. Default value is True.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.remove_diskgroup cache_disk_id='naa.000000000000001'
+    '''
+    log.trace('Validating diskgroup input')
+    schema = DiskGroupsDiskIdSchema.serialize()
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    diskgroups = \
+            salt.utils.vmware.get_diskgroups(host_ref,
+                                             cache_disk_ids=[cache_disk_id])
+    if not diskgroups:
+        raise VMwareObjectRetrievalError(
+            'No diskgroup with cache disk id \'{0}\' was found in ESXi '
+            'host \'{1}\''.format(cache_disk_id, hostname))
+    log.trace('data accessibility = {0}'.format(data_accessibility))
+    salt.utils.vsan.remove_diskgroup(
+        service_instance, host_ref, diskgroups[0],
+        data_accessibility=data_accessibility)
+    return True
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
