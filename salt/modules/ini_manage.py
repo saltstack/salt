@@ -368,7 +368,7 @@ class _Ini(_Section):
         super(_Ini, self).__init__(name, inicontents, separator, commenter)
 
     def refresh(self, inicontents=None):
-        if inicontents is None:
+        if inicontents is None and __opts__['test'] is False:
             try:
                 with salt.utils.fopen(self.name) as rfh:
                     inicontents = rfh.read()
