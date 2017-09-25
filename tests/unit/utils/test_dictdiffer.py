@@ -89,7 +89,7 @@ class RecursiveDictDifferTestCase(TestCase):
                          'a:\n'
                          '  c from 2 to 4\n'
                          '  e from \'old_value\' to \'new_value\'\n'
-                         '  g from nothing to \'new_key\'\n'
                          '  f from \'old_key\' to nothing\n'
+                         '  g from nothing to \'new_key\'\n'
                          'h from nothing to \'new_key\'\n'
                          'i from nothing to None')

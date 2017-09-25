@@ -217,7 +217,7 @@ class RecursiveDictDiffer(DictDiffer):
         Each inner difference is tabulated two space deeper
         '''
         changes_strings = []
-        for p in diff_dict.keys():
+        for p in sorted(diff_dict.keys()):
             if sorted(diff_dict[p].keys()) == ['new', 'old']:
                 # Some string formatting
                 old_value = diff_dict[p]['old']
