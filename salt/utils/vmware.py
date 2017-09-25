@@ -2227,6 +2227,45 @@ def get_host_datastore_system(host_ref, hostname=None):
     return objs[0]['object']
 
 
+def remove_datastore(service_instance, datastore_ref):
+    '''
+    Creates a VMFS datastore from a disk_id
+
+    service_instance
+        The Service Instance Object containing the datastore
+
+    datastore_ref
+        The reference to the datastore to remove
+    '''
+    ds_props = get_properties_of_managed_object(
+        datastore_ref, ['host', 'info', 'name'])
+    ds_name = ds_props['name']
+    log.debug('Removing datastore \'{}\''.format(ds_name))
+    ds_info = ds_props['info']
+    ds_hosts = ds_props.get('host')
+    if not ds_hosts:
+        raise salt.exceptions.VMwareApiError(
+            'Datastore \'{0}\' can\'t be removed. No '
+            'attached hosts found'.format(ds_name))
+    hostname = get_managed_object_name(ds_hosts[0].key)
+    host_ds_system = get_host_datastore_system(ds_hosts[0].key,
+                                               hostname=hostname)
+    try:
+        host_ds_system.RemoveDatastore(datastore_ref)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    log.trace('[{0}] Removed datastore \'{1}\''.format(hostname, ds_name))
+
+
 def get_hosts(service_instance, datacenter_name=None, host_names=None,
               cluster_name=None, get_all_hosts=False):
     '''
