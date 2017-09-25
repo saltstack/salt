@@ -49,6 +49,7 @@ def get_vm_info(name):
     if 'machine' not in vm_:
         raise SaltInvocationError(
             'No Vagrant machine defined for Salt-id {}'.format(name))
+    return vm_
 
 
 def _erase_cache(name):
