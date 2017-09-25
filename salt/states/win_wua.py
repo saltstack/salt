@@ -335,14 +335,14 @@ def removed(name, updates=None):
     return ret
 
 
-def up_to_date(name,
-               software=True,
-               drivers=False,
-               skip_hidden=False,
-               skip_mandatory=False,
-               skip_reboot=True,
-               categories=None,
-               severities=None,):
+def uptodate(name,
+             software=True,
+             drivers=False,
+             skip_hidden=False,
+             skip_mandatory=False,
+             skip_reboot=True,
+             categories=None,
+             severities=None,):
     '''
     Ensure Microsoft Updates that match the passed criteria are installed.
     Updates will be downloaded if needed.
