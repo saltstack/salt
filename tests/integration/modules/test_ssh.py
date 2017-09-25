@@ -14,7 +14,7 @@ from tests.support.paths import FILES, TMP
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 # Import 3rd-party libs
 from tornado.httpclient import HTTPClient
@@ -51,7 +51,7 @@ class SSHModuleTest(ModuleCase):
             os.makedirs(SUBSALT_DIR)
 
         ssh_raw_path = os.path.join(FILES, 'ssh', 'raw')
-        with salt.utils.fopen(ssh_raw_path) as fd:
+        with salt.utils.files.fopen(ssh_raw_path) as fd:
             self.key = fd.read().strip()
 
     def tearDown(self):

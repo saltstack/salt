@@ -50,7 +50,8 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
-# Import Third Party Libs
+# Import 3rd-party libs
+from salt.ext import six
 try:
     import requests
     HAS_REQUESTS = True
@@ -745,7 +746,7 @@ def _compute_signature(parameters, access_key_secret):
     '''
 
     def percent_encode(line):
-        if not isinstance(line, str):
+        if not isinstance(line, six.string_types):
             return line
 
         s = line
