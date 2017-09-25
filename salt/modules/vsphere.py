@@ -6441,7 +6441,7 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxcluster', 'esxdatacenter', 'vcenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter', 'vcenter')
 def _get_proxy_target(service_instance):
     '''
     Returns the target object of a proxy.
@@ -6472,6 +6472,18 @@ def _get_proxy_target(service_instance):
     elif proxy_type == 'vcenter':
         # vcenter proxy - the target is the root folder
         reference = salt.utils.vmware.get_root_folder(service_instance)
+    elif proxy_type == 'esxi':
+        # esxi proxy
+        details = __proxy__['esxi.get_details']()
+        if 'vcenter' not in details:
+            raise InvalidEntityError('Proxies connected directly to ESXi '
+                                     'hosts are not supported')
+        references = salt.utils.vmware.get_hosts(
+            service_instance, host_names=details['esxi_host'])
+        if not references:
+            raise VMwareObjectRetrievalError(
+                'ESXi host \'{0}\' was not found'.format(details['esxi_host']))
+        reference = references[0]
     log.trace('reference = {0}'.format(reference))
     return reference
 
