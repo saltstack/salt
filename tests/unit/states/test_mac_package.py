@@ -2,19 +2,20 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import sys
 
 # Import Salt Libs
 import salt.states.mac_package as macpackage
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
-
+@skipIf(not sys.platform.startswith('darwin'), "Mac specific test")
 class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {macpackage: {}}
