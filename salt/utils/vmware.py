@@ -2196,6 +2196,37 @@ def create_vmfs_datastore(host_ref, datastore_name, disk_ref,
     return ds_ref
 
 
+def get_host_datastore_system(host_ref, hostname=None):
+    '''
+    Returns a host's datastore system
+
+    host_ref
+        Reference to the ESXi host
+
+    hostname
+        Name of the host. This argument is optional.
+    '''
+
+    if not hostname:
+        hostname = get_managed_object_name(host_ref)
+    service_instance = get_service_instance_from_managed_object(host_ref)
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        path='configManager.datastoreSystem',
+        type=vim.HostSystem,
+        skip=False)
+    objs = get_mors_with_properties(service_instance,
+                                    vim.HostDatastoreSystem,
+                                    property_list=['datastore'],
+                                    container_ref=host_ref,
+                                    traversal_spec=traversal_spec)
+    if not objs:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Host\'s \'{0}\' datastore system was not retrieved'
+            ''.format(hostname))
+    log.trace('[{0}] Retrieved datastore system'.format(hostname))
+    return objs[0]['object']
+
+
 def get_hosts(service_instance, datacenter_name=None, host_names=None,
               cluster_name=None, get_all_hosts=False):
     '''
