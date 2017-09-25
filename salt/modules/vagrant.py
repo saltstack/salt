@@ -46,11 +46,9 @@ def get_vm_info(name):
     except SaltCacheError:
         vm_ = {}
         log.error('Trouble reading Salt cache for vagrant[%s]', name)
-    try:
-        _ = vm_['machine']
-    except KeyError:
-        raise SaltInvocationError('No Vagrant machine defined for Salt-id {}'.format(name))
-    return vm_
+    if 'machine' not in vm_:
+        raise SaltInvocationError(
+            'No Vagrant machine defined for Salt-id {}'.format(name))
 
 
 def _erase_cache(name):
@@ -143,7 +141,6 @@ def list_active_vms(cwd=None):
     cmd = 'vagrant status'
     reply = __salt__['cmd.shell'](cmd, cwd=cwd)
     for line in reply.split('\n'):  # build a list of the text reply
-        print(line)
         tokens = line.strip().split()
         if len(tokens) > 1:
             if tokens[1] == 'running':
@@ -165,7 +162,6 @@ def list_inactive_vms(cwd=None):
     cmd = 'vagrant status'
     reply = __salt__['cmd.shell'](cmd, cwd=cwd)
     for line in reply.split('\n'):  # build a list of the text reply
-        print(line)
         tokens = line.strip().split()
         if len(tokens) > 1 and tokens[-1].endswith(')'):
             if tokens[1] != 'running':
@@ -192,7 +188,6 @@ def vm_state(name='', cwd=None):
     cmd = 'vagrant status {}'.format(machine)
     reply = __salt__['cmd.shell'](cmd, cwd)
     for line in reply.split('\n'):  # build a list of the text reply
-        print(line)
         tokens = line.strip().split()
         if len(tokens) > 1 and tokens[-1].endswith(')'):
             try:
