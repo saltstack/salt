@@ -15,6 +15,7 @@ import salt.utils
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltCacheError, SaltInvocationError
 import salt.ext.six as six
+
 if six.PY3:
     import ipaddress
 else:
@@ -29,6 +30,7 @@ def __virtual__():
     '''
     run Vagrant commands if possible
     '''
+    # noinspection PyUnresolvedReferences
     if salt.utils.path.which('vagrant') is None:
         return False, 'The vagrant module could not be loaded: vagrant command not found'
     return __virtualname__
@@ -200,11 +202,10 @@ def vm_state(name='', cwd=None):
 
 
 def init(name,  # Salt_id for created VM
-         cwd=None,   # path to find Vagrantfile
+         cwd=None,  # path to find Vagrantfile
          machine='',  # name of machine in Vagrantfile
          runas=None,  # username who owns Vagrant box
          start=False,  # start the machine when initialized
-         deploy=None,  # flag suggesting whether to load Salt onto the VM
          vagrant_provider='',  # vagrant provider (default=virtualbox)
          vm=None,  # a dictionary of VM configuration settings
          ):
@@ -226,7 +227,6 @@ def init(name,  # Salt_id for created VM
         raise SaltInvocationError('Path to Vagrantfile must be defined by \'cwd\' argument')
     vm_['machine'] = machine or vm_.get('machine', machine)
     vm_['runas'] = runas or vm_.get('runas', runas)
-    vm_['deploy'] = deploy if deploy is not None else vm_.get('deploy', True)
     vm_['vagrant_provider'] = vagrant_provider or vm_.get('vagrant_provider', '')
     _update_cache(name, vm_)
 
@@ -359,8 +359,8 @@ def destroy(name):
     cmd = 'vagrant destroy -f {}'.format(machine)
     try:
         ret = __salt__['cmd.retcode'](cmd,
-                                  runas=vm_.get('runas'),
-                                  cwd=vm_.get('cwd'))
+                                      runas=vm_.get('runas'),
+                                      cwd=vm_.get('cwd'))
     except (OSError, CommandExecutionError):
         ret = 1
     finally:
@@ -407,15 +407,15 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
 
     try:
         ans = {'key_filename': ssh_config['IdentityFile'],
-            'ssh_username': ssh_config['User'],
-            'ssh_host': ssh_config['HostName'],
-            'ssh_port': ssh_config['Port'],
-            }
+               'ssh_username': ssh_config['User'],
+               'ssh_host': ssh_config['HostName'],
+               'ssh_port': ssh_config['Port'],
+               }
 
     except KeyError:
         raise CommandExecutionError(
-                'Insufficient SSH information to contact VM {}. '
-                'Is it running?'.format(vm_.get('machine', '(default)')))
+            'Insufficient SSH information to contact VM {}. '
+            'Is it running?'.format(vm_.get('machine', '(default)')))
 
     if network_mask:
         #  ask the new VM to report its network address
@@ -431,7 +431,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
         target_network_range = ipaddress.ip_network(network_mask, strict=False)
 
         for line in reply.split('\n'):
-            try:   # try to find a bridged network address
+            try:  # try to find a bridged network address
                 # the lines we are looking for appear like:
                 #    "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
                 # or "inet6 addr: fe80::a00:27ff:fe04:7aac/64 Scope:Link"
@@ -448,7 +448,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
                     break  # we have located a good matching address
             except (IndexError, AttributeError, TypeError):
                 pass  # all syntax and type errors loop here
-            # falling out if the loop leaves us remembering the last candidate
+                # falling out if the loop leaves us remembering the last candidate
         log.info('Network IP address in %s detected as: %s',
                  target_network_range, ans.get('ip_address', '(not found)'))
 
