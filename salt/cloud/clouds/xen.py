@@ -162,7 +162,7 @@ def _get_session():
             user, password, api_version, originator)
     except XenAPI.Failure as ex:
         '''
-        get the pool master's address from the XenAPI raised exception
+        get the pool master address from the XenAPI raised exception
         '''
         pool_master_addr = str(ex.__dict__['details'][1])
         slash_parts = url.split('/')
