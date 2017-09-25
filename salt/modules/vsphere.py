@@ -6320,6 +6320,37 @@ def remove_diskgroup(cache_disk_id, data_accessibility=True,
     return True
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def get_host_cache(service_instance=None):
+    '''
+    Returns the host cache configuration on the proxy host.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.get_host_cache
+    '''
+    # Default to getting all disks if no filtering is done
+    ret_dict = {}
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    hci = salt.utils.vmware.get_host_cache(host_ref)
+    if not hci:
+        log.debug('Host cache not configured on host \'{0}\''.format(hostname))
+        ret_dict['enabled'] = False
+        return ret_dict
+
+    # TODO Support multiple host cache info objects (on multiple datastores)
+    return {'enabled': True,
+            'datastore': {'name': hci.key.name},
+            'swap_size': '{}MiB'.format(hci.swapSize)}
+
+
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
