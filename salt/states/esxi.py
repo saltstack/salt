@@ -90,19 +90,45 @@ ESXi Proxy Minion, please refer to the
 configuration examples, dependency installation instructions, how to run remote
 execution functions against ESXi hosts via a Salt Proxy Minion, and a larger state
 example.
-
 '''
 # Import Python Libs
 from __future__ import absolute_import
 import logging
+import sys
+import re
 
 # Import Salt Libs
 from salt.ext import six
 import salt.utils.files
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, InvalidConfigError, \
+        VMwareObjectRetrievalError, VMwareSaltError, VMwareApiError
+from salt.utils.decorators import depends
+from salt.config.schemas.esxi import DiskGroupsDiskScsiAddressSchema, \
+        HostCacheSchema
+
+# External libraries
+try:
+    import jsonschema
+    HAS_JSONSCHEMA = True
+except ImportError:
+    HAS_JSONSCHEMA = False
 
 # Get Logging Started
 log = logging.getLogger(__name__)
+
+try:
+    from pyVmomi import vim, vmodl, VmomiSupport
+
+    # We check the supported vim versions to infer the pyVmomi version
+    if 'vim25/6.0' in VmomiSupport.versionMap and \
+        sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
+
+        log.error('pyVmomi not loaded: Incompatible versions '
+                  'of Python. See Issue #29537.')
+        raise ImportError()
+    HAS_PYVMOMI = True
+except ImportError:
+    HAS_PYVMOMI = False
 
 
 def __virtual__():
