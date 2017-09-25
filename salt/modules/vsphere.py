@@ -185,7 +185,8 @@ from salt.utils.decorators import depends, ignores_kwargs
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
         ESXClusterEntitySchema
 from salt.config.schemas.vcenter import VCenterEntitySchema
-from salt.config.schemas.esxi import DiskGroupsDiskIdSchema
+from salt.config.schemas.esxi import DiskGroupsDiskIdSchema, \
+        VmfsDatastoreSchema, SimpleHostCacheSchema
 
 # Import Third Party Libs
 try:
@@ -6349,6 +6350,64 @@ def get_host_cache(service_instance=None):
     return {'enabled': True,
             'datastore': {'name': hci.key.name},
             'swap_size': '{}MiB'.format(hci.swapSize)}
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def configure_host_cache(enabled, datastore=None, swap_size_MiB=None,
+                         service_instance=None):
+    '''
+    Configures the host cache on the selected host.
+
+    enabled
+        Boolean flag specifying whether the host cache is enabled.
+
+    datastore
+        Name of the datastore that contains the host cache. Must be set if
+        enabled is ``true``.
+
+    swap_size_MiB
+        Swap size in Mibibytes. Needs to be set if enabled is ``true``. Must be
+        smaller thant the datastore size.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.configure_host_cache enabled=False
+
+        salt '*' vsphere.configure_host_cache enabled=True datastore=ds1
+            swap_size_MiB=1024
+    '''
+    log.debug('Validating host cache input')
+    schema = SimpleHostCacheSchema.serialize()
+    try:
+        jsonschema.validate({'enabled': enabled,
+                             'datastore_name': datastore,
+                             'swap_size_MiB': swap_size_MiB},
+                            schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise ArgumentValueError(exc)
+    if not enabled:
+        raise ArgumentValueError('Disabling the host cache is not supported')
+    ret_dict = {'enabled': False}
+
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    if datastore:
+        ds_refs = salt.utils.vmware.get_datastores(
+            service_instance, host_ref, datastore_names=[datastore])
+        if not ds_refs:
+            raise VMwareObjectRetrievalError(
+                'Datastore \'{0}\' was not found on host '
+                '\'{1}\''.format(datastore_name, hostname))
+        ds_ref = ds_refs[0]
+    salt.utils.vmware.configure_host_cache(host_ref, ds_ref, swap_size_MiB)
+    return True
 
 
 def _check_hosts(service_instance, host, host_names):
