@@ -172,8 +172,16 @@ def present(name,
 
     '''
     Ensure a zone has specific attributes.
+
+    :param str name:
+        The zone to modify.
+
+    :param bool default:
+        Set this zone as the default zone if ``True``.
+
+    :param list block_icmp:
+        List of ICMP types to block.
     '''
-    # TODO: update lackluster documentation
 
     ret = _present(name, block_icmp, prune_block_icmp, default, masquerade, ports, prune_ports,
             port_fwd, prune_port_fwd, services, prune_services, interfaces, prune_interfaces,
