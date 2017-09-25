@@ -185,6 +185,7 @@ from salt.utils.decorators import depends, ignores_kwargs
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
         ESXClusterEntitySchema
 from salt.config.schemas.vcenter import VCenterEntitySchema
+from salt.config.schemas.esxi import DiskGroupsDiskIdSchema
 
 # Import Third Party Libs
 try:
@@ -6075,6 +6076,75 @@ def list_diskgroups(cache_disk_ids=None, service_instance=None):
             {'cache_disk': dg.ssd.canonicalName,
              'capacity_disks': [d.canonicalName for d in dg.nonSsd]})
     return ret_list
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def create_diskgroup(cache_disk_id, capacity_disk_ids, safety_checks=True,
+                     service_instance=None):
+    '''
+    Creates disk group on an ESXi host with the specified cache and
+    capacity disks.
+
+    cache_disk_id
+        The canonical name of the disk to be used as a cache. The disk must be
+        ssd.
+
+    capacity_disk_ids
+        A list containing canonical names of the capacity disks. Must contain at
+        least one id. Default is True.
+
+    safety_checks
+        Specify whether to perform safety check or to skip the checks and try
+        performing the required task. Default value is True.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.create_diskgroup cache_disk_id='naa.000000000000001'
+            capacity_disk_ids='[naa.000000000000002, naa.000000000000003]'
+    '''
+    log.trace('Validating diskgroup input')
+    schema = DiskGroupsDiskIdSchema.serialize()
+    try:
+        jsonschema.validate(
+            {'diskgroups': [{'cache_id': cache_disk_id,
+                              'capacity_ids': capacity_disk_ids}]},
+            schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise ArgumentValueError(exc)
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    if safety_checks:
+        diskgroups = \
+                salt.utils.vmware.get_diskgroups(host_ref, [cache_disk_id])
+        if diskgroups:
+            raise VMwareObjectExistsError(
+                'Diskgroup with cache disk id \'{0}\' already exists ESXi '
+                'host \'{1}\''.format(cache_disk_id, hostname))
+    disk_ids = capacity_disk_ids[:]
+    disk_ids.insert(0, cache_disk_id)
+    disks = salt.utils.vmware.get_disks(host_ref, disk_ids=disk_ids)
+    for id in disk_ids:
+        if not [d for d in disks if d.canonicalName == id]:
+            raise VMwareObjectRetrievalError(
+                'No disk with id \'{0}\' was found in ESXi host \'{0}\''
+                ''.format(id, hostname))
+    cache_disk = [d for d in disks if d.canonicalName == cache_disk_id][0]
+    capacity_disks = [d for d in disks if d.canonicalName in capacity_disk_ids]
+    vsan_disk_mgmt_system = \
+            salt.utils.vsan.get_vsan_disk_management_system(service_instance)
+    dg = salt.utils.vsan.create_diskgroup(service_instance,
+                                          vsan_disk_mgmt_system,
+                                          host_ref,
+                                          cache_disk,
+                                          capacity_disks)
+    return True
 
 
 def _check_hosts(service_instance, host, host_names):
