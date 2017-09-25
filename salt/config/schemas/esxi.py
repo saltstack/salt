@@ -17,9 +17,36 @@ from salt.utils.schema import (DefinitionsSchema,
                                Schema,
                                ComplexSchemaItem,
                                ArrayItem,
+                               DictItem,
                                IntegerItem,
                                BooleanItem,
-                               StringItem)
+                               StringItem,
+                               OneOfItem)
+
+
+class VMwareScsiAddressItem(StringItem):
+    pattern = r'vmhba\d+:C\d+:T\d+:L\d+'
+
+
+class DiskGroupDiskScsiAddressItem(ComplexSchemaItem):
+    '''
+    Schema item of a ESXi host disk group containing disk SCSI addresses
+    '''
+
+    title = 'Diskgroup Disk Scsi Address Item'
+    description = 'ESXi host diskgroup item containing disk SCSI addresses'
+
+
+    cache_scsi_addr = VMwareScsiAddressItem(
+        title='Cache Disk Scsi Address',
+        description='Specifies the SCSI address of the cache disk',
+        required=True)
+
+    capacity_scsi_addrs = ArrayItem(
+        title='Capacity Scsi Addresses',
+        description='Array with the SCSI addresses of the capacity disks',
+        items=VMwareScsiAddressItem(),
+        min_items=1)
 
 
 class DiskGroupDiskIdItem(ComplexSchemaItem):
@@ -41,6 +68,24 @@ class DiskGroupDiskIdItem(ComplexSchemaItem):
         description='Array with the ids of the capacity disks',
         items=StringItem(pattern=r'[^\s]+'),
         min_items=1)
+
+
+class DiskGroupsDiskScsiAddressSchema(DefinitionsSchema):
+    '''
+    Schema of ESXi host diskgroups containing disk SCSI addresses
+    '''
+
+    title = 'Diskgroups Disk Scsi Address Schema'
+    description = 'ESXi host diskgroup schema containing disk SCSI addresses'
+    disk_groups = ArrayItem(
+        title='Diskgroups',
+        description='List of diskgroups in an ESXi host',
+        min_items = 1,
+        items=DiskGroupDiskScsiAddressItem(),
+        required=True)
+    erase_disks = BooleanItem(
+        title='Erase Diskgroup Disks',
+        required=True)
 
 
 class DiskGroupsDiskIdSchema(DefinitionsSchema):
