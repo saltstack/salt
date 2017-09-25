@@ -1300,6 +1300,304 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
     return ret
 
 
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+def host_cache_configured(name, enabled, datastore, swap_size='100%',
+                          dedicated_backing_disk=False,
+                          erase_backing_disk=False):
+    '''
+    Configures the host cache used for swapping.
+
+    It will do the following:
+    (1) checks if backing disk exists
+    (2) creates the VMFS datastore if doesn't exist (datastore partition will
+        be created and use the entire disk
+    (3) raises an error if dedicated_backing_disk is True and partitions
+        already exist on the backing disk
+    (4) configures host_cache to use a portion of the datastore for caching
+        (either a specific size or a percentage of the datastore)
+
+    State input examples
+    --------------------
+
+    Percentage swap size (can't be 100%)
+
+    .. code:: python
+
+    {
+        'enabled': true,
+        'datastore': {
+            'backing_disk_scsi_addr': 'vmhba0:C0:T0:L0',
+            'vmfs_version': 5,
+            'name': 'hostcache'
+            }
+        'dedicated_backing_disk': false
+        'swap_size': '98%',
+    }
+
+
+    .. code:: python
+
+    Fixed sized swap size
+
+    {
+        'enabled': true,
+        'datastore': {
+            'backing_disk_scsi_addr': 'vmhba0:C0:T0:L0',
+            'vmfs_version': 5,
+            'name': 'hostcache'
+            }
+        'dedicated_backing_disk': true
+        'swap_size': '10GiB',
+    }
+
+    name
+        Mandatory state name.
+
+    enabled
+        Specifies whether the host cache is enabled.
+
+    datastore
+        Specifies the host cache datastore.
+
+    swap_size
+        Specifies the size of the host cache swap. Can be a percentage or a
+        value in GiB. Default value is ``100%``.
+
+    dedicated_backing_disk
+        Specifies whether the backing disk is dedicated to the host cache which
+        means it must have no other partitions. Default is False
+
+    erase_backing_disk
+        Specifies whether to erase all partitions on the backing disk before
+        the datastore is created. Default vaule is False.
+    '''
+    log.trace('enabled = {0}'.format(enabled))
+    log.trace('datastore = {0}'.format(datastore))
+    log.trace('swap_size = {0}'.format(swap_size))
+    log.trace('erase_backing_disk = {0}'.format(erase_backing_disk))
+    # Variable used to return the result of the invocation
+    proxy_details = __salt__['esxi.get_details']()
+    hostname = proxy_details['host'] if not proxy_details.get('vcenter') \
+               else proxy_details['esxi_host']
+    log.trace('hostname = {0}'.format(hostname))
+    log.info('Running host_cache_swap_configured for host '
+             '\'{0}\''.format(hostname))
+    ret = {'name': hostname, 'comment': 'Default comments',
+           'result': None, 'changes': {}, 'pchanges': {}}
+    result = None if __opts__['test'] else True #We assume success
+    needs_setting = False
+    comments = []
+    changes = {}
+    si = None
+    try:
+        log.debug('Validating host_cache_configured input')
+        schema = HostCacheSchema.serialize()
+        try:
+            jsonschema.validate({'enabled': enabled,
+                                 'datastore': datastore,
+                                 'swap_size': swap_size,
+                                 'erase_backing_disk': erase_backing_disk},
+                                schema)
+        except jsonschema.exceptions.ValidationError as exc:
+            raise InvalidConfigError(exc)
+        m = re.match(r'(\d+)(%|GiB)', swap_size)
+        swap_size_value = int(m.group(1))
+        swap_type = m.group(2)
+        log.trace('swap_size_value = {0}; swap_type = {1}'.format(
+            swap_size_value, swap_type))
+        si = __salt__['vsphere.get_service_instance_via_proxy']()
+        host_cache = __salt__['vsphere.get_host_cache'](service_instance=si)
+
+        # Check enabled
+        if host_cache['enabled'] != enabled:
+            changes.update({'enabled': {'old': host_cache['enabled'],
+                                        'new': enabled}})
+            needs_setting = True
+
+
+        # Check datastores
+        existing_datastores = None
+        if host_cache.get('datastore'):
+            existing_datastores = \
+                    __salt__['vsphere.list_datastores_via_proxy'](
+                        datastore_names=[datastore['name']],
+                        service_instance=si)
+        # Retrieve backing disks
+        existing_disks = __salt__['vsphere.list_disks'](
+            scsi_addresses=[datastore['backing_disk_scsi_addr']],
+            service_instance=si)
+        if not existing_disks:
+            raise VMwareObjectRetrievalError(
+                'Disk with scsi address \'{0}\' was not found in host \'{1}\''
+                ''.format(datastore['backing_disk_scsi_addr'], hostname))
+        backing_disk = existing_disks[0]
+        backing_disk_display = '{0} (id:{1})'.format(
+            backing_disk['scsi_address'], backing_disk['id'])
+        log.trace('backing_disk = {0}'.format(backing_disk_display))
+
+        existing_datastore = None
+        if not existing_datastores:
+            # Check if disk needs to be erased
+            if erase_backing_disk:
+                if __opts__['test']:
+                    comments.append('State {0} will erase '
+                                    'the backing disk \'{1}\' on host \'{2}\'.'
+                                    ''.format(name, backing_disk_display,
+                                              hostname))
+                    log.info(comments[-1])
+                else:
+                    # Erase disk
+                    __salt__['vsphere.erase_disk_partitions'](
+                        disk_id=backing_disk['id'], service_instance=si)
+                    comments.append('Erased backing disk \'{0}\' on host '
+                                    '\'{1}\'.'.format(backing_disk_display,
+                                                      hostname))
+                    log.info(comments[-1])
+            # Create the datastore
+            if __opts__['test']:
+                comments.append('State {0} will create '
+                                'the datastore \'{1}\', with backing disk '
+                                '\'{2}\', on host \'{3}\'.'
+                                ''.format(name, datastore['name'],
+                                          backing_disk_display, hostname))
+                log.info(comments[-1])
+            else:
+                if dedicated_backing_disk:
+                    # Check backing disk doesn't already have partitions
+                    partitions = __salt__['vsphere.list_disk_partitions'](
+                        disk_id=backing_disk['id'], service_instance=si)
+                    log.trace('partitions = {0}'.format(partitions))
+                    # We will ignore the mbr partitions
+                    non_mbr_partitions = [p for p in partitions
+                                          if p['format'] != 'mbr']
+                    if len(non_mbr_partitions) > 0:
+                        raise VMwareApiError(
+                            'Backing disk \'{0}\' has unexpected partitions'
+                            ''.format(backing_disk_display))
+                __salt__['vsphere.create_vmfs_datastore'](
+                    datastore['name'], existing_disks[0]['id'],
+                    datastore['vmfs_version'], service_instance=si)
+                comments.append('Created vmfs datastore \'{0}\', backed by '
+                                'disk \'{1}\', on host \'{2}\'.'
+                                ''.format(datastore['name'],
+                                          backing_disk_display, hostname))
+                log.info(comments[-1])
+                changes.update(
+                    {'datastore':
+                     {'new': {'name': datastore['name'],
+                              'backing_disk': backing_disk_display}}})
+                existing_datastore = \
+                        __salt__['vsphere.list_datastores_via_proxy'](
+                            datastore_names=[datastore['name']],
+                            service_instance=si)[0]
+            needs_setting = True
+        else:
+            # Check datastore is backed by the correct disk
+            if not existing_datastores[0].get('backing_disk_ids'):
+                raise VMwareSaltError('Datastore \'{0}\' doesn\'t have a '
+                                           'backing disk'
+                                           ''.format(datastore['name']))
+            if backing_disk['id'] not in \
+               existing_datastores[0]['backing_disk_ids']:
+
+                raise VMwareSaltError(
+                    'Datastore \'{0}\' is not backed by the correct disk: '
+                    'expected \'{1}\'; got {2}'
+                    ''.format(
+                        datastore['name'], backing_disk['id'],
+                        ', '.join(
+                            ['\'{0}\''.format(disk) for disk in
+                             existing_datastores[0]['backing_disk_ids']])))
+
+            comments.append('Datastore \'{0}\' already exists on host \'{1}\' '
+                            'and is backed by disk \'{2}\'. Nothing to be '
+                            'done.'.format(datastore['name'], hostname,
+                                           backing_disk_display))
+            existing_datastore = existing_datastores[0]
+            log.trace('existing_datastore = {0}'.format(existing_datastore))
+            log.info(comments[-1])
+
+
+        if existing_datastore:
+            # The following comparisons can be done if the existing_datastore
+            # is set; it may not be set if running in test mode
+            #
+            # We support percent, as well as MiB, we will convert the size
+            # to MiB, multiples of 1024 (VMware SDK limitation)
+            if swap_type == '%':
+                # Percentage swap size
+                # Convert from bytes to MiB
+                raw_size_MiB = (swap_size_value/100.0) * \
+                        (existing_datastore['capacity']/1024/1024)
+            else:
+                raw_size_MiB = swap_size_value * 1024
+            log.trace('raw_size = {0}MiB'.format(raw_size_MiB))
+            swap_size_MiB= int(raw_size_MiB/1024)*1024
+            log.trace('adjusted swap_size = {0}MiB'.format(swap_size_MiB))
+            existing_swap_size_MiB = 0
+            m = re.match('(\d+)MiB', host_cache.get('swap_size')) if \
+                    host_cache.get('swap_size') else None
+            if m:
+                # if swap_size from the host is set and has an expected value
+                # we are going to parse it to get the number of MiBs
+                existing_swap_size_MiB = int(m.group(1))
+            if not (existing_swap_size_MiB == swap_size_MiB):
+                needs_setting = True
+                changes.update(
+                    {'swap_size':
+                     {'old': '{}GiB'.format(existing_swap_size_MiB/1024),
+                      'new': '{}GiB'.format(swap_size_MiB/1024)}})
+
+
+        if needs_setting:
+            if __opts__['test']:
+                comments.append('State {0} will configure '
+                                'the host cache on host \'{1}\' to: {2}.'
+                                ''.format(name, hostname,
+                                          {'enabled': enabled,
+                                           'datastore_name': datastore['name'],
+                                           'swap_size': swap_size}))
+            else:
+                if (existing_datastore['capacity'] / 1024.0**2) < \
+                   swap_size_MiB:
+
+                    raise ArgumentValueError(
+                        'Capacity of host cache datastore \'{0}\' ({1} MiB) is '
+                        'smaller than the required swap size ({2} MiB)'
+                        ''.format(existing_datastore['name'],
+                                  existing_datastore['capacity'] / 1024.0**2,
+                                  swap_size_MiB))
+                __salt__['vsphere.configure_host_cache'](
+                    enabled,
+                    datastore['name'],
+                    swap_size_MiB=swap_size_MiB,
+                    service_instance=si)
+                comments.append('Host cache configured on host '
+                                '\'{0}\'.'.format(hostname))
+        else:
+            comments.append('Host cache on host \'{0}\' is already correctly '
+                            'configured. Nothing to be done.'.format(hostname))
+            result = True
+        __salt__['vsphere.disconnect'](si)
+        log.info(comments[-1])
+        ret.update({'comment': '\n'.join(comments),
+                    'result': result})
+        if __opts__['test']:
+            ret['pchanges'] = changes
+        else:
+            ret['changes'] = changes
+        return ret
+    except CommandExecutionError as err:
+        log.error('Error: {0}.'.format(err))
+        if si:
+            __salt__['vsphere.disconnect'](si)
+        ret.update({
+            'result': False if not __opts__['test'] else None,
+            'comment': '{}.'.format(err)})
+        return ret
+
+
 def _lookup_syslog_config(config):
     '''
     Helper function that looks up syslog_config keys available from
