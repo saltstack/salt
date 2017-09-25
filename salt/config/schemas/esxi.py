@@ -77,7 +77,7 @@ class DiskGroupsDiskScsiAddressSchema(DefinitionsSchema):
 
     title = 'Diskgroups Disk Scsi Address Schema'
     description = 'ESXi host diskgroup schema containing disk SCSI addresses'
-    disk_groups = ArrayItem(
+    diskgroups = ArrayItem(
         title='Diskgroups',
         description='List of diskgroups in an ESXi host',
         min_items = 1,
@@ -100,6 +100,84 @@ class DiskGroupsDiskIdSchema(DefinitionsSchema):
         description='List of disk groups in an ESXi host',
         min_items = 1,
         items=DiskGroupDiskIdItem(),
+        required=True)
+
+
+class VmfsDatastoreDiskIdItem(ComplexSchemaItem):
+    '''
+    Schema item of a VMFS datastore referencing a backing disk id
+    '''
+
+    title = 'VMFS Datastore Disk Id Item'
+    description = 'VMFS datastore item referencing a backing disk id'
+    name = StringItem(
+        title='Name',
+        description='Specifies the name of the VMFS datastore',
+        required=True)
+    backing_disk_id = StringItem(
+        title='Backing Disk Id',
+        description=('Specifies the id of the disk backing the VMFS '
+                     'datastore'),
+        pattern=r'[^\s]+',
+        required=True)
+    vmfs_version = IntegerItem(
+        title='VMFS Version',
+        description='VMFS version',
+        enum=[1, 2, 3, 5])
+
+
+class VmfsDatastoreDiskScsiAddressItem(ComplexSchemaItem):
+    '''
+    Schema item of a VMFS datastore referencing a backing disk SCSI address
+    '''
+
+    title = 'VMFS Datastore Disk Scsi Address Item'
+    description = 'VMFS datastore item referencing a backing disk SCSI address'
+    name = StringItem(
+        title='Name',
+        description='Specifies the name of the VMFS datastore',
+        required=True)
+    backing_disk_scsi_addr = VMwareScsiAddressItem(
+        title='Backing Disk Scsi Address',
+        description=('Specifies the SCSI address of the disk backing the VMFS '
+                     'datastore'),
+        required=True)
+    vmfs_version = IntegerItem(
+        title='VMFS Version',
+        description='VMFS version',
+        enum=[1, 2, 3, 5])
+
+
+class VmfsDatastoreSchema(DefinitionsSchema):
+    '''
+    Schema of a VMFS datastore
+    '''
+
+    title = 'VMFS Datastore Schema'
+    description = 'Schema of a VMFS datastore'
+    datastore = OneOfItem(
+        items=[VmfsDatastoreDiskScsiAddressItem(),
+               VmfsDatastoreDiskIdItem()],
+        required=True)
+
+
+class HostCacheSchema(DefinitionsSchema):
+    '''
+    Schema of ESXi host cache
+    '''
+
+    title = 'Host Cache Schema'
+    description = 'Schema of the ESXi host cache'
+    enabled = BooleanItem(
+        title='Enabled',
+        required=True)
+    datastore = VmfsDatastoreDiskScsiAddressItem(required=True)
+    swap_size = StringItem(
+        title='Host cache swap size (in GB or %)',
+        pattern=r'(\d+GiB)|(([0-9]|([1-9][0-9])|100)%)',
+        required=True)
+    erase_backing_disk = BooleanItem(
+        title='Erase Backup Disk',
         required=True)
 
 
