@@ -264,14 +264,14 @@ class GetDatastoresTestCase(TestCase):
                     mock_reference,
                     get_all_datastores=True)
 
-        mock_traversal_spec_init.assert_called([
+        mock_traversal_spec_init.assert_has_calls([
+            call(path='datastore',
+                 skip=False,
+                 type=vim.Datacenter),
             call(path='childEntity',
                  selectSet=['traversal'],
                  skip=False,
-                 type=vim.Folder),
-            call(path='datastore',
-                 skip=False,
-                 type=vim.Datacenter)])
+                 type=vim.Folder)])
 
     def test_unsupported_reference_type(self):
         class FakeClass(object):
@@ -379,7 +379,7 @@ class RenameDatastoreTestCase(TestCase):
         with self.assertRaises(VMwareApiError) as excinfo:
             salt.utils.vmware.rename_datastore(self.mock_ds_ref,
                                                'fake_new_name')
-        self.assertEqual(excinfo.exception.message, 'vim_fault')
+        self.assertEqual(excinfo.exception.strerror, 'vim_fault')
 
     def test_rename_datastore_raise_runtime_fault(self):
         exc = vmodl.RuntimeFault()
@@ -388,7 +388,7 @@ class RenameDatastoreTestCase(TestCase):
         with self.assertRaises(VMwareRuntimeError) as excinfo:
             salt.utils.vmware.rename_datastore(self.mock_ds_ref,
                                                'fake_new_name')
-        self.assertEqual(excinfo.exception.message, 'runtime_fault')
+        self.assertEqual(excinfo.exception.strerror, 'runtime_fault')
 
     def test_rename_datastore(self):
         salt.utils.vmware.rename_datastore(self.mock_ds_ref, 'fake_new_name')
