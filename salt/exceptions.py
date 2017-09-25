@@ -442,6 +442,12 @@ class VMwareObjectRetrievalError(VMwareSaltError):
     '''
 
 
+class VMwareObjectNotFoundError(VMwareSaltError):
+    '''
+    Used when a VMware object was not found
+    '''
+
+
 class VMwareApiError(VMwareSaltError):
     '''
     Used when representing a generic VMware API error
