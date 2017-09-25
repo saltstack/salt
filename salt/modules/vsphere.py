@@ -5564,6 +5564,60 @@ def list_datastores_via_proxy(datastore_names=None, backing_disk_ids=None,
 
 
 @depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def create_vmfs_datastore(datastore_name, disk_id, vmfs_major_version,
+                          safety_checks=True, service_instance=None):
+    '''
+    Creates a ESXi host disk group with the specified cache and capacity disks.
+
+    datastore_name
+        The name of the datastore to be created.
+
+    disk_id
+        The disk id (canonical name) on which the datastore is created.
+
+    vmfs_major_version
+        The VMFS major version.
+
+    safety_checks
+        Specify whether to perform safety check or to skip the checks and try
+        performing the required task. Default is True.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.create_vmfs_datastore datastore_name=ds1 disk_id=
+            vmfs_major_version=5
+    '''
+    log.debug('Validating vmfs datastore input')
+    schema = VmfsDatastoreSchema.serialize()
+    try:
+        jsonschema.validate(
+            {'datastore': {'name': datastore_name,
+                           'backing_disk_id': disk_id,
+                           'vmfs_version': vmfs_major_version}},
+            schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise ArgumentValueError(exc)
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    if safety_checks:
+        disks = salt.utils.vmware.get_disks(host_ref, disk_ids=[disk_id])
+        if not disks:
+            raise VMwareObjectRetrievalError(
+                'Disk \'{0}\' was not found in host \'{1}\''.format(disk_id,
+                                                                    hostname))
+    ds_ref = salt.utils.vmware.create_vmfs_datastore(
+        host_ref, datastore_name, disks[0], vmfs_major_version)
+    return True
+
+
+@depends(HAS_PYVMOMI)
 @supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
 @gets_service_instance_via_proxy
 def rename_datastore(datastore_name, new_datastore_name,
@@ -6207,7 +6261,7 @@ def add_capacity_to_diskgroup(cache_disk_id, capacity_disk_ids,
     salt.utils.vsan.add_capacity_to_diskgroup(service_instance,
                                               vsan_disk_mgmt_system,
                                               host_ref,
-                                              disk_groups[0],
+                                              diskgroups[0],
                                               disks)
     return True
 
