@@ -1024,6 +1024,282 @@ def syslog_configured(name,
     return ret
 
 
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+def diskgroups_configured(name, diskgroups, erase_disks=False):
+    '''
+    Configures the disk groups to use for vsan.
+
+    It will do the following:
+    (1) checks for if all disks in the diskgroup spec exist and errors if they
+    don't
+    (2) creates diskgroups with the correct disk configurations if diskgroup
+    (identified by the cache disk canonical name) doesn't exist
+    (3) adds extra capacity disks to the existing diskgroup
+
+    State input example
+    -------------------
+
+    .. code:: python
+
+    {
+        'cache_scsi_addr': 'vmhba1:C0:T0:L0',
+        'capacity_scsi_addrs': [
+            'vmhba2:C0:T0:L0',
+            'vmhba3:C0:T0:L0',
+            'vmhba4:C0:T0:L0',
+        ]
+    }
+
+    name
+        Mandatory state name.
+
+    diskgroups
+        Disk group representation containing scsi disk addresses.
+        Scsi addresses are expected for disks in the diskgroup:
+
+    erase_disks
+        Specifies whether to erase all partitions on all disks member of the
+        disk group before the disk group is created. Default vaule is False.
+    '''
+    proxy_details = __salt__['esxi.get_details']()
+    hostname = proxy_details['host'] if not proxy_details.get('vcenter') \
+               else proxy_details['esxi_host']
+    log.info('Running state {0} for host \'{1}\''.format(name, hostname))
+    # Variable used to return the result of the invocation
+    ret = {'name': name, 'result': None, 'changes': {},
+           'pchanges': {}, 'comments': None}
+    # Signals if errors have been encountered
+    errors = False
+    # Signals if changes are required
+    changes = False
+    comments = []
+    diskgroup_changes = {}
+    si = None
+    try:
+        log.trace('Validating diskgroups_configured input')
+        schema = DiskGroupsDiskScsiAddressSchema.serialize()
+        try:
+            jsonschema.validate({'diskgroups': diskgroups,
+                                 'erase_disks': erase_disks}, schema)
+        except jsonschema.exceptions.ValidationError as exc:
+            raise InvalidConfigError(exc)
+        si = __salt__['vsphere.get_service_instance_via_proxy']()
+        host_disks = __salt__['vsphere.list_disks'](service_instance=si)
+        if not host_disks:
+            raise VMwareObjectRetrievalError(
+                'No disks retrieved from host \'{0}\''.format(hostname))
+        scsi_addr_to_disk_map = {d['scsi_address']: d for d in host_disks}
+        log.trace('scsi_addr_to_disk_map = {0}'.format(scsi_addr_to_disk_map))
+        existing_diskgroups = \
+                __salt__['vsphere.list_diskgroups'](service_instance=si)
+        cache_disk_to_existing_diskgroup_map = \
+                {dg['cache_disk']: dg for dg in existing_diskgroups}
+    except CommandExecutionError as err:
+        log.error('Error: {0}'.format(err))
+        if si:
+            __salt__['vsphere.disconnect'](si)
+        ret.update({
+            'result': False if not __opts__['test'] else None,
+            'comment': str(err)})
+        return ret
+
+    # Iterate through all of the disk groups
+    for idx, dg in enumerate(diskgroups):
+        # Check for cache disk
+        if not dg['cache_scsi_addr'] in scsi_addr_to_disk_map:
+            comments.append('No cache disk with scsi address \'{0}\' was '
+                            'found.'.format(dg['cache_scsi_addr']))
+            log.error(comments[-1])
+            errors = True
+            continue
+
+        # Check for capacity disks
+        cache_disk_id = scsi_addr_to_disk_map[dg['cache_scsi_addr']]['id']
+        cache_disk_display = '{0} (id:{1})'.format(dg['cache_scsi_addr'],
+                                                   cache_disk_id)
+        bad_scsi_addrs = []
+        capacity_disk_ids = []
+        capacity_disk_displays = []
+        for scsi_addr in dg['capacity_scsi_addrs']:
+            if not scsi_addr in scsi_addr_to_disk_map:
+                bad_scsi_addrs.append(scsi_addr)
+                continue
+            capacity_disk_ids.append(scsi_addr_to_disk_map[scsi_addr]['id'])
+            capacity_disk_displays.append(
+                '{0} (id:{1})'.format(scsi_addr, capacity_disk_ids[-1]))
+        if bad_scsi_addrs:
+            comments.append('Error in diskgroup #{0}: capacity disks with '
+                            'scsi addresses {1} were not found.'
+                            ''.format(idx,
+                                      ', '.join(['\'{0}\''.format(a)
+                                                 for a in bad_scsi_addrs])))
+            log.error(comments[-1])
+            errors = True
+            continue
+
+        if not cache_disk_to_existing_diskgroup_map.get(cache_disk_id):
+            # A new diskgroup needs to be created
+            log.trace('erase_disks = {0}'.format(erase_disks))
+            if erase_disks:
+                if __opts__['test']:
+                    comments.append('State {0} will '
+                                    'erase all disks of disk group #{1}; '
+                                    'cache disk: \'{2}\', '
+                                    'capacity disk(s): {3}.'
+                                    ''.format(name, idx, cache_disk_display,
+                                              ', '.join(
+                                                  ['\'{}\''.format(a) for a in
+                                                   capacity_disk_displays])))
+                else:
+                    # Erase disk group disks
+                    for disk_id in ([cache_disk_id] + capacity_disk_ids):
+                        __salt__['vsphere.erase_disk_partitions'](
+                            disk_id=disk_id, service_instance=si)
+                    comments.append('Erased disks of diskgroup #{0}; '
+                                    'cache disk: \'{1}\', capacity disk(s): '
+                                    '{2}'.format(
+                                        idx, cache_disk_display,
+                                        ', '.join(['\'{0}\''.format(a) for a in
+                                                  capacity_disk_displays])))
+                    log.info(comments[-1])
+
+            if __opts__['test']:
+                comments.append('State {0} will create '
+                                'the disk group #{1}; cache disk: \'{2}\', '
+                                'capacity disk(s): {3}.'
+                                .format(name, idx, cache_disk_display,
+                                        ', '.join(['\'{0}\''.format(a) for a in
+                                                   capacity_disk_displays])))
+                log.info(comments[-1])
+                changes = True
+                continue
+            try:
+                __salt__['vsphere.create_diskgroup'](cache_disk_id,
+                                                     capacity_disk_ids,
+                                                     safety_checks=False,
+                                                     service_instance=si)
+            except VMwareSaltError as err:
+                comments.append('Error creating disk group #{0}: '
+                                '{1}.'.format(idx, err))
+                log.error(comments[-1])
+                errors = True
+                continue
+
+            comments.append('Created disk group #\'{0}\'.'.format(idx))
+            log.info(comments[-1])
+            diskgroup_changes[str(idx)] = \
+                 {'new': {'cache': cache_disk_display,
+                          'capacity': capacity_disk_displays}}
+            changes = True
+            continue
+
+        # The diskgroup exists; checking the capacity disks
+        log.debug('Disk group #{0} exists. Checking capacity disks: '
+                  '{1}.'.format(idx, capacity_disk_displays))
+        existing_diskgroup = \
+                cache_disk_to_existing_diskgroup_map.get(cache_disk_id)
+        existing_capacity_disk_displays = \
+                ['{0} (id:{1})'.format([d['scsi_address'] for d in host_disks
+                                        if d['id'] == disk_id][0], disk_id)
+                 for disk_id in existing_diskgroup['capacity_disks']]
+        # Populate added disks and removed disks and their displays
+        added_capacity_disk_ids = []
+        added_capacity_disk_displays = []
+        removed_capacity_disk_ids = []
+        removed_capacity_disk_displays = []
+        for disk_id in capacity_disk_ids:
+            if disk_id not in existing_diskgroup['capacity_disks']:
+                disk_scsi_addr = [d['scsi_address'] for d in host_disks
+                                  if d['id'] == disk_id][0]
+                added_capacity_disk_ids.append(disk_id)
+                added_capacity_disk_displays.append(
+                    '{0} (id:{1})'.format(disk_scsi_addr, disk_id))
+        for disk_id in existing_diskgroup['capacity_disks']:
+            if disk_id not in capacity_disk_ids:
+                disk_scsi_addr = [d['scsi_address'] for d in host_disks
+                                  if d['id'] == disk_id][0]
+                removed_capacity_disk_ids.append(disk_id)
+                removed_capacity_disk_displays.append(
+                    '{0} (id:{1})'.format(disk_scsi_addr, disk_id))
+
+        log.debug('Disk group #{0}: existing capacity disk ids: {1}; added '
+                  'capacity disk ids: {2}; removed capacity disk ids: {3}'
+                  ''.format(idx, existing_capacity_disk_displays,
+                            added_capacity_disk_displays,
+                            removed_capacity_disk_displays))
+
+        #TODO revisit this when removing capacity disks is supported
+        if removed_capacity_disk_ids:
+            comments.append(
+                'Error removing capacity disk(s) {0} from disk group #{1}; '
+                'operation is not supported.'
+                ''.format(', '.join(['\'{0}\''.format(id) for id in
+                                     removed_capacity_disk_displays]), idx))
+            log.error(comments[-1])
+            errors = True
+            continue
+
+        if added_capacity_disk_ids:
+            # Capacity disks need to be added to disk group
+
+            # Building a string representation of the capacity disks
+            # that need to be added
+            s = ', '.join(['\'{0}\''.format(id) for id in
+                           added_capacity_disk_displays])
+            if __opts__['test']:
+                comments.append('State {0} will add '
+                                'capacity disk(s) {1} to disk group #{2}.'
+                                ''.format(name, s, idx))
+                log.info(comments[-1])
+                changes = True
+                continue
+            try:
+                __salt__['vsphere.add_capacity_to_diskgroup'](
+                    cache_disk_id,
+                    added_capacity_disk_ids,
+                    safety_checks=False,
+                    service_instance=si)
+            except VMwareSaltError as err:
+                comments.append('Error adding capacity disk(s) {0} to '
+                                'disk group #{1}: {2}.'.format(s, idx, err))
+                log.error(comments[-1])
+                errors = True
+                continue
+
+            com = ('Added capacity disk(s) {0} to disk group #{1}'
+                   ''.format(s, idx))
+            log.info(com)
+            comments.append(com)
+            diskgroup_changes[str(idx)] = \
+                 {'new': {'cache': cache_disk_display,
+                          'capacity': capacity_disk_displays},
+                  'old': {'cache': cache_disk_display,
+                          'capacity': existing_capacity_disk_displays}}
+            changes = True
+            continue
+
+        # No capacity needs to be added
+        s = ('Disk group #{0} is correctly configured. Nothing to be done.'
+             ''.format(idx))
+        log.info(s)
+        comments.append(s)
+    __salt__['vsphere.disconnect'](si)
+
+    #Build the final return message
+    result = (True if not (changes or errors) else # no changes/errors
+              None if __opts__['test'] else # running in test mode
+              False if errors else True) # found errors; defaults to True
+    ret.update({'result': result,
+                'comment': '\n'.join(comments)})
+    if changes:
+        if __opts__['test']:
+            ret['pchanges'] = diskgroup_changes
+        elif changes:
+            ret['changes'] = diskgroup_changes
+    return ret
+
+
 def _lookup_syslog_config(config):
     '''
     Helper function that looks up syslog_config keys available from
