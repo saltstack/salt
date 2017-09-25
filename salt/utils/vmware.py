@@ -2072,6 +2072,69 @@ def _get_partition_info(storage_system, device_path):
     return partition_infos[0]
 
 
+def _get_new_computed_partition_spec(hostname, storage_system, device_path,
+                                     partition_info):
+    '''
+    Computes the new disk partition info when adding a new vmfs partition that
+    uses up the remainder of the disk; returns a tuple
+    (new_partition_number, vim.HostDiskPartitionSpec
+    '''
+    log.trace('Adding a partition at the end of the disk and getting the new '
+              'computed partition spec')
+    #TODO implement support for multiple partitions
+    # We support adding a partition add the end of the disk with partitions
+    free_partitions = [p for p in partition_info.layout.partition
+                       if p.type == 'none']
+    if not free_partitions:
+        raise salt.exceptions.VMwareObjectNotFoundError(
+            'Free partition was not found on device \'{0}\''
+            ''.format(partition_info.deviceName))
+    free_partition = free_partitions[0]
+
+    # Create a layout object that copies the existing one
+    layout = vim.HostDiskPartitionLayout(
+        total=partition_info.layout.total,
+        partition=partition_info.layout.partition)
+    # Create a partition with the free space on the disk
+    # Change the free partition type to vmfs
+    free_partition.type = 'vmfs'
+    try:
+        computed_partition_info = storage_system.ComputeDiskPartitionInfo(
+            devicePath=device_path,
+            partitionFormat=vim.HostDiskPartitionInfoPartitionFormat.gpt,
+            layout=layout)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    log.trace('computed partition info = {0}'
+              ''.format(computed_partition_info))
+    log.trace('Retrieving new partition number')
+    partition_numbers = [p.partition for p in
+                         computed_partition_info.layout.partition
+                         if (p.start.block == free_partition.start.block or
+                             # XXX If the entire disk is free (i.e. the free
+                             # disk partition starts at block 0) the newily
+                             # created partition is created from block 1
+                             (free_partition.start.block == 0 and
+                              p.start.block == 1)) and
+                         p.end.block == free_partition.end.block and
+                         p.type == 'vmfs']
+    if not partition_numbers:
+        raise salt.exceptions.VMwareNotFoundError(
+            'New partition was not found in computed partitions of device '
+            '\'{0}\''.format(partition_info.deviceName))
+    log.trace('new partition number = {0}'.format(partition_numbers[0]))
+    return (partition_numbers[0], computed_partition_info.spec)
+
+
 def get_hosts(service_instance, datacenter_name=None, host_names=None,
               cluster_name=None, get_all_hosts=False):
     '''
