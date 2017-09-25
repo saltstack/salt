@@ -98,13 +98,13 @@ class Nilrt_ipModuleTest(ModuleCase):
     def test_static_all(self):
         interfaces = self.__interfaces()
         for interface in interfaces:
-            result = self.run_function('ip.set_static_all', [interface, '192.168.10.4', '255.255.255.0', '192.168.10.1', '8.8.4.4 my.dns.com'])
+            result = self.run_function('ip.set_static_all', [interface, '192.168.10.4', '255.255.255.0', '192.168.10.1', '8.8.4.4 8.8.8.8'])
             self.assertTrue(result)
 
         info = self.run_function('ip.get_interfaces_details')
         for interface in info['interfaces']:
             self.assertIn('8.8.4.4', interface['ipv4']['dns'])
-            self.assertIn('my.dns.com', interface['ipv4']['dns'])
+            self.assertIn('8.8.8.8', interface['ipv4']['dns'])
             self.assertEqual(interface['ipv4']['requestmode'], 'static')
             self.assertEqual(interface['ipv4']['address'], '192.168.10.4')
             self.assertEqual(interface['ipv4']['netmask'], '255.255.255.0')
