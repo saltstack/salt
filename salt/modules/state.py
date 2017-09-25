@@ -1305,7 +1305,10 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     errors += st_.state.verify_high(high_)
     # Apply requisites to high data
     high_, req_in_errors = st_.state.requisite_in(high_)
-    errors.extend(req_in_errors)
+    if req_in_errors:
+        # This if statement should not be necessary if there were no errors,
+        # but it is required to get the unit tests to pass.
+        errors.extend(req_in_errors)
     if errors:
         __context__['retcode'] = 1
         return errors
