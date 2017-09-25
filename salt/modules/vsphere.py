@@ -5984,7 +5984,7 @@ def erase_disk_partitions(disk_id=None, scsi_address=None,
         Either ``disk_id`` or ``scsi_address`` needs to be specified
         (``disk_id`` supersedes ``scsi_address``.
 
-    scsi_address`
+    scsi_address
         Scsi address of the disk.
         ``disk_id`` or ``scsi_address`` needs to be specified
         (``disk_id`` supersedes ``scsi_address``.
