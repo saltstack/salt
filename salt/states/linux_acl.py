@@ -2,6 +2,8 @@
 '''
 Linux File Access Control Lists
 
+The Linux ACL state module requires the `getfacl` and `setfacl` binaries.
+
 Ensure a Linux ACL is present
 
 .. code-block:: yaml
@@ -50,7 +52,7 @@ def __virtual__():
     if salt.utils.path.which('getfacl') and salt.utils.path.which('setfacl'):
         return __virtualname__
 
-    return False
+    return False, 'The linux_acl state cannot be loaded: the getfacl or setfacl binary is not in the path.'
 
 
 def present(name, acl_type, acl_name='', perms='', recurse=False):
@@ -85,11 +87,12 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
     # applied to the user/group that owns the file, e.g.,
     # default:group::rwx would be listed as default:group:root:rwx
     # In this case, if acl_name is empty, we really want to search for root
+    # but still uses '' for other
 
     # We search through the dictionary getfacl returns for the owner of the
     # file if acl_name is empty.
     if acl_name == '':
-        _search_name = __current_perms[name].get('comment').get(_acl_type)
+        _search_name = __current_perms[name].get('comment').get(_acl_type, '')
     else:
         _search_name = acl_name
 
@@ -187,11 +190,12 @@ def absent(name, acl_type, acl_name='', perms='', recurse=False):
     # applied to the user/group that owns the file, e.g.,
     # default:group::rwx would be listed as default:group:root:rwx
     # In this case, if acl_name is empty, we really want to search for root
+    # but still uses '' for other
 
     # We search through the dictionary getfacl returns for the owner of the
     # file if acl_name is empty.
     if acl_name == '':
-        _search_name = __current_perms[name].get('comment').get(_acl_type)
+        _search_name = __current_perms[name].get('comment').get(_acl_type, '')
     else:
         _search_name = acl_name
 

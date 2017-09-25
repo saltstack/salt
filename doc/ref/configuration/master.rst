@@ -4175,7 +4175,9 @@ information.
 
 .. code-block:: yaml
 
-    reactor: []
+    reactor:
+      - 'salt/minion/*/start':
+        - salt://reactor/startup_tasks.sls
 
 .. conf_master:: reactor_refresh_interval
 
