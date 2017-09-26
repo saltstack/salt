@@ -981,6 +981,333 @@ def get_network_adapter_type(adapter_type):
         return vim.vm.device.VirtualE1000e()
 
 
+def get_dvss(dc_ref, dvs_names=None, get_all_dvss=False):
+    '''
+    Returns distributed virtual switches (DVSs) in a datacenter.
+
+    dc_ref
+        The parent datacenter reference.
+
+    dvs_names
+        The names of the DVSs to return. Default is None.
+
+    get_all_dvss
+        Return all DVSs in the datacenter. Default is False.
+    '''
+    dc_name = get_managed_object_name(dc_ref)
+    log.trace('Retrieving DVSs in datacenter \'{0}\', dvs_names=\'{1}\', '
+              'get_all_dvss={2}'.format(dc_name,
+                                        ','.join(dvs_names) if dvs_names
+                                        else None,
+                                        get_all_dvss))
+    properties = ['name']
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        path='networkFolder',
+        skip=True,
+        type=vim.Datacenter,
+        selectSet=[vmodl.query.PropertyCollector.TraversalSpec(
+            path='childEntity',
+            skip=False,
+            type=vim.Folder)])
+    service_instance = get_service_instance_from_managed_object(dc_ref)
+    items = [i['object'] for i in
+             get_mors_with_properties(service_instance,
+                                      vim.DistributedVirtualSwitch,
+                                      container_ref=dc_ref,
+                                      property_list=properties,
+                                      traversal_spec=traversal_spec)
+             if get_all_dvss or (dvs_names and i['name'] in dvs_names)]
+    return items
+
+
+def get_network_folder(dc_ref):
+    '''
+    Retrieves the network folder of a datacenter
+    '''
+    dc_name = get_managed_object_name(dc_ref)
+    log.trace('Retrieving network folder in datacenter '
+              '\'{0}\''.format(dc_name))
+    service_instance = get_service_instance_from_managed_object(dc_ref)
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        path='networkFolder',
+        skip=False,
+        type=vim.Datacenter)
+    entries = get_mors_with_properties(service_instance,
+                                       vim.Folder,
+                                       container_ref=dc_ref,
+                                       property_list=['name'],
+                                       traversal_spec=traversal_spec)
+    if not entries:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Network folder in datacenter \'{0}\' wasn\'t retrieved'
+            ''.format(dc_name))
+    return entries[0]['object']
+
+
+def create_dvs(dc_ref, dvs_name, dvs_create_spec=None):
+    '''
+    Creates a distributed virtual switches (DVS) in a datacenter.
+    Returns the reference to the newly created distributed virtual switch.
+
+    dc_ref
+        The parent datacenter reference.
+
+    dvs_name
+        The name of the DVS to create.
+
+    dvs_create_spec
+        The DVS spec (vim.DVSCreateSpec) to use when creating the DVS.
+        Default is None.
+    '''
+    dc_name = get_managed_object_name(dc_ref)
+    log.trace('Creating DVS \'{0}\' in datacenter '
+              '\'{1}\''.format(dvs_name, dc_name))
+    if not dvs_create_spec:
+        dvs_create_spec = vim.DVSCreateSpec()
+    if not dvs_create_spec.configSpec:
+        dvs_create_spec.configSpec = vim.VMwareDVSConfigSpec()
+        dvs_create_spec.configSpec.name = dvs_name
+    netw_folder_ref = get_network_folder(dc_ref)
+    try:
+        task = netw_folder_ref.CreateDVS_Task(dvs_create_spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, dvs_name, str(task.__class__))
+
+
+def update_dvs(dvs_ref, dvs_config_spec):
+    '''
+    Updates a distributed virtual switch with the config_spec.
+
+    dvs_ref
+        The DVS reference.
+
+    dvs_config_spec
+        The updated config spec (vim.VMwareDVSConfigSpec) to be applied to
+        the DVS.
+    '''
+    dvs_name = get_managed_object_name(dvs_ref)
+    log.trace('Updating dvs \'{0}\''.format(dvs_name))
+    try:
+        task = dvs_ref.ReconfigureDvs_Task(dvs_config_spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, dvs_name, str(task.__class__))
+
+
+def set_dvs_network_resource_management_enabled(dvs_ref, enabled):
+    '''
+    Sets whether NIOC is enabled on a DVS.
+
+    dvs_ref
+        The DVS reference.
+
+    enabled
+        Flag specifying whether NIOC is enabled.
+    '''
+    dvs_name = get_managed_object_name(dvs_ref)
+    log.trace('Setting network resource management enable to {0} on '
+              'dvs \'{1}\''.format(enabled, dvs_name))
+    try:
+        dvs_ref.EnableNetworkResourceManagement(enable=enabled)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+
+
+def get_dvportgroups(parent_ref, portgroup_names=None,
+                     get_all_portgroups=False):
+    '''
+    Returns distributed virtual porgroups (dvportgroups).
+    The parent object can be either a datacenter or a dvs.
+
+    parent_ref
+        The parent object reference. Can be either a datacenter or a dvs.
+
+    portgroup_names
+        The names of the dvss to return. Default is None.
+
+    get_all_portgroups
+        Return all portgroups in the parent. Default is False.
+    '''
+    if not (isinstance(parent_ref, vim.Datacenter) or
+            isinstance(parent_ref, vim.DistributedVirtualSwitch)):
+        raise salt.exceptions.ArgumentValueError(
+            'Parent has to be either a datacenter, '
+            'or a distributed virtual switch')
+    parent_name = get_managed_object_name(parent_ref)
+    log.trace('Retrieving portgroup in {0} \'{1}\', portgroups_names=\'{2}\', '
+              'get_all_portgroups={3}'.format(
+                  type(parent_ref).__name__, parent_name,
+                  ','.join(portgroup_names) if portgroup_names else None,
+                  get_all_portgroups))
+    properties = ['name']
+    if isinstance(parent_ref, vim.Datacenter):
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            path='networkFolder',
+            skip=True,
+            type=vim.Datacenter,
+            selectSet=[vmodl.query.PropertyCollector.TraversalSpec(
+                path='childEntity',
+                skip=False,
+                type=vim.Folder)])
+    else:  # parent is distributed virtual switch
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+            path='portgroup',
+            skip=False,
+            type=vim.DistributedVirtualSwitch)
+
+    service_instance = get_service_instance_from_managed_object(parent_ref)
+    items = [i['object'] for i in
+             get_mors_with_properties(service_instance,
+                                      vim.DistributedVirtualPortgroup,
+                                      container_ref=parent_ref,
+                                      property_list=properties,
+                                      traversal_spec=traversal_spec)
+             if get_all_portgroups or
+             (portgroup_names and i['name'] in portgroup_names)]
+    return items
+
+
+def get_uplink_dvportgroup(dvs_ref):
+    '''
+    Returns the uplink distributed virtual portgroup of a distributed virtual
+    switch (dvs)
+
+    dvs_ref
+        The dvs reference
+    '''
+    dvs_name = get_managed_object_name(dvs_ref)
+    log.trace('Retrieving uplink portgroup of dvs \'{0}\''.format(dvs_name))
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        path='portgroup',
+        skip=False,
+        type=vim.DistributedVirtualSwitch)
+    service_instance = get_service_instance_from_managed_object(dvs_ref)
+    items = [entry['object'] for entry in
+             get_mors_with_properties(service_instance,
+                                      vim.DistributedVirtualPortgroup,
+                                      container_ref=dvs_ref,
+                                      property_list=['tag'],
+                                      traversal_spec=traversal_spec)
+             if entry['tag'] and
+             [t for t in entry['tag'] if t.key == 'SYSTEM/DVS.UPLINKPG']]
+    if not items:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Uplink portgroup of DVS \'{0}\' wasn\'t found'.format(dvs_name))
+    return items[0]
+
+
+def create_dvportgroup(dvs_ref, spec):
+    '''
+    Creates a distributed virtual portgroup on a distributed virtual switch
+    (dvs)
+
+    dvs_ref
+        The dvs reference
+
+    spec
+        Portgroup spec (vim.DVPortgroupConfigSpec)
+    '''
+    dvs_name = get_managed_object_name(dvs_ref)
+    log.trace('Adding portgroup {0} to dvs '
+              '\'{1}\''.format(spec.name, dvs_name))
+    log.trace('spec = {}'.format(spec))
+    try:
+        task = dvs_ref.CreateDVPortgroup_Task(spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, dvs_name, str(task.__class__))
+
+
+def update_dvportgroup(portgroup_ref, spec):
+    '''
+    Updates a distributed virtual portgroup
+
+    portgroup_ref
+        The portgroup reference
+
+    spec
+        Portgroup spec (vim.DVPortgroupConfigSpec)
+    '''
+    pg_name = get_managed_object_name(portgroup_ref)
+    log.trace('Updating portgrouo {0}'.format(pg_name))
+    try:
+        task = portgroup_ref.ReconfigureDVPortgroup_Task(spec)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, pg_name, str(task.__class__))
+
+
+def remove_dvportgroup(portgroup_ref):
+    '''
+    Removes a distributed virtual portgroup
+
+    portgroup_ref
+        The portgroup reference
+    '''
+    pg_name = get_managed_object_name(portgroup_ref)
+    log.trace('Removing portgrouo {0}'.format(pg_name))
+    try:
+        task = portgroup_ref.Destroy_Task()
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{0}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    wait_for_task(task, pg_name, str(task.__class__))
+
+
 def list_objects(service_instance, vim_object, properties=None):
     '''
     Returns a simple list of objects from a given service instance.
