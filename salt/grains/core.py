@@ -2517,7 +2517,8 @@ def _linux_iqn():
             for line in _iscsi:
                 if line.find('InitiatorName') != -1:
                     iqn = line.split('=')
-                    ret.extend([iqn[1]])
+                    final_iqn = iqn[1].rstrip()
+                    ret.extend([final_iqn])
     return ret
 
 
@@ -2532,7 +2533,8 @@ def _aix_iqn():
     aixret = __salt__['cmd.run'](aixcmd)
     if aixret[0].isalpha():
         iqn = aixret.split()
-        ret.extend([iqn[1]])
+        final_iqn = iqn[1].rstrip()
+        ret.extend([final_iqn])
     return ret
 
 
@@ -2545,6 +2547,7 @@ def _linux_wwns():
     for fcfile in glob.glob('/sys/class/fc_host/*/port_name'):
         with salt.utils.files.fopen(fcfile, 'r') as _wwn:
             for line in _wwn:
+                line = line.rstrip()
                 ret.extend([line[2:]])
     return ret
 
@@ -2571,6 +2574,7 @@ def _windows_iqn():
     for line in cmdret['stdout'].splitlines():
         if line[0].isalpha():
             continue
+        line = line.rstrip()
         ret.extend([line])
 
     return ret
@@ -2587,6 +2591,7 @@ def _windows_wwns():
     cmdret = __salt__['cmd.run_ps'](ps_cmd)
 
     for line in cmdret:
+        line = line.rstrip()
         ret.append(line)
 
     return ret
