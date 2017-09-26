@@ -139,6 +139,7 @@ def _edit_config(xpath, element):
     query = {'type': 'config',
              'action': 'edit',
              'xpath': xpath,
+              'element': element}
              'element': element}
 
     response = __proxy__['panos.call'](query)
@@ -243,8 +244,11 @@ def _validate_response(response):
 
     '''
     if not response:
+        return False, "Error during move configuration. Verify connectivity to device."
         return False, 'Unable to validate response from device.'
     elif 'msg' in response:
+        if response['msg'] == 'command succeeded':
+            return True, response['msg']
         if 'line' in response['msg']:
             if response['msg']['line'] == 'already at the top':
                 return True, response
@@ -255,13 +259,21 @@ def _validate_response(response):
         elif response['msg'] == 'command succeeded':
             return True, response
         else:
+            return False, response['msg']
+    elif 'line' in response:
+        if response['line'] == 'already at the top':
+            return True, response['line']
+        elif response['line'] == 'already at the bottom':
+            return True, response['line']
             return False, response
     elif 'status' in response:
         if response['status'] == "success":
             return True, response
         else:
+            return False, response['line']
             return False, response
     else:
+        return False, "Error during move configuration. Verify connectivity to device."
         return False, response
 
 
@@ -567,10 +579,12 @@ def clone_config(name, xpath=None, newname=None, commit=False):
              'xpath': xpath,
              'newname': newname}
 
+    response = __proxy__['panos.call'](query)
     result, response = _validate_response(__proxy__['panos.call'](query))
 
     ret.update({
         'changes': response,
+        'result': True
         'result': result
     })
 
@@ -639,12 +653,15 @@ def delete_config(name, xpath=None, commit=False):
 
     query = {'type': 'config',
              'action': 'delete',
+              'xpath': xpath}
              'xpath': xpath}
 
+    response = __proxy__['panos.call'](query)
     result, response = _validate_response(__proxy__['panos.call'](query))
 
     ret.update({
         'changes': response,
+        'result': True
         'result': result
     })
 
@@ -690,6 +707,7 @@ def download_software(name, version=None, synch=False, check=False):
     if check is True:
         __salt__['panos.check_software']()
 
+    versions = __salt__['panos.get_software_info']()
     versions = __salt__['panos.get_software_info']()['result']
 
     if 'sw-updates' not in versions \
@@ -713,6 +731,7 @@ def download_software(name, version=None, synch=False, check=False):
         'changes': __salt__['panos.download_software_version'](version=version, synch=synch)
     })
 
+    versions = __salt__['panos.get_software_info']()
     versions = __salt__['panos.get_software_info']()['result']
 
     if 'sw-updates' not in versions \
@@ -797,6 +816,7 @@ def edit_config(name, xpath=None, value=None, commit=False):
         'result': result
     })
 
+    # Ensure we do not commit after a failed action
     if not result:
         return ret
 
@@ -872,6 +892,7 @@ def move_config(name, xpath=None, where=None, dst=None, commit=False):
         result, msg = _move_bottom(xpath)
 
     ret.update({
+        'result': result
         'result': result,
         'comment': msg
     })
@@ -948,10 +969,12 @@ def rename_config(name, xpath=None, newname=None, commit=False):
              'xpath': xpath,
              'newname': newname}
 
+    response = __proxy__['panos.call'](query)
     result, response = _validate_response(__proxy__['panos.call'](query))
 
     ret.update({
         'changes': response,
+        'result': True
         'result': result
     })
 
@@ -1145,6 +1168,7 @@ def security_rule_exists(name,
         return ret
 
     # Check if rule currently exists
+    rule = __salt__['panos.get_security_rule'](rulename, vsys)
     rule = __salt__['panos.get_security_rule'](rulename, vsys)['result']
 
     if rule and 'entry' in rule:
@@ -1260,10 +1284,22 @@ def security_rule_exists(name,
 
     full_element = "<entry name='{0}'>{1}</entry>".format(rulename, element)
 
+    create_rule = False
     new_rule = xml.to_dict(ET.fromstring(full_element), True)
 
+    if 'result' in rule:
+        if rule['result'] == "None":
+            create_rule = True
     config_change = False
 
+    if create_rule:
+        xpath = "/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/rulebase/" \
+                "security/rules".format(vsys)
+
+        result, msg = _set_config(xpath, full_element)
+        if not result:
+            ret['changes']['set'] = msg
+            return ret
     if rule == new_rule:
         ret.update({
             'comment': 'Security rule already exists. No changes required.'
@@ -1276,6 +1312,7 @@ def security_rule_exists(name,
         result, msg = _edit_config(xpath, full_element)
 
         if not result:
+            ret['changes']['edit'] = msg
             ret.update({
                 'comment': msg
             })
@@ -1310,6 +1347,7 @@ def security_rule_exists(name,
             })
 
         if not move_result:
+            ret['changes']['move'] = move_msg
             ret.update({
                 'comment': move_msg
             })
@@ -1318,14 +1356,111 @@ def security_rule_exists(name,
     if commit is True:
         ret.update({
             'commit': __salt__['panos.commit'](),
+            'comment': 'Security rule verified successfully.',
             'result': True
         })
     else:
         ret.update({
+            'comment': 'Security rule verified successfully.',
             'result': True
         })
 
     return ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def service_exists(name, servicename=None, vsys=1, protocol=None, port=None, description=None, commit=False):
@@ -1423,14 +1558,14 @@ def service_exists(name, servicename=None, vsys=1, protocol=None, port=None, des
 
     if commit is True:
         ret.update({
-            'changes': {'before': service, 'after': new_service },
+            'changes': {'before': service, 'after': new_service},
             'commit': __salt__['panos.commit'](),
             'comment': 'Service object successfully configured.',
             'result': True
         })
     else:
         ret.update({
-            'changes': {'before': service, 'after': new_service },
+            'changes': {'before': service, 'after': new_service},
             'comment': 'Service object successfully configured.',
             'result': True
         })
@@ -1580,6 +1715,7 @@ def set_config(name, xpath=None, value=None, commit=False):
         'result': result
     })
 
+    # Ensure we do not commit after a failed action
     if not result:
         return ret
 
@@ -1590,3 +1726,4 @@ def set_config(name, xpath=None, value=None, commit=False):
         })
 
     return ret
+
