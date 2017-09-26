@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 
-@skipIf(not sys.platform.startswith('darwin'), "Mac specific test")
+@skipIf(sys.platform.startswith('win'), "Not a Windows test")
 class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {macpackage: {}}
