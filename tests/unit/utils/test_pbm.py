@@ -214,7 +214,7 @@ class GetCapabilityDefinitionsTestCase(TestCase):
 
     def test_fetch_capabilities(self):
         salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
-        self.mock_prof_mgr.FetchCapabilityMetadata.assert_callend_once_with(
+        self.mock_prof_mgr.FetchCapabilityMetadata.assert_called_once_with(
             self.mock_res_type)
 
     def test_fetch_capabilities_raises_no_permissions(self):
@@ -268,7 +268,7 @@ class GetPoliciesByIdTestCase(TestCase):
 
     def test_retrieve_policies(self):
         salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
-        self.mock_prof_mgr.RetrieveContent.assert_callend_once_with(
+        self.mock_prof_mgr.RetrieveContent.assert_called_once_with(
             self.policy_ids)
 
     def test_retrieve_policies_raises_no_permissions(self):
