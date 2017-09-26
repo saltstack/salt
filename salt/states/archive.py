@@ -414,7 +414,7 @@ def extracted(name,
         .. versionadded:: 2017.7.3
 
     keep : True
-        Same as ``keep_source``.
+        Same as ``keep_source``, kept for backward-compatibility.
 
         .. note::
             If both ``keep_source`` and ``keep`` are used, ``keep`` will be
@@ -647,6 +647,21 @@ def extracted(name,
 
     # Remove pub kwargs as they're irrelevant here.
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
+
+    if 'keep_source' in kwargs and 'keep' in kwargs:
+        ret.setdefault('warnings', []).append(
+            'Both \'keep_source\' and \'keep\' were used. Since these both '
+            'do the same thing, \'keep\' was ignored.'
+        )
+        keep_source = bool(kwargs.pop('keep_source'))
+        kwargs.pop('keep')
+    elif 'keep_source' in kwargs:
+        keep_source = bool(kwargs.pop('keep_source'))
+    elif 'keep' in kwargs:
+        keep_source = bool(kwargs.pop('keep'))
+    else:
+        # Neither was passed, default is True
+        keep_source = True
 
     if 'keep_source' in kwargs and 'keep' in kwargs:
         ret.setdefault('warnings', []).append(
