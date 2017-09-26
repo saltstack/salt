@@ -276,7 +276,7 @@ import logging
 import os
 
 # Import Salt Libs
-from salt.exceptions import SaltSystemExit
+from salt.exceptions import SaltSystemExit, InvalidConfigError
 from salt.config.schemas.esxi import EsxiProxySchema
 from salt.utils.dictupdate import merge
 
@@ -300,6 +300,7 @@ log = logging.getLogger(__file__)
 # Define the module's virtual name
 __virtualname__ = 'esxi'
 
+
 def __virtual__():
     '''
     Only load if the ESXi execution module is available.
@@ -308,6 +309,7 @@ def __virtual__():
         return __virtualname__
 
     return False, 'The ESXi Proxy Minion module did not load.'
+
 
 def init(opts):
     '''
@@ -325,7 +327,7 @@ def init(opts):
     try:
         jsonschema.validate(proxy_conf, schema)
     except jsonschema.exceptions.ValidationError as exc:
-        raise excs.InvalidProxyInputError(exc)
+        raise InvalidConfigError(exc)
 
     DETAILS['proxytype'] = proxy_conf['proxytype']
     if ('host' not in proxy_conf) and ('vcenter' not in proxy_conf):
@@ -345,7 +347,7 @@ def init(opts):
         # Get the correct login details
         try:
             username, password = find_credentials(host)
-        except excs.SaltSystemExit as err:
+        except SaltSystemExit as err:
             log.critical('Error: {0}'.format(err))
             return False
 
@@ -366,7 +368,7 @@ def init(opts):
         if 'mechanism' not in proxy_conf:
             log.critical('No \'mechanism\' key found in pillar for this proxy.')
             return False
-        mechanism  = proxy_conf['mechanism']
+        mechanism = proxy_conf['mechanism']
         # Save mandatory fields in cache
         for key in ('vcenter', 'mechanism'):
             DETAILS[key] = proxy_conf[key]
@@ -376,7 +378,7 @@ def init(opts):
                 log.critical('No \'username\' key found in pillar for this '
                              'proxy.')
                 return False
-            if not 'passwords' in proxy_conf and \
+            if 'passwords' not in proxy_conf and \
                 len(proxy_conf['passwords']) > 0:
 
                 log.critical('Mechanism is set to \'userpass\' , but no '
@@ -386,11 +388,11 @@ def init(opts):
             for key in ('username', 'passwords'):
                 DETAILS[key] = proxy_conf[key]
         elif mechanism == 'sspi':
-            if not 'domain' in proxy_conf:
+            if 'domain' not in proxy_conf:
                 log.critical('Mechanism is set to \'sspi\' , but no '
                              '\'domain\' key found in pillar for this proxy.')
                 return False
-            if not 'principal' in proxy_conf:
+            if 'principal' not in proxy_conf:
                 log.critical('Mechanism is set to \'sspi\' , but no '
                              '\'principal\' key found in pillar for this '
                              'proxy.')
@@ -405,7 +407,7 @@ def init(opts):
             try:
                 username, password = find_credentials()
                 DETAILS['password'] = password
-            except excs.SaltSystemExit as err:
+            except SaltSystemExit as err:
                 log.critical('Error: {0}'.format(err))
                 return False
 
@@ -456,7 +458,7 @@ def ping():
                 __salt__['vsphere.system_info'](host=DETAILS['host'],
                                                 username=DETAILS['username'],
                                                 password=DETAILS['password'])
-            except excs.SaltSystemExit as err:
+            except SaltSystemExit as err:
                 log.warning(err)
                 return False
     return True

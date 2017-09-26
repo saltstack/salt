@@ -2471,7 +2471,7 @@ def get_scsi_address_to_lun_map(host_ref, storage_system=None, hostname=None):
     luns_to_key_map = {d.key: d for d in
                        get_all_luns(host_ref, storage_system, hostname)}
     return {scsi_addr: luns_to_key_map[lun_key] for scsi_addr, lun_key in
-            lun_ids_to_scsi_addr_map.iteritems()}
+            lun_ids_to_six.iteritems(scsi_addr_map)}
 
 
 def get_disks(host_ref, disk_ids=None, scsi_addresses=None,
@@ -2513,8 +2513,9 @@ def get_disks(host_ref, disk_ids=None, scsi_addresses=None,
         lun_key_by_scsi_addr = _get_scsi_address_to_lun_key_map(si, host_ref,
                                                                 storage_system,
                                                                 hostname)
-        disk_keys = [key for scsi_addr, key in lun_key_by_scsi_addr.iteritems()
-                     if scsi_addr in  scsi_addresses]
+        disk_keys = [key for scsi_addr, key
+                     in six.iteritems(lun_key_by_scsi_addr)
+                     if scsi_addr in scsi_addresses]
         log.trace('disk_keys based on scsi_addresses = {0}'.format(disk_keys))
 
     scsi_luns = get_all_luns(host_ref, storage_system)
@@ -2695,8 +2696,8 @@ def get_diskgroups(host_ref, cache_disk_ids=None, get_all_disk_groups=False):
     vsan_disk_mappings = vsan_storage_info.diskMapping
     if not vsan_disk_mappings:
         return []
-    disk_groups =  [dm for dm in vsan_disk_mappings if \
-                    (get_all_disk_groups or \
+    disk_groups =  [dm for dm in vsan_disk_mappings if
+                    (get_all_disk_groups or
                      (dm.ssd.canonicalName in cache_disk_ids))]
     log.trace('Retrieved disk groups on host \'{0}\', with cache disk ids : '
               '{1}'.format(hostname,

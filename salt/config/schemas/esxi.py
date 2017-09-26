@@ -17,7 +17,6 @@ from salt.utils.schema import (DefinitionsSchema,
                                Schema,
                                ComplexSchemaItem,
                                ArrayItem,
-                               DictItem,
                                IntegerItem,
                                BooleanItem,
                                StringItem,
@@ -35,7 +34,6 @@ class DiskGroupDiskScsiAddressItem(ComplexSchemaItem):
 
     title = 'Diskgroup Disk Scsi Address Item'
     description = 'ESXi host diskgroup item containing disk SCSI addresses'
-
 
     cache_scsi_addr = VMwareScsiAddressItem(
         title='Cache Disk Scsi Address',
@@ -56,7 +54,6 @@ class DiskGroupDiskIdItem(ComplexSchemaItem):
 
     title = 'Diskgroup Disk Id Item'
     description = 'ESXi host diskgroup item containing disk ids'
-
 
     cache_id = StringItem(
         title='Cache Disk Id',
@@ -80,7 +77,7 @@ class DiskGroupsDiskScsiAddressSchema(DefinitionsSchema):
     diskgroups = ArrayItem(
         title='Diskgroups',
         description='List of diskgroups in an ESXi host',
-        min_items = 1,
+        min_items=1,
         items=DiskGroupDiskScsiAddressItem(),
         required=True)
     erase_disks = BooleanItem(
@@ -98,7 +95,7 @@ class DiskGroupsDiskIdSchema(DefinitionsSchema):
     diskgroups = ArrayItem(
         title='DiskGroups',
         description='List of disk groups in an ESXi host',
-        min_items = 1,
+        min_items=1,
         items=DiskGroupDiskIdItem(),
         required=True)
 
@@ -207,8 +204,8 @@ class EsxiProxySchema(Schema):
     additional_properties = False
     proxytype = StringItem(required=True,
                            enum=['esxi'])
-    host = StringItem(pattern=r'[^\s]+') # Used when connecting directly
-    vcenter = StringItem(pattern=r'[^\s]+') # Used when connecting via a vCenter
+    host = StringItem(pattern=r'[^\s]+')  # Used when connecting directly
+    vcenter = StringItem(pattern=r'[^\s]+')  # Used when connecting via a vCenter
     esxi_host = StringItem()
     username = StringItem()
     passwords = ArrayItem(min_items=1,

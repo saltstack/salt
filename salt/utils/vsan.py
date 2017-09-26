@@ -49,7 +49,8 @@ import logging
 import ssl
 
 # Import Salt Libs
-from salt.exceptions import VMwareApiError, VMwareRuntimeError
+from salt.exceptions import VMwareApiError, VMwareRuntimeError, \
+        VMwareObjectRetrievalError
 import salt.utils.vmware
 
 try:
@@ -282,7 +283,7 @@ def add_capacity_to_diskgroup(service_instance, vsan_disk_mgmt_system,
     spec.host = host_ref
     try:
         task = vsan_disk_mgmt_system.InitializeDiskMappings(spec)
-    except fault.NoPermission as exc:
+    except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError('Not enough permissions. Required privilege: '
                              '{0}'.format(exc.privilegeId))
