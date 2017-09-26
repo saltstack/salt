@@ -117,7 +117,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 try:
-    from pyVmomi import vim, vmodl, VmomiSupport
+    from pyVmomi import VmomiSupport
 
     # We check the supported vim versions to infer the pyVmomi version
     if 'vim25/6.0' in VmomiSupport.versionMap and \
@@ -1122,7 +1122,7 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
         capacity_disk_ids = []
         capacity_disk_displays = []
         for scsi_addr in dg['capacity_scsi_addrs']:
-            if not scsi_addr in scsi_addr_to_disk_map:
+            if scsi_addr not in scsi_addr_to_disk_map:
                 bad_scsi_addrs.append(scsi_addr)
                 continue
             capacity_disk_ids.append(scsi_addr_to_disk_map[scsi_addr]['id'])
@@ -1153,7 +1153,7 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
                                                    capacity_disk_displays])))
                 else:
                     # Erase disk group disks
-                    for disk_id in ([cache_disk_id] + capacity_disk_ids):
+                    for disk_id in [cache_disk_id] + capacity_disk_ids:
                         __salt__['vsphere.erase_disk_partitions'](
                             disk_id=disk_id, service_instance=si)
                     comments.append('Erased disks of diskgroup #{0}; '
@@ -1287,9 +1287,9 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
     __salt__['vsphere.disconnect'](si)
 
     #Build the final return message
-    result = (True if not (changes or errors) else # no changes/errors
-              None if __opts__['test'] else # running in test mode
-              False if errors else True) # found errors; defaults to True
+    result = (True if not (changes or errors) else  # no changes/errors
+              None if __opts__['test'] else  # running in test mode
+              False if errors else True)  # found errors; defaults to True
     ret.update({'result': result,
                 'comment': '\n'.join(comments)})
     if changes:
@@ -1385,7 +1385,7 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
              '\'{0}\''.format(hostname))
     ret = {'name': hostname, 'comment': 'Default comments',
            'result': None, 'changes': {}, 'pchanges': {}}
-    result = None if __opts__['test'] else True #We assume success
+    result = None if __opts__['test'] else True  # We assume success
     needs_setting = False
     comments = []
     changes = {}
@@ -1518,7 +1518,6 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
             log.trace('existing_datastore = {0}'.format(existing_datastore))
             log.info(comments[-1])
 
-
         if existing_datastore:
             # The following comparisons can be done if the existing_datastore
             # is set; it may not be set if running in test mode
@@ -1533,22 +1532,21 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
             else:
                 raw_size_MiB = swap_size_value * 1024
             log.trace('raw_size = {0}MiB'.format(raw_size_MiB))
-            swap_size_MiB= int(raw_size_MiB/1024)*1024
+            swap_size_MiB = int(raw_size_MiB/1024)*1024
             log.trace('adjusted swap_size = {0}MiB'.format(swap_size_MiB))
             existing_swap_size_MiB = 0
-            m = re.match('(\d+)MiB', host_cache.get('swap_size')) if \
+            m = re.match(r'(\d+)MiB', host_cache.get('swap_size')) if \
                     host_cache.get('swap_size') else None
             if m:
                 # if swap_size from the host is set and has an expected value
                 # we are going to parse it to get the number of MiBs
                 existing_swap_size_MiB = int(m.group(1))
-            if not (existing_swap_size_MiB == swap_size_MiB):
+            if not existing_swap_size_MiB == swap_size_MiB:
                 needs_setting = True
                 changes.update(
                     {'swap_size':
                      {'old': '{}GiB'.format(existing_swap_size_MiB/1024),
                       'new': '{}GiB'.format(swap_size_MiB/1024)}})
-
 
         if needs_setting:
             if __opts__['test']:
