@@ -139,7 +139,10 @@ def _edit_config(xpath, element):
     query = {'type': 'config',
              'action': 'edit',
              'xpath': xpath,
+<<<<<<< HEAD
               'element': element}
+=======
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
              'element': element}
 
     response = __proxy__['panos.call'](query)
@@ -244,11 +247,16 @@ def _validate_response(response):
 
     '''
     if not response:
+<<<<<<< HEAD
         return False, "Error during move configuration. Verify connectivity to device."
         return False, 'Unable to validate response from device.'
     elif 'msg' in response:
         if response['msg'] == 'command succeeded':
             return True, response['msg']
+=======
+        return False, 'Unable to validate response from device.'
+    elif 'msg' in response:
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
         if 'line' in response['msg']:
             if response['msg']['line'] == 'already at the top':
                 return True, response
@@ -259,21 +267,29 @@ def _validate_response(response):
         elif response['msg'] == 'command succeeded':
             return True, response
         else:
+<<<<<<< HEAD
             return False, response['msg']
     elif 'line' in response:
         if response['line'] == 'already at the top':
             return True, response['line']
         elif response['line'] == 'already at the bottom':
             return True, response['line']
+=======
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
             return False, response
     elif 'status' in response:
         if response['status'] == "success":
             return True, response
         else:
+<<<<<<< HEAD
             return False, response['line']
             return False, response
     else:
         return False, "Error during move configuration. Verify connectivity to device."
+=======
+            return False, response
+    else:
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
         return False, response
 
 
@@ -579,12 +595,18 @@ def clone_config(name, xpath=None, newname=None, commit=False):
              'xpath': xpath,
              'newname': newname}
 
+<<<<<<< HEAD
     response = __proxy__['panos.call'](query)
+=======
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
     result, response = _validate_response(__proxy__['panos.call'](query))
 
     ret.update({
         'changes': response,
+<<<<<<< HEAD
         'result': True
+=======
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
         'result': result
     })
 
@@ -653,15 +675,23 @@ def delete_config(name, xpath=None, commit=False):
 
     query = {'type': 'config',
              'action': 'delete',
+<<<<<<< HEAD
               'xpath': xpath}
              'xpath': xpath}
 
     response = __proxy__['panos.call'](query)
+=======
+             'xpath': xpath}
+
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
     result, response = _validate_response(__proxy__['panos.call'](query))
 
     ret.update({
         'changes': response,
+<<<<<<< HEAD
         'result': True
+=======
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
         'result': result
     })
 
@@ -707,7 +737,10 @@ def download_software(name, version=None, synch=False, check=False):
     if check is True:
         __salt__['panos.check_software']()
 
+<<<<<<< HEAD
     versions = __salt__['panos.get_software_info']()
+=======
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
     versions = __salt__['panos.get_software_info']()['result']
 
     if 'sw-updates' not in versions \
@@ -731,7 +764,10 @@ def download_software(name, version=None, synch=False, check=False):
         'changes': __salt__['panos.download_software_version'](version=version, synch=synch)
     })
 
+<<<<<<< HEAD
     versions = __salt__['panos.get_software_info']()
+=======
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
     versions = __salt__['panos.get_software_info']()['result']
 
     if 'sw-updates' not in versions \
@@ -816,7 +852,6 @@ def edit_config(name, xpath=None, value=None, commit=False):
         'result': result
     })
 
-    # Ensure we do not commit after a failed action
     if not result:
         return ret
 
@@ -892,7 +927,10 @@ def move_config(name, xpath=None, where=None, dst=None, commit=False):
         result, msg = _move_bottom(xpath)
 
     ret.update({
+<<<<<<< HEAD
         'result': result
+=======
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
         'result': result,
         'comment': msg
     })
@@ -969,12 +1007,18 @@ def rename_config(name, xpath=None, newname=None, commit=False):
              'xpath': xpath,
              'newname': newname}
 
+<<<<<<< HEAD
     response = __proxy__['panos.call'](query)
+=======
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
     result, response = _validate_response(__proxy__['panos.call'](query))
 
     ret.update({
         'changes': response,
+<<<<<<< HEAD
         'result': True
+=======
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
         'result': result
     })
 
@@ -1168,7 +1212,10 @@ def security_rule_exists(name,
         return ret
 
     # Check if rule currently exists
+<<<<<<< HEAD
     rule = __salt__['panos.get_security_rule'](rulename, vsys)
+=======
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
     rule = __salt__['panos.get_security_rule'](rulename, vsys)['result']
 
     if rule and 'entry' in rule:
@@ -1284,6 +1331,7 @@ def security_rule_exists(name,
 
     full_element = "<entry name='{0}'>{1}</entry>".format(rulename, element)
 
+<<<<<<< HEAD
     create_rule = False
     new_rule = xml.to_dict(ET.fromstring(full_element), True)
 
@@ -1300,6 +1348,12 @@ def security_rule_exists(name,
         if not result:
             ret['changes']['set'] = msg
             return ret
+=======
+    new_rule = xml.to_dict(ET.fromstring(full_element), True)
+
+    config_change = False
+
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
     if rule == new_rule:
         ret.update({
             'comment': 'Security rule already exists. No changes required.'
@@ -1312,7 +1366,10 @@ def security_rule_exists(name,
         result, msg = _edit_config(xpath, full_element)
 
         if not result:
+<<<<<<< HEAD
             ret['changes']['edit'] = msg
+=======
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
             ret.update({
                 'comment': msg
             })
@@ -1347,7 +1404,12 @@ def security_rule_exists(name,
             })
 
         if not move_result:
+<<<<<<< HEAD
             ret['changes']['move'] = move_msg
+            ret.update({
+                'comment': move_msg
+            })
+=======
             ret.update({
                 'comment': move_msg
             })
@@ -1356,12 +1418,227 @@ def security_rule_exists(name,
     if commit is True:
         ret.update({
             'commit': __salt__['panos.commit'](),
-            'comment': 'Security rule verified successfully.',
             'result': True
         })
     else:
         ret.update({
-            'comment': 'Security rule verified successfully.',
+            'result': True
+        })
+
+    return ret
+
+
+def service_exists(name, servicename=None, vsys=1, protocol=None, port=None, description=None, commit=False):
+    '''
+    Ensures that a service object exists in the configured state. If it does not exist or is not configured with the
+    specified attributes, it will be adjusted to match the specified values.
+
+    name: The name of the module function to execute.
+
+    servicename(str): The name of the security object.  The name is case-sensitive and can have up to 31 characters,
+    which an be letters, numbers, spaces, hyphens, and underscores. The name must be unique on a firewall and, on
+    Panorama, unique within its device group and any ancestor or descendant device groups.
+
+    vsys(str): The string representation of the VSYS ID. Defaults to VSYS 1.
+
+    protocol(str): The protocol that is used by the service object. The only valid options are tcp and udp.
+
+    port(str): The port number that is used by the service object. This can be specified as a single integer or a
+    valid range of ports.
+
+    description(str): A description for the policy (up to 255 characters).
+
+    commit(bool): If true the firewall will commit the changes, if false do not commit changes.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        panos/service/tcp-80:
+            panos.service_exists:
+              - servicename: tcp-80
+              - vsys: 1
+              - protocol: tcp
+              - port: 80
+              - description: Hypertext Transfer Protocol
+              - commit: False
+
+        panos/service/udp-500-550:
+            panos.service_exists:
+              - servicename: udp-500-550
+              - vsys: 3
+              - protocol: udp
+              - port: 500-550
+              - commit: False
+
+    '''
+    ret = _default_ret(name)
+
+    if not servicename:
+        ret.update({'comment': "The service name field must be provided."})
+        return ret
+
+    # Check if service object currently exists
+    service = __salt__['panos.get_service'](servicename, vsys)['result']
+
+    if service and 'entry' in service:
+        service = service['entry']
+    else:
+        service = {}
+
+    # Verify the arguments
+    if not protocol and protocol not in ['tcp', 'udp']:
+        ret.update({'comment': "The protocol must be provided and must be tcp or udp."})
+        return ret
+    if not port:
+        ret.update({'comment': "The port field must be provided."})
+        return ret
+
+    element = "<protocol><{0}><port>{1}</port></{0}></protocol>".format(protocol, port)
+
+    if description:
+        element += "<description>{0}</description>".format(description)
+
+    full_element = "<entry name='{0}'>{1}</entry>".format(servicename, element)
+
+    new_service = xml.to_dict(ET.fromstring(full_element), True)
+
+    if service == new_service:
+        ret.update({
+            'comment': 'Service object already exists. No changes required.',
+            'result': True
+        })
+        return ret
+    else:
+        xpath = "/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/service/" \
+                "entry[@name=\'{1}\']".format(vsys, servicename)
+
+        result, msg = _edit_config(xpath, full_element)
+
+        if not result:
+            ret.update({
+                'comment': msg
+            })
+            return ret
+
+    if commit is True:
+        ret.update({
+            'changes': {'before': service, 'after': new_service},
+            'commit': __salt__['panos.commit'](),
+            'comment': 'Service object successfully configured.',
+            'result': True
+        })
+    else:
+        ret.update({
+            'changes': {'before': service, 'after': new_service},
+            'comment': 'Service object successfully configured.',
+            'result': True
+        })
+
+    return ret
+
+
+def service_group_exists(name,
+                         groupname=None,
+                         vsys=1,
+                         members=None,
+                         description=None,
+                         commit=False):
+    '''
+    Ensures that a service group object exists in the configured state. If it does not exist or is not configured with
+    the specified attributes, it will be adjusted to match the specified values.
+
+    This module will enforce group membership. If a group exists and contains members this state does not include,
+    those members will be removed and replaced with the specified members in the state.
+
+    name: The name of the module function to execute.
+
+    groupname(str): The name of the service group object.  The name is case-sensitive and can have up to 31 characters,
+    which an be letters, numbers, spaces, hyphens, and underscores. The name must be unique on a firewall and, on
+    Panorama, unique within its device group and any ancestor or descendant device groups.
+
+    vsys(str): The string representation of the VSYS ID. Defaults to VSYS 1.
+
+    members(str, list): The members of the service group. These must be valid service objects or service groups on the
+    system that already exist prior to the execution of this state.
+
+    description(str): A description for the policy (up to 255 characters).
+
+    commit(bool): If true the firewall will commit the changes, if false do not commit changes.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        panos/service-group/my-group:
+            panos.service_group_exists:
+              - groupname: my-group
+              - vsys: 1
+              - members:
+                - tcp-80
+                - custom-port-group
+              - description: A group that needs to exist
+              - commit: False
+
+    '''
+    ret = _default_ret(name)
+
+    if not groupname:
+        ret.update({'comment': "The group name field must be provided."})
+        return ret
+
+    # Check if service group object currently exists
+    group = __salt__['panos.get_service_group'](groupname, vsys)['result']
+
+    if group and 'entry' in group:
+        group = group['entry']
+    else:
+        group = {}
+
+    # Verify the arguments
+    if members:
+        element = "<members>{0}</members>".format(_build_members(members, True))
+    else:
+        ret.update({'comment': "The group members must be provided."})
+        return ret
+
+    if description:
+        element += "<description>{0}</description>".format(description)
+
+    full_element = "<entry name='{0}'>{1}</entry>".format(groupname, element)
+
+    new_group = xml.to_dict(ET.fromstring(full_element), True)
+
+    if group == new_group:
+        ret.update({
+            'comment': 'Service group object already exists. No changes required.',
+            'result': True
+        })
+        return ret
+    else:
+        xpath = "/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/service-group/" \
+                "entry[@name=\'{1}\']".format(vsys, groupname)
+
+        result, msg = _edit_config(xpath, full_element)
+
+        if not result:
+            ret.update({
+                'comment': msg
+            })
+>>>>>>> fed7e1cb66... Updated PANOS module to use full XML attribute parser.
+            return ret
+
+    if commit is True:
+        ret.update({
+            'changes': {'before': group, 'after': new_group},
+            'commit': __salt__['panos.commit'](),
+            'comment': 'Service group object successfully configured.',
+            'result': True
+        })
+    else:
+        ret.update({
+            'changes': {'before': group, 'after': new_group},
+            'comment': 'Service group object successfully configured.',
             'result': True
         })
 
@@ -1715,7 +1992,6 @@ def set_config(name, xpath=None, value=None, commit=False):
         'result': result
     })
 
-    # Ensure we do not commit after a failed action
     if not result:
         return ret
 
@@ -1726,4 +2002,3 @@ def set_config(name, xpath=None, value=None, commit=False):
         })
 
     return ret
-
