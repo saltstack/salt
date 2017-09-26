@@ -15,6 +15,7 @@ from tests.support.mock import (
     patch
 )
 
+
 @skipIf(not sys.platform.startswith('darwin'), "Mac specific test")
 class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
