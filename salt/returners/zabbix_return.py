@@ -26,6 +26,7 @@ import os
 
 # Import Salt libs
 from salt.ext import six
+import salt.utils.files
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -55,8 +56,20 @@ def zbx():
 
 
 def zabbix_send(key, host, output):
-    cmd = zbx()['sender'] + " -c " + zbx()['config'] + " -s " + host + " -k " + key + " -o \"" + output +"\""
-    __salt__['cmd.shell'](cmd)
+    with salt.utils.fopen(zbx()['zabbix_config'], 'r') as file_handle:
+        for line in file_handle:
+            if "ServerActive" in line:
+                flag = "true"
+                server = line.rsplit('=')
+                server = server[1].rsplit(',')
+                for s in server:
+                    cmd = zbx()['sender'] + " -z " + s.replace('\n', '') + " -s " + host + " -k " + key + " -o \"" + output +"\""
+                    __salt__['cmd.shell'](cmd)
+                break
+            else:
+                flag = "false"
+        if flag == 'false':
+            cmd = zbx()['sender'] + " -c " + zbx()['config'] + " -s " + host + " -k " + key + " -o \"" + output +"\""
 
 
 def returner(ret):

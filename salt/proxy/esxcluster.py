@@ -25,7 +25,8 @@ Example pillars:
 .. code-block:: yaml
 
     proxy:
-      proxytype: esxdatacenter
+      proxytype: esxcluster
+      cluster: <cluster name>
       datacenter: <datacenter name>
       vcenter: <ip or dns name of parent vcenter>
       mechanism: userpass
@@ -40,7 +41,8 @@ Example pillars:
 .. code-block:: yaml
 
     proxy:
-      proxytype: esxdatacenter
+      proxytype: esxcluster
+      cluster: <cluster name>
       datacenter: <datacenter name>
       vcenter: <ip or dns name of parent vcenter>
       mechanism: sspi
@@ -51,9 +53,13 @@ proxytype
 ^^^^^^^^^
 To use this Proxy Module, set this to ``esxdatacenter``.
 
+cluster
+^^^^^^^
+Name of the managed cluster. Required.
+
 datacenter
 ^^^^^^^^^^
-Name of the managed datacenter. Required.
+Name of the datacenter the managed cluster is in. Required.
 
 vcenter
 ^^^^^^^
@@ -131,19 +137,20 @@ individual commands can be runs against it:
 .. code-block:: bash
 
     # Master - minion communication
-    salt <datacenter_name> test.ping
+    salt <cluster_name> test.ping
 
     # Test vcenter connection
-    salt <datacenter_name> vsphere.test_vcenter_connection
+    salt <cluster_name> vsphere.test_vcenter_connection
 
 States
 ------
 
 Associated states are documented in
-:mod:`salt.states.esxdatacenter </ref/states/all/salt.states.esxdatacenter>`.
+:mod:`salt.states.esxcluster </ref/states/all/salt.states.esxcluster>`.
 Look there to find an example structure for Pillar as well as an example
-``.sls`` file for configuring an ESX datacenter from scratch.
+``.sls`` file for configuring an ESX cluster from scratch.
 '''
+
 
 # Import Python Libs
 from __future__ import absolute_import
@@ -152,11 +159,11 @@ import os
 
 # Import Salt Libs
 import salt.exceptions
-from salt.config.schemas.esxdatacenter import EsxdatacenterProxySchema
+from salt.config.schemas.esxcluster import EsxclusterProxySchema
 from salt.utils.dictupdate import merge
 
 # This must be present or the Salt loader won't load this module.
-__proxyenabled__ = ['esxdatacenter']
+__proxyenabled__ = ['esxcluster']
 
 # External libraries
 try:
@@ -167,13 +174,14 @@ except ImportError:
 
 # Variables are scoped to this module so we can have persistent data
 # across calls to fns in here.
+GRAINS_CACHE = {}
 DETAILS = {}
 
 
 # Set up logging
 log = logging.getLogger(__name__)
 # Define the module's virtual name
-__virtualname__ = 'esxdatacenter'
+__virtualname__ = 'esxcluster'
 
 
 def __virtual__():
@@ -183,18 +191,19 @@ def __virtual__():
     if HAS_JSONSCHEMA:
         return __virtualname__
 
-    return False, 'The esxdatacenter proxy module did not load.'
+    return False, 'The esxcluster proxy module did not load.'
 
 
 def init(opts):
     '''
-    This function gets called when the proxy starts up.
-    All login details are cached.
+    This function gets called when the proxy starts up. For
+    login
+    the protocol and port are cached.
     '''
-    log.debug('Initting esxdatacenter proxy module in process '
+    log.debug('Initting esxcluster proxy module in process '
               '{}'.format(os.getpid()))
-    log.trace('Validating esxdatacenter proxy input')
-    schema = EsxdatacenterProxySchema.serialize()
+    log.debug('Validating esxcluster proxy input')
+    schema = EsxclusterProxySchema.serialize()
     log.trace('schema = {}'.format(schema))
     proxy_conf = merge(opts.get('proxy', {}), __pillar__.get('proxy', {}))
     log.trace('proxy_conf = {0}'.format(proxy_conf))
@@ -204,7 +213,7 @@ def init(opts):
         raise salt.exceptions.InvalidConfigError(exc)
 
     # Save mandatory fields in cache
-    for key in ('vcenter', 'datacenter', 'mechanism'):
+    for key in ('vcenter', 'datacenter', 'cluster', 'mechanism'):
         DETAILS[key] = proxy_conf[key]
 
     # Additional validation
@@ -257,7 +266,7 @@ def ping():
 
     .. code-block:: bash
 
-        salt dc_id test.ping
+        salt esx-cluster test.ping
     '''
     return True
 
@@ -267,7 +276,7 @@ def shutdown():
     Shutdown the connection to the proxy device. For this proxy,
     shutdown is a no-op.
     '''
-    log.debug('esxdatacenter proxy shutdown() called...')
+    log.debug('esxcluster proxy shutdown() called...')
 
 
 def find_credentials():
