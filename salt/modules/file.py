@@ -4281,7 +4281,8 @@ def extract_hash(hash_fn,
 
 def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False):
     '''
-    Check the permissions on files, modify attributes and chown if needed
+    Check the permissions on files, modify attributes and chown if needed. File
+    attributes are only verified if lsattr(1) is installed.
 
     CLI Example:
 
@@ -4293,6 +4294,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
         ``follow_symlinks`` option added
     '''
     name = os.path.expanduser(name)
+    lsattr_cmd = salt.utils.path.which('lsattr')
 
     if not ret:
         ret = {'name': name,
@@ -4318,7 +4320,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     perms['lmode'] = salt.utils.normalize_mode(cur['mode'])
 
     is_dir = os.path.isdir(name)
-    if not salt.utils.platform.is_windows() and not is_dir:
+    if not salt.utils.platform.is_windows() and not is_dir and lsattr_cmd:
         # List attributes on file
         perms['lattrs'] = ''.join(lsattr(name)[name])
         # Remove attributes on file so changes can be enforced.
@@ -4429,7 +4431,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     if __opts__['test'] is True and ret['changes']:
         ret['result'] = None
 
-    if not salt.utils.platform.is_windows() and not is_dir:
+    if not salt.utils.platform.is_windows() and not is_dir and lsattr_cmd:
         # Replace attributes on file if it had been removed
         if perms['lattrs']:
             chattr(name, operator='add', attributes=perms['lattrs'])
