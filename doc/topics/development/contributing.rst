@@ -488,8 +488,30 @@ to help review incoming pull-requests based on their past contribution to
 files which are being changed.
 
 If you do not wish to receive these notifications, please add your GitHub
-handle to the blacklist line in the `.mention-bot` file located in the
+handle to the blacklist line in the ``.mention-bot`` file located in the
 root of the Salt repository.
+
+.. _probot-gpg-verification:
+
+GPG Verification
+----------------
+
+SaltStack has enabled `GPG Probot`_ to enforce GPG signatures for all
+commits included in a Pull Request.
+
+In order for the GPG verification status check to pass, *every* contributor in
+the pull request must:
+
+- Set up a GPG key on local machine
+- Sign all commits in the pull request with key
+- Link key with GitHub account
+
+This applies to all commits in the pull request.
+
+GitHub hosts a number of `help articles`_ for creating a GPG key, using the
+GPG key with ``git`` locally, and linking the GPG key to your GitHub account.
+Once these steps are completed, the commit signing verification will look like
+the example in GitHub's `GPG Signature Verification feature announcement`_.
 
 .. _`saltstack/salt`: https://github.com/saltstack/salt
 .. _`GitHub Fork a Repo Guide`: https://help.github.com/articles/fork-a-repo
@@ -499,3 +521,6 @@ root of the Salt repository.
 .. _`Closing issues via commit message`: https://help.github.com/articles/closing-issues-via-commit-messages
 .. _`git format-patch`: https://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
 .. _salt-users: https://groups.google.com/forum/#!forum/salt-users
+.. _GPG Probot: https://probot.github.io/apps/gpg/
+.. _help articles: https://help.github.com/articles/signing-commits-with-gpg/
+.. _GPG Signature Verification feature announcement: https://github.com/blog/2144-gpg-signature-verification
