@@ -1039,7 +1039,8 @@ def interface_ip(iface):
     iface_info, error = _get_iface_info(iface)
 
     if error is False:
-        return iface_info.get(iface, {}).get('inet', {})[0].get('address', '')
+        inet = iface_info.get(iface, {}).get('inet', None)
+        return inet[0].get('address', '') if inet else ''
     else:
         return error
 

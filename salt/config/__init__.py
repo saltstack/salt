@@ -337,6 +337,9 @@ VALID_OPTS = {
     # Whether or not processes should be forked when needed. The alternative is to use threading.
     'multiprocessing': bool,
 
+    # Maximum number of concurrently active processes at any given point in time
+    'process_count_max': int,
+
     # Whether or not the salt minion should run scheduled mine updates
     'mine_enabled': bool,
 
@@ -745,6 +748,10 @@ VALID_OPTS = {
     'fileserver_ignoresymlinks': bool,
     'fileserver_limit_traversal': bool,
     'fileserver_verify_config': bool,
+
+    # Optionally apply '*' permissioins to any user. By default '*' is a fallback case that is
+    # applied only if the user didn't matched by other matchers.
+    'permissive_acl': bool,
 
     # Optionally enables keeping the calculated user's auth list in the token file.
     'keep_acl_in_token': bool,
@@ -1258,6 +1265,7 @@ DEFAULT_MINION_OPTS = {
     'auto_accept': True,
     'autosign_timeout': 120,
     'multiprocessing': True,
+    'process_count_max': -1,
     'mine_enabled': True,
     'mine_return_job': False,
     'mine_interval': 60,
@@ -1526,6 +1534,7 @@ DEFAULT_MASTER_OPTS = {
     'external_auth': {},
     'token_expire': 43200,
     'token_expire_user_override': False,
+    'permissive_acl': False,
     'keep_acl_in_token': False,
     'eauth_acl_module': '',
     'eauth_tokens': 'localfs',
@@ -2721,7 +2730,7 @@ def old_to_new(opts):
     providers = (
         'AWS',
         'CLOUDSTACK',
-        'DIGITAL_OCEAN',
+        'DIGITALOCEAN',
         'EC2',
         'GOGRID',
         'IBMSCE',

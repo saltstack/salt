@@ -2404,11 +2404,14 @@ Thread Settings
 
 .. conf_minion:: multiprocessing
 
+``multiprocessing``
+-------
+
 Default: ``True``
 
-If `multiprocessing` is enabled when a minion receives a
+If ``multiprocessing`` is enabled when a minion receives a
 publication a new process is spawned and the command is executed therein.
-Conversely, if `multiprocessing` is disabled the new publication will be run
+Conversely, if ``multiprocessing`` is disabled the new publication will be run
 executed in a thread.
 
 
@@ -2416,6 +2419,23 @@ executed in a thread.
 
     multiprocessing: True
 
+.. conf_minion:: process_count_max
+
+``process_count_max``
+-------
+
+.. versionadded:: Oxygen
+
+Default: ``-1``
+
+Limit the maximum amount of processes or threads created by ``salt-minion``.
+This is useful to avoid resource exhaustion in case the minion receives more
+publications than it is able to handle, as it limits the number of spawned
+processes or threads. ``-1`` is the default and disables the limit.
+
+.. code-block:: yaml
+
+    process_count_max: -1
 
 .. _minion-logging-settings:
 

@@ -444,7 +444,7 @@ under the API Access tab.
 .. code-block:: yaml
 
     my-digitalocean-config:
-      driver: digital_ocean
+      driver: digitalocean
       personal_access_token: xxx
       location: New York 1
 
