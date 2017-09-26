@@ -3148,3 +3148,13 @@ Changes:
 .. _`fix-42683`: https://github.com/saltstack/salt/issues/42683
 .. _`fix-42697`: https://github.com/saltstack/salt/issues/42697
 .. _`fix-42870`: https://github.com/saltstack/salt/issues/42870
+
+Build Notes
+===========
+
+Mac Installer Packages
+--------------------------
+
+Mac Installer packages have been patched with the following PR: 43756_
+
+.. _43756: https://github.com/saltstack/salt/pull/43756
