@@ -778,9 +778,12 @@ class Pillar(object):
                     and self.opts.get('__role') != 'minion':
                 # Avoid circular import
                 import salt.utils.gitfs
-                from salt.pillar.git_pillar import PER_REMOTE_OVERRIDES
+                import salt.pillar.git_pillar
                 git_pillar = salt.utils.gitfs.GitPillar(self.opts)
-                git_pillar.init_remotes(self.ext['git'], PER_REMOTE_OVERRIDES)
+                git_pillar.init_remotes(
+                    self.ext['git'],
+                    salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
+                    salt.pillar.git_pillar.PER_REMOTE_ONLY)
                 git_pillar.fetch_remotes()
         except TypeError:
             # Handle malformed ext_pillar
