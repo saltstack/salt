@@ -373,7 +373,7 @@
 #    interface: eth0
 #    cidr: '10.0.0.0/8'
 
-# The number of seconds a mine update runs.
+# The number of minutes between mine updates.
 #mine_interval: 60
 
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
@@ -688,6 +688,12 @@
 # when processing large pillars. See https://github.com/saltstack/salt/issues/38758
 # for a full explanation.
 #multiprocessing: True
+
+# Limit the maximum amount of processes or threads created by salt-minion.
+# This is useful to avoid resource exhaustion in case the minion receives more
+# publications than it is able to handle, as it limits the number of spawned
+# processes or threads. -1 is the default and disables the limit.
+#process_count_max: -1
 
 
 #####         Logging settings       #####

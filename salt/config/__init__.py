@@ -337,13 +337,16 @@ VALID_OPTS = {
     # Whether or not processes should be forked when needed. The alternative is to use threading.
     'multiprocessing': bool,
 
+    # Maximum number of concurrently active processes at any given point in time
+    'process_count_max': int,
+
     # Whether or not the salt minion should run scheduled mine updates
     'mine_enabled': bool,
 
     # Whether or not scheduled mine updates should be accompanied by a job return for the job cache
     'mine_return_job': bool,
 
-    # Schedule a mine update every n number of seconds
+    # The number of minutes between mine updates.
     'mine_interval': int,
 
     # The ipc strategy. (i.e., sockets versus tcp, etc)
@@ -590,6 +593,23 @@ VALID_OPTS = {
     # False in 2016.3.0
     'add_proxymodule_to_opts': bool,
 
+    # Merge pillar data into configuration opts.
+    # As multiple proxies can run on the same server, we may need different
+    # configuration options for each, while there's one single configuration file.
+    # The solution is merging the pillar data of each proxy minion into the opts.
+    'proxy_merge_pillar_in_opts': bool,
+
+    # Deep merge of pillar data into configuration opts.
+    # Evaluated only when `proxy_merge_pillar_in_opts` is True.
+    'proxy_deep_merge_pillar_in_opts': bool,
+
+    # The strategy used when merging pillar into opts.
+    # Considered only when `proxy_merge_pillar_in_opts` is True.
+    'proxy_merge_pillar_in_opts_strategy': str,
+
+    # Allow enabling mine details using pillar data.
+    'proxy_mines_pillar': bool,
+
     # In some particular cases, always alive proxies are not beneficial.
     # This option can be used in those less dynamic environments:
     # the user can request the connection
@@ -728,6 +748,10 @@ VALID_OPTS = {
     'fileserver_ignoresymlinks': bool,
     'fileserver_limit_traversal': bool,
     'fileserver_verify_config': bool,
+
+    # Optionally apply '*' permissioins to any user. By default '*' is a fallback case that is
+    # applied only if the user didn't matched by other matchers.
+    'permissive_acl': bool,
 
     # Optionally enables keeping the calculated user's auth list in the token file.
     'keep_acl_in_token': bool,
@@ -925,6 +949,7 @@ VALID_OPTS = {
     'ssh_scan_timeout': float,
     'ssh_identities_only': bool,
     'ssh_log_file': str,
+    'ssh_config_file': str,
 
     # Enable ioflo verbose logging. Warning! Very verbose!
     'ioflo_verbose': int,
@@ -1240,6 +1265,7 @@ DEFAULT_MINION_OPTS = {
     'auto_accept': True,
     'autosign_timeout': 120,
     'multiprocessing': True,
+    'process_count_max': -1,
     'mine_enabled': True,
     'mine_return_job': False,
     'mine_interval': 60,
@@ -1508,6 +1534,7 @@ DEFAULT_MASTER_OPTS = {
     'external_auth': {},
     'token_expire': 43200,
     'token_expire_user_override': False,
+    'permissive_acl': False,
     'keep_acl_in_token': False,
     'eauth_acl_module': '',
     'eauth_tokens': 'localfs',
@@ -1632,6 +1659,7 @@ DEFAULT_MASTER_OPTS = {
     'ssh_scan_timeout': 0.01,
     'ssh_identities_only': False,
     'ssh_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'ssh'),
+    'ssh_config_file': os.path.join(salt.syspaths.HOME_DIR, '.ssh', 'config'),
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
     'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
     'maintenance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
@@ -1697,6 +1725,12 @@ DEFAULT_PROXY_MINION_OPTS = {
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'proxy', 'extmods'),
     'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include', 'extension_modules'],
     'default_include': 'proxy.d/*.conf',
+
+    'proxy_merge_pillar_in_opts': False,
+    'proxy_deep_merge_pillar_in_opts': False,
+    'proxy_merge_pillar_in_opts_strategy': 'smart',
+
+    'proxy_mines_pillar': True,
 
     # By default, proxies will preserve the connection.
     # If this option is set to False,
@@ -2696,7 +2730,7 @@ def old_to_new(opts):
     providers = (
         'AWS',
         'CLOUDSTACK',
-        'DIGITAL_OCEAN',
+        'DIGITALOCEAN',
         'EC2',
         'GOGRID',
         'IBMSCE',

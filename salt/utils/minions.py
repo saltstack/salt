@@ -966,6 +966,31 @@ class CkMinions(object):
                         auth_list.append(matcher)
         return auth_list
 
+    def fill_auth_list(self, auth_provider, name, groups, auth_list=None, permissive=None):
+        '''
+        Returns a list of authorisation matchers that a user is eligible for.
+        This list is a combination of the provided personal matchers plus the
+        matchers of any group the user is in.
+        '''
+        if auth_list is None:
+            auth_list = []
+        if permissive is None:
+            permissive = self.opts.get('permissive_acl')
+        name_matched = False
+        for match in auth_provider:
+            if match == '*' and not permissive:
+                continue
+            if match.endswith('%'):
+                if match.rstrip('%') in groups:
+                    auth_list.extend(auth_provider[match])
+            else:
+                if salt.utils.expr_match(match, name):
+                    name_matched = True
+                    auth_list.extend(auth_provider[match])
+        if not permissive and not name_matched and '*' in auth_provider:
+            auth_list.extend(auth_provider['*'])
+        return auth_list
+
     def wheel_check(self, auth_list, fun, args):
         '''
         Check special API permissions
@@ -982,10 +1007,16 @@ class CkMinions(object):
         '''
         Check special API permissions
         '''
+        if not auth_list:
+            return False
         if form != 'cloud':
             comps = fun.split('.')
             if len(comps) != 2:
-                return False
+                # Hint at a syntax error when command is passed improperly,
+                # rather than returning an authentication error of some kind.
+                # See Issue #21969 for more information.
+                return {'error': {'name': 'SaltInvocationError',
+                                  'message': 'A command invocation error occurred: Check syntax.'}}
             mod_name = comps[0]
             fun_name = comps[1]
         else:

@@ -61,7 +61,7 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-__HOLD_PATTERN = r'\w+(?:[.-][^-]+)*'
+__HOLD_PATTERN = r'[\w+]+(?:[.-][^-]+)*'
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -1347,6 +1347,7 @@ def install(name=None,
     to_install = []
     to_downgrade = []
     to_reinstall = []
+    _available = {}
     # The above three lists will be populated with tuples containing the
     # package name and the string being used for this particular package
     # modification. The reason for this method is that the string we use for

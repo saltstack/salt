@@ -51,6 +51,19 @@ New NaCl Renderer
 
 A new renderer has been added for encrypted data.
 
+New support for Cisco UCS Chassis
+---------------------------------
+
+The salt proxy minion now allows for control of Cisco USC chassis. See
+the `cimc` modules for details.
+
+New salt-ssh roster
+-------------------
+
+A new roster has been added that allows users to pull in a list of hosts
+for salt-ssh targeting from a ~/.ssh configuration. For full details,
+please see the `sshconfig` roster.
+
 New GitFS Features
 ------------------
 
@@ -102,6 +115,14 @@ Newer PyWinRM Versions
 
 Versions of ``pywinrm>=0.2.1`` are finally able to disable validation of self
 signed certificates.  :ref:`Here<new-pywinrm>` for more information.
+
+DigitalOcean
+------------
+
+The DigitalOcean driver has been renamed to conform to the companies name.  The
+new driver name is ``digitalocean``.  The old name ``digital_ocean`` and a
+short one ``do`` will still be supported through virtual aliases, this is mostly
+cosmetic.
 
 Solaris Logical Domains In Virtual Grain
 ----------------------------------------

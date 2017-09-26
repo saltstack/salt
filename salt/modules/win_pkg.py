@@ -987,18 +987,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 # Version 1.2.3 will apply to packages foo and bar
                 salt '*' pkg.install foo,bar version=1.2.3
 
-        cache_file (str):
-            A single file to copy down for use with the installer. Copied to the
-            same location as the installer. Use this over ``cache_dir`` if there
-            are many files in the directory and you only need a specific file
-            and don't want to cache additional files that may reside in the
-            installer directory. Only applies to files on ``salt://``
-
-        cache_dir (bool):
-            True will copy the contents of the installer directory. This is
-            useful for installations that are not a single file. Only applies to
-            directories on ``salt://``
-
         extra_install_flags (str):
             Additional install flags that will be appended to the
             ``install_flags`` defined in the software definition file. Only
@@ -1290,12 +1278,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         if use_msiexec:
             cmd = msiexec
             arguments = ['/i', cached_pkg]
-            if pkginfo['version_num'].get('allusers', True):
+            if pkginfo[version_num].get('allusers', True):
                 arguments.append('ALLUSERS="1"')
-            arguments.extend(salt.utils.shlex_split(install_flags))
+            arguments.extend(salt.utils.shlex_split(install_flags, posix=False))
         else:
             cmd = cached_pkg
-            arguments = salt.utils.shlex_split(install_flags)
+            arguments = salt.utils.shlex_split(install_flags, posix=False)
 
         # Install the software
         # Check Use Scheduler Option
@@ -1368,7 +1356,6 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             # Launch the command
             result = __salt__['cmd.run_all'](cmd,
                                              cache_path,
-                                             output_loglevel='quiet',
                                              python_shell=False,
                                              redirect_stderr=True)
             if not result['retcode']:
@@ -1627,19 +1614,19 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             #Compute msiexec string
             use_msiexec, msiexec = _get_msiexec(pkginfo[target].get('msiexec', False))
 
+            # Build cmd and arguments
+            # cmd and arguments must be separated for use with the task scheduler
+            if use_msiexec:
+                cmd = msiexec
+                arguments = ['/x']
+                arguments.extend(salt.utils.shlex_split(uninstall_flags, posix=False))
+            else:
+                cmd = expanded_cached_pkg
+                arguments = salt.utils.shlex_split(uninstall_flags, posix=False)
+
             # Uninstall the software
             # Check Use Scheduler Option
             if pkginfo[target].get('use_scheduler', False):
-
-                # Build Scheduled Task Parameters
-                if use_msiexec:
-                    cmd = msiexec
-                    arguments = ['/x']
-                    arguments.extend(salt.utils.args.shlex_split(uninstall_flags))
-                else:
-                    cmd = expanded_cached_pkg
-                    arguments = salt.utils.args.shlex_split(uninstall_flags)
-
                 # Create Scheduled Task
                 __salt__['task.create_task'](name='update-salt-software',
                                              user_name='System',
@@ -1660,16 +1647,12 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                     ret[pkgname] = {'uninstall status': 'failed'}
             else:
                 # Build the install command
-                cmd = []
-                if use_msiexec:
-                    cmd.extend([msiexec, '/x', expanded_cached_pkg])
-                else:
-                    cmd.append(expanded_cached_pkg)
-                cmd.extend(salt.utils.args.shlex_split(uninstall_flags))
+                cmd = [cmd]
+                cmd.extend(arguments)
+
                 # Launch the command
                 result = __salt__['cmd.run_all'](
                         cmd,
-                        output_loglevel='trace',
                         python_shell=False,
                         redirect_stderr=True)
                 if not result['retcode']:
