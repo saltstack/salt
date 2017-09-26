@@ -180,7 +180,7 @@ import salt.utils.vsan
 import salt.utils.pbm
 from salt.exceptions import CommandExecutionError, VMwareSaltError, \
         ArgumentValueError, InvalidConfigError, VMwareObjectRetrievalError, \
-        VMwareApiError, InvalidEntityError
+        VMwareApiError, InvalidEntityError, VMwareObjectExistsError
 from salt.utils.decorators import depends, ignores_kwargs
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
         ESXClusterEntitySchema
@@ -5992,7 +5992,7 @@ def list_disks(disk_ids=None, scsi_addresses=None, service_instance=None):
         host_ref, hostname=hostname)
     canonical_name_to_scsi_address = {
         lun.canonicalName: scsi_addr
-        for scsi_addr, lun in scsi_address_to_lun.iteritems()}
+        for scsi_addr, lun in six.iteritems(scsi_address_to_lun)}
     for d in salt.utils.vmware.get_disks(host_ref, disk_ids, scsi_addresses,
                                          get_all_disks):
         ret_list.append({'id': d.canonicalName,
@@ -6052,7 +6052,7 @@ def erase_disk_partitions(disk_id=None, scsi_address=None,
                                             host_ref, disk_id,
                                             hostname=hostname)
     log.info('Erased disk partitions on disk \'{0}\' on host \'{1}\''
-             ''.format(disk_id, esxi_host))
+             ''.format(disk_id, hostname))
     return True
 
 
@@ -6220,7 +6220,7 @@ def create_diskgroup(cache_disk_id, capacity_disk_ids, safety_checks=True,
     for id in disk_ids:
         if not [d for d in disks if d.canonicalName == id]:
             raise VMwareObjectRetrievalError(
-                'No disk with id \'{0}\' was found in ESXi host \'{0}\''
+                'No disk with id \'{0}\' was found in ESXi host \'{1}\''
                 ''.format(id, hostname))
     cache_disk = [d for d in disks if d.canonicalName == cache_disk_id][0]
     capacity_disks = [d for d in disks if d.canonicalName in capacity_disk_ids]
@@ -6287,7 +6287,7 @@ def add_capacity_to_diskgroup(cache_disk_id, capacity_disk_ids,
     if not diskgroups:
         raise VMwareObjectRetrievalError(
             'No diskgroup with cache disk id \'{0}\' was found in ESXi '
-            'host \'{1}\''.format(cache_disk_id, esxi_host))
+            'host \'{1}\''.format(cache_disk_id, hostname))
     vsan_disk_mgmt_system = \
             salt.utils.vsan.get_vsan_disk_management_system(service_instance)
     salt.utils.vsan.add_capacity_to_diskgroup(service_instance,
@@ -6490,7 +6490,7 @@ def configure_host_cache(enabled, datastore=None, swap_size_MiB=None,
         if not ds_refs:
             raise VMwareObjectRetrievalError(
                 'Datastore \'{0}\' was not found on host '
-                '\'{1}\''.format(datastore_name, hostname))
+                '\'{1}\''.format(datastore, hostname))
         ds_ref = ds_refs[0]
     salt.utils.vmware.configure_host_cache(host_ref, ds_ref, swap_size_MiB)
     return True
