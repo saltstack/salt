@@ -16,6 +16,7 @@ from tests.support.mock import (
 )
 # Import Salt Libs
 import salt.modules.hosts as hosts
+import salt.utils
 from salt.ext.six.moves import StringIO
 
 
@@ -92,8 +93,12 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests true if the alias is set
         '''
+        hosts_file = '/etc/hosts'
+        if salt.utils.is_windows():
+            hosts_file = r'C:\Windows\System32\Drivers\etc\hosts'
+
         with patch('salt.modules.hosts.__get_hosts_filename',
-                  MagicMock(return_value='/etc/hosts')), \
+                  MagicMock(return_value=hosts_file)), \
                 patch('os.path.isfile', MagicMock(return_value=False)), \
                     patch.dict(hosts.__salt__,
                                {'config.option': MagicMock(return_value=None)}):
@@ -106,7 +111,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.hosts.__get_hosts_filename',
                    MagicMock(return_value='/etc/hosts')), \
                 patch('os.path.isfile', MagicMock(return_value=True)), \
-                    patch('salt.utils.fopen', mock_open()):
+                    patch('salt.utils.files.fopen', mock_open()):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                 self.assertTrue(hosts.set_host('10.10.10.10', 'Salt1'))
@@ -139,7 +144,16 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                     self.close()
 
                 def close(self):
-                    data[0] = self.getvalue()
+                    # Don't save unless there's something there. In Windows
+                    # the class gets initialized the first time with mode = w
+                    # which sets the initial value to ''. When the class closes
+                    # it clears out data and causes the test to fail.
+                    # I don't know why it get's initialized with a mode of 'w'
+                    # For the purposes of this test data shouldn't be empty
+                    # This is a problem with this class and not with the hosts
+                    # module
+                    if self.getvalue():
+                        data[0] = self.getvalue()
                     StringIO.close(self)
 
             expected = '\n'.join((
@@ -147,10 +161,11 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                 '3.3.3.3 asdf.asdfadsf asdf',
             )) + '\n'
 
-            with patch('salt.utils.fopen', TmpStringIO):
+            with patch('salt.utils.files.fopen', TmpStringIO):
                 mock_opt = MagicMock(return_value=None)
                 with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                     self.assertTrue(hosts.set_host('1.1.1.1', ' '))
+
             self.assertEqual(data[0], expected)
 
     # 'rm_host' function tests: 2
@@ -159,7 +174,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if specified host entry gets removed from the hosts file
         '''
-        with patch('salt.utils.fopen', mock_open()), \
+        with patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.modules.hosts.__get_hosts_filename',
                       MagicMock(return_value='/etc/hosts')), \
                 patch('salt.modules.hosts.has_pair',
@@ -182,9 +197,13 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if specified host entry gets added from the hosts file
         '''
-        with patch('salt.utils.fopen', mock_open()), \
+        hosts_file = '/etc/hosts'
+        if salt.utils.is_windows():
+            hosts_file = r'C:\Windows\System32\Drivers\etc\hosts'
+
+        with patch('salt.utils.files.fopen', mock_open()), \
                 patch('salt.modules.hosts.__get_hosts_filename',
-                      MagicMock(return_value='/etc/hosts')):
+                      MagicMock(return_value=hosts_file)):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                 self.assertTrue(hosts.add_host('10.10.10.10', 'Salt1'))
@@ -193,7 +212,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if specified host entry gets added from the hosts file
         '''
-        with patch('salt.utils.fopen', mock_open()), \
+        with patch('salt.utils.files.fopen', mock_open()), \
                 patch('os.path.isfile', MagicMock(return_value=False)):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
@@ -203,7 +222,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if specified host entry gets added from the hosts file
         '''
-        with patch('salt.utils.fopen', mock_open()), \
+        with patch('salt.utils.files.fopen', mock_open()), \
                 patch('os.path.isfile', MagicMock(return_value=True)):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):

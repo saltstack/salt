@@ -13,7 +13,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 import salt.modules.disk as disk
-import salt.utils
+import salt.utils.path
 
 STUB_DISK_USAGE = {
                    '/': {'filesystem': None, '1K-blocks': 10000, 'used': 10000, 'available': 10000, 'capacity': 10000},
@@ -127,7 +127,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 kwargs = {'read-ahead': 512, 'filesystem-read-ahead': 1024}
                 disk.tune('/dev/sda', **kwargs)
 
-                mock.assert_called_once()
+                self.assert_called_once(mock)
 
                 args, kwargs = mock.call_args
 
@@ -141,8 +141,8 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(len(args[0].split()), 6)
                 self.assertEqual(kwargs, {'python_shell': False})
 
-    @skipIf(not salt.utils.which('sync'), 'sync not found')
-    @skipIf(not salt.utils.which('mkfs'), 'mkfs not found')
+    @skipIf(not salt.utils.path.which('sync'), 'sync not found')
+    @skipIf(not salt.utils.path.which('mkfs'), 'mkfs not found')
     def test_format(self):
         '''
         unit tests for disk.format
@@ -163,7 +163,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(disk.__salt__, {'cmd.run': mock}):
                 self.assertEqual(disk.fstype(device), fs_type)
 
-    @skipIf(not salt.utils.which('resize2fs'), 'resize2fs not found')
+    @skipIf(not salt.utils.path.which('resize2fs'), 'resize2fs not found')
     def test_resize2fs(self):
         '''
         unit tests for disk.resize2fs

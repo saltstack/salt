@@ -26,7 +26,7 @@ from __future__ import absolute_import
 import os
 import sys
 import logging
-import salt.ext.six as six
+from salt.ext import six
 try:
     import psutil
     HAS_PSUTIL = True
@@ -305,6 +305,16 @@ class TestCase(_TestCase):
             'instead.'.format('failIfAlmostEqual', 'assertNotAlmostEqual')
         )
         # return _TestCase.failIfAlmostEqual(self, *args, **kwargs)
+
+    @staticmethod
+    def assert_called_once(mock):
+        '''
+        mock.assert_called_once only exists in PY3 in 3.6 and newer
+        '''
+        try:
+            mock.assert_called_once()
+        except AttributeError:
+            log.warning('assert_called_once invoked, but not available')
 
     if six.PY2:
         def assertRegexpMatches(self, *args, **kwds):

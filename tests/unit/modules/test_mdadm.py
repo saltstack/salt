@@ -28,7 +28,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
     def test_create(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(mdadm.__salt__, {'cmd.run': mock}), \
-                patch('salt.utils.which', lambda exe: exe):
+                patch('salt.utils.path.which', lambda exe: exe):
             ret = mdadm.create(
                     '/dev/md0', 5,
                     devices=['/dev/sdb1', '/dev/sdc1', '/dev/sdd1'],
@@ -38,9 +38,8 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual('salt', ret)
 
-            # Only available in 3.6 and above on py3
-            if hasattr(mock, 'assert_called_once'):
-                mock.assert_called_once()
+            self.assert_called_once(mock)
+
             args, kwargs = mock.call_args
             # expected cmd is
             # mdadm -C /dev/md0 -R -v --chunk 256 --force -l 5 -e default -n 3 /dev/sdb1 /dev/sdc1 /dev/sdd1

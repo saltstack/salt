@@ -28,7 +28,7 @@ Manage Kubernetes
 from __future__ import absolute_import
 
 # Import salt libs
-import salt.utils
+import salt.utils.versions
 
 
 __virtualname__ = 'k8s'
@@ -47,7 +47,7 @@ def label_present(
         node=None,
         apiserver=None):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`kubernetes.node_label_present
         <salt.states.kubernetes.node_label_present`.
 
@@ -74,7 +74,7 @@ def label_present(
         'kubernetes.node_label_present. Update your SLS to use the new '
         'function name to get rid of this warning.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
 
     return ret
@@ -85,7 +85,7 @@ def label_absent(
         node=None,
         apiserver=None):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`kubernetes.node_label_absent
         <salt.states.kubernetes.node_label_absent`.
 
@@ -109,7 +109,7 @@ def label_absent(
         'kubernetes.node_label_absent. Update your SLS to use the new '
         'function name to get rid of this warning.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
 
     return ret
@@ -120,7 +120,7 @@ def label_folder_absent(
         node=None,
         apiserver=None):
     '''
-    .. deprecated:: Nitrogen
+    .. deprecated:: 2017.7.0
         This state has been moved to :py:func:`kubernetes.node_label_folder_absent
         <salt.states.kubernetes.node_label_folder_absent`.
 
@@ -145,7 +145,7 @@ def label_folder_absent(
         'function name to get rid of this warning.'
 
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
 
     return ret

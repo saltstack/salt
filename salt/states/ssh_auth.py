@@ -52,7 +52,7 @@ import re
 import sys
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def _present_test(user, name, enc, comment, options, source, config, fingerprint_hash_type):
@@ -258,7 +258,7 @@ def present(
         .. note::
 
             The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt Nitrogen.
+            ``sha256`` in Salt 2017.7.0.
     '''
     ret = {'name': name,
            'changes': {},
@@ -430,7 +430,7 @@ def absent(name,
         .. note::
 
             The default value of the ``fingerprint_hash_type`` will change to
-            ``sha256`` in Salt Nitrogen.
+            ``sha256`` in Salt 2017.7.0.
 
     '''
     ret = {'name': name,

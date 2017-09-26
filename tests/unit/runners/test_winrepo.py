@@ -13,7 +13,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 import salt.runners.winrepo as winrepo
 
 _WINREPO_SLS = r'''
@@ -102,6 +102,6 @@ class WinrepoTest(TestCase, LoaderModuleMockMixin):
         '''
         sls_file = os.path.join(self.winrepo_sls_dir, 'wireshark.sls')
         # Add a winrepo SLS file
-        with salt.utils.fopen(sls_file, 'w') as fp_:
+        with salt.utils.files.fopen(sls_file, 'w') as fp_:
             fp_.write(_WINREPO_SLS)
         self.assertEqual(winrepo.genrepo(), _WINREPO_GENREPO_DATA)

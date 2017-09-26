@@ -175,7 +175,7 @@ If (Test-Path "$($ini['Settings']['Python2Dir'])\python.exe") {
     DownloadFileWithProgress $url $file
 
     Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python2']) . . ."
-    $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,SharedCRT,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['Python2Dir'])" -Wait -NoNewWindow -PassThru
+    $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,SharedCRT,Extensions,pip_feature,PrependPath TARGETDIR=`"$($ini['Settings']['Python2Dir'])`"" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -191,7 +191,7 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['Scripts2Dir'])".ToLower())))
 
 #==============================================================================
 # Update PIP and SetupTools
-#    caching depends on environmant variable SALT_PIP_LOCAL_CACHE
+#    caching depends on environment variable SALT_PIP_LOCAL_CACHE
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
@@ -212,7 +212,7 @@ if ( ! [bool]$Env:SALT_PIP_LOCAL_CACHE) {
 
 #==============================================================================
 # Install pypi resources using pip
-#    caching depends on environmant variable SALT_REQ_LOCAL_CACHE
+#    caching depends on environment variable SALT_REQ_LOCAL_CACHE
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Installing pypi resources using pip . . ."
@@ -229,6 +229,24 @@ if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
     Write-Output "    If a (new) ressource is missing, please delete all files in this cache, go online and repeat"
   Start_Process_and_test_exitcode "$($ini['Settings']['Python2Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req_2.txt" "pip install"
 }
+
+#==============================================================================
+# Move PyWin32 DLL's to site-packages\win32
+#==============================================================================
+Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
+Move-Item "$($ini['Settings']['SitePkgs2Dir'])\pywin32_system32\*.dll" "$($ini['Settings']['SitePkgs2Dir'])\win32" -Force
+
+# Remove pywin32_system32 directory
+Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
+Remove-Item "$($ini['Settings']['SitePkgs2Dir'])\pywin32_system32"
+
+# Remove pythonwin directory
+Write-Output " - $script_name :: Removing pythonwin Directory . . ."
+Remove-Item "$($ini['Settings']['SitePkgs2Dir'])\pythonwin" -Force -Recurse
+
+# Remove PyWin32 PostInstall and testall Scripts
+Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
+Remove-Item "$($ini['Settings']['Scripts2Dir'])\pywin32_*" -Force -Recurse
 
 #==============================================================================
 # Install PyYAML with CLoader

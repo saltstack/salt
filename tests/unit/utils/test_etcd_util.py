@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.utils import etcd_util
+import salt.utils.etcd_util as etcd_util
 try:
     from urllib3.exceptions import ReadTimeoutError, MaxRetryError
     HAS_URLLIB3 = True

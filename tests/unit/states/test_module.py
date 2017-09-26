@@ -122,7 +122,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(module.__salt__, {CMD: _mocked_func_named}):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 ret = module.run(**{CMD: None})
-                assert ret['comment'] == "'{0}' failed: Missing arguments: name".format(CMD)
+                assert ret['comment'] == "'{0}' failed: Function expects 1 parameters, got only 0".format(CMD)
 
     def test_run_correct_arg(self):
         '''
@@ -131,7 +131,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(module.__salt__, {CMD: _mocked_func_named}):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
-                ret = module.run(**{CMD: [{'name': 'Fred'}]})
+                ret = module.run(**{CMD: ['Fred']})
                 assert ret['comment'] == '{0}: Success'.format(CMD)
                 assert ret['result']
 

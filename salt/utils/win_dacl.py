@@ -134,7 +134,7 @@ import logging
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import range
-import salt.ext.six as six
+from salt.ext import six
 
 # Import 3rd-party libs
 HAS_WIN32 = False

@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ def mdadm():
     '''
     devices = set()
     try:
-        with salt.utils.fopen('/proc/mdstat', 'r') as mdstat:
+        with salt.utils.files.fopen('/proc/mdstat', 'r') as mdstat:
             for line in mdstat:
                 if line.startswith('Personalities : '):
                     continue

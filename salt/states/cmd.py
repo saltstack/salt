@@ -241,6 +241,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.ext.six import string_types
 
@@ -276,7 +277,7 @@ def _reinterpreted_state(state):
             out = out[idx + 1:]
         data = {}
         try:
-            for item in salt.utils.shlex_split(out):
+            for item in salt.utils.args.shlex_split(out):
                 key, val = item.split('=')
                 data[key] = val
         except ValueError:
@@ -838,7 +839,7 @@ def run(name,
 
     ret['changes'] = cmd_all
     ret['result'] = not bool(cmd_all['retcode'])
-    ret['comment'] = 'Command "{0}" run'.format(name)
+    ret['comment'] = u'Command "{0}" run'.format(name)
 
     # Ignore timeout errors if asked (for nohups) and treat cmd as a success
     if ignore_timeout:

@@ -64,3 +64,14 @@ def is_readable(path):
 
     # The path does not exist
     return False
+
+
+def is_executable(path):
+    '''
+    Check if a given path is executable by the current user.
+
+    :param path: The path to check
+    :returns: True or False
+    '''
+
+    return os.access(path, os.X_OK)

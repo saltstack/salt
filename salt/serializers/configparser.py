@@ -12,7 +12,7 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.ext.six.moves.configparser as configparser  # pylint: disable=E0611
 from salt.serializers import DeserializationError, SerializationError
 

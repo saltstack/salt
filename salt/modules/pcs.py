@@ -14,14 +14,15 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
-import salt.ext.six as six
+import salt.utils.path
+from salt.ext import six
 
 
 def __virtual__():
     '''
     Only load if pcs package is installed
     '''
-    if salt.utils.which('pcs'):
+    if salt.utils.path.which('pcs'):
         return 'pcs'
     return False
 

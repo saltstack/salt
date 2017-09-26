@@ -52,8 +52,9 @@ import logging
 from salt.exceptions import CommandExecutionError
 import copy
 import salt.utils
+import salt.utils.args
 import salt.utils.docker
-import salt.ext.six as six
+from salt.ext import six
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -145,7 +146,7 @@ def running(name,
     .. _docker-container-running-skip-translate:
 
     skip_translate
-        This function translates Salt CLI input into the format which
+        This function translates Salt CLI or SLS input into the format which
         docker-py_ expects. However, in the event that Salt's translation logic
         fails (due to potential changes in the Docker Remote API, or to bugs in
         the translation code), this argument can be used to exert granular
@@ -283,10 +284,35 @@ def running(name,
 
     binds
         Files/directories to bind mount. Each bind mount should be passed in
-        the format ``<host_path>:<container_path>:<read_only>``, where
-        ``<read_only>`` is one of ``rw`` (for read-write access) or ``ro`` (for
-        read-only access). Can be expressed as a comma-separated list or a YAML
-        list. The below two examples are equivalent:
+        one of the following formats:
+
+        - ``<host_path>:<container_path>`` - ``host_path`` is mounted within
+          the container as ``container_path`` with read-write access.
+        - ``<host_path>:<container_path>:<selinux_context>`` - ``host_path`` is
+          mounted within the container as ``container_path`` with read-write
+          access. Additionally, the specified selinux context will be set
+          within the container.
+        - ``<host_path>:<container_path>:<read_only>`` - ``host_path`` is
+          mounted within the container as ``container_path``, with the
+          read-only or read-write setting explicitly defined.
+        - ``<host_path>:<container_path>:<read_only>,<selinux_context>`` -
+          ``host_path`` is mounted within the container as ``container_path``,
+          with the read-only or read-write setting explicitly defined.
+          Additionally, the specified selinux context will be set within the
+          container.
+
+        ``<read_only>`` can be either ``ro`` for read-write access, or ``ro``
+        for read-only access. When omitted, it is assumed to be read-write.
+
+        ``<selinux_context>`` can be ``z`` if the volume is shared between
+        multiple containers, or ``Z`` if the volume should be private.
+
+        .. note::
+            When both ``<read_only>`` and ``<selinux_context>`` are specified,
+            there must be a comma before ``<selinux_context>``.
+
+        Binds can be expressed as a comma-separated list or a YAML list. The
+        below two examples are equivalent:
 
         .. code-block:: yaml
 
@@ -304,9 +330,8 @@ def running(name,
                   - /srv/www:/var/www:ro
                   - /home/myuser/conf/foo.conf:/etc/foo.conf:rw
 
-        Optionally, the read-only information can be left off the end and the
-        bind mount will be assumed to be read-write. The example below is
-        equivalent to the one above:
+        However, in cases where both ro/rw and an selinux context are combined,
+        the only option is to use a YAML list, like so:
 
         .. code-block:: yaml
 
@@ -314,8 +339,20 @@ def running(name,
               docker_container.running:
                 - image: bar/baz:latest
                 - binds:
-                  - /srv/www:/var/www:ro
-                  - /home/myuser/conf/foo.conf:/etc/foo.conf
+                  - /srv/www:/var/www:ro,Z
+                  - /home/myuser/conf/foo.conf:/etc/foo.conf:rw,Z
+
+        Since the second bind in the previous example is mounted read-write,
+        the ``rw`` and comma can be dropped. For example:
+
+        .. code-block:: yaml
+
+            foo:
+              docker_container.running:
+                - image: bar/baz:latest
+                - binds:
+                  - /srv/www:/var/www:ro,Z
+                  - /home/myuser/conf/foo.conf:/etc/foo.conf:Z
 
     blkio_weight
         Block IO weight (relative weight), accepts a weight value between 10
@@ -641,24 +678,14 @@ def running(name,
                   - foo2.domain.tld
 
     domainname
-        Set custom DNS search domains. Can be expressed as a comma-separated
-        list or a YAML list. The below two examples are equivalent:
+        The domain name to use for the container
 
         .. code-block:: yaml
 
             foo:
               docker_container.running:
                 - image: bar/baz:latest
-                - dommainname: domain.tld,domain2.tld
-
-        .. code-block:: yaml
-
-            foo:
-              docker_container.running:
-                - image: bar/baz:latest
-                - dommainname:
-                  - domain.tld
-                  - domain2.tld
+                - dommainname: domain.tld
 
     entrypoint
         Entrypoint for the container
@@ -2032,7 +2059,7 @@ def mod_watch(name, sfun=None, **kwargs):
         return running(name, **watch_kwargs)
 
     if sfun == 'stopped':
-        return stopped(name, **salt.utils.clean_kwargs(**kwargs))
+        return stopped(name, **salt.utils.args.clean_kwargs(**kwargs))
 
     return {'name': name,
             'changes': {},

@@ -14,13 +14,14 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
 
 
 def __virtual__():
     '''
     Only load if qemu-img is installed
     '''
-    if salt.utils.which('qemu-img'):
+    if salt.utils.path.which('qemu-img'):
         return 'qemu_img'
     return (False, 'The qemu_img execution module cannot be loaded: the qemu-img binary is not in the path.')
 

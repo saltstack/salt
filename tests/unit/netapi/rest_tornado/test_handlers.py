@@ -38,7 +38,7 @@ except ImportError:
     class AsyncHTTPTestCase(object):
         pass
 
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlencode, urlparse  # pylint: disable=no-name-in-module
 # pylint: enable=import-error
 
