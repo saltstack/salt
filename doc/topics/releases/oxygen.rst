@@ -142,10 +142,10 @@ The Windows installer will now display command-line help when a help switch
 (``/?``) is passed.
 
 Salt Cloud Features
-===================
+-------------------
 
 Pre-Flight Commands
--------------------
+===================
 
 Support has been added for specified "preflight commands" to run on a VM before
 the deploy script is run. These must be defined as a list in a cloud configuration
