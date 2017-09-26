@@ -5656,6 +5656,41 @@ def rename_datastore(datastore_name, new_datastore_name,
 
 
 @depends(HAS_PYVMOMI)
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def remove_datastore(datastore, service_instance=None):
+    '''
+    Removes a datastore. If multiple datastores an error is raised.
+
+    datastore
+        Datastore name
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.remove_datastore ds_name
+    '''
+    log.trace('Removing datastore \'{0}\''.format(datastore))
+    target = _get_proxy_target(service_instance)
+    taget_name = target.name
+    datastores = salt.utils.vmware.get_datastores(
+        service_instance,
+        reference=target,
+        datastore_names=[datastore])
+    if not datastores:
+        raise VMwareObjectRetrievalError(
+            'Datastore \'{0}\' was not found'.format(datastore))
+    if len(datastores) > 1:
+        raise VMwareObjectRetrievalError(
+            'Multiple datastores \'{0}\' were found'.format(datastore))
+    salt.utils.vmware.remove_datastore(service_instance, datastores[0])
+    return True
+
+
+@depends(HAS_PYVMOMI)
 @supports_proxies('esxcluster', 'esxdatacenter')
 @gets_service_instance_via_proxy
 def list_licenses(service_instance=None):
