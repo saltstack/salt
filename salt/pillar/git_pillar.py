@@ -374,20 +374,20 @@ def __virtual__():
         return False
 
 
-def ext_pillar(minion_id, repo):
+def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
     '''
     Checkout the ext_pillar sources and compile the resulting pillar SLS
     '''
     opts = copy.deepcopy(__opts__)
     opts['pillar_roots'] = {}
     opts['__git_pillar'] = True
-    pillar = salt.utils.gitfs.GitPillar(opts)
-    pillar.init_remotes(repo, PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
+    git_pillar = salt.utils.gitfs.GitPillar(opts)
+    git_pillar.init_remotes(repos, PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
     if __opts__.get('__role') == 'minion':
         # If masterless, fetch the remotes. We'll need to remove this once
         # we make the minion daemon able to run standalone.
-        pillar.fetch_remotes()
-    pillar.checkout()
+        git_pillar.fetch_remotes()
+    git_pillar.checkout()
     ret = {}
     merge_strategy = __opts__.get(
         'pillar_source_merging_strategy',
@@ -397,7 +397,7 @@ def ext_pillar(minion_id, repo):
         'pillar_merge_lists',
         False
     )
-    for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
+    for pillar_dir, env in six.iteritems(git_pillar.pillar_dirs):
         # If pillarenv is set, only grab pillars with that match pillarenv
         if opts['pillarenv'] and env != opts['pillarenv']:
             log.debug(
@@ -406,7 +406,7 @@ def ext_pillar(minion_id, repo):
                 env, pillar_dir, opts['pillarenv']
             )
             continue
-        if pillar_dir in pillar.pillar_linked_dirs:
+        if pillar_dir in git_pillar.pillar_linked_dirs:
             log.debug(
                 'git_pillar is skipping processing on %s as it is a '
                 'mounted repo', pillar_dir
@@ -433,7 +433,7 @@ def ext_pillar(minion_id, repo):
             # list, so that its top file is sourced from the correct
             # location and not from another git_pillar remote.
             pillar_roots.extend(
-                [d for (d, e) in six.iteritems(pillar.pillar_dirs)
+                [d for (d, e) in six.iteritems(git_pillar.pillar_dirs)
                  if env == e and d != pillar_dir]
             )
 
