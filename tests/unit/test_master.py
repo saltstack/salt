@@ -63,7 +63,7 @@ class ClearFuncsTestCase(TestCase):
                                u'message': u'A command invocation error occurred: Check syntax.'}}
 
         with patch('salt.auth.LoadAuth.authenticate_token', MagicMock(return_value=mock_token)), \
-             patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
+             patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.clear_funcs.runner(clear_load)
 
         self.assertDictEqual(mock_ret, ret)
@@ -93,7 +93,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    def test_runner_eauth_salt_invocation_errpr(self):
+    def test_runner_eauth_salt_invocation_error(self):
         '''
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
         command is malformed.
@@ -102,7 +102,7 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {u'error': {u'name': u'SaltInvocationError',
                                u'message': u'A command invocation error occurred: Check syntax.'}}
         with patch('salt.auth.LoadAuth.authenticate_eauth', MagicMock(return_value=True)), \
-             patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
+             patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.clear_funcs.runner(clear_load)
 
         self.assertDictEqual(mock_ret, ret)
@@ -155,7 +155,7 @@ class ClearFuncsTestCase(TestCase):
                                u'message': u'A command invocation error occurred: Check syntax.'}}
 
         with patch('salt.auth.LoadAuth.authenticate_token', MagicMock(return_value=mock_token)), \
-             patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
+             patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.clear_funcs.wheel(clear_load)
 
         self.assertDictEqual(mock_ret, ret)
@@ -185,7 +185,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    def test_wheel_eauth_salt_invocation_errpr(self):
+    def test_wheel_eauth_salt_invocation_error(self):
         '''
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
         command is malformed.
@@ -194,7 +194,7 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {u'error': {u'name': u'SaltInvocationError',
                                u'message': u'A command invocation error occurred: Check syntax.'}}
         with patch('salt.auth.LoadAuth.authenticate_eauth', MagicMock(return_value=True)), \
-             patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
+             patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.clear_funcs.wheel(clear_load)
 
         self.assertDictEqual(mock_ret, ret)
