@@ -1418,6 +1418,7 @@ List of hosts to bypass proxy
 .. code-block:: yaml
     no_proxy: [ '127.0.0.1', 'foo.tld' ]
 
+
 .. conf_minion:: docker.compare_container_networks
 
 ``docker.compare_container_networks``
