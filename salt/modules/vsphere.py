@@ -5941,7 +5941,7 @@ def list_hosts_via_proxy(hostnames=None, datacenter=None,
             raise salt.exceptions.ArgumentValueError(
                 'Datacenter is required when cluster is specified')
     get_all_hosts = False
-    if not hostnames and not datacenter and not cluster:
+    if not hostnames:
         get_all_hosts = True
     hosts = salt.utils.vmware.get_hosts(service_instance,
                                         datacenter_name=datacenter,

@@ -2290,20 +2290,21 @@ def get_hosts(service_instance, datacenter_name=None, host_names=None,
         Default value is False.
     '''
     properties = ['name']
+    if cluster_name and not datacenter_name:
+        raise salt.exceptions.ArgumentValueError(
+            'Must specify the datacenter when specifying the cluster')
     if not host_names:
         host_names = []
-    if get_all_hosts or not datacenter_name:
+    if not datacenter_name:
         # Assume the root folder is the starting point
         start_point = get_root_folder(service_instance)
     else:
+        start_point = get_datacenter(service_instance, datacenter_name)
         if cluster_name:
+            # Retrieval to test if cluster exists. Cluster existence only makes
+            # sense if the datacenter has been specified
+            cluster = get_cluster(start_point, cluster_name)
             properties.append('parent')
-        if datacenter_name:
-            start_point = get_datacenter(service_instance, datacenter_name)
-            if cluster_name:
-                # Retrieval to test if cluster exists. Cluster existence only makes
-                # sense if the cluster has been specified
-                cluster = get_cluster(start_point, cluster_name)
 
     # Search for the objects
     hosts = get_mors_with_properties(service_instance,
@@ -2316,16 +2317,17 @@ def get_hosts(service_instance, datacenter_name=None, host_names=None,
         # Complex conditions checking if a host should be added to the
         # filtered list (either due to its name and/or cluster membership)
 
-        if get_all_hosts:
-            filtered_hosts.append(h['object'])
-            continue
-
         if cluster_name:
             if not isinstance(h['parent'], vim.ClusterComputeResource):
                 continue
             parent_name = get_managed_object_name(h['parent'])
             if parent_name != cluster_name:
                 continue
+
+        if get_all_hosts:
+            filtered_hosts.append(h['object'])
+            continue
+
         if h['name'] in host_names:
             filtered_hosts.append(h['object'])
     return filtered_hosts
