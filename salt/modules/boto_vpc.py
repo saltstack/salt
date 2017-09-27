@@ -2456,11 +2456,10 @@ def describe_route_table(route_table_id=None, route_table_name=None,
         salt myminion boto_vpc.describe_route_table route_table_id='rtb-1f382e7d'
 
     '''
-
     salt.utils.versions.warn_until(
-        'Oxygen',
-        'The \'describe_route_table\' method has been deprecated and '
-        'replaced by \'describe_route_tables\'.'
+        'Neon',
+         'The \'describe_route_table\' method has been deprecated and '
+         'replaced by \'describe_route_tables\'.'
     )
     if not any((route_table_id, route_table_name, tags)):
         raise SaltInvocationError('At least one of the following must be specified: '

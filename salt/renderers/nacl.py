@@ -22,8 +22,7 @@ To set things up, first generate a keypair. On the master, run the following:
 
 .. code-block:: bash
 
-    # salt-call --local nacl.keygen keyfile=/root/.nacl
-    # salt-call --local nacl.keygen_pub keyfile_pub=/root/.nacl.pub
+    # salt-call --local nacl.keygen sk_file=/root/.nacl
 
 
 Using encrypted pillar
@@ -33,7 +32,7 @@ To encrypt secrets, copy the public key to your local machine and run:
 
 .. code-block:: bash
 
-    $ salt-call --local nacl.enc_pub datatoenc keyfile_pub=/root/.nacl.pub
+    $ salt-call --local nacl.enc datatoenc pk_file=/root/.nacl.pub
 
 
 To apply the renderer on a file-by-file basis add the following line to the
@@ -80,7 +79,7 @@ def _decrypt_object(obj, **kwargs):
         return _decrypt_object(obj.getvalue(), **kwargs)
     if isinstance(obj, six.string_types):
         if re.search(NACL_REGEX, obj) is not None:
-            return __salt__['nacl.dec_pub'](re.search(NACL_REGEX, obj).group(1), **kwargs)
+            return __salt__['nacl.dec'](re.search(NACL_REGEX, obj).group(1), **kwargs)
         else:
             return obj
     elif isinstance(obj, dict):

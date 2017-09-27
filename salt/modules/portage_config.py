@@ -75,6 +75,8 @@ def _get_config_file(conf, atom):
         if parts.cp == '*/*':
             # parts.repo will be empty if there is no repo part
             relative_path = parts.repo or "gentoo"
+        elif str(parts.cp).endswith('/*'):
+            relative_path = str(parts.cp).split("/")[0] + "_"
         else:
             relative_path = os.path.join(*[x for x in os.path.split(parts.cp) if x != '*'])
     else:
@@ -92,9 +94,20 @@ def _p_to_cp(p):
     Convert a package name or a DEPEND atom to category/package format.
     Raises an exception if program name is ambiguous.
     '''
-    ret = _porttree().dbapi.xmatch("match-all", p)
-    if ret:
-        return portage.cpv_getkey(ret[0])
+    try:
+        ret = portage.dep_getkey(p)
+        if ret:
+            return ret
+    except portage.exception.InvalidAtom:
+        pass
+
+    try:
+        ret = _porttree().dbapi.xmatch('bestmatch-visible', p)
+        if ret:
+            return portage.dep_getkey(ret)
+    except portage.exception.InvalidAtom:
+        pass
+
     return None
 
 
@@ -188,12 +201,7 @@ def _package_conf_file_to_dir(file_name):
             else:
                 os.rename(path, path + '.tmpbak')
                 os.mkdir(path, 0o755)
-                with salt.utils.files.fopen(path + '.tmpbak') as fh_:
-                    for line in fh_:
-                        line = line.strip()
-                        if line and not line.startswith('#'):
-                            append_to_package_conf(file_name, string=line)
-                os.remove(path + '.tmpbak')
+                os.rename(path + '.tmpbak', os.path.join(path, 'tmp'))
                 return True
         else:
             os.mkdir(path, 0o755)
@@ -218,7 +226,7 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                 shutil.copy(file_path, file_path + '.bak')
                 backup_files.append(file_path + '.bak')
 
-                if cp[0] == '/' or cp.split('/') > 2:
+                if cp[0] == '/' or len(cp.split('/')) > 2:
                     with salt.utils.files.fopen(file_path) as fp_:
                         rearrange.extend(fp_.readlines())
                     os.remove(file_path)

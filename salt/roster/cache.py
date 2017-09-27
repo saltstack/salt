@@ -117,7 +117,8 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     The resulting roster can be configured using ``roster_order`` and ``roster_default``.
     '''
     minions = salt.utils.minions.CkMinions(__opts__)
-    minions = minions.check_minions(tgt, tgt_type)
+    _res = minions.check_minions(tgt, tgt_type)
+    minions = _res['minions']
 
     ret = {}
     if not minions:
