@@ -3,6 +3,7 @@
 # Import python libs
 from __future__ import absolute_import
 
+import os
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
@@ -11,29 +12,44 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 # Import salt libs
 import salt.modules.vagrant as vagrant
 import salt.modules.cmdmod as cmd
+import salt.utils.sdb as sdb
 import salt.exceptions
 
 # Import third party libs
 from salt.ext import six
 
+TEMP_DATABASE_FILE = '/tmp/test_vagrant.sqlite'
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class VagrantTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for the salt.modules.vagrant module.
     '''
+    @classmethod
+    def tearDownClass(cls):
+        os.unlink(TEMP_DATABASE_FILE)
 
     def setup_loader_modules(self):
         vagrant_globals = {
             '__opts__': {
                 'extension_modules': '',
-                'cachedir': '/tmp/salt-tests-tmpdir/cache',
-                'cache': 'localfs'
+                'vagrant_sdb_data': {
+                    'driver': 'sqlite3',
+                    'database': TEMP_DATABASE_FILE,
+                    'table': 'sdb',
+                    'create_table': True
+                }
             },
             '__salt__': {
                 'cmd.shell': cmd.shell,
                 'cmd.retcode': cmd.retcode,
-            }}
+            },
+            '__utils__': {
+                'sdb.sdb_set': sdb.sdb_set,
+                'sdb.sdb_get': sdb.sdb_get,
+                'sdb.sdb_delete': sdb.sdb_delete
+            }
+        }
         return {vagrant: vagrant_globals}
 
     def test_vagrant_get_vm_info(self):

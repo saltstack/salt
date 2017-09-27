@@ -2,18 +2,38 @@
 '''
 Work with virtual machines managed by vagrant
 
+Mapping between a Salt node id and the Vagrant machine name
+(and the path to the Vagrantfile where it is defined)
+is stored in a Salt sdb database on the host (minion) machine.
+
+    .. requirements:
+       - the VM host machine must have salt-minion, Vagrant and a vm provider
+        installed.
+       - the VM host must have a valid definition for `sdb://vagrant_sdb_data`
+
+    Configuration example:
+
+    .. code-block:: yaml
+
+        # file /etc/salt/minion.d/vagrant_sdb.conf
+        vagrant_sdb_data:
+          driver: sqlite3
+          database: /var/cache/salt/vagrant.sqlite
+          table: sdb
+          create_table: True
+
     .. versionadded:: Oxygen
+
 '''
 
 # Import python libs
 from __future__ import absolute_import, print_function
 import logging
+import os
 
 # Import salt libs
-import salt.cache
 import salt.utils
-import salt.utils.stringutils
-from salt.exceptions import CommandExecutionError, SaltCacheError, SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.ext.six as six
 
 if six.PY3:
@@ -25,6 +45,7 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'vagrant'
 
+VAGRANT_SDB_URL = 'sdb://vagrant_sdb_data/'
 
 def __virtual__():
     '''
@@ -36,33 +57,102 @@ def __virtual__():
     return __virtualname__
 
 
-def _update_cache(name, vm_):
-    vm_cache = salt.cache.Cache(__opts__, expire=13140000)  # keep data for ten years
-    vm_cache.store('vagrant', name, vm_)
+def _build_sdb_uri(key):
+    '''
+    returns string used to fetch data for "key" from the sdb store.
+
+    Salt node id's are used as the key for vm_ dicts.
+
+    '''
+    return '{}{}'.format(VAGRANT_SDB_URL, key)
+
+
+def _build_machine_uri(machine, cwd):
+    '''
+    returns string used to fetch id names from the sdb store.
+
+    the cwd and machine name are concatenated with '?' which should
+    never collide with a Salt node id -- which is important since we
+    will be storing both in the same table.
+    '''
+    key = '{}?{}'.format(machine, os.path.abspath(cwd))
+    return _build_sdb_uri(key)
+
+
+def _update_vm_info(name, vm_):
+    ''' store the vm_ information keyed by name '''
+    __utils__['sdb.sdb_set'](_build_sdb_uri(name), vm_, __opts__)
+
+    # store machine-to-name mapping, too
+    if vm_['machine']:
+        __utils__['sdb.sdb_set'](
+            _build_machine_uri(vm_['machine'], vm_.get('cwd', '.')),
+            name,
+            __opts__)
 
 
 def get_vm_info(name):
-    vm_cache = salt.cache.Cache(__opts__)
+    '''
+    get the information for VM named `name`
+    :param name: the VM's info as we have it now
+    :return: dictionary of {'machine': x, 'cwd': y} etc.
+    '''
     try:
-        vm_ = vm_cache.fetch('vagrant', name)
-    except SaltCacheError:
-        vm_ = {}
-        log.error('Trouble reading Salt cache for vagrant[%s]', name)
-    if 'machine' not in vm_:
+        vm_ = __utils__['sdb.sdb_get'](_build_sdb_uri(name), __opts__)
+    except KeyError:
+        raise SaltInvocationError(
+            'Probable sdb driver not found. Check your configuration.')
+    if vm_ is None or 'machine' not in vm_:
         raise SaltInvocationError(
             'No Vagrant machine defined for Salt-id {}'.format(name))
     return vm_
 
 
-def _erase_cache(name):
-    vm_cache = salt.cache.Cache(__opts__)
+def get_machine_id(machine, cwd):
+    '''
+    returns the Salt node name of the Vagrant VM
+
+    :param machine: the Vagrant machine name
+    :param cwd: the path to Vagrantfile
+    :return: Salt node name
+    '''
+    name = __utils__['sdb.sdb_get'](_build_machine_uri(machine, cwd))
+    if name is None:
+        raise SaltInvocationError(
+            'No Salt name found for Vagrant machine {} in {}'.format(
+                machine, cwd))
+    return name
+
+
+def _erase_vm_info(name):
+    '''
+    erase the information for a VM the we are destroying.
+
+    some sdb drivers (such as the SQLite driver we expect to use)
+    do not have a `delete` method, so if the delete fails, we have
+    to replace the with a blank entry.
+    '''
     try:
-        vm_cache.flush('vagrant', name)
-    except SaltCacheError:
+        # delete the machine record
+        vm_ = get_vm_info(name)
+        if vm_['machine']:
+            key = _build_machine_uri(vm_['machine'], vm_.get('cwd', '.'))
+            try:
+                __utils__['sdb.sdb_delete'](key, __opts__)
+            except KeyError:
+                # no delete method found -- load a blank value
+                __utils__['sdb.sdb_set'](key, '', __opts__)
+    except Exception:
         pass
+
+    uri = _build_sdb_uri(name)
     try:
-        vm_cache.flush('vagrant_opts', name)
-    except SaltCacheError:
+        # delete the name record
+        __utils__['sdb.sdb_delete'](uri, __opts__)
+    except KeyError:
+        # no delete method found -- load an empty dictionary
+        __utils__['sdb.sdb_set'](uri, {}, __opts__)
+    except Exception:
         pass
 
 
@@ -117,16 +207,20 @@ def list_domains():
     up-to-date.
     '''
     vms = []
-    cmd = 'vagrant global-status {}'
+    cmd = 'vagrant global-status'
     reply = __salt__['cmd.shell'](cmd)
+    log.info('--->\n' + reply)
     for line in reply.split('\n'):  # build a list of the text reply
-        print(line)
         tokens = line.strip().split()
         try:
             _ = int(tokens[0], 16)  # valid id numbers are hexadecimal
-            vms.append(' '.join(tokens))
         except (ValueError, IndexError):
-            pass  # skip other lines
+            continue  # skip lines without valid id numbers
+        machine = tokens[1]
+        cwd = tokens[-1]
+        name = get_machine_id(machine, cwd)
+        if name:
+            vms.append(name)
     return vms
 
 
@@ -143,6 +237,7 @@ def list_active_vms(cwd=None):
     vms = []
     cmd = 'vagrant status'
     reply = __salt__['cmd.shell'](cmd, cwd=cwd)
+    log.info('--->\n' + reply)
     for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         if len(tokens) > 1:
@@ -164,6 +259,7 @@ def list_inactive_vms(cwd=None):
     vms = []
     cmd = 'vagrant status'
     reply = __salt__['cmd.shell'](cmd, cwd=cwd)
+    log.info('--->\n' + reply)
     for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         if len(tokens) > 1 and tokens[-1].endswith(')'):
@@ -177,7 +273,8 @@ def vm_state(name='', cwd=None):
     Return list of all the vms and their state.
 
     If you pass a VM name in as an argument then it will return info
-    for just the named VM, otherwise it will return all VMs.
+    for just the named VM, otherwise it will return all VMs defined by
+    the Vagrantfile in the `cwd` directory.
 
     CLI Example:
 
@@ -186,16 +283,29 @@ def vm_state(name='', cwd=None):
         salt '*' vagrant.vm_state <name>  cwd=/projects/project_1
     '''
 
-    machine = get_vm_info(name)['machine'] if name else ''
-    info = {}
+    if name:
+        vm_ = get_vm_info(name)
+        machine = vm_['machine']
+        cwd = vm_['cwd'] or cwd  # usually ignore passed-in cwd
+    else:
+        if not cwd:
+            raise SaltInvocationError('Path to Vagranfile must be defined, but cwd=%s', cwd)
+        machine = ''
+
+    info = []
     cmd = 'vagrant status {}'.format(machine)
     reply = __salt__['cmd.shell'](cmd, cwd)
+    log.info('--->\n' + reply)
     for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         if len(tokens) > 1 and tokens[-1].endswith(')'):
             try:
-                info[tokens[0]] = {'state': ' '.join(tokens[1:-1])}
-                info[tokens[0]]['provider'] = tokens[-1].lstrip('(').rstrip(')')
+                datum = {'machine': tokens[0],
+                         'state': ' '.join(tokens[1:-1]),
+                         'provider': tokens[-1].lstrip('(').rstrip(')'),
+                         'name': name or get_machine_id(tokens[0], cwd)
+                         }
+                info.append(datum)
             except IndexError:
                 pass
     return info
@@ -228,7 +338,7 @@ def init(name,  # Salt_id for created VM
     vm_['machine'] = machine or vm_.get('machine', machine)
     vm_['runas'] = runas or vm_.get('runas', runas)
     vm_['vagrant_provider'] = vagrant_provider or vm_.get('vagrant_provider', '')
-    _update_cache(name, vm_)
+    _update_vm_info(name, vm_)
 
     if start:
         log.debug('Starting VM {0}'.format(name))
@@ -263,9 +373,19 @@ def _start(name, vm_):  # internal call name, because "start" is a keyword argum
     vagrant_provider = vm_.get('vagrant_provider', '')
     provider_ = '--provider={}'.format(vagrant_provider) if vagrant_provider else ''
     cmd = 'vagrant up {} {}'.format(machine, provider_)
-    ret = __salt__['cmd.retcode'](cmd, runes=vm_.get('runas'), cwd=vm_.get('cwd'))
+    ret = __salt__['cmd.run_all'](cmd, runas=vm_.get('runas'), cwd=vm_.get('cwd'), output_loglevel='info')
 
-    return ret == 0
+    if machine == '':  # we were called using the default machine
+        for line in ret['stdout'].split('\n'):  # find its actual Vagrant name
+            if line.startswith('==>'):
+                machine = line.split()[1].rstrip(':')
+                vm_['machine'] = machine
+                _update_vm_info(name, vm_)  # and remember the true name
+                break
+
+    if ret['retcode'] == 0:
+        return 'Started "{}" using Vagrant machine "{}".'.format(name, machine)
+    return False
 
 
 def shutdown(name):
@@ -364,7 +484,7 @@ def destroy(name):
     except (OSError, CommandExecutionError):
         ret = 1
     finally:
-        _erase_cache(name)
+        _erase_vm_info(name)
     return ret == 0
 
 
@@ -427,7 +547,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
 
         log.info('Trying ssh -p {Port} {User}@{HostName} ifconfig'.format(**ssh_config))
         reply = __salt__['cmd.shell'](command)
-
+        log.info('--->\n' + reply)
         target_network_range = ipaddress.ip_network(network_mask, strict=False)
 
         for line in reply.split('\n'):
