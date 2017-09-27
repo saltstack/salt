@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 '''
-Work with virtual machines managed by vagrant
+Work with virtual machines managed by Vagrant.
+
+.. versionadded:: Oxygen
 
 Mapping between a Salt node id and the Vagrant machine name
 (and the path to the Vagrantfile where it is defined)
-is stored in a Salt sdb database on the host (minion) machine.
+is stored in a Salt sdb database on the Vagrant host (minion) machine.
+In order to use this module, sdb must be configured. An SQLite
+database is the recommended storage method.  The URI used for
+the sdb lookup is "sdb://vagrant_sdb_data".
 
-    .. requirements:
-       - the VM host machine must have salt-minion, Vagrant and a vm provider
-        installed.
-       - the VM host must have a valid definition for `sdb://vagrant_sdb_data`
+requirements:
+   - the VM host machine must have salt-minion, Vagrant and a vm provider installed.
+   - the VM host must have a valid definition for `sdb://vagrant_sdb_data`
 
     Configuration example:
 
@@ -21,8 +25,6 @@ is stored in a Salt sdb database on the host (minion) machine.
           database: /var/cache/salt/vagrant.sqlite
           table: sdb
           create_table: True
-
-    .. versionadded:: Oxygen
 
 '''
 
@@ -46,6 +48,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'vagrant'
 
 VAGRANT_SDB_URL = 'sdb://vagrant_sdb_data/'
+
 
 def __virtual__():
     '''
@@ -93,9 +96,10 @@ def _update_vm_info(name, vm_):
 
 def get_vm_info(name):
     '''
-    get the information for VM named `name`
-    :param name: the VM's info as we have it now
-    :return: dictionary of {'machine': x, 'cwd': y} etc.
+    get the information for a VM.
+
+    :param name: salt_id name
+    :return: dictionary of {'machine': x, 'cwd': y, ...}.
     '''
     try:
         vm_ = __utils__['sdb.sdb_get'](_build_sdb_uri(name), __opts__)
@@ -104,17 +108,17 @@ def get_vm_info(name):
             'Probable sdb driver not found. Check your configuration.')
     if vm_ is None or 'machine' not in vm_:
         raise SaltInvocationError(
-            'No Vagrant machine defined for Salt-id {}'.format(name))
+            'No Vagrant machine defined for Salt_id {}'.format(name))
     return vm_
 
 
 def get_machine_id(machine, cwd):
     '''
-    returns the Salt node name of the Vagrant VM
+    returns the salt_id name of the Vagrant VM
 
     :param machine: the Vagrant machine name
     :param cwd: the path to Vagrantfile
-    :return: Salt node name
+    :return: salt_id name
     '''
     name = __utils__['sdb.sdb_get'](_build_machine_uri(machine, cwd))
     if name is None:
@@ -159,6 +163,7 @@ def _erase_vm_info(name):
 def _vagrant_ssh_config(vm_):
     '''
     get the information for ssh communication from the new VM
+
     :param vm_: the VM's info as we have it now
     :return: dictionary of ssh stuff
     '''
@@ -194,15 +199,16 @@ def version():
 
 def list_domains():
     '''
-    Return a cached list of all available Vagrant VMs on host.
+    Return a list of the salt_id names of all available Vagrant VMs on
+    this host without regard to the path where they are defined.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' vagrant.list_domains
+        salt '*' vagrant.list_domains --log-level=info
 
-    The above shows information about all known Vagrant environments
+    The log shows information about all known Vagrant environments
     on this machine. This data is cached and may not be completely
     up-to-date.
     '''
@@ -226,7 +232,8 @@ def list_domains():
 
 def list_active_vms(cwd=None):
     '''
-    Return a list of names for active virtual machine on the minion
+    Return a list of machine names for active virtual machine on the minion,
+    which are defined in the Vagrantfile at the indicated path.
 
     CLI Example:
 
@@ -248,7 +255,9 @@ def list_active_vms(cwd=None):
 
 def list_inactive_vms(cwd=None):
     '''
-    Return a list of names for inactive virtual machine on the minion
+    Return a list of machine names for inactive virtual machine on the minion,
+    which are defined in the Vagrantfile at the indicated path.
+
 
     CLI Example:
 
@@ -270,7 +279,7 @@ def list_inactive_vms(cwd=None):
 
 def vm_state(name='', cwd=None):
     '''
-    Return list of all the vms and their state.
+    Return list of information for all the vms indicating their state.
 
     If you pass a VM name in as an argument then it will return info
     for just the named VM, otherwise it will return all VMs defined by
@@ -281,6 +290,17 @@ def vm_state(name='', cwd=None):
     .. code-block:: bash
 
         salt '*' vagrant.vm_state <name>  cwd=/projects/project_1
+
+    returns a list of dictionaries with machine name, state, provider,
+    and salt_id name.
+
+    .. code-block:: python
+
+        datum = {'machine': _, # Vagrant machine name,
+                 'state': _, # string indicating machine state, like 'running'
+                 'provider': _, # the Vagrant VM provider
+                 'name': _} # salt_id name
+
     '''
 
     if name:
@@ -289,7 +309,8 @@ def vm_state(name='', cwd=None):
         cwd = vm_['cwd'] or cwd  # usually ignore passed-in cwd
     else:
         if not cwd:
-            raise SaltInvocationError('Path to Vagranfile must be defined, but cwd=%s', cwd)
+            raise SaltInvocationError(
+                'Path to Vagranfile must be defined, but cwd={}'.format(cwd))
         machine = ''
 
     info = []
@@ -320,7 +341,20 @@ def init(name,  # Salt_id for created VM
          vm=None,  # a dictionary of VM configuration settings
          ):
     '''
-    Initialize a new Vagrant vm
+    Initialize a new Vagrant VM.
+
+    This inputs all the information needed to start a Vagrant VM.  These settings are stored in
+    a Salt sdb database on the Vagrant host minion and used to start, control, and query the
+    guest VMs. The salt_id assigned here is the key field for that database and must be unique.
+
+    :param name: The salt_id name you will use to control this VM
+    :param cwd: The path to the directory where the Vagrantfile is located
+    :param machine: The machine name in the Vagrantfile. If blank, the primary machine will be used.
+    :param runas: The username on the host who owns the Vagrant work files.
+    :param start: (default: False) Start the virtual machine now.
+    :param vagrant_provider: The name of a Vagrant VM provider (if not the default).
+    :param vm: Optionally, all the above information may be supplied in this dictionary.
+    :return: A string indicating success, or False.
 
     CLI Example:
 
@@ -350,7 +384,7 @@ def init(name,  # Salt_id for created VM
 
 def start(name):
     '''
-    Start (vagrant up) a defined virtual machine by salt_id name.
+    Start (vagrant up) a virtual machine defined by salt_id name.
     The machine must have been previously defined using "vagrant.init".
 
     CLI Example:
@@ -368,7 +402,7 @@ def _start(name, vm_):  # internal call name, because "start" is a keyword argum
     try:
         machine = vm_['machine']
     except KeyError:
-        raise SaltInvocationError('No Vagrant machine defined for Salt-id {}'.format(name))
+        raise SaltInvocationError('No Vagrant machine defined for Salt_id {}'.format(name))
 
     vagrant_provider = vm_.get('vagrant_provider', '')
     provider_ = '--provider={}'.format(vagrant_provider) if vagrant_provider else ''
@@ -390,8 +424,11 @@ def _start(name, vm_):  # internal call name, because "start" is a keyword argum
 
 def shutdown(name):
     '''
-    Send a soft shutdown signal to the named vm.
-    ( for Vagrant, alternate name for vagrant.stop )
+    Send a soft shutdown (vagrant halt) signal to the named vm.
+
+    This does the same thing as vagrant.stop. Other VM control
+    modules use "stop" and "shutdown" to differentiate between
+    hard and soft shutdowns.
 
     CLI Example:
 
@@ -404,8 +441,7 @@ def shutdown(name):
 
 def stop(name):
     '''
-    Hard shutdown the virtual machine.
-    ( Vagrant will attempt a soft shutdown first. )
+    Hard shutdown the virtual machine. (vagrant halt)
 
     CLI Example:
 
@@ -425,7 +461,7 @@ def stop(name):
 
 def pause(name):
     '''
-    Pause (suspend) the named vm
+    Pause (vagrant suspend) the named VM.
 
     CLI Example:
 
@@ -445,7 +481,7 @@ def pause(name):
 
 def reboot(name):
     '''
-    Reboot a VM
+    Reboot a VM. (vagrant reload)
 
     CLI Example:
 
@@ -465,7 +501,9 @@ def reboot(name):
 
 def destroy(name):
     '''
-    Destroy and delete a virtual machine.
+    Destroy and delete a virtual machine. (vagrant destroy -f)
+
+    This also removes the salt_id name defined by vagrant.init.
 
     CLI Example:
 
@@ -492,6 +530,11 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
     r'''
     Retrieve hints of how you might connect to a Vagrant VM.
 
+    :param name: the salt_id of the machine
+    :param network_mask: a CIDR mask to search for the VM's address
+    :param get_private_key: (default: False) return the key used for ssh login
+    :return: a dict of ssh login information for the VM
+
     CLI Example:
 
     .. code-block:: bash
@@ -499,7 +542,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
         salt <host> vagrant.get_ssh_config <salt_id>
         salt my_laptop vagrant.get_ssh_config quail1 network_mask=10.0.0.0/8 get_private_key=True
 
-    returns a dictionary containing:
+    The returned dictionary contains:
 
     - key_filename:  the name of the private key file on the VM host computer
     - ssh_username:  the username to be used to log in to the VM
@@ -511,15 +554,17 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
     About `network_mask`:
 
     Vagrant usually uses a redirected TCP port on its host computer to log in to a VM using ssh.
+    This redirected port and its IP address are "ssh_port" and "ssh_host".  The ssh_host is
+    usually the localhost (127.0.0.1).
     This makes it impossible for a third machine (such as a salt-cloud master) to contact the VM
     unless the VM has another network interface defined.  You will usually want a bridged network
     defined by having a `config.vm.network "public_network"` statement in your `Vagrantfile`.
 
     The IP address of the bridged adapter will typically be assigned by DHCP and unknown to you,
     but you should be able to determine what IP network the address will be chosen from.
-    If you enter a CIDR network mask, the module will attempt to find the VM's address for you.
-    It will send an `ifconfig` command to the VM (using ssh to `ssh_host`:`ssh_port`) and scan the
-    result, returning the IP address of the first interface it can find which matches your mask.
+    If you enter a CIDR network mask, Salt will attempt to find the VM's address for you.
+    The host machine will send an "ifconfig" command to the VM (using ssh to `ssh_host`:`ssh_port`)
+    and return the IP address of the first interface it can find which matches your mask.
     '''
     vm_ = get_vm_info(name)
 
