@@ -79,6 +79,8 @@ import atexit
 import errno
 import logging
 import time
+import sys
+import ssl
 
 # Import Salt Libs
 import salt.exceptions
@@ -92,8 +94,9 @@ import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
 try:
-    from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub
-    from pyVmomi import vim, vmodl
+    from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub, \
+            SoapStubAdapter
+    from pyVmomi import vim, vmodl, VmomiSupport
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -403,6 +406,49 @@ def get_service_instance(host, username=None, password=None, protocol=None,
         raise salt.exceptions.VMwareRuntimeError(exc.msg)
 
     return service_instance
+
+
+def get_new_service_instance_stub(service_instance, path, ns=None,
+                                  version=None):
+    '''
+    Returns a stub that points to a different path,
+    created from an existing connection.
+
+    service_instance
+        The Service Instance.
+
+    path
+        Path of the new stub.
+
+    ns
+        Namespace of the new stub.
+        Default value is None
+
+    version
+        Version of the new stub.
+        Default value is None.
+    '''
+    #For python 2.7.9 and later, the defaul SSL conext has more strict
+    #connection handshaking rule. We may need turn of the hostname checking
+    #and client side cert verification
+    context = None
+    if sys.version_info[:3] > (2, 7, 8):
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+
+    stub = service_instance._stub
+    hostname = stub.host.split(':')[0]
+    session_cookie = stub.cookie.split('"')[1]
+    VmomiSupport.GetRequestContext()['vcSessionCookie'] = session_cookie
+    new_stub = SoapStubAdapter(host=hostname,
+                               ns=ns,
+                               path=path,
+                               version=version,
+                               poolSize=0,
+                               sslContext=context)
+    new_stub.cookie = stub.cookie
+    return new_stub
 
 
 def get_service_instance_from_managed_object(mo_ref, name='<unnamed>'):
