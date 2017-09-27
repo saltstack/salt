@@ -837,6 +837,9 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
         # IIS 7.5 and earlier have different syntax for associating a certificate with a site
         # Modify IP spec to IIS 7.5 format
         iis7path = binding_path.replace(r"\*!", "\\0.0.0.0!")
+        # win 2008 uses the following format: ip!port and not ip!port!
+        if iis7path.endswith("!"):
+            iis7path = iis7path[:-1]
 
         ps_cmd = ['New-Item',
                   '-Path', "'{0}'".format(iis7path),
@@ -1255,6 +1258,9 @@ def set_container_setting(name, container, settings):
         salt '*' win_iis.set_container_setting name='MyTestPool' container='AppPools'
             settings="{'managedPipeLineMode': 'Integrated'}"
     '''
+
+    identityType_map2string = {'0': 'LocalSystem', '1': 'LocalService', '2': 'NetworkService', '3': 'SpecificUser', '4': 'ApplicationPoolIdentity'}
+    identityType_map2numeric = {'LocalSystem': '0', 'LocalService': '1', 'NetworkService': '2', 'SpecificUser': '3', 'ApplicationPoolIdentity': '4'}
     ps_cmd = list()
     container_path = r"IIS:\{0}\{1}".format(container, name)
 
@@ -1281,6 +1287,10 @@ def set_container_setting(name, container, settings):
         except ValueError:
             value = "'{0}'".format(settings[setting])
 
+        # Map to numeric to support server 2008
+        if setting == 'processModel.identityType' and settings[setting] in identityType_map2numeric.keys():
+            value = identityType_map2numeric[settings[setting]]
+
         ps_cmd.extend(['Set-ItemProperty',
                        '-Path', "'{0}'".format(container_path),
                        '-Name', "'{0}'".format(setting),
@@ -1300,6 +1310,10 @@ def set_container_setting(name, container, settings):
     failed_settings = dict()
 
     for setting in settings:
+        # map identity type from numeric to string for comparing
+        if setting == 'processModel.identityType' and settings[setting] in identityType_map2string.keys():
+            settings[setting] = identityType_map2string[settings[setting]]
+
         if str(settings[setting]) != str(new_settings[setting]):
             failed_settings[setting] = settings[setting]
 
