@@ -14,6 +14,8 @@ from tests.support.unit import TestCase
 from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
+import salt.config
+import salt.loader
 import salt.utils.files
 import salt.modules.file as filemod
 import salt.modules.config as configmod
@@ -45,7 +47,8 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'cachedir': 'tmp',
                     'grains': {},
                 },
-                '__grains__': {'kernel': 'Linux'}
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {'files.is_text_file': MagicMock(return_value=True)},
             }
         }
 
@@ -203,7 +206,8 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'cachedir': 'tmp',
                     'grains': {},
                 },
-                '__grains__': {'kernel': 'Linux'}
+                '__grains__': {'kernel': 'Linux'},
+                '__utils__': {'files.is_text_file': MagicMock(return_value=True)},
             }
         }
 

@@ -1303,6 +1303,23 @@ def latest(name,
                         'if it does not already exist).',
                         comments
                     )
+                remote_tags = set([
+                    x.replace('refs/tags/', '') for x in __salt__['git.ls_remote'](
+                        cwd=target,
+                        remote=remote,
+                        opts="--tags",
+                        user=user,
+                        password=password,
+                        identity=identity,
+                        saltenv=__env__,
+                        ignore_retcode=True,
+                    ).keys() if '^{}' not in x
+                ])
+                if set(all_local_tags) != remote_tags:
+                    has_remote_rev = False
+                    ret['changes']['new_tags'] = list(remote_tags.symmetric_difference(
+                        all_local_tags
+                    ))
 
                 if not has_remote_rev:
                     try:

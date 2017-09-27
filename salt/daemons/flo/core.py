@@ -400,7 +400,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                                                      kind=kinds.applKinds.master))
                     except gaierror as ex:
                         log.warning("Unable to connect to master {0}: {1}".format(mha, ex))
-                        if self.opts.value.get('master_type') != 'failover':
+                        if self.opts.value.get(u'master_type') not in (u'failover', u'distributed'):
                             raise ex
                 if not stack.remotes:
                     raise ex

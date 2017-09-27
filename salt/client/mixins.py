@@ -16,7 +16,8 @@ import copy as pycopy
 # Import Salt libs
 import salt.exceptions
 import salt.minion
-import salt.utils
+import salt.utils  # Can be removed once daemonize, get_specific_user, format_call are moved
+import salt.utils.args
 import salt.utils.doc
 import salt.utils.error
 import salt.utils.event
@@ -25,6 +26,7 @@ import salt.utils.job
 import salt.utils.lazy
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.state
 import salt.utils.versions
 import salt.transport
 import salt.log.setup
@@ -297,7 +299,7 @@ class SyncClientMixin(object):
         # this is not to clutter the output with the module loading
         # if we have a high debug level.
         self.mminion  # pylint: disable=W0104
-        jid = low.get(u'__jid__', salt.utils.jid.gen_jid())
+        jid = low.get(u'__jid__', salt.utils.jid.gen_jid(self.opts))
         tag = low.get(u'__tag__', salt.utils.event.tagify(jid, prefix=self.tag_prefix))
 
         data = {u'fun': u'{0}.{1}'.format(self.client, fun),
@@ -362,29 +364,19 @@ class SyncClientMixin(object):
             # packed into the top level object. The plan is to move away from
             # that since the caller knows what is an arg vs a kwarg, but while
             # we make the transition we will load "kwargs" using format_call if
-            # there are no kwargs in the low object passed in
-            f_call = None
-            if u'arg' not in low:
+            # there are no kwargs in the low object passed in.
+
+            if u'arg' in low and u'kwarg' in low:
+                args = low[u'arg']
+                kwargs = low[u'kwarg']
+            else:
                 f_call = salt.utils.format_call(
                     self.functions[fun],
                     low,
                     expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
                 )
                 args = f_call.get(u'args', ())
-            else:
-                args = low[u'arg']
-
-            if u'kwarg' not in low:
-                log.critical(
-                    u'kwargs must be passed inside the low data within the '
-                    u'\'kwarg\' key. See usage of '
-                    u'salt.utils.args.parse_input() and '
-                    u'salt.minion.load_args_and_kwargs() elsewhere in the '
-                    u'codebase.'
-                )
-                kwargs = {}
-            else:
-                kwargs = low[u'kwarg']
+                kwargs = f_call.get(u'kwargs', {})
 
             # Update the event data with loaded args and kwargs
             data[u'fun_args'] = list(args) + ([kwargs] if kwargs else [])
@@ -396,7 +388,7 @@ class SyncClientMixin(object):
                 data[u'success'] = True
                 if isinstance(data[u'return'], dict) and u'data' in data[u'return']:
                     # some functions can return boolean values
-                    data[u'success'] = salt.utils.check_state_result(data[u'return'][u'data'])
+                    data[u'success'] = salt.utils.state.check_result(data[u'return'][u'data'])
         except (Exception, SystemExit) as ex:
             if isinstance(ex, salt.exceptions.NotImplemented):
                 data[u'return'] = str(ex)
@@ -510,7 +502,7 @@ class AsyncClientMixin(object):
 
     def _gen_async_pub(self, jid=None):
         if jid is None:
-            jid = salt.utils.jid.gen_jid()
+            jid = salt.utils.jid.gen_jid(self.opts)
         tag = salt.utils.event.tagify(jid, prefix=self.tag_prefix)
         return {u'tag': tag, u'jid': jid}
 

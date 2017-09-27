@@ -234,6 +234,7 @@ except ImportError:
 # pylint: enable=import-error
 
 HAS_NSENTER = bool(salt.utils.path.which('nsenter'))
+HUB_PREFIX = 'docker.io/'
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -1487,6 +1488,43 @@ def list_tags():
             continue
         ret.update(set(item['RepoTags']))
     return sorted(ret)
+
+
+def resolve_tag(name, tags=None):
+    '''
+    .. versionadded:: 2017.7.2,Oxygen
+
+    Given an image tag, check the locally-pulled tags (using
+    :py:func:`docker.list_tags <salt.modules.dockermod.list_tags>`) and return
+    the matching tag. This helps disambiguate differences on some platforms
+    where images from the Docker Hub are prefixed with ``docker.io/``. If an
+    image name with no tag is passed, a tag of ``latest`` is assumed.
+
+    If the specified image is not pulled locally, this function will return
+    ``False``.
+
+    tags
+        An optional Python list of tags to check against. If passed, then
+        :py:func:`docker.list_tags <salt.modules.dockermod.list_tags>` will not
+        be run to get a list of tags. This is useful when resolving a number of
+        tags at the same time.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion docker.resolve_tag busybox
+        salt myminion docker.resolve_tag busybox:latest
+    '''
+    tag_name = ':'.join(salt.utils.docker.get_repo_tag(name))
+    if tags is None:
+        tags = list_tags()
+    if tag_name in tags:
+        return tag_name
+    full_name = HUB_PREFIX + tag_name
+    if not name.startswith(HUB_PREFIX) and full_name in tags:
+        return full_name
+    return False
 
 
 def logs(name):
@@ -5420,7 +5458,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
             )
     if not isinstance(ret, dict):
         __context__['retcode'] = 1
-    elif not salt.utils.check_state_result(ret):
+    elif not __utils__['state.check_result'](ret):
         __context__['retcode'] = 2
     else:
         __context__['retcode'] = 0
@@ -5494,7 +5532,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         # Now execute the state into the container
         ret = sls(id_, mods, saltenv, **kwargs)
         # fail if the state was not successful
-        if not dryrun and not salt.utils.check_state_result(ret):
+        if not dryrun and not __utils__['state.check_result'](ret):
             raise CommandExecutionError(ret)
         if dryrun is False:
             ret = commit(id_, name)

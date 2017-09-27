@@ -29,6 +29,7 @@ import salt.config
 import salt.loader
 import salt.transport.client
 import salt.utils
+import salt.utils.args
 import salt.utils.files
 import salt.utils.minions
 import salt.utils.versions
@@ -69,7 +70,7 @@ class LoadAuth(object):
         if fstr not in self.auth:
             return ''
         try:
-            pname_arg = salt.utils.arg_lookup(self.auth[fstr])['args'][0]
+            pname_arg = salt.utils.args.arg_lookup(self.auth[fstr])['args'][0]
             return load[pname_arg]
         except IndexError:
             return ''
@@ -216,8 +217,9 @@ class LoadAuth(object):
             acl_ret = self.__get_acl(load)
             tdata['auth_list'] = acl_ret
 
-        if 'groups' in load:
-            tdata['groups'] = load['groups']
+        groups = self.get_groups(load)
+        if groups:
+            tdata['groups'] = groups
 
         return self.tokens["{0}.mk_token".format(self.opts['eauth_tokens'])](self.opts, tdata)
 
@@ -292,29 +294,31 @@ class LoadAuth(object):
     def authenticate_key(self, load, key):
         '''
         Authenticate a user by the key passed in load.
-        Return the effective user id (name) if it's differ from the specified one (for sudo).
-        If the effective user id is the same as passed one return True on success or False on
+        Return the effective user id (name) if it's different from the specified one (for sudo).
+        If the effective user id is the same as the passed one, return True on success or False on
         failure.
         '''
-        auth_key = load.pop('key')
-        if not auth_key:
-            log.warning('Authentication failure of type "user" occurred.')
+        error_msg = 'Authentication failure of type "user" occurred.'
+        auth_key = load.pop('key', None)
+        if auth_key is None:
+            log.warning(error_msg)
             return False
+
         if 'user' in load:
             auth_user = AuthUser(load['user'])
             if auth_user.is_sudo():
                 # If someone sudos check to make sure there is no ACL's around their username
                 if auth_key != key[self.opts.get('user', 'root')]:
-                    log.warning('Authentication failure of type "user" occurred.')
+                    log.warning(error_msg)
                     return False
                 return auth_user.sudo_name()
             elif load['user'] == self.opts.get('user', 'root') or load['user'] == 'root':
                 if auth_key != key[self.opts.get('user', 'root')]:
-                    log.warning('Authentication failure of type "user" occurred.')
+                    log.warning(error_msg)
                     return False
             elif auth_user.is_running_user():
                 if auth_key != key.get(load['user']):
-                    log.warning('Authentication failure of type "user" occurred.')
+                    log.warning(error_msg)
                     return False
             elif auth_key == key.get('root'):
                 pass
@@ -322,19 +326,19 @@ class LoadAuth(object):
                 if load['user'] in key:
                     # User is authorised, check key and check perms
                     if auth_key != key[load['user']]:
-                        log.warning('Authentication failure of type "user" occurred.')
+                        log.warning(error_msg)
                         return False
                     return load['user']
                 else:
-                    log.warning('Authentication failure of type "user" occurred.')
+                    log.warning(error_msg)
                     return False
         else:
             if auth_key != key[salt.utils.get_user()]:
-                log.warning('Authentication failure of type "other" occurred.')
+                log.warning(error_msg)
                 return False
         return True
 
-    def get_auth_list(self, load):
+    def get_auth_list(self, load, token=None):
         '''
         Retrieve access list for the user specified in load.
         The list is built by eauth module or from master eauth configuration.
@@ -342,30 +346,37 @@ class LoadAuth(object):
         list if the user has no rights to execute anything on this master and returns non-empty list
         if user is allowed to execute particular functions.
         '''
+        # Get auth list from token
+        if token and self.opts['keep_acl_in_token'] and 'auth_list' in token:
+            return token['auth_list']
         # Get acl from eauth module.
         auth_list = self.__get_acl(load)
         if auth_list is not None:
             return auth_list
 
-        if load['eauth'] not in self.opts['external_auth']:
+        eauth = token['eauth'] if token else load['eauth']
+        if eauth not in self.opts['external_auth']:
             # No matching module is allowed in config
             log.warning('Authorization failure occurred.')
             return None
 
-        name = self.load_name(load)  # The username we are attempting to auth with
-        groups = self.get_groups(load)  # The groups this user belongs to
-        eauth_config = self.opts['external_auth'][load['eauth']]
-        if groups is None or groups is False:
+        if token:
+            name = token['name']
+            groups = token.get('groups')
+        else:
+            name = self.load_name(load)  # The username we are attempting to auth with
+            groups = self.get_groups(load)  # The groups this user belongs to
+        eauth_config = self.opts['external_auth'][eauth]
+        if not groups:
             groups = []
         group_perm_keys = [item for item in eauth_config if item.endswith('%')]  # The configured auth groups
 
         # First we need to know if the user is allowed to proceed via any of their group memberships.
         group_auth_match = False
         for group_config in group_perm_keys:
-            group_config = group_config.rstrip('%')
-            for group in groups:
-                if group == group_config:
-                    group_auth_match = True
+            if group_config.rstrip('%') in groups:
+                group_auth_match = True
+                break
         # If a group_auth_match is set it means only that we have a
         # user which matches at least one or more of the groups defined
         # in the configuration file.
@@ -404,6 +415,64 @@ class LoadAuth(object):
         log.trace("Compiled auth_list: {0}".format(auth_list))
 
         return auth_list
+
+    def check_authentication(self, load, auth_type, key=None, show_username=False):
+        '''
+        .. versionadded:: Oxygen
+
+        Go through various checks to see if the token/eauth/user can be authenticated.
+
+        Returns a dictionary containing the following keys:
+
+        - auth_list
+        - username
+        - error
+
+        If an error is encountered, return immediately with the relevant error dictionary
+        as authentication has failed. Otherwise, return the username and valid auth_list.
+        '''
+        auth_list = []
+        username = load.get('username', 'UNKNOWN')
+        ret = {'auth_list': auth_list,
+               'username': username,
+               'error': {}}
+
+        # Authenticate
+        if auth_type == 'token':
+            token = self.authenticate_token(load)
+            if not token:
+                ret['error'] = {'name': 'TokenAuthenticationError',
+                                'message': 'Authentication failure of type "token" occurred.'}
+                return ret
+
+            # Update username for token
+            username = token['name']
+            ret['username'] = username
+            auth_list = self.get_auth_list(load, token=token)
+        elif auth_type == 'eauth':
+            if not self.authenticate_eauth(load):
+                ret['error'] = {'name': 'EauthAuthenticationError',
+                                'message': 'Authentication failure of type "eauth" occurred for '
+                                           'user {0}.'.format(username)}
+                return ret
+
+            auth_list = self.get_auth_list(load)
+        elif auth_type == 'user':
+            if not self.authenticate_key(load, key):
+                if show_username:
+                    msg = 'Authentication failure of type "user" occurred for user {0}.'.format(username)
+                else:
+                    msg = 'Authentication failure of type "user" occurred'
+                ret['error'] = {'name': 'UserAuthenticationError', 'message': msg}
+                return ret
+        else:
+            ret['error'] = {'name': 'SaltInvocationError',
+                            'message': 'Authentication type not supported.'}
+            return ret
+
+        # Authentication checks passed
+        ret['auth_list'] = auth_list
+        return ret
 
 
 class Authorize(object):
@@ -550,6 +619,15 @@ class Authorize(object):
                 load.get('arg', None),
                 load.get('tgt', None),
                 load.get('tgt_type', 'glob'))
+
+        # Handle possible return of dict data structure from any_auth call to
+        # avoid a stacktrace. As mentioned in PR #43181, this entire class is
+        # dead code and is marked for removal in Salt Neon. But until then, we
+        # should handle the dict return, which is an error and should return
+        # False until this class is removed.
+        if isinstance(good, dict):
+            return False
+
         if not good:
             # Accept find_job so the CLI will function cleanly
             if load.get('fun', '') != 'saltutil.find_job':
@@ -562,7 +640,7 @@ class Authorize(object):
         authorization
 
         Note: this will check that the user has at least one right that will let
-        him execute "load", this does not deal with conflicting rules
+        the user execute "load", this does not deal with conflicting rules
         '''
 
         adata = self.auth_data
@@ -634,7 +712,7 @@ class Resolver(object):
                    'not available').format(eauth))
             return ret
 
-        args = salt.utils.arg_lookup(self.auth[fstr])
+        args = salt.utils.args.arg_lookup(self.auth[fstr])
         for arg in args['args']:
             if arg in self.opts:
                 ret[arg] = self.opts[arg]

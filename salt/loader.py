@@ -270,7 +270,7 @@ def raw_mod(opts, name, functions, mod=u'modules'):
         testmod['test.ping']()
     '''
     loader = LazyLoader(
-        _module_dirs(opts, mod, u'rawmodule'),
+        _module_dirs(opts, mod, u'module'),
         opts,
         tag=u'rawmodule',
         virtual_enable=False,

@@ -263,9 +263,17 @@ against that branch.
 Release Branches
 ----------------
 
-For each release a branch will be created when we are ready to tag. The branch will be the same name as the tag minus the v. For example, the v2017.7.1 release was created from the 2017.7.1 branch. This branching strategy will allow for more stability when there is a need for a re-tag during the testing phase of our releases.
+For each release, a branch will be created when the SaltStack release team is
+ready to tag. The release branch is created from the parent branch and will be
+the same name as the tag minus the ``v``. For example, the ``2017.7.1`` release
+branch was created from the ``2017.7`` parent branch and the ``v2017.7.1``
+release was tagged at the ``HEAD`` of the ``2017.7.1`` branch. This branching
+strategy will allow for more stability when there is a need for a re-tag during
+the testing phase of the release process.
 
-Once the branch is created, the fixes required for a given release, as determined by the SaltStack release team, will be added to this branch. All commits in this branch will be merged forward into the parent branch as well.
+Once the release branch is created, the fixes required for a given release, as
+determined by the SaltStack release team, will be added to this branch. All
+commits in this branch will be merged forward into the parent branch as well.
 
 Keeping Salt Forks in Sync
 ==========================
