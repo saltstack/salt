@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 '''
-import sys
-import ssl
 Connection library for VMware
 
 .. versionadded:: 2015.8.2
