@@ -63,7 +63,6 @@ class GetHostsTestCase(TestCase):
                          'Must specify the datacenter when specifying the '
                          'cluster')
 
-
     def test_get_si_no_datacenter_no_cluster(self):
         mock_get_mors = MagicMock()
         mock_get_root_folder = MagicMock(return_value=self.mock_root_folder)
