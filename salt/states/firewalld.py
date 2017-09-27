@@ -173,14 +173,35 @@ def present(name,
     '''
     Ensure a zone has specific attributes.
 
-    :param str name:
+    name
         The zone to modify.
 
-    :param bool default:
+    default : None
         Set this zone as the default zone if ``True``.
 
-    :param list block_icmp:
+    block_icmp : None
         List of ICMP types to block.
+
+    masquerade : False
+        Enable or disable masquerade for a zone.
+
+    ports : None
+        List of ports to add to the zone.
+
+    port_fwd : None
+        List of port forwards to add to the zone.
+
+    services : None
+        List of services to add to the zone.
+
+    interfaces : None
+        List of interfaces to add to the zone.
+
+    sources : None
+        List of sources to add to the zone.
+
+    rich_rules : None
+        List of rich rules to add to the zone.
     '''
 
     ret = _present(name, block_icmp, prune_block_icmp, default, masquerade, ports, prune_ports,
