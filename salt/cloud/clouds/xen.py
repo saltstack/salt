@@ -151,8 +151,15 @@ def _get_session():
         __opts__,
         search_global=False
     )
+    ignore_ssl = config.get_cloud_config_value(
+        'ignore_ssl',
+        get_configured_provider(),
+        __opts__,
+        default=False,
+        search_global=False
+    )
     try:
-        session = XenAPI.Session(url)
+        session = XenAPI.Session(url, ignore_ssl=ignore_ssl)
         log.debug('url: {} user: {} password: {}, originator: {}'.format(
             url,
             user,
