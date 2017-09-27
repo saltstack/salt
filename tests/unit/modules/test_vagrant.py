@@ -18,7 +18,7 @@ import salt.exceptions
 # Import third party libs
 from salt.ext import six
 
-TEMP_DATABASE_FILE = '/tmp/test_vagrant.sqlite'
+TEMP_DATABASE_FILE = '/tmp/salt-tests-tmpdir/test_vagrant.sqlite'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

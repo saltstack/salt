@@ -232,7 +232,7 @@ def list_domains():
 
 def list_active_vms(cwd=None):
     '''
-    Return a list of machine names for active virtual machine on the minion,
+    Return a list of machine names for active virtual machine on the host,
     which are defined in the Vagrantfile at the indicated path.
 
     CLI Example:
@@ -255,7 +255,7 @@ def list_active_vms(cwd=None):
 
 def list_inactive_vms(cwd=None):
     '''
-    Return a list of machine names for inactive virtual machine on the minion,
+    Return a list of machine names for inactive virtual machine on the host,
     which are defined in the Vagrantfile at the indicated path.
 
 
