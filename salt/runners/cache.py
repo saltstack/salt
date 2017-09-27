@@ -11,12 +11,11 @@ import salt.log
 import salt.utils
 import salt.utils.master
 import salt.payload
+import salt.fileserver.gitfs
+import salt.pillar.git_pillar
+import salt.runners.winrepo
 from salt.exceptions import SaltInvocationError
 from salt.fileserver import clear_lock as _clear_lock
-from salt.fileserver.gitfs import PER_REMOTE_OVERRIDES as __GITFS_OVERRIDES
-from salt.pillar.git_pillar \
-    import PER_REMOTE_OVERRIDES as __GIT_PILLAR_OVERRIDES
-from salt.runners.winrepo import PER_REMOTE_OVERRIDES as __WINREPO_OVERRIDES
 
 log = logging.getLogger(__name__)
 
@@ -213,8 +212,10 @@ def clear_git_lock(role, remote=None, **kwargs):
 
     if role == 'gitfs':
         git_objects = [salt.utils.gitfs.GitFS(__opts__)]
-        git_objects[0].init_remotes(__opts__['gitfs_remotes'],
-                                    __GITFS_OVERRIDES)
+        git_objects[0].init_remotes(
+            __opts__['gitfs_remotes'],
+           salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
+           salt.fileserver.gitfs.PER_REMOTE_ONLY)
     elif role == 'git_pillar':
         git_objects = []
         for ext_pillar in __opts__['ext_pillar']:
@@ -223,7 +224,10 @@ def clear_git_lock(role, remote=None, **kwargs):
                 if not isinstance(ext_pillar['git'], list):
                     continue
                 obj = salt.utils.gitfs.GitPillar(__opts__)
-                obj.init_remotes(ext_pillar['git'], __GIT_PILLAR_OVERRIDES)
+                obj.init_remotes(
+                    ext_pillar['git'],
+                    salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
+                    salt.pillar.git_pillar.PER_REMOTE_ONLY)
                 git_objects.append(obj)
     elif role == 'winrepo':
         if 'win_repo' in __opts__:
@@ -252,7 +256,10 @@ def clear_git_lock(role, remote=None, **kwargs):
             (__opts__['winrepo_remotes_ng'], __opts__['winrepo_dir_ng'])
         ):
             obj = salt.utils.gitfs.WinRepo(__opts__, base_dir)
-            obj.init_remotes(remotes, __WINREPO_OVERRIDES)
+            obj.init_remotes(
+                remotes,
+                salt.runners.winrepo.PER_REMOTE_OVERRIDES,
+                salt.runners.winrepo.PER_REMOTE_ONLY)
             git_objects.append(obj)
     else:
         raise SaltInvocationError('Invalid role \'{0}\''.format(role))
