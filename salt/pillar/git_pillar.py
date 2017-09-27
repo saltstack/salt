@@ -398,6 +398,13 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
         False
     )
     for pillar_dir, env in six.iteritems(git_pillar.pillar_dirs):
+        # Map env if env == '__env__' before checking the env value
+        if env == '__env__':
+            env = opts.get('pillarenv') \
+                or opts.get('environment') \
+                or opts.get('git_pillar_base')
+            log.debug('__env__ maps to %s', env)
+
         # If pillarenv is set, only grab pillars with that match pillarenv
         if opts['pillarenv'] and env != opts['pillarenv']:
             log.debug(
@@ -417,12 +424,6 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
                 'git_pillar is processing pillar SLS from %s for pillar '
                 'env \'%s\'', pillar_dir, env
             )
-
-        if env == '__env__':
-            env = opts.get('pillarenv') \
-                or opts.get('environment') \
-                or opts.get('git_pillar_base')
-            log.debug('__env__ maps to %s', env)
 
         pillar_roots = [pillar_dir]
 
