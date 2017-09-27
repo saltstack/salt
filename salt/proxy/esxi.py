@@ -405,7 +405,7 @@ def init(opts):
             log.debug('Retrieving credentials and testing vCenter connection'
                       ' for mehchanism \'userpass\'')
             try:
-                username, password = find_credentials()
+                username, password = find_credentials(DETAILS['vcenter'])
                 DETAILS['password'] = password
             except SaltSystemExit as err:
                 log.critical('Error: {0}'.format(err))

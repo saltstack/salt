@@ -101,7 +101,8 @@ import re
 from salt.ext import six
 import salt.utils.files
 from salt.exceptions import CommandExecutionError, InvalidConfigError, \
-        VMwareObjectRetrievalError, VMwareSaltError, VMwareApiError
+        VMwareObjectRetrievalError, VMwareSaltError, VMwareApiError, \
+        ArgumentValueError
 from salt.utils.decorators import depends
 from salt.config.schemas.esxi import DiskGroupsDiskScsiAddressSchema, \
         HostCacheSchema
@@ -1414,7 +1415,6 @@ def host_cache_configured(name, enabled, datastore, swap_size='100%',
             changes.update({'enabled': {'old': host_cache['enabled'],
                                         'new': enabled}})
             needs_setting = True
-
 
         # Check datastores
         existing_datastores = None
