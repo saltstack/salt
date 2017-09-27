@@ -283,6 +283,12 @@ pki_dir: /conf/pki/minion
 # publication a new process is spawned and the command is executed therein.
 # multiprocessing: True
 
+# Limit the maximum amount of processes or threads created by salt-minion.
+# This is useful to avoid resource exhaustion in case the minion receives more
+# publications than it is able to handle, as it limits the number of spawned
+# processes or threads. -1 disables the limit.
+#process_count_max: 20
+
 ######         Logging settings       #####
 ###########################################
 # The location of the minion log file.
