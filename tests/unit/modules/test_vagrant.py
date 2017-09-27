@@ -20,6 +20,7 @@ from salt.ext import six
 
 TEMP_DATABASE_FILE = '/tmp/test_vagrant.sqlite'
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class VagrantTestCase(TestCase, LoaderModuleMockMixin):
     '''
