@@ -179,29 +179,50 @@ def present(name,
     default : None
         Set this zone as the default zone if ``True``.
 
-    block_icmp : None
-        List of ICMP types to block.
-
     masquerade : False
         Enable or disable masquerade for a zone.
+
+    block_icmp : None
+        List of ICMP types to block in the zone.
+
+    prune_block_icmp : False
+        If ``True``, remove all but the specified block_icmp from the zone.
 
     ports : None
         List of ports to add to the zone.
 
+    prune_ports : False
+        If ``True``, remove all but the specified ports from the zone.
+
     port_fwd : None
         List of port forwards to add to the zone.
+
+    prune_port_fwd : False
+        If ``True``, remove all but the specified port_fwd from the zone.
 
     services : None
         List of services to add to the zone.
 
+    prune_services : False
+        If ``True``, remove all but the specified services from the zone.
+
     interfaces : None
         List of interfaces to add to the zone.
+
+    prune_interfaces : False
+        If ``True``, remove all but the specified interfaces from the zone.
 
     sources : None
         List of sources to add to the zone.
 
+    prune_sources : False
+        If ``True``, remove all but the specified sources from the zone.
+
     rich_rules : None
         List of rich rules to add to the zone.
+
+    prune_rich_rules : False
+        If ``True``, remove all but the specified rich rules from the zone.
     '''
 
     ret = _present(name, block_icmp, prune_block_icmp, default, masquerade, ports, prune_ports,
