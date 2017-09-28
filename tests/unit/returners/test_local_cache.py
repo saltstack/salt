@@ -97,7 +97,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         local_cache.clean_old_jobs()
 
         # Get the name of the JID directory that was created to test against
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             jid_dir_name = jid_dir.rpartition('\\')[2]
         else:
             jid_dir_name = jid_dir.rpartition('/')[2]

@@ -30,7 +30,7 @@ Installation Prerequisites
 - Configure Pure Storage FlashArray authentication. Use one of the following
   three methods.
 
-    1) From the minion config
+  1) From the minion config
   .. code-block:: yaml
 
         pure_tags:
@@ -38,8 +38,8 @@ Installation Prerequisites
             san_ip: management vip or hostname for the FlashArray
             api_token: A valid api token for the FlashArray being managed
 
-    2) From environment (PUREFA_IP and PUREFA_API)
-    3) From the pillar (PUREFA_IP and PUREFA_API)
+  2) From environment (PUREFA_IP and PUREFA_API)
+  3) From the pillar (PUREFA_IP and PUREFA_API)
 
 :maintainer: Simon Dodsley (simon@purestorage.com)
 :maturity: new
