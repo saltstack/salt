@@ -2002,4 +2002,3 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True):
         return ret
 
     return {}
-	
