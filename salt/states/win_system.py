@@ -16,14 +16,14 @@ description.
     This is Erik's computer, don't touch!:
       system.computer_desc: []
 '''
-
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 
-# Import salt libs
+# Import Salt libs
 import salt.utils
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def __virtual__():
     '''
     This only supports Windows
     '''
-    if salt.utils.is_windows() and 'system.get_computer_desc' in __salt__:
+    if salt.utils.platform.is_windows() and 'system.get_computer_desc' in __salt__:
         return __virtualname__
     return False
 

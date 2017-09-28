@@ -2,7 +2,7 @@
 '''
 Manage Route53 records with Boto 3
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Create and delete Route53 records. Be aware that this interacts with Amazon's
 services, and so may incur charges.
@@ -70,7 +70,8 @@ import uuid
 
 # Import Salt Libs
 import salt.utils.dictupdate as dictupdate
-from salt.utils import SaltInvocationError, exactly_one
+from salt.utils import exactly_one
+from salt.exceptions import SaltInvocationError
 import logging
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 

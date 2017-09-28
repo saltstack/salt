@@ -10,7 +10,7 @@ from tests.support.case import ModuleCase
 from tests.support.paths import FILES
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.files
 
 
 STATE_DIR = os.path.join(FILES, 'file', 'base')
@@ -47,8 +47,8 @@ class EnabledTest(ModuleCase):
         Test cmd.shell works correctly when using a template.
 
         Note: This test used to test that python_shell defaulted to True for templates
-        in releases before Nitrogen. The cmd.run --> cmd.shell aliasing was removed in
-        Nitrogen. Templates should now be using cmd.shell.
+        in releases before 2017.7.0. The cmd.run --> cmd.shell aliasing was removed in
+        2017.7.0. Templates should now be using cmd.shell.
         '''
         state_name = 'template_shell_enabled'
         state_filename = state_name + '.sls'
@@ -58,7 +58,7 @@ class EnabledTest(ModuleCase):
         ret_key = 'test_|-shell_enabled_|-{0}_|-configurable_test_state'.format(enabled_ret)
 
         try:
-            with salt.utils.fopen(state_file, 'w') as fp_:
+            with salt.utils.files.fopen(state_file, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
                 {{% set shell_enabled = salt['cmd.shell']("{0}").strip() %}}
 
@@ -75,7 +75,7 @@ class EnabledTest(ModuleCase):
     def test_template_default_disabled(self):
         '''
         test shell disabled output for templates (python_shell=False is the default
-        beginning with the Nitrogen release).
+        beginning with the 2017.7.0 release).
         '''
         state_name = 'template_shell_disabled'
         state_filename = state_name + '.sls'
@@ -87,7 +87,7 @@ class EnabledTest(ModuleCase):
         ret_key = 'test_|-shell_enabled_|-{0}_|-configurable_test_state'.format(disabled_ret)
 
         try:
-            with salt.utils.fopen(state_file, 'w') as fp_:
+            with salt.utils.files.fopen(state_file, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
                 {{% set shell_disabled = salt['cmd.run']("{0}") %}}
 

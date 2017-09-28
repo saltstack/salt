@@ -122,7 +122,7 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
             return MockAnswer
 
         with patch.object(dns.query, 'udp', mock_udp_query()):
-            with patch('salt.utils.fopen', mock_open(read_data=file_data), create=True):
+            with patch('salt.utils.files.fopen', mock_open(read_data=file_data), create=True):
                 with patch.object(dns.tsigkeyring, 'from_text', return_value=True):
                     with patch.object(ddns, '_get_keyring', return_value=None):
                         with patch.object(ddns, '_config', return_value=None):

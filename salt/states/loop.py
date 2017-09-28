@@ -4,7 +4,7 @@ Loop state
 
 Allows for looping over execution modules.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 .. code-block:: yaml
 

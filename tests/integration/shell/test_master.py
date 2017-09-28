@@ -17,7 +17,7 @@ import shutil
 import yaml
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 # Import salt test libs
 import tests.integration.utils
@@ -41,14 +41,14 @@ class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         config_file_name = 'master'
         pid_path = os.path.join(config_dir, '{0}.pid'.format(config_file_name))
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
             config = yaml.load(fhr.read())
             config['root_dir'] = config_dir
             config['log_file'] = 'file:///tmp/log/LOG_LOCAL3'
             config['ret_port'] = config['ret_port'] + 10
             config['publish_port'] = config['publish_port'] + 10
 
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
                 fhw.write(
                     yaml.dump(config, default_flow_style=False)
                 )
@@ -66,7 +66,7 @@ class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         # Now kill it if still running
         if os.path.exists(pid_path):
-            with salt.utils.fopen(pid_path) as fhr:
+            with salt.utils.files.fopen(pid_path) as fhr:
                 try:
                     os.kill(int(fhr.read()), signal.SIGKILL)
                 except OSError:
@@ -95,16 +95,18 @@ class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_NOUSER',
-            message='unknown user not on system',
-            stdout=stdout,
-            stderr=tests.integration.utils.decode_byte_list(stderr)
-        )
-        # Although the start-up should fail, call shutdown() to set the internal
-        # _shutdown flag and avoid the registered atexit calls to cause timeout
-        # exeptions and respective traceback
-        master.shutdown()
+        try:
+            self.assert_exit_status(
+                status, 'EX_NOUSER',
+                message='unknown user not on system',
+                stdout=stdout,
+                stderr=tests.integration.utils.decode_byte_list(stderr)
+            )
+        finally:
+            # Although the start-up should fail, call shutdown() to set the
+            # internal _shutdown flag and avoid the registered atexit calls to
+            # cause timeout exeptions and respective traceback
+            master.shutdown()
 
     # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
@@ -123,16 +125,18 @@ class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_USAGE',
-            message='unknown argument',
-            stdout=stdout,
-            stderr=tests.integration.utils.decode_byte_list(stderr)
-        )
-        # Although the start-up should fail, call shutdown() to set the internal
-        # _shutdown flag and avoid the registered atexit calls to cause timeout
-        # exeptions and respective traceback
-        master.shutdown()
+        try:
+            self.assert_exit_status(
+                status, 'EX_USAGE',
+                message='unknown argument',
+                stdout=stdout,
+                stderr=tests.integration.utils.decode_byte_list(stderr)
+            )
+        finally:
+            # Although the start-up should fail, call shutdown() to set the
+            # internal _shutdown flag and avoid the registered atexit calls to
+            # cause timeout exeptions and respective traceback
+            master.shutdown()
 
     def test_exit_status_correct_usage(self):
         '''
@@ -150,10 +154,32 @@ class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_OK',
-            message='correct usage',
-            stdout=stdout,
-            stderr=tests.integration.utils.decode_byte_list(stderr)
-        )
-        master.shutdown()
+        try:
+            self.assert_exit_status(
+                status, 'EX_OK',
+                message='correct usage',
+                stdout=stdout,
+                stderr=tests.integration.utils.decode_byte_list(stderr)
+            )
+        finally:
+            master.shutdown(wait_for_orphans=3)
+
+        # Do the test again to check does master shut down correctly
+        # **Due to some underlying subprocessing issues with Minion._thread_return, this
+        # part of the test has been commented out. Once these underlying issues have
+        # been addressed, this part of the test should be uncommented. Work for this
+        # issue is being tracked in https://github.com/saltstack/salt-jenkins/issues/378
+        # stdout, stderr, status = master.run(
+        #     args=['-d'],
+        #     catch_stderr=True,
+        #     with_retcode=True,
+        # )
+        # try:
+        #     self.assert_exit_status(
+        #         status, 'EX_OK',
+        #         message='correct usage',
+        #         stdout=stdout,
+        #         stderr=tests.integration.utils.decode_byte_list(stderr)
+        #     )
+        # finally:
+        #     master.shutdown(wait_for_orphans=3)

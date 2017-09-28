@@ -59,7 +59,7 @@ import multiprocessing
 import tests.support.paths as paths
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import coverage  # pylint: disable=import-error
     HAS_COVERAGE = True
@@ -206,6 +206,7 @@ RUNTIME_VARS = RuntimeVars(
     TMP_CONF_DIR=paths.TMP_CONF_DIR,
     TMP_CONF_MASTER_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'master.d'),
     TMP_CONF_MINION_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'minion.d'),
+    TMP_CONF_PROXY_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'proxy.d'),
     TMP_CONF_CLOUD_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'cloud.conf.d'),
     TMP_CONF_CLOUD_PROFILE_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'cloud.profiles.d'),
     TMP_CONF_CLOUD_PROVIDER_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'cloud.providers.d'),

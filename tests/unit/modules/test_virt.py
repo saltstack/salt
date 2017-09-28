@@ -17,7 +17,7 @@ import salt.utils
 
 # Import third party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

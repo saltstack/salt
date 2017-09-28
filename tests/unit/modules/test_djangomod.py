@@ -25,7 +25,7 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.djangomod
     '''
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', lambda exe: exe)
+        patcher = patch('salt.utils.path.which', lambda exe: exe)
         patcher.start()
         self.addCleanup(patcher.stop)
         return {djangomod: {'_get_django_admin': MagicMock(return_value=True)}}
@@ -92,7 +92,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.djangomod
     '''
     def setup_loader_modules(self):
-        patcher = patch('salt.utils.which', lambda exe: exe)
+        patcher = patch('salt.utils.path.which', lambda exe: exe)
         patcher.start()
         self.addCleanup(patcher.stop)
         return {djangomod: {}}
@@ -189,12 +189,15 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
             djangomod.createsuperuser(
                 'settings.py', 'testuser', 'user@example.com'
             )
-            mock.assert_called_once_with(
-                'django-admin.py createsuperuser --settings=settings.py '
-                '--noinput --username=testuser --email=user@example.com',
-                python_shell=False,
-                env=None
-            )
+            self.assertEqual(mock.call_count, 1)
+            args, kwargs = mock.call_args
+            # cmdline arguments are extracted from a kwargs dict so order isn't guaranteed.
+            self.assertEqual(len(args), 1)
+            self.assertTrue(args[0].startswith('django-admin.py createsuperuser --'))
+            self.assertEqual(set(args[0].split()),
+                             set('django-admin.py createsuperuser --settings=settings.py --noinput '
+                                                   '--username=testuser --email=user@example.com'.split()))
+            self.assertDictEqual(kwargs, {'python_shell': False, 'env': None})
 
     def no_test_loaddata(self):
         mock = MagicMock()

@@ -89,13 +89,12 @@ import re
 import decimal
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.cloud
+import salt.utils.files
+import salt.utils.hashutils
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
-
-# Import salt.cloud libs
-import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
     SaltCloudException,
@@ -106,7 +105,7 @@ from salt.exceptions import (
 )
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import map, range, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
 
@@ -342,7 +341,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         canonical_headers = 'host:' + host + '\n' + 'x-amz-date:' + amz_date + '\n'
         signed_headers = 'host;x-amz-date'
 
-        payload_hash = hashlib.sha256('').hexdigest()
+        payload_hash = salt.utils.hashutils.sha256_digest('')
 
         ec2_api_version = provider.get(
             'ec2_api_version',
@@ -351,7 +350,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
         params_with_headers['Version'] = ec2_api_version
 
-        keys = sorted(params_with_headers.keys())
+        keys = sorted(list(params_with_headers))
         values = map(params_with_headers.get, keys)
         querystring = _urlencode(list(zip(keys, values)))
         querystring = querystring.replace('+', '%20')
@@ -365,7 +364,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
         string_to_sign = algorithm + '\n' +  amz_date + '\n' + \
                          credential_scope + '\n' + \
-                         hashlib.sha256(canonical_request).hexdigest()
+                         salt.utils.hashutils.sha256_digest(canonical_request)
 
         kDate = sign(('AWS4' + provider['key']).encode('utf-8'), datestamp)
         kRegion = sign(kDate, region)
@@ -1029,10 +1028,18 @@ def ssh_interface(vm_):
     Return the ssh_interface type to connect to. Either 'public_ips' (default)
     or 'private_ips'.
     '''
-    return config.get_cloud_config_value(
+    ret = config.get_cloud_config_value(
         'ssh_interface', vm_, __opts__, default='public_ips',
         search_global=False
     )
+    if ret not in ('public_ips', 'private_ips'):
+        log.warning((
+            'Invalid ssh_interface: {0}. '
+            'Allowed options are ("public_ips", "private_ips"). '
+            'Defaulting to "public_ips".'
+        ).format(ret))
+        ret = 'public_ips'
+    return ret
 
 
 def get_ssh_gateway_config(vm_):
@@ -1045,7 +1052,7 @@ def get_ssh_gateway_config(vm_):
     )
 
     # Check to see if a SSH Gateway will be used.
-    if not isinstance(ssh_gateway, str):
+    if not isinstance(ssh_gateway, six.string_types):
         return None
 
     # Create dictionary of configuration items
@@ -1432,7 +1439,7 @@ def _create_eni_if_necessary(interface, vm_):
     )
 
     associate_public_ip = interface.get('AssociatePublicIpAddress', False)
-    if isinstance(associate_public_ip, str):
+    if isinstance(associate_public_ip, six.string_types):
         # Assume id of EIP as value
         _associate_eip_with_interface(eni_id, associate_public_ip, vm_=vm_)
 
@@ -1786,7 +1793,7 @@ def request_instance(vm_=None, call=None):
     else:
         log.trace('userdata_file: {0}'.format(userdata_file))
         if os.path.exists(userdata_file):
-            with salt.utils.fopen(userdata_file, 'r') as fh_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
     userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
@@ -2000,7 +2007,7 @@ def request_instance(vm_=None, call=None):
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
             'kwargs': __utils__['cloud.filter_event'](
-                'requesting', params, params.keys()
+                'requesting', params, list(params)
             ),
             'location': location,
         },
@@ -2327,6 +2334,9 @@ def wait_for_instance(
         use_winrm = config.get_cloud_config_value(
             'use_winrm', vm_, __opts__, default=False
         )
+        winrm_verify_ssl = config.get_cloud_config_value(
+            'winrm_verify_ssl', vm_, __opts__, default=True
+        )
 
         if win_passwd and win_passwd == 'auto':
             log.debug('Waiting for auto-generated Windows EC2 password')
@@ -2398,7 +2408,8 @@ def wait_for_instance(
                                                           winrm_port,
                                                           username,
                                                           win_passwd,
-                                                          timeout=ssh_connect_timeout):
+                                                          timeout=ssh_connect_timeout,
+                                                          verify=winrm_verify_ssl):
                 raise SaltCloudSystemExit(
                     'Failed to authenticate against remote windows host'
                 )
@@ -2439,7 +2450,7 @@ def wait_for_instance(
                     continue
                 keys += '\n{0} {1}'.format(ip_address, line)
 
-            with salt.utils.fopen(known_hosts_file, 'a') as fp_:
+            with salt.utils.files.fopen(known_hosts_file, 'a') as fp_:
                 fp_.write(keys)
             fp_.close()
 
@@ -2608,7 +2619,7 @@ def create(vm_=None, call=None):
         data, vm_ = request_instance(vm_, location)
 
         # If data is a str, it's an error
-        if isinstance(data, str):
+        if isinstance(data, six.string_types):
             log.error('Error requesting instance: {0}'.format(data))
             return {}
 
@@ -2641,7 +2652,7 @@ def create(vm_=None, call=None):
         )
 
     for value in six.itervalues(tags):
-        if not isinstance(value, str):
+        if not isinstance(value, six.string_types):
             raise SaltCloudConfigError(
                 '\'tag\' values must be strings. Try quoting the values. '
                 'e.g. "2013-09-19T20:09:46Z".'
@@ -2786,7 +2797,7 @@ def create(vm_=None, call=None):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('created', event_data, event_data.keys()),
+        args=__utils__['cloud.filter_event']('created', event_data, list(event_data)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -2828,7 +2839,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     if 'instance_id' not in kwargs:
         kwargs['instance_id'] = _get_node(name)['instanceId']
 
-    if isinstance(kwargs['volumes'], str):
+    if isinstance(kwargs['volumes'], six.string_types):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
@@ -2862,6 +2873,8 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             volume_dict['iops'] = volume['iops']
         if 'encrypted' in volume:
             volume_dict['encrypted'] = volume['encrypted']
+        if 'kmskeyid' in volume:
+            volume_dict['kmskeyid'] = volume['kmskeyid']
 
         if 'volume_id' not in volume_dict:
             created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
@@ -3394,7 +3407,8 @@ def _get_node(name=None, instance_id=None, location=None):
                                   provider=provider,
                                   opts=__opts__,
                                   sigver='4')
-            return _extract_instance_info(instances).values()[0]
+            instance_info = _extract_instance_info(instances).values()
+            return next(iter(instance_info))
         except IndexError:
             attempts -= 1
             log.debug(
@@ -3418,34 +3432,7 @@ def list_nodes_full(location=None, call=None):
             'or --function.'
         )
 
-    if not location:
-        ret = {}
-        locations = set(
-            get_location(vm_) for vm_ in six.itervalues(__opts__['profiles'])
-            if _vm_provider_driver(vm_)
-        )
-
-        # If there aren't any profiles defined for EC2, check
-        # the provider config file, or use the default location.
-        if not locations:
-            locations = [get_location()]
-
-        for loc in locations:
-            ret.update(_list_nodes_full(loc))
-        return ret
-
-    return _list_nodes_full(location)
-
-
-def _vm_provider_driver(vm_):
-    alias, driver = vm_['driver'].split(':')
-    if alias not in __opts__['providers']:
-        return None
-
-    if driver not in __opts__['providers'][alias]:
-        return None
-
-    return driver == 'ec2'
+    return _list_nodes_full(location or get_location())
 
 
 def _extract_name_tag(item):
@@ -3556,16 +3543,15 @@ def list_nodes_min(location=None, call=None):
 
     for instance in instances:
         if isinstance(instance['instancesSet']['item'], list):
-            for item in instance['instancesSet']['item']:
-                state = item['instanceState']['name']
-                name = _extract_name_tag(item)
-                id = item['instanceId']
+            items = instance['instancesSet']['item']
         else:
-            item = instance['instancesSet']['item']
+            items = [instance['instancesSet']['item']]
+
+        for item in items:
             state = item['instanceState']['name']
             name = _extract_name_tag(item)
             id = item['instanceId']
-        ret[name] = {'state': state, 'id': id}
+            ret[name] = {'state': state, 'id': id}
     return ret
 
 
@@ -4016,7 +4002,46 @@ def volume_create(**kwargs):
 
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
     '''
-    Create a volume
+    Create a volume.
+
+    zone
+        The availability zone used to create the volume. Required. String.
+
+    size
+        The size of the volume, in GiBs. Defaults to ``10``. Integer.
+
+    snapshot
+        The snapshot-id from which to create the volume. Integer.
+
+    type
+        The volume type. This can be gp2 for General Purpose SSD, io1 for Provisioned
+        IOPS SSD, st1 for Throughput Optimized HDD, sc1 for Cold HDD, or standard for
+        Magnetic volumes. String.
+
+    iops
+        The number of I/O operations per second (IOPS) to provision for the volume,
+        with a maximum ratio of 50 IOPS/GiB. Only valid for Provisioned IOPS SSD
+        volumes. Integer.
+
+        This option will only be set if ``type`` is also specified as ``io1``.
+
+    encrypted
+        Specifies whether the volume will be encrypted. Boolean.
+
+        If ``snapshot`` is also given in the list of kwargs, then this value is ignored
+        since volumes that are created from encrypted snapshots are also automatically
+        encrypted.
+
+    tags
+        The tags to apply to the volume during creation. Dictionary.
+
+    call
+        The ``create_volume`` function must be called with ``-f`` or ``--function``.
+        String.
+
+    wait_to_finish
+        Whether or not to wait for the volume to be available. Boolean. Defaults to
+        ``False``.
 
     CLI Examples:
 
@@ -4057,6 +4082,13 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
     # You can't set `encrypted` if you pass a snapshot
     if 'encrypted' in kwargs and 'snapshot' not in kwargs:
         params['Encrypted'] = kwargs['encrypted']
+        if 'kmskeyid' in kwargs:
+            params['KmsKeyId'] = kwargs['kmskeyid']
+    if 'kmskeyid' in kwargs and 'encrypted' not in kwargs:
+        log.error(
+            'If a KMS Key ID is specified, encryption must be enabled'
+        )
+        return False
 
     log.debug(params)
 
@@ -4335,7 +4367,7 @@ def import_keypair(kwargs=None, call=None):
     public_key_file = kwargs['file']
 
     if os.path.exists(public_key_file):
-        with salt.utils.fopen(public_key_file, 'r') as fh_:
+        with salt.utils.files.fopen(public_key_file, 'r') as fh_:
             public_key = fh_.read()
 
     if public_key is not None:
@@ -4397,7 +4429,7 @@ def delete_keypair(kwargs=None, call=None):
         return False
 
     params = {'Action': 'DeleteKeyPair',
-              'KeyName.1': kwargs['keyname']}
+              'KeyName': kwargs['keyname']}
 
     data = aws.query(params,
                      return_url=True,
@@ -4724,7 +4756,7 @@ def get_password_data(
 
     if 'key' not in kwargs:
         if 'key_file' in kwargs:
-            with salt.utils.fopen(kwargs['key_file'], 'r') as kf_:
+            with salt.utils.files.fopen(kwargs['key_file'], 'r') as kf_:
                 kwargs['key'] = kf_.read()
 
     if 'key' in kwargs:
@@ -4824,7 +4856,7 @@ def _parse_pricing(url, name):
     outfile = os.path.join(
         __opts__['cachedir'], 'ec2-pricing-{0}.p'.format(name)
     )
-    with salt.utils.fopen(outfile, 'w') as fho:
+    with salt.utils.files.fopen(outfile, 'w') as fho:
         msgpack.dump(regions, fho)
 
     return True
@@ -4892,7 +4924,7 @@ def show_pricing(kwargs=None, call=None):
     if not os.path.isfile(pricefile):
         update_pricing({'type': name}, 'function')
 
-    with salt.utils.fopen(pricefile, 'r') as fhi:
+    with salt.utils.files.fopen(pricefile, 'r') as fhi:
         ec2_price = msgpack.load(fhi)
 
     region = get_location(profile)

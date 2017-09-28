@@ -11,6 +11,7 @@ import socket
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
     '''
     ret = []
     try:
-        with salt.utils.fopen(maclist, 'r') as ifile:
+        with salt.utils.files.fopen(maclist, 'r') as ifile:
             for mac in ifile:
                 wol(mac.strip(), bcast, destport)
                 print('Waking up {0}'.format(mac.strip()))

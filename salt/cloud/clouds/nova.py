@@ -209,8 +209,10 @@ import pprint
 import yaml
 
 # Import Salt Libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.cloud
+import salt.utils.files
+import salt.utils.pycrypto
 import salt.client
 from salt.utils.openstack import nova
 try:
@@ -220,8 +222,6 @@ except ImportError as exc:
 
 # Import Salt Cloud Libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
-import salt.utils.cloud
-import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.exceptions import (
@@ -651,7 +651,7 @@ def request_instance(vm_=None, call=None):
         kwargs['files'] = {}
         for src_path in files:
             if os.path.exists(files[src_path]):
-                with salt.utils.fopen(files[src_path], 'r') as fp_:
+                with salt.utils.files.fopen(files[src_path], 'r') as fp_:
                     kwargs['files'][src_path] = fp_.read()
             else:
                 kwargs['files'][src_path] = files[src_path]
@@ -661,7 +661,7 @@ def request_instance(vm_=None, call=None):
     )
     if userdata_file is not None:
         try:
-            with salt.utils.fopen(userdata_file, 'r') as fp_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fp_:
                 kwargs['userdata'] = salt.utils.cloud.userdata_template(
                     __opts__, vm_, fp_.read()
                 )
@@ -686,7 +686,7 @@ def request_instance(vm_=None, call=None):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
-            'kwargs': __utils__['cloud.filter_event']('requesting', event_kwargs, event_kwargs.keys()),
+            'kwargs': __utils__['cloud.filter_event']('requesting', event_kwargs, list(event_kwargs)),
         },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
@@ -711,14 +711,35 @@ def request_instance(vm_=None, call=None):
                                                      search_global=False,
                                                      default={})
     if floating_ip_conf.get('auto_assign', False):
-        pool = floating_ip_conf.get('pool', 'public')
         floating_ip = None
-        for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
-            if opts['fixed_ip'] is None and opts['pool'] == pool:
-                floating_ip = fl_ip
-                break
-        if floating_ip is None:
-            floating_ip = conn.floating_ip_create(pool)['ip']
+        if floating_ip_conf.get('ip_address', None) is not None:
+            ip_address = floating_ip_conf.get('ip_address', None)
+            try:
+                fl_ip_dict = conn.floating_ip_show(ip_address)
+                floating_ip = fl_ip_dict['ip']
+            except Exception as err:
+                raise SaltCloudSystemExit(
+                    'Error assigning floating_ip for {0} on Nova\n\n'
+                    'The following exception was thrown by libcloud when trying to '
+                    'assign a floating ip: {1}\n'.format(
+                        vm_['name'], err
+                    )
+                )
+
+        else:
+            pool = floating_ip_conf.get('pool', 'public')
+            try:
+                floating_ip = conn.floating_ip_create(pool)['ip']
+            except Exception:
+                log.info('A new IP address was unable to be allocated. '
+                         'An IP address will be pulled from the already allocated list, '
+                         'This will cause a race condition when building in parallel.')
+                for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
+                    if opts['fixed_ip'] is None and opts['pool'] == pool:
+                        floating_ip = fl_ip
+                        break
+                if floating_ip is None:
+                    log.error('No IP addresses available to allocate for this server: {0}'.format(vm_['name']))
 
         def __query_node_data(vm_):
             try:
@@ -765,7 +786,7 @@ def request_instance(vm_=None, call=None):
             raise SaltCloudSystemExit(
                 'Error assigning floating_ip for {0} on Nova\n\n'
                 'The following exception was thrown by libcloud when trying to '
-                'assing a floating ip: {1}\n'.format(
+                'assign a floating ip: {1}\n'.format(
                     vm_['name'], exc
                 )
             )
@@ -966,7 +987,7 @@ def create(vm_):
             )
         data = conn.server_show_libcloud(vm_['instance_id'])
         if vm_['key_filename'] is None and 'change_password' in __opts__ and __opts__['change_password'] is True:
-            vm_['password'] = sup.secure_password()
+            vm_['password'] = salt.utils.pycrypto.secure_password()
             conn.root_password(vm_['instance_id'], vm_['password'])
     else:
         # Put together all of the information required to request the instance,
@@ -1054,7 +1075,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('created', event_data, event_data.keys()),
+        args=__utils__['cloud.filter_event']('created', event_data, list(event_data)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )

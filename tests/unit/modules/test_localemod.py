@@ -43,17 +43,18 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         Test for Get the current system locale
         '''
         with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': True}):
-            with patch.multiple(localemod,
-                               _parse_dbus_locale=MagicMock(return_value={'LANG': 'A'}),
-                               HAS_DBUS=True):
-                self.assertEqual('A', localemod.get_locale())
-                localemod._parse_dbus_locale.assert_called_once_with()
+            with patch.dict(localemod.__grains__, {'os_family': ['Unknown']}):
+                with patch.multiple(localemod,
+                                   _parse_dbus_locale=MagicMock(return_value={'LANG': 'A'}),
+                                   HAS_DBUS=True):
+                    self.assertEqual('A', localemod.get_locale())
+                    localemod._parse_dbus_locale.assert_called_once_with()
 
-            with patch.multiple(localemod,
-                               _parse_localectl=MagicMock(return_value={'LANG': 'A'}),
-                               HAS_DBUS=False):
-                self.assertEqual('A', localemod.get_locale())
-                localemod._parse_localectl.assert_called_once_with()
+                with patch.multiple(localemod,
+                                   _parse_localectl=MagicMock(return_value={'LANG': 'A'}),
+                                   HAS_DBUS=False):
+                    self.assertEqual('A', localemod.get_locale())
+                    localemod._parse_localectl.assert_called_once_with()
 
         with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': False}):
             with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
@@ -79,8 +80,9 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         Test for Sets the current system locale
         '''
         with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': True}):
-            with patch.object(localemod, '_localectl_set', return_value=True):
-                self.assertTrue(localemod.set_locale('l'))
+            with patch.dict(localemod.__grains__, {'os_family': ['Unknown']}):
+                with patch.object(localemod, '_localectl_set', return_value=True):
+                    self.assertTrue(localemod.set_locale('l'))
 
         with patch.dict(localemod.__context__, {'salt.utils.systemd.booted': False}):
             with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
@@ -111,7 +113,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         Tests the return of gen_locale when the provided locale is not found
         '''
         with patch.dict(localemod.__grains__, {'os': 'Debian'}), \
-                 patch('salt.utils.which', MagicMock(return_value='/some/dir/path')), \
+                 patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
                  patch.dict(localemod.__salt__,
                             {'file.search': MagicMock(return_value=False)}):
             self.assertFalse(localemod.gen_locale('foo'))
@@ -122,7 +124,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = {'stdout': 'saltines', 'stderr': 'biscuits', 'retcode': 0, 'pid': 1337}
         with patch.dict(localemod.__grains__, {'os': 'Debian'}), \
-                patch('salt.utils.which', MagicMock(return_value='/some/dir/path')), \
+                patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
                 patch.dict(localemod.__salt__,
                            {'file.search': MagicMock(return_value=True),
                             'file.replace': MagicMock(return_value=True),
@@ -144,7 +146,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = {'stdout': 'saltines', 'stderr': 'biscuits', 'retcode': 0, 'pid': 1337}
         with patch.dict(localemod.__grains__, {'os': 'Debian'}), \
-                patch('salt.utils.which', MagicMock(return_value='/some/dir/path')), \
+                patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
                 patch.dict(localemod.__salt__,
                            {'file.search': file_search,
                             'file.replace': MagicMock(return_value=True),
@@ -161,7 +163,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                          'file.touch': MagicMock(return_value=None),
                          'file.append': MagicMock(return_value=None),
                          'cmd.run_all': MagicMock(return_value=ret)}), \
-                patch('salt.utils.which', MagicMock(return_value='/some/dir/path')), \
+                patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
                 patch('os.listdir', MagicMock(return_value=['en_US'])), \
                 patch.dict(localemod.__grains__, {'os': 'Ubuntu'}):
             self.assertTrue(localemod.gen_locale('en_US.UTF-8'))
@@ -172,7 +174,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = {'stdout': 'saltines', 'stderr': 'biscuits', 'retcode': 0, 'pid': 1337}
         with patch.dict(localemod.__grains__, {'os_family': 'Gentoo'}), \
-                patch('salt.utils.which', MagicMock(return_value='/some/dir/path')), \
+                patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
                 patch('os.listdir', MagicMock(return_value=['en_US.UTF-8'])), \
                 patch.dict(localemod.__salt__,
                            {'file.search': MagicMock(return_value=True),
@@ -195,7 +197,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = {'stdout': 'saltines', 'stderr': 'biscuits', 'retcode': 0, 'pid': 1337}
         with patch.dict(localemod.__grains__, {'os_family': 'Gentoo'}), \
-                patch('salt.utils.which', MagicMock(return_value='/some/dir/path')), \
+                patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
                 patch('os.listdir', MagicMock(return_value=['en_US.UTF-8'])), \
                 patch.dict(localemod.__salt__,
                            {'file.search': file_search,
@@ -211,7 +213,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(localemod.__salt__,
                         {'cmd.run_all': MagicMock(return_value=ret),
                          'file.replace': MagicMock()}), \
-                patch('salt.utils.which', MagicMock(return_value='/some/dir/path')), \
+                patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
                 patch('os.listdir', MagicMock(return_value=['en_US'])):
             self.assertTrue(localemod.gen_locale('en_US.UTF-8'))
 
@@ -223,7 +225,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(localemod.__salt__,
                         {'cmd.run_all': MagicMock(return_value=ret),
                          'file.replace': MagicMock()}), \
-                patch('salt.utils.which', MagicMock(return_value='/some/dir/path')), \
+                patch('salt.utils.path.which', MagicMock(return_value='/some/dir/path')), \
                 patch('os.listdir', MagicMock(return_value=['en_US'])):
             self.assertEqual(localemod.gen_locale('en_US.UTF-8', verbose=True), ret)
 

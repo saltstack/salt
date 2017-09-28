@@ -29,16 +29,19 @@ Example:
 
 .. code-block:: yaml
 
-    webserver:
+    my-zone:
       libcloud_dns.zone_present:
-        name: mywebsite.com
-        profile: profile1
+        - name: mywebsite.com
+        - profile: profile1
+    my-website:
       libcloud_dns.record_present:
-        name: www
-        zone: mywebsite.com
-        type: A
-        data: 12.34.32.3
-        profile: profile1
+        - name: www
+        - zone: mywebsite.com
+        - type: A
+        - data: 12.34.32.3
+        - profile: profile1
+        - require:
+          - libcloud_dns: my-zone
 
 
 :depends: apache-libcloud
@@ -46,13 +49,10 @@ Example:
 
 # Import Python Libs
 from __future__ import absolute_import
-import logging
 
 # Import salt libs
 import salt.utils
 import salt.utils.compat
-
-log = logging.getLogger(__name__)
 
 
 def __virtual__():

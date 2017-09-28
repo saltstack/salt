@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -11,7 +13,10 @@ from tests.support.helpers import (
     requires_salt_modules,
 )
 from tests.support.unit import skipIf
-import salt.utils
+
+# Import Salt libs
+import salt.utils.pkg
+import salt.utils.platform
 
 
 class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
@@ -19,7 +24,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     Validate the pkg module
     '''
     def setUp(self):
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.run_function('pkg.refresh_db')
 
     def test_list(self):
@@ -208,6 +213,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         func = 'pkg.refresh_db'
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
 
+        rtag = salt.utils.pkg.rtag(self.minion_opts)
+        salt.utils.pkg.write_rtag(self.minion_opts)
+        self.assertTrue(os.path.isfile(rtag))
+
         if os_family == 'RedHat':
             ret = self.run_function(func)
             self.assertIn(ret, (True, None))
@@ -229,6 +238,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             os_grain = self.run_function('grains.item', ['os'])['os']
             self.skipTest('{0} is unavailable on {1}'.format(func, os_grain))
 
+        self.assertFalse(os.path.isfile(rtag))
+
     @requires_salt_modules('pkg.info_installed')
     def test_pkg_info(self):
         '''
@@ -247,7 +258,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             keys = ret.keys()
             self.assertIn('rpm', keys)
             self.assertIn('yum', keys)
-        elif os_family == 'SUSE':
+        elif os_family == 'Suse':
             ret = self.run_function(func, ['less', 'zypper'])
             keys = ret.keys()
             self.assertIn('less', keys)
@@ -255,7 +266,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_network()
     @destructiveTest
-    @skipIf(salt.utils.is_windows(), 'pkg.upgrade not available on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'pkg.upgrade not available on Windows')
     def test_pkg_upgrade_has_pending_upgrades(self):
         '''
         Test running a system upgrade when there are packages that need upgrading

@@ -225,5 +225,5 @@ Create the Jinja template in :file:`/srv/salt/haproxy_config`:
 In the above example, ``server`` will be expanded to the ``minion_id``.
 
 .. note::
-    The expr_form argument will be renamed to ``tgt_type`` in the Nitrogen
+    The expr_form argument will be renamed to ``tgt_type`` in the 2017.7.0
     release of Salt.

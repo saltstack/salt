@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # define the module's virtual name
 __virtualname__ = 'sysrc'

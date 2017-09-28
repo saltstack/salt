@@ -2,7 +2,7 @@
 '''
  Namecheap management
 
- .. versionadded:: Nitrogen
+ .. versionadded:: 2017.7.0
 
  General Notes
  -------------
@@ -49,7 +49,7 @@ except ImportError:
     CAN_USE_NAMECHEAP = False
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():

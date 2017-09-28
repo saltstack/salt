@@ -11,26 +11,26 @@ import glob
 import shutil
 import logging
 import os
+import sys
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.verify
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import string_types
 
-KNOWN_BINARY_NAMES = frozenset(
-    ['virtualenv',
-     'virtualenv2',
-     'virtualenv-2.6',
-     'virtualenv-2.7'
-     ]
-)
+KNOWN_BINARY_NAMES = frozenset([
+    'virtualenv-{0}.{1}'.format(*sys.version_info[:2]),
+    'virtualenv{0}'.format(sys.version_info[0]),
+    'virtualenv',
+])
 
 log = logging.getLogger(__name__)
 
 __opts__ = {
-    'venv_bin': salt.utils.which_bin(KNOWN_BINARY_NAMES) or 'virtualenv'
+    'venv_bin': salt.utils.path.which_bin(KNOWN_BINARY_NAMES) or 'virtualenv'
 }
 
 __pillar__ = {}
@@ -186,7 +186,7 @@ def create(path,
                 cmd.append('--distribute')
 
         if python is not None and python.strip() != '':
-            if not salt.utils.which(python):
+            if not salt.utils.path.which(python):
                 raise CommandExecutionError(
                     'Cannot find requested python ({0}).'.format(python)
                 )
@@ -200,12 +200,10 @@ def create(path,
             for entry in extra_search_dir:
                 cmd.append('--extra-search-dir={0}'.format(entry))
         if never_download is True:
-            if virtualenv_version_info >= (1, 10):
+            if virtualenv_version_info >= (1, 10) and virtualenv_version_info < (14, 0, 0):
                 log.info(
-                    'The virtualenv \'--never-download\' option has been '
-                    'deprecated in virtualenv(>=1.10), as such, the '
-                    '\'never_download\' option to `virtualenv.create()` has '
-                    'also been deprecated and it\'s not necessary anymore.'
+                    '--never-download was deprecated in 1.10.0, but reimplemented in 14.0.0. '
+                    'If this feature is needed, please install a supported virtualenv version.'
                 )
             else:
                 cmd.append('--never-download')
@@ -260,7 +258,7 @@ def create(path,
         return ret
 
     # Check if distribute and pip are already installed
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         venv_python = os.path.join(path, 'Scripts', 'python.exe')
         venv_pip = os.path.join(path, 'Scripts', 'pip.exe')
         venv_setuptools = os.path.join(path, 'Scripts', 'easy_install.exe')
@@ -454,12 +452,12 @@ def get_resource_content(venv,
 
 
 def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         tmppath = salt.utils.files.mkstemp(dir=cwd)
     else:
         tmppath = __salt__['cp.cache_file'](source, saltenv)
 
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         shutil.copyfile(fn_, tmppath)
         os.chmod(tmppath, 0o500)

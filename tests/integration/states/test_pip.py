@@ -26,18 +26,35 @@ from tests.support.helpers import (
     skip_if_not_root
 )
 # Import salt libs
-from tests.support.case import ModuleCase
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.versions
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.exceptions import CommandExecutionError
+from tests.support.case import ModuleCase
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+class VirtualEnv(object):
+    def __init__(self, test, venv_dir):
+        self.venv_dir = venv_dir
+        self.test = test
+
+    def __enter__(self):
+        ret = self.test.run_function('virtualenv.create', [self.venv_dir])
+        self.test.assertEqual(ret['retcode'], 0)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if os.path.isdir(self.venv_dir):
+            shutil.rmtree(self.venv_dir)
+
+
+@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
+    @skip_if_not_root
     def test_pip_installed_removed(self):
         '''
         Tests installed and removed states
@@ -50,13 +67,25 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pip.removed', name=name)
         self.assertSaltTrueReturn(ret)
 
+    def test_pip_installed_removed_venv(self):
+        venv_dir = os.path.join(
+            RUNTIME_VARS.TMP, 'pip_installed_removed'
+        )
+        with VirtualEnv(self, venv_dir):
+            name = 'pudb'
+            ret = self.run_state('pip.installed', name=name, bin_env=venv_dir)
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pip.removed', name=name, bin_env=venv_dir)
+            self.assertSaltTrueReturn(ret)
+
     def test_pip_installed_errors(self):
         venv_dir = os.path.join(
             RUNTIME_VARS.TMP, 'pip-installed-errors'
         )
+        orig_shell = os.environ.get('SHELL')
         try:
             # Since we don't have the virtualenv created, pip.installed will
-            # thrown and error.
+            # throw an error.
             # Example error strings:
             #  * "Error installing 'pep8': /tmp/pip-installed-errors: not found"
             #  * "Error installing 'pep8': /bin/sh: 1: /tmp/pip-installed-errors: not found"
@@ -77,9 +106,17 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_function('state.sls', mods='pip-installed-errors')
             self.assertSaltTrueReturn(ret)
         finally:
+            if orig_shell is None:
+                # Didn't exist before, don't leave it there. This should never
+                # happen, but if it does, we don't want this test to affect
+                # others elsewhere in the suite.
+                os.environ.pop('SHELL')
+            else:
+                os.environ['SHELL'] = orig_shell
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
+    @skipIf(six.PY3, 'Issue is specific to carbon module, which is PY2-only')
     @requires_system_grains
     def test_pip_installed_weird_install(self, grains=None):
         # First, check to see if this is running on CentOS 5 or MacOS.
@@ -202,7 +239,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             )
         except (AssertionError, CommandExecutionError):
             pip_version = self.run_function('pip.version', [venv_dir])
-            if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='7.0.0'):
+            if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='7.0.0'):
                 self.skipTest('the --mirrors arg has been deprecated and removed in pip==7.0.0')
         finally:
             if os.path.isdir(venv_dir):
@@ -258,7 +295,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         req_filename = os.path.join(
             RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt'
         )
-        with salt.utils.fopen(req_filename, 'wb') as reqf:
+        with salt.utils.files.fopen(req_filename, 'wb') as reqf:
             reqf.write(six.b('pep8'))
 
         try:
@@ -325,7 +362,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         req_filename = os.path.join(
             RUNTIME_VARS.TMP_STATE_TREE, 'issue-6912-requirements.txt'
         )
-        with salt.utils.fopen(req_filename, 'wb') as reqf:
+        with salt.utils.files.fopen(req_filename, 'wb') as reqf:
             reqf.write(six.b('pep8'))
 
         try:
@@ -370,7 +407,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # Let's install a fixed version pip over whatever pip was
             # previously installed
             ret = self.run_function(
-                'pip.install', ['pip==6.0'], upgrade=True,
+                'pip.install', ['pip==8.0'], upgrade=True,
                 bin_env=venv_dir
             )
             try:
@@ -384,15 +421,15 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 pprint.pprint(ret)
                 raise
 
-            # Let's make sure we have pip 6.0 installed
+            # Let's make sure we have pip 8.0 installed
             self.assertEqual(
                 self.run_function('pip.list', ['pip'], bin_env=venv_dir),
-                {'pip': '6.0'}
+                {'pip': '8.0.0'}
             )
 
             # Now the actual pip upgrade pip test
             ret = self.run_state(
-                'pip.installed', name='pip==6.0.7', upgrade=True,
+                'pip.installed', name='pip==8.0.1', upgrade=True,
                 bin_env=venv_dir
             )
             try:
@@ -400,7 +437,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertInSaltReturn(
                     'Installed',
                     ret,
-                    ['changes', 'pip==6.0.7']
+                    ['changes', 'pip==8.0.1']
                 )
             except AssertionError:
                 import pprint
@@ -420,7 +457,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         requirements_file = os.path.join(
             RUNTIME_VARS.TMP_PRODENV_STATE_TREE, 'prod-env-requirements.txt'
         )
-        with salt.utils.fopen(requirements_file, 'wb') as reqf:
+        with salt.utils.files.fopen(requirements_file, 'wb') as reqf:
             reqf.write(six.b('pep8\n'))
 
         try:

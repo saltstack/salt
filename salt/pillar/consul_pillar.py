@@ -167,7 +167,8 @@ def ext_pillar(minion_id,
         opts['target'] = match.group(1)
         temp = temp.replace(match.group(0), '')
         checker = salt.utils.minions.CkMinions(__opts__)
-        minions = checker.check_minions(opts['target'], 'compound')
+        _res = checker.check_minions(opts['target'], 'compound')
+        minions = _res['minions']
         if minion_id not in minions:
             return {}
 
@@ -189,8 +190,8 @@ def ext_pillar(minion_id,
 
     client = get_conn(__opts__, opts['profile'])
 
-    role = __salt__['grains.get']('role')
-    environment = __salt__['grains.get']('environment')
+    role = __salt__['grains.get']('role', None)
+    environment = __salt__['grains.get']('environment', None)
     # put the minion's ID in the path if necessary
     opts['root'] %= {
         'minion_id': minion_id,

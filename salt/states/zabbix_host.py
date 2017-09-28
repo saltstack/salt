@@ -368,7 +368,7 @@ def assign_templates(host, templates, **kwargs):
     '''
     Ensures that templates are assigned to the host.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     :param host: technical name of the host
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)

@@ -61,7 +61,7 @@ Or delete all existing names for an address:
 from __future__ import absolute_import
 
 import salt.utils.validate.net
-import salt.ext.six as six
+from salt.ext import six
 
 
 def present(name, ip):  # pylint: disable=C0103

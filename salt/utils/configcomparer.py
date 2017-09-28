@@ -8,7 +8,7 @@ changes in a way that can be easily reported in a state.
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def compare_and_update_config(config, update_config, changes, namespace=''):

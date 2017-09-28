@@ -556,7 +556,7 @@ class ProxyMinionOptionParserTestCase(LogSettingsParserTests):
         # Log file
         self.log_file = '/tmp/salt_proxy_minion_parser_test'
         # Function to patch
-        self.config_func = 'salt.config.minion_config'
+        self.config_func = 'salt.config.proxy_config'
 
         # Mock log setup
         self.setup_log()
@@ -957,6 +957,48 @@ class SaltAPIParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.SaltAPIParser
         self.addCleanup(delattr, self, 'parser')
 
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class DaemonMixInTestCase(TestCase):
+    '''
+    Tests the PIDfile deletion in the DaemonMixIn.
+    '''
+
+    def setUp(self):
+        '''
+        Setting up
+        '''
+        # Set PID
+        self.pid = '/some/fake.pid'
+
+        # Setup mixin
+        self.mixin = salt.utils.parsers.DaemonMixIn()
+        self.mixin.info = None
+        self.mixin.config = {}
+        self.mixin.config['pidfile'] = self.pid
+
+    def test_pid_file_deletion(self):
+        '''
+        PIDfile deletion without exception.
+        '''
+        with patch('os.unlink', MagicMock()) as os_unlink:
+            with patch('os.path.isfile', MagicMock(return_value=True)):
+                with patch.object(self.mixin, 'info', MagicMock()):
+                    self.mixin._mixin_before_exit()
+                    assert self.mixin.info.call_count == 0
+                    assert os_unlink.call_count == 1
+
+    def test_pid_file_deletion_with_oserror(self):
+        '''
+        PIDfile deletion with exception
+        '''
+        with patch('os.unlink', MagicMock(side_effect=OSError())) as os_unlink:
+            with patch('os.path.isfile', MagicMock(return_value=True)):
+                with patch.object(self.mixin, 'info', MagicMock()):
+                    self.mixin._mixin_before_exit()
+                    assert os_unlink.call_count == 1
+                    self.mixin.info.assert_called_with(
+                        'PIDfile could not be deleted: {0}'.format(self.pid))
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module
 del LogSettingsParserTests

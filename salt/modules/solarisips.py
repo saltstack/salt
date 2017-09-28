@@ -44,6 +44,8 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
+import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -55,9 +57,9 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris 11
     '''
-    if __grains__['os'] == 'Solaris' \
+    if __grains__['os_family'] == 'Solaris' \
             and float(__grains__['kernelrelease']) > 5.10 \
-            and salt.utils.which('pkg'):
+            and salt.utils.path.which('pkg'):
         return __virtualname__
     return (False,
             'The solarisips execution module failed to load: only available '
@@ -118,6 +120,8 @@ def refresh_db(full=False):
         salt '*' pkg.refresh_db
         salt '*' pkg.refresh_db full=True
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     if full:
         return __salt__['cmd.retcode']('/bin/pkg refresh --full') == 0
     else:
@@ -164,10 +168,10 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
         Runs a full package database refresh before listing. Set to ``False`` to
         disable running the refresh.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
 
         In previous versions of Salt, ``refresh`` defaulted to ``False``. This was
-        changed to default to ``True`` in the Nitrogen release to make the behavior
+        changed to default to ``True`` in the 2017.7.0 release to make the behavior
         more consistent with the other package modules, which all default to ``True``.
 
     CLI Example:

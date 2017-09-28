@@ -19,9 +19,9 @@ Function Get-Settings {
             "Python2Dir"   = "C:\Python27"
             "Scripts2Dir"  = "C:\Python27\Scripts"
             "SitePkgs2Dir" = "C:\Python27\Lib\site-packages"
-            "Python3Dir"   = "C:\Program Files\Python35"
-            "Scripts3Dir"  = "C:\Program Files\Python35\Scripts"
-            "SitePkgs3Dir" = "C:\Program Files\Python35\Lib\site-packages"
+            "Python3Dir"   = "C:\Python35"
+            "Scripts3Dir"  = "C:\Python35\Scripts"
+            "SitePkgs3Dir" = "C:\Python35\Lib\site-packages"
             "DownloadDir" = "$env:Temp\DevSalt"
             }
         # The script deletes the DownLoadDir (above) for each install.
@@ -82,7 +82,6 @@ Function Get-Settings {
             "Libeay"     = "libeay32.dll"
             "SSLeay"     = "ssleay32.dll"
             "OpenSSLLic" = "OpenSSL_License.txt"
-            "libsodium"  = "libsodium.dll"
             "msvcr"      = "msvcr120.dll"
         }
         $ini.Add("64bitDLLs", $64bitDLLs)
@@ -92,7 +91,6 @@ Function Get-Settings {
             "Libeay"     = "libeay32.dll"
             "SSLeay"     = "ssleay32.dll"
             "OpenSSLLic" = "OpenSSL_License.txt"
-            "libsodium"  = "libsodium.dll"
             "msvcr"      = "msvcr120.dll"
         }
         $ini.Add("32bitDLLs", $32bitDLLs)

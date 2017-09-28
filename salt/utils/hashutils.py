@@ -8,12 +8,13 @@ from __future__ import absolute_import
 import base64
 import hashlib
 import hmac
+import random
 
 # Import Salt libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.stringutils
 
-from salt.utils.decorators import jinja_filter
+from salt.utils.decorators.jinja import jinja_filter
 
 
 @jinja_filter('base64_encode')
@@ -25,9 +26,9 @@ def base64_b64encode(instr):
     newline ('\\n') characters in the encoded output.
     '''
     if six.PY3:
-        b = salt.utils.to_bytes(instr)
+        b = salt.utils.stringutils.to_bytes(instr)
         b64 = base64.b64encode(b)
-        return salt.utils.to_str(b64)
+        return salt.utils.stringutils.to_str(b64)
     return base64.b64encode(instr)
 
 
@@ -37,10 +38,10 @@ def base64_b64decode(instr):
     Decode a base64-encoded string using the "modern" Python interface.
     '''
     if six.PY3:
-        b = salt.utils.to_bytes(instr)
+        b = salt.utils.stringutils.to_bytes(instr)
         data = base64.b64decode(b)
         try:
-            return salt.utils.to_str(data)
+            return salt.utils.stringutils.to_str(data)
         except UnicodeDecodeError:
             return data
     return base64.b64decode(instr)
@@ -55,9 +56,9 @@ def base64_encodestring(instr):
     at the end of the encoded string.
     '''
     if six.PY3:
-        b = salt.utils.to_bytes(instr)
+        b = salt.utils.stringutils.to_bytes(instr)
         b64 = base64.encodebytes(b)
-        return salt.utils.to_str(b64)
+        return salt.utils.stringutils.to_str(b64)
     return base64.encodestring(instr)
 
 
@@ -67,10 +68,10 @@ def base64_decodestring(instr):
 
     '''
     if six.PY3:
-        b = salt.utils.to_bytes(instr)
+        b = salt.utils.stringutils.to_bytes(instr)
         data = base64.decodebytes(b)
         try:
-            return salt.utils.to_str(data)
+            return salt.utils.stringutils.to_str(data)
         except UnicodeDecodeError:
             return data
     return base64.decodestring(instr)
@@ -82,7 +83,7 @@ def md5_digest(instr):
     Generate an md5 hash of a given string.
     '''
     if six.PY3:
-        b = salt.utils.to_bytes(instr)
+        b = salt.utils.stringutils.to_bytes(instr)
         return hashlib.md5(b).hexdigest()
     return hashlib.md5(instr).hexdigest()
 
@@ -93,7 +94,7 @@ def sha256_digest(instr):
     Generate an sha256 hash of a given string.
     '''
     if six.PY3:
-        b = salt.utils.to_bytes(instr)
+        b = salt.utils.stringutils.to_bytes(instr)
         return hashlib.sha256(b).hexdigest()
     return hashlib.sha256(instr).hexdigest()
 
@@ -104,7 +105,7 @@ def sha512_digest(instr):
     Generate an sha512 hash of a given string
     '''
     if six.PY3:
-        b = salt.utils.to_bytes(instr)
+        b = salt.utils.stringutils.to_bytes(instr)
         return hashlib.sha512(b).hexdigest()
     return hashlib.sha512(instr).hexdigest()
 
@@ -116,9 +117,9 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     Returns a boolean if the verification succeeded or failed.
     '''
     if six.PY3:
-        msg = salt.utils.to_bytes(string)
-        key = salt.utils.to_bytes(shared_secret)
-        challenge = salt.utils.to_bytes(challenge_hmac)
+        msg = salt.utils.stringutils.to_bytes(string)
+        key = salt.utils.stringutils.to_bytes(shared_secret)
+        challenge = salt.utils.stringutils.to_bytes(challenge_hmac)
     else:
         msg = string
         key = shared_secret
@@ -126,3 +127,15 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     hmac_hash = hmac.new(key, msg, hashlib.sha256)
     valid_hmac = base64.b64encode(hmac_hash.digest())
     return valid_hmac == challenge
+
+
+@jinja_filter('rand_str')  # Remove this for Neon
+@jinja_filter('random_hash')
+def random_hash(size=9999999999, hash_type=None):
+    '''
+    Return a hash of a randomized data from random.SystemRandom()
+    '''
+    if not hash_type:
+        hash_type = 'md5'
+    hasher = getattr(hashlib, hash_type)
+    return hasher(salt.utils.stringutils.to_bytes(str(random.SystemRandom().randint(0, size)))).hexdigest()

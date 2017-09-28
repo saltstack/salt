@@ -16,6 +16,7 @@ runner modules
     cache
     cloud
     ddns
+    digicertapi
     doc
     drac
     error
@@ -42,7 +43,6 @@ runner modules
     saltutil
     sdb
     smartos_vmadm
-    search
     spacewalk
     ssh
     state

@@ -57,18 +57,18 @@ service, then set the reload value to True:
     :ref:`Requisites <requisites>` documentation.
 
 '''
-
 # Import Python libs
 from __future__ import absolute_import
 import time
 
 # Import Salt libs
 import salt.utils
+import salt.utils.platform
 from salt.utils.args import get_function_argspec as _argspec
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 SYSTEMD_ONLY = ('no_block', 'unmask', 'unmask_runtime')
 
@@ -360,13 +360,13 @@ def running(name,
     no_block : False
         **For systemd minions only.** Starts the service using ``--no-block``.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     unmask : False
         **For systemd minions only.** Set to ``True`` to remove an indefinite
         mask before attempting to start the service.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous releases, Salt would simply unmask a service before
             making any changes. This behavior is no longer the default.
 
@@ -374,7 +374,7 @@ def running(name,
         **For systemd minions only.** Set to ``True`` to remove a runtime mask
         before attempting to start the service.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
             In previous releases, Salt would simply unmask a service before
             making any changes. This behavior is no longer the default.
 
@@ -432,7 +432,7 @@ def running(name,
         ret['comment'] = 'Service {0} is set to start'.format(name)
         return ret
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         if enable is True:
             ret.update(_enable(name, False, result=False, **kwargs))
 
@@ -516,12 +516,12 @@ def dead(name,
         Add a sleep command (in seconds) before the check to make sure service
         is killed.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     no_block : False
         **For systemd minions only.** Stops the service using ``--no-block``.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
     '''
     ret = {'name': name,
            'changes': {},
@@ -660,7 +660,7 @@ def disabled(name, **kwargs):
 
 def masked(name, runtime=False):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     .. note::
         This state is only available on minions which use systemd_.
@@ -745,7 +745,7 @@ def masked(name, runtime=False):
 
 def unmasked(name, runtime=False):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     .. note::
         This state is only available on minions which use systemd_.
@@ -900,7 +900,7 @@ def mod_watch(name,
     try:
         result = func(name, **func_kwargs)
     except CommandExecutionError as exc:
-        ret['result'] = True
+        ret['result'] = False
         ret['comment'] = exc.strerror
         return ret
 

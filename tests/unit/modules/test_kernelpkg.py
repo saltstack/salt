@@ -5,18 +5,21 @@
     :maturity: develop
     versionadded:: oxygen
 '''
+# pylint: disable=invalid-name,no-member
+
 from __future__ import absolute_import
 
 # Salt testing libs
 try:
     from tests.support.mock import MagicMock, patch
+    from salt.exceptions import CommandExecutionError
 except ImportError:
     pass
 
 
 class KernelPkgTestCase(object):
     '''
-    Test cases for salt.modules.yumkernelpkg
+    Test cases shared by all kernelpkg virtual modules
     '''
 
     def test_active(self):
@@ -94,7 +97,7 @@ class KernelPkgTestCase(object):
 
     def test_upgrade_not_needed_with_reboot(self):
         '''
-        Test - Upgrade funciotn when no upgrade is available and reboot has been requested
+        Test - Upgrade function when no upgrade is available and reboot has been requested
         '''
         with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
             with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
@@ -108,7 +111,7 @@ class KernelPkgTestCase(object):
 
     def test_upgrade_not_needed_without_reboot(self):
         '''
-        Test - Upgrade funciotn when no upgrade is available and no reboot has been requested
+        Test - Upgrade function when no upgrade is available and no reboot has been requested
         '''
         with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
             with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
@@ -122,7 +125,7 @@ class KernelPkgTestCase(object):
 
     def test_upgrade_needed_with_reboot(self):
         '''
-        Test - Upgrade funciotn when an upgrade is available and reboot has been requested
+        Test - Upgrade function when an upgrade is available and reboot has been requested
         '''
         with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[0]):
             with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
@@ -132,11 +135,11 @@ class KernelPkgTestCase(object):
                 self.assertEqual(result['latest_installed'], self.KERNEL_LIST[-1])
                 self.assertEqual(result['reboot_requested'], True)
                 self.assertEqual(result['reboot_required'], True)
-                self._kernelpkg.__salt__['system.reboot'].assert_called_once()
+                self.assert_called_once(self._kernelpkg.__salt__['system.reboot'])
 
     def test_upgrade_needed_without_reboot(self):
         '''
-        Test - Upgrade funciotn when an upgrade is available and no reboot has been requested
+        Test - Upgrade function when an upgrade is available and no reboot has been requested
         '''
         with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[0]):
             with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
@@ -147,3 +150,49 @@ class KernelPkgTestCase(object):
                 self.assertEqual(result['reboot_requested'], False)
                 self.assertEqual(result['reboot_required'], True)
                 self._kernelpkg.__salt__['system.reboot'].assert_not_called()
+
+    def test_upgrade_available_true(self):
+        '''
+        Test - upgrade_available
+        '''
+        with patch.object(self._kernelpkg, 'latest_available', return_value=self.KERNEL_LIST[-1]):
+            with patch.object(self._kernelpkg, 'latest_installed', return_value=self.KERNEL_LIST[0]):
+                self.assertTrue(self._kernelpkg.upgrade_available())
+
+    def test_upgrade_available_false(self):
+        '''
+        Test - upgrade_available
+        '''
+        with patch.object(self._kernelpkg, 'latest_available', return_value=self.KERNEL_LIST[-1]):
+            with patch.object(self._kernelpkg, 'latest_installed', return_value=self.KERNEL_LIST[-1]):
+                self.assertFalse(self._kernelpkg.upgrade_available())
+
+    def test_upgrade_available_inverted(self):
+        '''
+        Test - upgrade_available
+        '''
+        with patch.object(self._kernelpkg, 'latest_available', return_value=self.KERNEL_LIST[0]):
+            with patch.object(self._kernelpkg, 'latest_installed', return_value=self.KERNEL_LIST[-1]):
+                self.assertFalse(self._kernelpkg.upgrade_available())
+
+    def test_remove_active(self):
+        '''
+        Test - remove kernel package
+        '''
+        mock = MagicMock(return_value={'retcode': 0, 'stderr': []})
+        with patch.dict(self._kernelpkg.__salt__, {'cmd.run_all': mock}):
+            with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
+                with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
+                    self.assertRaises(CommandExecutionError, self._kernelpkg.remove, release=self.KERNEL_LIST[-1])
+                    self._kernelpkg.__salt__['cmd.run_all'].assert_not_called()
+
+    def test_remove_invalid(self):
+        '''
+        Test - remove kernel package
+        '''
+        mock = MagicMock(return_value={'retcode': 0, 'stderr': []})
+        with patch.dict(self._kernelpkg.__salt__, {'cmd.run_all': mock}):
+            with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
+                with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
+                    self.assertRaises(CommandExecutionError, self._kernelpkg.remove, release='invalid')
+                    self._kernelpkg.__salt__['cmd.run_all'].assert_not_called()

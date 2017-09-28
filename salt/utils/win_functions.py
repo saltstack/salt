@@ -4,6 +4,9 @@ Various functions to be used by windows during start up and to monkey patch
 missing functions in other modules
 '''
 from __future__ import absolute_import
+import platform
+
+# Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd Party Libs
@@ -138,3 +141,19 @@ def get_current_user():
         return False
 
     return user_name
+
+
+def get_sam_name(username):
+    '''
+    Gets the SAM name for a user. It basically prefixes a username without a
+    backslash with the computer name. If the username contains a backslash, it
+    is returned as is.
+
+    Everything is returned lower case
+
+    i.e. salt.utils.fix_local_user('Administrator') would return 'computername\administrator'
+    '''
+    if '\\' not in username:
+        username = '{0}\\{1}'.format(platform.node(), username)
+
+    return username.lower()

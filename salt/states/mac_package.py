@@ -22,15 +22,14 @@ Install any kind of pkg, dmg or app file on macOS:
             - target: /Applications/Xcode.app
             - version_check: xcodebuild -version=Xcode 7.1\n.*7B91b
 '''
-
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import logging
 import os
 import re
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -41,7 +40,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return __virtualname__
     return False
 

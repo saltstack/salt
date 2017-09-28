@@ -54,10 +54,12 @@ import pprint
 import logging
 import msgpack
 from ast import literal_eval
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error
 try:
+    import libcloud
     from libcloud.compute.types import Provider
     from libcloud.compute.providers import get_driver
     from libcloud.loadbalancer.types import Provider as Provider_lb
@@ -66,9 +68,14 @@ try:
         ResourceInUseError,
         ResourceNotFoundError,
         )
-    # See https://github.com/saltstack/salt/issues/32743
-    import libcloud.security
-    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
+    # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
+    # However, older versions of libcloud must still be supported with this work-around.
+    # This work-around can be removed when the required minimum version of libcloud is
+    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+    if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
+        # See https://github.com/saltstack/salt/issues/32743
+        import libcloud.security
+        libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
@@ -76,10 +83,11 @@ except ImportError:
 
 # Import salt libs
 from salt.utils import namespaced_function
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.cloud
+import salt.utils.files
+import salt.utils.http
 import salt.config as config
-from salt.utils import http
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
     SaltCloudSystemExit,
@@ -460,7 +468,7 @@ def __get_subnetwork(vm_):
     '''
     ex_subnetwork = config.get_cloud_config_value(
         'subnetwork', vm_, __opts__,
-        default='default', search_global=False)
+        search_global=False)
 
     return ex_subnetwork
 
@@ -555,7 +563,7 @@ def __get_ssh_credentials(vm_):
 
 def create_network(kwargs=None, call=None):
     '''
-    ... versionchanged:: Nitrogen
+    ... versionchanged:: 2017.7.0
     Create a GCE network. Must specify name and cidr.
 
     CLI Example:
@@ -706,7 +714,7 @@ def show_network(kwargs=None, call=None):
 
 def create_subnetwork(kwargs=None, call=None):
     '''
-    ... versionadded:: Nitrogen
+    ... versionadded:: 2017.7.0
     Create a GCE Subnetwork. Must specify name, cidr, network, and region.
 
     CLI Example:
@@ -788,7 +796,7 @@ def create_subnetwork(kwargs=None, call=None):
 
 def delete_subnetwork(kwargs=None, call=None):
     '''
-    ... versionadded:: Nitrogen
+    ... versionadded:: 2017.7.0
     Delete a GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -856,7 +864,7 @@ def delete_subnetwork(kwargs=None, call=None):
 
 def show_subnetwork(kwargs=None, call=None):
     '''
-    ... versionadded:: Nitrogen
+    ... versionadded:: 2017.7.0
     Show details of an existing GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -2165,7 +2173,7 @@ def start(vm_name, call=None):
     '''
     Call GCE 'start on the instance.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -2209,7 +2217,7 @@ def stop(vm_name, call=None):
     '''
     Call GCE 'stop' on the instance.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -2385,7 +2393,7 @@ def create_attach_volumes(name, kwargs, call=None):
     Volumes are attached in the order in which they are given, thus on a new
     node the first volume will be /dev/sdb, the second /dev/sdc, and so on.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2418,7 +2426,7 @@ def request_instance(vm_):
     '''
     Request a single GCE instance from a data dict.
 
-    .. versionchanged: Nitrogen
+    .. versionchanged: 2017.7.0
     '''
     if not GCE_VM_NAME_REGEX.match(vm_['name']):
         raise SaltCloudSystemExit(
@@ -2607,12 +2615,12 @@ def update_pricing(kwargs=None, call=None):
     .. versionadded:: 2015.8.0
     '''
     url = 'https://cloudpricingcalculator.appspot.com/static/data/pricelist.json'
-    price_json = http.query(url, decode=True, decode_type='json')
+    price_json = salt.utils.http.query(url, decode=True, decode_type='json')
 
     outfile = os.path.join(
         __opts__['cachedir'], 'gce-pricing.p'
     )
-    with salt.utils.fopen(outfile, 'w') as fho:
+    with salt.utils.files.fopen(outfile, 'w') as fho:
         msgpack.dump(price_json['dict'], fho)
 
     return True
@@ -2635,7 +2643,7 @@ def show_pricing(kwargs=None, call=None):
     if not profile:
         return {'Error': 'The requested profile was not found'}
 
-    # Make sure the profile belongs to Digital Ocean
+    # Make sure the profile belongs to DigitalOcean
     provider = profile.get('provider', '0:0')
     comps = provider.split(':')
     if len(comps) < 2 or comps[1] != 'gce':
@@ -2651,7 +2659,7 @@ def show_pricing(kwargs=None, call=None):
     if not os.path.exists(pricefile):
         update_pricing()
 
-    with salt.utils.fopen(pricefile, 'r') as fho:
+    with salt.utils.files.fopen(pricefile, 'r') as fho:
         sizes = msgpack.load(fho)
 
     per_hour = float(sizes['gcp_price_list'][size][region])
