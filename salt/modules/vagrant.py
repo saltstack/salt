@@ -35,6 +35,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.sdb
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.ext.six as six
 
@@ -84,11 +85,11 @@ def _build_machine_uri(machine, cwd):
 
 def _update_vm_info(name, vm_):
     ''' store the vm_ information keyed by name '''
-    __utils__['sdb.sdb_set'](_build_sdb_uri(name), vm_, __opts__)
+    salt.utils.sdb.sdb_set(_build_sdb_uri(name), vm_, __opts__)
 
     # store machine-to-name mapping, too
     if vm_['machine']:
-        __utils__['sdb.sdb_set'](
+        salt.utils.sdb.sdb_set(
             _build_machine_uri(vm_['machine'], vm_.get('cwd', '.')),
             name,
             __opts__)
@@ -102,7 +103,7 @@ def get_vm_info(name):
     :return: dictionary of {'machine': x, 'cwd': y, ...}.
     '''
     try:
-        vm_ = __utils__['sdb.sdb_get'](_build_sdb_uri(name), __opts__)
+        vm_ = salt.utils.sdb.sdb_get(_build_sdb_uri(name), __opts__)
     except KeyError:
         raise SaltInvocationError(
             'Probable sdb driver not found. Check your configuration.')
@@ -120,7 +121,7 @@ def get_machine_id(machine, cwd):
     :param cwd: the path to Vagrantfile
     :return: salt_id name
     '''
-    name = __utils__['sdb.sdb_get'](_build_machine_uri(machine, cwd))
+    name = salt.utils.sdb.sdb_get(_build_machine_uri(machine, cwd))
     if name is None:
         raise SaltInvocationError(
             'No Salt name found for Vagrant machine {} in {}'.format(
@@ -142,20 +143,20 @@ def _erase_vm_info(name):
         if vm_['machine']:
             key = _build_machine_uri(vm_['machine'], vm_.get('cwd', '.'))
             try:
-                __utils__['sdb.sdb_delete'](key, __opts__)
+                salt.utils.sdb.sdb_delete(key, __opts__)
             except KeyError:
                 # no delete method found -- load a blank value
-                __utils__['sdb.sdb_set'](key, '', __opts__)
+                salt.utils.sdb.sdb_set(key, '', __opts__)
     except Exception:
         pass
 
     uri = _build_sdb_uri(name)
     try:
         # delete the name record
-        __utils__['sdb.sdb_delete'](uri, __opts__)
+        salt.utils.sdb.sdb_delete(uri, __opts__)
     except KeyError:
         # no delete method found -- load an empty dictionary
-        __utils__['sdb.sdb_set'](uri, {}, __opts__)
+        salt.utils.sdb.sdb_set(uri, {}, __opts__)
     except Exception:
         pass
 
