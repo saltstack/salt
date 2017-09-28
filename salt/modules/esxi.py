@@ -56,3 +56,7 @@ def cmd(command, *args, **kwargs):
     proxy_cmd = proxy_prefix + '.ch_config'
 
     return __proxy__[proxy_cmd](command, *args, **kwargs)
+
+
+def get_details():
+    return __proxy__['esxi.get_details']()

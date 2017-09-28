@@ -14,6 +14,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 
 # Import Salt libraries
+from salt.exceptions import ArgumentValueError
 import salt.utils.vmware
 # Import Third Party Libs
 try:
@@ -46,13 +47,21 @@ class GetHostsTestCase(TestCase):
         self.mock_host1, self.mock_host2, self.mock_host3 = MagicMock(), \
                 MagicMock(), MagicMock()
         self.mock_prop_host1 = {'name': 'fake_hostname1',
-                            'object': self.mock_host1}
+                                'object': self.mock_host1}
         self.mock_prop_host2 = {'name': 'fake_hostname2',
-                            'object': self.mock_host2}
+                                'object': self.mock_host2}
         self.mock_prop_host3 = {'name': 'fake_hostname3',
-                            'object': self.mock_host3}
+                                'object': self.mock_host3}
         self.mock_prop_hosts = [self.mock_prop_host1, self.mock_prop_host2,
                                 self.mock_prop_host3]
+
+    def test_cluster_no_datacenter(self):
+        with self.assertRaises(ArgumentValueError) as excinfo:
+            salt.utils.vmware.get_hosts(self.mock_si,
+                                        cluster_name='fake_cluster')
+        self.assertEqual(excinfo.exception.strerror,
+                         'Must specify the datacenter when specifying the '
+                         'cluster')
 
     def test_get_si_no_datacenter_no_cluster(self):
         mock_get_mors = MagicMock()
@@ -124,23 +133,20 @@ class GetHostsTestCase(TestCase):
         self.assertEqual(res, [])
 
     def test_filter_cluster(self):
-        cluster1 = vim.ClusterComputeResource('fake_good_cluster')
-        cluster2 = vim.ClusterComputeResource('fake_bad_cluster')
-        # Mock cluster1.name and cluster2.name
-        cluster1._stub = MagicMock(InvokeAccessor=MagicMock(
-            return_value='fake_good_cluster'))
-        cluster2._stub = MagicMock(InvokeAccessor=MagicMock(
-            return_value='fake_bad_cluster'))
-        self.mock_prop_host1['parent'] = cluster2
-        self.mock_prop_host2['parent'] = cluster1
-        self.mock_prop_host3['parent'] = cluster1
+        self.mock_prop_host1['parent'] = vim.ClusterComputeResource('cluster')
+        self.mock_prop_host2['parent'] = vim.ClusterComputeResource('cluster')
+        self.mock_prop_host3['parent'] = vim.Datacenter('dc')
+        mock_get_cl_name = MagicMock(
+            side_effect=['fake_bad_cluster', 'fake_good_cluster'])
         with patch('salt.utils.vmware.get_mors_with_properties',
                    MagicMock(return_value=self.mock_prop_hosts)):
-            res = salt.utils.vmware.get_hosts(self.mock_si,
-                                              datacenter_name='fake_datacenter',
-                                              cluster_name='fake_good_cluster',
-                                              get_all_hosts=True)
-        self.assertEqual(res, [self.mock_host2, self.mock_host3])
+            with patch('salt.utils.vmware.get_managed_object_name',
+                       mock_get_cl_name):
+                res = salt.utils.vmware.get_hosts(
+                    self.mock_si, datacenter_name='fake_datacenter',
+                    cluster_name='fake_good_cluster', get_all_hosts=True)
+        self.assertEqual(mock_get_cl_name.call_count, 2)
+        self.assertEqual(res, [self.mock_host2])
 
     def test_no_hosts(self):
         with patch('salt.utils.vmware.get_mors_with_properties',
