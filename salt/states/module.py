@@ -319,7 +319,7 @@ def _call_function(name, returner=None, **kwargs):
     arg_type, na_type, kw_type = [], {}, False
     for funcset in reversed(kwargs.get('func_args') or []):
         if not isinstance(funcset, dict):
-                arg_type.append(funcset)
+            arg_type.append(funcset)
         elif isinstance(funcset, dict):
             arg_type += funcset.values()
             na_type.update(funcset)
