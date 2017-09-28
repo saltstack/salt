@@ -19,7 +19,7 @@ class ExtraMinionDataInPillarTestCase(TestCase, LoaderModuleMockMixin):
     '''
     def setup_loader_modules(self):
         return {
-            extra_minion_data_in_pillar : {
+            extra_minion_data_in_pillar: {
                 '__virtual__': True,
             }
         }
