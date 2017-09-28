@@ -6,29 +6,26 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import mongodb_user
-
-mongodb_user.__salt__ = {}
-mongodb_user.__opts__ = {}
+import salt.states.mongodb_user as mongodb_user
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MongodbUserTestCase(TestCase):
+class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.mongodb_user
     '''
+    def setup_loader_modules(self):
+        return {mongodb_user: {'__opts__': {'test': True}}}
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -47,13 +44,16 @@ class MongodbUserTestCase(TestCase):
         ret.update({'comment': comt})
         self.assertDictEqual(mongodb_user.present(name, passwd, port={}), ret)
 
-        mock = MagicMock(side_effect=[True, False, False])
         mock_t = MagicMock(return_value=True)
+        mock_f = MagicMock(return_value=[])
         with patch.dict(mongodb_user.__salt__,
-                        {'mongodb.user_exists': mock,
-                         'mongodb.user_create': mock_t}):
-            comt = ('User {0} is already present'.format(name))
-            ret.update({'comment': comt, 'result': True})
+                        {
+                         'mongodb.user_create': mock_t,
+                         'mongodb.user_find': mock_f
+                        }):
+            comt = ('User {0} is not present and needs to be created'
+                ).format(name)
+            ret.update({'comment': comt, 'result': None})
             self.assertDictEqual(mongodb_user.present(name, passwd), ret)
 
             with patch.dict(mongodb_user.__opts__, {'test': True}):
@@ -102,8 +102,3 @@ class MongodbUserTestCase(TestCase):
                     .format(name))
             ret.update({'comment': comt, 'result': True, 'changes': {}})
             self.assertDictEqual(mongodb_user.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MongodbUserTestCase, needs_daemon=False)

@@ -48,11 +48,10 @@ import logging
 
 # Import Salt libs
 import salt.utils.jid
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     from raven import Client
-    from raven.transport.http import HTTPTransport
 
     has_raven = True
 except ImportError:
@@ -130,7 +129,7 @@ def returner(ret):
             return
 
         if raven_config.get('dsn'):
-            client = Client(raven_config.get('dsn'), transport=HTTPTransport)
+            client = Client(raven_config.get('dsn'))
         else:
             try:
                 servers = []
@@ -140,8 +139,7 @@ def returner(ret):
                     servers=servers,
                     public_key=raven_config['public_key'],
                     secret_key=raven_config['secret_key'],
-                    project=raven_config['project'],
-                    transport=HTTPTransport
+                    project=raven_config['project']
                 )
             except KeyError as missing_key:
                 logger.error(
@@ -172,4 +170,4 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

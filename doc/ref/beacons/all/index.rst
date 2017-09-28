@@ -22,6 +22,7 @@ beacon modules
     load
     log
     memusage
+    napalm_beacon
     network_info
     network_settings
     pkg
@@ -32,5 +33,6 @@ beacon modules
     service
     sh
     status
+    telegram_bot_msg
     twilio_txt_msg
     wtmp

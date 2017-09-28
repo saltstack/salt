@@ -6,29 +6,26 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import varnish
-
-# Globals
-varnish.__salt__ = {}
+import salt.modules.varnish as varnish
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class VarnishTestCase(TestCase):
+class VarnishTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.varnish
     '''
+    def setup_loader_modules(self):
+        return {varnish: {}}
+
     def test_version(self):
         '''
         Test to return server version from varnishd -V
@@ -86,8 +83,3 @@ class VarnishTestCase(TestCase):
                           return_value={'retcode': False,
                                         'stdout': 'A .1\nB .2\n'}):
             self.assertEqual(varnish.param_show('param'), {'A': '.1'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VarnishTestCase, needs_daemon=False)

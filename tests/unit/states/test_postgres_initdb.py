@@ -4,33 +4,31 @@
 '''
 from __future__ import absolute_import
 
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
-from salt.states import postgres_initdb
+import salt.states.postgres_initdb as postgres_initdb
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PostgresInitdbTestCase(TestCase):
+class PostgresInitdbTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.postgres_initdb
     '''
+
+    def setup_loader_modules(self):
+        return {postgres_initdb: {}}
 
     def setUp(self):
         '''
         Setup data for the tests
         '''
-        postgres_initdb.__opts__ = {}
-        postgres_initdb.__salt__ = {}
         self.name = '/var/lib/psql/data'
         self.ret = {
             'name': self.name,
@@ -39,6 +37,11 @@ class PostgresInitdbTestCase(TestCase):
             'comment': ''}
         self.mock_true = MagicMock(return_value=True)
         self.mock_false = MagicMock(return_value=False)
+
+    def tearDown(self):
+        del self.ret
+        del self.mock_true
+        del self.mock_false
 
     def test_present_existing(self):
         '''

@@ -14,23 +14,20 @@ in ~/.ssh/known_hosts, and the remote host has this host's public key.
           - target: /tmp/example_repo
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import logging
 import os
 import shutil
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.states.git import _fail, _neutral_test
 
 log = logging.getLogger(__name__)
 
-if salt.utils.is_windows():
-    HG_BINARY = "hg.exe"
-else:
-    HG_BINARY = "hg"
+HG_BINARY = 'hg.exe' if salt.utils.platform.is_windows() else 'hg'
 
 
 def __virtual__():
@@ -83,7 +80,7 @@ def latest(name,
     update_head
         Should we update the head if new changes are found? Defaults to True
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}

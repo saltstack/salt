@@ -6,29 +6,26 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import kmod
-
-kmod.__salt__ = {}
-kmod.__opts__ = {}
+import salt.states.kmod as kmod
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class KmodTestCase(TestCase):
+class KmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.kmod
     '''
+    def setup_loader_modules(self):
+        return {kmod: {}}
+
     # 'present' function tests: 2
 
     def test_present(self):
@@ -217,8 +214,3 @@ class KmodTestCase(TestCase):
                             'result': True,
                             'changes': {}})
                 self.assertDictEqual(kmod.absent(name, mods=mods), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KmodTestCase, needs_daemon=False)

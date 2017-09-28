@@ -6,6 +6,7 @@ Runs all the example FloScripts
 
 
 '''
+# pylint: disable=3rd-party-module-not-gated
 
 # Import Python Libs
 from __future__ import absolute_import, print_function

@@ -6,8 +6,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -15,22 +16,18 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import debconfmod
+import salt.modules.debconfmod as debconfmod
 import os
 
 
-# Globals
-debconfmod.__grains__ = {}
-debconfmod.__salt__ = {}
-debconfmod.__context__ = {}
-debconfmod.__opts__ = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DebconfmodTestCase(TestCase):
+class DebconfmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.DebconfmodTestCase
     '''
+    def setup_loader_modules(self):
+        return {debconfmod: {}}
+
     def test_get_selections(self):
         '''
         Test for Answers to debconf questions for all packages
@@ -89,8 +86,3 @@ class DebconfmodTestCase(TestCase):
             mock = MagicMock(return_value=None)
             with patch.object(debconfmod, '_set_file', mock):
                 self.assertFalse(debconfmod.set_file('path'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DebconfmodTestCase, needs_daemon=False)

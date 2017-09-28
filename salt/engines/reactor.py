@@ -7,10 +7,10 @@ Example Config in Master or Minion config
 .. code-block:: yaml
 
     engines:
-      reactor:
-        refresh_interval: 60
-        worker_threads: 10
-        worker_hwm: 10000
+      - reactor:
+          refresh_interval: 60
+          worker_threads: 10
+          worker_hwm: 10000
 
     reactor:
       - 'salt/cloud/*/destroyed':

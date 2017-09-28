@@ -7,20 +7,28 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import twilio_notify
+import salt.modules.twilio_notify as twilio_notify
+
+HAS_LIBS = False
+try:
+    import twilio
+    if twilio.__version__ > 5:
+        TWILIO_5 = False
+    else:
+        TWILIO_5 = True
+    HAS_LIBS = True
+except ImportError:
+    pass
 
 
 class MockTwilioRestException(Exception):
@@ -78,17 +86,26 @@ class MockTwilioRestClient(object):
     Mock TwilioRestClient class
     '''
     def __init__(self):
-        self.sms = MockSMS()
+        if TWILIO_5:
+            self.sms = MockSMS()
+        else:
+            self.messages = MockMessages()
 
-twilio_notify.TwilioRestClient = MockTwilioRestClient
-twilio_notify.TwilioRestException = MockTwilioRestException
 
-
+@skipIf(not HAS_LIBS, 'twilio.rest is not available')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TwilioNotifyTestCase(TestCase):
+class TwilioNotifyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.twilio_notify
     '''
+    def setup_loader_modules(self):
+        return {
+            twilio_notify: {
+                'TwilioRestClient': MockTwilioRestClient,
+                'TwilioRestException': MockTwilioRestException
+            }
+        }
+
     # 'send_sms' function tests: 1
 
     def test_send_sms(self):
@@ -117,8 +134,3 @@ class TwilioNotifyTestCase(TestCase):
                                  {'message': {'sid': None}, '_error':
                                   {'msg': 'Exception error',
                                    'status': 'Not send', 'code': 'error code'}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TwilioNotifyTestCase, needs_daemon=False)

@@ -22,9 +22,13 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
+import salt.utils.path
+import salt.utils.pkg
 import salt.utils.systemd
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 
 # Import third party libs
 HAS_PORTAGE = False
@@ -59,21 +63,32 @@ def __virtual__():
 
 
 def _vartree():
-    import portage
+    import portage  # pylint: disable=3rd-party-module-not-gated
     portage = reload(portage)
     return portage.db[portage.root]['vartree']
 
 
 def _porttree():
-    import portage
+    import portage  # pylint: disable=3rd-party-module-not-gated
     portage = reload(portage)
     return portage.db[portage.root]['porttree']
 
 
 def _p_to_cp(p):
-    ret = _porttree().dbapi.xmatch("match-all", p)
-    if ret:
-        return portage.cpv_getkey(ret[0])
+    try:
+        ret = portage.dep_getkey(p)
+        if ret:
+            return ret
+    except portage.exception.InvalidAtom:
+        pass
+
+    try:
+        ret = _porttree().dbapi.xmatch('bestmatch-visible', p)
+        if ret:
+            return portage.dep_getkey(ret)
+    except portage.exception.InvalidAtom:
+        pass
+
     return None
 
 
@@ -87,11 +102,14 @@ def _allnodes():
 
 
 def _cpv_to_cp(cpv):
-    ret = portage.cpv_getkey(cpv)
-    if ret:
-        return ret
-    else:
-        return cpv
+    try:
+        ret = portage.dep_getkey(cpv)
+        if ret:
+            return ret
+    except portage.exception.InvalidAtom:
+        pass
+
+    return cpv
 
 
 def _cpv_to_version(cpv):
@@ -233,7 +251,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
         installed = _cpv_to_version(_vartree().dep_bestmatch(name))
         avail = _cpv_to_version(_porttree().dep_bestmatch(name))
-        if avail and (not installed or salt.utils.compare_versions(ver1=installed, oper='<', ver2=avail, cmp_func=version_cmp)):
+        if avail and (not installed or salt.utils.versions.compare(ver1=installed, oper='<', ver2=avail, cmp_func=version_cmp)):
             ret[name] = avail
 
     # Return a string if only one package name passed
@@ -412,6 +430,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     if 'eix.sync' in __salt__:
         return __salt__['eix.sync']()
 
@@ -419,7 +439,7 @@ def refresh_db():
         # GPG sign verify is supported only for "webrsync"
         cmd = 'emerge-webrsync -q'
         # We prefer 'delta-webrsync' to 'webrsync'
-        if salt.utils.which('emerge-delta-webrsync'):
+        if salt.utils.path.which('emerge-delta-webrsync'):
             cmd = 'emerge-delta-webrsync -q'
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
     else:
@@ -429,7 +449,7 @@ def refresh_db():
         # We fall back to "webrsync" if "rsync" fails for some reason
         cmd = 'emerge-webrsync -q'
         # We prefer 'delta-webrsync' to 'webrsync'
-        if salt.utils.which('emerge-delta-webrsync'):
+        if salt.utils.path.which('emerge-delta-webrsync'):
             cmd = 'emerge-delta-webrsync -q'
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
@@ -589,9 +609,7 @@ def install(name=None,
     # Handle version kwarg for a single package target
     if pkgs is None and sources is None:
         version_num = kwargs.get('version')
-        if version_num:
-            pkg_params = {name: version_num}
-        else:
+        if not version_num:
             version_num = ''
             if slot is not None:
                 version_num += ':{0}'.format(slot)
@@ -1108,10 +1126,10 @@ def version_cmp(pkg1, pkg2, **kwargs):
     # definition (and thus have it show up in the docs), we just pop it out of
     # the kwargs dict and then raise an exception if any kwargs other than
     # ignore_epoch were passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     kwargs.pop('ignore_epoch', None)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     regex = r'^~?([^:\[]+):?[^\[]*\[?.*$'
     ver1 = re.match(regex, pkg1)

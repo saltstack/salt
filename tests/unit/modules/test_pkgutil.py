@@ -7,32 +7,30 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
+    Mock,
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import pkgutil
+import salt.modules.pkgutil as pkgutil
 from salt.exceptions import CommandExecutionError, MinionError
-
-# Globals
-pkgutil.__salt__ = {}
-pkgutil.__context__ = {}
+import salt.utils.pkg
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PkgutilTestCase(TestCase):
+class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pkgutil
     '''
+    def setup_loader_modules(self):
+        return {pkgutil: {}}
+
     # 'refresh_db' function tests: 1
 
     def test_refresh_db(self):
@@ -41,7 +39,8 @@ class PkgutilTestCase(TestCase):
         '''
         mock = MagicMock(return_value=0)
         with patch.dict(pkgutil.__salt__, {'cmd.retcode': mock}):
-            self.assertTrue(pkgutil.refresh_db())
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                self.assertTrue(pkgutil.refresh_db())
 
     # 'upgrade_available' function tests: 1
 
@@ -69,7 +68,8 @@ class PkgutilTestCase(TestCase):
         mock_ret = MagicMock(return_value=0)
         with patch.dict(pkgutil.__salt__, {'cmd.run_stdout': mock_run,
                                            'cmd.retcode': mock_ret}):
-            self.assertDictEqual(pkgutil.list_upgrades(), {'A': ' B'})
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                self.assertDictEqual(pkgutil.list_upgrades(), {'A': ' B'})
 
     # 'upgrade' function tests: 1
 
@@ -87,7 +87,8 @@ class PkgutilTestCase(TestCase):
                          'pkg_resource.sort_pkglist': mock_pkg,
                          'cmd.run_all': mock_ret, 'cmd.run': mock_run}):
             with patch.dict(pkgutil.__context__, {'pkg.list_pkgs': mock_ret}):
-                self.assertDictEqual(pkgutil.upgrade(), {})
+                with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                    self.assertDictEqual(pkgutil.upgrade(), {})
 
     # 'list_pkgs' function tests: 1
 
@@ -146,10 +147,11 @@ class PkgutilTestCase(TestCase):
                          'pkg_resource.stringify': mock_pkg,
                          'pkg_resource.sort_pkglist': mock_pkg,
                          'cmd.run_all': mock_run, 'cmd.run': mock_run_all}):
-            self.assertEqual(pkgutil.latest_version('CSWpython'), '')
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                self.assertEqual(pkgutil.latest_version('CSWpython'), '')
 
-            self.assertDictEqual(pkgutil.latest_version('CSWpython', 'Python'),
-                                 {'Python': '', 'CSWpython': ''})
+                self.assertDictEqual(pkgutil.latest_version('CSWpython', 'Python'),
+                                     {'Python': '', 'CSWpython': ''})
 
     # 'install' function tests: 1
 
@@ -228,8 +230,3 @@ class PkgutilTestCase(TestCase):
         with patch.dict(pkgutil.__salt__,
                         {'pkg_resource.parse_targets': mock_pkg}):
             self.assertRaises(CommandExecutionError, pkgutil.purge)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PkgutilTestCase, needs_daemon=False)

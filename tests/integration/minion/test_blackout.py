@@ -10,20 +10,19 @@ from time import sleep
 import textwrap
 
 # Import Salt Testing libs
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-
-ensure_in_syspath('../')
+from tests.support.case import ModuleCase
+from tests.support.paths import PILLAR_DIR
+from tests.support.helpers import destructiveTest
 
 # Import Salt libs
-import integration
-import salt.utils
+import salt.utils.files
 
 
-BLACKOUT_PILLAR = os.path.join(integration.PILLAR_DIR, 'base', 'blackout.sls')
+BLACKOUT_PILLAR = os.path.join(PILLAR_DIR, 'base', 'blackout.sls')
 
 
 @destructiveTest
-class MinionBlackoutTestCase(integration.ModuleCase):
+class MinionBlackoutTestCase(ModuleCase):
     '''
     Test minion blackout functionality
     '''
@@ -31,7 +30,8 @@ class MinionBlackoutTestCase(integration.ModuleCase):
         '''
         setup minion blackout mode
         '''
-        salt.utils.fopen(BLACKOUT_PILLAR, 'w').write(blackout_data)
+        with salt.utils.files.fopen(BLACKOUT_PILLAR, 'w') as wfh:
+            wfh.write(blackout_data)
         self.run_function('saltutil.refresh_pillar')
         sleep(5)  # wait for minion to enter blackout mode
 
@@ -39,7 +39,7 @@ class MinionBlackoutTestCase(integration.ModuleCase):
         '''
         takedown minion blackout mode
         '''
-        with salt.utils.fopen(BLACKOUT_PILLAR, 'w') as blackout_pillar:
+        with salt.utils.files.fopen(BLACKOUT_PILLAR, 'w') as blackout_pillar:
             blackout_pillar.write(textwrap.dedent('''\
                 minion_blackout: False
                 '''))
@@ -101,8 +101,3 @@ class MinionBlackoutTestCase(integration.ModuleCase):
             self.assertIn('Minion in blackout mode.', cloud_ret)
         finally:
             self.end_blackout()
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MinionBlackoutTestCase, needs_daemon=True)

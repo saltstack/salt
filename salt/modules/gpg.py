@@ -14,7 +14,6 @@ Sign, encrypt and sign plus encrypt text and files.
 
 # Import python libs
 from __future__ import absolute_import
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import functools
 import logging
 import os
@@ -22,12 +21,13 @@ import re
 import time
 
 # Import salt libs
-import salt.utils
-import salt.syspaths
+import salt.utils.files
+import salt.utils.path
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ def _gpg():
     Returns the path to the gpg binary
     '''
     # Get the path to the gpg binary.
-    return salt.utils.which('gpg')
+    return salt.utils.path.which('gpg')
 
 
 def __virtual__():
@@ -97,7 +97,7 @@ def __virtual__():
         return (False, 'The gpg execution module cannot be loaded: '
                 'gpg binary is not in the path.')
     if HAS_LIBS:
-        gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
+        gnupg_version = _LooseVersion(gnupg.__version__)
         if gnupg_version >= '1.3.1':
             global GPG_1_3_1
             GPG_1_3_1 = True
@@ -133,7 +133,7 @@ def _get_user_gnupghome(user):
     Return default GnuPG home directory path for a user
     '''
     if user == 'salt':
-        gnupghome = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+        gnupghome = os.path.join(__salt__['config.get']('config_dir'), 'gpgkeys')
     else:
         gnupghome = os.path.join(_get_user_info(user)['home'], '.gnupg')
 
@@ -163,7 +163,7 @@ def _restore_ownership(func):
                 __salt__['file.chown'](path, run_user['name'], group)
 
         # Filter special kwargs
-        for key in kwargs.keys():
+        for key in list(kwargs):
             if key.startswith('__'):
                 del kwargs[key]
 
@@ -727,7 +727,7 @@ def import_key(text=None,
 
     if filename:
         try:
-            with salt.utils.flopen(filename, 'rb') as _fp:
+            with salt.utils.files.flopen(filename, 'rb') as _fp:
                 lines = _fp.readlines()
                 text = ''.join(lines)
         except IOError:
@@ -929,7 +929,7 @@ def trust_key(keyid=None,
     _user = user
 
     if user == 'salt':
-        homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+        homeDir = os.path.join(__salt__['config.get']('config_dir'), 'gpgkeys')
         cmd.extend([' --homedir', homeDir])
         _user = 'root'
     res = __salt__['cmd.run_all'](cmd,
@@ -1013,20 +1013,20 @@ def sign(user=None,
 
     # Check for at least one secret key to sign with
 
-    gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
+    gnupg_version = _LooseVersion(gnupg.__version__)
     if text:
         if gnupg_version >= '1.3.1':
             signed_data = gpg.sign(text, default_key=keyid, passphrase=gpg_passphrase)
         else:
             signed_data = gpg.sign(text, keyid=keyid, passphrase=gpg_passphrase)
     elif filename:
-        with salt.utils.flopen(filename, 'rb') as _fp:
+        with salt.utils.files.flopen(filename, 'rb') as _fp:
             if gnupg_version >= '1.3.1':
                 signed_data = gpg.sign(text, default_key=keyid, passphrase=gpg_passphrase)
             else:
                 signed_data = gpg.sign_file(_fp, keyid=keyid, passphrase=gpg_passphrase)
         if output:
-            with salt.utils.flopen(output, 'w') as fout:
+            with salt.utils.files.flopen(output, 'w') as fout:
                 fout.write(signed_data.data)
     else:
         raise SaltInvocationError('filename or text must be passed.')
@@ -1036,7 +1036,8 @@ def sign(user=None,
 def verify(text=None,
            user=None,
            filename=None,
-           gnupghome=None):
+           gnupghome=None,
+           signature=None):
     '''
     Verify a message or file
 
@@ -1054,6 +1055,10 @@ def verify(text=None,
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    signature
+        Specify the filename of a detached signature.
+    .. versionadded:: Oxygen
+
     CLI Example:
 
     .. code-block:: bash
@@ -1070,8 +1075,14 @@ def verify(text=None,
     if text:
         verified = gpg.verify(text)
     elif filename:
-        with salt.utils.flopen(filename, 'rb') as _fp:
-            verified = gpg.verify_file(_fp)
+        if signature:
+            # need to call with fopen instead of flopen due to:
+            # https://bitbucket.org/vinay.sajip/python-gnupg/issues/76/verify_file-closes-passed-file-handle
+            with salt.utils.files.fopen(signature, 'rb') as _fp:
+                verified = gpg.verify_file(_fp, filename)
+        else:
+            with salt.utils.files.flopen(filename, 'rb') as _fp:
+                verified = gpg.verify_file(_fp)
     else:
         raise SaltInvocationError('filename or text must be passed.')
 
@@ -1163,12 +1174,12 @@ def encrypt(user=None,
         if GPG_1_3_1:
             # This version does not allow us to encrypt using the
             # file stream # have to read in the contents and encrypt.
-            with salt.utils.flopen(filename, 'rb') as _fp:
+            with salt.utils.files.flopen(filename, 'rb') as _fp:
                 _contents = _fp.read()
             result = gpg.encrypt(_contents, recipients, passphrase=gpg_passphrase, output=output)
         else:
             # This version allows encrypting the file stream
-            with salt.utils.flopen(filename, 'rb') as _fp:
+            with salt.utils.files.flopen(filename, 'rb') as _fp:
                 if output:
                     result = gpg.encrypt_file(_fp, recipients, passphrase=gpg_passphrase, output=output, sign=sign)
                 else:
@@ -1254,7 +1265,7 @@ def decrypt(user=None,
     if text:
         result = gpg.decrypt(text, passphrase=gpg_passphrase)
     elif filename:
-        with salt.utils.flopen(filename, 'rb') as _fp:
+        with salt.utils.files.flopen(filename, 'rb') as _fp:
             if output:
                 result = gpg.decrypt_file(_fp, passphrase=gpg_passphrase, output=output)
             else:

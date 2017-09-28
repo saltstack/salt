@@ -6,22 +6,21 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (ensure_in_syspath, destructiveTest)
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
-# Import salt libs
-import integration
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 @destructiveTest
-@skipIf(salt.utils.is_windows(), 'No mtab on Windows')
-@skipIf(salt.utils.is_darwin(), 'No mtab on Darwin')
-class DiskModuleVirtualizationTest(integration.ModuleCase):
+@skipIf(salt.utils.platform.is_windows(), 'No mtab on Windows')
+@skipIf(salt.utils.platform.is_darwin(), 'No mtab on Darwin')
+class DiskModuleVirtualizationTest(ModuleCase):
     '''
     Test to make sure we return a clean result under Docker. Refs #8976
 
@@ -41,7 +40,7 @@ class DiskModuleVirtualizationTest(integration.ModuleCase):
             shutil.move('/tmp/mtab', '/etc/mtab')
 
 
-class DiskModuleTest(integration.ModuleCase):
+class DiskModuleTest(ModuleCase):
     '''
     Validate the disk module
     '''
@@ -53,7 +52,7 @@ class DiskModuleTest(integration.ModuleCase):
         self.assertTrue(isinstance(ret, dict))
         if not isinstance(ret, dict):
             return
-        if salt.utils.is_darwin():
+        if salt.utils.platform.is_darwin():
             for key, val in six.iteritems(ret):
                 self.assertTrue('filesystem' in val)
                 self.assertTrue('512-blocks' in val)
@@ -71,7 +70,7 @@ class DiskModuleTest(integration.ModuleCase):
                 self.assertTrue('available' in val)
                 self.assertTrue('capacity' in val)
 
-    @skipIf(salt.utils.is_windows(), 'inode info not available on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'inode info not available on Windows')
     def test_inodeusage(self):
         '''
         disk.inodeusage
@@ -86,8 +85,3 @@ class DiskModuleTest(integration.ModuleCase):
             self.assertTrue('free' in val)
             self.assertTrue('use' in val)
             self.assertTrue('filesystem' in val)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests([DiskModuleVirtualizationTest, DiskModuleTest])

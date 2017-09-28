@@ -4,28 +4,25 @@
 from __future__ import absolute_import
 import random
 import string
+import logging
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
     patch
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.config
 import salt.loader
-from salt.modules import boto_cloudwatch_event
+import salt.modules.boto_cloudwatch_event as boto_cloudwatch_event
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd-party libs
-import logging
-
 # pylint: disable=import-error,no-name-in-module,unused-import
 try:
     import boto
@@ -38,14 +35,6 @@ except ImportError:
 
 # pylint: enable=import-error,no-name-in-module,unused-import
 log = logging.getLogger(__name__)
-
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_cloudwatch_event.__utils__ = utils
-boto_cloudwatch_event.__init__(opts)
-boto_cloudwatch_event.__salt__ = {}
 
 
 def _has_required_boto():
@@ -98,13 +87,20 @@ if _has_required_boto():
     )
 
 
-class BotoCloudWatchEventTestCaseBase(TestCase):
+class BotoCloudWatchEventTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    def setup_loader_modules(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        return {boto_cloudwatch_event: {'__utils__': utils}}
+
     def setUp(self):
-        boto_cloudwatch_event.__context__ = {}
-        context.clear()
+        super(BotoCloudWatchEventTestCaseBase, self).setUp()
+        boto_cloudwatch_event.__init__(self.opts)
+        del self.opts
+
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -112,10 +108,12 @@ class BotoCloudWatchEventTestCaseBase(TestCase):
 
         self.patcher = patch('boto3.session.Session')
         self.addCleanup(self.patcher.stop)
+        self.addCleanup(delattr, self, 'patcher')
         mock_session = self.patcher.start()
 
         session_instance = mock_session.return_value
         self.conn = MagicMock()
+        self.addCleanup(delattr, self, 'conn')
         session_instance.client.return_value = self.conn
 
 
@@ -277,8 +275,3 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         self.conn.remove_targets.side_effect = ClientError(error_content, 'remove_targets')
         result = boto_cloudwatch_event.remove_targets(Rule=rule_name, Ids=[], **conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'), error_message.format('remove_targets'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoCloudWatchEventTestCase, needs_daemon=False)

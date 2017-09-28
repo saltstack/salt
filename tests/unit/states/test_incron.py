@@ -6,29 +6,26 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import incron
-
-incron.__salt__ = {}
-incron.__opts__ = {}
+import salt.states.incron as incron
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IncronTestCase(TestCase):
+class IncronTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.incron
     '''
+    def setup_loader_modules(self):
+        return {incron: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -114,8 +111,3 @@ class IncronTestCase(TestCase):
 
                 ret.update({'comment': comt4, 'result': False, 'changes': {}})
                 self.assertDictEqual(incron.absent(name, path, mask, cmd), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(IncronTestCase, needs_daemon=False)

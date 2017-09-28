@@ -9,19 +9,15 @@ import os
 import traceback
 
 # Import Salt Testing Libs
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mixins import RUNTIME_VARS
-
-ensure_in_syspath('../../')
+from tests.support.case import ShellCase
+from tests.support.mixins import RUNTIME_VARS
 
 # Import Salt libs
-import integration
 import salt.config
 from salt.output import display_output
-import salt.config
 
 
-class OutputReturnTest(integration.ShellCase):
+class OutputReturnTest(ShellCase):
     '''
     Integration tests to ensure outputters return their expected format.
     Tests against situations where the loader might not be returning the
@@ -91,8 +87,7 @@ class OutputReturnTest(integration.ShellCase):
         '''
         opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         opts['output_file'] = os.path.join(
-            integration.SYS_TMP_DIR,
-            'salt-tests-tmpdir',
+            RUNTIME_VARS.TMP,
             'outputtest'
         )
         data = {'foo': {'result': False,
@@ -101,7 +96,6 @@ class OutputReturnTest(integration.ShellCase):
         try:
             # this should not raises UnicodeEncodeError
             display_output(data, opts=opts)
-            self.assertTrue(True)
         except Exception:
             # display trace in error message for debugging on jenkins
             trace = traceback.format_exc()
@@ -115,8 +109,3 @@ class OutputReturnTest(integration.ShellCase):
                     delattr(self, 'maxDiff')
                 else:
                     self.maxDiff = old_max_diff
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(OutputReturnTest)

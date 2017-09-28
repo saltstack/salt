@@ -6,29 +6,26 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import aptpkg
-
-aptpkg.__opts__ = {}
-aptpkg.__salt__ = {}
+import salt.states.aptpkg as aptpkg
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class AptTestCase(TestCase):
+class AptTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.aptpkg
     '''
+    def setup_loader_modules(self):
+        return {aptpkg: {}}
+
     # 'held' function tests: 1
 
     def test_held(self):
@@ -45,8 +42,3 @@ class AptTestCase(TestCase):
         mock = MagicMock(return_value=False)
         with patch.dict(aptpkg.__salt__, {'pkg.get_selections': mock}):
             self.assertDictEqual(aptpkg.held(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AptTestCase, needs_daemon=False)

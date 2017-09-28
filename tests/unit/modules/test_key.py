@@ -5,10 +5,12 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import os.path
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -17,18 +19,17 @@ from salttesting.mock import (
 
 # Import Salt Libs
 import salt.utils
-import os.path
-from salt.modules import key
-
-# Globals
-key.__opts__ = {}
+import salt.modules.key as key
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class KeyTestCase(TestCase):
+class KeyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.key
     '''
+    def setup_loader_modules(self):
+        return {key: {}}
+
     def test_finger(self):
         '''
         Test for finger
@@ -50,8 +51,3 @@ class KeyTestCase(TestCase):
                 with patch.dict(key.__opts__,
                         {'pki_dir': 'A', 'hash_type': 'sha256'}):
                     self.assertEqual(key.finger_master(), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeyTestCase, needs_daemon=False)

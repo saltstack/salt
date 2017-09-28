@@ -7,8 +7,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -16,17 +17,17 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import hadoop
-
-# Globals
-hadoop.__salt__ = {}
+import salt.modules.hadoop as hadoop
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class HadoopTestCase(TestCase):
+class HadoopTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.hadoop
     '''
+    def setup_loader_modules(self):
+        return {hadoop: {}}
+
     def test_version(self):
         '''
         Test for Return version from hadoop version
@@ -68,8 +69,3 @@ class HadoopTestCase(TestCase):
         '''
         with patch.object(hadoop, '_hadoop_cmd', return_value='A'):
             self.assertEqual(hadoop.namenode_format('force'), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HadoopTestCase, needs_daemon=False)

@@ -7,14 +7,10 @@ tests for host state
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ModuleCase
 
 
-class CompileTest(integration.ModuleCase):
+class CompileTest(ModuleCase):
     '''
     Validate the state compiler
     '''
@@ -36,8 +32,3 @@ class CompileTest(integration.ModuleCase):
             ', in jinja_error' in ret[0].strip())
         self.assertTrue(
             ret[0].strip().endswith('Exception: hehehe'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CompileTest)

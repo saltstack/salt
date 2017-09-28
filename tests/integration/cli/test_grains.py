@@ -17,16 +17,13 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Libs
-import integration
-import salt.utils
+import salt.utils.files
 
 # Import Salt Testing Libs
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.case import ShellCase, SSHCase
 
 
-class GrainsTargetingTest(integration.ShellCase):
+class GrainsTargetingTest(ShellCase):
     '''
     Integration tests for targeting with grains.
     '''
@@ -64,9 +61,11 @@ class GrainsTargetingTest(integration.ShellCase):
         # Create a minion key, but do not start the "fake" minion. This mimics a
         # disconnected minion.
         key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'disconnected')
-        with salt.utils.fopen(key_file, 'a'):
+        with salt.utils.files.fopen(key_file, 'a'):
             pass
 
+        import logging
+        log = logging.getLogger(__name__)
         # ping disconnected minion and ensure it times out and returns with correct message
         try:
             ret = ''
@@ -78,10 +77,10 @@ class GrainsTargetingTest(integration.ShellCase):
             os.unlink(key_file)
 
 
-class SSHGrainsTest(integration.SSHCase):
+class SSHGrainsTest(SSHCase):
     '''
     Test salt-ssh grains functionality
-    Depend on proper environment set by integration.SSHCase class
+    Depend on proper environment set by SSHCase class
     '''
 
     def test_grains_id(self):
@@ -90,8 +89,3 @@ class SSHGrainsTest(integration.SSHCase):
         '''
         cmd = self.run_function('grains.get', ['id'])
         self.assertEqual(cmd, 'localhost')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SSHGrainsTest)

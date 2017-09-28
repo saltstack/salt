@@ -6,25 +6,21 @@ Tests for the service state
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    ensure_in_syspath,
-    destructiveTest
-)
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import integration
-import salt.utils
+import salt.utils.path
 
 INIT_DELAY = 5
 SERVICE_NAME = 'crond'
 
 
 @destructiveTest
-@skipIf(salt.utils.which('crond') is None, 'crond not installed')
-class ServiceTest(integration.ModuleCase,
-                  integration.SaltReturnAssertsMixIn):
+@skipIf(salt.utils.path.which('crond') is None, 'crond not installed')
+class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the service state
     '''
@@ -34,7 +30,7 @@ class ServiceTest(integration.ModuleCase,
         '''
         check_status = self.run_function('service.status', name=SERVICE_NAME)
         if check_status is not exp_return:
-            self.assertFalse('status of service is not returning correctly')
+            self.fail('status of service is not returning correctly')
 
     def test_service_dead(self):
         '''
@@ -60,7 +56,3 @@ class ServiceTest(integration.ModuleCase,
                              init_delay=INIT_DELAY)
         self.assertSaltTrueReturn(ret)
         self.check_service_status(False)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ServiceTest)

@@ -27,9 +27,11 @@ state modules
     bigip
     blockdev
     boto3_elasticache
+    boto3_route53
     boto_apigateway
     boto_asg
     boto_cfn
+    boto_cloudfront
     boto_cloudtrail
     boto_cloudwatch_alarm
     boto_cloudwatch_event
@@ -40,6 +42,7 @@ state modules
     boto_elasticache
     boto_elasticsearch_domain
     boto_elb
+    boto_elbv2
     boto_iam
     boto_iam_role
     boto_iot
@@ -72,7 +75,12 @@ state modules
     dellchassis
     disk
     docker
+    docker_container
+    docker_image
+    docker_network
+    docker_volume
     drac
+    elasticsearch
     elasticsearch_index
     elasticsearch_index_template
     environ
@@ -125,15 +133,21 @@ state modules
     junos
     k8s
     kapacitor
+    kernelpkg
     keyboard
     keystone
     kmod
+    kubernetes
     layman
     ldap
     libcloud_dns
+    libcloud_loadbalancer
+    libcloud_storage
     linux_acl
     locale
+    logadm
     logrotate
+    loop
     lvm
     lvs_server
     lvs_service
@@ -154,15 +168,19 @@ state modules
     mongodb_user
     monit
     mount
+    msteams
     mysql_database
     mysql_grants
     mysql_query
     mysql_user
+    netacl
     netconfig
     netntp
     netsnmp
     netusers
     network
+    netyang
+    nfs_export
     nftables
     npm
     ntp
@@ -234,7 +252,6 @@ state modules
     stateconf
     status
     statuspage
-    stormpath_account
     supervisord
     svn
     sysctl
@@ -250,6 +267,7 @@ state modules
     tuned
     uptime
     user
+    vault
     vbox_guest
     victorops
     virt
@@ -277,6 +295,7 @@ state modules
     xmpp
     zabbix_host
     zabbix_hostgroup
+    zabbix_mediatype
     zabbix_user
     zabbix_usergroup
     zcbuildout

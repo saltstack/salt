@@ -39,14 +39,15 @@ from __future__ import absolute_import
 import hashlib
 import logging
 import sys
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 from functools import partial
 
 # Import salt libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
 import salt.utils
+import salt.utils.stringutils
 
 # Import third party libs
 # pylint: disable=import-error
@@ -131,7 +132,7 @@ def _get_profile(service, region, key, keyid, profile):
     if keyid:
         hash_string = region + keyid + key
         if six.PY3:
-            hash_string = salt.utils.to_bytes(hash_string)
+            hash_string = salt.utils.stringutils.to_bytes(hash_string)
         cxkey = label + hashlib.md5(hash_string).hexdigest()
     else:
         cxkey = label + region
@@ -181,7 +182,7 @@ def cache_id_func(service):
     '''
     Returns a partial `cache_id` function for the provided service.
 
-    ... code-block:: python
+    .. code-block:: python
 
         cache_id = __utils__['boto.cache_id_func']('ec2')
         cache_id('myinstance', 'i-a1b2c3')
@@ -232,7 +233,7 @@ def get_connection_func(service, module=None):
     '''
     Returns a partial `get_connection` function for the provided service.
 
-    ... code-block:: python
+    .. code-block:: python
 
         get_conn = __utils__['boto.get_connection_func']('ec2')
         conn = get_conn()
@@ -328,21 +329,11 @@ def paged_call(function, *args, **kwargs):
         kwargs[marker_arg] = marker
 
 
-def get_role_arn(name, region=None, key=None, keyid=None, profile=None):
-    if name.startswith('arn:aws:iam:'):
-        return name
-
-    account_id = __salt__['boto_iam.get_account_id'](
-        region=region, key=key, keyid=keyid, profile=profile
-    )
-    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
-
-
-def _ordered(obj):
+def ordered(obj):
     if isinstance(obj, (list, tuple)):
-        return sorted(_ordered(x) for x in obj)
+        return sorted(ordered(x) for x in obj)
     elif isinstance(obj, dict):
-        return dict((six.text_type(k) if isinstance(k, six.string_types) else k, _ordered(v)) for k, v in obj.items())
+        return dict((six.text_type(k) if isinstance(k, six.string_types) else k, ordered(v)) for k, v in obj.items())
     elif isinstance(obj, six.string_types):
         return six.text_type(obj)
     return obj
@@ -351,4 +342,4 @@ def _ordered(obj):
 def json_objs_equal(left, right):
     """ Compare two parsed JSON objects, given non-ordering in JSON objects
     """
-    return _ordered(left) == _ordered(right)
+    return ordered(left) == ordered(right)

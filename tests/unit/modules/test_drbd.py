@@ -7,8 +7,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -16,19 +17,17 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import drbd
-
-# Globals
-drbd.__grains__ = {}
-drbd.__salt__ = {}
-drbd.__context__ = {}
+import salt.modules.drbd as drbd
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DrbdTestCase(TestCase):
+class DrbdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.drbd
     '''
+    def setup_loader_modules(self):
+        return {drbd: {}}
+
     # 'overview' function tests: 1
 
     def test_overview(self):
@@ -66,8 +65,3 @@ class DrbdTestCase(TestCase):
         UpToDate/partner syncbar None 50 50')
         with patch.dict(drbd.__salt__, {'cmd.run': mock}):
             self.assertDictEqual(drbd.overview(), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DrbdTestCase, needs_daemon=False)

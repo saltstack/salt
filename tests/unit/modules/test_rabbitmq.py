@@ -7,36 +7,28 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import rabbitmq
+import salt.modules.rabbitmq as rabbitmq
 from salt.exceptions import CommandExecutionError
-
-# Globals
-rabbitmq.__salt__ = {}
-rabbitmq.__context__ = {}
-
-# These are set by rabbitmq.__virtual__()
-rabbitmq.__context__['rabbitmqctl'] = None
-rabbitmq.__context__['rabbitmq-plugins'] = None
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RabbitmqTestCase(TestCase):
+class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rabbitmq
     '''
+    def setup_loader_modules(self):
+        return {rabbitmq: {'__context__': {'rabbitmqctl': None, 'rabbitmq-plugins': None}}}
+
     # 'list_users_rabbitmq2' function tests: 1
 
     def test_list_users_rabbitmq2(self):
@@ -521,8 +513,3 @@ class RabbitmqTestCase(TestCase):
                                             'pkg.version': mock_pkg}):
             self.assertDictEqual(rabbitmq.disable_plugin('salt'),
                                  {'Disabled': 'saltstack'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RabbitmqTestCase, needs_daemon=False)

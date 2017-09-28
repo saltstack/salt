@@ -90,7 +90,7 @@ by their ``os`` grain:
 
 ``/srv/pillar/packages.sls``
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if grains['os'] == 'RedHat' %}
     apache: httpd
@@ -116,13 +116,13 @@ of ``Foo Industries``.
 Consequently this data can be used from within modules, renderers, State SLS
 files, and more via the shared pillar :ref:`dict <python2:typesmapping>`:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     apache:
       pkg.installed:
         - name: {{ pillar['apache'] }}
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     git:
       pkg.installed:
@@ -155,7 +155,7 @@ And the actual pillar file at '/srv/pillar/common_pillar.sls':
     environment has its own top file, the jinja placeholder ``{{ saltenv }}``
     can be used in place of the environment name:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {{ saltenv }}:
           '*':
@@ -376,7 +376,7 @@ the ``testing`` environment, without modifying the in-memory pillar data.
     this case would still restrict the states' pillar data to just that of the
     ``testing`` pillar environment.
 
-Starting in the Nitrogen release, it is possible to pin the pillarenv to the
+Starting in the 2017.7.0 release, it is possible to pin the pillarenv to the
 effective saltenv, using the :conf_minion:`pillarenv_from_saltenv` minion
 config option. When this is set to ``True``, if a specific saltenv is specified
 when running states, the ``pillarenv`` will be the same. This essentially makes
@@ -497,7 +497,7 @@ compilation.
 Encrypted Pillar SLS
 --------------------
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Consider the following pillar SLS file:
 

@@ -7,26 +7,29 @@ import time
 import subprocess
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.paths import TMP
 
 # Import salt libs
-import integration
-import salt.utils
+import salt.utils.path
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
+# Import 3rd-party libs
+from salt.ext import six
 
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
-@skipIf(salt.utils.which('supervisorctl') is None, 'supervisord not installed')
-class SupervisordModuleTest(integration.ModuleCase):
+
+@skipIf(six.PY3, 'supervisor does not work under python 3')
+@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@skipIf(salt.utils.path.which('supervisorctl') is None, 'supervisord not installed')
+class SupervisordModuleTest(ModuleCase):
     '''
     Validates the supervisorctl functions.
     '''
     def setUp(self):
         super(SupervisordModuleTest, self).setUp()
 
-        self.venv_test_dir = os.path.join(integration.TMP, 'supervisortests')
+        self.venv_test_dir = os.path.join(TMP, 'supervisortests')
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
         self.supervisor_sock = os.path.join(self.venv_dir, 'supervisor.sock')
 
@@ -76,6 +79,11 @@ class SupervisordModuleTest(integration.ModuleCase):
                 'supervisord.custom', ['shutdown'],
                 conf_file=self.supervisor_conf, bin_env=self.venv_dir)
             self.supervisor_proc.wait()
+        del self.venv_dir
+        del self.venv_test_dir
+        del self.supervisor_sock
+        del self.supervisord
+        del self.supervisor_conf
 
     def test_start_all(self):
         '''
@@ -225,8 +233,3 @@ class SupervisordModuleTest(integration.ModuleCase):
             'supervisord.status', ['sleep_service'],
             conf_file=self.supervisor_conf, bin_env=self.venv_dir)
         self.assertTrue(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SupervisordModuleTest)

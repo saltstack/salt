@@ -7,32 +7,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import bower
+import salt.states.bower as bower
 from salt.exceptions import CommandExecutionError
-
-# Globals
-bower.__salt__ = {}
-bower.__opts__ = {'test': False}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BowerTestCase(TestCase):
+class BowerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.bower
     '''
+    def setup_loader_modules(self):
+        return {bower: {'__opts__': {'test': False}}}
 
     def test_removed_not_installed(self):
         '''
@@ -239,8 +234,3 @@ class BowerTestCase(TestCase):
                             'Package(s) \'underscore\' successfully installed',
                         'changes': {'new': ['underscore'], 'old': []}}
             self.assertEqual(ret, expected)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BowerTestCase, needs_daemon=False)

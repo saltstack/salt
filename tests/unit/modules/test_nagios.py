@@ -4,33 +4,30 @@
 '''
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
-from salt.modules import nagios
-import os
-
-
-# Globals
-nagios.__salt__ = {}
+import salt.modules.nagios as nagios
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NagiosTestCase(TestCase):
+class NagiosTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.nagios
     '''
+    def setup_loader_modules(self):
+        return {nagios: {}}
+
     def test_run(self):
         '''
         Test for Run nagios plugin and return all
@@ -86,8 +83,3 @@ class NagiosTestCase(TestCase):
         '''
         with patch.object(os, 'listdir', return_value=[]):
             self.assertEqual(nagios.list_plugins(), [])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NagiosTestCase, needs_daemon=False)

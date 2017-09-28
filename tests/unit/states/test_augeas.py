@@ -5,12 +5,12 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
-
 import os
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     mock_open,
     NO_MOCK,
     NO_MOCK_REASON,
@@ -18,23 +18,20 @@ from salttesting.mock import (
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import augeas
+import salt.states.augeas as augeas
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class AugeasTestCase(TestCase):
+class AugeasTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.augeas
     '''
+    def setup_loader_modules(self):
+        return {augeas: {}}
+
     # 'change' function tests: 1
     def setUp(self):
-        augeas.__opts__ = {}
-        augeas.__salt__ = {}
         self.name = 'zabbix'
         self.context = '/files/etc/services'
         self.changes = ['ins service-name after service-name[last()]',
@@ -57,6 +54,12 @@ class AugeasTestCase(TestCase):
             'remove': 'remove',
         }
         self.mock_method_map = MagicMock(return_value=method_map)
+
+    def tearDown(self):
+        del self.ret
+        del self.changes
+        del self.fp_changes
+        del self.mock_method_map
 
     def test_change_non_list_changes(self):
         '''
@@ -138,7 +141,7 @@ class AugeasTestCase(TestCase):
             with patch.dict(augeas.__salt__, mock_dict_):
                 mock_filename = MagicMock(return_value='/etc/services')
                 with patch.object(augeas, '_workout_filename', mock_filename):
-                    with patch('salt.utils.fopen', MagicMock(mock_open)):
+                    with patch('salt.utils.files.fopen', MagicMock(mock_open)):
                         mock_diff = MagicMock(return_value=['+ zabbix-agent'])
                         with patch('difflib.unified_diff', mock_diff):
                             self.assertDictEqual(augeas.change(self.name,
@@ -215,7 +218,7 @@ class AugeasTestCase(TestCase):
             mock_dict_ = {'augeas.execute': mock_execute,
                         'augeas.method_map': self.mock_method_map}
             with patch.dict(augeas.__salt__, mock_dict_):
-                with patch('salt.utils.fopen', MagicMock(mock_open)):
+                with patch('salt.utils.files.fopen', MagicMock(mock_open)):
                     self.assertDictEqual(augeas.change(self.name,
                                         context=self.context,
                                         changes=self.changes),
@@ -240,8 +243,3 @@ class AugeasTestCase(TestCase):
                                         context=self.context,
                                         changes=self.changes),
                                         self.ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AugeasTestCase, needs_daemon=False)

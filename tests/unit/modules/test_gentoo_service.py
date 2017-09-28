@@ -4,37 +4,33 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from mock import call
-
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
-    NO_MOCK_REASON
+    NO_MOCK_REASON,
+    call
 )
 
 # Import Salt Libs
-from salt.modules import gentoo_service
-
-
-# Globals
-gentoo_service.__grains__ = {}
-gentoo_service.__salt__ = {}
-gentoo_service.__context__ = {}
-gentoo_service.__opts__ = {}
+import salt.modules.gentoo_service as gentoo_service
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GentooServicesTestCase(TestCase):
-    """
+class GentooServicesTestCase(TestCase, LoaderModuleMockMixin):
+    '''
     Test cases for salt.modules.gentoo_service
-    """
+    '''
+
+    def setup_loader_modules(self):
+        return {gentoo_service: {}}
 
     def test_service_list_parser(self):
-        """
+        '''
         Test for parser of rc-status results
-        """
+        '''
         # no services is enabled
         mock = MagicMock(return_value='')
         with patch.dict(gentoo_service.__salt__, {'cmd.run': mock}):
@@ -42,9 +38,9 @@ class GentooServicesTestCase(TestCase):
         mock.assert_called_once_with('rc-update -v show')
 
     def test_get_enabled_single_runlevel(self):
-        """
+        '''
         Test for Return a list of service that are enabled on boot
-        """
+        '''
         service_name = 'name'
         runlevels = ['default']
         mock = MagicMock(return_value=self.__services({service_name: runlevels}))
@@ -54,9 +50,9 @@ class GentooServicesTestCase(TestCase):
             self.assertEqual(enabled_services[service_name], runlevels)
 
     def test_get_enabled_filters_out_disabled_services(self):
-        """
+        '''
         Test for Return a list of service that are enabled on boot
-        """
+        '''
         service_name = 'name'
         runlevels = ['default']
         disabled_service = 'disabled'
@@ -70,9 +66,9 @@ class GentooServicesTestCase(TestCase):
             self.assertEqual(enabled_services[service_name], runlevels)
 
     def test_get_enabled_with_multiple_runlevels(self):
-        """
+        '''
         Test for Return a list of service that are enabled on boot at more than one runlevel
-        """
+        '''
         service_name = 'name'
         runlevels = ['non-default', 'default']
         mock = MagicMock(return_value=self.__services({service_name: runlevels}))
@@ -83,9 +79,9 @@ class GentooServicesTestCase(TestCase):
             self.assertEqual(enabled_services[service_name][1], runlevels[0])
 
     def test_get_disabled(self):
-        """
+        '''
         Test for Return a list of service that are installed but disabled
-        """
+        '''
         disabled_service = 'disabled'
         enabled_service = 'enabled'
         service_list = self.__services({disabled_service: [],
@@ -97,11 +93,11 @@ class GentooServicesTestCase(TestCase):
             self.assertTrue(disabled_service in disabled_services)
 
     def test_available(self):
-        """
+        '''
         Test for Returns ``True`` if the specified service is
         available, otherwise returns
         ``False``.
-        """
+        '''
         disabled_service = 'disabled'
         enabled_service = 'enabled'
         multilevel_service = 'multilevel'
@@ -120,9 +116,9 @@ class GentooServicesTestCase(TestCase):
             self.assertFalse(gentoo_service.available(missing_service))
 
     def test_missing(self):
-        """
+        '''
         Test for The inverse of service.available.
-        """
+        '''
         disabled_service = 'disabled'
         enabled_service = 'enabled'
         service_list = self.__services({disabled_service: [],
@@ -134,9 +130,9 @@ class GentooServicesTestCase(TestCase):
             self.assertTrue(gentoo_service.missing('missing'))
 
     def test_getall(self):
-        """
+        '''
         Test for Return all available boot services
-        """
+        '''
         disabled_service = 'disabled'
         enabled_service = 'enabled'
         service_list = self.__services({disabled_service: [],
@@ -149,54 +145,54 @@ class GentooServicesTestCase(TestCase):
             self.assertTrue(enabled_service in all_services)
 
     def test_start(self):
-        """
+        '''
         Test for Start the specified service
-        """
+        '''
         mock = MagicMock(return_value=True)
         with patch.dict(gentoo_service.__salt__, {'cmd.retcode': mock}):
             self.assertFalse(gentoo_service.start('name'))
         mock.assert_called_once_with('/etc/init.d/name start', python_shell=False)
 
     def test_stop(self):
-        """
+        '''
         Test for Stop the specified service
-        """
+        '''
         mock = MagicMock(return_value=True)
         with patch.dict(gentoo_service.__salt__, {'cmd.retcode': mock}):
             self.assertFalse(gentoo_service.stop('name'))
         mock.assert_called_once_with('/etc/init.d/name stop', python_shell=False)
 
     def test_restart(self):
-        """
+        '''
         Test for Restart the named service
-        """
+        '''
         mock = MagicMock(return_value=True)
         with patch.dict(gentoo_service.__salt__, {'cmd.retcode': mock}):
             self.assertFalse(gentoo_service.restart('name'))
         mock.assert_called_once_with('/etc/init.d/name restart', python_shell=False)
 
     def test_reload_(self):
-        """
+        '''
         Test for Reload the named service
-        """
+        '''
         mock = MagicMock(return_value=True)
         with patch.dict(gentoo_service.__salt__, {'cmd.retcode': mock}):
             self.assertFalse(gentoo_service.reload_('name'))
         mock.assert_called_once_with('/etc/init.d/name reload', python_shell=False)
 
     def test_zap(self):
-        """
+        '''
         Test for Reload the named service
-        """
+        '''
         mock = MagicMock(return_value=True)
         with patch.dict(gentoo_service.__salt__, {'cmd.retcode': mock}):
             self.assertFalse(gentoo_service.zap('name'))
         mock.assert_called_once_with('/etc/init.d/name zap', python_shell=False)
 
     def test_status(self):
-        """
+        '''
         Test for Return the status for a service
-        """
+        '''
         mock = MagicMock(return_value=True)
         with patch.dict(gentoo_service.__salt__, {'status.pid': mock}):
             self.assertTrue(gentoo_service.status('name', 1))
@@ -226,9 +222,9 @@ class GentooServicesTestCase(TestCase):
         mock.assert_called_once_with('/etc/init.d/name status', python_shell=False)
 
     def test_enable(self):
-        """
+        '''
         Test for Enable the named service to start at boot
-        """
+        '''
         rc_update_mock = MagicMock(return_value=0)
         with patch.dict(gentoo_service.__salt__, {'cmd.retcode': rc_update_mock}):
             self.assertTrue(gentoo_service.enable('name'))
@@ -321,9 +317,9 @@ class GentooServicesTestCase(TestCase):
         rc_update_mock.reset_mock()
 
     def test_disable(self):
-        """
+        '''
         Test for Disable the named service to start at boot
-        """
+        '''
         rc_update_mock = MagicMock(return_value=0)
         with patch.dict(gentoo_service.__salt__, {'cmd.retcode': rc_update_mock}):
             self.assertTrue(gentoo_service.disable('name'))
@@ -407,9 +403,9 @@ class GentooServicesTestCase(TestCase):
         rc_update_mock.reset_mock()
 
     def test_enabled(self):
-        """
+        '''
         Test for Return True if the named service is enabled, false otherwise
-        """
+        '''
         mock = MagicMock(return_value={'name': ['default']})
         with patch.object(gentoo_service, 'get_enabled', mock):
             # service is enabled at any level
@@ -442,8 +438,3 @@ class GentooServicesTestCase(TestCase):
 
     def __services(self, services):
         return '\n'.join([' | '.join([svc, ' '.join(services[svc])]) for svc in services])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GentooServicesTestCase, needs_daemon=False)

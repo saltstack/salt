@@ -14,12 +14,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
-from integration.utils import testprogram
+from tests.integration.utils import testprogram
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +69,3 @@ class SaltTest(testprogram.TestProgramCase):
             message='correct usage',
             stdout=stdout, stderr=stderr
         )
-
-
-if __name__ == '__main__':
-    integration.run_tests(SaltTest)

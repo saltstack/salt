@@ -8,19 +8,15 @@ Test the lxc module
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import (
-    ensure_in_syspath,
+from tests.support.case import ModuleCase
+from tests.support.helpers import (
     skip_if_not_root,
     skip_if_binaries_missing
 )
-from salttesting import skipIf
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.unit import skipIf
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 @skipIf(True,
@@ -28,7 +24,7 @@ import salt.ext.six as six
         'function destroys ALL containers on the box, which is BAD.')
 @skip_if_not_root
 @skip_if_binaries_missing('lxc-start', message='LXC is not installed or minimal version not met')
-class LXCModuleTest(integration.ModuleCase):
+class LXCModuleTest(ModuleCase):
     '''
     Test the lxc module
     '''
@@ -104,7 +100,3 @@ class LXCModuleTest(integration.ModuleCase):
         self.run_function('cmd.run', ['truncate -s 0 {0}'.format(f)])
 
         self.assertEqual(conf.get('lxc.network.type'), 'macvlan')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LXCModuleTest)

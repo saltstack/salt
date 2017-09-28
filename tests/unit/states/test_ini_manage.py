@@ -6,29 +6,26 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import ini_manage
-
-ini_manage.__salt__ = {}
-ini_manage.__opts__ = {}
+import salt.states.ini_manage as ini_manage
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IniManageTestCase(TestCase):
+class IniManageTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ini_manage
     '''
+    def setup_loader_modules(self):
+        return {ini_manage: {}}
+
     # 'options_present' function tests: 1
 
     def test_options_present(self):
@@ -145,8 +142,3 @@ class IniManageTestCase(TestCase):
             comt = ('No anomaly detected')
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(ini_manage.sections_absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(IniManageTestCase, needs_daemon=False)

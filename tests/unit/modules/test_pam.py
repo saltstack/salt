@@ -8,20 +8,16 @@ from __future__ import absolute_import
 import sys
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     patch,
     mock_open,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import pam
+import salt.modules.pam as pam
 
 MOCK_FILE = 'ok ok ignore '
 
@@ -38,12 +34,8 @@ class PamTestCase(TestCase):
         '''
         Test if the parsing function works
         '''
-        with patch('salt.utils.fopen', mock_open(read_data=MOCK_FILE)):
+        with patch('os.path.exists', return_value=True), \
+                patch('salt.utils.files.fopen', mock_open(read_data=MOCK_FILE)):
             self.assertListEqual(pam.read_file('/etc/pam.d/login'),
                                  [{'arguments': [], 'control_flag': 'ok',
                                    'interface': 'ok', 'module': 'ignore'}])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PamTestCase, needs_daemon=False)

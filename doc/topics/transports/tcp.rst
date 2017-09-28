@@ -57,11 +57,16 @@ The minimal `ssl` option in the minion configuration file looks like this:
 
 .. code-block:: yaml
 
+    ssl: True
+    # Versions below 2016.11.4:
     ssl: {}
+
+Specific options can be sent to the minion also, as defined in the Python
+`ssl.wrap_socket` function.
 
 .. note::
 
-    While setting the ssl_version is not required, we recomend it. Some older
+    While setting the ssl_version is not required, we recommend it. Some older
     versions of python do not support the latest TLS protocol and if this is
     the case for your version of python we strongly recommend upgrading your
     version of Python.

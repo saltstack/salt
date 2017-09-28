@@ -2,39 +2,36 @@
 
 # Import python libs
 from __future__ import absolute_import
-import sys
 import re
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-ensure_in_syspath('../../')
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-from salt.modules import virt
-from salt.modules import config
+import salt.modules.virt as virt
+import salt.modules.config as config
 from salt._compat import ElementTree as ET
 import salt.utils
 
 # Import third party libs
 import yaml
-import salt.ext.six as six
-
-config.__grains__ = {}
-config.__opts__ = {}
-config.__pillar__ = {}
-virt.__salt__ = {
-    'config.get': config.get,
-    'config.option': config.option,
-}
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class VirtTestCase(TestCase):
+class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
+    def setup_loader_modules(self):
+        loader_globals = {
+            '__salt__': {
+                'config.get': config.get,
+                'config.option': config.option,
+            }
+        }
+        return {virt: loader_globals, config: loader_globals}
+
     def test_boot_default_dev(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -49,8 +46,6 @@ class VirtTestCase(TestCase):
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find('os/boot').attrib['dev'], 'hd')
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_boot_custom_dev(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -66,8 +61,6 @@ class VirtTestCase(TestCase):
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find('os/boot').attrib['dev'], 'cdrom')
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_boot_multiple_devs(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -84,8 +77,6 @@ class VirtTestCase(TestCase):
         devs = root.findall('.//boot')
         self.assertTrue(len(devs) == 2)
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_serial_console(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -103,8 +94,6 @@ class VirtTestCase(TestCase):
         self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
         self.assertEqual(root.find('devices/console').attrib['type'], 'pty')
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_telnet_console(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -124,8 +113,6 @@ class VirtTestCase(TestCase):
         self.assertEqual(root.find('devices/console').attrib['type'], 'tcp')
         self.assertEqual(root.find('devices/console/source').attrib['service'], '22223')
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_telnet_console_unspecified_port(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -144,8 +131,6 @@ class VirtTestCase(TestCase):
         self.assertEqual(root.find('devices/console').attrib['type'], 'tcp')
         self.assertIsInstance(int(root.find('devices/console/source').attrib['service']), int)
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_serial_no_console(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -163,8 +148,6 @@ class VirtTestCase(TestCase):
         self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
         self.assertEqual(root.find('devices/console'), None)
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_telnet_no_console(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -226,8 +209,6 @@ class VirtTestCase(TestCase):
             self.assertEqual(eth0['source'], 'br0')
             self.assertEqual(eth0['model'], 'virtio')
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_vol_xml_for_kvm(self):
         xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'kvm')
         root = ET.fromstring(xml_data)
@@ -236,8 +217,6 @@ class VirtTestCase(TestCase):
         self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
         self.assertEqual(root.find('capacity').text, str(8192 * 1024))
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_vol_xml_for_esxi(self):
         xml_data = virt._gen_vol_xml('vmname', 'system', 8192, 'esxi')
         root = ET.fromstring(xml_data)
@@ -246,8 +225,6 @@ class VirtTestCase(TestCase):
         self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
         self.assertEqual(root.find('capacity').text, str(8192 * 1024))
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_kvm_default_profile(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -286,8 +263,6 @@ class VirtTestCase(TestCase):
         self.assertTrue(
               re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$', mac, re.I))
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_gen_xml_for_esxi_default_profile(self):
         diskp = virt._disk_profile('default', 'esxi')
         nicp = virt._nic_profile('default', 'esxi')
@@ -325,11 +300,7 @@ class VirtTestCase(TestCase):
         self.assertTrue(
               re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$', mac, re.I))
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
-    @patch('salt.modules.virt._nic_profile')
-    @patch('salt.modules.virt._disk_profile')
-    def test_gen_xml_for_esxi_custom_profile(self, disk_profile, nic_profile):
+    def test_gen_xml_for_esxi_custom_profile(self):
         diskp_yaml = '''
 - first:
     size: 8192
@@ -354,31 +325,29 @@ class VirtTestCase(TestCase):
   model: e1000
   mac: '00:00:00:00:00:00'
 '''
-        disk_profile.return_value = yaml.load(diskp_yaml)
-        nic_profile.return_value = yaml.load(nicp_yaml)
-        diskp = virt._disk_profile('noeffect', 'esxi')
-        nicp = virt._nic_profile('noeffect', 'esxi')
-        xml_data = virt._gen_xml(
-            'hello',
-            1,
-            512,
-            diskp,
-            nicp,
-            'esxi',
-            )
-        root = ET.fromstring(xml_data)
-        self.assertEqual(root.attrib['type'], 'vmware')
-        self.assertEqual(root.find('vcpu').text, '1')
-        self.assertEqual(root.find('memory').text, str(512 * 1024))
-        self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
-        self.assertTrue(len(root.findall('.//disk')) == 2)
-        self.assertTrue(len(root.findall('.//interface')) == 2)
+        with patch('salt.modules.virt._nic_profile') as nic_profile, \
+                patch('salt.modules.virt._disk_profile') as disk_profile:
+            disk_profile.return_value = yaml.load(diskp_yaml)
+            nic_profile.return_value = yaml.load(nicp_yaml)
+            diskp = virt._disk_profile('noeffect', 'esxi')
+            nicp = virt._nic_profile('noeffect', 'esxi')
+            xml_data = virt._gen_xml(
+                'hello',
+                1,
+                512,
+                diskp,
+                nicp,
+                'esxi',
+                )
+            root = ET.fromstring(xml_data)
+            self.assertEqual(root.attrib['type'], 'vmware')
+            self.assertEqual(root.find('vcpu').text, '1')
+            self.assertEqual(root.find('memory').text, str(512 * 1024))
+            self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
+            self.assertTrue(len(root.findall('.//disk')) == 2)
+            self.assertTrue(len(root.findall('.//interface')) == 2)
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
-    @patch('salt.modules.virt._nic_profile')
-    @patch('salt.modules.virt._disk_profile')
-    def test_gen_xml_for_kvm_custom_profile(self, disk_profile, nic_profile):
+    def test_gen_xml_for_kvm_custom_profile(self):
         diskp_yaml = '''
 - first:
     size: 8192
@@ -403,28 +372,28 @@ class VirtTestCase(TestCase):
   model: virtio
   mac: '00:00:00:00:00:00'
 '''
-        disk_profile.return_value = yaml.load(diskp_yaml)
-        nic_profile.return_value = yaml.load(nicp_yaml)
-        diskp = virt._disk_profile('noeffect', 'kvm')
-        nicp = virt._nic_profile('noeffect', 'kvm')
-        xml_data = virt._gen_xml(
-            'hello',
-            1,
-            512,
-            diskp,
-            nicp,
-            'kvm',
-            )
-        root = ET.fromstring(xml_data)
-        self.assertEqual(root.attrib['type'], 'kvm')
-        self.assertEqual(root.find('vcpu').text, '1')
-        self.assertEqual(root.find('memory').text, str(512 * 1024))
-        self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
-        self.assertTrue(len(root.findall('.//disk')) == 2)
-        self.assertTrue(len(root.findall('.//interface')) == 2)
+        with patch('salt.modules.virt._nic_profile') as nic_profile, \
+                patch('salt.modules.virt._disk_profile') as disk_profile:
+            disk_profile.return_value = yaml.load(diskp_yaml)
+            nic_profile.return_value = yaml.load(nicp_yaml)
+            diskp = virt._disk_profile('noeffect', 'kvm')
+            nicp = virt._nic_profile('noeffect', 'kvm')
+            xml_data = virt._gen_xml(
+                'hello',
+                1,
+                512,
+                diskp,
+                nicp,
+                'kvm',
+                )
+            root = ET.fromstring(xml_data)
+            self.assertEqual(root.attrib['type'], 'kvm')
+            self.assertEqual(root.find('vcpu').text, '1')
+            self.assertEqual(root.find('memory').text, str(512 * 1024))
+            self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
+            self.assertTrue(len(root.findall('.//disk')) == 2)
+            self.assertTrue(len(root.findall('.//interface')) == 2)
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_controller_for_esxi(self):
         diskp = virt._disk_profile('default', 'esxi')
         nicp = virt._nic_profile('default', 'esxi')
@@ -442,8 +411,6 @@ class VirtTestCase(TestCase):
         controller = controllers[0]
         self.assertEqual(controller.attrib['model'], 'lsilogic')
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_controller_for_kvm(self):
         diskp = virt._disk_profile('default', 'kvm')
         nicp = virt._nic_profile('default', 'kvm')
@@ -485,27 +452,25 @@ class VirtTestCase(TestCase):
                    model: virtio
         '''
         mock_config = yaml.load(yaml_config)
-        salt.modules.config.__opts__ = mock_config
+        with patch.dict(salt.modules.config.__opts__, mock_config):
 
-        for name in six.iterkeys(mock_config['virt.nic']):
-            profile = salt.modules.virt._nic_profile(name, 'kvm')
-            self.assertEqual(len(profile), 2)
+            for name in six.iterkeys(mock_config['virt.nic']):
+                profile = salt.modules.virt._nic_profile(name, 'kvm')
+                self.assertEqual(len(profile), 2)
 
-            interface_attrs = profile[0]
-            self.assertIn('source', interface_attrs)
-            self.assertIn('type', interface_attrs)
-            self.assertIn('name', interface_attrs)
-            self.assertIn('model', interface_attrs)
-            self.assertEqual(interface_attrs['model'], 'virtio')
-            self.assertIn('mac', interface_attrs)
-            self.assertTrue(
-                re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$',
-                interface_attrs['mac'], re.I))
+                interface_attrs = profile[0]
+                self.assertIn('source', interface_attrs)
+                self.assertIn('type', interface_attrs)
+                self.assertIn('name', interface_attrs)
+                self.assertIn('model', interface_attrs)
+                self.assertEqual(interface_attrs['model'], 'virtio')
+                self.assertIn('mac', interface_attrs)
+                self.assertTrue(
+                    re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$',
+                    interface_attrs['mac'], re.I))
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_get_graphics(self):
-        virt.get_xml = MagicMock(return_value='''<domain type='kvm' id='7'>
+        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
               <name>test-vm</name>
               <devices>
                 <graphics type='vnc' port='5900' autoport='yes' listen='0.0.0.0'>
@@ -514,15 +479,14 @@ class VirtTestCase(TestCase):
               </devices>
             </domain>
         ''')
-        graphics = virt.get_graphics('test-vm')
-        self.assertEqual('vnc', graphics['type'])
-        self.assertEqual('5900', graphics['port'])
-        self.assertEqual('0.0.0.0', graphics['listen'])
+        with patch.object(virt, 'get_xml', get_xml_mock):
+            graphics = virt.get_graphics('test-vm')
+            self.assertEqual('vnc', graphics['type'])
+            self.assertEqual('5900', graphics['port'])
+            self.assertEqual('0.0.0.0', graphics['listen'])
 
-    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
-            ' which comes with Python 2.7')
     def test_get_nics(self):
-        virt.get_xml = MagicMock(return_value='''<domain type='kvm' id='7'>
+        get_xml_mock = MagicMock(return_value='''<domain type='kvm' id='7'>
               <name>test-vm</name>
               <devices>
                 <interface type='bridge'>
@@ -534,12 +498,8 @@ class VirtTestCase(TestCase):
               </devices>
             </domain>
         ''')
-        nics = virt.get_nics('test-vm')
-        nic = nics[list(nics)[0]]
-        self.assertEqual('bridge', nic['type'])
-        self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VirtTestCase, needs_daemon=False)
+        with patch.object(virt, 'get_xml', get_xml_mock):
+            nics = virt.get_nics('test-vm')
+            nic = nics[list(nics)[0]]
+            self.assertEqual('bridge', nic['type'])
+            self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])

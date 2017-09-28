@@ -2,18 +2,17 @@
 
 # Import python libs
 from __future__ import absolute_import
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing libs
-from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 
 # Import Salt libs
-from salt.exceptions import SaltInvocationError
 import salt.utils.boto
 import salt.utils.boto3
+from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -132,13 +131,13 @@ def _has_required_moto():
         return True
 
 
-class BotoUtilsTestCaseBase(TestCase):
+class BotoUtilsTestCaseBase(TestCase, LoaderModuleMockMixin):
 
-    def setUp(self):
-        salt.utils.boto.__context__ = {}
-        salt.utils.boto.__opts__ = {}
-        salt.utils.boto.__pillar__ = {}
-        salt.utils.boto.__salt__ = {'config.option': MagicMock(return_value='dummy_opt')}
+    def setup_loader_modules(self):
+        module_globals = {
+            '__salt__': {'config.option': MagicMock(return_value='dummy_opt')}
+        }
+        return {salt.utils.boto: module_globals, salt.utils.boto3: module_globals}
 
 
 class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
@@ -245,17 +244,6 @@ class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
         .format(required_boto3_version))
 class BotoBoto3CacheContextCollisionTest(BotoUtilsTestCaseBase):
 
-    def setUp(self):
-        salt.utils.boto.__context__ = {}
-        salt.utils.boto.__opts__ = {}
-        salt.utils.boto.__pillar__ = {}
-        salt.utils.boto.__salt__ = {'config.option': MagicMock(return_value='dummy_opt')}
-
-        salt.utils.boto3.__context__ = salt.utils.boto.__context__
-        salt.utils.boto3.__opts__ = salt.utils.boto.__opts__
-        salt.utils.boto3.__pillar__ = salt.utils.boto.__pillar__
-        salt.utils.boto3.__salt__ = salt.utils.boto.__salt__
-
     def test_context_conflict_between_boto_and_boto3_utils(self):
         salt.utils.boto.assign_funcs(__name__, 'ec2')
         salt.utils.boto3.assign_funcs(__name__, 'ec2', get_conn_funcname="_get_conn3")
@@ -271,8 +259,3 @@ class BotoBoto3CacheContextCollisionTest(BotoUtilsTestCaseBase):
 
         # These should *not* be the same object!
         self.assertNotEqual(id(boto_ec2_conn), id(boto3_ec2_conn))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoUtilsGetConnTestCase, needs_daemon=False)

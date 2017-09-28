@@ -1,12 +1,16 @@
 # encoding: utf-8
 
+# Import python libs
 from __future__ import absolute_import, print_function
 import hashlib
 import logging
 import os
-import distutils.version  # pylint: disable=no-name-in-module
 
-__virtualname__ = os.path.abspath(__file__).rsplit('/')[-2] or 'rest_tornado'
+# Import salt libs
+import salt.auth
+from salt.utils.versions import StrictVersion as _StrictVersion
+
+__virtualname__ = os.path.abspath(__file__).rsplit(os.sep)[-2] or 'rest_tornado'
 
 logger = logging.getLogger(__virtualname__)
 
@@ -15,16 +19,13 @@ min_tornado_version = '4.0'
 has_tornado = False
 try:
     import tornado
-    if distutils.version.StrictVersion(tornado.version) >= \
-       distutils.version.StrictVersion(min_tornado_version):
+    if _StrictVersion(tornado.version) >= _StrictVersion(min_tornado_version):
         has_tornado = True
     else:
         logger.error('rest_tornado requires at least tornado {0}'.format(min_tornado_version))
 except (ImportError, TypeError) as err:
     has_tornado = False
     logger.error('ImportError! {0}'.format(str(err)))
-
-import salt.auth
 
 
 def __virtual__():
@@ -114,6 +115,7 @@ def start():
             ssl_opts.update({'keyfile': mod_opts['ssl_key']})
         kwargs['ssl_options'] = ssl_opts
 
+    import tornado.httpserver
     http_server = tornado.httpserver.HTTPServer(get_application(__opts__), **kwargs)
     try:
         http_server.bind(mod_opts['port'],

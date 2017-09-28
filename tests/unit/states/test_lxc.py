@@ -6,30 +6,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import lxc
-import salt.utils
-
-lxc.__salt__ = {}
-lxc.__opts__ = {}
+import salt.states.lxc as lxc
+import salt.utils.versions
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LxcTestCase(TestCase):
+class LxcTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.lxc
     '''
+    def setup_loader_modules(self):
+        return {lxc: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -249,7 +246,7 @@ class LxcTestCase(TestCase):
                'comment': comment,
                'changes': {}}
 
-        with patch.object(salt.utils, 'warn_until', MagicMock()):
+        with patch.object(salt.utils.versions, 'warn_until', MagicMock()):
             with patch.dict(lxc.__opts__, {'test': True}):
                 self.assertDictEqual(lxc.edited_conf(name), ret)
 
@@ -258,8 +255,3 @@ class LxcTestCase(TestCase):
                 with patch.dict(lxc.__salt__, {'lxc.update_lxc_conf': mock}):
                     self.assertDictEqual(lxc.edited_conf(name),
                                          {'name': 'web01'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LxcTestCase, needs_daemon=False)

@@ -7,46 +7,44 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import znc
-
-znc.__salt__ = {}
+import salt.modules.znc as znc
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ZncTestCase(TestCase):
+class ZncTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.znc
     '''
+    def setup_loader_modules(self):
+        return {znc: {}}
+
     # 'buildmod' function tests: 1
 
-    @patch('os.path.exists', MagicMock(return_value=False))
     def test_buildmod(self):
         '''
         Tests build module using znc-buildmod
         '''
-        self.assertEqual(znc.buildmod('modules.cpp'),
-                         'Error: The file (modules.cpp) does not exist.')
+        with patch('os.path.exists', MagicMock(return_value=False)):
+            self.assertEqual(znc.buildmod('modules.cpp'),
+                             'Error: The file (modules.cpp) does not exist.')
 
-    @patch('os.path.exists', MagicMock(return_value=True))
     def test_buildmod_module(self):
         '''
         Tests build module using znc-buildmod
         '''
         mock = MagicMock(return_value='SALT')
-        with patch.dict(znc.__salt__, {'cmd.run': mock}):
+        with patch.dict(znc.__salt__, {'cmd.run': mock}), \
+                patch('os.path.exists', MagicMock(return_value=True)):
             self.assertEqual(znc.buildmod('modules.cpp'), 'SALT')
 
     # 'dumpconf' function tests: 1
@@ -78,8 +76,3 @@ class ZncTestCase(TestCase):
         mock = MagicMock(return_value='ZNC 1.2 - http://znc.in')
         with patch.dict(znc.__salt__, {'cmd.run': mock}):
             self.assertEqual(znc.version(), 'ZNC 1.2')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ZncTestCase, needs_daemon=False)

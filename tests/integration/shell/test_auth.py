@@ -4,27 +4,25 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
-import os
+import logging
 import pwd
 import grp
 import random
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    ensure_in_syspath,
-    destructiveTest)
-ensure_in_syspath('../../')
+from tests.support.case import ShellCase
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.utils.pycrypto import gen_hash
-import integration
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
+log = logging.getLogger(__name__)
 
 
 def gen_password():
@@ -45,23 +43,20 @@ def gen_password():
     return (password, hashed_pwd)
 
 
-class AuthTest(integration.ShellCase):
+@skip_if_not_root
+@destructiveTest
+class AuthTest(ShellCase):
     '''
     Test auth mechanisms
     '''
 
     _call_binary_ = 'salt'
 
-    is_not_root = os.geteuid() != 0
-
     userA = 'saltdev'
     userB = 'saltadm'
     group = 'saltops'
 
-    @destructiveTest
-    @skipIf(is_not_root, 'You must be logged in as root to run this test')
     def setUp(self):
-        # This is a little wasteful but shouldn't be a problem
         for user in (self.userA, self.userB):
             try:
                 pwd.getpwnam(user)
@@ -75,6 +70,21 @@ class AuthTest(integration.ShellCase):
             self.run_call('group.add {0}'.format(self.group))
             self.run_call('user.chgroups {0} {1} True'.format(self.userB, self.group))
 
+    def tearDown(self):
+        for user in (self.userA, self.userB):
+            try:
+                pwd.getpwnam(user)
+            except KeyError:
+                pass
+            else:
+                self.run_call('user.delete {0}'.format(user))
+        try:
+            grp.getgrnam(self.group)
+        except KeyError:
+            pass
+        else:
+            self.run_call('group.delete {0}'.format(self.group))
+
     def test_pam_auth_valid_user(self):
         '''
         test that pam auth mechanism works with a valid user
@@ -84,7 +94,7 @@ class AuthTest(integration.ShellCase):
         # set user password
         set_pw_cmd = "shadow.set_password {0} '{1}'".format(
                 self.userA,
-                password if salt.utils.is_darwin() else hashed_pwd
+                password if salt.utils.platform.is_darwin() else hashed_pwd
         )
         self.run_call(set_pw_cmd)
 
@@ -92,6 +102,7 @@ class AuthTest(integration.ShellCase):
         cmd = ('-a pam "*" test.ping '
                '--username {0} --password {1}'.format(self.userA, password))
         resp = self.run_salt(cmd)
+        log.debug('resp = %s', resp)
         self.assertTrue(
             'minion:' in resp
         )
@@ -116,7 +127,7 @@ class AuthTest(integration.ShellCase):
         # set user password
         set_pw_cmd = "shadow.set_password {0} '{1}'".format(
                 self.userB,
-                password if salt.utils.is_darwin() else hashed_pwd
+                password if salt.utils.platform.is_darwin() else hashed_pwd
         )
         self.run_call(set_pw_cmd)
 
@@ -128,17 +139,3 @@ class AuthTest(integration.ShellCase):
         self.assertTrue(
             'minion:' in resp
         )
-
-    @destructiveTest
-    @skipIf(is_not_root, 'You must be logged in as root to run this test')
-    def test_zzzz_tearDown(self):
-        for user in (self.userA, self.userB):
-            if pwd.getpwnam(user):
-                self.run_call('user.delete {0}'.format(user))
-        if grp.getgrnam(self.group):
-            self.run_call('group.delete {0}'.format(self.group))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AuthTest)

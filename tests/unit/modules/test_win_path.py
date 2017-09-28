@@ -7,35 +7,30 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import win_path
-
-# Globals
-win_path.__salt__ = {}
+import salt.modules.win_path as win_path
 
 
-class MockWin32Gui(object):
+class MockWin32API(object):
     '''
-        Mock class for win32gui
+        Mock class for win32api
     '''
     def __init__(self):
         pass
 
     @staticmethod
-    def SendMessageTimeout(*args):
+    def SendMessage(*args):
         '''
-            Mock method for SendMessageTimeOut
+            Mock method for SendMessage
         '''
         return [args[0]]
 
@@ -50,15 +45,19 @@ class MockWin32Con(object):
     def __init__(self):
         pass
 
-win_path.win32gui = MockWin32Gui
-win_path.win32con = MockWin32Con
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinPathTestCase(TestCase):
+class WinPathTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.win_path
     '''
+    def setup_loader_modules(self):
+        return {win_path: {'win32api': MockWin32API,
+                           'win32con': MockWin32Con,
+                           'SendMessage': MagicMock,
+                           'HWND_BROADCAST': MagicMock,
+                           'WM_SETTINGCHANGE': MagicMock}}
+
     def test_rehash(self):
         '''
             Test to rehash the Environment variables
@@ -110,8 +109,3 @@ class WinPathTestCase(TestCase):
                     self.assertEqual(win_path.remove("c:\\salt"), "Salt")
 
                 self.assertFalse(win_path.remove("c:\\salt"))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinPathTestCase, needs_daemon=False)

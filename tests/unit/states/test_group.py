@@ -7,32 +7,28 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import group
+import salt.states.group as group
 from salt.utils.odict import OrderedDict
 
 
-# Globals
-group.__salt__ = {}
-group.__opts__ = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GroupTestCase(TestCase):
+class GroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the group state
     '''
+    def setup_loader_modules(self):
+        return {group: {}}
+
     def test_present(self):
         '''
             Test to ensure that a group is present
@@ -112,8 +108,3 @@ class GroupTestCase(TestCase):
             ret.update({'result': True,
                         'comment': 'Group not present'})
             self.assertDictEqual(group.absent('salt'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GroupTestCase, needs_daemon=False)

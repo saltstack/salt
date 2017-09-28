@@ -8,15 +8,11 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath
-)
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
-# Import salt libs
-import integration
 log = logging.getLogger(__name__)
 
 NO_KEYSTONE = False
@@ -33,8 +29,7 @@ except ImportError:
     'Please install keystoneclient and a keystone server before running'
     'openstack integration tests.'
 )
-class OpenstackTest(integration.ModuleCase,
-                    integration.SaltReturnAssertsMixIn):
+class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the keystone state
     '''
@@ -161,8 +156,3 @@ class OpenstackTest(integration.ModuleCase,
                                                   tenant_name='admin')
         driver.authenticate()
         self.assertTrue(driver.auth_token)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(OpenstackTest)

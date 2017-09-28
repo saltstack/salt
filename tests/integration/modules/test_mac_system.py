@@ -9,14 +9,14 @@ import random
 import string
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-from salt.ext.six.moves import range
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import salt libs
-import integration
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
+from salt.ext.six.moves import range
 
 
 def __random_string(size=6):
@@ -33,10 +33,10 @@ SET_COMPUTER_NAME = __random_string()
 SET_SUBNET_NAME = __random_string()
 
 
-@skipIf(not salt.utils.is_darwin()
-        or not salt.utils.which('systemsetup')
-        or salt.utils.get_uid(salt.utils.get_user()) != 0, 'Test requirements not met')
-class MacSystemModuleTest(integration.ModuleCase):
+@skip_if_not_root
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
+class MacSystemModuleTest(ModuleCase):
     '''
     Validate the mac_system module
     '''
@@ -245,8 +245,3 @@ class MacSystemModuleTest(integration.ModuleCase):
         self.assertIn(
             'Invalid value passed for arch',
             self.run_function('system.set_boot_arch', ['spongebob']))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacSystemModuleTest)

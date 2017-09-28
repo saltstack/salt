@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -16,7 +16,7 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import influx08
+import salt.modules.influx08 as influx08
 
 DB_LIST = ['A', 'B', 'C']
 USER_LIST = [{'name': 'A'}, {'name': 'B'}]
@@ -284,7 +284,3 @@ class InfluxTestCase(TestCase):
             ))
             client.alter_retention_policy.assert_called_once_with(
                 'name', 'db', '30d', 1, False)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(InfluxTestCase, needs_daemon=False)

@@ -8,15 +8,10 @@ from __future__ import absolute_import
 import time
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
-# Import Salt libs
-import integration
+from tests.support.case import ModuleCase
 
 
-class SaltUtilModuleTest(integration.ModuleCase):
+class SaltUtilModuleTest(ModuleCase):
     '''
     Testcase for the saltutil execution module
     '''
@@ -61,7 +56,7 @@ class SaltUtilModuleTest(integration.ModuleCase):
         self.assertIn('priv', ret['return'])
 
 
-class SaltUtilSyncModuleTest(integration.ModuleCase):
+class SaltUtilSyncModuleTest(ModuleCase):
     '''
     Testcase for the saltutil sync execution module
     '''
@@ -78,6 +73,7 @@ class SaltUtilSyncModuleTest(integration.ModuleCase):
         Test syncing all ModuleCase
         '''
         expected_return = {'engines': [],
+                           'clouds': [],
                            'grains': [],
                            'beacons': [],
                            'utils': [],
@@ -100,6 +96,7 @@ class SaltUtilSyncModuleTest(integration.ModuleCase):
         Test syncing all ModuleCase with whitelist
         '''
         expected_return = {'engines': [],
+                           'clouds': [],
                            'grains': [],
                            'beacons': [],
                            'utils': [],
@@ -119,6 +116,7 @@ class SaltUtilSyncModuleTest(integration.ModuleCase):
         Test syncing all ModuleCase with blacklist
         '''
         expected_return = {'engines': [],
+                           'clouds': [],
                            'grains': [],
                            'beacons': [],
                            'utils': [],
@@ -140,6 +138,7 @@ class SaltUtilSyncModuleTest(integration.ModuleCase):
         Test syncing all ModuleCase with whitelist and blacklist
         '''
         expected_return = {'engines': [],
+                           'clouds': [],
                            'grains': [],
                            'beacons': [],
                            'utils': [],
@@ -154,9 +153,3 @@ class SaltUtilSyncModuleTest(integration.ModuleCase):
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['runtests_decorators']},
                                 extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SaltUtilModuleTest)
-    run_tests(SaltUtilSyncModuleTest)

@@ -3,32 +3,29 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import boto_kinesis
-
-boto_kinesis.__salt__ = {}
-boto_kinesis.__opts__ = {}
+import salt.states.boto_kinesis as boto_kinesis
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoKinesisTestCase(TestCase):
+class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_kinesis
     '''
     # 'present' function tests: 1
 
     maxDiff = None
+
+    def setup_loader_modules(self):
+        return {boto_kinesis: {}}
 
     def test_stream_present(self):
         '''
@@ -144,8 +141,3 @@ class BotoKinesisTestCase(TestCase):
                 ret.update({'comment': comt, 'result': True,
                             'changes': changes})
                 self.assertDictEqual(boto_kinesis.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoKinesisTestCase, needs_daemon=False)

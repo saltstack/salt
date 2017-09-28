@@ -81,13 +81,17 @@ import os
 import re
 import shutil
 import logging
-
-# Import salt libs
-import salt.utils
+import sys
 import tempfile
+
+# Import Salt libs
+import salt.utils  # Can be removed once compare_dicts is moved
+import salt.utils.files
 import salt.utils.locales
+import salt.utils.platform
 import salt.utils.url
-from salt.ext.six import string_types, iteritems
+import salt.utils.versions
+from salt.ext import six
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -118,18 +122,25 @@ def _get_pip_bin(bin_env):
     executable itself, or from searching conventional filesystem locations
     '''
     if not bin_env:
-        which_result = __salt__['cmd.which_bin'](['pip', 'pip2', 'pip3', 'pip-python'])
+        which_result = __salt__['cmd.which_bin'](
+            ['pip{0}.{1}'.format(*sys.version_info[:2]),
+             'pip{0}'.format(sys.version_info[0]),
+             'pip', 'pip-python']
+        )
+        if salt.utils.platform.is_windows() and six.PY2:
+            which_result.encode('string-escape')
         if which_result is None:
             raise CommandNotFoundError('Could not find a `pip` binary')
-        if salt.utils.is_windows():
-            return which_result.encode('string-escape')
         return which_result
 
     # try to get pip bin from virtualenv, bin_env
     if os.path.isdir(bin_env):
-        if salt.utils.is_windows():
-            pip_bin = os.path.join(
-                bin_env, 'Scripts', 'pip.exe').encode('string-escape')
+        if salt.utils.platform.is_windows():
+            if six.PY2:
+                pip_bin = os.path.join(
+                    bin_env, 'Scripts', 'pip.exe').encode('string-escape')
+            else:
+                pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe')
         else:
             pip_bin = os.path.join(bin_env, 'bin', 'pip')
         if os.path.isfile(pip_bin):
@@ -183,7 +194,7 @@ def _get_env_activate(bin_env):
         raise CommandNotFoundError('Could not find a `activate` binary')
 
     if os.path.isdir(bin_env):
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             activate_bin = os.path.join(bin_env, 'Scripts', 'activate.bat')
         else:
             activate_bin = os.path.join(bin_env, 'bin', 'activate')
@@ -196,7 +207,7 @@ def _find_req(link):
 
     logger.info('_find_req -- link = %s', str(link))
 
-    with salt.utils.fopen(link) as fh_link:
+    with salt.utils.files.fopen(link) as fh_link:
         child_links = rex_pip_chain_read.findall(fh_link.read())
 
     base_path = os.path.dirname(link)
@@ -213,7 +224,7 @@ def _resolve_requirements_chain(requirements):
 
     chain = []
 
-    if isinstance(requirements, string_types):
+    if isinstance(requirements, six.string_types):
         requirements = [requirements]
 
     for req_file in requirements:
@@ -230,7 +241,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
     cleanup_requirements = []
 
     if requirements is not None:
-        if isinstance(requirements, string_types):
+        if isinstance(requirements, six.string_types):
             requirements = [r.strip() for r in requirements.split(',')]
         elif not isinstance(requirements, list):
             raise TypeError('requirements must be a string or list')
@@ -367,7 +378,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             env_vars=None,
             use_vt=False,
             trusted_host=None,
-            no_cache_dir=False):
+            no_cache_dir=False,
+            cache_dir=None):
     '''
     Install packages with pip
 
@@ -440,8 +452,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     download
         Download packages into ``download`` instead of installing them
 
-    download_cache
-        Cache downloaded packages in ``download_cache`` dir
+    download_cache | cache_dir
+        Cache downloaded packages in ``download_cache`` or ``cache_dir`` dir
 
     source
         Check out ``editable`` packages into ``source`` dir
@@ -566,7 +578,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if use_wheel:
         min_version = '1.4'
         cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+        if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             logger.error(
                 ('The --use-wheel option is only supported in pip {0} and '
@@ -579,7 +591,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if no_use_wheel:
         min_version = '1.4'
         cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+        if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             logger.error(
                 ('The --no-use-wheel option is only supported in pip {0} and '
@@ -616,7 +628,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         cmd.extend(['--timeout', timeout])
 
     if find_links:
-        if isinstance(find_links, string_types):
+        if isinstance(find_links, six.string_types):
             find_links = [l.strip() for l in find_links.split(',')]
 
         for link in find_links:
@@ -652,13 +664,13 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if mirrors:
         # https://github.com/pypa/pip/pull/2641/files#diff-3ef137fb9ffdd400f117a565cd94c188L216
         pip_version = version(pip_bin)
-        if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='7.0.0'):
+        if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='7.0.0'):
             raise CommandExecutionError(
                     'pip >= 7.0.0 does not support mirror argument:'
                     ' use index_url and/or extra_index_url instead'
             )
 
-        if isinstance(mirrors, string_types):
+        if isinstance(mirrors, six.string_types):
             mirrors = [m.strip() for m in mirrors.split(',')]
 
         cmd.append('--use-mirrors')
@@ -678,8 +690,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if download:
         cmd.extend(['--download', download])
 
-    if download_cache:
-        cmd.extend(['--download-cache', download_cache])
+    if download_cache or cache_dir:
+        cmd.extend(['--cache-dir' if salt.utils.versions.compare(
+            ver1=version(bin_env), oper='>=', ver2='6.0'
+        ) else '--download-cache', download_cache or cache_dir])
 
     if source:
         cmd.extend(['--source', source])
@@ -718,28 +732,28 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         pip_version = version(pip_bin)
 
         # From pip v1.4 the --pre flag is available
-        if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='1.4'):
+        if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='1.4'):
             cmd.append('--pre')
 
     if cert:
         cmd.extend(['--cert', cert])
 
     if global_options:
-        if isinstance(global_options, string_types):
+        if isinstance(global_options, six.string_types):
             global_options = [go.strip() for go in global_options.split(',')]
 
         for opt in global_options:
             cmd.extend(['--global-option', opt])
 
     if install_options:
-        if isinstance(install_options, string_types):
+        if isinstance(install_options, six.string_types):
             install_options = [io.strip() for io in install_options.split(',')]
 
         for opt in install_options:
             cmd.extend(['--install-option', opt])
 
     if pkgs:
-        if isinstance(pkgs, string_types):
+        if isinstance(pkgs, six.string_types):
             pkgs = [p.strip() for p in pkgs.split(',')]
 
         # It's possible we replaced version-range commas with semicolons so
@@ -750,7 +764,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if editable:
         egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
-        if isinstance(editable, string_types):
+        if isinstance(editable, six.string_types):
             editable = [e.strip() for e in editable.split(',')]
 
         for entry in editable:
@@ -769,14 +783,14 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         cmd.append('--allow-all-external')
 
     if allow_external:
-        if isinstance(allow_external, string_types):
+        if isinstance(allow_external, six.string_types):
             allow_external = [p.strip() for p in allow_external.split(',')]
 
         for pkg in allow_external:
             cmd.extend(['--allow-external', pkg])
 
     if allow_unverified:
-        if isinstance(allow_unverified, string_types):
+        if isinstance(allow_unverified, six.string_types):
             allow_unverified = \
                 [p.strip() for p in allow_unverified.split(',')]
 
@@ -786,27 +800,27 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if process_dependency_links:
         cmd.append('--process-dependency-links')
 
+    if trusted_host:
+        cmd.extend(['--trusted-host', trusted_host])
+
+    cmd_kwargs = dict(saltenv=saltenv, use_vt=use_vt, runas=user)
+
     if env_vars:
         if isinstance(env_vars, dict):
-            for k, v in iteritems(env_vars):
-                if not isinstance(v, string_types):
-                    env_vars[k] = str(v)
-            os.environ.update(env_vars)
+            for key, val in six.iteritems(env_vars):
+                if not isinstance(val, six.string_types):
+                    val = str(val)
+                cmd_kwargs.setdefault('env', {})[key] = val
         else:
             raise CommandExecutionError(
                 'env_vars {0} is not a dictionary'.format(env_vars))
 
-    if trusted_host:
-        cmd.extend(['--trusted-host', trusted_host])
-
     try:
-        cmd_kwargs = dict(saltenv=saltenv, use_vt=use_vt, runas=user)
-
         if cwd:
             cmd_kwargs['cwd'] = cwd
 
         if bin_env and os.path.isdir(bin_env):
-            cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+            cmd_kwargs.setdefault('env', {})['VIRTUAL_ENV'] = bin_env
 
         logger.debug(
             'TRY BLOCK: end of pip.install -- cmd: %s, cmd_kwargs: %s',
@@ -921,11 +935,11 @@ def uninstall(pkgs=None,
         cmd.extend(['--timeout', timeout])
 
     if pkgs:
-        if isinstance(pkgs, string_types):
+        if isinstance(pkgs, six.string_types):
             pkgs = [p.strip() for p in pkgs.split(',')]
         if requirements:
             for requirement in requirements:
-                with salt.utils.fopen(requirement) as rq_:
+                with salt.utils.files.fopen(requirement) as rq_:
                     for req in rq_:
                         try:
                             req_pkg, _ = req.split('==')
@@ -994,7 +1008,7 @@ def freeze(bin_env=None,
     # Include pip, setuptools, distribute, wheel
     min_version = '8.0.3'
     cur_version = version(bin_env)
-    if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+    if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
                                        ver2=min_version):
         logger.warning(
             ('The version of pip installed is {0}, which is older than {1}. '
@@ -1058,6 +1072,9 @@ def list_(prefix=None,
         elif line.startswith('-e'):
             line = line.split('-e ')[1]
             version_, name = line.split('#egg=')
+        elif len(line.split('===')) >= 2:
+            name = line.split('===')[0]
+            version_ = line.split('===')[1]
         elif len(line.split('==')) >= 2:
             name = line.split('==')[0]
             version_ = line.split('==')[1]
@@ -1091,7 +1108,7 @@ def version(bin_env=None):
     '''
     pip_bin = _get_pip_bin(bin_env)
 
-    output = __salt__['cmd.run'](
+    output = __salt__['cmd.run_stdout'](
         '{0} --version'.format(pip_bin), python_shell=False)
     try:
         return re.match(r'^pip (\S+)', output).group(1)

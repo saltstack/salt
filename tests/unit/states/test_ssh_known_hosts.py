@@ -4,32 +4,30 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-import os
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import ssh_known_hosts
-
-ssh_known_hosts.__salt__ = {}
-ssh_known_hosts.__opts__ = {}
+import salt.states.ssh_known_hosts as ssh_known_hosts
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SshKnownHostsTestCase(TestCase):
+class SshKnownHostsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.ssh_known_hosts
     '''
+    def setup_loader_modules(self):
+        return {ssh_known_hosts: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -170,8 +168,3 @@ class SshKnownHostsTestCase(TestCase):
                                 'changes': {'new': None, 'old': True}})
                     self.assertDictEqual(ssh_known_hosts.absent(name, user),
                                          ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SshKnownHostsTestCase, needs_daemon=False)

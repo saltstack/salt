@@ -3,38 +3,34 @@
     :synopsis: Unit Tests for Windows SNMP Module 'state.win_snmp'
     :platform: Windows
     :maturity: develop
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 '''
 
 # Import Python Libs
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import win_snmp
-import salt.ext.six as six
+import salt.states.win_snmp as win_snmp
+from salt.ext import six
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON,
 )
 
-ensure_in_syspath('../../')
-
-# Globals
-win_snmp.__salt__ = {}
-win_snmp.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinSnmpTestCase(TestCase):
+class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_snmp
     '''
+    def setup_loader_modules(self):
+        return {win_snmp: {}}
 
     def test_agent_settings(self):
         '''
@@ -99,8 +95,3 @@ class WinSnmpTestCase(TestCase):
                                             'win_snmp.set_community_names': mock_value_set}):
             with patch.dict(win_snmp.__opts__, {'test': False}):
                 self.assertEqual(win_snmp.community_names(**kwargs), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(WinSnmpTestCase, needs_daemon=False)

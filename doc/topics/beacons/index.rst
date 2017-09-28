@@ -34,7 +34,7 @@ monitored, everything is configured using Salt.
 
 Beacons are typically enabled by placing a ``beacons:`` top level block in
 ``/etc/salt/minion`` or any file in ``/etc/salt/minion.d/`` such as
-``/etc/salt/minion.d/beacons.conf``:
+``/etc/salt/minion.d/beacons.conf`` or add it to pillars for that minion:
 
 .. code-block:: yaml
 
@@ -221,7 +221,7 @@ Add the following to ``/srv/reactor/revert.sls``:
 
 .. note::
 
-    The expression ``{{ data['data']['id] }}`` :ref:`is correct
+    The expression ``{{ data['data']['id'] }}`` :ref:`is correct
     <beacons-and-reactors>` as it matches the event structure :ref:`shown above
     <beacon-event-bus>`.
 
@@ -253,9 +253,8 @@ in ``/etc/salt/master.d/reactor.conf``:
 
 .. note::
     You can have only one top level ``reactor`` section, so if one already
-    exists, add this code to the existing section. See :ref:`Understanding the
-    Structure of Reactor Formulas <reactor-structure>` to learn more about
-    reactor SLS syntax.
+    exists, add this code to the existing section. See :ref:`here
+    <reactor-sls>` to learn more about reactor SLS syntax.
 
 
 Start the Salt Master in Debug Mode

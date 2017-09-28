@@ -6,17 +6,21 @@ Function Start_Process_and_test_exitcode {
     #    $args  - the the arguments of $fun
     #    $descr - the short description shown in the case of an error
 
-    param(
+    Param(
         [Parameter(Mandatory=$true)] [String] $fun,
         [Parameter(Mandatory=$true)] [String] $args,
         [Parameter(Mandatory=$true)] [String] $descr
     )
 
-    begin {
+    Begin { Write-Host "Executing Command: $fun $args" }
+
+    Process {
         $p = Start-Process "$fun" -ArgumentList "$args" -Wait -NoNewWindow -PassThru
         If ( $($p.ExitCode) -ne 0) {
             Write-Error "$descr returned exitcode $($p.ExitCode). "
             exit $($p.ExitCode)
         }
     }
+
+    End { Write-Host "Finished Executing Command: $fun $args" }
 }

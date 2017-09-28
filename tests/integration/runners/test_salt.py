@@ -8,14 +8,10 @@ Tests for the salt runner
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ShellCase
 
 
-class SaltRunnerTest(integration.ShellCase):
+class SaltRunnerTest(ShellCase):
     '''
     Test the salt runner
     '''
@@ -29,8 +25,3 @@ class SaltRunnerTest(integration.ShellCase):
 
         self.assertEqual(out_ret, 'True')
         self.assertTrue(return_ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SaltRunnerTest)

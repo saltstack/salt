@@ -7,14 +7,15 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
 )
 # Import Salt Libs
-from salt.modules import augeas_cfg
+import salt.modules.augeas_cfg as augeas_cfg
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
 # Make sure augeas python interface is installed
 if augeas_cfg.HAS_AUGEAS:
     from augeas import Augeas as _Augeas
@@ -26,7 +27,7 @@ class AugeasCfgTestCase(TestCase):
     Test cases for salt.modules.augeas_cfg
     '''
     # 'execute' function tests: 3
-
+    @skipIf(six.PY3, 'Disabled pending https://github.com/hercules-team/python-augeas/issues/30')
     def test_execute(self):
         '''
         Test if it execute Augeas commands
@@ -148,8 +149,3 @@ class AugeasCfgTestCase(TestCase):
         Test if it returns recursively the complete tree of a node
         '''
         self.assertEqual(augeas_cfg.tree('/etc/'), {'/etc': None})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AugeasCfgTestCase, needs_daemon=False)

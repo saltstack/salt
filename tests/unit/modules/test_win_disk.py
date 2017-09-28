@@ -7,18 +7,15 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import win_disk
+import salt.modules.win_disk as win_disk
 
 
 class MockKernel32(object):
@@ -51,14 +48,15 @@ class MockCtypes(object):
     def __init__(self):
         self.windll = MockWindll()
 
-win_disk.ctypes = MockCtypes()
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinDiskTestCase(TestCase):
+class WinDiskTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_disk
     '''
+    def setup_loader_modules(self):
+        return {win_disk: {'ctypes': MockCtypes()}}
+
     # 'usage' function tests: 1
 
     def test_usage(self):
@@ -71,8 +69,3 @@ class WinDiskTestCase(TestCase):
                                        'used': None,
                                        'capacity': None,
                                        'filesystem': 'A:\\'}})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinDiskTestCase, needs_daemon=False)

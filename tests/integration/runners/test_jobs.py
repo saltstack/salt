@@ -6,15 +6,11 @@ Tests for the salt-run command
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ShellCase
+from tests.support.unit import skipIf
 
 
-class ManageTest(integration.ShellCase):
+class ManageTest(ShellCase):
     '''
     Test the manage runner
     '''
@@ -34,15 +30,10 @@ class ManageTest(integration.ShellCase):
         self.assertEqual(ret['return'], {})
         self.assertEqual(ret['out'], [])
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_list_jobs(self):
         '''
         jobs.list_jobs
         '''
         ret = self.run_run_plus('jobs.list_jobs')
         self.assertIsInstance(ret['return'], dict)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ManageTest)

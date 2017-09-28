@@ -5,28 +5,22 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
-import salt.config
-from salt.syspaths import BASE_FILE_ROOTS_DIR
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-import os
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
-from salt.states import winrepo
-
-# Globals
-winrepo.__salt__ = {}
-winrepo.__opts__ = {}
+import salt.config
+from salt.syspaths import BASE_FILE_ROOTS_DIR
+import salt.states.winrepo as winrepo
 
 
 class MockRunnerClient(object):
@@ -54,12 +48,17 @@ class MockRunnerClient(object):
             return []
 
 
-@patch('salt.states.winrepo.salt.runner', MockRunnerClient)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinrepoTestCase(TestCase):
+class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate the winrepo state
     '''
+    def setup_loader_modules(self):
+        patcher = patch('salt.states.winrepo.salt.runner', MockRunnerClient)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return {winrepo: {}}
+
     def test_genrepo(self):
         '''
         Test to refresh the winrepo.p file of the repository
@@ -68,9 +67,8 @@ class WinrepoTestCase(TestCase):
                'changes': {},
                'result': False,
                'comment': ''}
-        ret.update({'comment':
-                    '{file_roots}/win/repo is '
-                    'missing'.format(file_roots=BASE_FILE_ROOTS_DIR)})
+        ret.update({'comment': '{0} is missing'.format(
+            os.sep.join([BASE_FILE_ROOTS_DIR, 'win', 'repo']))})
         self.assertDictEqual(winrepo.genrepo('salt'), ret)
 
         mock = MagicMock(return_value={'winrepo_dir': 'salt',
@@ -91,8 +89,3 @@ class WinrepoTestCase(TestCase):
                         ret.update({'changes': {'winrepo': []}})
                         self.assertDictEqual(winrepo.genrepo('salt', True),
                                              ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinrepoTestCase, needs_daemon=False)

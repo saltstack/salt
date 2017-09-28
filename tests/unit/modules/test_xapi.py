@@ -7,9 +7,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     mock_open,
     MagicMock,
     patch,
@@ -17,12 +17,8 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
 # Import Salt Libs
-from salt.modules import xapi
-
-xapi.__grains__ = {}
-xapi.__salt__ = {}
+import salt.modules.xapi as xapi
 
 
 class Mockxapi(object):
@@ -69,10 +65,13 @@ class Mockxapi(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class XapiTestCase(TestCase):
+class XapiTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.xapi
     '''
+    def setup_loader_modules(self):
+        return {xapi: {}}
+
     def test_list_domains(self):
         '''
             Test to return a list of domain names on the minion
@@ -368,14 +367,14 @@ class XapiTestCase(TestCase):
             self.assertFalse(xapi.is_hyper())
 
         with patch.dict(xapi.__grains__, {'virtual_subtype': 'Xen Dom0'}):
-            with patch('salt.utils.fopen', mock_open(read_data="salt")):
+            with patch('salt.utils.files.fopen', mock_open(read_data="salt")):
                 self.assertFalse(xapi.is_hyper())
 
-            with patch('salt.utils.fopen', mock_open()) as mock_read:
+            with patch('salt.utils.files.fopen', mock_open()) as mock_read:
                 mock_read.side_effect = IOError
                 self.assertFalse(xapi.is_hyper())
 
-            with patch('salt.utils.fopen', mock_open(read_data="xen_")):
+            with patch('salt.utils.files.fopen', mock_open(read_data="xen_")):
                 with patch.dict(xapi.__grains__, {'ps': 'salt'}):
                     mock = MagicMock(return_value={'xenstore': 'salt'})
                     with patch.dict(xapi.__salt__, {'cmd.run': mock}):
@@ -412,8 +411,3 @@ class XapiTestCase(TestCase):
         '''
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             self.assertDictEqual(xapi.vm_diskstats(""), {})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(XapiTestCase, needs_daemon=False)

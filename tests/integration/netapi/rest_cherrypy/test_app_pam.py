@@ -3,32 +3,22 @@
 Integration Tests for restcherry salt-api with pam eauth
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
-import os
 
-# Import salttesting libs
-from salttesting.unit import skipIf
-from salttesting.helpers import (
-    ensure_in_syspath,
-    destructiveTest)
-ensure_in_syspath('../../../')
-
-from tests.utils import BaseRestCherryPyTest
+# Import test support libs
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, skip_if_not_root
+import tests.support.cherrypy_testclasses as cptc
 
 # Import Salt Libs
-import salt.utils
-from tests import integration
+import salt.utils.platform
 
 # Import 3rd-party libs
-# pylint: disable=import-error,unused-import
-from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module
-try:
+from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
+if cptc.HAS_CHERRYPY:
     import cherrypy
-    HAS_CHERRYPY = True
-except ImportError:
-    HAS_CHERRYPY = False
-# pylint: enable=import-error,unused-import
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -40,20 +30,25 @@ AUTH_CREDS = {
     'eauth': 'pam'}
 
 
-@skipIf(HAS_CHERRYPY is False, 'CherryPy not installed')
-class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
+@skipIf(cptc.HAS_CHERRYPY is False, 'CherryPy not installed')
+class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
     '''
     Test auth with pam using salt-api
     '''
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @skip_if_not_root
     def setUp(self):
         super(TestAuthPAM, self).setUp()
         try:
             add_user = self.run_function('user.add', [USERA], createhome=False)
-            add_pwd = self.run_function('shadow.set_password',
-                                        [USERA, USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD])
+            add_pwd = self.run_function(
+                'shadow.set_password',
+                [
+                    USERA,
+                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD
+                ]
+            )
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_function('user.list_users')
@@ -127,7 +122,7 @@ class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
         self.assertEqual(response.status, '200 OK')
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @skip_if_not_root
     def tearDown(self):
         '''
         Clean up after tests. Delete user
@@ -137,5 +132,5 @@ class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
         # Remove saltdev user
         if USERA in user_list:
             self.run_function('user.delete', [USERA], remove=True)
-        #need to exit cherypy engine
+        # need to exit cherypy engine
         cherrypy.engine.exit()

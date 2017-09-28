@@ -20,7 +20,7 @@ class NetapiClient(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.process_manager = salt.utils.process.ProcessManager(name='NetAPIProcessManager')
+        self.process_manager = salt.utils.process.ProcessManager(name=u'NetAPIProcessManager')
         self.netapi = salt.loader.netapi(self.opts)
 
     def run(self):
@@ -28,11 +28,11 @@ class NetapiClient(object):
         Load and start all available api modules
         '''
         if not len(self.netapi):
-            log.error("Did not find any netapi configurations, nothing to start")
+            log.error(u"Did not find any netapi configurations, nothing to start")
 
         for fun in self.netapi:
-            if fun.endswith('.start'):
-                log.info('Starting {0} netapi module'.format(fun))
+            if fun.endswith(u'.start'):
+                log.info(u'Starting %s netapi module', fun)
                 self.process_manager.add_process(self.netapi[fun])
 
         # Install the SIGINT/SIGTERM handlers if not done so far

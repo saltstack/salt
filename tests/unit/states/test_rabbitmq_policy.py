@@ -6,30 +6,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import rabbitmq_policy
-
-rabbitmq_policy.__opts__ = {}
-rabbitmq_policy.__salt__ = {}
+import salt.states.rabbitmq_policy as rabbitmq_policy
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RabbitmqPolicyTestCase(TestCase):
+class RabbitmqPolicyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.rabbitmq_policy
     '''
+    def setup_loader_modules(self):
+        return {rabbitmq_policy: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -87,8 +84,3 @@ class RabbitmqPolicyTestCase(TestCase):
                 changes = {'new': '', 'old': 'HA'}
                 ret.update({'comment': comment, 'result': None, 'changes': changes})
                 self.assertDictEqual(rabbitmq_policy.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RabbitmqPolicyTestCase, needs_daemon=False)

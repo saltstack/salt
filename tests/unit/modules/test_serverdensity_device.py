@@ -7,25 +7,18 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import serverdensity_device
+import salt.modules.serverdensity_device as serverdensity_device
 from salt.exceptions import CommandExecutionError
-
-serverdensity_device.__salt__ = {}
-serverdensity_device.__pillar__ = {}
-serverdensity_device.__opts__ = {}
 
 
 class MockJson(Exception):
@@ -104,15 +97,19 @@ class MockRequests(object):
         return self.return_request(url, data, **kwargs)
 
 
-serverdensity_device.requests = MockRequests()
-serverdensity_device.json = MockJson()
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ServerdensityDeviceTestCase(TestCase):
+class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.serverdensity_device
     '''
+    def setup_loader_modules(self):
+        return {
+            serverdensity_device: {
+                'json': MockJson(),
+                'requests': MockRequests()
+            }
+        }
+
     # 'get_sd_auth' function tests: 1
 
     def test_get_sd_auth(self):
@@ -242,8 +239,3 @@ class ServerdensityDeviceTestCase(TestCase):
                     self.assertTrue(
                         serverdensity_device.install_agent(
                             '51f7e', agent_version=2))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ServerdensityDeviceTestCase, needs_daemon=False)

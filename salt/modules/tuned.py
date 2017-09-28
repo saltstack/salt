@@ -13,7 +13,7 @@ from __future__ import absolute_import
 import re
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 
 __func_alias__ = {
     'list_': 'list',
@@ -27,7 +27,7 @@ def __virtual__():
     Check to see if tuned-adm binary is installed on the system
 
     '''
-    tuned_adm = salt.utils.which('tuned-adm')
+    tuned_adm = salt.utils.path.which('tuned-adm')
     if not tuned_adm:
         return (False, 'The tuned execution module failed to load: the tuned-adm binary is not in the path.')
     return __virtualname__
@@ -45,9 +45,13 @@ def list_():
     '''
 
     result = __salt__['cmd.run']('tuned-adm list').splitlines()
+    # Remove "Available profiles:"
     result.pop(0)
+    # Remove "Current active profile:.*"
     result.pop()
-    result = [i.lstrip('- ') for i in result]
+    # Output can be : " - <profile name> - <description>" (v2.7.1)
+    # or " - <profile name> " (v2.4.1)
+    result = [i.split('- ')[1].strip() for i in result]
     return result
 
 

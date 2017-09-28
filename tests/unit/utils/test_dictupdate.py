@@ -5,13 +5,10 @@ from __future__ import absolute_import
 import copy
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase
 
 # Import Salt libs
-from salt.utils import dictupdate
+import salt.utils.dictupdate as dictupdate
 
 
 class UtilDictupdateTestCase(TestCase):
@@ -42,6 +39,14 @@ class UtilDictupdateTestCase(TestCase):
         mdict['A'] = [1, 2, 3, 4]
         self.assertEqual(res, mdict)
 
+        # level 1 value changes (list merge, remove duplicates, preserve order)
+        mdict = copy.deepcopy(self.dict1)
+        mdict['A'] = [1, 2]
+        res = dictupdate.update(copy.deepcopy(mdict), {'A': [4, 3, 2, 1]},
+                                merge_lists=True)
+        mdict['A'] = [1, 2, 4, 3]
+        self.assertEqual(res, mdict)
+
         # level 2 value changes
         mdict = copy.deepcopy(self.dict1)
         mdict['C']['D'] = 'Z'
@@ -62,6 +67,15 @@ class UtilDictupdateTestCase(TestCase):
         res = dictupdate.update(copy.deepcopy(mdict), {'C': {'D': ['c', 'd']}},
                                 merge_lists=True)
         mdict['C']['D'] = ['a', 'b', 'c', 'd']
+        self.assertEqual(res, mdict)
+
+        # level 2 value changes (list merge, remove duplicates, preserve order)
+        mdict = copy.deepcopy(self.dict1)
+        mdict['C']['D'] = ['a', 'b']
+        res = dictupdate.update(copy.deepcopy(mdict),
+                                {'C': {'D': ['d', 'c', 'b', 'a']}},
+                                merge_lists=True)
+        mdict['C']['D'] = ['a', 'b', 'd', 'c']
         self.assertEqual(res, mdict)
 
         # level 3 value changes
@@ -87,6 +101,14 @@ class UtilDictupdateTestCase(TestCase):
         res = dictupdate.update(copy.deepcopy(mdict),
             {'C': {'F': {'G': ['c', 'd']}}}, merge_lists=True)
         mdict['C']['F']['G'] = ['a', 'b', 'c', 'd']
+        self.assertEqual(res, mdict)
+
+        # level 3 value changes (list merge, remove duplicates, preserve order)
+        mdict = copy.deepcopy(self.dict1)
+        mdict['C']['F']['G'] = ['a', 'b']
+        res = dictupdate.update(copy.deepcopy(mdict),
+            {'C': {'F': {'G': ['d', 'c', 'b', 'a']}}}, merge_lists=True)
+        mdict['C']['F']['G'] = ['a', 'b', 'd', 'c']
         self.assertEqual(res, mdict)
 
         # replace a sub-dictionary
@@ -173,8 +195,3 @@ class UtilDictMergeTestCase(TestCase):
         mdict1['A'] = ['B']
         ret = dictupdate.merge_list(mdict1, {'A': ['b', 'c']})
         self.assertEqual({'A': [['B'], ['b', 'c']], 'C': {'D': 'E', 'F': {'I': 'J', 'G': 'H'}}}, ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(UtilDictupdateTestCase, needs_daemon=False)

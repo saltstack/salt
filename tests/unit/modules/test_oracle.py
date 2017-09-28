@@ -5,33 +5,30 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import oracle
-import os
-
-# Globals
-oracle.__salt__ = {}
-oracle.cx_Oracle = object()
+import salt.modules.oracle as oracle
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class OracleTestCase(TestCase):
+class OracleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.oracle
     '''
+    def setup_loader_modules(self):
+        return {oracle: {'cx_Oracle': object()}}
+
     def test_run_query(self):
         '''
         Test for Run SQL query and return result
@@ -87,8 +84,3 @@ class OracleTestCase(TestCase):
                                         'TNS_ADMIN': 'TNS_ADMIN',
                                         'NLS_LANG': 'NLS_LANG'}):
             self.assertDictEqual(oracle.show_env(), {})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(OracleTestCase, needs_daemon=False)

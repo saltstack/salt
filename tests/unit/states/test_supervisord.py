@@ -6,30 +6,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import supervisord
-
-supervisord.__salt__ = {}
-supervisord.__opts__ = {}
+import salt.states.supervisord as supervisord
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SupervisordTestCase(TestCase):
+class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.supervisord
     '''
+    def setup_loader_modules(self):
+        return {supervisord: {}}
+
     # 'running' function tests: 1
 
     def test_running(self):
@@ -95,8 +92,3 @@ class SupervisordTestCase(TestCase):
                 ' Do you need to install supervisord?')
         ret.update({'comment': comt, 'result': False})
         self.assertDictEqual(supervisord.mod_watch(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SupervisordTestCase, needs_daemon=False)

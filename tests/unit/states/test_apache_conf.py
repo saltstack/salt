@@ -3,30 +3,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import apache_conf
-
-apache_conf.__opts__ = {}
-apache_conf.__salt__ = {}
+import salt.states.apache_conf as apache_conf
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ApacheConfTestCase(TestCase):
+class ApacheConfTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.apache_conf
     '''
+    def setup_loader_modules(self):
+        return {apache_conf: {}}
+
     # 'enabled' function tests: 1
 
     def test_enabled(self):
@@ -92,8 +89,3 @@ class ApacheConfTestCase(TestCase):
             comt = ('{0} already disabled.'.format(name))
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(apache_conf.disabled(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ApacheConfTestCase, needs_daemon=False)

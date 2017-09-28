@@ -7,29 +7,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
-from salt.modules import lvs
-
-# Globals
-lvs.__salt__ = {}
+import salt.modules.lvs as lvs
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LvsTestCase(TestCase):
+class LvsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.lvs
     '''
+    def setup_loader_modules(self):
+        return {lvs: {}}
+
     def test_add_service(self):
         '''
         Test for Add a virtual service.
@@ -197,8 +195,3 @@ class LvsTestCase(TestCase):
                     with patch.object(lvs, 'get_rules', return_value='C'):
                         self.assertEqual(lvs.check_server('p', 's'),
                                          'Error: server not exists')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LvsTestCase, needs_daemon=False)

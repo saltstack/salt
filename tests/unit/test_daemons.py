@@ -5,18 +5,15 @@
 
 # Import python libs
 from __future__ import absolute_import
+import multiprocessing
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
-
-ensure_in_syspath('../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
+from tests.support.mixins import SaltClientTestCaseMixin
 
 # Import Salt libs
-import integration
-import multiprocessing
-from salt.cli import daemons
+import salt.cli.daemons as daemons
 
 
 class LoggerMock(object):
@@ -72,7 +69,7 @@ class LoggerMock(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
+class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
     '''
     Unit test for the daemons starter classes.
     '''
@@ -248,7 +245,3 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
             child_pipe.close()
 
         self._multiproc_exec_test(exec_test)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DaemonsStarterTestCase, needs_daemon=False)

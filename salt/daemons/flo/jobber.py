@@ -3,6 +3,7 @@
 Jobber Behaviors
 '''
 # pylint: disable=W0232
+# pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
 from __future__ import absolute_import
@@ -16,17 +17,19 @@ import subprocess
 import json
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.daemons.masterapi
-import salt.utils.args
 import salt.utils
+import salt.utils.args
+import salt.utils.files
+import salt.utils.kinds as kinds
+import salt.utils.stringutils
 import salt.transport
 from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
-from salt.executors import FUNCTION_EXECUTORS
-from salt.utils import kinds, is_windows
+from salt.utils.platform import is_windows
 from salt.utils.event import tagify
 
 from salt.exceptions import (
@@ -58,7 +61,7 @@ def jobber_check(self):
             rms.append(jid)
             data = self.shells.value[jid]
             stdout, stderr = data['proc'].communicate()
-            ret = json.loads(salt.utils.to_str(stdout), object_hook=salt.utils.decode_dict)['local']
+            ret = json.loads(salt.utils.stringutils.to_str(stdout), object_hook=salt.utils.decode_dict)['local']
             route = {'src': (self.stack.value.local.name, 'manor', 'jid_ret'),
                      'dst': (data['msg']['route']['src'][0], None, 'remote_cmd')}
             ret['cmd'] = '_return'
@@ -103,7 +106,9 @@ def shell_jobber(self):
             continue
         args, kwargs = salt.minion.load_args_and_kwargs(
             func,
-            salt.utils.args.parse_input(data['arg']),
+            salt.utils.args.parse_input(
+                data['arg'],
+                no_parse=data.get('no_parse', [])),
             data)
         cmd = ['salt-call',
                '--out', 'json',
@@ -209,7 +214,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         except (KeyError, AttributeError, TypeError):
             pass
         else:
-            if isinstance(oput, str):
+            if isinstance(oput, six.string_types):
                 ret['out'] = oput
         msg = {'route': route, 'load': ret}
         stack.transmit(msg, stack.fetchUidByName('manor'))
@@ -277,7 +282,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
-        with salt.utils.fopen(fn_, 'w+b') as fp_:
+        with salt.utils.files.fopen(fn_, 'w+b') as fp_:
             fp_.write(self.serial.dumps(sdata))
         ret = {'success': False}
         function_name = data['fun']
@@ -286,35 +291,28 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 func = self.modules.value[data['fun']]
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     func,
-                    salt.utils.args.parse_input(data['arg']),
+                    salt.utils.args.parse_input(
+                        data['arg'],
+                        no_parse=data.get('no_parse', [])),
                     data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
 
-                executors = data.get('module_executors') or self.opts.get('module_executors', ['direct_call.get'])
+                executors = data.get('module_executors') or self.opts.get('module_executors', ['direct_call'])
                 if isinstance(executors, six.string_types):
                     executors = [executors]
                 elif not isinstance(executors, list) or not executors:
                     raise SaltInvocationError("Wrong executors specification: {0}. String or non-empty list expected".
                                               format(executors))
-                if self.opts.get('sudo_user', '') and executors[-1] != 'sudo.get':
-                    if executors[-1] in FUNCTION_EXECUTORS:
-                        executors[-1] = 'sudo.get'  # replace
-                    else:
-                        executors.append('sudo.get')  # append
+                if self.opts.get('sudo_user', '') and executors[-1] != 'sudo':
+                    executors[-1] = 'sudo.get'  # replace
                 log.trace("Executors list {0}".format(executors))
 
-                # Get executors
-                def get_executor(name):
-                    executor_class = self.module_executors.value.get(name)
-                    if executor_class is None:
+                for name in executors:
+                    if name not in self.module_executors.value:
                         raise SaltInvocationError("Executor '{0}' is not available".format(name))
-                    return executor_class
-                # Get the last one that is function executor
-                executor = get_executor(executors.pop())(self.opts, data, func, args, kwargs)
-                # Instantiate others from bottom to the top
-                for executor_name in reversed(executors):
-                    executor = get_executor(executor_name)(self.opts, data, executor)
-                return_data = executor.execute()
+                    return_data = self.module_executors.value[name].execute(self.opts, data, func, args, kwargs)
+                    if return_data is not None:
+                        break
 
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0

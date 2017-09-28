@@ -7,30 +7,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import nftables
-
-# Globals
-nftables.__salt__ = {}
-nftables.__opts__ = {}
+import salt.states.nftables as nftables
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NftablesTestCase(TestCase):
+class NftablesTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the nftables state
     '''
+    def setup_loader_modules(self):
+        return {nftables: {}}
+
     def test_chain_present(self):
         '''
             Test to verify the chain is exist.
@@ -275,8 +272,3 @@ class NftablesTestCase(TestCase):
                                     'result': False})
                         self.assertDictEqual(nftables.flush('salt', table='',
                                                             chain=''), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NftablesTestCase, needs_daemon=False)

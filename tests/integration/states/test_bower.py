@@ -7,18 +7,17 @@ from __future__ import absolute_import
 import json
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import integration
-import salt.utils
+import salt.utils.path
 
 
-@skipIf(salt.utils.which('bower') is None, 'bower not installed')
-class BowerStateTest(integration.ModuleCase,
-                     integration.SaltReturnAssertsMixIn):
+@skipIf(salt.utils.path.which('bower') is None, 'bower not installed')
+class BowerStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     def test_bower_installed_removed(self):
@@ -74,8 +73,3 @@ class BowerStateTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('file.absent', name='/salt_test_bower_3')
         self.assertSaltTrueReturn(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BowerStateTest)

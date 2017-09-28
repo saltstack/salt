@@ -4,14 +4,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ModuleCase
 
 
-class DecoratorTest(integration.ModuleCase):
+class DecoratorTest(ModuleCase):
     def test_module(self):
         self.assertTrue(
                 self.run_function(
@@ -26,8 +22,9 @@ class DecoratorTest(integration.ModuleCase):
         self.assertTrue(isinstance(ret['time'], float))
 
     def test_missing_depends(self):
-        self.assertIn(
-                'is not available',
+        self.assertEqual(
+                {'runtests_decorators.missing_depends_will_fallback': '\n    CLI Example:\n\n    ',
+                 'runtests_decorators.missing_depends': "'runtests_decorators.missing_depends' is not available."},
                 self.run_function('runtests_decorators.missing_depends'
                     )
                 )
@@ -60,8 +57,3 @@ class DecoratorTest(integration.ModuleCase):
                     'runtests_decorators.missing_depends_will_fallback'
                     )
                 )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DecoratorTest)

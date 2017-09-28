@@ -4,7 +4,6 @@ Manage Dell DRAC.
 
 .. versionadded:: 2015.8.2
 '''
-# pylint: disable=W0141
 
 # Import python libs
 from __future__ import absolute_import
@@ -14,10 +13,10 @@ import re
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.path
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves import map
 
@@ -35,7 +34,7 @@ except (NameError, KeyError):
 
 
 def __virtual__():
-    if salt.utils.which('racadm'):
+    if salt.utils.path.which('racadm'):
         return True
 
     return (False, 'The drac execution module cannot be loaded: racadm binary not in path.')

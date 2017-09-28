@@ -3,30 +3,24 @@
     :synopsis: Unit Tests for Windows PKI Module 'state.win_pki'
     :platform: Windows
     :maturity: develop
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 '''
 
 # Import Python Libs
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import win_pki
+import salt.states.win_pki as win_pki
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON,
 )
-
-ensure_in_syspath('../../')
-
-# Globals
-win_pki.__salt__ = {}
-win_pki.__opts__ = {}
 
 CERT_PATH = r'C:\certs\testdomain.local.cer'
 THUMBPRINT = '9988776655443322111000AAABBBCCCDDDEEEFFF'
@@ -44,10 +38,12 @@ CERTS = {
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinPkiTestCase(TestCase):
+class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.win_pki
     '''
+    def setup_loader_modules(self):
+        return {win_pki: {}}
 
     def test_import_cert(self):
         '''
@@ -104,8 +100,3 @@ class WinPkiTestCase(TestCase):
                                  " {1}").format(kwargs['thumbprint'], STORE_PATH)
                 ret['result'] = None
                 self.assertEqual(win_pki.remove_cert(**kwargs), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(WinPkiTestCase, needs_daemon=False)

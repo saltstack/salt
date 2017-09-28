@@ -54,18 +54,17 @@ from __future__ import absolute_import
 import logging
 import json
 import datetime
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
-from salt.ext.six import string_types
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
-
+from salt.ext.six import string_types
 # pylint: disable=import-error
 try:
     #pylint: disable=unused-import

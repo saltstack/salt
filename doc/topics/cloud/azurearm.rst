@@ -6,7 +6,7 @@ Getting Started With Azure ARM
 
 Azure is a cloud service by Microsoft providing virtual machines, SQL services,
 media services, and more. Azure ARM (aka, the Azure Resource Manager) is a next
-generatiom version of the Azure portal and API. This document describes how to
+generation version of the Azure portal and API. This document describes how to
 use Salt Cloud to create a virtual machine on Azure ARM, with Salt installed.
 
 More information about Azure is located at `http://www.windowsazure.com/
@@ -15,11 +15,37 @@ More information about Azure is located at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc5
-* `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32
-* The python-requests library, for Python < 2.7.9.
+* Azure Cli ```pip install 'azure-cli>=2.0.12'```
 * A Microsoft Azure account
 * `Salt <https://github.com/saltstack/salt>`_
+
+
+Installation Tips
+=================
+Because the ``azure`` library requires the ``cryptography`` library, which is
+compiled on-the-fly by ``pip``, you may need to install the development tools
+for your operating system.
+
+Before you install ``azure`` with ``pip``, you should make sure that the
+required libraries are installed.
+
+Debian
+------
+For Debian and Ubuntu, the following command will ensure that the required
+dependencies are installed:
+
+.. code-block:: bash
+
+    sudo apt-get install build-essential libssl-dev libffi-dev python-dev
+
+Red Hat
+-------
+For Fedora and RHEL-derivatives, the following command will ensure that the
+required dependencies are installed:
+
+.. code-block:: bash
+
+    sudo yum install gcc libffi-devel python-devel openssl-devel
 
 
 Configuration
@@ -33,7 +59,7 @@ Set up the provider config at ``/etc/salt/cloud.providers.d/azurearm.conf``:
 
     my-azurearm-config:
       driver: azurearm
-      master: limejack.com
+      master: salt.example.com
       subscription_id: 01234567-890a-bcde-f012-34567890abdc
 
       # https://apps.dev.microsoft.com/#/appList
@@ -48,15 +74,14 @@ Set up the provider config at ``/etc/salt/cloud.providers.d/azurearm.conf``:
       cleanup_vhds: True
       cleanup_data_disks: True
       cleanup_interfaces: True
-      custom_data: 'This is a Joseph test'
-      expire_publisher_cache: 604800  # 1 week
-      expire_offer_cache: 604800  # 1 week
-      expire_sku_cache: 604800  # 1 week
-      expire_version_cache: 604800  # 1 week
-      expire_group_cache: 86400  # 1 day
+      custom_data: 'This is custom data'
+      expire_publisher_cache: 604800  # 7 days
+      expire_offer_cache: 518400  # 6 days
+      expire_sku_cache: 432000  # 5 days
+      expire_version_cache: 345600  # 4 days
+      expire_group_cache: 14400  # 4 hours
       expire_interface_cache: 3600  # 1 hour
       expire_network_cache: 3600  # 1 hour
-      expire_subnet_cache: 3600  # 1 hour
 
 Cloud Profiles
 ==============
@@ -172,6 +197,10 @@ win_password
 Required for Windows. The password to use to log into the newly-created Windows
 VM to install Salt.
 
+win_installer
+-------------
+Required for Windows. The path to the Salt installer to be uploaded.
+
 resource_group
 --------------
 Required. The resource group that all VM resources (VM, network interfaces,
@@ -182,6 +211,48 @@ network_resource_group
 Optional. If specified, then the VM will be connected to the network resources
 in this group, rather than the group that it was created in. The VM interfaces
 and IPs will remain in the configured ``resource_group`` with the VM.
+
+network
+-------
+Required. The virtual network that the VM will be spun up in.
+
+subnet
+------
+Optional. The subnet inside the virtual network that the VM will be spun up in.
+Default is ``default``.
+
+load_balancer
+-------------
+Optional. The load-balancer for the VM's network interface to join. If
+specified the backend_pool option need to be set.
+
+backend_pool
+------------
+Optional. Required if the load_balancer option is set. The load-balancer's
+Backend Pool the VM's network interface will join.
+
+iface_name
+----------
+Optional. The name to apply to the VM's network interface. If not supplied, the
+value will be set to ``<VM name>-iface0``.
+
+dns_servers
+-----------
+Optional. A **list** of the DNS servers to configure for the network interface
+(will be set on the VM by the DHCP of the VNET).
+
+.. code-block:: yaml
+
+    my-azurearm-profile:
+      provider: azurearm-provider
+      network: mynetwork
+      dns_servers:
+        - 10.1.1.4
+        - 10.1.1.5
+
+availability_set
+----------------
+Optional. If set, the VM will be added to the specified availability set.
 
 cleanup_disks
 -------------
@@ -208,14 +279,37 @@ to be recreated with the same name and network settings. If you would like
 interfaces and IPs to be deleted when their associated VM is deleted, set this
 to ``True``. 
 
-custom_data
------------
-Any custom cloud data that needs to be specified. How this data is used depends
-on the operating system and image that is used. For instance, Linux images that
-use ``cloud-init`` will import this data for use with that program. Some
-Windows images will create a file with a copy of this data, and others will
-ignore it. If a Windows image creates a file, then the location will depend
-upon the version of Windows.
+userdata
+--------
+Optional. Any custom cloud data that needs to be specified. How this data is
+used depends on the operating system and image that is used. For instance,
+Linux images that use ``cloud-init`` will import this data for use with that
+program. Some Windows images will create a file with a copy of this data, and
+others will ignore it. If a Windows image creates a file, then the location
+will depend upon the version of Windows. This will be ignored if the
+``userdata_file`` is specified.
+
+userdata_file
+-------------
+Optional. The path to a file to be read and submitted to Azure as user data.
+How this is used depends on the operating system that is being deployed. If
+used, any ``userdata`` setting will be ignored.
+
+wait_for_ip_timeout
+-------------------
+Optional. Default is ``600``. When waiting for a VM to be created, Salt Cloud
+will attempt to connect to the VM's IP address until it starts responding. This
+setting specifies the maximum time to wait for a response.
+
+wait_for_ip_interval
+--------------------
+Optional. Default is ``10``. How long to wait between attempts to connect to
+the VM's IP.
+
+wait_for_ip_interval_multiplier
+-------------------------------
+Optional. Default is ``1``. Increase the interval by this multiplier after
+each request; helps with throttling.
 
 expire_publisher_cache
 ----------------------
@@ -231,41 +325,41 @@ cache.
 
 expire_offer_cache
 ------------------
-Optional. Default is ``604800``. See ``expire_publisher_cache`` for details on
+Optional. Default is ``518400``. See ``expire_publisher_cache`` for details on
 why this exists.
 
-By default, the offer data will be cached, and only updated every ``604800``
-seconds (7 days). If you need the offer cache to be updated at a different
+By default, the offer data will be cached, and only updated every ``518400``
+seconds (6 days). If you need the offer cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the publiser
 cache.
 
 expire_sku_cache
 ----------------
-Optional. Default is ``604800``. See ``expire_publisher_cache`` for details on
+Optional. Default is ``432000``. See ``expire_publisher_cache`` for details on
 why this exists.
 
-By default, the sku data will be cached, and only updated every ``604800``
-seconds (7 days). If you need the sku cache to be updated at a different
+By default, the sku data will be cached, and only updated every ``432000``
+seconds (5 days). If you need the sku cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the sku
 cache.
 
 expire_version_cache
 --------------------
-Optional. Default is ``604800``. See ``expire_publisher_cache`` for details on
+Optional. Default is ``345600``. See ``expire_publisher_cache`` for details on
 why this exists.
 
-By default, the version data will be cached, and only updated every ``604800``
-seconds (7 days). If you need the version cache to be updated at a different
+By default, the version data will be cached, and only updated every ``345600``
+seconds (4 days). If you need the version cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the version
 cache.
 
 expire_group_cache
 ------------------
-Optional. Default is ``604800``. See ``expire_publisher_cache`` for details on
+Optional. Default is ``14400``. See ``expire_publisher_cache`` for details on
 why this exists.
 
 By default, the resource group data will be cached, and only updated every
-``604800`` seconds (7 days). If you need the resource group cache to be updated
+``14400`` seconds (4 hours). If you need the resource group cache to be updated
 at a different frequency, change this setting. Setting it to ``0`` will turn
 off the resource group cache.
 
@@ -289,15 +383,19 @@ seconds (1 hour). If you need the network cache to be updated at a different
 frequency, change this setting. Setting it to ``0`` will turn off the network
 cache.
 
-expire_subnet_cache
--------------------
-Optional. Default is ``3600``. See ``expire_publisher_cache`` for details on
-why this exists.
 
-By default, the subnet data will be cached, and only updated every ``3600``
-seconds (1 hour). If you need the subnet cache to be updated at a different
-frequency, change this setting. Setting it to ``0`` will turn off the subnet
-cache.
+Other Options
+=============
+Other options relevant to Azure ARM.
+
+storage_account
+---------------
+Required for actions involving an Azure storage account.
+
+storage_key
+-----------
+Required for actions involving an Azure storage account.
+
 
 Show Instance
 =============

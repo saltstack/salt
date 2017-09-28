@@ -2,7 +2,7 @@
 '''
 Pillar data from vCenter or an ESXi host
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: - pyVmomi
 
@@ -147,11 +147,11 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-from salt.utils import dictupdate
+import salt.utils.dictupdate as dictupdate
 import salt.utils.vmware
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     from pyVmomi import vim
     from pyVim.connect import Disconnect
@@ -502,7 +502,7 @@ def _crawl_attribute(this_data, this_attr):
     else:
         if isinstance(this_attr, dict):
             t_dict = {}
-            for k in this_attr.keys():
+            for k in this_attr:
                 if hasattr(this_data, k):
                     t_dict[k] = _crawl_attribute(getattr(this_data, k, None), this_attr[k])
             return t_dict

@@ -44,9 +44,10 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves import range, zip  # pylint: disable=no-name-in-module,redefined-builtin
 try:
@@ -621,19 +622,22 @@ def query(database, query, **connection_args):
     orig_conv = MySQLdb.converters.conversions
     conv_iter = iter(orig_conv)
     conv = dict(zip(conv_iter, [str] * len(orig_conv)))
+
     # some converters are lists, do not break theses
-    conv[FIELD_TYPE.BLOB] = [
-        (FLAG.BINARY, str),
-    ]
-    conv[FIELD_TYPE.STRING] = [
-        (FLAG.BINARY, str),
-    ]
-    conv[FIELD_TYPE.VAR_STRING] = [
-        (FLAG.BINARY, str),
-    ]
-    conv[FIELD_TYPE.VARCHAR] = [
-        (FLAG.BINARY, str),
-    ]
+    conv_mysqldb = {'MYSQLDB': True}
+    if conv_mysqldb.get(MySQLdb.__package__.upper()):
+        conv[FIELD_TYPE.BLOB] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.STRING] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.VAR_STRING] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.VARCHAR] = [
+            (FLAG.BINARY, str),
+        ]
 
     connection_args.update({'connection_db': database, 'connection_conv': conv})
     dbc = _connect(**connection_args)
@@ -682,13 +686,22 @@ def file_query(database, file_name, **connection_args):
     Run an arbitrary SQL query from the specified file and return the
     the number of affected rows.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
+
+    database
+
+        database to run script inside
+
+    file_name
+
+        File name of the script.  This can be on the minion, or a file that is reachable by the fileserver
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' mysql.file_query mydb file_name=/tmp/sqlfile.sql
+        salt '*' mysql.file_query mydb file_name=salt://sqlfile.sql
 
     Return data:
 
@@ -697,15 +710,18 @@ def file_query(database, file_name, **connection_args):
         {'query time': {'human': '39.0ms', 'raw': '0.03899'}, 'rows affected': 1L}
 
     '''
+    if any(file_name.startswith(proto) for proto in ('salt://', 'http://', 'https://', 'swift://', 's3://')):
+        file_name = __salt__['cp.cache_file'](file_name)
+
     if os.path.exists(file_name):
-        with salt.utils.fopen(file_name, 'r') as ifile:
+        with salt.utils.files.fopen(file_name, 'r') as ifile:
             contents = ifile.read()
     else:
         log.error('File "{0}" does not exist'.format(file_name))
         return False
 
     query_string = ""
-    ret = {'rows returned': 0, 'columns': 0, 'results': 0, 'rows affected': 0, 'query time': {'raw': 0}}
+    ret = {'rows returned': 0, 'columns': [], 'results': [], 'rows affected': 0, 'query time': {'raw': 0}}
     for line in contents.splitlines():
         if re.match(r'--', line):  # ignore sql comments
             continue
@@ -725,16 +741,16 @@ def file_query(database, file_name, **connection_args):
             if 'rows returned' in query_result:
                 ret['rows returned'] += query_result['rows returned']
             if 'columns' in query_result:
-                ret['columns'] += query_result['columns']
+                ret['columns'].append(query_result['columns'])
             if 'results' in query_result:
-                ret['results'] += query_result['results']
+                ret['results'].append(query_result['results'])
             if 'rows affected' in query_result:
                 ret['rows affected'] += query_result['rows affected']
     ret['query time']['human'] = str(round(float(ret['query time']['raw']), 2)) + 's'
     ret['query time']['raw'] = round(float(ret['query time']['raw']), 5)
 
     # Remove empty keys in ret
-    ret = dict((k, v) for k, v in six.iteritems(ret) if v)
+    ret = {k: v for k, v in six.iteritems(ret) if v}
 
     return ret
 
@@ -1448,7 +1464,10 @@ def user_chpass(user,
     if salt.utils.is_true(allow_passwordless) and \
             salt.utils.is_true(unix_socket):
         if host == 'localhost':
-            qry += ' IDENTIFIED VIA unix_socket'
+            qry = ('UPDATE mysql.user SET ' + password_column + '='
+                   + password_sql + ', plugin=%(unix_socket)s' +
+                   ' WHERE User=%(user)s AND Host = %(host)s;')
+            args['unix_socket'] = 'unix_socket'
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
     try:

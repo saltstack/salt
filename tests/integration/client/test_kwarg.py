@@ -4,14 +4,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ModuleCase
 
 
-class StdTest(integration.ModuleCase):
+class StdTest(ModuleCase):
     '''
     Test standard client calls
     '''
@@ -21,18 +17,14 @@ class StdTest(integration.ModuleCase):
         '''
         cmd_iter = self.client.cmd_cli(
                 'minion',
-                'test.kwarg',
-                ['foo=bar', 'baz=quo'],
+                'test.arg',
+                ['foo', 'bar', 'baz'],
                 kwarg={'qux': 'quux'}
                 )
         for ret in cmd_iter:
             data = ret['minion']['ret']
-            self.assertIn('foo', data)
-            self.assertIn('baz', data)
-            self.assertIn('qux', data)
-            self.assertEqual(data['foo'], 'bar')
-            self.assertEqual(data['baz'], 'quo')
-            self.assertEqual(data['qux'], 'quux')
+            self.assertEqual(data['args'], ['foo', 'bar', 'baz'])
+            self.assertEqual(data['kwargs']['qux'], 'quux')
 
     def test_iter(self):
         '''
@@ -40,18 +32,14 @@ class StdTest(integration.ModuleCase):
         '''
         cmd_iter = self.client.cmd_iter(
                 'minion',
-                'test.kwarg',
-                ['foo=bar', 'baz=quo'],
+                'test.arg',
+                ['foo', 'bar', 'baz'],
                 kwarg={'qux': 'quux'}
                 )
         for ret in cmd_iter:
             data = ret['minion']['ret']
-            self.assertIn('foo', data)
-            self.assertIn('baz', data)
-            self.assertIn('qux', data)
-            self.assertEqual(data['foo'], 'bar')
-            self.assertEqual(data['baz'], 'quo')
-            self.assertEqual(data['qux'], 'quux')
+            self.assertEqual(data['args'], ['foo', 'bar', 'baz'])
+            self.assertEqual(data['kwargs']['qux'], 'quux')
 
     def test_iter_no_block(self):
         '''
@@ -59,20 +47,16 @@ class StdTest(integration.ModuleCase):
         '''
         cmd_iter = self.client.cmd_iter_no_block(
                 'minion',
-                'test.kwarg',
-                ['foo=bar', 'baz=quo'],
+                'test.arg',
+                ['foo', 'bar', 'baz'],
                 kwarg={'qux': 'quux'}
                 )
         for ret in cmd_iter:
             if ret is None:
                 continue
             data = ret['minion']['ret']
-            self.assertIn('foo', data)
-            self.assertIn('baz', data)
-            self.assertIn('qux', data)
-            self.assertEqual(data['foo'], 'bar')
-            self.assertEqual(data['baz'], 'quo')
-            self.assertEqual(data['qux'], 'quux')
+            self.assertEqual(data['args'], ['foo', 'bar', 'baz'])
+            self.assertEqual(data['kwargs']['qux'], 'quux')
 
     def test_full_returns(self):
         '''
@@ -80,17 +64,13 @@ class StdTest(integration.ModuleCase):
         '''
         ret = self.client.cmd_full_return(
                 'minion',
-                'test.kwarg',
-                ['foo=bar', 'baz=quo'],
+                'test.arg',
+                ['foo', 'bar', 'baz'],
                 kwarg={'qux': 'quux'}
                 )
-        data = ret['minion']
-        self.assertIn('foo', data['ret'])
-        self.assertIn('baz', data['ret'])
-        self.assertIn('qux', data['ret'])
-        self.assertEqual(data['ret']['foo'], 'bar')
-        self.assertEqual(data['ret']['baz'], 'quo')
-        self.assertEqual(data['ret']['qux'], 'quux')
+        data = ret['minion']['ret']
+        self.assertEqual(data['args'], ['foo', 'bar', 'baz'])
+        self.assertEqual(data['kwargs']['qux'], 'quux')
 
     def test_kwarg_type(self):
         '''
@@ -110,7 +90,29 @@ class StdTest(integration.ModuleCase):
         self.assertIn('dict', data['kwargs']['outer'])
         self.assertIn('str', data['kwargs']['inner'])
 
+    def test_full_return_kwarg(self):
+        ret = self.client.cmd('minion', 'test.ping', full_return=True)
+        for mid, data in ret.items():
+            self.assertIn('retcode', data)
 
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StdTest)
+    def test_cmd_arg_kwarg_parsing(self):
+        ret = self.client.cmd('minion', 'test.arg_clean',
+            arg=[
+                'foo',
+                'bar=off',
+                'baz={qux: 123}'
+            ],
+            kwarg={
+                'quux': 'Quux',
+            })
+
+        self.assertEqual(ret['minion'], {
+            'args': ['foo'],
+            'kwargs': {
+                'bar': False,
+                'baz': {
+                    'qux': 123,
+                },
+                'quux': 'Quux',
+            },
+        })

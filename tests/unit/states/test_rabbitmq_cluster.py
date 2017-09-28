@@ -7,30 +7,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import rabbitmq_cluster
-
-# Globals
-rabbitmq_cluster.__salt__ = {}
-rabbitmq_cluster.__opts__ = {}
+import salt.states.rabbitmq_cluster as rabbitmq_cluster
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RabbitmqClusterTestCase(TestCase):
+class RabbitmqClusterTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the rabbitmq_cluster state
     '''
+    def setup_loader_modules(self):
+        return {rabbitmq_cluster: {}}
+
     def test_joined(self):
         '''
             Test to ensure the current node joined
@@ -67,8 +64,3 @@ class RabbitmqClusterTestCase(TestCase):
                                                                  'salt',
                                                                  'rahulha'),
                                          ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RabbitmqClusterTestCase, needs_daemon=False)

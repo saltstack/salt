@@ -23,9 +23,10 @@ import datetime
 import ast
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 import salt.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.odict import OrderedDict
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import range
@@ -165,7 +166,7 @@ def _parse_openssl_req(csr_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
@@ -214,7 +215,7 @@ def _parse_openssl_crl(crl_filename):
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )
@@ -315,7 +316,7 @@ def _text_or_file(input_):
     content to be parsed.
     '''
     if os.path.isfile(input_):
-        with salt.utils.fopen(input_) as fp_:
+        with salt.utils.files.fopen(input_) as fp_:
             return fp_.read()
     else:
         return input_
@@ -330,10 +331,14 @@ def _parse_subject(subject):
     for nid_name, nid_num in six.iteritems(subject.nid):
         if nid_num in nids:
             continue
-        val = getattr(subject, nid_name)
-        if val:
-            ret[nid_name] = val
-            nids.append(nid_num)
+        try:
+            val = getattr(subject, nid_name)
+            if val:
+                ret[nid_name] = val
+                nids.append(nid_num)
+        except TypeError as e:
+            if e.args and e.args[0] == 'No string argument provided':
+                pass
 
     return ret
 
@@ -355,7 +360,7 @@ def _get_private_key_obj(private_key, passphrase=None):
     Returns a private key object based on PEM text.
     '''
     private_key = _text_or_file(private_key)
-    private_key = get_pem_entry(private_key, pem_type='RSA PRIVATE KEY')
+    private_key = get_pem_entry(private_key, pem_type='(?:RSA )?PRIVATE KEY')
     rsaprivkey = M2Crypto.RSA.load_key_string(
         private_key, callback=_passphrase_callback(passphrase))
     evpprivkey = M2Crypto.EVP.PKey()
@@ -765,10 +770,10 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         except salt.exceptions.SaltInvocationError:
             pass
         try:
-            _private_key = get_pem_entry(_filecontents, 'RSA PRIVATE KEY')
+            _private_key = get_pem_entry(_filecontents, '(?:RSA )?PRIVATE KEY')
         except salt.exceptions.SaltInvocationError:
             pass
-    with salt.utils.fopen(path, 'w') as _fp:
+    with salt.utils.files.fopen(path, 'w') as _fp:
         if pem_type and pem_type == 'CERTIFICATE' and _private_key:
             _fp.write(_private_key)
         _fp.write(text)
@@ -842,7 +847,7 @@ def create_private_key(path=None,
         return write_pem(
             text=bio.read_all(),
             path=path,
-            pem_type='RSA PRIVATE KEY'
+            pem_type='(?:RSA )?PRIVATE KEY'
         )
     else:
         return bio.read_all()
@@ -881,7 +886,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         represents one certificate. A dict must contain either the key
         ``serial_number`` with the value of the serial number to revoke, or
         ``certificate`` with either the PEM encoded text of the certificate,
-        or a path ot the certificate to revoke.
+        or a path to the certificate to revoke.
 
         The dict can optionally contain the ``revocation_date`` key. If this
         key is omitted the revocation date will be set to now. If should be a
@@ -981,21 +986,24 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
         OpenSSL.crypto.FILETYPE_PEM,
         get_pem_entry(signing_private_key))
 
+    export_kwargs = {
+        'cert': cert,
+        'key': key,
+        'type': OpenSSL.crypto.FILETYPE_PEM,
+        'days': days_valid
+    }
+    if digest:
+        export_kwargs['digest'] = bytes(digest)
+    else:
+        log.warning('No digest specified. The default md5 digest will be used.')
+
     try:
-        crltext = crl.export(
-            cert,
-            key,
-            OpenSSL.crypto.FILETYPE_PEM,
-            days=days_valid,
-            digest=bytes(digest))
-    except TypeError:
+        crltext = crl.export(**export_kwargs)
+    except (TypeError, ValueError):
         log.warning(
             'Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used.')
-        crltext = crl.export(
-            cert,
-            key,
-            OpenSSL.crypto.FILETYPE_PEM,
-            days=days_valid)
+        export_kwargs.pop('digest', None)
+        crltext = crl.export(**export_kwargs)
 
     if text:
         return crltext
@@ -1370,10 +1378,19 @@ def create_certificate(
                 ['listen_in', 'preqrequired', '__prerequired__']:
             kwargs.pop(ignore, None)
 
-        cert_txt = __salt__['publish.publish'](
+        certs = __salt__['publish.publish'](
             tgt=ca_server,
             fun='x509.sign_remote_certificate',
-            arg=str(kwargs))[ca_server]
+            arg=str(kwargs))
+
+        if not any(certs):
+            raise salt.exceptions.SaltInvocationError(
+                    'ca_server did not respond'
+                    ' salt master must permit peers to'
+                    ' call the sign_remote_certificate function.')
+
+        cert_txt = certs[ca_server]
+
         if path:
             return write_pem(
                 text=cert_txt,
@@ -1585,7 +1602,7 @@ def create_csr(path=None, text=False, **kwargs):
         log.warning(
             "OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key")
 
-    if 'private_key' not in kwargs not in kwargs:
+    if 'private_key' not in kwargs:
         raise salt.exceptions.SaltInvocationError('private_key is required')
 
     if 'public_key' not in kwargs:
@@ -1733,7 +1750,7 @@ def verify_crl(crl, cert):
 
         salt '*' x509.verify_crl crl=/etc/pki/myca.crl cert=/etc/pki/myca.crt
     '''
-    if not salt.utils.which('openssl'):
+    if not salt.utils.path.which('openssl'):
         raise salt.exceptions.SaltInvocationError(
             'openssl binary not found in path'
         )

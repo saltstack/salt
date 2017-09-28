@@ -7,30 +7,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import win_system
-
-# Globals
-win_system.__salt__ = {}
-win_system.__opts__ = {}
+import salt.states.win_system as win_system
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinSystemTestCase(TestCase):
+class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the win_system state
     '''
+    def setup_loader_modules(self):
+        return {win_system: {}}
+
     def test_computer_desc(self):
         '''
             Test to manage the computer's description field
@@ -135,8 +132,3 @@ class WinSystemTestCase(TestCase):
                         'result': True})
 
             self.assertDictEqual(win_system.hostname('SALT'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinSystemTestCase, needs_daemon=False)

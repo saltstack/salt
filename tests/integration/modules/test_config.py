@@ -7,14 +7,10 @@ Validate the config system
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ModuleCase
 
 
-class ConfigTest(integration.ModuleCase):
+class ConfigTest(ModuleCase):
     '''
     Test config routines
     '''
@@ -103,8 +99,3 @@ class ConfigTest(integration.ModuleCase):
                     'config.get',
                     ['config_test:spam']),
                 'eggs')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ConfigTest)

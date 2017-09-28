@@ -7,8 +7,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -16,7 +17,7 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import pw_user
+import salt.modules.pw_user as pw_user
 from salt.exceptions import CommandExecutionError
 try:
     import pwd
@@ -25,18 +26,15 @@ except ImportError:
     HAS_PWD = False
 
 
-# Globals
-pw_user.__grains__ = {}
-pw_user.__salt__ = {}
-pw_user.__context__ = {}
-
-
 @skipIf(not HAS_PWD, 'These tests can only run on systems with the python pwd module')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PwUserTestCase(TestCase):
+class PwUserTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pw_user
     '''
+    def setup_loader_modules(self):
+        return {pw_user: {}}
+
     def test_add(self):
         '''
         Test for adding a user
@@ -312,7 +310,6 @@ class PwUserTestCase(TestCase):
             with patch.object(pw_user, 'list_groups', mock):
                 self.assertEqual(pw_user.info('name')['name'], '_TEST_GROUP')
 
-    @patch('salt.utils.get_group_list', MagicMock(return_value='A'))
     def test_list_groups(self):
         '''
         Return a list of groups the named user belongs to
@@ -358,7 +355,3 @@ class PwUserTestCase(TestCase):
             mock = MagicMock(side_effect=[{'name': ''}, False, {'name': ''}])
             with patch.object(pw_user, 'info', mock):
                 self.assertFalse(pw_user.rename('name', 'name'))
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PwUserTestCase, needs_daemon=False)

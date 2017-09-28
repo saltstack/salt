@@ -8,22 +8,17 @@ from __future__ import absolute_import
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
-from salt.modules import logrotate
+import salt.modules.logrotate as logrotate
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
-# Globals
-logrotate.__salt__ = {}
 
 PARSE_CONF = {
     'include files': {
@@ -37,64 +32,59 @@ PARSE_CONF = {
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LogrotateTestCase(TestCase):
+class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.logrotate
     '''
+    def setup_loader_modules(self):
+        return {logrotate: {}}
+
     # 'show_conf' function tests: 1
 
-    @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value=True))
     def test_show_conf(self):
         '''
         Test if it show parsed configuration
         '''
-        self.assertTrue(logrotate.show_conf())
+        with patch('salt.modules.logrotate._parse_conf',
+                   MagicMock(return_value=True)):
+            self.assertTrue(logrotate.show_conf())
 
     # 'set_' function tests: 4
 
-    @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value=PARSE_CONF))
     def test_set(self):
         '''
         Test if it set a new value for a specific configuration line
         '''
-        with patch.dict(logrotate.__salt__,
-                        {'file.replace': MagicMock(return_value=True)}):
+        with patch('salt.modules.logrotate._parse_conf',
+                   MagicMock(return_value=PARSE_CONF)), \
+                patch.dict(logrotate.__salt__,
+                           {'file.replace': MagicMock(return_value=True)}):
             self.assertTrue(logrotate.set_('rotate', '2'))
 
-    @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value=PARSE_CONF))
     def test_set_failed(self):
         '''
         Test if it fails to set a new value for a specific configuration line
         '''
-        kwargs = {'key': '/var/log/wtmp',
-                  'value': 2}
-        self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
+        with patch('salt.modules.logrotate._parse_conf', MagicMock(return_value=PARSE_CONF)):
+            kwargs = {'key': '/var/log/wtmp', 'value': 2}
+            self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
 
-    @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value=PARSE_CONF))
     def test_set_setting(self):
         '''
         Test if it set a new value for a specific configuration line
         '''
         with patch.dict(logrotate.__salt__,
-                        {'file.replace': MagicMock(return_value=True)}):
+                        {'file.replace': MagicMock(return_value=True)}), \
+                patch('salt.modules.logrotate._parse_conf',
+                      MagicMock(return_value=PARSE_CONF)):
             self.assertTrue(logrotate.set_('/var/log/wtmp', 'rotate', '2'))
 
-    @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value=PARSE_CONF))
     def test_set_setting_failed(self):
         '''
         Test if it fails to set a new value for a specific configuration line
         '''
-        kwargs = {'key': 'rotate',
-                  'value': '/var/log/wtmp',
-                  'setting': '2'}
-        self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(LogrotateTestCase, needs_daemon=False)
+        with patch('salt.modules.logrotate._parse_conf', MagicMock(return_value=PARSE_CONF)):
+            kwargs = {'key': 'rotate',
+                      'value': '/var/log/wtmp',
+                      'setting': '2'}
+            self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)

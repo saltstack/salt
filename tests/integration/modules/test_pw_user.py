@@ -7,23 +7,18 @@
 '''
 # Import python libs
 from __future__ import absolute_import
-import os
 import string
 import random
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ModuleCase
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
-class PwUserModuleTest(integration.ModuleCase):
+class PwUserModuleTest(ModuleCase):
 
     def setUp(self):
         super(PwUserModuleTest, self).setUp()
@@ -42,7 +37,7 @@ class PwUserModuleTest(integration.ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_groups_includes_primary(self):
         # Let's create a user, which usually creates the group matching the
         # name
@@ -81,8 +76,3 @@ class PwUserModuleTest(integration.ModuleCase):
         except AssertionError:
             self.run_function('user.delete', [uname, True, True])
             raise
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PwUserModuleTest)

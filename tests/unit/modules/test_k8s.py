@@ -12,22 +12,21 @@ import time
 from subprocess import Popen, PIPE
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase
+from tests.support.helpers import skip_if_binaries_missing
 
 # Import Salt libs
+import salt.utils.files
 import salt.modules.k8s as k8s
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error
 
-TestCase.maxDiff = None
-
 
 @skip_if_binaries_missing(['kubectl'])
 class TestK8SNamespace(TestCase):
+
+    maxDiff = None
 
     def test_get_namespaces(self):
         res = k8s.get_namespaces(apiserver_url="http://127.0.0.1:8080")
@@ -59,6 +58,8 @@ class TestK8SNamespace(TestCase):
 @skip_if_binaries_missing(['kubectl'])
 class TestK8SSecrets(TestCase):
 
+    maxDiff = None
+
     def setUp(self):
         hash = hashlib.sha1()
         hash.update(str(time.time()))
@@ -85,7 +86,7 @@ class TestK8SSecrets(TestCase):
     def test_get_one_secret(self):
         name = self.name
         filename = "/tmp/{0}.json".format(name)
-        with open(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             json.dump(self.request, f)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -101,7 +102,7 @@ class TestK8SSecrets(TestCase):
     def test_get_decoded_secret(self):
         name = self.name
         filename = "/tmp/{0}.json".format(name)
-        with open(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             json.dump(self.request, f)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -117,7 +118,7 @@ class TestK8SSecrets(TestCase):
         expected_data = {}
         for i in range(2):
             names.append("/tmp/{0}-{1}".format(name, i))
-            with open("/tmp/{0}-{1}".format(name, i), 'w') as f:
+            with salt.utils.files.fopen("/tmp/{0}-{1}".format(name, i), 'w') as f:
                 expected_data["{0}-{1}".format(name, i)] = base64.b64encode("{0}{1}".format(name, i))
                 f.write("{0}{1}".format(name, i))
         res = k8s.create_secret("default", name, names, apiserver_url="http://127.0.0.1:8080")
@@ -131,7 +132,7 @@ class TestK8SSecrets(TestCase):
     def test_update_secret(self):
         name = self.name
         filename = "/tmp/{0}.json".format(name)
-        with open(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             json.dump(self.request, f)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -141,7 +142,7 @@ class TestK8SSecrets(TestCase):
         names = []
         for i in range(3):
             names.append("/tmp/{0}-{1}-updated".format(name, i))
-            with open("/tmp/{0}-{1}-updated".format(name, i), 'w') as f:
+            with salt.utils.files.fopen("/tmp/{0}-{1}-updated".format(name, i), 'w') as f:
                 expected_data["{0}-{1}-updated".format(name, i)] = base64.b64encode("{0}{1}-updated".format(name, i))
                 f.write("{0}{1}-updated".format(name, i))
 
@@ -157,7 +158,7 @@ class TestK8SSecrets(TestCase):
     def test_delete_secret(self):
         name = self.name
         filename = "/tmp/{0}.json".format(name)
-        with open(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             json.dump(self.request, f)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -174,6 +175,8 @@ class TestK8SSecrets(TestCase):
 
 @skip_if_binaries_missing(['kubectl'])
 class TestK8SResourceQuotas(TestCase):
+
+    maxDiff = None
 
     def setUp(self):
         hash = hashlib.sha1()
@@ -202,7 +205,7 @@ spec:
     services: "5"
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
-        with open(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace={0}".format(namespace), "create", "-f", filename], stdout=PIPE)
@@ -236,7 +239,7 @@ spec:
     services: "5"
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
-        with open(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace={0}".format(namespace), "create", "-f", filename], stdout=PIPE)
@@ -283,7 +286,7 @@ spec:
     services: "5"
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
-        with open(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace={0}".format(namespace), "create", "-f", filename], stdout=PIPE)
@@ -302,6 +305,8 @@ spec:
 
 @skip_if_binaries_missing(['kubectl'])
 class TestK8SLimitRange(TestCase):
+
+    maxDiff = None
 
     def setUp(self):
         hash = hashlib.sha1()
@@ -347,7 +352,7 @@ spec:
             }
         }
         filename = "/tmp/{0}.yaml".format(name)
-        with open(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -385,7 +390,7 @@ spec:
     type: Container
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
-        with open(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -397,12 +402,3 @@ spec:
         kubectl_out = json.loads(proc.communicate()[0])
         b = kubectl_out.get("metadata", {}).get("name", "b")
         self.assertEqual(a, b)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestK8SNamespace,
-              TestK8SSecrets,
-              TestK8SResourceQuotas,
-              TestK8SLimitRange,
-              needs_daemon=False)

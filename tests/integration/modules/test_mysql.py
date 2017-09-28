@@ -5,20 +5,17 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath
-)
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import integration
-import salt.utils
+import salt.utils.path
 from salt.modules import mysql as mysqlmod
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -29,7 +26,7 @@ try:
 except Exception:
     NO_MYSQL = True
 
-if not salt.utils.which('mysqladmin'):
+if not salt.utils.path.which('mysqladmin'):
     NO_MYSQL = True
 
 
@@ -38,8 +35,7 @@ if not salt.utils.which('mysqladmin'):
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
-class MysqlModuleDbTest(integration.ModuleCase,
-                        integration.SaltReturnAssertsMixIn):
+class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Module testing database creation on a real MySQL Server.
     '''
@@ -619,8 +615,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
-class MysqlModuleUserTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixIn):
+class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     User Creation and connection tests
     '''
@@ -1273,8 +1268,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
-class MysqlModuleUserGrantTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixIn):
+class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     User Creation and connection tests
     '''
@@ -1286,6 +1280,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
     testdb1 = 'tes.t\'"saltdb'
     testdb2 = 't_st `(:=salt%b)'
     testdb3 = 'test `(:=salteeb)'
+    test_file_query_db = 'test_query'
     table1 = 'foo'
     table2 = "foo `\'%_bar"
     users = {
@@ -1397,13 +1392,19 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             name=self.testdb1,
             connection_user=self.user,
             connection_pass=self.password,
-       )
+        )
         self.run_function(
             'mysql.db_remove',
             name=self.testdb2,
             connection_user=self.user,
             connection_pass=self.password,
-       )
+        )
+        self.run_function(
+            'mysql.db_remove',
+            name=self.test_file_query_db,
+            connection_user=self.user,
+            connection_pass=self.password,
+        )
 
     def _userCreation(self,
                       uname,
@@ -1634,6 +1635,122 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             "GRANT DELETE ON `test ``(:=salteeb)`.* TO ''@'localhost'"
         ])
 
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MysqlModuleDbTest, MysqlModuleUserTest)
+
+@skipIf(
+    NO_MYSQL,
+    'Please install MySQL bindings and a MySQL Server before running'
+    'MySQL integration tests.'
+)
+class MysqlModuleFileQueryTest(ModuleCase, SaltReturnAssertsMixin):
+    '''
+    Test file query module
+    '''
+
+    user = 'root'
+    password = 'poney'
+    testdb = 'test_file_query'
+
+    @destructiveTest
+    def setUp(self):
+        '''
+        Test presence of MySQL server, enforce a root password, create users
+        '''
+        super(MysqlModuleFileQueryTest, self).setUp()
+        NO_MYSQL_SERVER = True
+        # now ensure we know the mysql root password
+        # one of theses two at least should work
+        ret1 = self.run_state(
+            'cmd.run',
+             name='mysqladmin --host="localhost" -u '
+               + self.user
+               + ' flush-privileges password "'
+               + self.password
+               + '"'
+        )
+        ret2 = self.run_state(
+            'cmd.run',
+             name='mysqladmin --host="localhost" -u '
+               + self.user
+               + ' --password="'
+               + self.password
+               + '" flush-privileges password "'
+               + self.password
+               + '"'
+        )
+        key, value = ret2.popitem()
+        if value['result']:
+            NO_MYSQL_SERVER = False
+        else:
+            self.skipTest('No MySQL Server running, or no root access on it.')
+        # Create some users and a test db
+        self.run_function(
+            'mysql.db_create',
+            name=self.testdb,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_db='mysql',
+        )
+
+    @destructiveTest
+    def tearDown(self):
+        '''
+        Removes created users and db
+        '''
+        self.run_function(
+            'mysql.db_remove',
+            name=self.testdb,
+            connection_user=self.user,
+            connection_pass=self.password,
+            connection_db='mysql',
+       )
+
+    @destructiveTest
+    def test_update_file_query(self):
+        '''
+        Test query without any output
+        '''
+        ret = self.run_function(
+          'mysql.file_query',
+          database=self.testdb,
+          file_name='salt://mysql/update_query.sql',
+          character_set='utf8',
+          collate='utf8_general_ci',
+          connection_user=self.user,
+          connection_pass=self.password
+        )
+        self.assertTrue('query time' in ret)
+        ret.pop('query time')
+        self.assertEqual(ret, {'rows affected': 2})
+
+    @destructiveTest
+    def test_select_file_query(self):
+        '''
+        Test query with table output
+        '''
+        ret = self.run_function(
+          'mysql.file_query',
+          database=self.testdb,
+          file_name='salt://mysql/select_query.sql',
+          character_set='utf8',
+          collate='utf8_general_ci',
+          connection_user=self.user,
+          connection_pass=self.password
+        )
+        expected = {
+            'rows affected': 5,
+            'rows returned': 4,
+            'results': [
+                [
+                    ['2'],
+                    ['3'],
+                    ['4'],
+                    ['5']
+                ]
+            ],
+            'columns': [
+                ['a']
+            ],
+        }
+        self.assertTrue('query time' in ret)
+        ret.pop('query time')
+        self.assertEqual(ret, expected)

@@ -6,19 +6,15 @@
 # Import Python Libs
 from __future__ import absolute_import
 import os
-import random
-import string
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, expensiveTest
-
-ensure_in_syspath('../../../')
+from tests.support.case import ShellCase
+from tests.support.paths import FILES
+from tests.support.unit import skipIf
+from tests.support.helpers import expensiveTest, generate_random_name
 
 # Import Salt Libs
-import integration
 from salt.config import cloud_providers_config
-from salt.ext.six.moves import range
 
 # Import Third-Party Libs
 try:
@@ -27,24 +23,14 @@ try:
 except ImportError:
     HAS_PROFITBRICKS = False
 
-
-def __random_name(size=6):
-    '''
-    Generates a random cloud instance name
-    '''
-    return 'CLOUD-TEST-' + ''.join(
-        random.choice(string.ascii_uppercase + string.digits)
-        for x in range(size)
-    )
-
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = __random_name()
+INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'profitbricks'
 DRIVER_NAME = 'profitbricks'
 
 
 @skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 2.3.0')
-class ProfitBricksTest(integration.ShellCase):
+class ProfitBricksTest(ShellCase):
     '''
     Integration tests for the ProfitBricks cloud provider
     '''
@@ -69,7 +55,7 @@ class ProfitBricksTest(integration.ShellCase):
         # check if credentials and datacenter_id present
         config = cloud_providers_config(
             os.path.join(
-                integration.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'
@@ -134,8 +120,3 @@ class ProfitBricksTest(integration.ShellCase):
         # if test instance is still present, delete it
         if ret in query:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(ProfitBricksTest)

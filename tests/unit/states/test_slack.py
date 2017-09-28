@@ -6,30 +6,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import slack
-
-slack.__salt__ = {}
-slack.__opts__ = {}
+import salt.states.slack as slack
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SlackTestCase(TestCase):
+class SlackTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.slack
     '''
+    def setup_loader_modules(self):
+        return {slack: {}}
+
     # 'post_message' function tests: 1
 
     def test_post_message(self):
@@ -76,8 +73,3 @@ class SlackTestCase(TestCase):
                 self.assertDictEqual(slack.post_message(name, channel,
                                                         from_name, message),
                                      ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SlackTestCase, needs_daemon=False)

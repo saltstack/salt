@@ -7,8 +7,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     call,
@@ -17,19 +18,16 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import openbsdpkg
-
-# Globals
-openbsdpkg.__grains__ = dict()
-openbsdpkg.__salt__ = dict()
-openbsdpkg.__context__ = dict()
+import salt.modules.openbsdpkg as openbsdpkg
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class OpenbsdpkgTestCase(TestCase):
+class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.openbsdpkg
     '''
+    def setup_loader_modules(self):
+        return {openbsdpkg: {}}
 
     def test_list_pkgs(self):
         '''
@@ -111,8 +109,3 @@ class OpenbsdpkgTestCase(TestCase):
         ]
         run_all_mock.assert_has_calls(expected_calls, any_order=True)
         self.assertEqual(run_all_mock.call_count, 3)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(OpenbsdpkgTestCase, needs_daemon=False)

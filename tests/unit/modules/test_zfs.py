@@ -10,35 +10,32 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-
-# Import Mock libraries
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON,
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Execution module to test
-from salt.modules import zfs
+import salt.modules.zfs as zfs
 from salt.utils.odict import OrderedDict
-
-# Globals
-zfs.__salt__ = {}
 
 
 # Skip this test case if we don't have access to mock!
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ZfsTestCase(TestCase):
+class ZfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     This class contains a set of functions that test salt.modules.zfs module
     '''
+    def setup_loader_modules(self):
+        patcher = patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return {zfs: {}}
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_exists_success(self):
         '''
         Tests successful return of exists function
@@ -51,7 +48,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertTrue(zfs.exists('myzpool/mydataset'))
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_exists_failure_not_exists(self):
         '''
         Tests unsuccessful return of exists function if dataset does not exist
@@ -64,7 +60,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertFalse(zfs.exists('myzpool/mydataset'))
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_exists_failure_invalid_name(self):
         '''
         Tests unsuccessful return of exists function if dataset name is invalid
@@ -77,7 +72,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertFalse(zfs.exists('myzpool/'))
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_create_success(self):
         '''
         Tests successful return of create function on ZFS file system creation
@@ -91,7 +85,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.create('myzpool/mydataset'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_create_success_with_create_parent(self):
         '''
         Tests successful return of create function when ``create_parent=True``
@@ -105,7 +98,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.create('myzpool/mydataset/mysubdataset', create_parent=True), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_create_success_with_properties(self):
         '''
         Tests successful return of create function on ZFS file system creation (with properties)
@@ -127,7 +119,6 @@ class ZfsTestCase(TestCase):
                 ), res
             )
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_create_error_missing_dataset(self):
         '''
         Tests unsuccessful return of create function if dataset name is missing
@@ -141,7 +132,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.create('myzpool'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_create_error_trailing_slash(self):
         '''
         Tests unsuccessful return of create function if trailing slash in name is present
@@ -155,7 +145,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.create('myzpool/'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_create_error_no_such_pool(self):
         '''
         Tests unsuccessful return of create function if the pool is not present
@@ -169,7 +158,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.create('myzpool/mydataset'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_create_error_missing_parent(self):
         '''
         Tests unsuccessful return of create function if the parent datasets do not exist
@@ -183,7 +171,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.create('myzpool/mydataset/mysubdataset'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_list_success(self):
         '''
         Tests zfs list
@@ -194,7 +181,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.list_('myzpool'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_mount_success(self):
         '''
         Tests zfs mount of filesystem
@@ -208,7 +194,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.mount('myzpool/mydataset'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_mount_failure(self):
         '''
         Tests zfs mount of already mounted filesystem
@@ -222,7 +207,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.mount('myzpool/mydataset'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_unmount_success(self):
         '''
         Tests zfs unmount of filesystem
@@ -236,7 +220,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.unmount('myzpool/mydataset'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_unmount_failure(self):
         '''
         Tests zfs unmount of already mounted filesystem
@@ -250,7 +233,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.unmount('myzpool/mydataset'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_inherit_success(self):
         '''
         Tests zfs inherit of compression property
@@ -261,7 +243,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.inherit('compression', 'myzpool/mydataset'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_inherit_failure(self):
         '''
         Tests zfs inherit of canmount
@@ -276,7 +257,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.inherit('canmount', 'myzpool/mydataset'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_diff(self):
         '''
         Tests zfs diff
@@ -287,7 +267,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.diff('myzpool/mydataset@yesterday', 'myzpool/mydataset'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_rollback_success(self):
         '''
         Tests zfs rollback success
@@ -298,23 +277,25 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.rollback('myzpool/mydataset@yesterday'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_rollback_failure(self):
         '''
         Tests zfs rollback failure
         '''
-        res = {'myzpool/mydataset': "cannot rollback to 'myzpool/mydataset@yesterday': more recent snapshots or bookmarks exist\nuse '-r' to force deletion of the following snapshots and bookmarks:\nmyzpool/mydataset@today"}
+        res = {'myzpool/mydataset': "cannot rollback to 'myzpool/mydataset@yesterday': more recent snapshots "
+                                    "or bookmarks exist\nuse '-r' to force deletion of the following snapshots "
+                                    "and bookmarks:\nmyzpool/mydataset@today"}
         ret = {
             'pid': 57471,
             'retcode': 1,
-            'stderr': "cannot rollback to 'myzpool/mydataset@yesterday': more recent snapshots or bookmarks exist\nuse '-r' to force deletion of the following snapshots and bookmarks:\nmyzpool/mydataset@today",
+            'stderr': "cannot rollback to 'myzpool/mydataset@yesterday': more recent snapshots or bookmarks "
+                      "exist\nuse '-r' to force deletion of the following snapshots and "
+                      "bookmarks:\nmyzpool/mydataset@today",
             'stdout': ''
         }
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.rollback('myzpool/mydataset@yesterday'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_clone_success(self):
         '''
         Tests zfs clone success
@@ -325,7 +306,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.clone('myzpool/mydataset@yesterday', 'myzpool/yesterday'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_clone_failure(self):
         '''
         Tests zfs clone failure
@@ -336,7 +316,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.clone('myzpool/mydataset@yesterday', 'myzpool/archive/yesterday'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_promote_success(self):
         '''
         Tests zfs promote success
@@ -347,7 +326,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.promote('myzpool/yesterday'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_promote_failure(self):
         '''
         Tests zfs promote failure
@@ -358,19 +336,17 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.promote('myzpool/yesterday'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
-    @patch('salt.utils.which', MagicMock(return_value='/usr/bin/man'))
     def test_bookmark_success(self):
         '''
         Tests zfs bookmark success
         '''
-        res = {'myzpool/mydataset@yesterday': 'bookmarked as myzpool/mydataset#important'}
-        ret = {'pid': 20990, 'retcode': 0, 'stderr': '', 'stdout': ''}
-        mock_cmd = MagicMock(return_value=ret)
-        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertEqual(zfs.bookmark('myzpool/mydataset@yesterday', 'myzpool/mydataset#important'), res)
+        with patch('salt.utils.path.which', MagicMock(return_value='/usr/bin/man')):
+            res = {'myzpool/mydataset@yesterday': 'bookmarked as myzpool/mydataset#important'}
+            ret = {'pid': 20990, 'retcode': 0, 'stderr': '', 'stdout': ''}
+            mock_cmd = MagicMock(return_value=ret)
+            with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+                self.assertEqual(zfs.bookmark('myzpool/mydataset@yesterday', 'myzpool/mydataset#important'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_holds_success(self):
         '''
         Tests zfs holds success
@@ -381,7 +357,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.holds('myzpool/mydataset@baseline'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_holds_failure(self):
         '''
         Tests zfs holds failure
@@ -392,7 +367,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.holds('myzpool/mydataset@baseline'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_hold_success(self):
         '''
         Tests zfs hold success
@@ -403,7 +377,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.hold('important', 'myzpool/mydataset@baseline', 'myzpool/mydataset@release-1.0'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_hold_failure(self):
         '''
         Tests zfs hold failure
@@ -414,7 +387,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.hold('important', 'myzpool/mydataset@baseline'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_release_success(self):
         '''
         Tests zfs release success
@@ -425,7 +397,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.release('important', 'myzpool/mydataset@baseline', 'myzpool/mydataset@release-1.0'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_release_failure(self):
         '''
         Tests zfs release failure
@@ -436,7 +407,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.release('important', 'myzpool/mydataset@baseline'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_snapshot_success(self):
         '''
         Tests zfs snapshot success
@@ -447,7 +417,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.snapshot('myzpool/mydataset@baseline'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_snapshot_failure(self):
         '''
         Tests zfs snapshot failure
@@ -458,7 +427,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.snapshot('myzpool/mydataset@baseline'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_snapshot_failure2(self):
         '''
         Tests zfs snapshot failure
@@ -469,7 +437,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.snapshot('myzpool/mydataset@baseline'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_set_success(self):
         '''
         Tests zfs set success
@@ -480,7 +447,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.set('myzpool/mydataset', compression='lz4'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_set_failure(self):
         '''
         Tests zfs set failure
@@ -491,7 +457,6 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.set('myzpool/mydataset', canmount='lz4'), res)
 
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_get_success(self):
         '''
         Tests zfs get success
@@ -501,9 +466,3 @@ class ZfsTestCase(TestCase):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.get('myzpool', properties='compression', fields='value'), res)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ZfsTestCase, needs_daemon=False)
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

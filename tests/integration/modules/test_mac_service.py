@@ -3,25 +3,24 @@
 integration tests for mac_service
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import integration
-import salt.utils
+# Import Salt libs
+import salt.utils.path
+import salt.utils.platform
 
 
-@skipIf(not salt.utils.is_darwin(), 'Test only available on macOS')
-@skipIf(not salt.utils.which('launchctl'), 'Test requires launchctl binary')
-@skipIf(not salt.utils.which('plutil'), 'Test requires plutil binary')
-@skipIf(salt.utils.get_uid(salt.utils.get_user()) != 0,
-        'Test requires root')
-class MacServiceModuleTest(integration.ModuleCase):
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.path.which('launchctl'), 'Test requires launchctl binary')
+@skipIf(not salt.utils.path.which('plutil'), 'Test requires plutil binary')
+@skip_if_not_root
+class MacServiceModuleTest(ModuleCase):
     '''
     Validate the mac_service module
     '''
@@ -220,8 +219,3 @@ class MacServiceModuleTest(integration.ModuleCase):
         services = self.run_function('service.get_enabled')
         self.assertIsInstance(services, list)
         self.assertIn('com.apple.coreservicesd', services)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacServiceModuleTest)

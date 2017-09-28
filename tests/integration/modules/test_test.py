@@ -4,17 +4,15 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import salt libs
-import integration
 import salt.version
-from salt import config
+import salt.config
 
 
-class TestModuleTest(integration.ModuleCase,
-                     integration.AdaptedConfigurationTestCaseMixIn):
+class TestModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     '''
     Validate the test module
     '''
@@ -47,7 +45,7 @@ class TestModuleTest(integration.ModuleCase,
         '''
         test.get_opts
         '''
-        opts = config.minion_config(
+        opts = salt.config.minion_config(
             self.get_config_file_path('minion')
         )
         self.assertEqual(
@@ -95,8 +93,3 @@ class TestModuleTest(integration.ModuleCase,
         test.outputter
         '''
         self.assertEqual(self.run_function('test.outputter', ['text']), 'text')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestModuleTest)

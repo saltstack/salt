@@ -6,12 +6,11 @@ import sys
 import types
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, ANY
 
 # wmi and pythoncom modules are platform specific...
 wmi = types.ModuleType('wmi')
@@ -19,8 +18,6 @@ sys.modules['wmi'] = wmi
 
 pythoncom = types.ModuleType('pythoncom')
 sys.modules['pythoncom'] = pythoncom
-
-from salttesting.mock import NO_MOCK, Mock, patch, ANY
 
 if NO_MOCK is False:
     WMI = Mock()
@@ -32,7 +29,9 @@ if NO_MOCK is False:
 import salt.modules.win_status as status
 
 
-@skipIf(NO_MOCK or sys.stdin.encoding != 'UTF8', 'Mock is not installed or encoding not supported')
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(sys.stdin.encoding != 'UTF-8', 'UTF-8 encoding required for this test is not supported')
+@skipIf(status.HAS_WMI is False, 'This test requires Windows')
 class TestProcsBase(TestCase):
     def __init__(self, *args, **kwargs):
         TestCase.__init__(self, *args, **kwargs)
@@ -183,17 +182,3 @@ class TestEmptyCommandLine(TestProcsBase):
 #    def test_initialize_and_uninitialize_called(self):
 #        pythoncom.CoInitialize.assert_has_calls(self.expected_calls)
 #        pythoncom.CoUninitialize.assert_has_calls(self.expected_calls)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(
-        [
-            TestProcsCount,
-            TestProcsAttributes,
-            TestProcsUnicodeAttributes,
-            TestProcsWMIGetOwnerErrorsAreLogged,
-            TestProcsWMIGetOwnerAccessDeniedWorkaround,
-        ],
-        needs_daemon=False
-    )

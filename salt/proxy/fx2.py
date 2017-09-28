@@ -175,8 +175,8 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import salt.utils
 import salt.utils.http
+import salt.utils.path
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ['fx2']
@@ -195,7 +195,7 @@ def __virtual__():
     '''
     Only return if all the modules are available
     '''
-    if not salt.utils.which('racadm'):
+    if not salt.utils.path.which('racadm'):
         log.critical('fx2 proxy minion needs "racadm" to be installed.')
         return False
 
@@ -330,7 +330,7 @@ def chconfig(cmd, *args, **kwargs):
 
     '''
     # Strip the __pub_ keys...is there a better way to do this?
-    for k in kwargs.keys():
+    for k in kwargs:
         if k.startswith('__pub_'):
             kwargs.pop(k)
 

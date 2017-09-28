@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import datetime
 import logging
@@ -9,25 +9,22 @@ import signal
 import subprocess
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath
-)
-from salt.ext.six.moves import range
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 import salt.states.file
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
 
-@skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
-class SystemModuleTest(integration.ModuleCase):
+@skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
+class SystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the system module
     '''
@@ -113,7 +110,7 @@ class SystemModuleTest(integration.ModuleCase):
                 log.debug('Comparing hwclock to sys clock')
                 with os.fdopen(rpipeFd, "r") as rpipe:
                     with os.fdopen(wpipeFd, "w") as wpipe:
-                        with open(os.devnull, "r") as nulFd:
+                        with salt.utils.files.fopen(os.devnull, "r") as nulFd:
                             p = subprocess.Popen(args=['hwclock', '--compare'],
                                 stdin=nulFd, stdout=wpipeFd, stderr=subprocess.PIPE)
                             p.communicate()
@@ -145,14 +142,14 @@ class SystemModuleTest(integration.ModuleCase):
 
     def _save_machine_info(self):
         if os.path.isfile('/etc/machine-info'):
-            with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+            with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                 self._machine_info = mach_info.read()
         else:
             self._machine_info = False
 
     def _restore_machine_info(self):
         if self._machine_info is not False:
-            with salt.utils.fopen('/etc/machine-info', 'w') as mach_info:
+            with salt.utils.files.fopen('/etc/machine-info', 'w') as mach_info:
                 mach_info.write(self._machine_info)
         else:
             self.run_function('file.remove', ['/etc/machine-info'])
@@ -181,7 +178,7 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_system_date_time(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -199,7 +196,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_system_date_time_utc(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -217,7 +214,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_system_date_time_utcoffset_east(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -237,7 +234,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_system_date_time_utcoffset_west(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -257,7 +254,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_system_time(self):
         '''
         Test setting the system time without adjusting the date.
@@ -276,7 +273,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_system_date(self):
         '''
         Test setting the system date without adjusting the time.
@@ -297,14 +294,14 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_get_computer_desc(self):
         '''
         Test getting the system hostname
         '''
         res = self.run_function('system.get_computer_desc')
 
-        hostname_cmd = salt.utils.which('hostnamectl')
+        hostname_cmd = salt.utils.path.which('hostnamectl')
         if hostname_cmd:
             desc = self.run_function('cmd.run', ["hostnamectl status --pretty"])
             self.assertEqual(res, desc)
@@ -312,12 +309,12 @@ class SystemModuleTest(integration.ModuleCase):
             if not os.path.isfile('/etc/machine-info'):
                 self.assertFalse(res)
             else:
-                with salt.utils.fopen('/etc/machine-info', 'r') as mach_info:
+                with salt.utils.files.fopen('/etc/machine-info', 'r') as mach_info:
                     data = mach_info.read()
                     self.assertIn(res, data.decode('string_escape'))
 
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_set_computer_desc(self):
         '''
         Test setting the system hostname
@@ -330,7 +327,7 @@ class SystemModuleTest(integration.ModuleCase):
         self.assertTrue(ret)
         self.assertIn(desc, computer_desc)
 
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_has_hwclock(self):
         '''
         Verify platform has a settable hardware clock, if possible.
@@ -338,7 +335,3 @@ class SystemModuleTest(integration.ModuleCase):
         if self.run_function('grains.get', ['os_family']) == 'NILinuxRT':
             self.assertTrue(self.run_function('system._has_settable_hwclock'))
             self.assertTrue(self._hwclock_has_compare())
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SystemModuleTest)

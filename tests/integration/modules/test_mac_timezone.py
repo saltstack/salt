@@ -10,21 +10,24 @@ Time sync do the following:
     - Set time to 'Do not sync'
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import datetime
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, destructiveTest
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import integration
-import salt.utils
+# Import Salt libs
+import salt.utils.path
+import salt.utils.platform
 
 
-class MacTimezoneModuleTest(integration.ModuleCase):
+@skip_if_not_root
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
+@skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
+class MacTimezoneModuleTest(ModuleCase):
     '''
     Validate the mac_timezone module
     '''
@@ -38,15 +41,6 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         '''
         Get current settings
         '''
-        if not salt.utils.is_darwin():
-            self.skipTest('Test only available on macOS')
-
-        if not salt.utils.which('systemsetup'):
-            self.skipTest('Test requires systemsetup binary')
-
-        if salt.utils.get_uid(salt.utils.get_user()) != 0:
-            self.skipTest('Test requires root')
-
         self.USE_NETWORK_TIME = self.run_function('timezone.get_using_network_time')
         self.TIME_SERVER = self.run_function('timezone.get_time_server')
         self.TIME_ZONE = self.run_function('timezone.get_zone')
@@ -214,8 +208,3 @@ class MacTimezoneModuleTest(integration.ModuleCase):
             self.run_function('timezone.set_time_server', ['spongebob.com']))
         self.assertEqual(
             self.run_function('timezone.get_time_server'), 'spongebob.com')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacTimezoneModuleTest)

@@ -12,12 +12,11 @@
 from __future__ import absolute_import, print_function
 
 # Import salt testing libs
-from salttesting.unit import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../')
+from tests.support.unit import skipIf
 
 # Import salt libs
-import integration  # pylint: disable=import-error
+from tests.support.case import ShellCase
+from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -31,8 +30,8 @@ except ImportError:
 
 
 @skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.11.4')
-class SaltCloudCliTest(integration.ShellCase,
-                       integration.ShellCaseCommonTestsMixIn):
+class SaltCloudCliTest(ShellCase,
+                       ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-cloud'
 
@@ -96,8 +95,3 @@ class SaltCloudCliTest(integration.ShellCase,
             if len(test_options) <= 1:
                 # Only one left? Stop iterating
                 break
-
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
-    run_tests(SaltCloudCliTest)

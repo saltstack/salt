@@ -5,17 +5,13 @@ salt-ssh testing
 # Import Python libs
 from __future__ import absolute_import
 
-# Import salttesting libs
-from salttesting.unit import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import Salt libs
-import integration
+# Import salt testing libs
+from tests.support.unit import skipIf
+from tests.support.case import SSHCase
 
 
 @skipIf(True, 'Not ready for production')
-class SSHTest(integration.SSHCase):
+class SSHTest(SSHCase):
     '''
     Test general salt-ssh functionality
     '''

@@ -5,37 +5,30 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-import os
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
-from salt.states import virtualenv_mod
-
-# Globals
-virtualenv_mod.__salt__ = {}
-virtualenv_mod.__opts__ = {}
-virtualenv_mod.__env__ = {}
+import salt.states.virtualenv_mod as virtualenv_mod
 
 
-@patch('salt.states.virtualenv_mod.salt.utils.is_windows',
-       MagicMock(return_value=True))
-@patch('salt.states.virtualenv_mod.os.path.join', MagicMock(return_value=True))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class VirtualenvModTestCase(TestCase):
+class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the virtualenv_mod state
     '''
+    def setup_loader_modules(self):
+        return {virtualenv_mod: {'__env__': 'base'}}
+
     def test_managed(self):
         '''
             Test to create a virtualenv and optionally manage it with pip
@@ -92,8 +85,3 @@ class VirtualenvModTestCase(TestCase):
                     ret.update({'comment': 'virtualenv exists',
                                 'result': True})
                     self.assertDictEqual(virtualenv_mod.managed('salt'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VirtualenvModTestCase, needs_daemon=False)

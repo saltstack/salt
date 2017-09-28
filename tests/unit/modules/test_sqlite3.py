@@ -7,19 +7,15 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import sqlite3
-import salt
+import salt.modules.sqlite3 as sqlite3
 
 
 class MockSqlite3(object):
@@ -62,14 +58,15 @@ class MockSqlite3(object):
         '''
         return True
 
-salt.modules.sqlite3.sqlite3 = MockSqlite3()
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class Sqlite3TestCase(TestCase):
+class Sqlite3TestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.sqlite3
     '''
+    def setup_loader_modules(self):
+        return {sqlite3: {'sqlite3': MockSqlite3()}}
+
     # 'version' function tests: 1
 
     def test_version(self):
@@ -139,8 +136,3 @@ class Sqlite3TestCase(TestCase):
         for people with poor spelling skills
         '''
         self.assertTrue(sqlite3.indexes('/root/test.db'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(Sqlite3TestCase, needs_daemon=False)

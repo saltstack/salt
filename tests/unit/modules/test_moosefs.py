@@ -7,30 +7,29 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
-from salt.modules import moosefs
-
-# Globals
-moosefs.__salt__ = {}
+import salt.modules.moosefs as moosefs
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MoosefsTestCase(TestCase):
+class MoosefsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.moosefs
     '''
-    # 'dirinfo' function tests: 1
+
+    def setup_loader_modules(self):
+        return {moosefs: {}}
+
+    # 'dirinfo' function tests: 1i
 
     def test_dirinfo(self):
         '''
@@ -69,8 +68,3 @@ class MoosefsTestCase(TestCase):
         mock = MagicMock(return_value={'stdout': 'Salt: salt'})
         with patch.dict(moosefs.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(moosefs.getgoal('/tmp/salt'), {'goal': 'salt'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MoosefsTestCase, needs_daemon=False)

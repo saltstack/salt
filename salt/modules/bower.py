@@ -13,12 +13,12 @@ from __future__ import absolute_import
 # Import python libs
 import json
 import logging
-import distutils.version  # pylint: disable=import-error,no-name-in-module
 import shlex
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 
 log = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ def __virtual__():
     '''
     Only work when Bower is installed
     '''
-    if salt.utils.which('bower') is None:
+    if salt.utils.path.which('bower') is None:
         return (False, 'The bower module could not be loaded: bower command not found')
     return True
 
@@ -44,9 +44,9 @@ def _check_valid_version():
     bower must be at least version 1.3.
     '''
     # pylint: disable=no-member
-    bower_version = distutils.version.LooseVersion(
+    bower_version = _LooseVersion(
         __salt__['cmd.run']('bower --version'))
-    valid_version = distutils.version.LooseVersion('1.3')
+    valid_version = _LooseVersion('1.3')
     # pylint: enable=no-member
     if bower_version < valid_version:
         raise CommandExecutionError(
@@ -219,7 +219,7 @@ def list_(dir, runas=None, env=None):
 
 def prune(dir, runas=None, env=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Remove extraneous local Bower packages, i.e. those not referenced in bower.json
 

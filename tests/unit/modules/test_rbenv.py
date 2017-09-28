@@ -5,34 +5,29 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import rbenv
-import os
-
-
-# Globals
-rbenv.__grains__ = {}
-rbenv.__salt__ = {}
+import salt.modules.rbenv as rbenv
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RbenvTestCase(TestCase):
+class RbenvTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rbenv
     '''
+    def setup_loader_modules(self):
+        return {rbenv: {}}
+
     def test_install(self):
         '''
         Test for install Rbenv systemwide
@@ -129,8 +124,3 @@ class RbenvTestCase(TestCase):
         '''
         with patch.object(rbenv, 'do', return_value='A'):
             self.assertEqual(rbenv.do_with_ruby('ruby', 'cmdline'), 'A')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RbenvTestCase, needs_daemon=False)

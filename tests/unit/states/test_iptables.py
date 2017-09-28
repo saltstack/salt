@@ -7,30 +7,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import iptables
-
-# Globals
-iptables.__salt__ = {}
-iptables.__opts__ = {}
+import salt.states.iptables as iptables
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IptablesTestCase(TestCase):
+class IptablesTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the iptables state
     '''
+    def setup_loader_modules(self):
+        return {iptables: {}}
+
     def test_chain_present(self):
         '''
             Test to verify the chain is exist.
@@ -376,8 +373,3 @@ class IptablesTestCase(TestCase):
 
         self.assertDictEqual(iptables.mod_aggregate({'fun': 'append'}, [], []),
                              {'fun': 'append'})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(IptablesTestCase, needs_daemon=False)

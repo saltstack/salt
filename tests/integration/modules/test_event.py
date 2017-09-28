@@ -13,18 +13,16 @@ import time
 import threading
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
 
 # Import salt libs
-import integration
-from salt.utils import event
+import salt.utils.event as event
 
 # Import 3rd-party libs
 from salt.ext.six.moves.queue import Queue, Empty  # pylint: disable=import-error,no-name-in-module
 
 
-class EventModuleTest(integration.ModuleCase):
+class EventModuleTest(ModuleCase):
     def __test_event_fire_master(self):
         events = Queue()
 
@@ -117,8 +115,3 @@ class EventModuleTest(integration.ModuleCase):
 
         with self.assertRaises(Empty):
             eventfired = events.get(block=True, timeout=10)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(EventModuleTest)

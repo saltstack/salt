@@ -4,15 +4,11 @@
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ModuleCase
+from tests.support.mixins import SaltReturnAssertsMixin
 
 
-class PublishModuleTest(integration.ModuleCase,
-                        integration.SaltReturnAssertsMixIn):
+class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the publish module
     '''
@@ -20,12 +16,18 @@ class PublishModuleTest(integration.ModuleCase,
         '''
         publish.publish
         '''
-        ret = self.run_function('publish.publish', ['minion', 'test.ping'])
+        ret = self.run_function(
+            'publish.publish',
+            ['minion', 'test.ping'],
+            f_timeout=50
+        )
         self.assertEqual(ret, {'minion': True})
 
         ret = self.run_function(
             'publish.publish',
-            ['minion', 'test.kwarg', 'arg="cheese=spam"']
+            ['minion', 'test.kwarg'],
+            f_arg='cheese=spam',
+            f_timeout=50
         )
         ret = ret['minion']
 
@@ -45,7 +47,7 @@ class PublishModuleTest(integration.ModuleCase,
             self.assertTrue(name in ret)
 
         self.assertEqual(ret['cheese'], 'spam')
-        self.assertEqual(ret['__pub_arg'], ['cheese=spam'])
+        self.assertEqual(ret['__pub_arg'], [{'cheese': 'spam'}])
         self.assertEqual(ret['__pub_id'], 'minion')
         self.assertEqual(ret['__pub_fun'], 'test.kwarg')
 
@@ -53,14 +55,19 @@ class PublishModuleTest(integration.ModuleCase,
         '''
         test publish.publish yaml args formatting
         '''
-        ret = self.run_function('publish.publish', ['minion', 'test.ping'])
+        ret = self.run_function(
+            'publish.publish',
+            ['minion', 'test.ping'],
+            f_timeout=50
+        )
         self.assertEqual(ret, {'minion': True})
 
         test_args_list = ['saltines, si', 'crackers, nein', 'cheese, indeed']
         test_args = '["{args[0]}", "{args[1]}", "{args[2]}"]'.format(args=test_args_list)
         ret = self.run_function(
             'publish.publish',
-            ['minion', 'test.arg', test_args]
+            ['minion', 'test.arg', test_args],
+            f_timeout=50
         )
         ret = ret['minion']
 
@@ -88,7 +95,8 @@ class PublishModuleTest(integration.ModuleCase,
         '''
         ret = self.run_function(
             'publish.full_data',
-            ['minion', 'test.fib', 20]
+            ['minion', 'test.fib', 20],
+            f_timeout=50
         )
         self.assertTrue(ret)
         self.assertEqual(ret['minion']['ret'][0], 6765)
@@ -99,7 +107,9 @@ class PublishModuleTest(integration.ModuleCase,
         '''
         ret = self.run_function(
             'publish.full_data',
-            ['minion', 'test.kwarg', 'arg="cheese=spam"']
+            ['minion', 'test.kwarg'],
+            f_arg='cheese=spam',
+            f_timeout=50
         )
         ret = ret['minion']['ret']
 
@@ -119,13 +129,15 @@ class PublishModuleTest(integration.ModuleCase,
             self.assertTrue(name in ret)
 
         self.assertEqual(ret['cheese'], 'spam')
-        self.assertEqual(ret['__pub_arg'], ['cheese=spam'])
+        self.assertEqual(ret['__pub_arg'], [{'cheese': 'spam'}])
         self.assertEqual(ret['__pub_id'], 'minion')
         self.assertEqual(ret['__pub_fun'], 'test.kwarg')
 
         ret = self.run_function(
             'publish.full_data',
-            ['minion', 'test.kwarg', 'cheese=spam']
+            ['minion', 'test.kwarg'],
+            cheese='spam',
+            f_timeout=50
         )
         self.assertIn(
             'The following keyword arguments are not valid', ret
@@ -137,11 +149,7 @@ class PublishModuleTest(integration.ModuleCase,
         '''
         ret = self.run_function(
             'publish.publish',
-            ['minion', 'cmd.run', ['echo foo']]
+            ['minion', 'cmd.run', ['echo foo']],
+            f_timeout=50
         )
         self.assertEqual(ret, {})
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PublishModuleTest)

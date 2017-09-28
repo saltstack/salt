@@ -7,29 +7,25 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import sdb
-
-# Globals
-sdb.__opts__ = {}
-sdb.__utils__ = {}
+import salt.modules.sdb as sdb
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SdbTestCase(TestCase):
+class SdbTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.sdb
     '''
+    def setup_loader_modules(self):
+        return {sdb: {}}
+
     # 'get' function tests: 1
 
     def test_get(self):
@@ -47,8 +43,3 @@ class SdbTestCase(TestCase):
         sdb://<profile>/<key>
         '''
         self.assertFalse(sdb.set_('sdb://mymemcached/foo', 'bar'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SdbTestCase, needs_daemon=False)

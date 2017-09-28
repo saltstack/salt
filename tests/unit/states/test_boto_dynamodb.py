@@ -6,29 +6,26 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import boto_dynamodb
-
-boto_dynamodb.__salt__ = {}
-boto_dynamodb.__opts__ = {}
+import salt.states.boto_dynamodb as boto_dynamodb
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoDynamodbTestCase(TestCase):
+class BotoDynamodbTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_dynamodb
     '''
+    def setup_loader_modules(self):
+        return {boto_dynamodb: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -119,8 +116,3 @@ class BotoDynamodbTestCase(TestCase):
                 ret.update({'comment': comt, 'result': True,
                             'changes': changes})
                 self.assertDictEqual(boto_dynamodb.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoDynamodbTestCase, needs_daemon=False)

@@ -21,7 +21,8 @@ import subprocess
 import random
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.stringutils
 try:
     from salt.utils.nb_popen import NonBlockingPopen
 except ImportError:
@@ -154,11 +155,10 @@ def echo_parseable_environment(options, parser):
             '.github_token'
         )
         if os.path.isfile(github_access_token_path):
-            headers = {
-                'Authorization': 'token {0}'.format(
-                    open(github_access_token_path).read().strip()
-                )
-            }
+            with salt.utils.files.fopen(github_access_token_path) as rfh:
+                headers = {
+                    'Authorization': 'token {0}'.format(rfh.read().strip())
+                }
 
         http_req = requests.get(url, headers=headers)
         if http_req.status_code != 200:
@@ -463,7 +463,7 @@ def run(opts):
                 delete_vm(opts)
             sys.exit(retcode)
 
-        outstr = salt.utils.to_str(stdout).strip()
+        outstr = salt.utils.stringutils.to_str(stdout).strip()
         if not outstr:
             print('Failed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
@@ -533,9 +533,9 @@ def run(opts):
     stdout, stderr = proc.communicate()
 
     if stdout:
-        print(salt.utils.to_str(stdout))
+        print(salt.utils.stringutils.to_str(stdout))
     if stderr:
-        print(salt.utils.to_str(stderr))
+        print(salt.utils.stringutils.to_str(stderr))
     sys.stdout.flush()
 
     retcode = proc.returncode
@@ -573,7 +573,7 @@ def run(opts):
             # DO NOT print the state return here!
             print('Cloud configuration files provisioned via pillar.')
         if stderr:
-            print(salt.utils.to_str(stderr))
+            print(salt.utils.stringutils.to_str(stderr))
         sys.stdout.flush()
 
         retcode = proc.returncode
@@ -609,9 +609,9 @@ def run(opts):
         stdout, stderr = proc.communicate()
 
         if stdout:
-            print(salt.utils.to_str(stdout))
+            print(salt.utils.stringutils.to_str(stdout))
         if stderr:
-            print(salt.utils.to_str(stderr))
+            print(salt.utils.stringutils.to_str(stderr))
         sys.stdout.flush()
 
         retcode = proc.returncode
@@ -667,7 +667,7 @@ def run(opts):
                 sys.exit(retcode)
             print('matches!')
         except ValueError:
-            print('Failed to load any JSON from \'{0}\''.format(salt.utils.to_str(stdout).strip()))
+            print('Failed to load any JSON from \'{0}\''.format(salt.utils.stringutils.to_str(stdout).strip()))
 
     if opts.test_git_commit is not None:
         test_git_commit_downtime = random.randint(1, opts.splay)
@@ -714,7 +714,7 @@ def run(opts):
                 sys.exit(retcode)
             print('matches!')
         except ValueError:
-            print('Failed to load any JSON from \'{0}\''.format(salt.utils.to_str(stdout).strip()))
+            print('Failed to load any JSON from \'{0}\''.format(salt.utils.stringutils.to_str(stdout).strip()))
 
     # Run tests here
     test_begin_downtime = random.randint(3, opts.splay)
@@ -737,11 +737,11 @@ def run(opts):
     )
     stdout, stderr = proc.communicate()
 
-    outstr = salt.utils.to_str(stdout)
+    outstr = salt.utils.stringutils.to_str(stdout)
     if outstr:
         print(outstr)
     if stderr:
-        print(salt.utils.to_str(stderr))
+        print(salt.utils.stringutils.to_str(stderr))
     sys.stdout.flush()
 
     try:
@@ -781,9 +781,9 @@ def run(opts):
         stdout, stderr = proc.communicate()
 
         if stdout:
-            print(salt.utils.to_str(stdout))
+            print(salt.utils.stringutils.to_str(stdout))
         if stderr:
-            print(salt.utils.to_str(stderr))
+            print(salt.utils.stringutils.to_str(stderr))
         sys.stdout.flush()
 
         # Grab packages and log file (or just log file if build failed)

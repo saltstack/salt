@@ -4,16 +4,14 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../..')
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
 
 # Import Salt libs
 import salt.state
 from salt.config import minion_config
 from salt.template import compile_template_str
-from salt.serializers import yamlex
+import salt.serializers.yamlex as yamlex
 
 basic_template = '''#!yamlex
 foo: bar
@@ -42,7 +40,11 @@ class RendererMixin(object):
                                     _state.opts['renderer_whitelist'])
 
 
-class RendererTests(TestCase, RendererMixin):
+class RendererTests(TestCase, RendererMixin, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {yamlex: {}}
+
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'yamlex')
     def test_basic(self):
         sls_obj = self.render(basic_template)
@@ -61,7 +63,3 @@ class RendererTests(TestCase, RendererMixin):
                 }
             }
         }, sls_obj
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RendererTests, needs_daemon=False)

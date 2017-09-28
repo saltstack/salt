@@ -20,18 +20,18 @@ import tarfile
 import tempfile
 
 # Import Salt Testing libs
-from distutils.version import LooseVersion
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath,
-    skip_if_binaries_missing
-)
-ensure_in_syspath('../..')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.paths import TMP
+from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
-import integration
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
+from salt.utils.versions import LooseVersion
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def _git_version():
         git_version = subprocess.Popen(
             ['git', '--version'],
             shell=False,
-            close_fds=False if salt.utils.is_windows else True,
+            close_fds=False if salt.utils.platform.is_windows() else True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE).communicate()[0]
     except OSError:
@@ -49,8 +49,11 @@ def _git_version():
     if not git_version:
         log.debug('Git not installed')
         return False
-    log.debug('Detected git version %s', git_version)
-    return LooseVersion(str(git_version.split()[-1]))
+    git_version = git_version.strip().split()[-1]
+    if six.PY3:
+        git_version = git_version.decode(__salt_system_encoding__)
+    log.debug('Detected git version: %s', git_version)
+    return LooseVersion(git_version)
 
 
 def _worktrees_supported():
@@ -58,7 +61,7 @@ def _worktrees_supported():
     Check if the git version is 2.5.0 or later
     '''
     try:
-        return _git_version() >= LooseVersion('2.5.0').encode()
+        return _git_version() >= LooseVersion('2.5.0')
     except AttributeError:
         return False
 
@@ -72,15 +75,14 @@ def _makedirs(path):
             raise
 
 
-@destructiveTest
 @skip_if_binaries_missing('git')
-class GitModuleTest(integration.ModuleCase):
+class GitModuleTest(ModuleCase):
 
     def setUp(self):
         super(GitModuleTest, self).setUp()
         self.orig_cwd = os.getcwd()
         self.addCleanup(os.chdir, self.orig_cwd)
-        self.repo = tempfile.mkdtemp(dir=integration.TMP)
+        self.repo = tempfile.mkdtemp(dir=TMP)
         self.addCleanup(shutil.rmtree, self.repo, ignore_errors=True)
         self.files = ('foo', 'bar', 'baz')
         self.dirs = ('', 'qux')
@@ -90,7 +92,7 @@ class GitModuleTest(integration.ModuleCase):
             dir_path = os.path.join(self.repo, dirname)
             _makedirs(dir_path)
             for filename in self.files:
-                with open(os.path.join(dir_path, filename), 'w') as fp_:
+                with salt.utils.files.fopen(os.path.join(dir_path, filename), 'w') as fp_:
                     fp_.write('This is a test file named ' + filename + '.')
         # Navigate to the root of the repo to init, stage, and commit
         os.chdir(self.repo)
@@ -123,7 +125,7 @@ class GitModuleTest(integration.ModuleCase):
             ['git', 'checkout', '--quiet', '-b', self.branches[1]]
         )
         # Add a line to the file
-        with open(self.files[0], 'a') as fp_:
+        with salt.utils.files.fopen(self.files[0], 'a') as fp_:
             fp_.write('Added a line\n')
         # Commit the updated file
         subprocess.check_call(
@@ -134,6 +136,11 @@ class GitModuleTest(integration.ModuleCase):
         subprocess.check_call(['git', 'checkout', '--quiet', 'master'])
         # Go back to original cwd
         os.chdir(self.orig_cwd)
+
+    def tearDown(self):
+        for key in ('orig_cwd', 'repo', 'files', 'dirs', 'branches', 'tags'):
+            delattr(self, key)
+        super(GitModuleTest, self).tearDown()
 
     def test_add_dir(self):
         '''
@@ -146,14 +153,14 @@ class GitModuleTest(integration.ModuleCase):
         files = [os.path.join(newdir_path, x) for x in self.files]
         files_relpath = [os.path.join(newdir, x) for x in self.files]
         for path in files:
-            with open(path, 'w') as fp_:
+            with salt.utils.files.fopen(path, 'w') as fp_:
                 fp_.write(
                     'This is a test file with relative path {0}.\n'
                     .format(path)
                 )
         ret = self.run_function('git.add', [self.repo, newdir])
         res = '\n'.join(sorted(['add \'{0}\''.format(x) for x in files_relpath]))
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             res = res.replace('\\', '/')
         self.assertEqual(ret, res)
 
@@ -163,7 +170,7 @@ class GitModuleTest(integration.ModuleCase):
         '''
         filename = 'quux'
         file_path = os.path.join(self.repo, filename)
-        with open(file_path, 'w') as fp_:
+        with salt.utils.files.fopen(file_path, 'w') as fp_:
             fp_.write('This is a test file named ' + filename + '.\n')
         ret = self.run_function('git.add', [self.repo, filename])
         self.assertEqual(ret, 'add \'{0}\''.format(filename))
@@ -172,7 +179,7 @@ class GitModuleTest(integration.ModuleCase):
         '''
         Test git.archive
         '''
-        tar_archive = os.path.join(integration.TMP, 'test_archive.tar.gz')
+        tar_archive = os.path.join(TMP, 'test_archive.tar.gz')
         self.assertTrue(
             self.run_function(
                 'git.archive',
@@ -194,7 +201,7 @@ class GitModuleTest(integration.ModuleCase):
         Test git.archive on a subdir, giving only a partial copy of the repo in
         the resulting archive
         '''
-        tar_archive = os.path.join(integration.TMP, 'test_archive.tar.gz')
+        tar_archive = os.path.join(TMP, 'test_archive.tar.gz')
         self.assertTrue(
             self.run_function(
                 'git.archive',
@@ -271,7 +278,7 @@ class GitModuleTest(integration.ModuleCase):
         '''
         Test cloning an existing repo
         '''
-        clone_parent_dir = tempfile.mkdtemp(dir=integration.TMP)
+        clone_parent_dir = tempfile.mkdtemp(dir=TMP)
         self.assertTrue(
             self.run_function('git.clone', [clone_parent_dir, self.repo])
         )
@@ -282,7 +289,7 @@ class GitModuleTest(integration.ModuleCase):
         '''
         Test cloning an existing repo with an alternate name for the repo dir
         '''
-        clone_parent_dir = tempfile.mkdtemp(dir=integration.TMP)
+        clone_parent_dir = tempfile.mkdtemp(dir=TMP)
         clone_name = os.path.basename(self.repo)
         # Change to newly-created temp dir
         self.assertTrue(
@@ -304,7 +311,7 @@ class GitModuleTest(integration.ModuleCase):
         filename = 'foo'
         commit_re_prefix = r'^\[master [0-9a-f]+\] '
         # Add a line
-        with open(os.path.join(self.repo, filename), 'a') as fp_:
+        with salt.utils.files.fopen(os.path.join(self.repo, filename), 'a') as fp_:
             fp_.write('Added a line\n')
         # Stage the file
         self.run_function('git.add', [self.repo, filename])
@@ -314,7 +321,7 @@ class GitModuleTest(integration.ModuleCase):
         # Make sure the expected line is in the output
         self.assertTrue(bool(re.search(commit_re_prefix + commit_msg, ret)))
         # Add another line
-        with open(os.path.join(self.repo, filename), 'a') as fp_:
+        with salt.utils.files.fopen(os.path.join(self.repo, filename), 'a') as fp_:
             fp_.write('Added another line\n')
         # Commit the second file without staging
         commit_msg = 'Add another line to ' + filename
@@ -339,7 +346,7 @@ class GitModuleTest(integration.ModuleCase):
                 ['git', 'config', '--global', '--remove-section', 'foo']
             )
             for cmd in cmds:
-                with open(os.devnull, 'w') as devnull:
+                with salt.utils.files.fopen(os.devnull, 'w') as devnull:
                     try:
                         subprocess.check_call(cmd, stderr=devnull)
                     except subprocess.CalledProcessError:
@@ -582,7 +589,7 @@ class GitModuleTest(integration.ModuleCase):
         '''
         Use git.init to init a new repo
         '''
-        new_repo = tempfile.mkdtemp(dir=integration.TMP)
+        new_repo = tempfile.mkdtemp(dir=TMP)
 
         # `tempfile.mkdtemp` gets the path to the Temp directory using
         # environment variables. As a result, folder names longer than 8
@@ -591,7 +598,7 @@ class GitModuleTest(integration.ModuleCase):
         # the full, unshortened name of the folder. Therefore you can't compare
         # the path returned by `tempfile.mkdtemp` and the results of `git.init`
         # exactly.
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             new_repo = new_repo.replace('\\', '/')
 
             # Get the name of the temp directory
@@ -698,7 +705,7 @@ class GitModuleTest(integration.ModuleCase):
         '''
         # Make a change to a different file than the one modifed in setUp
         file_path = os.path.join(self.repo, self.files[1])
-        with open(file_path, 'a') as fp_:
+        with salt.utils.files.fopen(file_path, 'a') as fp_:
             fp_.write('Added a line\n')
         # Commit the change
         self.assertTrue(
@@ -828,7 +835,7 @@ class GitModuleTest(integration.ModuleCase):
             sorted(['rm \'' + os.path.join(entire_dir, x) + '\''
                     for x in self.files])
         )
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             expected = expected.replace('\\', '/')
         self.assertEqual(
             self.run_function('git.rm', [self.repo, entire_dir], opts='-r'),
@@ -842,7 +849,7 @@ class GitModuleTest(integration.ModuleCase):
         # TODO: test more stash actions
         '''
         file_path = os.path.join(self.repo, self.files[0])
-        with open(file_path, 'a') as fp_:
+        with salt.utils.files.fopen(file_path, 'a') as fp_:
             fp_.write('Temp change to be stashed')
         self.assertTrue(
             'ERROR' not in self.run_function('git.stash', [self.repo])
@@ -881,10 +888,10 @@ class GitModuleTest(integration.ModuleCase):
             'untracked': ['thisisalsoanewfile']
         }
         for filename in changes['modified']:
-            with open(os.path.join(self.repo, filename), 'a') as fp_:
+            with salt.utils.files.fopen(os.path.join(self.repo, filename), 'a') as fp_:
                 fp_.write('Added a line\n')
         for filename in changes['new']:
-            with open(os.path.join(self.repo, filename), 'w') as fp_:
+            with salt.utils.files.fopen(os.path.join(self.repo, filename), 'w') as fp_:
                 fp_.write('This is a new file named ' + filename + '.')
             # Stage the new file so it shows up as a 'new' file
             self.assertTrue(
@@ -896,7 +903,7 @@ class GitModuleTest(integration.ModuleCase):
         for filename in changes['deleted']:
             self.run_function('git.rm', [self.repo, filename])
         for filename in changes['untracked']:
-            with open(os.path.join(self.repo, filename), 'w') as fp_:
+            with salt.utils.files.fopen(os.path.join(self.repo, filename), 'w') as fp_:
                 fp_.write('This is a new file named ' + filename + '.')
         self.assertEqual(
             self.run_function('git.status', [self.repo]),
@@ -933,10 +940,16 @@ class GitModuleTest(integration.ModuleCase):
             worktree_add_prefix = 'Preparing '
         else:
             worktree_add_prefix = 'Enter '
-        worktree_path = tempfile.mkdtemp(dir=integration.TMP)
+
+        worktree_path = tempfile.mkdtemp(dir=TMP)
         worktree_basename = os.path.basename(worktree_path)
-        worktree_path2 = tempfile.mkdtemp(dir=integration.TMP)
-        worktree_basename2 = os.path.basename(worktree_path2)
+        worktree_path2 = tempfile.mkdtemp(dir=TMP)
+
+        # Even though this is Windows, git commands return a unix style path
+        if salt.utils.platform.is_windows():
+            worktree_path = worktree_path.replace('\\', '/')
+            worktree_path2 = worktree_path2.replace('\\', '/')
+
         # Add the worktrees
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path],
@@ -951,7 +964,7 @@ class GitModuleTest(integration.ModuleCase):
         # Check if the main repo is a worktree
         self.assertFalse(self.run_function('git.is_worktree', [self.repo]))
         # Check if a non-repo directory is a worktree
-        empty_dir = tempfile.mkdtemp(dir=integration.TMP)
+        empty_dir = tempfile.mkdtemp(dir=TMP)
         self.assertFalse(self.run_function('git.is_worktree', [empty_dir]))
         shutil.rmtree(empty_dir)
         # Remove the first worktree
@@ -963,21 +976,12 @@ class GitModuleTest(integration.ModuleCase):
         )
         # Test dry run output. It should match the same output we get when we
         # actually prune the worktrees.
-        self.assertEqual(
-            self.run_function(
-                'git.worktree_prune',
-                [self.repo],
-                dry_run=True
-            ),
-            prune_message
-        )
+        result = self.run_function('git.worktree_prune',
+                                   [self.repo],
+                                   dry_run=True)
+        self.assertEqual(result, prune_message)
         # Test pruning for real, and make sure the output is the same
         self.assertEqual(
             self.run_function('git.worktree_prune', [self.repo]),
             prune_message
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GitModuleTest)

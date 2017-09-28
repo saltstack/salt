@@ -50,7 +50,8 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
-# Import Third Party Libs
+# Import 3rd-party libs
+from salt.ext import six
 try:
     import requests
     HAS_REQUESTS = True
@@ -621,11 +622,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -659,7 +656,7 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={'kwargs': kwargs},
+        args=__utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -735,11 +732,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -753,7 +746,7 @@ def _compute_signature(parameters, access_key_secret):
     '''
 
     def percent_encode(line):
-        if not isinstance(line, str):
+        if not isinstance(line, six.string_types):
             return line
 
         s = line

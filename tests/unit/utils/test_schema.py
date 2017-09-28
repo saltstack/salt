@@ -9,16 +9,12 @@ import copy
 import json
 import yaml
 
-from distutils.version import LooseVersion as _LooseVersion
-
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
-from salt.utils import schema
+import salt.utils.schema as schema
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
 try:
@@ -140,7 +136,7 @@ class ConfigTestCase(TestCase):
 
     def test_optional_requirements_config(self):
         class BaseRequirements(schema.Schema):
-            driver = schema.StringItem(default='digital_ocean', format='hidden')
+            driver = schema.StringItem(default='digitalocean', format='hidden')
 
         class SSHKeyFileSchema(schema.Schema):
             ssh_key_file = schema.StringItem(
@@ -153,13 +149,13 @@ class ConfigTestCase(TestCase):
             ssh_key_names = schema.StringItem(
                 title='SSH Key Names',
                 description='The names of an SSH key being managed on '
-                            'Digital Ocean account which will be used to '
+                            'DigitalOcean account which will be used to '
                             'authenticate on the deployed VMs',
                 )
 
         class Requirements(BaseRequirements):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             personal_access_token = schema.StringItem(
                 title='Personal Access Token',
@@ -178,12 +174,12 @@ class ConfigTestCase(TestCase):
 
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
-            'title': 'Digital Ocean',
-            'description': 'Digital Ocean Cloud VM configuration requirements.',
+            'title': 'DigitalOcean',
+            'description': 'DigitalOcean Cloud VM configuration requirements.',
             'type': 'object',
             'properties': {
                 'driver': {
-                    'default': 'digital_ocean',
+                    'default': 'digitalocean',
                     'format': 'hidden',
                     'type': 'string',
                     'title': 'driver'
@@ -202,9 +198,8 @@ class ConfigTestCase(TestCase):
                 },
                 'ssh_key_names': {
                     'type': 'string',
-                    'description': 'The names of an SSH key being managed on Digital '
-                                   'Ocean account which will be used to authenticate '
-                                   'on the deployed VMs',
+                    'description': 'The names of an SSH key being managed on DigitalOcean '
+                                   'account which will be used to authenticate on the deployed VMs',
                     'title': 'SSH Key Names'
                 }
             },
@@ -226,8 +221,8 @@ class ConfigTestCase(TestCase):
         self.assertDictEqual(expected, Requirements.serialize())
 
         class Requirements2(BaseRequirements):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             personal_access_token = schema.StringItem(
                 title='Personal Access Token',
@@ -243,7 +238,7 @@ class ConfigTestCase(TestCase):
             ssh_key_names = schema.StringItem(
                 title='SSH Key Names',
                 description='The names of an SSH key being managed on '
-                            'Digital Ocean account which will be used to '
+                            'DigitalOcean account which will be used to '
                             'authenticate on the deployed VMs')
 
             requirements_definition = schema.AnyOfItem(
@@ -255,12 +250,12 @@ class ConfigTestCase(TestCase):
 
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
-            'title': 'Digital Ocean',
-            'description': 'Digital Ocean Cloud VM configuration requirements.',
+            'title': 'DigitalOcean',
+            'description': 'DigitalOcean Cloud VM configuration requirements.',
             'type': 'object',
             'properties': {
                 'driver': {
-                    'default': 'digital_ocean',
+                    'default': 'digitalocean',
                     'format': 'hidden',
                     'type': 'string',
                     'title': 'driver'
@@ -279,9 +274,8 @@ class ConfigTestCase(TestCase):
                 },
                 'ssh_key_names': {
                     'type': 'string',
-                    'description': 'The names of an SSH key being managed on Digital '
-                                   'Ocean account which will be used to authenticate '
-                                   'on the deployed VMs',
+                    'description': 'The names of an SSH key being managed on DigitalOcean '
+                                   'account which will be used to authenticate on the deployed VMs',
                     'title': 'SSH Key Names'
                 }
             },
@@ -303,19 +297,19 @@ class ConfigTestCase(TestCase):
         self.assertDictContainsSubset(expected, Requirements2.serialize())
 
         class Requirements3(schema.Schema):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             merge_reqs = Requirements(flatten=True)
 
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
-            'title': 'Digital Ocean',
-            'description': 'Digital Ocean Cloud VM configuration requirements.',
+            'title': 'DigitalOcean',
+            'description': 'DigitalOcean Cloud VM configuration requirements.',
             'type': 'object',
             'properties': {
                 'driver': {
-                    'default': 'digital_ocean',
+                    'default': 'digitalocean',
                     'format': 'hidden',
                     'type': 'string',
                     'title': 'driver'
@@ -334,9 +328,8 @@ class ConfigTestCase(TestCase):
                 },
                 'ssh_key_names': {
                     'type': 'string',
-                    'description': 'The names of an SSH key being managed on Digital '
-                                   'Ocean account which will be used to authenticate '
-                                   'on the deployed VMs',
+                    'description': 'The names of an SSH key being managed on DigitalOcean '
+                                   'account which will be used to authenticate on the deployed VMs',
                     'title': 'SSH Key Names'
                 }
             },
@@ -358,8 +351,8 @@ class ConfigTestCase(TestCase):
         self.assertDictContainsSubset(expected, Requirements3.serialize())
 
         class Requirements4(schema.Schema):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             merge_reqs = Requirements(flatten=True)
 
@@ -371,7 +364,7 @@ class ConfigTestCase(TestCase):
             ssh_key_names_2 = schema.StringItem(
                 title='SSH Key Names',
                 description='The names of an SSH key being managed on '
-                            'Digital Ocean account which will be used to '
+                            'DigitalOcean account which will be used to '
                             'authenticate on the deployed VMs')
 
             requirements_definition_2 = schema.AnyOfItem(
@@ -383,12 +376,12 @@ class ConfigTestCase(TestCase):
 
         expected = {
             '$schema': 'http://json-schema.org/draft-04/schema#',
-            'title': 'Digital Ocean',
-            'description': 'Digital Ocean Cloud VM configuration requirements.',
+            'title': 'DigitalOcean',
+            'description': 'DigitalOcean Cloud VM configuration requirements.',
             'type': 'object',
             'properties': {
                 'driver': {
-                    'default': 'digital_ocean',
+                    'default': 'digitalocean',
                     'format': 'hidden',
                     'type': 'string',
                     'title': 'driver'
@@ -407,9 +400,8 @@ class ConfigTestCase(TestCase):
                 },
                 'ssh_key_names': {
                     'type': 'string',
-                    'description': 'The names of an SSH key being managed on Digital '
-                                   'Ocean account which will be used to authenticate '
-                                   'on the deployed VMs',
+                    'description': 'The names of an SSH key being managed on DigitalOcean '
+                                   'account which will be used to authenticate on the deployed VMs',
                     'title': 'SSH Key Names'
                 },
                 'ssh_key_file_2': {
@@ -420,9 +412,8 @@ class ConfigTestCase(TestCase):
                 },
                 'ssh_key_names_2': {
                     'type': 'string',
-                    'description': 'The names of an SSH key being managed on Digital '
-                                   'Ocean account which will be used to authenticate '
-                                   'on the deployed VMs',
+                    'description': 'The names of an SSH key being managed on DigitalOcean '
+                                   'account which will be used to authenticate on the deployed VMs',
                     'title': 'SSH Key Names'
                 }
             },
@@ -450,7 +441,7 @@ class ConfigTestCase(TestCase):
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_optional_requirements_config_validation(self):
         class BaseRequirements(schema.Schema):
-            driver = schema.StringItem(default='digital_ocean', format='hidden')
+            driver = schema.StringItem(default='digitalocean', format='hidden')
 
         class SSHKeyFileSchema(schema.Schema):
             ssh_key_file = schema.StringItem(
@@ -466,8 +457,8 @@ class ConfigTestCase(TestCase):
                             'authenticate on the deployed VMs')
 
         class Requirements(BaseRequirements):
-            title = 'Digital Ocean'
-            description = 'Digital Ocean Cloud VM configuration requirements.'
+            title = 'DigitalOcean'
+            description = 'DigitalOcean Cloud VM configuration requirements.'
 
             personal_access_token = schema.StringItem(
                 title='Personal Access Token',
@@ -2032,54 +2023,54 @@ class ConfigTestCase(TestCase):
         self.assertDictEqual(TestConf2.serialize(), expected)
 
 
-class TestComplexSchemaItem(schema.ComplexSchemaItem):
+class ComplexSchemaItem(schema.ComplexSchemaItem):
     _complex_attributes = ['thirsty']
     thirsty = schema.BooleanItem(title='Thirsty',
                                  description='Are you thirsty?')
 
 
-class TestComplexComplexSchemaItem(schema.ComplexSchemaItem):
+class ComplexComplexSchemaItem(schema.ComplexSchemaItem):
     _complex_attributes = ['hungry', 'complex_item']
 
     hungry = schema.BooleanItem(title='Hungry',
                                 description='Are you hungry?',
                                 required=True)
-    complex_item = TestComplexSchemaItem(definition_name='test_definition')
+    complex_item = ComplexSchemaItem(definition_name='test_definition')
 
 
 class TestComplexDefinitionsSchema(schema.DefinitionsSchema):
     title = 'Test Complex Definition Schema'
-    complex_item = TestComplexSchemaItem()
+    complex_item = ComplexSchemaItem()
 
 
 class TestOneOfComplexDefinitionsSchema(schema.DefinitionsSchema):
     title = 'Test OneOf Complex Definitions Schema'
     one_of_item = schema.OneOfItem(
-        items=[TestComplexSchemaItem(), schema.StringItem()])
+        items=[ComplexSchemaItem(), schema.StringItem()])
 
 
 class TestArrayComplexDefinitionsSchema(schema.DefinitionsSchema):
     title = 'Test Array Complex Definitions Schema'
-    array_item = schema.ArrayItem(items=TestComplexSchemaItem())
+    array_item = schema.ArrayItem(items=ComplexSchemaItem())
 
 
 class TestDictComplexDefinitionsSchema(schema.DefinitionsSchema):
     title = 'Test Dict Complex Definitions Schema'
     dict_item = schema.DictItem(
-        properties={'complex_obj': TestComplexSchemaItem(required=True)},
-        additional_properties=TestComplexSchemaItem())
+        properties={'complex_obj': ComplexSchemaItem(required=True)},
+        additional_properties=ComplexSchemaItem())
 
 
 class TestComplexComplexDefinitionsSchema(schema.DefinitionsSchema):
     title = 'Test Complex Complex Definition Schema'
-    complex_complex_item = TestComplexComplexSchemaItem()
+    complex_complex_item = ComplexComplexSchemaItem()
 
 
 class ComplexSchemaTestCase(TestCase):
     ''' Test cases with definition schemas containing complex items'''
 
-    obj = TestComplexSchemaItem()
-    complex_obj = TestComplexComplexSchemaItem()
+    obj = ComplexSchemaItem()
+    complex_obj = ComplexComplexSchemaItem()
     schema = TestComplexDefinitionsSchema()
     one_of_schema = TestOneOfComplexDefinitionsSchema()
     array_schema = TestArrayComplexDefinitionsSchema()
@@ -2089,14 +2080,14 @@ class ComplexSchemaTestCase(TestCase):
     def test_complex_schema_item_serialize(self):
         obj = copy.deepcopy(self.obj)
         expected_serialized = {'$ref':
-                               '#/definitions/TestComplexSchemaItem'}
+                               '#/definitions/ComplexSchemaItem'}
         self.assertDictEqual(obj.serialize(), expected_serialized)
 
     def test_complex_schema_item_definition(self):
         obj = copy.deepcopy(self.obj)
         expected_def = {
             'type': 'object',
-            'title': 'TestComplexSchemaItem',
+            'title': 'ComplexSchemaItem',
             'properties':  {
                 'thirsty': {
                     'type': 'boolean',
@@ -2108,7 +2099,7 @@ class ComplexSchemaTestCase(TestCase):
         complex_obj = copy.deepcopy(self.complex_obj)
         expected_def = {
             'type': 'object',
-            'title': 'TestComplexComplexSchemaItem',
+            'title': 'ComplexComplexSchemaItem',
             'properties':  {
                 'hungry': {
                     'type': 'boolean',
@@ -2128,13 +2119,13 @@ class ComplexSchemaTestCase(TestCase):
             'type': 'object',
             'properties': {
                 'complex_item': {
-                    '$ref': '#/definitions/TestComplexSchemaItem'}},
+                    '$ref': '#/definitions/ComplexSchemaItem'}},
             'x-ordering': ['complex_item'],
             'additionalProperties': False,
             'definitions': {
-                'TestComplexSchemaItem': {
+                'ComplexSchemaItem': {
                     'type': 'object',
-                    'title': 'TestComplexSchemaItem',
+                    'title': 'ComplexSchemaItem',
                     'properties':  {
                         'thirsty': {
                             'type': 'boolean',
@@ -2150,14 +2141,14 @@ class ComplexSchemaTestCase(TestCase):
             'type': 'object',
             'properties': {
                 'one_of_item': {
-                    'oneOf': [{'$ref': '#/definitions/TestComplexSchemaItem'},
+                    'oneOf': [{'$ref': '#/definitions/ComplexSchemaItem'},
                               {'type': 'string'}]}},
             'x-ordering': ['one_of_item'],
             'additionalProperties': False,
             'definitions': {
-                'TestComplexSchemaItem': {
+                'ComplexSchemaItem': {
                     'type': 'object',
-                    'title': 'TestComplexSchemaItem',
+                    'title': 'ComplexSchemaItem',
                     'properties':  {
                         'thirsty': {
                             'type': 'boolean',
@@ -2175,13 +2166,13 @@ class ComplexSchemaTestCase(TestCase):
                 'array_item': {
                     'type': 'array',
                     'title': 'array_item',
-                    'items': {'$ref': '#/definitions/TestComplexSchemaItem'}}},
+                    'items': {'$ref': '#/definitions/ComplexSchemaItem'}}},
             'x-ordering': ['array_item'],
             'additionalProperties': False,
             'definitions': {
-                'TestComplexSchemaItem': {
+                'ComplexSchemaItem': {
                     'type': 'object',
-                    'title': 'TestComplexSchemaItem',
+                    'title': 'ComplexSchemaItem',
                     'properties':  {
                         'thirsty': {
                             'type': 'boolean',
@@ -2202,15 +2193,15 @@ class ComplexSchemaTestCase(TestCase):
                     'required': ['complex_obj'],
                     'properties':
                         {'complex_obj':
-                            {'$ref': '#/definitions/TestComplexSchemaItem'}},
+                            {'$ref': '#/definitions/ComplexSchemaItem'}},
                     'additionalProperties':
-                        {'$ref': '#/definitions/TestComplexSchemaItem'}}},
+                        {'$ref': '#/definitions/ComplexSchemaItem'}}},
             'x-ordering': ['dict_item'],
             'additionalProperties': False,
             'definitions': {
-                'TestComplexSchemaItem': {
+                'ComplexSchemaItem': {
                     'type': 'object',
-                    'title': 'TestComplexSchemaItem',
+                    'title': 'ComplexSchemaItem',
                     'properties':  {
                         'thirsty': {
                             'type': 'boolean',
@@ -2227,13 +2218,13 @@ class ComplexSchemaTestCase(TestCase):
             'type': 'object',
             'properties': {
                 'complex_complex_item': {
-                    '$ref': '#/definitions/TestComplexComplexSchemaItem'}},
+                    '$ref': '#/definitions/ComplexComplexSchemaItem'}},
             'x-ordering': ['complex_complex_item'],
             'additionalProperties': False,
             'definitions': {
-                'TestComplexComplexSchemaItem': {
+                'ComplexComplexSchemaItem': {
                     'type': 'object',
-                    'title': 'TestComplexComplexSchemaItem',
+                    'title': 'ComplexComplexSchemaItem',
                     'properties':  {
                         'hungry': {
                             'type': 'boolean',
@@ -2328,9 +2319,3 @@ class ComplexSchemaTestCase(TestCase):
                 serialized)
         self.assertIn('\'hungry\' is a required property',
                       excinfo.exception.message)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ConfigTestCase, needs_daemon=False)
-    run_tests(ComplexSchemaTestCase, needs_daemon=False)

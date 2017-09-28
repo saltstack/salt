@@ -5,36 +5,31 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import json
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     patch,
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
 import salt.utils
-from salt.modules import pagerduty
-import json
-
-# Globals
-pagerduty.__opts__ = {}
-pagerduty.__salt__ = {
-    'config.option': MagicMock(return_value=None)
-    }
+import salt.modules.pagerduty as pagerduty
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PagerdutyTestCase(TestCase):
+class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pagerduty
     '''
+    def setup_loader_modules(self):
+        return {pagerduty: {'__salt__': {'config.option': MagicMock(return_value=None)}}}
+
     def test_list_services(self):
         '''
         Test for List services belonging to this account
@@ -91,8 +86,3 @@ class PagerdutyTestCase(TestCase):
             with patch.object(salt.utils.pagerduty, 'query',
                               return_value='A'):
                 self.assertListEqual(pagerduty.create_event(), ['A'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PagerdutyTestCase, needs_daemon=False)

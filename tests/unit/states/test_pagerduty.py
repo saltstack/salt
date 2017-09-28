@@ -6,29 +6,26 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import pagerduty
-
-pagerduty.__salt__ = {}
-pagerduty.__opts__ = {}
+import salt.states.pagerduty as pagerduty
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PagerdutyTestCase(TestCase):
+class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.pagerduty
     '''
+    def setup_loader_modules(self):
+        return {pagerduty: {}}
+
     # 'create_event' function tests: 1
 
     def test_create_event(self):
@@ -61,8 +58,3 @@ class PagerdutyTestCase(TestCase):
                 self.assertDictEqual(pagerduty.create_event(name, details,
                                                             service_key,
                                                             profile), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PagerdutyTestCase, needs_daemon=False)

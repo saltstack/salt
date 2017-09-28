@@ -27,11 +27,11 @@ import subprocess
 
 mswindows = (sys.platform == "win32")
 
-if mswindows:
+try:
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
     import msvcrt
-else:
+except ImportError:
     import fcntl
 
 log = logging.getLogger(__name__)

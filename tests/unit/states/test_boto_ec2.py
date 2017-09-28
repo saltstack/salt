@@ -6,29 +6,22 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    patch)
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt Libs
-from salt.states import boto_ec2
-
-boto_ec2.__salt__ = {}
-boto_ec2.__opts__ = {}
+import salt.states.boto_ec2 as boto_ec2
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoEc2TestCase(TestCase):
+class BotoEc2TestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_ec2
     '''
+    def setup_loader_modules(self):
+        return {boto_ec2: {}}
+
     # 'key_present' function tests: 1
 
     def test_key_present(self):
@@ -86,8 +79,3 @@ class BotoEc2TestCase(TestCase):
                 comt = ('The key {0} is set to be deleted.'.format(name))
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(boto_ec2.key_absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoEc2TestCase, needs_daemon=False)

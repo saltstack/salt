@@ -6,8 +6,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -15,21 +16,17 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import firewalld
-
-
-# Globals
-firewalld.__grains__ = {}
-firewalld.__salt__ = {}
-firewalld.__context__ = {}
-firewalld.__opts__ = {}
+import salt.modules.firewalld as firewalld
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class FirewalldTestCase(TestCase):
+class FirewalldTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.firewalld
     '''
+    def setup_loader_modules(self):
+        return {firewalld: {}}
+
     def test_version(self):
         '''
         Test for Return version from firewall-cmd
@@ -288,7 +285,3 @@ class FirewalldTestCase(TestCase):
         '''
         with patch.object(firewalld, '__firewall_cmd', return_value='success'):
             self.assertEqual(firewalld.remove_rich_rule('zone', 'rule family="ipv4" source address="1.2.3.4" accept'), 'success')
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(FirewalldTestCase, needs_daemon=False)

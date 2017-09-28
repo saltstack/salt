@@ -7,30 +7,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import rpm
-
-# Globals
-rpm.__salt__ = {}
+import salt.modules.rpm as rpm
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RpmTestCase(TestCase):
+class RpmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rpm
     '''
+    def setup_loader_modules(self):
+        return {rpm: {'rpm': MagicMock(return_value=MagicMock)}}
+
     # 'list_pkgs' function tests: 1
 
     def test_list_pkgs(self):
@@ -114,28 +111,22 @@ class RpmTestCase(TestCase):
         with patch.dict(rpm.__salt__, {'file.file_exists': mock, 'cmd.retcode': mock}):
             self.assertDictEqual(rpm.checksum("file1.rpm", "file2.rpm", "file3.rpm"), ret)
 
-    @patch('salt.modules.rpm.HAS_RPM', True)
     def test_version_cmp_rpm(self):
         '''
         Test package version is called RPM version if RPM-Python is installed
 
         :return:
         '''
-        rpm.rpm = MagicMock(return_value=MagicMock)
-        with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)):
+        with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)), \
+                patch('salt.modules.rpm.HAS_RPM', True):
             self.assertEqual(0, rpm.version_cmp('1', '2'))  # mock returns 0, which means RPM was called
 
-    @patch('salt.modules.rpm.HAS_RPM', False)
     def test_version_cmp_fallback(self):
         '''
         Test package version is called RPM version if RPM-Python is installed
 
         :return:
         '''
-        rpm.rpm = MagicMock(return_value=MagicMock)
-        with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)):
+        with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)), \
+                patch('salt.modules.rpm.HAS_RPM', False):
             self.assertEqual(-1, rpm.version_cmp('1', '2'))  # mock returns -1, a python implementation was called
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RpmTestCase, needs_daemon=False)

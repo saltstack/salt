@@ -122,7 +122,7 @@ def _load_config():
     config = {}
 
     if os.path.isfile('/usbkey/config'):
-        with salt.utils.fopen('/usbkey/config', 'r') as config_file:
+        with salt.utils.files.fopen('/usbkey/config', 'r') as config_file:
             for optval in config_file:
                 if optval[0] == '#':
                     continue
@@ -161,7 +161,7 @@ def _parse_vmconfig(config, instances):
 
     if isinstance(config, (salt.utils.odict.OrderedDict)):
         vmconfig = OrderedDict()
-        for prop in config.keys():
+        for prop in config:
             if prop not in instances:
                 vmconfig[prop] = config[prop]
             else:
@@ -171,6 +171,9 @@ def _parse_vmconfig(config, instances):
                 for instance in config[prop]:
                     instance_config = config[prop][instance]
                     instance_config[instances[prop]] = instance
+                    ## some property are lowercase
+                    if 'mac' in instance_config:
+                        instance_config['mac'] = instance_config['mac'].lower()
                     vmconfig[prop].append(instance_config)
     else:
         log.error('smartos.vm_present::parse_vmconfig - failed to parse')
@@ -188,7 +191,7 @@ def _get_instance_changes(current, state):
 
     # compare configs
     changed = salt.utils.compare_dicts(current, state)
-    for change in changed.keys():
+    for change in salt.utils.compare_dicts(current, state):
         if change in changed and changed[change]['old'] == "":
             del changed[change]
         if change in changed and changed[change]['new'] == "":

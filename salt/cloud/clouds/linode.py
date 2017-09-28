@@ -35,7 +35,7 @@ import datetime
 
 # Import Salt Libs
 import salt.config as config
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -43,9 +43,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit
 )
-
-# Import Salt-Cloud Libs
-import salt.utils.cloud
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -345,11 +342,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(name),
-        args={
-            'name': name,
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -447,10 +440,11 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(name),
-        args={'kwargs': kwargs},
+        args=__utils__['cloud.filter_event']('requesting', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
+
     node_id = _clean_data(result)['LinodeID']
     data['id'] = node_id
 
@@ -523,11 +517,12 @@ def create(vm_):
     vm_['private_ips'] = ips['private_ips']
 
     # Send event that the instance has booted.
-    salt.utils.cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'waiting for ssh',
         'salt/cloud/{0}/waiting_for_ssh'.format(name),
-        {'ip_address': vm_['ssh_host']},
+        sock_dir=__opts__['sock_dir'],
+        args={'ip_address': vm_['ssh_host']},
         transport=__opts__['transport']
     )
 
@@ -547,11 +542,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(name),
-        args={
-            'name': name,
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1199,7 +1190,7 @@ def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields.
     '''
-    return salt.utils.cloud.list_nodes_select(
+    return __utils__['cloud.list_nodes_select'](
         list_nodes_full(), __opts__['query.selection'], call,
     )
 
@@ -1509,7 +1500,7 @@ def _query(action=None,
     if LASTCALL >= now:
         time.sleep(ratelimit_sleep)
 
-    result = salt.utils.http.query(
+    result = __utils__['http.query'](
         url,
         method,
         params=args,

@@ -8,12 +8,10 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
+from tests.support.mixins import SaltReturnAssertsMixin
 
 NO_ALTERNATIVES = False
 if not os.path.exists('/etc/alternatives'):
@@ -21,8 +19,7 @@ if not os.path.exists('/etc/alternatives'):
 
 
 @skipIf(NO_ALTERNATIVES, '/etc/alternatives does not exist on the system')
-class AlterantivesStateTest(integration.ModuleCase,
-                            integration.SaltReturnAssertsMixIn):
+class AlterantivesStateTest(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
     def test_install_set_and_remove(self):
         ret = self.run_state('alternatives.set', name='alt-test', path='/bin/true')

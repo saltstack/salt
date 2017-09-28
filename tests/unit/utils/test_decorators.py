@@ -7,14 +7,12 @@
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-from salt.utils import decorators
+# Import Salt libs
+import salt.utils.decorators as decorators
 from salt.version import SaltStackVersion
-from salt.exceptions import CommandExecutionError
-
-ensure_in_syspath('../../')
+from salt.exceptions import CommandExecutionError, SaltConfigurationError
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 
 class DummyLogger(object):
@@ -31,6 +29,7 @@ class DummyLogger(object):
         self._messages.append(msg)
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DecoratorsTest(TestCase):
     '''
     Testing decorators.
@@ -40,6 +39,9 @@ class DecoratorsTest(TestCase):
 
     def new_function(self):
         return "new"
+
+    def _new_function(self):
+        return "old"
 
     def _mk_version(self, name):
         '''
@@ -57,11 +59,17 @@ class DecoratorsTest(TestCase):
         self.globs = {
             '__virtualname__': 'test',
             '__opts__': {},
+            '__pillar__': {},
             'old_function': self.old_function,
             'new_function': self.new_function,
+            '_new_function': self._new_function,
         }
+        self.addCleanup(delattr, self, 'globs')
         self.messages = list()
-        decorators.log = DummyLogger(self.messages)
+        self.addCleanup(delattr, self, 'messages')
+        patcher = patch.object(decorators, 'log', DummyLogger(self.messages))
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_is_deprecated_version_eol(self):
         '''
@@ -132,14 +140,32 @@ class DecoratorsTest(TestCase):
 
         :return:
         '''
+        del self.globs['_new_function']
         self.globs['__opts__']['use_deprecated'] = ['test.new_function']
         depr = decorators.with_deprecated(self.globs, "Beryllium")
         depr._curr_version = self._mk_version("Helium")[1]
         with self.assertRaises(CommandExecutionError):
             depr(self.new_function)()
         self.assertEqual(self.messages,
-                         ['The function is using its deprecated version and will expire in version "Beryllium". '
-                          'Use its successor "new_function" instead.'])
+                         ['The function "test.new_function" is using its deprecated '
+                          'version and will expire in version "Beryllium".'])
+
+    def test_with_deprecated_notfound_in_pillar(self):
+        '''
+        Test with_deprecated should raise an exception, if a same name
+        function with the "_" prefix not implemented.
+
+        :return:
+        '''
+        del self.globs['_new_function']
+        self.globs['__pillar__']['use_deprecated'] = ['test.new_function']
+        depr = decorators.with_deprecated(self.globs, "Beryllium")
+        depr._curr_version = self._mk_version("Helium")[1]
+        with self.assertRaises(CommandExecutionError):
+            depr(self.new_function)()
+        self.assertEqual(self.messages,
+                         ['The function "test.new_function" is using its deprecated '
+                          'version and will expire in version "Beryllium".'])
 
     def test_with_deprecated_found(self):
         '''
@@ -154,8 +180,25 @@ class DecoratorsTest(TestCase):
         depr = decorators.with_deprecated(self.globs, "Beryllium")
         depr._curr_version = self._mk_version("Helium")[1]
         self.assertEqual(depr(self.new_function)(), self.old_function())
-        log_msg = ['The function is using its deprecated version and will expire in version "Beryllium". '
-                   'Use its successor "new_function" instead.']
+        log_msg = ['The function "test.new_function" is using its deprecated version '
+                   'and will expire in version "Beryllium".']
+        self.assertEqual(self.messages, log_msg)
+
+    def test_with_deprecated_found_in_pillar(self):
+        '''
+        Test with_deprecated should not raise an exception, if a same name
+        function with the "_" prefix is implemented, but should use
+        an old version instead, if "use_deprecated" is requested.
+
+        :return:
+        '''
+        self.globs['__pillar__']['use_deprecated'] = ['test.new_function']
+        self.globs['_new_function'] = self.old_function
+        depr = decorators.with_deprecated(self.globs, "Beryllium")
+        depr._curr_version = self._mk_version("Helium")[1]
+        self.assertEqual(depr(self.new_function)(), self.old_function())
+        log_msg = ['The function "test.new_function" is using its deprecated version '
+                   'and will expire in version "Beryllium".']
         self.assertEqual(self.messages, log_msg)
 
     def test_with_deprecated_found_eol(self):
@@ -167,6 +210,25 @@ class DecoratorsTest(TestCase):
         :return:
         '''
         self.globs['__opts__']['use_deprecated'] = ['test.new_function']
+        self.globs['_new_function'] = self.old_function
+        depr = decorators.with_deprecated(self.globs, "Helium")
+        depr._curr_version = self._mk_version("Beryllium")[1]
+        with self.assertRaises(CommandExecutionError):
+            depr(self.new_function)()
+        self.assertEqual(self.messages,
+                         ['Although function "new_function" is called, an alias "new_function" '
+                          'is configured as its deprecated version. The lifetime of the function '
+                          '"new_function" expired. Please use its successor "new_function" instead.'])
+
+    def test_with_deprecated_found_eol_in_pillar(self):
+        '''
+        Test with_deprecated should raise an exception, if a same name
+        function with the "_" prefix is implemented, "use_deprecated" is requested
+        and EOL is reached.
+
+        :return:
+        '''
+        self.globs['__pillar__']['use_deprecated'] = ['test.new_function']
         self.globs['_new_function'] = self.old_function
         depr = decorators.with_deprecated(self.globs, "Helium")
         depr._curr_version = self._mk_version("Beryllium")[1]
@@ -226,7 +288,67 @@ class DecoratorsTest(TestCase):
                           'The lifetime of the function "old_function" expired. '
                           'Please use its successor "new_function" instead.'])
 
+    def test_with_deprecated_opt_in_default(self):
+        '''
+        Test with_deprecated using opt-in policy,
+        where newer function is not used, unless configured.
 
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(DecoratorsTest, needs_daemon=False)
+        :return:
+        '''
+        depr = decorators.with_deprecated(self.globs, "Beryllium", policy=decorators._DeprecationDecorator.OPT_IN)
+        depr._curr_version = self._mk_version("Helium")[1]
+        assert depr(self.new_function)() == self.old_function()
+        assert self.messages == ['The function "test.new_function" is using its '
+                                 'deprecated version and will expire in version "Beryllium".']
+
+    def test_with_deprecated_opt_in_use_superseded(self):
+        '''
+        Test with_deprecated using opt-in policy,
+        where newer function is used as per configuration.
+
+        :return:
+        '''
+        self.globs['__opts__']['use_superseded'] = ['test.new_function']
+        depr = decorators.with_deprecated(self.globs, "Beryllium", policy=decorators._DeprecationDecorator.OPT_IN)
+        depr._curr_version = self._mk_version("Helium")[1]
+        assert depr(self.new_function)() == self.new_function()
+        assert not self.messages
+
+    def test_with_deprecated_opt_in_use_superseded_in_pillar(self):
+        '''
+        Test with_deprecated using opt-in policy,
+        where newer function is used as per configuration.
+
+        :return:
+        '''
+        self.globs['__pillar__']['use_superseded'] = ['test.new_function']
+        depr = decorators.with_deprecated(self.globs, "Beryllium", policy=decorators._DeprecationDecorator.OPT_IN)
+        depr._curr_version = self._mk_version("Helium")[1]
+        assert depr(self.new_function)() == self.new_function()
+        assert not self.messages
+
+    def test_with_deprecated_opt_in_use_superseded_and_deprecated(self):
+        '''
+        Test with_deprecated misconfiguration.
+
+        :return:
+        '''
+        self.globs['__opts__']['use_deprecated'] = ['test.new_function']
+        self.globs['__opts__']['use_superseded'] = ['test.new_function']
+        depr = decorators.with_deprecated(self.globs, "Beryllium")
+        depr._curr_version = self._mk_version("Helium")[1]
+        with self.assertRaises(SaltConfigurationError):
+            assert depr(self.new_function)() == self.new_function()
+
+    def test_with_deprecated_opt_in_use_superseded_and_deprecated_in_pillar(self):
+        '''
+        Test with_deprecated misconfiguration.
+
+        :return:
+        '''
+        self.globs['__pillar__']['use_deprecated'] = ['test.new_function']
+        self.globs['__pillar__']['use_superseded'] = ['test.new_function']
+        depr = decorators.with_deprecated(self.globs, "Beryllium")
+        depr._curr_version = self._mk_version("Helium")[1]
+        with self.assertRaises(SaltConfigurationError):
+            assert depr(self.new_function)() == self.new_function()

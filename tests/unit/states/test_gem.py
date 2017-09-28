@@ -4,19 +4,19 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-ensure_in_syspath('../../')
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Late import so mock can do its job
 import salt.states.gem as gem
-gem.__salt__ = {}
-gem.__opts__ = {'test': False}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestGemState(TestCase):
+class TestGemState(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {gem: {'__opts__': {'test': False}}}
 
     def test_installed(self):
         gems = {'foo': ['1.0'], 'bar': ['2.0']}
@@ -106,7 +106,3 @@ class TestGemState(TestCase):
                 self.assertEqual(False, ret['result'])
                 gem_sources_remove_fails.assert_called_once_with(
                     source_uri='http://bar', ruby=None, runas=None)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestGemState, needs_daemon=False)

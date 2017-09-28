@@ -6,30 +6,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import rabbitmq_plugin
-
-rabbitmq_plugin.__opts__ = {}
-rabbitmq_plugin.__salt__ = {}
+import salt.states.rabbitmq_plugin as rabbitmq_plugin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RabbitmqPluginTestCase(TestCase):
+class RabbitmqPluginTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.rabbitmq_plugin
     '''
+    def setup_loader_modules(self):
+        return {rabbitmq_plugin: {}}
+
     # 'enabled' function tests: 1
 
     def test_enabled(self):
@@ -81,8 +78,3 @@ class RabbitmqPluginTestCase(TestCase):
                 changes = {'new': '', 'old': 'some_plugin'}
                 ret.update({'comment': comment, 'result': None, 'changes': changes})
                 self.assertDictEqual(rabbitmq_plugin.disabled(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RabbitmqPluginTestCase, needs_daemon=False)

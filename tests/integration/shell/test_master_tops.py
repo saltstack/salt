@@ -8,14 +8,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ShellCase
 
 
-class MasterTopsTest(integration.ShellCase):
+class MasterTopsTest(ShellCase):
 
     _call_binary_ = 'salt'
 
@@ -26,7 +22,3 @@ class MasterTopsTest(integration.ShellCase):
         self.assertTrue(
             any('master_tops_test' in _x for _x in resp)
         )
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MasterTopsTest)

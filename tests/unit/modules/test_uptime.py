@@ -4,26 +4,13 @@
 from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
-ensure_in_syspath('../../')
-ensure_in_syspath('../../../')
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-from salt.modules import uptime
-
-uptime.__grains__ = None  # in order to stub it w/patch below
-uptime.__salt__ = None  # in order to stub it w/patch below
-
-if NO_MOCK is False:
-    SALT_STUB = {
-        'pillar.get': Mock(return_value='http://localhost:5000'),
-        'requests.put': Mock(),
-    }
-else:
-    SALT_STUB = {}
+import salt.modules.uptime as uptime
 
 
 class RequestMock(Mock):
@@ -61,11 +48,19 @@ REQUEST_MOCK = RequestMock()
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch.multiple(uptime,
-                requests=REQUEST_MOCK,
-                __salt__=SALT_STUB)
-class UptimeTestCase(TestCase):
+class UptimeTestCase(TestCase, LoaderModuleMockMixin):
     ''' UptimeTestCase'''
+
+    def setup_loader_modules(self):
+        return {
+            uptime: {
+                '__salt__': {
+                    'pillar.get': Mock(return_value='http://localhost:5000'),
+                    'requests.put': Mock(),
+                },
+                'requests': REQUEST_MOCK
+            }
+        }
 
     def test_checks_list(self):
         ret = uptime.checks_list()
@@ -87,7 +82,3 @@ class UptimeTestCase(TestCase):
         self.assertTrue(uptime.delete('http://example.org') is True)
         self.assertEqual(('http://localhost:5000/api/checks/1234',),
                          REQUEST_MOCK.args)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(UptimeTestCase, needs_daemon=False)

@@ -7,8 +7,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -16,31 +17,24 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import guestfs
-
-# Globals
-guestfs.__salt__ = {}
+import salt.modules.guestfs as guestfs
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GuestfsTestCase(TestCase):
+class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.guestfs
     '''
-    # 'mount' function tests: 1
+    def setup_loader_modules(self):
+        return {guestfs: {}}
 
-    @patch('os.path.join', MagicMock(return_value=True))
-    @patch('os.path.isdir', MagicMock(return_value=True))
-    @patch('os.listdir', MagicMock(return_value=False))
+    # 'mount' function tests: 1
     def test_mount(self):
         '''
         Test if it mount an image
         '''
-        mock = MagicMock(return_value='')
-        with patch.dict(guestfs.__salt__, {'cmd.run': mock}):
+        with patch('os.path.join', MagicMock(return_value=True)), \
+                patch('os.path.isdir', MagicMock(return_value=True)), \
+                patch('os.listdir', MagicMock(return_value=False)), \
+                patch.dict(guestfs.__salt__, {'cmd.run': MagicMock(return_value='')}):
             self.assertTrue(guestfs.mount('/srv/images/fedora.qcow'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(GuestfsTestCase, needs_daemon=False)

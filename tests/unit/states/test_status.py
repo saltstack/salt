@@ -6,31 +6,28 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import status
-
-status.__salt__ = {}
+import salt.states.status as status
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class StatusTestCase(TestCase):
+class StatusTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.status
     '''
-    # 'loadavg' function tests: 1
+    def setup_loader_modules(self):
+        return {status: {}}
 
+    # 'loadavg' function tests: 1
     def test_loadavg(self):
         '''
         Test to return the current load average for the specified minion.
@@ -92,8 +89,3 @@ class StatusTestCase(TestCase):
             ret.update({'comment': comt, 'result': True,
                         'data': {name: 1}})
             self.assertDictEqual(status.process(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StatusTestCase, needs_daemon=False)

@@ -1,74 +1,134 @@
 @echo off
 @echo Salt Windows Build Package Script
-@echo ----------------------------------------------------------------------
+@echo =====================================================================
+@echo.
+
+:: Get Passed Parameters
+@echo %0 :: Get Passed Parameters...
+@echo ---------------------------------------------------------------------
+Set "Version="
+Set "Python="
+:: First Parameter
+if not "%~1"=="" (
+    echo.%1 | FIND /I "=" > nul && (
+        :: Named Parameter
+        set "%~1"
+    ) || (
+        :: Positional Parameter
+        set "Version=%~1"
+    )
+)
+:: Second Parameter
+if not "%~2"=="" (
+    echo.%2 | FIND /I "=" > nul && (
+        :: Named Parameter
+        set "%~2"
+    ) || (
+        :: Positional Parameter
+        set "Python=%~2"
+    )
+)
+
+:: If Version not defined, Get the version from Git
+if "%Version%"=="" (
+    for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
+)
+
+:: If Python not defined, Assume Python 2
+if "%Python%"=="" (
+    set Python=2
+)
+
+:: Verify valid Python value (2 or 3)
+set "x="
+for /f "delims=23" %%i in ("%Python%") do set x=%%i
+if Defined x (
+    echo Invalid Python Version specified. Must be 2 or 3. Passed %Python%
+    goto eof
+)
 @echo.
 
 :: Define Variables
 @echo Defining Variables...
 @echo ----------------------------------------------------------------------
-Set "CurrDir=%cd%"
-Set "BinDir=%cd%\buildenv\bin"
-Set "InsDir=%cd%\installer"
-Set "PreDir=%cd%\prereqs"
-Set "PyDir27=C:\Python27"
-Set "PyDir35=C:\Program Files\Python35"
-Set "PyDir36=C:\Program Files\Python36"
-
-:: Get the version from git if not passed
-if [%1]==[] (
-    for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
+if %Python%==2 (
+    Set "PyDir=C:\Python27"
+    Set "PyVerMajor=2"
+    Set "PyVerMinor=7"
 ) else (
-    set "Version=%~1"
+    Set "PyDir=C:\Python35"
+    Set "PyVerMajor=3"
+    Set "PyVerMinor=5"
 )
 
-If Exist "%PyDir36%\python.exe" (
-    Set "PyDir=%PyDir36%"
-    Set "PyVerMajor=3"
-    Set "PyVerMinor=6"
-) Else (
-    If Exist "%PyDir35%\python.exe" (
-        Set "PyDir=%PyDir35%"
-        Set "PyVerMajor=3"
-        Set "PyVerMinor=5"
-    ) Else (
-        If Exist "%PyDir27%\python.exe" (
-            Set "PyDir=%PyDir27%"
-            Set "PyVerMajor=2"
-            Set "PyVerMinor=7"
-        ) Else (
-            @echo Could not find Python on the system
-            exit /b 1
-        )
-    )
+:: Verify the Python Installation
+If not Exist "%PyDir%\python.exe" (
+    @echo Expected version of Python not found: Python %PyVerMajor%.%PyVerMinor%"
+    exit /b 1
 )
+
+Set "CurDir=%~dp0"
+Set "BldDir=%CurDir%\buildenv"
+Set "BinDir=%CurDir%\buildenv\bin"
+Set "CnfDir=%CurDir%\buildenv\conf"
+Set "InsDir=%CurDir%\installer"
+Set "PreDir=%CurDir%\prereqs"
+for /f "delims=" %%a in ('git rev-parse --show-toplevel') do @set "SrcDir=%%a"
 
 :: Find the NSIS Installer
 If Exist "C:\Program Files\NSIS\" (
-    Set NSIS="C:\Program Files\NSIS\"
+    Set "NSIS=C:\Program Files\NSIS\"
 ) Else (
-    Set NSIS="C:\Program Files (x86)\NSIS\"
+    Set "NSIS=C:\Program Files (x86)\NSIS\"
 )
+If not Exist "%NSIS%NSIS.exe" (
+    @echo "NSIS not found in %NSIS%"
+    exit /b 1
+)
+
+:: Add NSIS to the Path
 Set "PATH=%NSIS%;%PATH%"
 @echo.
 
+:: Check for existing bin directory and remove
+If Exist "%BinDir%\" (
+    @echo Removing %BinDir%
+    @echo ----------------------------------------------------------------------
+    rd /S /Q "%BinDir%"
+)
+
+:: Copy the contents of the Python Dir to bin
 @echo Copying "%PyDir%" to bin...
 @echo ----------------------------------------------------------------------
-:: Check for existing bin directory and remove
-If Exist "%BinDir%\" rd /S /Q "%BinDir%"
-
-:: Copy the Python directory to bin
 @echo xcopy /E /Q "%PyDir%" "%BinDir%\"
 xcopy /E /Q "%PyDir%" "%BinDir%\"
 @echo.
 
-@echo Copying VCRedist 2008 MFC to Prerequisites
+:: Copy the default master and minion configs to buildenv\conf
+@echo Copying configs to buildenv\conf...
+@echo ----------------------------------------------------------------------
+@echo xcopy /E /Q "%SrcDir%\conf\master" "%CnfDir%\"
+xcopy /Q /Y "%SrcDir%\conf\master" "%CnfDir%\"
+@echo xcopy /E /Q "%SrcDir%\conf\minion" "%CnfDir%\"
+xcopy /Q /Y "%SrcDir%\conf\minion" "%CnfDir%\"
+@echo.
+
+@echo Copying VCRedist to Prerequisites
 @echo ----------------------------------------------------------------------
 :: Make sure the "prereq" directory exists
 If NOT Exist "%PreDir%" mkdir "%PreDir%"
 
+:: Set the location of the vcredist to download
+If %Python%==3 (
+    Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2015.exe"
+    Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2015.exe"
+
+) Else (
+    Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
+    Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
+)
+
 :: Check for 64 bit by finding the Program Files (x86) directory
-Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
-Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
 If Defined ProgramFiles(x86) (
     powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%PreDir%\vcredist.exe"
 ) Else (
@@ -79,11 +139,12 @@ If Defined ProgramFiles(x86) (
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files
 @echo ----------------------------------------------------------------------
-"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
-"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install-%PyVerMajor%.%PyVerMinor%.exe"
-"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
-"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.%PyVerMinor%.exe"
-"%PyDir%\python" "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.exe"
+"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
+"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install-%PyVerMajor%.%PyVerMinor%.exe"
+"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
+"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.%PyVerMinor%.exe"
+"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.exe"
+"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\wheel.exe"
 @echo.
 
 @echo Cleaning up unused files and directories...
@@ -245,8 +306,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\modules\netbsd*"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\netbsd*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\netscaler.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\netscaler.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\modules\network.py"^
-    del /Q "%BinDir%\Lib\site-packages\salt\modules\network.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\neutron.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\neutron.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\nfs3.py"^
@@ -487,12 +546,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\zpool.py"^
 :: Remove Unneeded Components
 If Exist "%BinDir%\Lib\site-packages\salt\cloud"^
     rd /S /Q "%BinDir%\Lib\site-packages\salt\cloud" 1>nul
-If Exist "%BinDir%\Scripts\salt-key*"^
-    del /Q "%BinDir%\Scripts\salt-key*" 1>nul
-If Exist "%BinDir%\Scripts\salt-master*"^
-    del /Q "%BinDir%\Scripts\salt-master*" 1>nul
-If Exist "%BinDir%\Scripts\salt-run*"^
-    del /Q "%BinDir%\Scripts\salt-run*" 1>nul
 If Exist "%BinDir%\Scripts\salt-unity*"^
     del /Q "%BinDir%\Scripts\salt-unity*" 1>nul
 
@@ -500,7 +553,41 @@ If Exist "%BinDir%\Scripts\salt-unity*"^
 
 @echo Building the installer...
 @echo ----------------------------------------------------------------------
-makensis.exe /DSaltVersion=%Version% "%InsDir%\Salt-Minion-Setup.nsi"
+:: Make the Master installer if the nullsoft script exists
+If Exist "%InsDir%\Salt-Setup.nsi"^
+    makensis.exe /DSaltVersion=%Version% /DPythonVersion=%Python% "%InsDir%\Salt-Setup.nsi"
+
+:: Remove files not needed for Salt Minion
+:: salt
+:: salt has to be removed individually (can't wildcard it)
+If Exist "%BinDir%\Scripts\salt"^
+    del /Q "%BinDir%\Scripts\salt" 1>nul
+If Exist "%BinDir%\Scripts\salt.exe"^
+    del /Q "%BinDir%\Scripts\salt.exe" 1>nul
+If Exist "%BldDir%\salt.bat"^
+    del /Q "%BldDir%\salt.bat" 1>nul
+:: salt-key
+If Exist "%BinDir%\Scripts\salt-key*"^
+    del /Q "%BinDir%\Scripts\salt-key*" 1>nul
+If Exist "%BldDir%\salt-key.bat"^
+    del /Q "%BldDir%\salt-key.bat" 1>nul
+:: salt-master
+If Exist "%BinDir%\Scripts\salt-master*"^
+    del /Q "%BinDir%\Scripts\salt-master*" 1>nul
+If Exist "%BldDir%\salt-master.bat"^
+    del /Q "%BldDir%\salt-master.bat" 1>nul
+:: salt-run
+If Exist "%BinDir%\Scripts\salt-run*"^
+    del /Q "%BinDir%\Scripts\salt-run*" 1>nul
+If Exist "%BldDir%\salt-run.bat"^
+    del /Q "%BldDir%\salt-run.bat" 1>nul
+
+:: Remove the master config file
+if Exist "%CnfDir%\master"^
+    del /Q "%CnfDir%\master" 1>nul
+
+:: Make the Salt Minion Installer
+makensis.exe /DSaltVersion=%Version% /DPythonVersion=%Python% "%InsDir%\Salt-Minion-Setup.nsi"
 @echo.
 
 @echo.

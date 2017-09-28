@@ -7,22 +7,15 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from tests.unit import ModuleTestCase, hasDependency
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     patch,
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-from salt.modules import libcloud_dns
-
-ensure_in_syspath('../../')
-
-SERVICE_NAME = 'libcloud_dns'
-libcloud_dns.__salt__ = {}
-libcloud_dns.__utils__ = {}
+import salt.modules.libcloud_dns as libcloud_dns
 
 
 class MockDNSDriver(object):
@@ -35,27 +28,26 @@ def get_mock_driver():
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.modules.libcloud_dns._get_driver',
-       MagicMock(return_value=MockDNSDriver()))
-class LibcloudDnsModuleTestCase(ModuleTestCase):
-    def setUp(self):
-        hasDependency('libcloud', fake_module=False)
+class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
-        def get_config(service):
-            if service == SERVICE_NAME:
-                return {
+    def setup_loader_modules(self):
+        module_globals = {
+            '_get_driver': MagicMock(return_value=MockDNSDriver()),
+            '__salt__': {
+                'config.option': MagicMock(return_value={
                     'test': {
                         'driver': 'test',
                         'key': '2orgk34kgk34g'
                     }
-                }
-            else:
-                raise KeyError("service name invalid")
+                })
+            }
+        }
+        if libcloud_dns.HAS_LIBCLOUD is False:
+            module_globals['sys.modules'] = {'libcloud': MagicMock()}
 
-        self.setup_loader()
-        self.loader.set_result(libcloud_dns, 'config.option', get_config)
+        return {libcloud_dns: module_globals}
 
-    def test_module_creation(self, *args):
+    def test_module_creation(self):
         client = libcloud_dns._get_driver('test')
         self.assertFalse(client is None)
 
@@ -63,7 +55,3 @@ class LibcloudDnsModuleTestCase(ModuleTestCase):
         with patch('salt.utils.compat.pack_dunder', return_value=False) as dunder:
             libcloud_dns.__init__(None)
             dunder.assert_called_with('salt.modules.libcloud_dns')
-
-if __name__ == '__main__':
-    from unit import run_tests
-    run_tests(LibcloudDnsModuleTestCase)

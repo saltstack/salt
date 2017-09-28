@@ -7,30 +7,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import locale
-
-# Globals
-locale.__salt__ = {}
-locale.__opts__ = {}
+import salt.states.locale as locale
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LocaleTestCase(TestCase):
+class LocaleTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the locale state
     '''
+    def setup_loader_modules(self):
+        return {locale: {}}
+
     def test_system(self):
         '''
             Test to set the locale for the system
@@ -90,8 +87,3 @@ class LocaleTestCase(TestCase):
                     self.assertDictEqual(locale.present("salt"), ret[2])
 
                     self.assertDictEqual(locale.present("salt"), ret[3])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LocaleTestCase, needs_daemon=False)

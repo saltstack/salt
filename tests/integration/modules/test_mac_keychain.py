@@ -8,20 +8,15 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath,
-    requires_system_grains
-)
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.paths import FILES
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt Libs
-import integration
 from salt.exceptions import CommandExecutionError
 
 CERT = os.path.join(
-    integration.FILES,
+    FILES,
     'file',
     'base',
     'certs',
@@ -32,8 +27,8 @@ PASSWD = 'salttest'
 
 
 @destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-class MacKeychainModuleTest(integration.ModuleCase):
+@skip_if_not_root
+class MacKeychainModuleTest(ModuleCase):
     '''
     Integration tests for the mac_keychain module
     '''
@@ -59,8 +54,7 @@ class MacKeychainModuleTest(integration.ModuleCase):
         if CERT_ALIAS in certs_list:
             self.run_function('keychain.uninstall', [CERT_ALIAS])
 
-    @requires_system_grains
-    def test_mac_keychain_install(self, grains=None):
+    def test_mac_keychain_install(self):
         '''
         Tests that attempts to install a certificate
         '''
@@ -71,8 +65,7 @@ class MacKeychainModuleTest(integration.ModuleCase):
         certs_list = self.run_function('keychain.list_certs')
         self.assertIn(CERT_ALIAS, certs_list)
 
-    @requires_system_grains
-    def test_mac_keychain_uninstall(self, grains=None):
+    def test_mac_keychain_uninstall(self):
         '''
         Tests that attempts to uninstall a certificate
         '''
@@ -93,8 +86,7 @@ class MacKeychainModuleTest(integration.ModuleCase):
         except CommandExecutionError:
             self.run_function('keychain.uninstall', [CERT_ALIAS])
 
-    @requires_system_grains
-    def test_mac_keychain_get_friendly_name(self, grains=None):
+    def test_mac_keychain_get_friendly_name(self):
         '''
         Test that attempts to get friendly name of a cert
         '''
@@ -107,8 +99,7 @@ class MacKeychainModuleTest(integration.ModuleCase):
         get_name = self.run_function('keychain.get_friendly_name', [CERT, PASSWD])
         self.assertEqual(get_name, CERT_ALIAS)
 
-    @requires_system_grains
-    def test_mac_keychain_get_default_keychain(self, grains=None):
+    def test_mac_keychain_get_default_keychain(self):
         '''
         Test that attempts to get the default keychain
         '''
@@ -117,16 +108,10 @@ class MacKeychainModuleTest(integration.ModuleCase):
                                              ['security default-keychain -d user'])
         self.assertEqual(salt_get_keychain, sys_get_keychain)
 
-    @requires_system_grains
-    def test_mac_keychain_list_certs(self, grains=None):
+    def test_mac_keychain_list_certs(self):
         '''
         Test that attempts to list certs
         '''
         cert_default = 'com.apple.systemdefault'
         certs = self.run_function('keychain.list_certs')
         self.assertIn(cert_default, certs)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacKeychainModuleTest)

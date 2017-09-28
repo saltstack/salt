@@ -100,7 +100,7 @@ except ImportError:
 # Import Salt libs
 import salt.utils.jid
 import salt.returners
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 # Define the module's virtual name
@@ -192,10 +192,14 @@ def returner(ret):
         logoption = logoption | getattr(syslog, opt)
 
     # Open syslog correctly based on options and tag
-    if 'tag' in _options:
-        syslog.openlog(ident=_options['tag'], logoption=logoption)
-    else:
-        syslog.openlog(logoption=logoption)
+    try:
+        if 'tag' in _options:
+            syslog.openlog(ident=_options['tag'], logoption=logoption)
+        else:
+            syslog.openlog(logoption=logoption)
+    except TypeError:
+        # Python 2.6 syslog.openlog does not accept keyword args
+        syslog.openlog(_options.get('tag', 'salt-minion'), logoption)
 
     # Send log of given level and facility
     syslog.syslog(facility | level, '{0}'.format(json.dumps(ret)))
@@ -209,4 +213,4 @@ def prep_jid(nocache=False,
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

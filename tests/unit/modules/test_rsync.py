@@ -6,30 +6,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import rsync
+import salt.modules.rsync as rsync
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Globals
-rsync.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RsyncTestCase(TestCase):
+class RsyncTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.rsync
     '''
+    def setup_loader_modules(self):
+        return {rsync: {}}
+
     def test_rsync(self):
         '''
         Test for rsync files from src to dst
@@ -56,8 +53,3 @@ class RsyncTestCase(TestCase):
             self.assertRaises(CommandExecutionError, rsync.version)
 
             self.assertEqual(rsync.version(), 'C')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(RsyncTestCase, needs_daemon=False)

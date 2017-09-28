@@ -1,18 +1,17 @@
 # coding: utf-8
 
-# python libs
+# Import Python libs
 from __future__ import absolute_import
 
-# salt testing libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
 
-# salt libs
-ensure_in_syspath('../../')
-import salt.ext.six as six
+# Import Salt libs
+import salt.utils.locales as locales
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+
+# Import 3rd-part libs
+from salt.ext import six
 from salt.ext.six.moves import reload_module
-from salt.utils import locales
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -64,8 +63,3 @@ class TestLocales(TestCase):
         self.assertEqual(
                 locales.normalize_locale('ca_es.UTF-8@valencia utf-8'),
                 'ca_ES.utf8@valencia')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestLocales, needs_daemon=False)

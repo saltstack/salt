@@ -24,9 +24,13 @@ import logging
 
 # Import salt libs
 import salt.fileserver
-import salt.utils
-from salt.utils.event import tagify
-import salt.ext.six as six
+import salt.utils  # Can be removed once is_bin_file and get_hash are moved
+import salt.utils.event
+import salt.utils.files
+import salt.utils.gzip_util
+import salt.utils.path
+import salt.utils.versions
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -36,12 +40,7 @@ def find_file(path, saltenv='base', **kwargs):
     Search the environment for the relative path.
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     path = os.path.normpath(path)
@@ -113,12 +112,7 @@ def serve_file(load, fnd):
     Return a chunk from a file based on the data received
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = {'data': '',
@@ -130,7 +124,7 @@ def serve_file(load, fnd):
     ret['dest'] = fnd['rel']
     gzip = load.get('gzip', None)
     fpath = os.path.normpath(fnd['path'])
-    with salt.utils.fopen(fpath, 'rb') as fp_:
+    with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
         if data and six.PY3 and not salt.utils.is_bin_file(fpath):
@@ -167,7 +161,7 @@ def update():
     old_mtime_map = {}
     # if you have an old map, load that
     if os.path.exists(mtime_map_path):
-        with salt.utils.fopen(mtime_map_path, 'r') as fp_:
+        with salt.utils.files.fopen(mtime_map_path, 'r') as fp_:
             for line in fp_:
                 try:
                     file_path, mtime = line.replace('\n', '').split(':', 1)
@@ -192,7 +186,7 @@ def update():
     mtime_map_path_dir = os.path.dirname(mtime_map_path)
     if not os.path.exists(mtime_map_path_dir):
         os.makedirs(mtime_map_path_dir)
-    with salt.utils.fopen(mtime_map_path, 'w') as fp_:
+    with salt.utils.files.fopen(mtime_map_path, 'w') as fp_:
         for file_path, mtime in six.iteritems(new_mtime_map):
             fp_.write('{file_path}:{mtime}\n'.format(file_path=file_path,
                                                      mtime=mtime))
@@ -205,7 +199,8 @@ def update():
                 __opts__['transport'],
                 opts=__opts__,
                 listen=False)
-        event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
+        event.fire_event(data,
+                         salt.utils.event.tagify(['roots', 'update'], prefix='fileserver'))
 
 
 def file_hash(load, fnd):
@@ -213,12 +208,7 @@ def file_hash(load, fnd):
     Return a file hash, the hash type is set in the master config file
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if 'path' not in load or 'saltenv' not in load:
@@ -243,7 +233,7 @@ def file_hash(load, fnd):
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.fopen(cache_path, 'r') as fp_:
+            with salt.utils.files.fopen(cache_path, 'r') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
@@ -283,7 +273,7 @@ def file_hash(load, fnd):
                 raise
     # save the cache object "hash:mtime"
     cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
-    with salt.utils.flopen(cache_path, 'w') as fp_:
+    with salt.utils.files.flopen(cache_path, 'w') as fp_:
         fp_.write(cache_object)
     return ret
 
@@ -293,18 +283,13 @@ def _file_lists(load, form):
     Return a dict containing the file lists for files, dirs, emtydirs and symlinks
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if load['saltenv'] not in __opts__['file_roots']:
         return []
 
-    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/roots')
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists', 'roots')
     if not os.path.isdir(list_cachedir):
         try:
             os.makedirs(list_cachedir)
@@ -340,7 +325,7 @@ def _file_lists(load, form):
             for item in items:
                 abs_path = os.path.join(parent_dir, item)
                 log.trace('roots: Processing %s', abs_path)
-                is_link = os.path.islink(abs_path)
+                is_link = salt.utils.path.islink(abs_path)
                 log.trace(
                     'roots: %s is %sa link',
                     abs_path, 'not ' if not is_link else ''
@@ -361,7 +346,7 @@ def _file_lists(load, form):
                     # WindowsError on Windows.
                     pass
                 if is_link:
-                    link_dest = os.readlink(abs_path)
+                    link_dest = salt.utils.path.readlink(abs_path)
                     log.trace(
                         'roots: %s symlink destination is %s',
                         abs_path, link_dest
@@ -372,9 +357,11 @@ def _file_lists(load, form):
                         joined = os.path.join(
                             os.path.dirname(abs_path), link_dest
                         )
-                    rel_dest = os.path.relpath(
-                        os.path.realpath(os.path.normpath(joined)),
-                        fs_root
+                    rel_dest = _translate_sep(
+                        os.path.relpath(
+                            os.path.realpath(os.path.normpath(joined)),
+                            fs_root
+                        )
                     )
                     log.trace(
                         'roots: %s relative path is %s',
@@ -384,7 +371,7 @@ def _file_lists(load, form):
                         # Only count the link if it does not point
                         # outside of the root dir of the fileserver
                         # (i.e. the "path" variable)
-                        ret['links'][rel_path] = rel_dest
+                        ret['links'][rel_path] = link_dest
 
         for path in __opts__['file_roots'][load['saltenv']]:
             for root, dirs, files in os.walk(
@@ -437,12 +424,7 @@ def symlink_list(load):
     Return a dict of all symlinks based on a given path on the Master
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = {}

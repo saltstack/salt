@@ -6,30 +6,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import splunk_search
-
-splunk_search.__salt__ = {}
-splunk_search.__opts__ = {}
+import salt.states.splunk_search as splunk_search
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SplunkSearchTestCase(TestCase):
+class SplunkSearchTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.splunk_search
     '''
+    def setup_loader_modules(self):
+        return {splunk_search: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -83,8 +80,3 @@ class SplunkSearchTestCase(TestCase):
             ret.update({'comment': comt, 'result': True,
                         'changes': {}})
             self.assertDictEqual(splunk_search.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SplunkSearchTestCase, needs_daemon=False)

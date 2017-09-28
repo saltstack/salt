@@ -5,20 +5,19 @@ Test the grains module
 
 # Import python libs
 from __future__ import absolute_import
+import logging
 import os
 import time
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest
 
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+log = logging.getLogger(__name__)
 
 
-class TestModulesGrains(integration.ModuleCase):
+class TestModulesGrains(ModuleCase):
     '''
     Test the grains module
     '''
@@ -57,6 +56,7 @@ class TestModulesGrains(integration.ModuleCase):
             'host',
             'kernel',
             'kernelrelease',
+            'kernelversion',
             'localhost',
             'mem_total',
             'num_cpus',
@@ -113,12 +113,13 @@ class TestModulesGrains(integration.ModuleCase):
         '''
         test to ensure some core grains are returned
         '''
-        grains = ['os', 'os_family', 'osmajorrelease', 'osrelease', 'osfullname', 'id']
+        grains = ('os', 'os_family', 'osmajorrelease', 'osrelease', 'osfullname', 'id')
         os = self.run_function('grains.get', ['os'])
 
         for grain in grains:
             get_grain = self.run_function('grains.get', [grain])
-            if os == 'Arch' and grain in ['osmajorrelease', 'osrelease']:
+            log.debug('Value of \'%s\' grain: \'%s\'', grain, get_grain)
+            if os == 'Arch' and grain in ['osmajorrelease']:
                 self.assertEqual(get_grain, '')
                 continue
             if os == 'Windows' and grain in ['osmajorrelease']:
@@ -144,7 +145,7 @@ class TestModulesGrains(integration.ModuleCase):
 
 
 @destructiveTest
-class GrainsAppendTestCase(integration.ModuleCase):
+class GrainsAppendTestCase(ModuleCase):
     '''
     Tests written specifically for the grains.append function.
     '''
@@ -152,9 +153,8 @@ class GrainsAppendTestCase(integration.ModuleCase):
     GRAIN_VAL = 'my-grain-val'
 
     def tearDown(self):
-        test_grain = self.run_function('grains.get', [self.GRAIN_KEY])
-        if test_grain and test_grain == [self.GRAIN_VAL]:
-            self.run_function('grains.remove', [self.GRAIN_KEY, self.GRAIN_VAL])
+        for item in self.run_function('grains.get', [self.GRAIN_KEY]):
+            self.run_function('grains.remove', [self.GRAIN_KEY, item])
 
     def test_grains_append(self):
         '''
@@ -199,14 +199,9 @@ class GrainsAppendTestCase(integration.ModuleCase):
         # Now make sure the grain doesn't show up twice.
         grains = self.run_function('grains.items')
         count = 0
-        for grain in grains.keys():
+        for grain in grains:
             if grain == self.GRAIN_KEY:
                 count += 1
 
         # We should only have hit the grain key once.
         self.assertEqual(count, 1)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TestModulesGrains)

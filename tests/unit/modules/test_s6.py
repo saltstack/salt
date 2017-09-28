@@ -8,8 +8,9 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -17,18 +18,17 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import s6
-
-# Globals
-s6.__salt__ = {}
-s6.SERVICE_DIR = '/etc/service'
+import salt.modules.s6 as s6
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class S6TestCase(TestCase):
+class S6TestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.s6
     '''
+    def setup_loader_modules(self):
+        return {s6: {'SERVICE_DIR': '/etc/service'}}
+
     # 'start' function tests: 1
 
     def test_start(self):

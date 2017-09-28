@@ -8,8 +8,9 @@ from __future__ import absolute_import
 import yaml
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -18,19 +19,18 @@ from salttesting.mock import (
 
 # Import Salt Libs
 import salt.utils
-from salt.modules import pkg_resource
-import salt.ext.six as six
-
-# Globals
-pkg_resource.__grains__ = {}
-pkg_resource.__salt__ = {}
+import salt.modules.pkg_resource as pkg_resource
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PkgresTestCase(TestCase):
+class PkgresTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pkg_resource
     '''
+    def setup_loader_modules(self):
+        return {pkg_resource: {}}
+
     def test_pack_sources(self):
         '''
             Test to accepts list of dicts (or a string representing a
@@ -157,8 +157,3 @@ class PkgresTestCase(TestCase):
                              'A')
 
         self.assertTrue(pkg_resource.check_extra_requirements('a', False))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PkgresTestCase, needs_daemon=False)

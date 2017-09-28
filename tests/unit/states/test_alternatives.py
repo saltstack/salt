@@ -6,30 +6,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import alternatives
-
-alternatives.__opts__ = {}
-alternatives.__salt__ = {}
+import salt.states.alternatives as alternatives
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class AlternativesTestCase(TestCase):
+class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.alternatives
     '''
+    def setup_loader_modules(self):
+        return {alternatives: {}}
+
     # 'install' function tests: 1
 
     def test_install(self):
@@ -199,7 +196,7 @@ class AlternativesTestCase(TestCase):
             ret.update({'comment': comt})
             self.assertDictEqual(alternatives.set_(name, path), ret)
 
-            comt = ('Alternative for {0} will be set to path False'
+            comt = ('Alternative for {0} will be set to path /usr/bin/less'
                    ).format(name)
             ret.update({'comment': comt, 'result': None})
             with patch.dict(alternatives.__opts__, {'test': True}):
@@ -213,8 +210,3 @@ class AlternativesTestCase(TestCase):
             comt = ('Alternative {0} for {1} doesn\'t exist').format(path, name)
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(alternatives.set_(name, path), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AlternativesTestCase, needs_daemon=False)

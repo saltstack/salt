@@ -30,17 +30,25 @@ import logging
 
 # Import salt cloud libs
 import salt.config as config
+import salt.utils.cloud
+import salt.utils.event
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.utils import namespaced_function
 from salt.exceptions import SaltCloudSystemExit
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # CloudStackNetwork will be needed during creation of a new node
 # pylint: disable=import-error
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
-    # See https://github.com/saltstack/salt/issues/32743
-    import libcloud.security
-    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
+    # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
+    # However, older versions of libcloud must still be supported with this work-around.
+    # This work-around can be removed when the required minimum version of libcloud is
+    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+    if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
+        # See https://github.com/saltstack/salt/issues/32743
+        import libcloud.security
+        libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
@@ -162,8 +170,15 @@ def get_security_groups(conn, vm_):
     '''
     Return a list of security groups to use, defaulting to ['default']
     '''
-    return config.get_cloud_config_value('securitygroup', vm_, __opts__,
-                                         default=['default'])
+    securitygroup_enabled = config.get_cloud_config_value(
+        'securitygroup_enabled', vm_, __opts__, default=True
+    )
+    if securitygroup_enabled:
+        return config.get_cloud_config_value(
+            'securitygroup', vm_, __opts__, default=['default']
+        )
+    else:
+        return False
 
 
 def get_password(vm_):
@@ -264,11 +279,8 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        sock_dir=__opts__['sock_dir'],
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         transport=__opts__['transport']
     )
 
@@ -279,8 +291,11 @@ def create(vm_):
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
-        'ex_security_groups': get_security_groups(conn, vm_)
     }
+
+    sg = get_security_groups(conn, vm_)
+    if sg is not False:
+        kwargs['ex_security_groups'] = sg
 
     if get_keypair(vm_) is not False:
         kwargs['ex_keyname'] = get_keypair(vm_)
@@ -296,13 +311,22 @@ def create(vm_):
     if get_project(conn, vm_) is not False:
         kwargs['project'] = get_project(conn, vm_)
 
+    event_data = kwargs.copy()
+    event_data['image'] = kwargs['image'].name
+    event_data['size'] = kwargs['size'].name
+
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': {'name': kwargs['name'],
-                    'image': kwargs['image'].name,
-                    'size': kwargs['size'].name}},
+        sock_dir=__opts__['sock_dir'],
+        args={
+            'kwargs': __utils__['cloud.filter_event'](
+                'requesting',
+                event_data,
+                ['name', 'profile', 'provider', 'driver', 'image', 'size'],
+            ),
+        },
         transport=__opts__['transport']
     )
 
@@ -319,12 +343,13 @@ def create(vm_):
             if 'VirtualName' not in ex_blockdevicemapping:
                 ex_blockdevicemapping['VirtualName'] = '{0}-{1}'.format(vm_['name'], len(volumes))
             __utils__['cloud.fire_event'](
-              'event',
-              'requesting volume',
-              'salt/cloud/{0}/requesting'.format(ex_blockdevicemapping['VirtualName']),
-              {'kwargs': {'name': ex_blockdevicemapping['VirtualName'],
-                          'device': ex_blockdevicemapping['DeviceName'],
-                          'size': ex_blockdevicemapping['VolumeSize']}},
+                'event',
+                'requesting volume',
+                'salt/cloud/{0}/requesting'.format(ex_blockdevicemapping['VirtualName']),
+                sock_dir=__opts__['sock_dir'],
+                args={'kwargs': {'name': ex_blockdevicemapping['VirtualName'],
+                                 'device': ex_blockdevicemapping['DeviceName'],
+                                 'size': ex_blockdevicemapping['VolumeSize']}},
             )
             try:
                 volumes[ex_blockdevicemapping['DeviceName']] = conn.create_volume(
@@ -398,11 +423,8 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        sock_dir=__opts__['sock_dir'],
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         transport=__opts__['transport']
     )
 
@@ -423,7 +445,8 @@ def destroy(name, conn=None, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        sock_dir=__opts__['sock_dir'],
+        args={'name': name},
     )
 
     if not conn:
@@ -447,7 +470,8 @@ def destroy(name, conn=None, call=None):
             'event',
             'detaching volume',
             'salt/cloud/{0}/detaching'.format(volume.name),
-            {'name': volume.name},
+            sock_dir=__opts__['sock_dir'],
+            args={'name': volume.name},
         )
         if not conn.detach_volume(volume):
             log.error('Failed to Detach volume: {0}'.format(volume.name))
@@ -457,7 +481,8 @@ def destroy(name, conn=None, call=None):
             'event',
             'detached volume',
             'salt/cloud/{0}/detached'.format(volume.name),
-            {'name': volume.name},
+            sock_dir=__opts__['sock_dir'],
+            args={'name': volume.name},
         )
 
         log.info('Destroying volume: {0}'.format(volume.name))
@@ -465,7 +490,8 @@ def destroy(name, conn=None, call=None):
             'event',
             'destroying volume',
             'salt/cloud/{0}/destroying'.format(volume.name),
-            {'name': volume.name},
+            sock_dir=__opts__['sock_dir'],
+            args={'name': volume.name},
         )
         if not conn.destroy_volume(volume):
             log.error('Failed to Destroy volume: {0}'.format(volume.name))
@@ -475,7 +501,8 @@ def destroy(name, conn=None, call=None):
             'event',
             'destroyed volume',
             'salt/cloud/{0}/destroyed'.format(volume.name),
-            {'name': volume.name},
+            sock_dir=__opts__['sock_dir'],
+            args={'name': volume.name},
         )
     log.info('Destroying VM: {0}'.format(name))
     ret = conn.destroy_node(node)
@@ -489,7 +516,8 @@ def destroy(name, conn=None, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        sock_dir=__opts__['sock_dir'],
+        args={'name': name},
     )
     if __opts__['delete_sshkeys'] is True:
         salt.utils.cloud.remove_sshkey(node.public_ips[0])

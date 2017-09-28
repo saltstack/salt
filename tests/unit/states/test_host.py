@@ -6,29 +6,27 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import host
+import salt.states.host as host
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-ensure_in_syspath('../../')
-
-host.__salt__ = {}
-host.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class HostTestCase(TestCase):
+class HostTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the host state
     '''
+    def setup_loader_modules(self):
+        return {host: {}}
+
     def test_present(self):
         '''
             Test to ensures that the named host is present with the given ip
@@ -126,8 +124,3 @@ class HostTestCase(TestCase):
                     self.assertDictEqual(
                         expected,
                         host.only("127.0.1.1", ['foo.bar', 'foo']))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(HostTestCase, needs_daemon=False)

@@ -6,15 +6,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
-# Import Salt Libs
-import integration
+from tests.support.case import ShellCase
 
 
-class BatchTest(integration.ShellCase):
+class BatchTest(ShellCase):
     '''
     Integration tests for the salt.cli.batch module
     '''
@@ -32,7 +27,7 @@ class BatchTest(integration.ShellCase):
         Tests executing a simple batch command using a number division instead of
         a percentage with full batch CLI call.
         '''
-        ret = "Executing run on ['sub_minion', 'minion']"
+        ret = "Executing run on ['minion', 'sub_minion']"
         cmd = self.run_salt('\'*\' test.ping --batch-size 2')
         self.assertIn(ret, cmd)
 
@@ -60,7 +55,3 @@ class BatchTest(integration.ShellCase):
         '''
         cmd = self.run_salt(' "*" state.single test.fail_without_changes name=test_me -b 25%', with_retcode=True)
         self.assertEqual(cmd[-1], 2)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BatchTest)

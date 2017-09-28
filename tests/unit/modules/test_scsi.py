@@ -4,36 +4,32 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
+import copy
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import scsi
-import os
-import salt.utils
-import copy
-
-# Globals
-scsi.__salt__ = {}
-scsi.__context__ = {}
+import salt.modules.scsi as scsi
+import salt.utils.path
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ScsiTestCase(TestCase):
+class ScsiTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.scsi
     '''
+    def setup_loader_modules(self):
+        return {scsi: {}}
+
     def test_ls_(self):
         '''
         Test for list SCSI devices, with details
@@ -64,7 +60,7 @@ class ScsiTestCase(TestCase):
         result_size['[0:0:0:0]']['size'] = '1.20TB'
 
         mock = MagicMock(return_value='/usr/bin/lsscsi')
-        with patch.object(salt.utils, 'which', mock):
+        with patch.object(salt.utils.path, 'which', mock):
             # get_size = True
 
             cmd_mock = MagicMock(return_value=lsscsi_size)
@@ -81,7 +77,7 @@ class ScsiTestCase(TestCase):
                 self.assertDictEqual(scsi.ls_(get_size=False), result)
 
         mock = MagicMock(return_value=None)
-        with patch.object(salt.utils, 'which', mock):
+        with patch.object(salt.utils.path, 'which', mock):
             self.assertEqual(scsi.ls_(), 'scsi.ls not available - lsscsi command not found')
 
     def test_rescan_all(self):
@@ -96,8 +92,3 @@ class ScsiTestCase(TestCase):
             with patch.dict(scsi.__salt__,
                             {'cmd.run': MagicMock(return_value='A')}):
                 self.assertListEqual(scsi.rescan_all('host'), ['A'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ScsiTestCase, needs_daemon=False)

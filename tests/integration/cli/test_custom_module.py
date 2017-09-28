@@ -37,11 +37,11 @@
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt Libs
-import integration
+# Import test Libs
+from tests.support.case import SSHCase
 
 
-class SSHCustomModuleTest(integration.SSHCase):
+class SSHCustomModuleTest(SSHCase):
     '''
     Test sls with custom module functionality using ssh
     '''
@@ -78,8 +78,3 @@ class SSHCustomModuleTest(integration.SSHCase):
                 raise AssertionError(cmd[key]['comment'])
             cmd_ret = cmd[key]['changes'].get('ret', None)
             self.assertEqual(cmd_ret, expected[key])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SSHCustomModuleTest)

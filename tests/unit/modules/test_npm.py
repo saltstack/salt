@@ -5,38 +5,37 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import json
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import npm
+import salt.modules.npm as npm
 from salt.exceptions import CommandExecutionError
-import json
-
-# Globals
-npm.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NpmTestCase(TestCase):
+class NpmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.npm
     '''
+    def setup_loader_modules(self):
+        patcher = patch('salt.modules.npm._check_valid_version',
+                        MagicMock(return_value=True))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return {npm: {}}
+
     # 'install' function tests: 1
 
-    @patch('salt.modules.npm._check_valid_version',
-           MagicMock(return_value=True))
     def test_install(self):
         '''
         Test if it install an NPM package.
@@ -63,8 +62,6 @@ class NpmTestCase(TestCase):
 
     # 'uninstall' function tests: 1
 
-    @patch('salt.modules.npm._check_valid_version',
-           MagicMock(return_value=True))
     def test_uninstall(self):
         '''
         Test if it uninstall an NPM package.
@@ -79,8 +76,6 @@ class NpmTestCase(TestCase):
 
     # 'list_' function tests: 1
 
-    @patch('salt.modules.npm._check_valid_version',
-           MagicMock(return_value=True))
     def test_list(self):
         '''
         Test if it list installed NPM packages.
@@ -98,8 +93,6 @@ class NpmTestCase(TestCase):
 
     # 'cache_clean' function tests: 1
 
-    @patch('salt.modules.npm._check_valid_version',
-           MagicMock(return_value=True))
     def test_cache_clean(self):
         '''
         Test if it cleans the cached NPM packages.
@@ -118,8 +111,6 @@ class NpmTestCase(TestCase):
 
     # 'cache_list' function tests: 1
 
-    @patch('salt.modules.npm._check_valid_version',
-           MagicMock(return_value=True))
     def test_cache_list(self):
         '''
         Test if it lists the NPM cache.
@@ -140,8 +131,6 @@ class NpmTestCase(TestCase):
 
     # 'cache_path' function tests: 1
 
-    @patch('salt.modules.npm._check_valid_version',
-           MagicMock(return_value=True))
     def test_cache_path(self):
         '''
         Test if it prints the NPM cache path.
@@ -154,8 +143,3 @@ class NpmTestCase(TestCase):
                                        'stdout': '/User/salt/.npm'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
             self.assertEqual(npm.cache_path(), '/User/salt/.npm')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NpmTestCase, needs_daemon=False)

@@ -5,12 +5,12 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import sys
 import types
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     Mock,
@@ -18,29 +18,8 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
-# wmi and pythoncom modules are platform specific...
-wmi = types.ModuleType('wmi')
-sys.modules['wmi'] = wmi
-
-pythoncom = types.ModuleType('pythoncom')
-sys.modules['pythoncom'] = pythoncom
-
-if NO_MOCK is False:
-    WMI = Mock()
-    wmi.WMI = Mock(return_value=WMI)
-    pythoncom.CoInitialize = Mock()
-    pythoncom.CoUninitialize = Mock()
-
 # Import Salt Libs
-from salt.modules import win_dns_client
-
-# Globals
-win_dns_client.__salt__ = {}
-win_dns_client.__context__ = {}
+import salt.modules.win_dns_client as win_dns_client
 
 
 class Mockwmi(object):
@@ -80,28 +59,43 @@ class Mockwinapi(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinDnsClientTestCase(TestCase):
+class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_dns_client
     '''
+
+    def setup_loader_modules(self):
+        # wmi and pythoncom modules are platform specific...
+        wmi = types.ModuleType('wmi')
+        pythoncom = types.ModuleType('pythoncom')
+        sys_modules_patcher = patch.dict('sys.modules', {'wmi': wmi, 'pythoncom': pythoncom})
+        sys_modules_patcher.start()
+        self.addCleanup(sys_modules_patcher.stop)
+        self.WMI = Mock()
+        self.addCleanup(delattr, self, 'WMI')
+        wmi.WMI = Mock(return_value=self.WMI)
+        pythoncom.CoInitialize = Mock()
+        pythoncom.CoUninitialize = Mock()
+        return {win_dns_client: {'wmi': wmi}}
+
     # 'get_dns_servers' function tests: 1
 
-    @patch('salt.utils', Mockwinapi)
     def test_get_dns_servers(self):
         '''
         Test if it return a list of the configured DNS servers
         of the specified interface.
         '''
-        with patch('salt.utils.winapi.Com', MagicMock()):
-            with patch.object(WMI, 'Win32_NetworkAdapter',
-                              return_value=[Mockwmi()]):
-                with patch.object(WMI, 'Win32_NetworkAdapterConfiguration',
-                                  return_value=[Mockwmi()]):
-                    self.assertListEqual(win_dns_client.get_dns_servers
-                                         ('Local Area Connection'),
-                                         ['10.1.1.10'])
+        with patch('salt.utils', Mockwinapi), \
+                patch('salt.utils.winapi.Com', MagicMock()), \
+                patch.object(self.WMI, 'Win32_NetworkAdapter',
+                             return_value=[Mockwmi()]), \
+                patch.object(self.WMI, 'Win32_NetworkAdapterConfiguration',
+                             return_value=[Mockwmi()]):
+            self.assertListEqual(win_dns_client.get_dns_servers
+                                 ('Local Area Connection'),
+                                 ['10.1.1.10'])
 
-                    self.assertFalse(win_dns_client.get_dns_servers('Ethernet'))
+            self.assertFalse(win_dns_client.get_dns_servers('Ethernet'))
 
     # 'rm_dns' function tests: 1
 
@@ -120,9 +114,9 @@ class WinDnsClientTestCase(TestCase):
         Test if it add the DNS server to the network interface.
         '''
         with patch('salt.utils.winapi.Com', MagicMock()):
-            with patch.object(WMI, 'Win32_NetworkAdapter',
+            with patch.object(self.WMI, 'Win32_NetworkAdapter',
                               return_value=[Mockwmi()]):
-                with patch.object(WMI, 'Win32_NetworkAdapterConfiguration',
+                with patch.object(self.WMI, 'Win32_NetworkAdapterConfiguration',
                                   return_value=[Mockwmi()]):
                     self.assertFalse(win_dns_client.add_dns('10.1.1.10',
                                                             'Ethernet'))
@@ -155,13 +149,8 @@ class WinDnsClientTestCase(TestCase):
         Test if it get the type of DNS configuration (dhcp / static)
         '''
         with patch('salt.utils.winapi.Com', MagicMock()):
-            with patch.object(WMI, 'Win32_NetworkAdapter',
+            with patch.object(self.WMI, 'Win32_NetworkAdapter',
                               return_value=[Mockwmi()]):
-                with patch.object(WMI, 'Win32_NetworkAdapterConfiguration',
+                with patch.object(self.WMI, 'Win32_NetworkAdapterConfiguration',
                                   return_value=[Mockwmi()]):
                     self.assertTrue(win_dns_client.get_dns_config())
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinDnsClientTestCase, needs_daemon=False)

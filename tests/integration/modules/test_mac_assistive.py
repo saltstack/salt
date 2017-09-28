@@ -5,26 +5,17 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from salttesting.helpers import (
-    destructiveTest,
-    ensure_in_syspath,
-    requires_system_grains
-)
-ensure_in_syspath('../../')
-
-# Import Salt Libs
-import integration
+from tests.support.case import ModuleCase
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 OSA_SCRIPT = '/usr/bin/osascript'
 
 
 @destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-class MacAssistiveTest(integration.ModuleCase):
+@skip_if_not_root
+class MacAssistiveTest(ModuleCase):
     '''
     Integration tests for the mac_assistive module.
     '''
@@ -58,8 +49,7 @@ class MacAssistiveTest(integration.ModuleCase):
         if smile_bundle_present:
             self.run_function('assistive.remove', [smile_bundle])
 
-    @requires_system_grains
-    def test_install_and_remove(self, grains=None):
+    def test_install_and_remove(self):
         '''
         Tests installing and removing a bundled ID or command to use assistive access.
         '''
@@ -71,8 +61,7 @@ class MacAssistiveTest(integration.ModuleCase):
             self.run_function('assistive.remove', [new_bundle])
         )
 
-    @requires_system_grains
-    def test_installed(self, grains=None):
+    def test_installed(self):
         '''
         Tests the True and False return of assistive.installed.
         '''
@@ -87,8 +76,7 @@ class MacAssistiveTest(integration.ModuleCase):
             self.run_function('assistive.installed', [OSA_SCRIPT])
         )
 
-    @requires_system_grains
-    def test_enable(self, grains=None):
+    def test_enable(self):
         '''
         Tests setting the enabled status of a bundled ID or command.
         '''
@@ -110,8 +98,7 @@ class MacAssistiveTest(integration.ModuleCase):
             self.run_function('assistive.enabled', [OSA_SCRIPT])
         )
 
-    @requires_system_grains
-    def test_enabled(self, grains=None):
+    def test_enabled(self):
         '''
         Tests if a bundled ID or command is listed in assistive access returns True.
         '''
@@ -126,8 +113,3 @@ class MacAssistiveTest(integration.ModuleCase):
         self.assertFalse(
             self.run_function('assistive.enabled', [OSA_SCRIPT])
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MacAssistiveTest)

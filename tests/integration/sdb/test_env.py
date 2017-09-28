@@ -7,24 +7,24 @@ import os
 import textwrap
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.paths import FILES
+from tests.support.mixins import SaltReturnAssertsMixin
 
-import integration
-import salt.utils
+# Import salt libs
+import salt.utils.files
+
+STATE_DIR = os.path.join(FILES, 'file', 'base')
 
 
-STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
-
-
-class EnvTestCase(integration.ModuleCase,
-                  integration.SaltReturnAssertsMixIn):
+class EnvTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     def setUp(self):
         self.state_name = 'test_sdb_env'
         self.state_file_name = self.state_name + '.sls'
         self.state_file_set_var = os.path.join(STATE_DIR, self.state_file_name)
-        salt.utils.fopen(self.state_file_set_var, 'w').write(textwrap.dedent('''\
+        with salt.utils.files.fopen(self.state_file_set_var, 'w') as wfh:
+            wfh.write(textwrap.dedent('''\
                 set some env var:
                   cmd.run:
                     - name: echo {{ salt['sdb.set']('sdb://osenv/foo', 'bar') }}
@@ -48,8 +48,3 @@ class EnvTestCase(integration.ModuleCase,
         state_key = 'test_|-always-changes-and-succeeds_|-foo_|-succeed_with_changes'
         ret = self.run_function('state.sls', [self.state_name])
         self.assertTrue(ret[state_key]['result'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(EnvTestCase)

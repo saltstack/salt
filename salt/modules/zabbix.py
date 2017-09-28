@@ -28,10 +28,11 @@ from __future__ import absolute_import
 import logging
 import socket
 import json
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ def __virtual__():
     '''
     Only load the module if Zabbix server is installed
     '''
-    if salt.utils.which('zabbix_server'):
+    if salt.utils.path.which('zabbix_server'):
         return __virtualname__
     return (False, 'The zabbix execution module cannot be loaded: zabbix not installed.')
 
@@ -191,7 +192,7 @@ def _params_extend(params, _ignore_name=False, **kwargs):
 
     '''
     # extend params value by optional zabbix API parameters
-    for key in kwargs.keys():
+    for key in kwargs:
         if not key.startswith('_'):
             params.setdefault(key, kwargs[key])
 
@@ -441,7 +442,7 @@ def user_getmedia(userids=None, **connection_args):
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    :return: List of retreived media, False on failure.
+    :return: List of retrieved media, False on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -675,12 +676,12 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
     try:
         if conn_args:
             # usergroup.exists deprecated
-            if LooseVersion(zabbix_version) > LooseVersion("2.5"):
+            if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
                 if not name:
                     name = ''
                 ret = usergroup_get(name, None, **connection_args)
                 return bool(ret)
-            # zabbix 2.4 nad earlier
+            # zabbix 2.4 and earlier
             else:
                 method = 'usergroup.exists'
                 params = {}
@@ -690,7 +691,7 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
                 if name:
                     params['name'] = name
                 # deprecated in 2.4
-                if LooseVersion(zabbix_version) < LooseVersion("2.4"):
+                if _LooseVersion(zabbix_version) < _LooseVersion("2.4"):
                     if node:
                         params['node'] = node
                     if nodeids:
@@ -726,11 +727,16 @@ def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
         salt '*' zabbix.usergroup_get Guests
     '''
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
     try:
         if conn_args:
             method = 'usergroup.get'
-            params = {"output": "extend", "filter": {}}
+            # Versions above 2.4 allow retrieving user group permissions
+            if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
+                params = {"selectRights": "extend", "output": "extend", "filter": {}}
+            else:
+                params = {"output": "extend", "filter": {}}
             if not name and not usrgrpids and not userids:
                 return False
             if name:
@@ -931,7 +937,7 @@ def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **co
     try:
         if conn_args:
             # hostgroup.exists deprecated
-            if LooseVersion(zabbix_version) > LooseVersion("2.5"):
+            if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
                 if not host:
                     host = None
                 if not name:
@@ -951,7 +957,7 @@ def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **co
                 if name:
                     params['name'] = name
                 # deprecated in 2.4
-                if LooseVersion(zabbix_version) < LooseVersion("2.4"):
+                if _LooseVersion(zabbix_version) < _LooseVersion("2.4"):
                     if node:
                         params['node'] = node
                     if nodeids:
@@ -1180,7 +1186,7 @@ def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connect
     try:
         if conn_args:
             # hostgroup.exists deprecated
-            if LooseVersion(zabbix_version) > LooseVersion("2.5"):
+            if _LooseVersion(zabbix_version) > _LooseVersion("2.5"):
                 if not groupid:
                     groupid = None
                 if not name:
@@ -1196,7 +1202,7 @@ def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connect
                 if name:
                     params['name'] = name
                 # deprecated in 2.4
-                if LooseVersion(zabbix_version) < LooseVersion("2.4"):
+                if _LooseVersion(zabbix_version) < _LooseVersion("2.4"):
                     if node:
                         params['node'] = node
                     if nodeids:
@@ -1484,6 +1490,450 @@ def hostinterface_update(interfaceid, **connection_args):
         return ret
 
 
+def usermacro_get(macro=None, hostids=None, templateids=None, hostmacroids=None,
+                  globalmacroids=None, globalmacro=False, **connection_args):
+    '''
+    Retrieve user macros according to the given parameters.
+
+    Args:
+        macro:          name of the usermacro
+        hostids:        Return macros for the given hostids
+        templateids:    Return macros for the given templateids
+        hostmacroids:   Return macros with the given hostmacroids
+        globalmacroids: Return macros with the given globalmacroids (implies globalmacro=True)
+        globalmacro:    if True, returns only global macros
+
+
+        optional connection_args:
+                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
+                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
+                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+
+    Returns:
+        Array with usermacro details, False if no usermacro found or on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.usermacro_get macro='{$SNMP_COMMUNITY}'
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'usermacro.get'
+            params = {"output": "extend", "filter": {}}
+            if macro:
+                # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
+                if isinstance(macro, dict):
+                    macro = "{" + str(macro.keys()[0]) +"}"
+                if not macro.startswith('{') and not macro.endswith('}'):
+                    macro = "{" + macro + "}"
+                params['filter'].setdefault('macro', macro)
+            if hostids:
+                params.setdefault('hostids', hostids)
+            elif templateids:
+                params.setdefault('templateids', hostids)
+            if hostmacroids:
+                params.setdefault('hostmacroids', hostmacroids)
+            elif globalmacroids:
+                globalmacro = True
+                params.setdefault('globalmacroids', globalmacroids)
+            if globalmacro:
+                params = _params_extend(params, globalmacro=True)
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result'] if len(ret['result']) > 0 else False
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def usermacro_create(macro, value, hostid, **connection_args):
+    '''
+    Create new host usermacro.
+
+    :param macro: name of the host usermacro
+    :param value: value of the host usermacro
+    :param hostid: hostid or templateid
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    return: ID of the created host usermacro.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.usermacro_create '{$SNMP_COMMUNITY}' 'public' 1
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            params = {}
+            method = 'usermacro.create'
+            if macro:
+                # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
+                if isinstance(macro, dict):
+                    macro = "{" + str(macro.keys()[0]) +"}"
+                if not macro.startswith('{') and not macro.endswith('}'):
+                    macro = "{" + macro + "}"
+                params['macro'] = macro
+            params['value'] = value
+            params['hostid'] = hostid
+            params = _params_extend(params, _ignore_name=True, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['hostmacroids'][0]
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def usermacro_createglobal(macro, value, **connection_args):
+    '''
+    Create new global usermacro.
+
+    :param macro: name of the global usermacro
+    :param value: value of the global usermacro
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    return: ID of the created global usermacro.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.usermacro_createglobal '{$SNMP_COMMUNITY}' 'public'
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            params = {}
+            method = 'usermacro.createglobal'
+            if macro:
+                # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
+                if isinstance(macro, dict):
+                    macro = "{" + str(macro.keys()[0]) +"}"
+                if not macro.startswith('{') and not macro.endswith('}'):
+                    macro = "{" + macro + "}"
+                params['macro'] = macro
+            params['value'] = value
+            params = _params_extend(params, _ignore_name=True, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['globalmacroids'][0]
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def usermacro_delete(macroids, **connection_args):
+    '''
+    Delete host usermacros.
+
+    :param macroids: macroids of the host usermacros
+
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    return: IDs of the deleted host usermacro.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.usermacro_delete 21
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'usermacro.delete'
+            if isinstance(macroids, list):
+                params = macroids
+            else:
+                params = [macroids]
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['hostmacroids']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def usermacro_deleteglobal(macroids, **connection_args):
+    '''
+    Delete global usermacros.
+
+    :param macroids: macroids of the global usermacros
+
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    return: IDs of the deleted global usermacro.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.usermacro_deleteglobal 21
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'usermacro.deleteglobal'
+            if isinstance(macroids, list):
+                params = macroids
+            else:
+                params = [macroids]
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['globalmacroids']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def usermacro_update(hostmacroid, value, **connection_args):
+    '''
+    Update existing host usermacro.
+
+    :param hostmacroid: id of the host usermacro
+    :param value: new value of the host usermacro
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    return: ID of the update host usermacro.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.usermacro_update 1 'public'
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            params = {}
+            method = 'usermacro.update'
+            params['hostmacroid'] = hostmacroid
+            params['value'] = value
+            params = _params_extend(params, _ignore_name=True, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['hostmacroids'][0]
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def usermacro_updateglobal(globalmacroid, value, **connection_args):
+    '''
+    Update existing global usermacro.
+
+    :param globalmacroid: id of the host usermacro
+    :param value: new value of the host usermacro
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    return: ID of the update global usermacro.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.usermacro_updateglobal 1 'public'
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            params = {}
+            method = 'usermacro.updateglobal'
+            params['globalmacroid'] = globalmacroid
+            params['value'] = value
+            params = _params_extend(params, _ignore_name=True, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['globalmacroids'][0]
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def mediatype_get(name=None, mediatypeids=None, **connection_args):
+    '''
+    Retrieve mediatypes according to the given parameters.
+
+    Args:
+        name:         Name or description of the mediatype
+        mediatypeids: ids of the mediatypes
+
+        optional connection_args:
+                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
+                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
+                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+
+                all optional mediatype.get parameters: keyword argument names differ depending on your zabbix version, see:
+
+                https://www.zabbix.com/documentation/2.2/manual/api/reference/mediatype/get
+
+    Returns:
+        Array with mediatype details, False if no mediatype found or on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.mediatype_get name='Email'
+        salt '*' zabbix.mediatype_get mediatypeids="['1', '2', '3']"
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'mediatype.get'
+            params = {"output": "extend", "filter": {}}
+            if name:
+                params['filter'].setdefault('description', name)
+            if mediatypeids:
+                params.setdefault('mediatypeids', mediatypeids)
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result'] if len(ret['result']) > 0 else False
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def mediatype_create(name, mediatype, **connection_args):
+    '''
+    Create new mediatype.
+    NOTE: This function accepts all standard mediatype properties: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/3.0/manual/api/reference/mediatype/object
+
+    :param mediatype: media type - 0: email, 1: script, 2: sms, 3: Jabber, 100: Ez Texting
+    :param exec_path: exec path - Required for script and Ez Texting types, see Zabbix API docs
+    :param gsm_modem: exec path - Required for sms type, see Zabbix API docs
+    :param smtp_email: email address from which notifications will be sent, required for email type
+    :param smtp_helo: SMTP HELO, required for email type
+    :param smtp_server: SMTP server, required for email type
+    :param status: whether the media type is enabled - 0: enabled, 1: disabled
+    :param username: authentication user, required for Jabber and Ez Texting types
+    :param passwd: authentication password, required for Jabber and Ez Texting types
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    return: ID of the created mediatype.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.mediatype_create 'Email' 0 smtp_email='noreply@example.com'
+        smtp_server='mailserver.example.com' smtp_helo='zabbix.example.com'
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'mediatype.create'
+            params = {"description": name}
+            params['type'] = mediatype
+            params = _params_extend(params, _ignore_name=True, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['mediatypeid']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def mediatype_delete(mediatypeids, **connection_args):
+    '''
+    Delete mediatype
+
+
+    :param interfaceids: IDs of the mediatypes to delete
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: ID of deleted mediatype, False on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.mediatype_delete 3
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'mediatype.delete'
+            if isinstance(mediatypeids, list):
+                params = mediatypeids
+            else:
+                params = [mediatypeids]
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['mediatypeids']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def mediatype_update(mediatypeid, name=False, mediatype=False, **connection_args):
+    '''
+    Update existing mediatype.
+    NOTE: This function accepts all standard mediatype properties: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/3.0/manual/api/reference/mediatype/object
+
+    :param mediatypeid: ID of the mediatype to update
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: IDs of the updated mediatypes, False on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.usergroup_update 8 name="Email update"
+    '''
+    conn_args = _login(**connection_args)
+    ret = False
+    try:
+        if conn_args:
+            method = 'mediatype.update'
+            params = {"mediatypeid": mediatypeid}
+            if name:
+                params['description'] = name
+            if mediatype:
+                params['type'] = mediatype
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['mediatypeids']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
 def template_get(name=None, host=None, templateids=None, **connection_args):
     '''
     Retrieve templates according to the given parameters.
@@ -1561,8 +2011,6 @@ def run_query(method, params, **connection_args):
     ret = False
     try:
         if conn_args:
-            method = method
-            params = params
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
             return ret['result'] if len(ret['result']) > 0 else False

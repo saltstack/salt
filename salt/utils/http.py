@@ -8,13 +8,14 @@ and the like, but also useful for basic HTTP testing.
 
 # Import python libs
 from __future__ import absolute_import
+import cgi
 import json
 import logging
 import os.path
 import pprint
 import socket
-import urllib
 import yaml
+import re
 
 import ssl
 try:
@@ -35,24 +36,29 @@ except ImportError:
             HAS_MATCHHOSTNAME = False
 
 # Import salt libs
-import salt.utils
-import salt.utils.xmlutil as xml
-import salt.utils.args
-import salt.loader
 import salt.config
+import salt.loader
+import salt.syspaths
+import salt.utils  # Can be removed once refresh_dns is moved
+import salt.utils.args
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.version
+import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 from salt.template import compile_template
-from salt import syspaths
+from salt.utils.decorators.jinja import jinja_filter
 
 # Import 3rd party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error,no-name-in-module
 import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.parse import splitquery
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module
 
 # Don't need a try/except block, since Salt depends on tornado
@@ -88,6 +94,7 @@ log = logging.getLogger(__name__)
 USERAGENT = 'Salt/{0}'.format(salt.version.__version__)
 
 
+@jinja_filter('http_query')
 def query(url,
           method='GET',
           params=None,
@@ -120,7 +127,6 @@ def query(url,
           port=80,
           opts=None,
           backend=None,
-          requests_lib=None,
           ca_bundle=None,
           verify_ssl=None,
           cert=None,
@@ -143,28 +149,21 @@ def query(url,
     if opts is None:
         if node == 'master':
             opts = salt.config.master_config(
-                os.path.join(syspaths.CONFIG_DIR, 'master')
+                os.path.join(salt.syspaths.CONFIG_DIR, 'master')
             )
         elif node == 'minion':
             opts = salt.config.minion_config(
-                os.path.join(syspaths.CONFIG_DIR, 'minion')
+                os.path.join(salt.syspaths.CONFIG_DIR, 'minion')
             )
         else:
             opts = {}
 
     if not backend:
-        if requests_lib is not None or 'requests_lib' in opts:
-            salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
-                                            'please change your config')
-            # beware the named arg above
-            if 'backend' in opts:
-                backend = opts['backend']
-            elif requests_lib or opts.get('requests_lib', False):
-                backend = 'requests'
-            else:
-                backend = 'tornado'
-        else:
-            backend = opts.get('backend', 'tornado')
+        backend = opts.get('backend', 'tornado')
+
+    match = re.match(r'https?://((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)($|/)', url)
+    if not match:
+        salt.utils.refresh_dns()
 
     if backend == 'requests':
         if HAS_REQUESTS is False:
@@ -178,7 +177,7 @@ def query(url,
 
     # Some libraries don't support separation of url and GET parameters
     # Don't need a try/except block, since Salt depends on tornado
-    url_full = tornado.httputil.url_concat(url, params)
+    url_full = tornado.httputil.url_concat(url, params) if params else url
 
     if ca_bundle is None:
         ca_bundle = get_ca_bundle(opts)
@@ -227,9 +226,9 @@ def query(url,
         header_list = []
 
     if cookie_jar is None:
-        cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.txt')
+        cookie_jar = os.path.join(opts.get('cachedir', salt.syspaths.CACHE_DIR), 'cookies.txt')
     if session_cookie_jar is None:
-        session_cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.session.p')
+        session_cookie_jar = os.path.join(opts.get('cachedir', salt.syspaths.CACHE_DIR), 'cookies.session.p')
 
     if persist_session is True and HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with
@@ -237,12 +236,12 @@ def query(url,
         # proper cookie jar. Unfortunately, since session cookies do not
         # contain expirations, they can't be stored in a proper cookie jar.
         if os.path.isfile(session_cookie_jar):
-            with salt.utils.fopen(session_cookie_jar, 'rb') as fh_:
+            with salt.utils.files.fopen(session_cookie_jar, 'rb') as fh_:
                 session_cookies = msgpack.load(fh_)
             if isinstance(session_cookies, dict):
                 header_dict.update(session_cookies)
         else:
-            with salt.utils.fopen(session_cookie_jar, 'wb') as fh_:
+            with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
                 msgpack.dump('', fh_)
 
     for header in header_list:
@@ -334,7 +333,10 @@ def query(url,
         result_headers = result.headers
         result_text = result.content
         result_cookies = result.cookies
-        ret['body'] = result.content
+        body = result.content
+        if not isinstance(body, six.text_type):
+            body = body.decode(result.encoding or 'utf-8')
+        ret['body'] = body
     elif backend == 'urllib2':
         request = urllib_request.Request(url_full, data)
         handlers = [
@@ -417,8 +419,14 @@ def query(url,
             }
 
         result_status_code = result.code
-        result_headers = result.headers.headers
+        result_headers = dict(result.info())
         result_text = result.read()
+        if 'Content-Type' in result_headers:
+            res_content_type, res_params = cgi.parse_header(result_headers['Content-Type'])
+            if res_content_type.startswith('text/') and \
+                    'charset' in res_params and \
+                    not isinstance(result_text, six.text_type):
+                result_text = result_text.decode(res_params['charset'])
         ret['body'] = result_text
     else:
         # Tornado
@@ -438,7 +446,7 @@ def query(url,
                           'not valid: {0}'.format(cert))
 
         if isinstance(data, dict):
-            data = urllib.urlencode(data)
+            data = _urlencode(data)
 
         if verify_ssl:
             req_kwargs['ca_certs'] = ca_bundle
@@ -456,8 +464,8 @@ def query(url,
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
             if HAS_CURL_HTTPCLIENT is False:
-                ret['error'] = ('proxy_host and proxy_port has been set. This requires pycurl, but the '
-                                'pycurl library does not seem to be installed')
+                ret['error'] = ('proxy_host and proxy_port has been set. This requires pycurl and tornado, '
+                                'but the libraries does not seem to be installed')
                 log.error(ret['error'])
                 return ret
 
@@ -513,7 +521,13 @@ def query(url,
         result_status_code = result.code
         result_headers = result.headers
         result_text = result.body
-        ret['body'] = result.body
+        if 'Content-Type' in result_headers:
+            res_content_type, res_params = cgi.parse_header(result_headers['Content-Type'])
+            if res_content_type.startswith('text/') and \
+                    'charset' in res_params and \
+                    not isinstance(result_text, six.text_type):
+                result_text = result_text.decode(res_params['charset'])
+        ret['body'] = result_text
         if 'Set-Cookie' in result_headers.keys() and cookies is not None:
             result_cookies = parse_cookie_header(result_headers['Set-Cookie'])
             for item in result_cookies:
@@ -538,11 +552,11 @@ def query(url,
                   'incompatibilities between requests and logging.').format(exc))
 
     if text_out is not None:
-        with salt.utils.fopen(text_out, 'w') as tof:
+        with salt.utils.files.fopen(text_out, 'w') as tof:
             tof.write(result_text)
 
     if headers_out is not None and os.path.exists(headers_out):
-        with salt.utils.fopen(headers_out, 'w') as hof:
+        with salt.utils.files.fopen(headers_out, 'w') as hof:
             hof.write(result_headers)
 
     if cookies is not None:
@@ -551,7 +565,7 @@ def query(url,
     if persist_session is True and HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
-            with salt.utils.fopen(session_cookie_jar, 'wb') as fh_:
+            with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
                 session_cookies = result_headers.get('set-cookie', None)
                 if session_cookies is not None:
                     msgpack.dump({'Cookie': session_cookies}, fh_)
@@ -590,7 +604,7 @@ def query(url,
             return ret
 
         if decode_type == 'json':
-            ret['dict'] = json.loads(salt.utils.to_str(result_text))
+            ret['dict'] = json.loads(salt.utils.stringutils.to_str(result_text))
         elif decode_type == 'xml':
             ret['dict'] = []
             items = ET.fromstring(result_text)
@@ -602,7 +616,7 @@ def query(url,
             text = True
 
         if decode_out:
-            with salt.utils.fopen(decode_out, 'w') as dof:
+            with salt.utils.files.fopen(decode_out, 'w') as dof:
                 dof.write(result_text)
 
     if text is True:
@@ -627,7 +641,7 @@ def get_ca_bundle(opts=None):
     if opts_bundle is not None and os.path.exists(opts_bundle):
         return opts_bundle
 
-    file_roots = opts.get('file_roots', {'base': [syspaths.SRV_ROOT_DIR]})
+    file_roots = opts.get('file_roots', {'base': [salt.syspaths.SRV_ROOT_DIR]})
 
     # Please do not change the order without good reason
 
@@ -655,7 +669,7 @@ def get_ca_bundle(opts=None):
         if os.path.exists(path):
             return path
 
-    if salt.utils.is_windows() and HAS_CERTIFI:
+    if salt.utils.platform.is_windows() and HAS_CERTIFI:
         return certifi.where()
 
     return None
@@ -727,7 +741,7 @@ def update_ca_bundle(
                     )
                 )
                 try:
-                    with salt.utils.fopen(cert_file, 'r') as fcf:
+                    with salt.utils.files.fopen(cert_file, 'r') as fcf:
                         merge_content = '\n'.join((merge_content, fcf.read()))
                 except IOError as exc:
                     log.error(
@@ -739,7 +753,7 @@ def update_ca_bundle(
         if merge_content:
             log.debug('Appending merge_files to {0}'.format(target))
             try:
-                with salt.utils.fopen(target, 'a') as tfp:
+                with salt.utils.files.fopen(target, 'a') as tfp:
                     tfp.write('\n')
                     tfp.write(merge_content)
             except IOError as exc:
@@ -762,8 +776,13 @@ def _render(template, render, renderer, template_dict, opts):
         rend = salt.loader.render(opts, {})
         blacklist = opts.get('renderer_blacklist')
         whitelist = opts.get('renderer_whitelist')
-        return compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
-    with salt.utils.fopen(template, 'r') as fh_:
+        ret = compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
+        if salt.utils.stringio.is_readable(ret):
+            ret = ret.read()
+        if str(ret).startswith('#!') and not str(ret).startswith('#!/'):
+            ret = str(ret).split('\n', 1)[1]
+        return ret
+    with salt.utils.files.fopen(template, 'r') as fh_:
         return fh_.read()
 
 
@@ -834,7 +853,7 @@ def parse_cookie_header(header):
     for cookie in cookies:
         name = None
         value = None
-        for item in cookie.keys():
+        for item in cookie:
             if item in attribs:
                 continue
             name = item

@@ -7,22 +7,17 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import netscaler
-
-netscaler.__salt__ = {}
+import salt.modules.netscaler as netscaler
 
 
 class MockJson(Exception):
@@ -559,22 +554,26 @@ class MockNSSSLVServerSSLCertKeyBinding(object):
             raise MockNSNitroError
         return MockNSSSLVServerSSLCertKeyBinding()
 
-netscaler.NSNitro = MockNSNitro
-netscaler.NSServiceGroup = MockNSServiceGroup
-netscaler.NSServiceGroupServerBinding = MockNSServiceGroupServerBinding
-netscaler.NSLBVServerServiceGroupBinding = MockNSLBVServerServiceGroupBinding
-netscaler.NSService = MockNSService
-netscaler.NSServer = MockNSServer
-netscaler.NSLBVServer = MockNSLBVServer
-netscaler.NSNitroError = MockNSNitroError
-netscaler.NSSSLVServerSSLCertKeyBinding = MockNSSSLVServerSSLCertKeyBinding
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NetscalerTestCase(TestCase):
+class NetscalerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.netscaler
     '''
+    def setup_loader_modules(self):
+        return {
+            netscaler: {
+                'NSNitro': MockNSNitro,
+                'NSServiceGroup': MockNSServiceGroup,
+                'NSServiceGroupServerBinding': MockNSServiceGroupServerBinding,
+                'NSLBVServerServiceGroupBinding': MockNSLBVServerServiceGroupBinding,
+                'NSService': MockNSService,
+                'NSServer': MockNSServer,
+                'NSLBVServer': MockNSLBVServer,
+                'NSNitroError': MockNSNitroError,
+                'NSSSLVServerSSLCertKeyBinding': MockNSSSLVServerSSLCertKeyBinding,
+            }
+        }
     # 'servicegroup_exists' function tests: 1
 
     def test_servicegroup_exists(self):
@@ -1123,8 +1122,3 @@ class NetscalerTestCase(TestCase):
                               MagicMock(return_value=None)):
                 self.assertFalse(netscaler.vserver_sslcert_delete
                                  ('vserverName', 'serGroupName'))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(NetscalerTestCase, needs_daemon=False)

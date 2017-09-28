@@ -9,32 +9,34 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
-ensure_in_syspath('../../')
-
+from tests.support.case import ModuleCase
+from tests.support.paths import FILES, TMP
+from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
-import integration
-import salt.utils
-import salt.utils.http
+import salt.utils.files
 
-SUBSALT_DIR = os.path.join(integration.TMP, 'subsalt')
+# Import 3rd-party libs
+from tornado.httpclient import HTTPClient
+
+SUBSALT_DIR = os.path.join(TMP, 'subsalt')
 AUTHORIZED_KEYS = os.path.join(SUBSALT_DIR, 'authorized_keys')
 KNOWN_HOSTS = os.path.join(SUBSALT_DIR, 'known_hosts')
-GITHUB_FINGERPRINT = '16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48'
+GITHUB_FINGERPRINT = '9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f'
 
 
 def check_status():
     '''
     Check the status of Github for remote operations
     '''
-    return salt.utils.http.query('http://github.com', status=True)['status'] == 200
+    try:
+        return HTTPClient().fetch('http://github.com').code == 200
+    except Exception:  # pylint: disable=broad-except
+        return False
 
 
 @skip_if_binaries_missing(['ssh', 'ssh-keygen'], check_all=True)
-@skipIf(not check_status(), 'External source, github.com is down')
-class SSHModuleTest(integration.ModuleCase):
+class SSHModuleTest(ModuleCase):
     '''
     Test the ssh module
     '''
@@ -42,12 +44,14 @@ class SSHModuleTest(integration.ModuleCase):
         '''
         Set up the ssh module tests
         '''
+        if not check_status():
+            self.skipTest('External source, github.com is down')
         super(SSHModuleTest, self).setUp()
         if not os.path.isdir(SUBSALT_DIR):
             os.makedirs(SUBSALT_DIR)
 
-        ssh_raw_path = os.path.join(integration.FILES, 'ssh', 'raw')
-        with salt.utils.fopen(ssh_raw_path) as fd:
+        ssh_raw_path = os.path.join(FILES, 'ssh', 'raw')
+        with salt.utils.files.fopen(ssh_raw_path) as fd:
             self.key = fd.read().strip()
 
     def tearDown(self):
@@ -57,13 +61,14 @@ class SSHModuleTest(integration.ModuleCase):
         if os.path.isdir(SUBSALT_DIR):
             shutil.rmtree(SUBSALT_DIR)
         super(SSHModuleTest, self).tearDown()
+        del self.key
 
     def test_auth_keys(self):
         '''
         test ssh.auth_keys
         '''
         shutil.copyfile(
-             os.path.join(integration.FILES, 'ssh', 'authorized_keys'),
+             os.path.join(FILES, 'ssh', 'authorized_keys'),
              AUTHORIZED_KEYS)
         ret = self.run_function('ssh.auth_keys', ['root', AUTHORIZED_KEYS])
         self.assertEqual(len(list(ret.items())), 1)  # exactly one key is found
@@ -88,7 +93,7 @@ class SSHModuleTest(integration.ModuleCase):
         invalid key entry in authorized_keys
         '''
         shutil.copyfile(
-             os.path.join(integration.FILES, 'ssh', 'authorized_badkeys'),
+             os.path.join(FILES, 'ssh', 'authorized_badkeys'),
              AUTHORIZED_KEYS)
         ret = self.run_function('ssh.auth_keys', ['root', AUTHORIZED_KEYS])
 
@@ -104,7 +109,7 @@ class SSHModuleTest(integration.ModuleCase):
         Check that known host information is returned from ~/.ssh/config
         '''
         shutil.copyfile(
-             os.path.join(integration.FILES, 'ssh', 'known_hosts'),
+             os.path.join(FILES, 'ssh', 'known_hosts'),
              KNOWN_HOSTS)
         arg = ['root', 'github.com']
         kwargs = {'config': KNOWN_HOSTS}
@@ -151,7 +156,7 @@ class SSHModuleTest(integration.ModuleCase):
         ssh.check_known_host update verification
         '''
         shutil.copyfile(
-             os.path.join(integration.FILES, 'ssh', 'known_hosts'),
+             os.path.join(FILES, 'ssh', 'known_hosts'),
              KNOWN_HOSTS)
         arg = ['root', 'github.com']
         kwargs = {'config': KNOWN_HOSTS}
@@ -169,7 +174,7 @@ class SSHModuleTest(integration.ModuleCase):
         Verify check_known_host_exists
         '''
         shutil.copyfile(
-             os.path.join(integration.FILES, 'ssh', 'known_hosts'),
+             os.path.join(FILES, 'ssh', 'known_hosts'),
              KNOWN_HOSTS)
         arg = ['root', 'github.com']
         kwargs = {'config': KNOWN_HOSTS}
@@ -187,7 +192,7 @@ class SSHModuleTest(integration.ModuleCase):
         ssh.rm_known_host
         '''
         shutil.copyfile(
-             os.path.join(integration.FILES, 'ssh', 'known_hosts'),
+             os.path.join(FILES, 'ssh', 'known_hosts'),
              KNOWN_HOSTS)
         arg = ['root', 'github.com']
         kwargs = {'config': KNOWN_HOSTS, 'key': self.key}
@@ -239,8 +244,3 @@ class SSHModuleTest(integration.ModuleCase):
                     exc, ret
                 )
             )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SSHModuleTest)

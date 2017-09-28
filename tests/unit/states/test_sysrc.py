@@ -7,30 +7,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import sysrc
-
-# Globals
-sysrc.__salt__ = {}
-sysrc.__opts__ = {}
+import salt.states.sysrc as sysrc
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SysrcTestCase(TestCase):
+class SysrcTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the sysrc state
     '''
+    def setup_loader_modules(self):
+        return {sysrc: {}}
+
     def test_managed(self):
         '''
             Test to ensure a sysrc variable is set to a specific value.
@@ -86,8 +83,3 @@ class SysrcTestCase(TestCase):
                             'comment': '"salt" was removed!',
                             'result': True})
                 self.assertDictEqual(sysrc.absent('salt'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SysrcTestCase, needs_daemon=False)

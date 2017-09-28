@@ -7,29 +7,27 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Libs
-from salt.states import svn
+import salt.states.svn as svn
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-ensure_in_syspath('../../')
-
-svn.__opts__ = {}
-svn.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SvnTestCase(TestCase):
+class SvnTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the svn state
     '''
+    def setup_loader_modules(self):
+        return {svn: {}}
+
     def test_latest(self):
         '''
             Checkout or update the working directory to
@@ -55,7 +53,8 @@ class SvnTestCase(TestCase):
                 mock = MagicMock(side_effect=[False, True])
                 with patch.object(os.path, 'exists', mock):
                     mock = MagicMock(return_value=True)
-                    with patch.dict(svn.__salt__, {'svn.diff': mock}):
+                    info_mock = MagicMock(return_value=[{'Revision': 'mocked'}])
+                    with patch.dict(svn.__salt__, {'svn.diff': mock, 'svn.info': info_mock}):
                         mock = MagicMock(return_value=["Dude"])
                         with patch.object(svn, '_neutral_test', mock):
                             self.assertListEqual(svn.latest("salt",
@@ -120,8 +119,3 @@ class SvnTestCase(TestCase):
         mock = MagicMock(return_value=True)
         with patch.object(svn, '_fail', mock):
             self.assertTrue(svn.dirty("salt", "c://salt"))
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SvnTestCase, needs_daemon=False)

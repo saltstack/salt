@@ -7,29 +7,27 @@ unit tests for the jobs runner
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     patch
 )
 
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.runners import jobs
+import salt.runners.jobs as jobs
 import salt.minion
-
-jobs.__opts__ = {'ext_job_cache': None, 'master_job_cache': 'local_cache'}
-jobs.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class JobsTest(TestCase):
+class JobsTest(TestCase, LoaderModuleMockMixin):
     '''
     Validate the jobs runner
     '''
+    def setup_loader_modules(self):
+        return {jobs: {'__opts__': {'ext_job_cache': None, 'master_job_cache': 'local_cache'}}}
+
     def test_list_jobs_with_search_target(self):
         '''
         test jobs.list_jobs runner with search_target args
@@ -80,8 +78,3 @@ class JobsTest(TestCase):
 
             self.assertEqual(jobs.list_jobs(search_target='non-existant'),
                              returns['non-existant'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(JobsTest, needs_daemon=False)

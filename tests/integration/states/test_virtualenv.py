@@ -7,39 +7,41 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 import shutil
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import destructiveTest, ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.runtests import RUNTIME_VARS
 
-# Import salt libs
-import integration
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
-class VirtualenvTest(integration.ModuleCase,
-                     integration.SaltReturnAssertsMixIn):
+@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skip_if_not_root
     def test_issue_1959_virtualenv_runas(self):
         user = 'issue-1959'
-        if not self.run_function('user.add', [user]):
-            # Left behind on a canceled test run?
-            self.run_function('user.delete', [user, True, True])
-            if not self.run_function('user.add', [user]):
-                self.skipTest('Failed to create the \'{0}\' user'.format(user))
+        self.assertSaltTrueReturn(self.run_state('user.present', name=user))
 
         uinfo = self.run_function('user.info', [user])
 
+        if salt.utils.platform.is_darwin():
+            # MacOS does not support createhome with user.present
+            self.assertSaltTrueReturn(self.run_state('file.directory', name=uinfo['home'], user=user, group=uinfo['groups'][0], dir_mode=755))
+
         venv_dir = os.path.join(
-            integration.SYS_TMP_DIR, 'issue-1959-virtualenv-runas'
+            RUNTIME_VARS.SYS_TMP_DIR, 'issue-1959-virtualenv-runas'
         )
         try:
             ret = self.run_function(
@@ -54,16 +56,16 @@ class VirtualenvTest(integration.ModuleCase,
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
-            self.run_function('user.delete', [user, True, True])
+            self.assertSaltTrueReturn(self.run_state('user.absent', name=user, purge=True))
 
     def test_issue_2594_non_invalidated_cache(self):
         # Testing virtualenv directory
-        venv_path = os.path.join(integration.TMP, 'issue-2594-ve')
+        venv_path = os.path.join(RUNTIME_VARS.TMP, 'issue-2594-ve')
         if os.path.exists(venv_path):
             shutil.rmtree(venv_path)
         # Our virtualenv requirements file
         requirements_file_path = os.path.join(
-            integration.TMP_STATE_TREE, 'issue-2594-requirements.txt'
+            RUNTIME_VARS.TMP_STATE_TREE, 'issue-2594-requirements.txt'
         )
         if os.path.exists(requirements_file_path):
             os.unlink(requirements_file_path)
@@ -78,7 +80,7 @@ class VirtualenvTest(integration.ModuleCase,
         ]
 
         # Let's populate the requirements file, just pep-8 for now
-        with salt.utils.fopen(requirements_file_path, 'a') as fhw:
+        with salt.utils.files.fopen(requirements_file_path, 'a') as fhw:
             fhw.write('pep8==1.3.3\n')
 
         # Let's run our state!!!
@@ -106,7 +108,7 @@ class VirtualenvTest(integration.ModuleCase,
         self.assertNotIn('zope.interface==4.0.1', ret)
 
         # Now let's update the requirements file, which is now cached.
-        with salt.utils.fopen(requirements_file_path, 'w') as fhw:
+        with salt.utils.files.fopen(requirements_file_path, 'w') as fhw:
             fhw.write('zope.interface==4.0.1\n')
 
         # Let's run our state!!!
@@ -138,8 +140,3 @@ class VirtualenvTest(integration.ModuleCase,
             shutil.rmtree(venv_path)
         if os.path.exists(requirements_file_path):
             os.unlink(requirements_file_path)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VirtualenvTest)

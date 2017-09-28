@@ -6,8 +6,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
@@ -15,21 +16,18 @@ from salttesting.mock import (
 )
 
 # Import Salt Libs
-import salt.ext.six as six
-from salt.modules import cassandra
-
-
-cassandra.__grains__ = {}
-cassandra.__salt__ = {}
-cassandra.__context__ = {}
-cassandra.__opts__ = {}
+from salt.ext import six
+import salt.modules.cassandra as cassandra
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class CassandraTestCase(TestCase):
+class CassandraTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.cassandra
     '''
+    def setup_loader_modules(self):
+        return {cassandra: {}}
+
     def test_compactionstats(self):
         '''
         Test for Return compactionstats info
@@ -142,8 +140,3 @@ class CassandraTestCase(TestCase):
         with patch.object(cassandra, '_sys_mgr', mock_sys_mgr):
             self.assertEqual(cassandra.column_family_definition('A', 'a'), vars(object))
             self.assertEqual(cassandra.column_family_definition('B', 'a'), None)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CassandraTestCase, needs_daemon=False)

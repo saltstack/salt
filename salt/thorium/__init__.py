@@ -23,6 +23,9 @@ import salt.loader
 import salt.payload
 from salt.exceptions import SaltRenderError
 
+# Import 3rd-party libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 
@@ -45,7 +48,7 @@ class ThorState(salt.state.HighState):
         opts['file_client'] = 'local'
         self.opts = opts
         if opts.get('minion_data_cache'):
-            self.cache = salt.cache.Cache(opts)
+            self.cache = salt.cache.factory(opts)
         salt.state.HighState.__init__(self, self.opts, loader='thorium')
 
         self.returners = salt.loader.returners(self.opts, {})
@@ -73,7 +76,7 @@ class ThorState(salt.state.HighState):
                 if not minions:
                     return cache
                 for minion in minions:
-                    total = salt.cache.fetch('minions/{0}'.format(minion), 'data')
+                    total = self.cache.fetch('minions/{0}'.format(minion), 'data')
 
                     if 'pillar' in total:
                         if self.pillar_keys:
@@ -130,7 +133,7 @@ class ThorState(salt.state.HighState):
         matches = self.matches_whitelist(matches, whitelist)
         high, errors = self.render_highstate(matches)
         if exclude:
-            if isinstance(exclude, str):
+            if isinstance(exclude, six.string_types):
                 exclude = exclude.split(',')
             if '__exclude__' in high:
                 high['__exclude__'].extend(exclude)

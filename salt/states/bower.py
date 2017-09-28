@@ -36,7 +36,7 @@ from __future__ import absolute_import
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():
@@ -275,7 +275,7 @@ def bootstrap(name, user=None):
 
 def pruned(name, user=None, env=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Cleans up local bower_components directory.
 

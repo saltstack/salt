@@ -5,14 +5,10 @@ from __future__ import absolute_import
 import re
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ModuleCase
 
 
-class KeyModuleTest(integration.ModuleCase):
+class KeyModuleTest(ModuleCase):
     def test_key_finger(self):
         '''
         test key.finger to ensure we receive a valid fingerprint
@@ -28,7 +24,3 @@ class KeyModuleTest(integration.ModuleCase):
         out = self.run_function('key.finger_master')
         match = re.match("([0-9a-z]{2}:){15,}[0-9a-z]{2}$", out)
         self.assertTrue(match)
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(KeyModuleTest)

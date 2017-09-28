@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 import shutil
@@ -9,38 +9,34 @@ import threading
 import time
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.paths import TMP
+from tests.support.mixins import SaltReturnAssertsMixin
 
-# Import salt libs
-import integration
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
-class StateModuleTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixIn):
+class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the state module
     '''
 
     maxDiff = None
 
-    @classmethod
-    def setUpClass(cls):
-        mod_case = integration.ModuleCase()
-        mod_case.run_function('saltutil.sync_all')
-
     def test_show_highstate(self):
         '''
         state.show_highstate
         '''
         high = self.run_function('state.show_highstate')
-        destpath = os.path.join(integration.SYS_TMP_DIR, 'testfile')
+        destpath = os.path.join(TMP, 'testfile')
         self.assertTrue(isinstance(high, dict))
         self.assertTrue(destpath in high)
         self.assertEqual(high[destpath]['__env__'], 'base')
@@ -113,13 +109,13 @@ class StateModuleTest(integration.ModuleCase,
             self.assertTrue(isinstance(ret['__sls__'], type(None)))
 
         for state, ret in sls2.items():
-            self.assertTrue(isinstance(ret['__sls__'], str))
+            self.assertTrue(isinstance(ret['__sls__'], six.string_types))
 
     def _remove_request_cache_file(self):
         '''
         remove minion state request file
         '''
-        cache_file = os.path.join(integration.RUNTIME_CONFIGS['minion']['cachedir'], 'req_state.p')
+        cache_file = os.path.join(self.get_config('minion')['cachedir'], 'req_state.p')
         if os.path.exists(cache_file):
             os.remove(cache_file)
 
@@ -160,14 +156,14 @@ class StateModuleTest(integration.ModuleCase,
         '''
         self._remove_request_cache_file()
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.run_function('state.request', mods='modules.state.requested_win')
         else:
             self.run_function('state.request', mods='modules.state.requested')
 
         ret = self.run_function('state.run_request')
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             key = 'cmd_|-count_root_dir_contents_|-Get-ChildItem C:\\\\ | Measure-Object | %{$_.Count}_|-run'
         else:
             key = 'cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run'
@@ -190,7 +186,7 @@ class StateModuleTest(integration.ModuleCase,
         '''
         Verify that we can append a file's contents
         '''
-        testfile = os.path.join(integration.TMP, 'test.append')
+        testfile = os.path.join(TMP, 'test.append')
         if os.path.isfile(testfile):
             os.unlink(testfile)
 
@@ -203,7 +199,7 @@ class StateModuleTest(integration.ModuleCase,
         ret = self.run_function('state.sls', mods='testappend.step-2')
         self.assertSaltTrueReturn(ret)
 
-        with salt.utils.fopen(testfile, 'r') as fp_:
+        with salt.utils.files.fopen(testfile, 'r') as fp_:
             testfile_contents = fp_.read()
 
         contents = textwrap.dedent('''\
@@ -213,7 +209,7 @@ class StateModuleTest(integration.ModuleCase,
             fi
             ''')
 
-        if not salt.utils.is_windows():
+        if not salt.utils.platform.is_windows():
             contents += os.linesep
 
         contents += textwrap.dedent('''\
@@ -223,7 +219,7 @@ class StateModuleTest(integration.ModuleCase,
             fi
             ''')
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             new_contents = contents.splitlines()
             contents = os.linesep.join(new_contents)
             contents += os.linesep
@@ -238,7 +234,7 @@ class StateModuleTest(integration.ModuleCase,
         ret = self.run_function('state.sls', mods='testappend.step-1')
         self.assertSaltTrueReturn(ret)
 
-        with salt.utils.fopen(testfile, 'r') as fp_:
+        with salt.utils.files.fopen(testfile, 'r') as fp_:
             testfile_contents = fp_.read()
 
         self.assertMultiLineEqual(contents, testfile_contents)
@@ -257,7 +253,7 @@ class StateModuleTest(integration.ModuleCase,
                 - text: foo
 
         '''
-        testfile = os.path.join(integration.TMP, 'issue-1876')
+        testfile = os.path.join(TMP, 'issue-1876')
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
             'ID \'{0}\' in SLS \'issue-1876\' contains multiple state '
@@ -277,12 +273,12 @@ class StateModuleTest(integration.ModuleCase,
             fi
             ''')
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             new_contents = expected.splitlines()
             expected = os.linesep.join(new_contents)
             expected += os.linesep
 
-        testfile = os.path.join(integration.TMP, 'issue-1879')
+        testfile = os.path.join(TMP, 'issue-1879')
         # Delete if exiting
         if os.path.isfile(testfile):
             os.unlink(testfile)
@@ -305,7 +301,7 @@ class StateModuleTest(integration.ModuleCase,
 
         # Does it match?
         try:
-            with salt.utils.fopen(testfile, 'r') as fp_:
+            with salt.utils.files.fopen(testfile, 'r') as fp_:
                 contents = fp_.read()
             self.assertMultiLineEqual(expected, contents)
             # Make sure we don't re-append existing text
@@ -319,7 +315,7 @@ class StateModuleTest(integration.ModuleCase,
             )
             self.assertSaltTrueReturn(ret)
 
-            with salt.utils.fopen(testfile, 'r') as fp_:
+            with salt.utils.files.fopen(testfile, 'r') as fp_:
                 contents = fp_.read()
             self.assertMultiLineEqual(expected, contents)
         except Exception:
@@ -332,11 +328,11 @@ class StateModuleTest(integration.ModuleCase,
 
     def test_include(self):
         fnames = (
-            os.path.join(integration.SYS_TMP_DIR, 'include-test'),
-            os.path.join(integration.SYS_TMP_DIR, 'to-include-test')
+            os.path.join(TMP, 'include-test'),
+            os.path.join(TMP, 'to-include-test')
         )
         exclude_test_file = os.path.join(
-            integration.SYS_TMP_DIR, 'exclude-test'
+            TMP, 'exclude-test'
         )
         try:
             ret = self.run_function('state.sls', mods='include-test')
@@ -352,11 +348,11 @@ class StateModuleTest(integration.ModuleCase,
 
     def test_exclude(self):
         fnames = (
-            os.path.join(integration.SYS_TMP_DIR, 'include-test'),
-            os.path.join(integration.SYS_TMP_DIR, 'exclude-test')
+            os.path.join(TMP, 'include-test'),
+            os.path.join(TMP, 'exclude-test')
         )
         to_include_test_file = os.path.join(
-            integration.SYS_TMP_DIR, 'to-include-test'
+            TMP, 'to-include-test'
         )
         try:
             ret = self.run_function('state.sls', mods='exclude-test')
@@ -370,10 +366,10 @@ class StateModuleTest(integration.ModuleCase,
                 if os.path.isfile(fname):
                     os.remove(fname)
 
-    @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+    @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
     def test_issue_2068_template_str(self):
         venv_dir = os.path.join(
-            integration.SYS_TMP_DIR, 'issue-2068-template-str'
+            TMP, 'issue-2068-template-str'
         )
 
         try:
@@ -393,7 +389,7 @@ class StateModuleTest(integration.ModuleCase,
             'files', 'file', 'base', 'issue-2068-template-str-no-dot.sls'
         )
 
-        with salt.utils.fopen(template_path, 'r') as fp_:
+        with salt.utils.files.fopen(template_path, 'r') as fp_:
             template = fp_.read()
             ret = self.run_function(
                 'state.template_str', [template], timeout=120
@@ -419,7 +415,7 @@ class StateModuleTest(integration.ModuleCase,
             'files', 'file', 'base', 'issue-2068-template-str.sls'
         )
 
-        with salt.utils.fopen(template_path, 'r') as fp_:
+        with salt.utils.files.fopen(template_path, 'r') as fp_:
             template = fp_.read()
         ret = self.run_function(
             'state.template_str', [template], timeout=120
@@ -729,21 +725,10 @@ class StateModuleTest(integration.ModuleCase,
         result = self.normalize_ret(ret)
         self.assertEqual(expected_result, result)
 
-        # TODO: not done
-        #ret = self.run_function('state.sls', mods='requisites.fullsls_require_in')
-        #self.assertEqual(['sls command can only be used with require requisite'], ret)
-
         # issue #8233: traceback on prereq sls
         # TODO: not done
         #ret = self.run_function('state.sls', mods='requisites.fullsls_prereq')
         #self.assertEqual(['sls command can only be used with require requisite'], ret)
-
-    def test_requisites_full_sls_import(self):
-        '''
-        Test full sls requisite with nothing but an import
-        '''
-        ret = self.run_function('state.sls', mods='requisites.fullsls_require_import')
-        self.assertSaltTrueReturn(ret)
 
     def test_requisites_prereq_simple_ordering_and_errors(self):
         '''
@@ -949,14 +934,14 @@ class StateModuleTest(integration.ModuleCase,
         #])
 
     def test_get_file_from_env_in_top_match(self):
-        tgt = os.path.join(integration.SYS_TMP_DIR, 'prod-cheese-file')
+        tgt = os.path.join(TMP, 'prod-cheese-file')
         try:
             ret = self.run_function(
                 'state.highstate', minion_tgt='sub_minion'
             )
             self.assertSaltTrueReturn(ret)
             self.assertTrue(os.path.isfile(tgt))
-            with salt.utils.fopen(tgt, 'r') as cheese:
+            with salt.utils.files.fopen(tgt, 'r') as cheese:
                 data = cheese.read()
                 self.assertIn('Gromit', data)
                 self.assertIn('Comte', data)
@@ -1201,7 +1186,7 @@ class StateModuleTest(integration.ModuleCase,
         '''
         test a state with the retry option that should return True immedietly (i.e. no retries)
         '''
-        testfile = os.path.join(integration.TMP, 'retry_file')
+        testfile = os.path.join(TMP, 'retry_file')
         state_run = self.run_function(
             'state.sls',
             mods='retry.retry_success'
@@ -1214,16 +1199,16 @@ class StateModuleTest(integration.ModuleCase,
         '''
         helper function to wait 30 seconds and then create the temp retry file
         '''
-        testfile = os.path.join(integration.TMP, 'retry_file')
+        testfile = os.path.join(TMP, 'retry_file')
         time.sleep(30)
-        open(testfile, 'a').close()
+        open(testfile, 'a').close()  # pylint: disable=resource-leakage
 
     def test_retry_option_eventual_success(self):
         '''
         test a state with the retry option that should return True after at least 4 retry attmempt
         but never run 15 attempts
         '''
-        testfile = os.path.join(integration.TMP, 'retry_file')
+        testfile = os.path.join(TMP, 'retry_file')
         create_thread = threading.Thread(target=self.run_create)
         create_thread.start()
         state_run = self.run_function(
@@ -1238,7 +1223,22 @@ class StateModuleTest(integration.ModuleCase,
         self.assertNotIn('Attempt 15:', state_run[retry_state]['comment'])
         self.assertEqual(state_run[retry_state]['result'], True)
 
+    def test_issue_38683_require_order_failhard_combination(self):
+        '''
+        This tests the case where require, order, and failhard are all used together in a state definition.
 
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StateModuleTest)
+        Previously, the order option, which used in tandem with require and failhard, would cause the state
+        compiler to stacktrace. This exposed a logic error in the ``check_failhard`` function of the state
+        compiler. With the logic error resolved, this test should now pass.
+
+        See https://github.com/saltstack/salt/issues/38683 for more information.
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='requisites.require_order_failhard_combo'
+        )
+        state_id = 'test_|-b_|-b_|-fail_with_changes'
+
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'], 'Failure!')
+        self.assertFalse(state_run[state_id]['result'])

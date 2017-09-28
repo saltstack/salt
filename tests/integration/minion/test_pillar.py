@@ -2,46 +2,43 @@
 '''
     :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
 '''
-from __future__ import absolute_import
-
-# Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, requires_system_grains
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-
-ensure_in_syspath('../..')
 
 # Import Python libs
+from __future__ import absolute_import
 import copy
 import errno
 import logging
 import os
 import shutil
 import textwrap
+import subprocess
+
+# Import Salt Testing libs
+from tests.support.case import ModuleCase
+from tests.support.paths import TMP, TMP_CONF_DIR
+from tests.support.unit import skipIf
+from tests.support.helpers import requires_system_grains
+
+# Import 3rd-party libs
 import yaml
-from subprocess import Popen, PIPE, STDOUT
+from salt.ext import six
+
+# Import salt libs
+import salt.utils.files
+import salt.utils.path
+import salt.pillar as pillar
 
 log = logging.getLogger(__name__)
 
-# Import 3rd-party libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('..')
-import salt.ext.six as six
 
-# Import salt libs
-import integration
-import salt.utils
-from salt import pillar
-
-
-GPG_HOMEDIR = os.path.join(integration.TMP_CONF_DIR, 'gpgkeys')
-PILLAR_BASE = os.path.join(integration.TMP, 'test-decrypt-pillar', 'pillar')
+GPG_HOMEDIR = os.path.join(TMP_CONF_DIR, 'gpgkeys')
+PILLAR_BASE = os.path.join(TMP, 'test-decrypt-pillar', 'pillar')
 TOP_SLS = os.path.join(PILLAR_BASE, 'top.sls')
 GPG_SLS = os.path.join(PILLAR_BASE, 'gpg.sls')
 DEFAULT_OPTS = {
-    'cachedir': os.path.join(integration.TMP, 'rootdir', 'cache'),
-    'config_dir': integration.TMP_CONF_DIR,
-    'extension_modules': os.path.join(integration.TMP,
+    'cachedir': os.path.join(TMP, 'rootdir', 'cache'),
+    'config_dir': TMP_CONF_DIR,
+    'extension_modules': os.path.join(TMP,
                                       'test-decrypt-pillar',
                                       'extmods'),
     'pillar_roots': {'base': [PILLAR_BASE]},
@@ -52,6 +49,7 @@ DEFAULT_OPTS = {
     'decrypt_pillar_renderers': ['gpg'],
 }
 ADDITIONAL_OPTS = (
+    'conf_file',
     'file_roots',
     'state_top',
     'renderer',
@@ -193,9 +191,8 @@ GPG_PILLAR_DECRYPTED = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(not salt.utils.which('gpg'), 'GPG is not installed')
-class DecryptGPGPillarTest(integration.ModuleCase):
+@skipIf(not salt.utils.path.which('gpg'), 'GPG is not installed')
+class DecryptGPGPillarTest(ModuleCase):
     '''
     Tests for pillar decryption
     '''
@@ -214,33 +211,45 @@ class DecryptGPGPillarTest(integration.ModuleCase):
 
             cmd = cmd_prefix + ['--list-keys']
             log.debug('Instantiating gpg keyring using: %s', cmd)
-            output = Popen(cmd,
-                           stdout=PIPE,
-                           stderr=STDOUT,
-                           shell=False).communicate()[0]
+            output = subprocess.Popen(cmd,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT,
+                                      shell=False).communicate()[0]
             log.debug('Result:\n%s', output)
 
             cmd = cmd_prefix + ['--import', '--allow-secret-key-import']
             log.debug('Importing keypair using: %s', cmd)
-            output = Popen(cmd,
-                           stdin=PIPE,
-                           stdout=PIPE,
-                           stderr=STDOUT,
-                           shell=False).communicate(input=six.b(TEST_KEY))[0]
+            output = subprocess.Popen(cmd,
+                                      stdin=subprocess.PIPE,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT,
+                                      shell=False).communicate(input=six.b(TEST_KEY))[0]
             log.debug('Result:\n%s', output)
 
             os.makedirs(PILLAR_BASE)
-            with salt.utils.fopen(TOP_SLS, 'w') as fp_:
+            with salt.utils.files.fopen(TOP_SLS, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
                 base:
                   '*':
                     - gpg
                 '''))
-            with salt.utils.fopen(GPG_SLS, 'w') as fp_:
+            with salt.utils.files.fopen(GPG_SLS, 'w') as fp_:
                 fp_.write(GPG_PILLAR_YAML)
 
     @classmethod
     def tearDownClass(cls):
+        cmd = ['gpg-connect-agent', '--homedir', GPG_HOMEDIR]
+        try:
+            log.debug('Killing gpg-agent using: %s', cmd)
+            output = subprocess.Popen(cmd,
+                                      stdin=subprocess.PIPE,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT,
+                                      shell=False).communicate(input=six.b('KILLAGENT'))[0]
+            log.debug('Result:\n%s', output)
+        except OSError:
+            log.debug('No need to kill: old gnupg doesn\'t start the agent.')
+
         if cls.created_gpg_homedir:
             try:
                 shutil.rmtree(GPG_HOMEDIR)
@@ -373,7 +382,3 @@ class DecryptGPGPillarTest(integration.ModuleCase):
             'not a valid decryption renderer. Valid choices are: foo, bar'
         ]
         self.assertEqual(ret, expected)
-
-
-if __name__ == '__main__':
-    integration.run_tests(DecryptGPGPillarTest)

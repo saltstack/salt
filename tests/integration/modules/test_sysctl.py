@@ -5,15 +5,11 @@ from __future__ import absolute_import
 import sys
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
 
 
-class SysctlModuleTest(integration.ModuleCase):
+class SysctlModuleTest(ModuleCase):
     def setUp(self):
         super(SysctlModuleTest, self).setUp()
         ret = self.run_function('cmd.has_exec', ['sysctl'])
@@ -53,8 +49,3 @@ class SysctlModuleTest(integration.ModuleCase):
         self.assertEqual(
             ret.get('kern.ostype'), 'Darwin', 'Incorrect kern.ostype'
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SysctlModuleTest)

@@ -10,14 +10,19 @@ import time
 import logging
 
 # Import Salt libs
-from raet import raeting, nacling
-from raet.lane.stacking import LaneStack
-from raet.lane.yarding import RemoteYard
 import salt.config
 import salt.client
-import salt.utils
+import salt.utils.kinds as kinds
+import salt.utils.versions
 import salt.syspaths as syspaths
-from salt.utils import kinds
+
+try:
+    from raet import raeting, nacling
+    from raet.lane.stacking import LaneStack
+    from raet.lane.yarding import RemoteYard
+    HAS_RAET_LIBS = True
+except ImportError:
+    HAS_RAET_LIBS = False
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +32,7 @@ class LocalClient(salt.client.LocalClient):
     The RAET LocalClient
     '''
     def __init__(self,
-                 c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
+                 c_path=os.path.join(syspaths.CONFIG_DIR, u'master'),
                  mopts=None):
 
         salt.client.LocalClient.__init__(self, c_path, mopts)
@@ -36,22 +41,22 @@ class LocalClient(salt.client.LocalClient):
             tgt,
             fun,
             arg=(),
-            tgt_type='glob',
-            ret='',
-            jid='',
+            tgt_type=u'glob',
+            ret=u'',
+            jid=u'',
             timeout=5,
             **kwargs):
         '''
         Publish the command!
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
+        if u'expr_form' in kwargs:
+            salt.utils.versions.warn_until(
+                u'Fluorine',
+                u'The target type should be passed using the \'tgt_type\' '
+                u'argument instead of \'expr_form\'. Support for using '
+                u'\'expr_form\' will be removed in Salt Fluorine.'
             )
-            tgt_type = kwargs.pop('expr_form')
+            tgt_type = kwargs.pop(u'expr_form')
 
         payload_kwargs = self._prep_pub(
                 tgt,
@@ -63,21 +68,21 @@ class LocalClient(salt.client.LocalClient):
                 timeout=timeout,
                 **kwargs)
 
-        kind = self.opts['__role']
+        kind = self.opts[u'__role']
         if kind not in kinds.APPL_KINDS:
-            emsg = ("Invalid application kind = '{0}' for Raet LocalClient.".format(kind))
-            log.error(emsg + "\n")
+            emsg = (u"Invalid application kind = '{0}' for Raet LocalClient.".format(kind))
+            log.error(emsg + u"\n")
             raise ValueError(emsg)
         if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.master],
                     kinds.APPL_KIND_NAMES[kinds.applKinds.syndic]]:
-            lanename = 'master'
+            lanename = u'master'
         else:
-            emsg = ("Unsupported application kind '{0}' for Raet LocalClient.".format(kind))
-            log.error(emsg + '\n')
+            emsg = (u"Unsupported application kind '{0}' for Raet LocalClient.".format(kind))
+            log.error(emsg + u'\n')
             raise ValueError(emsg)
 
-        sockdirpath = self.opts['sock_dir']
-        name = 'client' + nacling.uuid(size=18)
+        sockdirpath = self.opts[u'sock_dir']
+        name = u'client' + nacling.uuid(size=18)
         stack = LaneStack(
                 name=name,
                 lanename=lanename,
@@ -86,12 +91,12 @@ class LocalClient(salt.client.LocalClient):
         manor_yard = RemoteYard(
                 stack=stack,
                 lanename=lanename,
-                name='manor',
+                name=u'manor',
                 dirpath=sockdirpath)
         stack.addRemote(manor_yard)
-        route = {'dst': (None, manor_yard.name, 'local_cmd'),
-                 'src': (None, stack.local.name, None)}
-        msg = {'route': route, 'load': payload_kwargs}
+        route = {u'dst': (None, manor_yard.name, u'local_cmd'),
+                 u'src': (None, stack.local.name, None)}
+        msg = {u'route': route, u'load': payload_kwargs}
         stack.transmit(msg)
         stack.serviceAll()
         while True:
@@ -99,9 +104,9 @@ class LocalClient(salt.client.LocalClient):
             stack.serviceAll()
             while stack.rxMsgs:
                 msg, sender = stack.rxMsgs.popleft()
-                ret = msg.get('return', {})
-                if 'ret' in ret:
+                ret = msg.get(u'return', {})
+                if u'ret' in ret:
                     stack.server.close()
-                    return ret['ret']
+                    return ret[u'ret']
                 stack.server.close()
                 return ret

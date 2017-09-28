@@ -7,31 +7,27 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import tomcat
+import salt.states.tomcat as tomcat
+from salt.modules import tomcat as tomcatmod
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-ensure_in_syspath('../../')
-
-# Globals
-tomcat.__salt__ = {}
-tomcat.__opts__ = {}
-tomcat.__env__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TomcatTestCase(TestCase):
+class TomcatTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate the tomcat state
     '''
+    def setup_loader_modules(self):
+        return {tomcat: {'__env__': 'base'}}
 
     def test_war_deployed(self):
         '''
@@ -54,6 +50,7 @@ class TomcatTestCase(TestCase):
                                          {'salt': {'version': '1'}},
                                          {'salt': {'version': '1'}}])
         with patch.dict(tomcat.__salt__, {"tomcat.ls": mock_ls,
+                                          'tomcat.extract_war_version': tomcatmod.extract_war_version,
                                           'tomcat.start': mock_start,
                                           'tomcat.undeploy': mock_undeploy,
                                           'tomcat.deploy_war': mock_deploy}):
@@ -117,6 +114,7 @@ class TomcatTestCase(TestCase):
         with patch.dict(tomcat.__opts__, {"test": True}):
             with patch.dict(tomcat.__salt__,
                             {"tomcat.ls": mock_ls_version,
+                             "tomcat.extract_war_version": tomcatmod.extract_war_version,
                              "tomcat.deploy_war": mock_deploy,
                              "tomcat.undeploy": mock_undeploy}):
                 # We deploy from version to no version
@@ -130,6 +128,7 @@ class TomcatTestCase(TestCase):
 
             with patch.dict(tomcat.__salt__,
                             {"tomcat.ls": mock_ls_no_version,
+                             "tomcat.extract_war_version": tomcatmod.extract_war_version,
                              "tomcat.deploy_war": mock_deploy,
                              "tomcat.undeploy": mock_undeploy}):
                 # Deploy from none to specified version
@@ -169,7 +168,8 @@ class TomcatTestCase(TestCase):
                'result': True,
                'comment': 'tomcat manager is ready'}
         mock = MagicMock(return_value=True)
-        with patch.dict(tomcat.__salt__, {"tomcat.status": mock}):
+        with patch.dict(tomcat.__salt__, {"tomcat.status": mock,
+                                          "tomcat.extract_war_version": tomcatmod.extract_war_version}):
             self.assertDictEqual(tomcat.wait('salt'), ret)
 
     def test_mod_watch(self):
@@ -181,7 +181,8 @@ class TomcatTestCase(TestCase):
                'result': False,
                'comment': 'True'}
         mock = MagicMock(return_value='True')
-        with patch.dict(tomcat.__salt__, {"tomcat.reload": mock}):
+        with patch.dict(tomcat.__salt__, {"tomcat.reload": mock,
+                                          "tomcat.extract_war_version": tomcatmod.extract_war_version}):
             ret.update({'changes': {'salt': False}})
             self.assertDictEqual(tomcat.mod_watch('salt'), ret)
 
@@ -200,6 +201,7 @@ class TomcatTestCase(TestCase):
                                        {'salt': {'version': 1}}])
         mock2 = MagicMock(side_effect=['FAIL', 'saltstack'])
         with patch.dict(tomcat.__salt__, {"tomcat.status": mock,
+                                          "tomcat.extract_war_version": tomcatmod.extract_war_version,
                                           "tomcat.ls": mock1,
                                           "tomcat.undeploy": mock2}):
             ret.update({'comment': 'Tomcat Manager does not respond'})
@@ -220,9 +222,3 @@ class TomcatTestCase(TestCase):
                 ret.update({'changes': {'undeploy': 1},
                             'comment': '', 'result': True})
                 self.assertDictEqual(tomcat.undeployed('salt'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-
-    run_tests(TomcatTestCase, needs_daemon=False)

@@ -7,19 +7,16 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import sysmod
+import salt.modules.sysmod as sysmod
 
 
 class MockDocstringable(object):
@@ -28,39 +25,6 @@ class MockDocstringable(object):
 
     def set_module_docstring(self, docstr):
         self.__globals__ = {'__doc__': docstr}
-
-
-_modules = set()
-_functions = [
-    'exist.exist',
-
-    'sys.doc', 'sys.list_functions', 'sys.list_modules',
-    'sysctl.get', 'sysctl.show',
-    'system.halt', 'system.reboot',
-
-    'udev.name', 'udev.path',
-    'user.add', 'user.info', 'user.rename',
-]
-_docstrings = {}
-_statedocstrings = {}
-
-sysmod.__salt__ = {}
-sysmod.__opts__ = {}
-
-
-for func in _functions:
-    docstring = 'docstring for {0}'.format(func)
-
-    sysmod.__salt__[func] = MockDocstringable(docstring)
-    _docstrings[func] = docstring
-
-    module = func.split('.')[0]
-    _statedocstrings[func] = docstring
-    _statedocstrings[module] = 'docstring for {0}'.format(module)
-
-    _modules.add(func.split('.')[0])
-
-_modules = sorted(list(_modules))
 
 
 class Mockstate(object):
@@ -72,11 +36,6 @@ class Mockstate(object):
         Mock state functions
         """
         states = {}
-        for func in _functions:
-            docstring = 'docstring for {0}'.format(func)
-            mock = MockDocstringable(docstring)
-            mock.set_module_docstring('docstring for {0}'.format(func.split('.')[0]))
-            states[func] = mock
 
         def __init__(self, opts):
             pass
@@ -90,10 +49,13 @@ class Mockrunner(object):
         """
         Mock runner functions
         """
-        functions = sysmod.__salt__
 
         def __init__(self, opts):
             pass
+
+        @property
+        def functions(self):
+            return sysmod.__salt__
 
 
 class Mockloader(object):
@@ -119,20 +81,75 @@ class Mockloader(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.state', Mockstate())
-@patch('salt.runner', Mockrunner())
-@patch('salt.loader', Mockloader())
-class SysmodTestCase(TestCase):
+class SysmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.sysmod
     '''
+    def setup_loader_modules(self):
+        return {sysmod: {'__salt__': self.salt_dunder}}
+
+    @classmethod
+    def setUpClass(cls):
+        cls._modules = set()
+        cls._functions = [
+            'exist.exist',
+
+            'sys.doc', 'sys.list_functions', 'sys.list_modules',
+            'sysctl.get', 'sysctl.show',
+            'system.halt', 'system.reboot',
+
+            'udev.name', 'udev.path',
+            'user.add', 'user.info', 'user.rename',
+        ]
+        cls._docstrings = {}
+        cls._statedocstrings = {}
+
+        cls.salt_dunder = {}
+
+        for func in cls._functions:
+            docstring = 'docstring for {0}'.format(func)
+
+            cls.salt_dunder[func] = MockDocstringable(docstring)
+            cls._docstrings[func] = docstring
+
+            module = func.split('.')[0]
+            cls._statedocstrings[func] = docstring
+            cls._statedocstrings[module] = 'docstring for {0}'.format(module)
+
+            cls._modules.add(func.split('.')[0])
+
+            docstring = 'docstring for {0}'.format(func)
+            mock = MockDocstringable(docstring)
+            mock.set_module_docstring('docstring for {0}'.format(func.split('.')[0]))
+            Mockstate.State.states[func] = mock
+
+        cls._modules = sorted(list(cls._modules))
+
+        cls.state_patcher = patch('salt.state', Mockstate())
+        cls.state_patcher.start()
+        cls.runner_patcher = patch('salt.runner', Mockrunner())
+        cls.runner_patcher.start()
+        cls.loader_patcher = patch('salt.loader', Mockloader())
+        cls.loader_patcher.start()
     # 'doc' function tests: 2
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.runner_patcher.stop()
+        cls.state_patcher.stop()
+        cls.loader_patcher.stop()
+        for attrname in ('_modules', '_functions', '_docstrings', '_statedocstrings', 'salt_dunder',
+                         'runner_patcher', 'state_patcher', 'loader_patcher'):
+            try:
+                delattr(cls, attrname)
+            except AttributeError:
+                continue
 
     def test_doc(self):
         '''
         Test if it returns the docstrings for all modules.
         '''
-        self.assertDictEqual(sysmod.doc(), _docstrings)
+        self.assertDictEqual(sysmod.doc(), self._docstrings)
 
         self.assertDictEqual(sysmod.doc('sys.doc'), {'sys.doc': 'docstring for sys.doc'})
 
@@ -142,7 +159,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it returns the docstrings for all states.
         '''
-        self.assertDictEqual(sysmod.state_doc(), _statedocstrings)
+        self.assertDictEqual(sysmod.state_doc(), self._statedocstrings)
 
         self.assertDictEqual(sysmod.state_doc('sys.doc'), {'sys': 'docstring for sys', 'sys.doc': 'docstring for sys.doc'})
 
@@ -152,7 +169,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it returns the docstrings for all runners.
         '''
-        self.assertDictEqual(sysmod.runner_doc(), _docstrings)
+        self.assertDictEqual(sysmod.runner_doc(), self._docstrings)
 
         self.assertDictEqual(sysmod.runner_doc('sys.doc'), {'sys.doc': 'docstring for sys.doc'})
 
@@ -162,7 +179,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it returns the docstrings for all returners.
         '''
-        self.assertDictEqual(sysmod.returner_doc(), _docstrings)
+        self.assertDictEqual(sysmod.returner_doc(), self._docstrings)
 
         self.assertDictEqual(sysmod.returner_doc('sys.doc'), {'sys.doc': 'docstring for sys.doc'})
 
@@ -172,7 +189,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it returns the docstrings for all renderers.
         '''
-        self.assertDictEqual(sysmod.renderer_doc(), _docstrings)
+        self.assertDictEqual(sysmod.renderer_doc(), self._docstrings)
 
         self.assertDictEqual(sysmod.renderer_doc('sys.doc'), {'sys.doc': 'docstring for sys.doc'})
 
@@ -182,7 +199,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it lists the functions for all modules.
         '''
-        self.assertListEqual(sysmod.list_functions(), _functions)
+        self.assertListEqual(sysmod.list_functions(), self._functions)
 
         self.assertListEqual(sysmod.list_functions('nonexist'), [])
 
@@ -203,7 +220,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it lists the modules loaded on the minion
         '''
-        self.assertListEqual(sysmod.list_modules(), _modules)
+        self.assertListEqual(sysmod.list_modules(), self._modules)
 
         self.assertListEqual(sysmod.list_modules('nonexist'), [])
 
@@ -261,7 +278,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it lists the functions for all state modules.
         '''
-        self.assertListEqual(sysmod.list_state_functions(), _functions)
+        self.assertListEqual(sysmod.list_state_functions(), self._functions)
 
         self.assertListEqual(sysmod.list_state_functions('nonexist'), [])
 
@@ -282,7 +299,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it lists the modules loaded on the minion.
         '''
-        self.assertListEqual(sysmod.list_state_modules(), _modules)
+        self.assertListEqual(sysmod.list_state_modules(), self._modules)
 
         self.assertListEqual(sysmod.list_state_modules('nonexist'), [])
 
@@ -296,7 +313,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it list the runners loaded on the minion.
         '''
-        self.assertListEqual(sysmod.list_runners(), _modules)
+        self.assertListEqual(sysmod.list_runners(), self._modules)
 
         self.assertListEqual(sysmod.list_runners('nonexist'), [])
 
@@ -310,7 +327,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it lists the functions for all runner modules.
         '''
-        self.assertListEqual(sysmod.list_runner_functions(), _functions)
+        self.assertListEqual(sysmod.list_runner_functions(), self._functions)
 
         self.assertListEqual(sysmod.list_runner_functions('nonexist'), [])
 
@@ -331,7 +348,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it lists the returners loaded on the minion
         '''
-        self.assertListEqual(sysmod.list_returners(), _modules)
+        self.assertListEqual(sysmod.list_returners(), self._modules)
 
         self.assertListEqual(sysmod.list_returners('nonexist'), [])
 
@@ -345,7 +362,7 @@ class SysmodTestCase(TestCase):
         '''
         Test if it lists the functions for all returner modules.
         '''
-        self.assertListEqual(sysmod.list_returner_functions(), _functions)
+        self.assertListEqual(sysmod.list_returner_functions(), self._functions)
 
         self.assertListEqual(sysmod.list_returner_functions('nonexist'), [])
 
@@ -366,15 +383,10 @@ class SysmodTestCase(TestCase):
         '''
         Test if it list the renderers loaded on the minion.
         '''
-        self.assertListEqual(sysmod.list_renderers(), _functions)
+        self.assertListEqual(sysmod.list_renderers(), self._functions)
 
         self.assertListEqual(sysmod.list_renderers('nonexist'), [])
 
         self.assertListEqual(sysmod.list_renderers('user.info'), ['user.info'])
 
         self.assertListEqual(sysmod.list_renderers('syst*'), ['system.halt', 'system.reboot'])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SysmodTestCase, needs_daemon=False)

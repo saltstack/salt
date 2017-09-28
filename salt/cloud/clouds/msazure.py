@@ -52,6 +52,7 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
 
 # Import 3rd-party libs
+from salt.ext import six
 HAS_LIBS = False
 try:
     import azure
@@ -426,11 +427,7 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -542,7 +539,7 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args=event_kwargs,
+        args=__utils__['cloud.filter_event']('requesting', event_kwargs, list(event_kwargs)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -658,7 +655,7 @@ def create(vm_):
             'event',
             'attaching volumes',
             'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
-            args={'volumes': volumes},
+            args=__utils__['cloud.filter_event']('attaching_volumes', vm_, ['volumes']),
             sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
@@ -692,11 +689,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -717,7 +710,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     if kwargs is None:
         kwargs = {}
 
-    if isinstance(kwargs['volumes'], str):
+    if isinstance(kwargs['volumes'], six.string_types):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
@@ -811,7 +804,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     if kwargs is None:
         kwargs = {}
 
-    if isinstance(kwargs['volumes'], str):
+    if isinstance(kwargs['volumes'], six.string_types):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
@@ -1595,7 +1588,7 @@ def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
     for disk in disks:
         if disks[disk]['attached_to'] is None:
             del_kwargs = {
-                'name': disks[disk]['name'][0],
+                'name': disks[disk]['name'],
                 'delete_vhd': kwargs.get('delete_vhd', False)
             }
             log.info('Deleting disk {name}, deleting VHD: {delete_vhd}'.format(**del_kwargs))
@@ -3392,14 +3385,6 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         search_global=False,
         default='management.core.windows.net'
     )
-    requests_lib = config.get_cloud_config_value(
-        'requests_lib',
-        get_configured_provider(), __opts__, search_global=False
-    )
-    if requests_lib is not None:
-        salt.utils.warn_until('Oxygen', '"requests_lib:True" has been replaced by "backend:requests", '
-                                        'please change your config')
-
     backend = config.get_cloud_config_value(
         'backend',
         get_configured_provider(), __opts__, search_global=False
@@ -3424,7 +3409,6 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         port=443,
         text=True,
         cert=certificate_path,
-        requests_lib=requests_lib,
         backend=backend,
         decode=decode,
         decode_type='xml',

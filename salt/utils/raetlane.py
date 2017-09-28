@@ -48,6 +48,7 @@ msg = raetlane.wait(share=track, timeout=5.0)
 if not msg:
    raise ValueError("Timed out out waiting for response")
 '''
+# pylint: disable=3rd-party-module-not-gated
 # Import python libs
 from __future__ import absolute_import
 import time
@@ -55,7 +56,7 @@ import time
 # Import Salt Libs
 
 import logging
-from salt.utils import kinds
+import salt.utils.kinds as kinds
 
 log = logging.getLogger(__name__)
 

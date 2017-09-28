@@ -7,20 +7,14 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf
-from tests.unit import ModuleTestCase, hasDependency
-from salttesting.mock import (
-    patch,
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
+    MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-from salt.modules import servicenow
-
-ensure_in_syspath('../../')
-
-SERVICE_NAME = 'servicenow'
-servicenow.__salt__ = {}
+import salt.modules.servicenow as servicenow
 
 
 class MockServiceNowClient(object):
@@ -33,24 +27,22 @@ class MockServiceNowClient(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('servicenow_rest.api.Client', MockServiceNowClient)
-class ServiceNowModuleTestCase(ModuleTestCase):
-    def setUp(self):
-        hasDependency('servicenow_rest')
-        servicenow.Client = MockServiceNowClient
-
-        def get_config(service):
-            if service == SERVICE_NAME:
-                return {
+class ServiceNowModuleTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        module_globals = {
+            'Client': MockServiceNowClient,
+            '__salt__': {
+                'config.option': MagicMock(return_value={
                     'instance_name': 'test',
                     'username': 'mr_test',
                     'password': 'test123'
-                }
-            else:
-                raise KeyError("service name invalid")
-
-        self.setup_loader()
-        self.loader.set_result(servicenow, 'config.option', get_config)
+                })
+            }
+        }
+        if servicenow.HAS_LIBS is False:
+            module_globals['sys.modules'] = {'servicenow_rest': MagicMock()}
+            module_globals['sys.modules']['servicenow_rest'].api.Client = MockServiceNowClient
+        return {servicenow: module_globals}
 
     def test_module_creation(self):
         client = servicenow._get_client()
@@ -73,7 +65,3 @@ class ServiceNowModuleTestCase(ModuleTestCase):
                                                  type='computer')
         self.assertFalse(result is None)
         self.assertEqual(result[0]['query_size'], 22)
-
-if __name__ == '__main__':
-    from unit import run_tests
-    run_tests(ServiceNowModuleTestCase)

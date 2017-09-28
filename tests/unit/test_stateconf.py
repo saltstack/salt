@@ -7,20 +7,17 @@ import os.path
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../')
+from tests.support.unit import TestCase
 
 # Import Salt libs
 import salt.loader
 import salt.config
-import integration
+import tests.integration as integration
 from salt.exceptions import SaltRenderError
 from salt.ext.six.moves import StringIO
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
@@ -52,6 +49,13 @@ class StateConfigRendererTestCase(TestCase):
             self.config,
             {'config.get': lambda a, b: False}
         )
+
+    def tearDown(self):
+        for attrname in ('config', '_renderers'):
+            try:
+                delattr(self, attrname)
+            except AttributeError:
+                continue
 
     def _render_sls(self,
                     content,
@@ -98,8 +102,9 @@ test:
     - name: echo sls_dir={{sls_dir}}
     - cwd: /
 ''', sls='path.to.sls')
-        self.assertEqual(result['test']['cmd.run'][0]['name'],
-                         'echo sls_dir=path/to')
+        self.assertEqual(
+            result['test']['cmd.run'][0]['name'],
+            'echo sls_dir=path{0}to'.format(os.sep))
 
     def test_states_declared_with_shorthand_no_args(self):
         result = self._render_sls('''
@@ -337,8 +342,3 @@ formula/woot.sls:
 
         r = result['formula/woot.sls']['cmd.run'][0]['name']
         self.assertEqual(r, 'echo formula/woot')
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(StateConfigRendererTestCase, needs_daemon=False)

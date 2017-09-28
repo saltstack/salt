@@ -6,7 +6,7 @@ Manage accounts in Samba's passdb using pdbedit
 :maturity:      new
 :platform:      posix
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 '''
 from __future__ import absolute_import
 
@@ -21,6 +21,7 @@ except ImportError:
 
 # Import Salt libs
 import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ def __virtual__():
     '''
     Provides pdbedit if available
     '''
-    if salt.utils.which('pdbedit'):
+    if salt.utils.path.which('pdbedit'):
         return __virtualname__
     return (
         False,

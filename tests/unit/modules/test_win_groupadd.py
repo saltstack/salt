@@ -7,22 +7,19 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import win_groupadd
+import salt.modules.win_groupadd as win_groupadd
 
 # Import Other Libs
-# pylint: disable=W0611
+# pylint: disable=unused-import
 try:
     import win32com
     import pythoncom
@@ -30,19 +27,20 @@ try:
     HAS_WIN_LIBS = True
 except ImportError:
     HAS_WIN_LIBS = False
-# pylint: enable=W0611
-
-
-win_groupadd.__context__ = {}
-win_groupadd.__opts__ = {'test': False}
+# pylint: enable=unused-import
 
 
 @skipIf(not HAS_WIN_LIBS, 'win_groupadd unit tests can only be run if win32com, pythoncom, and pywintypes are installed')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinGroupTestCase(TestCase):
+class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_groupadd
     '''
+    def setup_loader_modules(self):
+        return {
+            win_groupadd: {'__opts__': {'test': False}}
+        }
+
     # 'add' function tests: 1
 
     def test_add(self):
@@ -146,8 +144,3 @@ class WinGroupTestCase(TestCase):
             comment = ['dc=foo membership is correct']
             ret.update({'comment': comment, 'result': None})
             self.assertDictEqual(win_groupadd.members('dc=foo', 'dc=\\user1'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(WinGroupTestCase, needs_daemon=False)

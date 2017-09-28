@@ -4,19 +4,15 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-from salt.pillar import mysql
-from salt.ext.six import PY3
+import salt.pillar.mysql as mysql
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(PY3, 'MySQL-python is not compatible with python3')
+@skipIf(not mysql.HAS_MYSQL, 'Install MySQL bindings before running MySQL unit tests.')
 class MysqlPillarTestCase(TestCase):
     maxDiff = None
 
@@ -572,8 +568,3 @@ class MysqlPillarTestCase(TestCase):
             ]},
              return_data.result
         )
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MysqlPillarTestCase, needs_daemon=False)

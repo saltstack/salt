@@ -7,32 +7,29 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     create_autospec,
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
-from salt.modules import etcd_mod
-from salt.utils import etcd_util
-
-# Globals
-etcd_mod.__opts__ = {}
-etcd_mod.__utils__ = {}
+import salt.modules.etcd_mod as etcd_mod
+import salt.utils.etcd_util as etcd_util
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class EtcdModTestCase(TestCase):
+class EtcdModTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.etcd_mod
     '''
+
+    def setup_loader_modules(self):
+        return {etcd_mod: {}}
 
     def setUp(self):
         self.instance = create_autospec(etcd_util.EtcdClient)
@@ -40,8 +37,8 @@ class EtcdModTestCase(TestCase):
         self.EtcdClientMock.return_value = self.instance
 
     def tearDown(self):
-        self.instance = None
-        self.EtcdClientMock = None
+        del self.instance
+        del self.EtcdClientMock
 
     # 'get_' function tests: 1
 
@@ -193,8 +190,3 @@ class EtcdModTestCase(TestCase):
             self.assertEqual(etcd_mod.watch('/some-dir', True, None, 5, 10),
                              self.instance.watch.return_value)
             self.instance.watch.assert_called_with('/some-dir', recurse=True, timeout=5, index=10)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(EtcdModTestCase, needs_daemon=False)

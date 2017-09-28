@@ -5,26 +5,26 @@ from __future__ import absolute_import
 import textwrap
 
 # Import Salt Libs
-from salt.modules import parallels
+import salt.modules.parallels as parallels
 from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import third party libs
-import salt.ext.six as six
-
-ensure_in_syspath('../../')
-parallels.__salt__ = {}
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ParallelsTestCase(TestCase):
+class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test parallels desktop execution module functions
     '''
+    def setup_loader_modules(self):
+        return {parallels: {}}
+
     def test___virtual__(self):
         '''
         Test parallels.__virtual__
@@ -33,7 +33,7 @@ class ParallelsTestCase(TestCase):
         mock_false = MagicMock(return_value=False)
 
         # Validate false return
-        with patch('salt.utils.which', mock_false):
+        with patch('salt.utils.path.which', mock_false):
             ret = parallels.__virtual__()
             self.assertTrue(isinstance(ret, tuple))
             self.assertEqual(len(ret), 2)
@@ -41,7 +41,7 @@ class ParallelsTestCase(TestCase):
             self.assertTrue(isinstance(ret[1], six.string_types))
 
         # Validate true return
-        with patch('salt.utils.which', mock_true):
+        with patch('salt.utils.path.which', mock_true):
             ret = parallels.__virtual__()
             self.assertTrue(ret)
             self.assertEqual(ret, 'parallels')
@@ -602,8 +602,3 @@ class ParallelsTestCase(TestCase):
                 mock_delete.assert_called_once_with('snapshot-switch',
                                                     [name, '--id', snap_id],
                                                     runas=None)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(ParallelsTestCase, needs_daemon=False)

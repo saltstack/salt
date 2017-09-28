@@ -19,16 +19,15 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed when is_true is moved
+import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 try:
     import salt.utils.pycrypto
     HAS_CRYPT = True
 except ImportError:
     HAS_CRYPT = False
-
-# Import 3rd-party libs
-import salt.ext.six as six
 
 
 def __virtual__():
@@ -291,10 +290,9 @@ def set_password(name, password, use_usermod=False):
         if not os.path.isfile(s_file):
             return ret
         lines = []
-        with salt.utils.fopen(s_file, 'rb') as fp_:
+        with salt.utils.files.fopen(s_file, 'rb') as fp_:
             for line in fp_:
-                if six.PY3:
-                    line = line.decode(__salt_system_encoding__)
+                line = salt.utils.stringutils.to_str(line)
                 comps = line.strip().split(':')
                 if comps[0] != name:
                     lines.append(line)
@@ -304,7 +302,7 @@ def set_password(name, password, use_usermod=False):
                 comps[2] = str(changed_date.days)
                 line = ':'.join(comps)
                 lines.append('{0}\n'.format(line))
-        with salt.utils.fopen(s_file, 'w+') as fp_:
+        with salt.utils.files.fopen(s_file, 'w+') as fp_:
             fp_.writelines(lines)
         uinfo = info(name)
         return uinfo['passwd'] == password
@@ -369,3 +367,18 @@ def set_expire(name, expire):
     '''
     cmd = 'chage -E {0} {1}'.format(expire, name)
     return not __salt__['cmd.run'](cmd, python_shell=False)
+
+
+def list_users():
+    '''
+    .. versionadded:: Oxygen
+
+    Return a list of all shadow users
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.list_users
+    '''
+    return sorted([user.sp_nam for user in spwd.getspall()])

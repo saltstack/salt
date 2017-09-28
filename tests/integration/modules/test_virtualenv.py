@@ -6,24 +6,23 @@ import os
 import tempfile
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from tests.support.case import ModuleCase
+from tests.support.unit import skipIf
+from tests.support.paths import TMP
 
 # Import salt libs
-import integration
-import salt.utils
+import salt.utils.path
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
-class VirtualenvModuleTest(integration.ModuleCase):
+@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+class VirtualenvModuleTest(ModuleCase):
     '''
     Validate the virtualenv module
     '''
     def setUp(self):
         super(VirtualenvModuleTest, self).setUp()
-        self.venv_test_dir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        self.venv_test_dir = tempfile.mkdtemp(dir=TMP)
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
 
     def test_create_defaults(self):
@@ -57,8 +56,3 @@ class VirtualenvModuleTest(integration.ModuleCase):
 
     def tearDown(self):
         self.run_function('file.remove', [self.venv_test_dir])
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(VirtualenvModuleTest)

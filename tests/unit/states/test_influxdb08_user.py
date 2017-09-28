@@ -6,29 +6,26 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import influxdb08_user
-
-influxdb08_user.__salt__ = {}
-influxdb08_user.__opts__ = {}
+import salt.states.influxdb08_user as influxdb08_user
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class InfluxdbUserTestCase(TestCase):
+class InfluxdbUserTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.influxdb08_user
     '''
+    def setup_loader_modules(self):
+        return {influxdb08_user: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -113,8 +110,3 @@ class InfluxdbUserTestCase(TestCase):
                     .format(name))
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(influxdb08_user.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(InfluxdbUserTestCase, needs_daemon=False)

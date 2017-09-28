@@ -4,28 +4,27 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import win_powercfg as powercfg
+import salt.states.win_powercfg as powercfg
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-ensure_in_syspath('../../')
-
-powercfg.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PowerCfgTestCase(TestCase):
+class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the powercfg state
     '''
+    def setup_loader_modules(self):
+        return {powercfg: {}}
+
     def test_set_monitor(self):
         '''
             Test to make sure we can set the monitor timeout value
@@ -61,8 +60,3 @@ class PowerCfgTestCase(TestCase):
         '''
         ret = {'changes': {}, 'comment': 'fakepower is not a power type', 'name': 'monitor', 'result': False}
         self.assertEqual(powercfg.set_timeout("monitor", 0, power="fakepower"), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PowerCfgTestCase, needs_daemon=False)

@@ -7,7 +7,7 @@ from __future__ import absolute_import
 from salt import acl
 
 # Import Salt Testing Libs
-from salttesting import TestCase
+from tests.support.unit import TestCase
 
 
 class ClientACLTestCase(TestCase):
@@ -19,6 +19,9 @@ class ClientACLTestCase(TestCase):
             'users': ['joker', 'penguin', '*bad_*', 'blocked_.*', '^Homer$'],
             'modules': ['cmd.run', 'test.fib', 'rm-rf.*'],
         }
+
+    def tearDown(self):
+        del self.blacklist
 
     def test_user_is_blacklisted(self):
         '''

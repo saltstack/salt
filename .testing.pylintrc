@@ -21,7 +21,9 @@ load-plugins=saltpylint.pep8,
   saltpylint.fileperms,
   saltpylint.py3modernize,
   saltpylint.smartup,
-  saltpylint.minpyver
+  saltpylint.minpyver,
+  saltpylint.blacklist,
+  saltpylint.thirdparty
 
 # Use multiple processes to speed up Pylint.
 # Don't bump this values on PyLint 1.4.0 - Know bug that ignores the passed --rcfile
@@ -38,10 +40,22 @@ extension-pkg-whitelist=
 
 # Fileperms Lint Plugin Settings
 fileperms-default=0644
-fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
+fileperms-ignore-paths=setup.py,tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
 
 # Minimum Python Version To Enforce
 minimum-python-version = 2.7
+
+# Allowed 3rd-party package imports
+allowed-3rd-party-modules = msgpack,
+  tornado,
+  yaml,
+  jinja2,
+  Crypto,
+  requests,
+  libcloud,
+  zmq,
+  pytest,
+  pytestsalt
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show
@@ -57,7 +71,7 @@ confidence=
 # can either give multiple identifiers separated by comma (,) or put this
 # option multiple times (only on the command line, not in the configuration
 # file where it should appear only once).You can also use "--disable=all" to
-# disable everything first and then reenable specific checks. For example, if
+# disable everything first and then re-enable specific checks. For example, if
 # you want to run only the similarities checker, you can use "--disable=all
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
@@ -120,7 +134,8 @@ disable=R,
   E8265,
   E8266,
   E8402,
-  E8731
+  E8731,
+  3rd-party-local-module-not-gated
 
 # Disabled:
 # R* [refactoring suggestions & reports]

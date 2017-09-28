@@ -6,30 +6,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     patch
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.states import smtp
-
-smtp.__opts__ = {}
-smtp.__salt__ = {}
+import salt.states.smtp as smtp
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SmtpTestCase(TestCase):
+class SmtpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.smtp
     '''
+    def setup_loader_modules(self):
+        return {smtp: {}}
+
     # 'send_msg' function tests: 1
 
     def test_send_msg(self):
@@ -66,8 +63,3 @@ class SmtpTestCase(TestCase):
                                                    'Message from Salt',
                                                    'admin@example.com',
                                                    'my-smtp-account'), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(SmtpTestCase, needs_daemon=False)

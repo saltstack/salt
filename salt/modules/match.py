@@ -11,7 +11,7 @@ import sys
 
 # Import salt libs
 import salt.minion
-import salt.utils
+import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.ext.six import string_types
 
@@ -309,7 +309,8 @@ def glob(tgt, minion_id=None):
 def filter_by(lookup,
               tgt_type='compound',
               minion_id=None,
-              expr_form=None):
+              expr_form=None,
+              default='default'):
     '''
     Return the first match in a dictionary of target patterns
 
@@ -323,13 +324,13 @@ def filter_by(lookup,
 
     Pillar Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         # Filter the data for the current minion into a variable:
         {% set roles = salt['match.filter_by']({
             'web*': ['app', 'caching'],
             'db*': ['db'],
-        }) %}
+        }, default='web*') %}
 
         # Make the filtered data available to Pillar:
         roles: {{ roles | yaml() }}
@@ -337,7 +338,7 @@ def filter_by(lookup,
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -353,7 +354,7 @@ def filter_by(lookup,
         if expr_funcs[tgt_type](*params):
             return lookup[key]
 
-    return None
+    return lookup.get(default, None)
 
 
 def search_by(lookup, tgt_type='compound', minion_id=None):
@@ -364,7 +365,7 @@ def search_by(lookup, tgt_type='compound', minion_id=None):
     <salt.modules.match.filter_by>` and allows matching values instead of
     matching keys. A minion can be matched by multiple entries.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     CLI Example:
 

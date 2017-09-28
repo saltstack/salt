@@ -7,31 +7,26 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.mock import (
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
     MagicMock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
 # Import Salt Libs
-from salt.modules import pacman
+import salt.modules.pacman as pacman
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PacmanTestCase(TestCase):
+class PacmanTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pacman
     '''
-
-    def setUp(self):
-        pacman.__salt__ = {}
-        pacman.__context__ = {}
+    def setup_loader_modules(self):
+        return {pacman: {}}
 
     def test_list_pkgs(self):
         '''
@@ -136,7 +131,3 @@ class PacmanTestCase(TestCase):
                 }):
             results = pacman.group_diff('testgroup')
             self.assertEqual(results['default'], {'installed': ['A'], 'not installed': ['C']})
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(PacmanTestCase, needs_daemon=False)

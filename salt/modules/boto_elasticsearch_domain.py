@@ -78,14 +78,14 @@ Connection module for Amazon Elasticsearch Service
 from __future__ import absolute_import
 import logging
 import json
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 

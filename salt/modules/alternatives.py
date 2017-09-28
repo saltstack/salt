@@ -11,7 +11,11 @@ import os
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 __outputter__ = {
@@ -86,8 +90,11 @@ def show_link(name):
     path += 'alternatives/{0}'.format(name)
 
     try:
-        with salt.utils.fopen(path, 'rb') as r_file:
-            return r_file.readlines()[1].rstrip('\n')
+        with salt.utils.files.fopen(path, 'rb') as r_file:
+            contents = r_file.read()
+            if six.PY3:
+                contents = contents.decode(__salt_system_encoding__)
+            return contents.splitlines(True)[1].rstrip('\n')
     except OSError:
         log.error(
             'alternatives: {0} does not exist'.format(name)
@@ -235,4 +242,4 @@ def _read_link(name):
     Throws an OSError if the link does not exist
     '''
     alt_link_path = '/etc/alternatives/{0}'.format(name)
-    return os.readlink(alt_link_path)
+    return salt.utils.path.readlink(alt_link_path)

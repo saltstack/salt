@@ -13,10 +13,10 @@ from __future__ import unicode_literals
 import sys
 import time
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
-from salttesting.helpers import destructiveTest
+from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import destructiveTest
 # Import Salt Libs
-from salt.modules import reg as win_mod_reg
+import salt.modules.reg as win_mod_reg
 from salt.ext import six
 try:
     from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
@@ -27,7 +27,7 @@ except ImportError:
 PY2 = sys.version_info[0] == 2
 # The following used to make sure we are not
 # testing already existing data
-# Note strftime retunrns a str, so we need to make it unicode
+# Note strftime returns a str, so we need to make it unicode
 TIMEINT = int(time.time())
 
 if PY2:
@@ -300,7 +300,3 @@ class RegWinTestCase(TestCase):
 
     # pylint: disable=W0511
     # TODO: Test other hives, other than HKEY_LOCAL_MACHINE and HKEY_CURRENT_USER
-
-if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=C0413
-    run_tests(RegWinTestCase, needs_daemon=False)

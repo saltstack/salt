@@ -30,9 +30,12 @@ import signal
 import select
 import logging
 
+# Import salt libs
+from salt.ext import six
+
 mswindows = (sys.platform == "win32")
 
-if mswindows:
+try:
     # pylint: disable=F0401,W0611
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
@@ -41,7 +44,7 @@ if mswindows:
     import win32con
     import win32process
     # pylint: enable=F0401,W0611
-else:
+except ImportError:
     import pty
     import fcntl
     import struct
@@ -50,6 +53,7 @@ else:
 
 # Import salt libs
 import salt.utils
+import salt.utils.stringutils
 from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 
@@ -566,7 +570,10 @@ class Terminal(object):
             try:
                 if self.stdin_logger:
                     self.stdin_logger.log(self.stdin_logger_level, data)
-                written = os.write(self.child_fd, data)
+                if six.PY3:
+                    written = os.write(self.child_fd, data.encode(__salt_system_encoding__))
+                else:
+                    written = os.write(self.child_fd, data)
             except OSError as why:
                 if why.errno == errno.EPIPE:  # broken pipe
                     os.close(self.child_fd)
@@ -637,7 +644,7 @@ class Terminal(object):
             if self.child_fde in rlist:
                 try:
                     stderr = self._translate_newlines(
-                        salt.utils.to_str(
+                        salt.utils.stringutils.to_str(
                             os.read(self.child_fde, maxsize)
                         )
                     )
@@ -670,7 +677,7 @@ class Terminal(object):
             if self.child_fd in rlist:
                 try:
                     stdout = self._translate_newlines(
-                        salt.utils.to_str(
+                        salt.utils.stringutils.to_str(
                             os.read(self.child_fd, maxsize)
                         )
                     )

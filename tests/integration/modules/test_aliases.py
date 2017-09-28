@@ -4,14 +4,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ModuleCase
 
 
-class AliasesTest(integration.ModuleCase):
+class AliasesTest(ModuleCase):
     '''
     Validate aliases module
     '''
@@ -74,8 +70,3 @@ class AliasesTest(integration.ModuleCase):
                 'aliases.list_aliases')
         self.assertIsInstance(tgt_ret, dict)
         self.assertNotIn('alias=frank', tgt_ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(AliasesTest)

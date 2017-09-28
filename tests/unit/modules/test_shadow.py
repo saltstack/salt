@@ -7,10 +7,9 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salt.utils import is_linux
-from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+import salt.utils.platform
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
 
 # Import salt libs
 try:
@@ -20,7 +19,7 @@ except ImportError:
     HAS_SHADOW = False
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 _PASSWORD = 'lamepassword'
@@ -42,8 +41,11 @@ _HASHES = dict(
 )
 
 
-@skipIf(not is_linux(), 'minion is not Linux')
-class LinuxShadowTest(TestCase):
+@skipIf(not salt.utils.platform.is_linux(), 'minion is not Linux')
+class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {shadow: {}}
 
     def test_gen_password(self):
         '''
@@ -60,6 +62,10 @@ class LinuxShadowTest(TestCase):
                 hash_info['pw_hash']
             )
 
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(LinuxShadowTest, needs_daemon=False)
+    # 'list_users' function tests: 1
+
+    def test_list_users(self):
+        '''
+        Test if it returns a list of all users
+        '''
+        self.assertTrue(shadow.list_users())

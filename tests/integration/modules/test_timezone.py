@@ -9,14 +9,10 @@ Linux and Solaris are supported
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
+from tests.support.case import ModuleCase
 
 
-class TimezoneLinuxModuleTest(integration.ModuleCase):
+class TimezoneLinuxModuleTest(ModuleCase):
     def setUp(self):
         '''
         Set up Linux test environment
@@ -32,7 +28,7 @@ class TimezoneLinuxModuleTest(integration.ModuleCase):
         self.assertIn(ret, timescale)
 
 
-class TimezoneSolarisModuleTest(integration.ModuleCase):
+class TimezoneSolarisModuleTest(ModuleCase):
     def setUp(self):
         '''
         Set up Solaris test environment
@@ -46,8 +42,3 @@ class TimezoneSolarisModuleTest(integration.ModuleCase):
         timescale = ['UTC', 'localtime']
         ret = self.run_function('timezone.get_hwclock')
         self.assertIn(ret, timescale)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests([TimezoneLinuxModuleTest, TimezoneSolarisModuleTest])

@@ -5,14 +5,27 @@ This module allows SPM to use the local filesystem to install files for SPM.
 .. versionadded:: 2015.8.0
 '''
 
+# Import Python libs
 from __future__ import absolute_import
 import os
 import os.path
 import logging
+
+# Import Salt libs
 import salt.syspaths
+import salt.utils.files
+import salt.utils.stringutils
 
 # Get logging started
 log = logging.getLogger(__name__)
+FILE_TYPES = ('c', 'd', 'g', 'l', 'r', 's', 'm')
+# c: config file
+# d: documentation file
+# g: ghost file (i.e. the file contents are not included in the package payload)
+# l: license file
+# r: readme file
+# s: SLS file
+# m: Salt module
 
 
 def init(**kwargs):
@@ -100,9 +113,22 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
 
     tld = formula_def.get('top_level_dir', package)
     new_name = member.name.replace('{0}/'.format(package), '', 1)
-    if not new_name.startswith(tld) and not new_name.startswith('_') and not new_name.startswith('pillar.example'):
+    if not new_name.startswith(tld) and not new_name.startswith('_') and not \
+            new_name.startswith('pillar.example') and not new_name.startswith('README'):
         log.debug('{0} not in top level directory, not installing'.format(new_name))
         return False
+
+    for line in formula_def.get('files', []):
+        tag = ''
+        for ftype in FILE_TYPES:
+            if line.startswith('{0}|'.format(ftype)):
+                tag = line.split('|', 1)[0]
+                line = line.split('|', 1)[1]
+        if tag and new_name == line:
+            if tag in ('c', 'd', 'g', 'l', 'r'):
+                out_path = __opts__['spm_share_dir']
+            elif tag in ('s', 'm'):
+                pass
 
     if new_name.startswith('{0}/_'.format(package)):
         if node_type in ('master', 'minion'):
@@ -158,8 +184,8 @@ def hash_file(path, hashobj, conn=None):
     if os.path.isdir(path):
         return ''
 
-    with salt.utils.fopen(path, 'r') as f:
-        hashobj.update(f.read())
+    with salt.utils.files.fopen(path, 'r') as f:
+        hashobj.update(salt.utils.stringutils.to_bytes(f.read()))
         return hashobj.hexdigest()
 
 

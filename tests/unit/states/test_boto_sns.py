@@ -6,29 +6,22 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    patch)
-
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import skipIf, TestCase
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt Libs
-from salt.states import boto_sns
-
-boto_sns.__salt__ = {}
-boto_sns.__opts__ = {}
+import salt.states.boto_sns as boto_sns
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoSnsTestCase(TestCase):
+class BotoSnsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_sns
     '''
+    def setup_loader_modules(self):
+        return {boto_sns: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -149,8 +142,3 @@ class BotoSnsTestCase(TestCase):
                                     'result': False,
                                     'comment': comt})
                         self.assertDictEqual(boto_sns.absent(name), ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoSnsTestCase, needs_daemon=False)
