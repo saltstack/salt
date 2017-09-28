@@ -12,6 +12,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 # Import salt libs
 import salt.modules.vagrant as vagrant
 import salt.modules.cmdmod as cmd
+import salt.utils.sdb as sdb
 import salt.exceptions
 
 # Import third party libs
@@ -27,7 +28,10 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
     '''
     @classmethod
     def tearDownClass(cls):
-        os.unlink(TEMP_DATABASE_FILE)
+        try:
+            os.unlink(TEMP_DATABASE_FILE)
+        except:
+            pass
 
     def setup_loader_modules(self):
         vagrant_globals = {
@@ -44,6 +48,11 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 'cmd.shell': cmd.shell,
                 'cmd.retcode': cmd.retcode,
             },
+            '__utils__': {
+                'sdb.sdb_set': sdb.sdb_set,
+                'sdb.sdb_get': sdb.sdb_get,
+                'sdb.sdb_delete': sdb.sdb_delete
+            }
         }
         return {vagrant: vagrant_globals}
 
