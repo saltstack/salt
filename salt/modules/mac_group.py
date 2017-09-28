@@ -13,6 +13,7 @@ except ImportError:
 # Import Salt Libs
 import salt.utils
 import salt.utils.itertools
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.mac_user import _dscl, _flush_dscl_cache
 
@@ -48,7 +49,7 @@ def add(name, gid=None, **kwargs):
         raise CommandExecutionError(
             'Group \'{0}\' already exists'.format(name)
         )
-    if salt.utils.contains_whitespace(name):
+    if salt.utils.stringutils.contains_whitespace(name):
         raise SaltInvocationError('Group name cannot contain whitespace')
     if name.startswith('_'):
         raise SaltInvocationError(
@@ -96,7 +97,7 @@ def delete(name):
 
         salt '*' group.delete foo
     '''
-    if salt.utils.contains_whitespace(name):
+    if salt.utils.stringutils.contains_whitespace(name):
         raise SaltInvocationError('Group name cannot contain whitespace')
     if name.startswith('_'):
         raise SaltInvocationError(
@@ -183,7 +184,7 @@ def info(name):
 
         salt '*' group.info foo
     '''
-    if salt.utils.contains_whitespace(name):
+    if salt.utils.stringutils.contains_whitespace(name):
         raise SaltInvocationError('Group name cannot contain whitespace')
     try:
         # getgrnam seems to cache weirdly, so don't use it

@@ -5,7 +5,7 @@ NAPALM YANG
 
 NAPALM YANG basic operations.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 '''
 from __future__ import absolute_import
 
@@ -448,7 +448,7 @@ def load_config(data, models, **kwargs):
 
     Output Example:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         device1:
             ----------
