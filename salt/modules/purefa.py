@@ -31,6 +31,7 @@ Installation Prerequisites
   three methods.
 
   1) From the minion config
+
   .. code-block:: yaml
 
         pure_tags:
