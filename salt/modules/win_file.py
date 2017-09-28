@@ -788,6 +788,31 @@ def chgrp(path, group):
     return None
 
 
+def findstr(path, pattern):
+    '''
+    Searches a text file for a pattern using regular expression and returns
+    the lines of text that match the pattern.
+    Args:
+        path (str): The path to the text file
+        pattern (str): A regular expression used to match a pattern within the
+            file
+
+    Returns:
+        str: Rows within the text file that match the pattern.
+    CLI Example:
+    .. code-block:: bash
+        salt '*' c:\\temp\\test.txt foobar
+    '''
+    cmd = ['findstr', pattern, path]
+
+    try:
+        ret = __salt__['cmd.run'](cmd)
+    except (IOError, OSError) as exc:
+        raise CommandExecutionError(exc.strerror)
+
+    return ret
+
+
 def stats(path, hash_type='sha256', follow_symlinks=True):
     '''
     Return a dict containing the stats for a given file
@@ -1977,3 +2002,4 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True):
         return ret
 
     return {}
+	
