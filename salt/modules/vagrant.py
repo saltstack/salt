@@ -121,11 +121,7 @@ def get_machine_id(machine, cwd):
     :param cwd: the path to Vagrantfile
     :return: salt_id name
     '''
-    name = salt.utils.sdb.sdb_get(_build_machine_uri(machine, cwd))
-    if name is None:
-        raise SaltInvocationError(
-            'No Salt name found for Vagrant machine {} in {}'.format(
-                machine, cwd))
+    name = salt.utils.sdb.sdb_get(_build_machine_uri(machine, cwd), __opts__)
     return name
 
 
@@ -146,7 +142,7 @@ def _erase_vm_info(name):
                 salt.utils.sdb.sdb_delete(key, __opts__)
             except KeyError:
                 # no delete method found -- load a blank value
-                salt.utils.sdb.sdb_set(key, '', __opts__)
+                salt.utils.sdb.sdb_set(key, None, __opts__)
     except Exception:
         pass
 
