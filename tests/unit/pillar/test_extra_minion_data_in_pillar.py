@@ -40,9 +40,10 @@ class ExtraMinionDataInPillarTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, {})
 
     def test_include_all(self):
-        ret = extra_minion_data_in_pillar.ext_pillar(
-            'fake_id', self.pillar, '<all>', self.extra_minion_data)
-        self.assertEqual(ret, self.extra_minion_data)
+        for include_all in ['*', '<all>']:
+            ret = extra_minion_data_in_pillar.ext_pillar(
+                'fake_id', self.pillar, include_all, self.extra_minion_data)
+            self.assertEqual(ret, self.extra_minion_data)
 
     def test_include_specific_keys(self):
         # Tests partially existing key, key with and without subkey,
