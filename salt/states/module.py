@@ -319,13 +319,10 @@ def _call_function(name, returner=None, **kwargs):
     arg_type, na_type, kw_type = [], {}, False
     for funcset in reversed(kwargs.get('func_args') or []):
         if not isinstance(funcset, dict):
-            kw_type = True
-        if kw_type:
-            if isinstance(funcset, dict):
-                arg_type += funcset.values()
-                na_type.update(funcset)
-            else:
                 arg_type.append(funcset)
+        elif isinstance(funcset, dict):
+            arg_type += funcset.values()
+            na_type.update(funcset)
         else:
             func_kw.update(funcset)
     arg_type.reverse()
