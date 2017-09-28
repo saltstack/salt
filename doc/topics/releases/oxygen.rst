@@ -46,6 +46,21 @@ noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
 
+New Grains
+----------
+
+New core grains have been added to expose any storage inititator setting.
+
+The new grains added are:
+
+* ``fc_wwn``: Show all fibre channel world wide port names for a host
+* ``iscsi_iqn``: Show the iSCSI IQN name for a host
+
+New Modules
+-----------
+
+- :mod:`salt.modules.purefa <salt.modules.purefa>`
+
 New NaCl Renderer
 -----------------
 
