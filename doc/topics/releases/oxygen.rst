@@ -8,17 +8,17 @@ Comparison Operators in Package Installation
 --------------------------------------------
 
 Salt now supports using comparison operators (e.g. ``>=1.2.3``) when installing
-packages on minions which use :mod:`yum/dnf <salt.modules.yumpkg>` or :mod:`apt
-<salt.modules.aptpkg>`. This is supported both in the :py:func:`pkg.installed
-<salt.states.pkg.installed>` state and in the ``pkg.install`` remote execution
-function.
+packages on minions which use :mod:`yum/dnf <salt.modules.yumpkg>` or
+:mod:`apt <salt.modules.aptpkg>`. This is supported both in the
+:py:func:`pkg.installed <salt.states.pkg.installed>` state and in the ``pkg.install``
+remote execution function.
 
 :ref:`Master Tops <master-tops-system>` Changes
 -----------------------------------------------
 
-When both :ref:`Master Tops <master-tops-system>` and a :ref:`Top File
-<states-top>` produce SLS matches for a given minion, the matches were being
-merged in an unpredictable manner which did not preserve ordering. This has
+When both :ref:`Master Tops <master-tops-system>` and a
+:ref:`Top File <states-top>` produce SLS matches for a given minion, the matches
+were being merged in an unpredictable manner which did not preserve ordering. This has
 been changed. The top file matches now execute in the expected order, followed
 by any master tops matches that are not matched via a top file.
 
@@ -55,14 +55,14 @@ New support for Cisco UCS Chassis
 ---------------------------------
 
 The salt proxy minion now allows for control of Cisco USC chassis. See
-the `cimc` modules for details.
+the ``cimc`` modules for details.
 
 New salt-ssh roster
 -------------------
 
 A new roster has been added that allows users to pull in a list of hosts
-for salt-ssh targeting from a ~/.ssh configuration. For full details,
-please see the `sshconfig` roster.
+for salt-ssh targeting from a ``~/.ssh`` configuration. For full details,
+please see the ``sshconfig`` roster.
 
 New GitFS Features
 ------------------
@@ -149,185 +149,200 @@ check the configuration for the correct format and only load if the validation p
 - ``avahi_announce`` beacon
 
     Old behavior:
-    ```
-    beacons:
-      avahi_announce:
-        run_once: True
-        servicetype: _demo._tcp
-        port: 1234
-        txt:
-          ProdName: grains.productname
-          SerialNo: grains.serialnumber
-          Comments: 'this is a test'
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          avahi_announce:
+            run_once: True
+            servicetype: _demo._tcp
+            port: 1234
+            txt:
+              ProdName: grains.productname
+              SerialNo: grains.serialnumber
+              Comments: 'this is a test'
 
     New behavior:
-    ```
-    beacons:
-      avahi_announce:
-        - run_once: True
-        - servicetype: _demo._tcp
-        - port: 1234
-        - txt:
-            ProdName: grains.productname
-            SerialNo: grains.serialnumber
-            Comments: 'this is a test'
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          avahi_announce:
+            - run_once: True
+            - servicetype: _demo._tcp
+            - port: 1234
+            - txt:
+                ProdName: grains.productname
+                SerialNo: grains.serialnumber
+                Comments: 'this is a test'
 
  - ``bonjour_announce`` beacon
 
     Old behavior:
-    ```
-    beacons:
-      bonjour_announce:
-        run_once: True
-        servicetype: _demo._tcp
-        port: 1234
-        txt:
-          ProdName: grains.productname
-          SerialNo: grains.serialnumber
-          Comments: 'this is a test'
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          bonjour_announce:
+            run_once: True
+            servicetype: _demo._tcp
+            port: 1234
+            txt:
+              ProdName: grains.productname
+              SerialNo: grains.serialnumber
+              Comments: 'this is a test'
 
     New behavior:
-    ```
-    beacons:
-      bonjour_announce:
-        - run_once: True
-        - servicetype: _demo._tcp
-        - port: 1234
-        - txt:
-            ProdName: grains.productname
-            SerialNo: grains.serialnumber
-            Comments: 'this is a test'
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          bonjour_announce:
+            - run_once: True
+            - servicetype: _demo._tcp
+            - port: 1234
+            - txt:
+                ProdName: grains.productname
+                SerialNo: grains.serialnumber
+                Comments: 'this is a test'
 
 - ``btmp`` beacon
 
     Old behavior:
-    ```
-    beacons:
-      btmp: {}
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          btmp: {}
 
     New behavior:
-    ```
-    beacons:
-      btmp: []
 
-    ```
+    .. code-block:: yaml
+
+        beacons:
+          btmp: []
 
 - ``glxinfo`` beacon
 
     Old behavior:
-    ```
-    beacons:
-      glxinfo:
-        user: frank
-        screen_event: True
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          glxinfo:
+            user: frank
+            screen_event: True
 
     New behavior:
-    ```
-    beacons:
-      glxinfo:
-        - user: frank
-        - screen_event: True
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          glxinfo:
+            - user: frank
+            - screen_event: True
 
 - ``haproxy`` beacon
 
     Old behavior:
-    ```
-    beacons:
-        haproxy:
-            - www-backend:
-                threshold: 45
-                servers:
+
+    .. code-block:: yaml
+
+        beacons:
+            haproxy:
+                - www-backend:
+                    threshold: 45
+                    servers:
+                        - web1
+                        - web2
+                - interval: 120
+
+    New behavior:
+
+    .. code-block:: yaml
+
+        beacons:
+          haproxy:
+            - backends:
+                www-backend:
+                  threshold: 45
+                  servers:
                     - web1
                     - web2
             - interval: 120
-    ```
-
-    New behavior:
-    ```
-    beacons:
-      haproxy:
-        - backends:
-            www-backend:
-              threshold: 45
-              servers:
-                - web1
-                - web2
-        - interval: 120
-    ```
 
 - ``inotify`` beacon
 
     Old behavior:
-    ```
-    beacons:
-      inotify:
-        /path/to/file/or/dir:
-            mask:
-              - open
-              - create
-              - close_write
-            recurse: True
-            auto_add: True
-            exclude:
-              - /path/to/file/or/dir/exclude1
-              - /path/to/file/or/dir/exclude2
-              - /path/to/file/or/dir/regex[a-m]*$:
-            regex: True
-        coalesce: True
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          inotify:
+            /path/to/file/or/dir:
+                mask:
+                  - open
+                  - create
+                  - close_write
+                recurse: True
+                auto_add: True
+                exclude:
+                  - /path/to/file/or/dir/exclude1
+                  - /path/to/file/or/dir/exclude2
+                  - /path/to/file/or/dir/regex[a-m]*$:
+                regex: True
+            coalesce: True
 
     New behavior:
-    ```
-    beacons:
-      inotify:
-        - files:
-            /path/to/file/or/dir:
-              mask:
-                - open
-                - create
-                - close_write
-              recurse: True
-              auto_add: True
-              exclude:
-                - /path/to/file/or/dir/exclude1
-                - /path/to/file/or/dir/exclude2
-                - /path/to/file/or/dir/regex[a-m]*$:
-              regex: True
-        - coalesce: True
-```
+
+    .. code-block:: yaml
+
+        beacons:
+          inotify:
+            - files:
+                /path/to/file/or/dir:
+                  mask:
+                    - open
+                    - create
+                    - close_write
+                  recurse: True
+                  auto_add: True
+                  exclude:
+                    - /path/to/file/or/dir/exclude1
+                    - /path/to/file/or/dir/exclude2
+                    - /path/to/file/or/dir/regex[a-m]*$:
+                  regex: True
+            - coalesce: True
 
 - ``journald`` beacon
 
     Old behavior:
-    ```
-    beacons:
-      journald:
-        sshd:
-          SYSLOG_IDENTIFIER: sshd
-          PRIORITY: 6
-    ```
 
-    New behavior:
-    ```
-    beacons:
-      journald:
-        - services:
+    .. code-block:: yaml
+
+        beacons:
+          journald:
             sshd:
               SYSLOG_IDENTIFIER: sshd
               PRIORITY: 6
-    ```
+
+    New behavior:
+
+    .. code-block:: yaml
+
+        beacons:
+          journald:
+            - services:
+                sshd:
+                  SYSLOG_IDENTIFIER: sshd
+                  PRIORITY: 6
 
 - ``load`` beacon
 
     Old behavior:
-    ```
+
+    .. code-block:: yaml
+
         beacons:
           load:
             1m:
@@ -341,51 +356,55 @@ check the configuration for the correct format and only load if the validation p
               - 1.0
             emitatstartup: True
             onchangeonly: False
-    ```
 
     New behavior:
-    ```
-    beacons:
-      load:
-        - averages:
-            1m:
-              - 0.0
-              - 2.0
-            5m:
-              - 0.0
-              - 1.5
-            15m:
-              - 0.1
-              - 1.0
-        - emitatstartup: True
-        - onchangeonly: False
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          load:
+            - averages:
+                1m:
+                  - 0.0
+                  - 2.0
+                5m:
+                  - 0.0
+                  - 1.5
+                15m:
+                  - 0.1
+                  - 1.0
+            - emitatstartup: True
+            - onchangeonly: False
 
 - ``log`` beacon
 
     Old behavior:
-    ```
-    beacons:
-        log:
-          file: <path>
-          <tag>:
-            regex: <pattern>
-    ```
 
-    New behavior:
-    ```
-    beacons:
-        log:
-          - file: <path>
-          - tags:
+    .. code-block:: yaml
+
+        beacons:
+            log:
+              file: <path>
               <tag>:
                 regex: <pattern>
-    ```
+
+    New behavior:
+
+    .. code-block:: yaml
+
+        beacons:
+            log:
+              - file: <path>
+              - tags:
+                  <tag>:
+                    regex: <pattern>
 
 - ``network_info`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           network_info:
             - eth0:
@@ -398,10 +417,11 @@ check the configuration for the correct format and only load if the validation p
                 errout: 100
                 dropin: 100
                 dropout: 100
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           network_info:
             - interfaces:
@@ -415,12 +435,13 @@ check the configuration for the correct format and only load if the validation p
                   errout: 100
                   dropin: 100
                   dropout: 100
-        ```
 
 - ``network_settings`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           network_settings:
             eth0:
@@ -429,10 +450,11 @@ check the configuration for the correct format and only load if the validation p
                 onvalue: 1
             eth1:
               linkmode:
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           network_settings:
             - interfaces:
@@ -442,12 +464,13 @@ check the configuration for the correct format and only load if the validation p
                       onvalue: 1
                 - eth1:
                     linkmode:
-        ```
 
 - ``proxy_example`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           proxy_example:
             endpoint: beacon
@@ -458,60 +481,66 @@ check the configuration for the correct format and only load if the validation p
         beacons:
           proxy_example:
             - endpoint: beacon
-        ```
 
 - ``ps`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           ps:
             - salt-master: running
             - mysql: stopped
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           ps:
             - processes:
                 salt-master: running
                 mysql: stopped
-        ```
 
 - ``salt_proxy`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           salt_proxy:
             - p8000: {}
             - p8001: {}
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           salt_proxy:
             - proxies:
                 p8000: {}
                 p8001: {}
-        ```
 
 - ``sensehat`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           sensehat:
             humidity: 70%
             temperature: [20, 40]
             temperature_from_pressure: 40
             pressure: 1500
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           sensehat:
             - sensors:
@@ -519,21 +548,22 @@ check the configuration for the correct format and only load if the validation p
                 temperature: [20, 40]
                 temperature_from_pressure: 40
                 pressure: 1500
-        ```
 
 - ``service`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           service:
             salt-master:
             mysql:
 
-        ```
-
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           service:
             - services:
@@ -541,93 +571,102 @@ check the configuration for the correct format and only load if the validation p
                     onchangeonly: True
                     delay: 30
                     uncleanshutdown: /run/nginx.pid
-        ```
 
 - ``sh`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           sh: {}
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           sh: []
-        ```
 
 - ``status`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           status: {}
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           status: []
-        ```
 
 - ``telegram_bot_msg`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           telegram_bot_msg:
             token: "<bot access token>"
             accept_from:
               - "<valid username>"
             interval: 10
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           telegram_bot_msg:
             - token: "<bot access token>"
             - accept_from:
               - "<valid username>"
             - interval: 10
-        ```
 
 - ``twilio_txt_msg`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           twilio_txt_msg:
             account_sid: "<account sid>"
             auth_token: "<auth token>"
             twilio_number: "+15555555555"
             interval: 10
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           twilio_txt_msg:
             - account_sid: "<account sid>"
             - auth_token: "<auth token>"
             - twilio_number: "+15555555555"
             - interval: 10
-        ```
 
 - ``wtmp`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           wtmp: {}
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           wtmp: []
-        ```
 
 Deprecations
 ------------
