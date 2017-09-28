@@ -31,15 +31,14 @@ Complete example in etc/salt/master
 
 
 from __future__ import absolute_import
-import os
 import logging
 
 
 # Set up logging
 log = logging.getLogger(__name__)
 
-
 __virtualname__ = 'extra_minion_data_in_pillar'
+
 
 def __virtual__():
     return __virtualname__
@@ -65,7 +64,7 @@ def ext_pillar(minion_id, pillar, include, extra_minion_data=None):
             # The result will be built in aux_dict
             aux_dict[subkey] = {}
             aux_dict = aux_dict[subkey]
-            if not subkey in subtree:
+            if subkey not in subtree:
                 # The subkey is not in
                 return {}
             subtree = subtree[subkey]
