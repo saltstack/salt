@@ -5672,7 +5672,6 @@ def remove_datastore(datastore, service_instance=None):
     '''
     log.trace('Removing datastore \'{0}\''.format(datastore))
     target = _get_proxy_target(service_instance)
-    taget_name = target.name
     datastores = salt.utils.vmware.get_datastores(
         service_instance,
         reference=target,
@@ -6340,7 +6339,7 @@ def remove_capacity_from_diskgroup(cache_disk_id, capacity_disk_ids,
                              'capacity_ids': capacity_disk_ids}]},
             schema)
     except jsonschema.exceptions.ValidationError as exc:
-        raise ArgumentValueError(exc)
+        raise ArgumentValueError(str(exc))
     host_ref = _get_proxy_target(service_instance)
     hostname = __proxy__['esxi.get_details']()['esxi_host']
     disks = salt.utils.vmware.get_disks(host_ref, disk_ids=capacity_disk_ids)
@@ -6390,7 +6389,6 @@ def remove_diskgroup(cache_disk_id, data_accessibility=True,
         salt '*' vsphere.remove_diskgroup cache_disk_id='naa.000000000000001'
     '''
     log.trace('Validating diskgroup input')
-    schema = DiskGroupsDiskIdSchema.serialize()
     host_ref = _get_proxy_target(service_instance)
     hostname = __proxy__['esxi.get_details']()['esxi_host']
     diskgroups = \
