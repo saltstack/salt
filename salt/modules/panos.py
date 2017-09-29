@@ -7,9 +7,11 @@ Module to provide Palo Alto compatibility to Salt.
 :depends:    none
 :platform:   unix
 
+.. versionadded:: Oxygen
 
 Configuration
 =============
+
 This module accepts connection configuration details either as
 parameters, or as configuration settings in pillar as a Salt proxy.
 Options passed into opts will be ignored if options are passed into pillar.
@@ -19,6 +21,7 @@ Options passed into opts will be ignored if options are passed into pillar.
 
 About
 =====
+
 This execution module was designed to handle connections to a Palo Alto based
 firewall. This module adds support to send connections directly to the device
 through the XML API or through a brokered connection to Panorama.
@@ -31,8 +34,9 @@ import logging
 import time
 
 # Import Salt Libs
-import salt.utils.platform
+from salt.exceptions import CommandExecutionError
 import salt.proxy.panos
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -55,11 +59,11 @@ def __virtual__():
 
 def _get_job_results(query=None):
     '''
-    Executes a query that requires a job for completion. This funciton will wait for the job to complete
+    Executes a query that requires a job for completion. This function will wait for the job to complete
     and return the results.
     '''
     if not query:
-        raise salt.exception.CommandExecutionError("Query parameters cannot be empty.")
+        raise CommandExecutionError("Query parameters cannot be empty.")
 
     response = __proxy__['panos.call'](query)
 
@@ -241,10 +245,10 @@ def download_software_file(filename=None, synch=False):
 
     '''
     if not filename:
-        raise salt.exception.CommandExecutionError("Filename option must not be none.")
+        raise CommandExecutionError("Filename option must not be none.")
 
     if not isinstance(synch, bool):
-        raise salt.exception.CommandExecutionError("Synch option must be boolean..")
+        raise CommandExecutionError("Synch option must be boolean..")
 
     if synch is True:
         query = {'type': 'op',
@@ -276,10 +280,10 @@ def download_software_version(version=None, synch=False):
 
     '''
     if not version:
-        raise salt.exception.CommandExecutionError("Version option must not be none.")
+        raise CommandExecutionError("Version option must not be none.")
 
     if not isinstance(synch, bool):
-        raise salt.exception.CommandExecutionError("Synch option must be boolean..")
+        raise CommandExecutionError("Synch option must be boolean..")
 
     if synch is True:
         query = {'type': 'op',
@@ -694,7 +698,7 @@ def get_job(jid=None):
 
     '''
     if not jid:
-        raise salt.exception.CommandExecutionError("ID option must not be none.")
+        raise CommandExecutionError("ID option must not be none.")
 
     query = {'type': 'op', 'cmd': '<show><jobs><id>{0}</id></jobs></show>'.format(jid)}
 
@@ -725,7 +729,7 @@ def get_jobs(state='all'):
     elif state.lower() == 'processed':
         query = {'type': 'op', 'cmd': '<show><jobs><processed></processed></jobs></show>'}
     else:
-        raise salt.exception.CommandExecutionError("The state parameter must be all, pending, or processed.")
+        raise CommandExecutionError("The state parameter must be all, pending, or processed.")
 
     return __proxy__['panos.call'](query)
 
@@ -1355,7 +1359,7 @@ def install_antivirus(version=None, latest=False, synch=False, skip_commit=False
 
     '''
     if not version and latest is False:
-        raise salt.exception.CommandExecutionError("Version option must not be none.")
+        raise CommandExecutionError("Version option must not be none.")
 
     if synch is True:
         s = "yes"
@@ -1412,7 +1416,7 @@ def install_software(version=None):
 
     '''
     if not version:
-        raise salt.exception.CommandExecutionError("Version option must not be none.")
+        raise CommandExecutionError("Version option must not be none.")
 
     query = {'type': 'op',
              'cmd': '<request><system><software><install>'
@@ -1453,7 +1457,7 @@ def refresh_fqdn_cache(force=False):
 
     '''
     if not isinstance(force, bool):
-        raise salt.exception.CommandExecutionError("Force option must be boolean.")
+        raise CommandExecutionError("Force option must be boolean.")
 
     if force:
         query = {'type': 'op',
@@ -1504,7 +1508,7 @@ def resolve_address(address=None, vsys=None):
         return False, 'The panos device requires version {0} or greater for this command.'.format(_required_version)
 
     if not address:
-        raise salt.exception.CommandExecutionError("FQDN to resolve must be provided as address.")
+        raise CommandExecutionError("FQDN to resolve must be provided as address.")
 
     if not vsys:
         query = {'type': 'op',
@@ -1532,7 +1536,7 @@ def save_device_config(filename=None):
 
     '''
     if not filename:
-        raise salt.exception.CommandExecutionError("Filename must not be empty.")
+        raise CommandExecutionError("Filename must not be empty.")
 
     query = {'type': 'op', 'cmd': '<save><config><to>{0}</to></config></save>'.format(filename)}
 
@@ -1574,7 +1578,7 @@ def set_authentication_profile(profile=None, deploy=False):
     '''
 
     if not profile:
-        salt.exception.CommandExecutionError("Profile name option must not be none.")
+        CommandExecutionError("Profile name option must not be none.")
 
     ret = {}
 
@@ -1611,7 +1615,7 @@ def set_hostname(hostname=None, deploy=False):
     '''
 
     if not hostname:
-        salt.exception.CommandExecutionError("Hostname option must not be none.")
+        CommandExecutionError("Hostname option must not be none.")
 
     ret = {}
 
@@ -1651,7 +1655,7 @@ def set_management_icmp(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1691,7 +1695,7 @@ def set_management_http(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1731,7 +1735,7 @@ def set_management_https(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1771,7 +1775,7 @@ def set_management_ocsp(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1811,7 +1815,7 @@ def set_management_snmp(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1851,7 +1855,7 @@ def set_management_ssh(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -1891,7 +1895,7 @@ def set_management_telnet(enabled=True, deploy=False):
     elif enabled is False:
         value = "yes"
     else:
-        salt.exception.CommandExecutionError("Invalid option provided for service enabled option.")
+        CommandExecutionError("Invalid option provided for service enabled option.")
 
     ret = {}
 
@@ -2084,7 +2088,7 @@ def set_permitted_ip(address=None, deploy=False):
     '''
 
     if not address:
-        salt.exception.CommandExecutionError("Address option must not be empty.")
+        CommandExecutionError("Address option must not be empty.")
 
     ret = {}
 
@@ -2120,7 +2124,7 @@ def set_timezone(tz=None, deploy=False):
     '''
 
     if not tz:
-        salt.exception.CommandExecutionError("Timezone name option must not be none.")
+        CommandExecutionError("Timezone name option must not be none.")
 
     ret = {}
 
@@ -2168,7 +2172,7 @@ def unlock_admin(username=None):
 
     '''
     if not username:
-        raise salt.exception.CommandExecutionError("Username option must not be none.")
+        raise CommandExecutionError("Username option must not be none.")
 
     query = {'type': 'op',
              'cmd': '<set><management-server><unlock><admin>{0}</admin></unlock></management-server>'
