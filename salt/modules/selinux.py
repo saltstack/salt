@@ -464,7 +464,7 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
     cmd_kwargs['filetype'] = '[[:alpha:] ]+' if filetype is None else filetype_id_to_string(filetype)
     cmd = 'semanage fcontext -l | egrep ' + \
           "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}$'".format(**cmd_kwargs)
-    current_entry_text = __salt__['cmd.shell'](cmd)
+    current_entry_text = __salt__['cmd.shell'](cmd, ignore_retcode=True)
     if current_entry_text == '':
         return None
     ret = {}

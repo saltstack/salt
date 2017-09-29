@@ -18,6 +18,7 @@ import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
 import salt.serializers.msgpack as msgpack
 import salt.serializers.python as python
+from salt.serializers.yaml import EncryptedString
 from salt.serializers import SerializationError
 from salt.utils.odict import OrderedDict
 
@@ -43,10 +44,11 @@ class TestSerializers(TestCase):
     @skipIf(not yaml.available, SKIP_MESSAGE % 'yaml')
     def test_serialize_yaml(self):
         data = {
-            "foo": "bar"
+            "foo": "bar",
+            "encrypted_data": EncryptedString("foo")
         }
         serialized = yaml.serialize(data)
-        assert serialized == '{foo: bar}', serialized
+        assert serialized == '{encrypted_data: !encrypted foo, foo: bar}', serialized
 
         deserialized = yaml.deserialize(serialized)
         assert deserialized == data, deserialized

@@ -68,9 +68,7 @@ class _Puppet(object):
             self.vardir = 'C:\\ProgramData\\PuppetLabs\\puppet\\var'
             self.rundir = 'C:\\ProgramData\\PuppetLabs\\puppet\\run'
             self.confdir = 'C:\\ProgramData\\PuppetLabs\\puppet\\etc'
-            self.useshell = True
         else:
-            self.useshell = False
             self.puppet_version = __salt__['cmd.run']('puppet --version')
             if 'Enterprise' in self.puppet_version:
                 self.vardir = '/var/opt/lib/pe-puppet'
@@ -106,7 +104,10 @@ class _Puppet(object):
             ' --{0} {1}'.format(k, v) for k, v in six.iteritems(self.kwargs)]
         )
 
-        return '{0} {1}'.format(cmd, args)
+        # Ensure that the puppet call will return 0 in case of exit code 2
+        if salt.utils.platform.is_windows():
+            return 'cmd /V:ON /c {0} {1} ^& if !ERRORLEVEL! EQU 2 (EXIT 0) ELSE (EXIT /B)'.format(cmd, args)
+        return '({0} {1}) || test $? -eq 2'.format(cmd, args)
 
     def arguments(self, args=None):
         '''
@@ -169,12 +170,7 @@ def run(*args, **kwargs):
 
     puppet.kwargs.update(salt.utils.args.clean_kwargs(**kwargs))
 
-    ret = __salt__['cmd.run_all'](repr(puppet), python_shell=puppet.useshell)
-    if ret['retcode'] in [0, 2]:
-        ret['retcode'] = 0
-    else:
-        ret['retcode'] = 1
-
+    ret = __salt__['cmd.run_all'](repr(puppet), python_shell=True)
     return ret
 
 
