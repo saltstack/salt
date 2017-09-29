@@ -17,7 +17,6 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.mount as mount
-import salt.utils
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
