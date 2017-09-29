@@ -150,10 +150,6 @@ class GetVsanDiskManagementSystemTestCase(TestCase, LoaderModuleMockMixin):
             'ssl': MagicMock()}}
 
     def setUp(self):
-        self.stub_mock = MagicMock()
-        self.si_mock = MagicMock(_stub=self.stub_mock)
-
-    def setUp(self):
         self.mock_si = MagicMock()
         self.mock_ret = MagicMock()
         patches = (('salt.utils.vsan.vsanapiutils.GetVsanVcMos',
@@ -198,7 +194,6 @@ class GetVsanDiskManagementSystemTestCase(TestCase, LoaderModuleMockMixin):
     def test_return(self):
         ret = vsan.get_vsan_disk_management_system(self.mock_si)
         self.assertEqual(ret, self.mock_ret)
-
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -362,7 +357,7 @@ class CreateDiskgroupTestCase(TestCase):
                          'Fake privilege')
 
     def test_initialize_disk_mapping_raise_vim_fault(self):
-        err =  vim.fault.VimFault()
+        err = vim.fault.VimFault()
         err.msg = 'vim_fault'
         self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
             MagicMock(side_effect=err)
@@ -497,7 +492,7 @@ class AddCapacityToDiskGroupTestCase(TestCase):
                          'Fake privilege')
 
     def test_initialize_disk_mapping_raise_vim_fault(self):
-        err =  vim.fault.VimFault()
+        err = vim.fault.VimFault()
         err.msg = 'vim_fault'
         self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
             MagicMock(side_effect=err)
@@ -620,7 +615,7 @@ class RemoveCapacityFromDiskGroup(TestCase):
     def test_remove_disk_raise_no_permission(self):
         err = vim.fault.NoPermission()
         err.privilegeId = 'Fake privilege'
-        self.mock_host_vsan_system.RemoveDisk_Task= \
+        self.mock_host_vsan_system.RemoveDisk_Task = \
             MagicMock(side_effect=err)
         with self.assertRaises(VMwareApiError) as excinfo:
             vsan.remove_capacity_from_diskgroup(
@@ -631,9 +626,9 @@ class RemoveCapacityFromDiskGroup(TestCase):
                          'Fake privilege')
 
     def test_remove_disk_raise_vim_fault(self):
-        err =  vim.fault.VimFault()
+        err = vim.fault.VimFault()
         err.msg = 'vim_fault'
-        self.mock_host_vsan_system.RemoveDisk_Task= \
+        self.mock_host_vsan_system.RemoveDisk_Task = \
             MagicMock(side_effect=err)
         with self.assertRaises(VMwareApiError) as excinfo:
             vsan.remove_capacity_from_diskgroup(
@@ -644,7 +639,7 @@ class RemoveCapacityFromDiskGroup(TestCase):
     def test_remove_disk_raise_runtime_fault(self):
         err = vmodl.RuntimeFault()
         err.msg = 'runtime_fault'
-        self.mock_host_vsan_system.RemoveDisk_Task= \
+        self.mock_host_vsan_system.RemoveDisk_Task = \
             MagicMock(side_effect=err)
         with self.assertRaises(VMwareRuntimeError) as excinfo:
             vsan.remove_capacity_from_diskgroup(
@@ -744,7 +739,7 @@ class RemoveDiskgroup(TestCase):
             self.mock_si, self.mock_host_ref, self.mock_diskgroup)
         err = vim.fault.NoPermission()
         err.privilegeId = 'Fake privilege'
-        self.mock_host_vsan_system.RemoveDiskMapping_Task= \
+        self.mock_host_vsan_system.RemoveDiskMapping_Task = \
             MagicMock(side_effect=err)
         with self.assertRaises(VMwareApiError) as excinfo:
             vsan.remove_diskgroup(
@@ -754,9 +749,9 @@ class RemoveDiskgroup(TestCase):
                          'Fake privilege')
 
     def test_remove_disk_mapping_raise_vim_fault(self):
-        err =  vim.fault.VimFault()
+        err = vim.fault.VimFault()
         err.msg = 'vim_fault'
-        self.mock_host_vsan_system.RemoveDiskMapping_Task= \
+        self.mock_host_vsan_system.RemoveDiskMapping_Task = \
             MagicMock(side_effect=err)
         with self.assertRaises(VMwareApiError) as excinfo:
             vsan.remove_diskgroup(
@@ -766,7 +761,7 @@ class RemoveDiskgroup(TestCase):
     def test_remove_disk_mapping_raise_runtime_fault(self):
         err = vmodl.RuntimeFault()
         err.msg = 'runtime_fault'
-        self.mock_host_vsan_system.RemoveDiskMapping_Task= \
+        self.mock_host_vsan_system.RemoveDiskMapping_Task = \
             MagicMock(side_effect=err)
         with self.assertRaises(VMwareRuntimeError) as excinfo:
             vsan.remove_diskgroup(
