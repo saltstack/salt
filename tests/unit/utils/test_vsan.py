@@ -200,6 +200,90 @@ class GetVsanDiskManagementSystemTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, self.mock_ret)
 
 
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
+class GetHostVsanSystemTestCase(TestCase):
+    '''Tests for salt.utils.vsan.get_host_vsan_system'''
+
+    def setUp(self):
+        self.mock_host_ref = MagicMock()
+        self.mock_si = MagicMock()
+        self.mock_traversal_spec = MagicMock()
+        self.mock_vsan_system = MagicMock()
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name',
+             MagicMock(return_value='fake_hostname')),
+            ('salt.utils.vsan.vmodl.query.PropertyCollector.TraversalSpec',
+             MagicMock(return_value=self.mock_traversal_spec)),
+            ('salt.utils.vmware.get_mors_with_properties',
+             MagicMock(return_value=self.mock_traversal_spec)),
+            ('salt.utils.vmware.get_mors_with_properties',
+             MagicMock(return_value=[{'object': self.mock_vsan_system}])))
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def test_get_hostname(self):
+        mock_get_managed_object_name = MagicMock(return_value='fake_hostname')
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   mock_get_managed_object_name):
+            vsan.get_host_vsan_system(self.mock_si, self.mock_host_ref)
+        mock_get_managed_object_name.assert_called_once_with(
+            self.mock_host_ref)
+
+    def test_hostname_argument(self):
+        mock_get_managed_object_name = MagicMock(return_value='fake_hostname')
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   MagicMock(return_value='fake_hostname')):
+            vsan.get_host_vsan_system(self.mock_si,
+                                      self.mock_host_ref,
+                                      hostname='passedin_hostname')
+        self.assertEqual(mock_get_managed_object_name.call_count, 0)
+
+    def test_traversal_spec(self):
+        mock_traversal_spec = MagicMock(return_value=self.mock_traversal_spec)
+        with patch(
+            'salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec',
+            mock_traversal_spec):
+
+            vsan.get_host_vsan_system(self.mock_si, self.mock_host_ref)
+        mock_traversal_spec.assert_called_once_with(
+            path='configManager.vsanSystem',
+            type=vim.HostSystem,
+            skip=False)
+
+    def test_get_mors_with_properties(self):
+        mock_get_mors = \
+                MagicMock(return_value=[{'object': self.mock_vsan_system}])
+        with patch('salt.utils.vmware.get_mors_with_properties',
+                   mock_get_mors):
+            vsan.get_host_vsan_system(self.mock_si, self.mock_host_ref)
+        mock_get_mors.assert_called_once_with(
+            self.mock_si,
+            vim.HostVsanSystem,
+            property_list=['config.enabled'],
+            container_ref=self.mock_host_ref,
+            traversal_spec=self.mock_traversal_spec)
+
+    def test_empty_mors_result(self):
+        mock_get_mors = MagicMock(return_value=None)
+        with patch('salt.utils.vmware.get_mors_with_properties',
+                   mock_get_mors):
+
+            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                vsan.get_host_vsan_system(self.mock_si, self.mock_host_ref)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Host\'s \'fake_hostname\' VSAN system was '
+                         'not retrieved')
+
+    def test_valid_mors_result(self):
+        res = vsan.get_host_vsan_system(self.mock_si, self.mock_host_ref)
+        self.assertEqual(res, self.mock_vsan_system)
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
