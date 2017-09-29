@@ -1,0 +1,16 @@
+states:
+  - user_mgt
+
+pillars:
+  default:
+    users:
+      adm1:
+        uid: 1201
+        gid: 1201
+        gecos: 'Super user admin1'
+        homedir: /home/adm1
+      adm2:
+        uid: 1202
+        gid: 1202
+        gecos: 'Super user admin2'
+        homedir: /home/adm2

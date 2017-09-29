@@ -517,7 +517,8 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
 
     health = __salt__['boto_elb.get_instance_health'](
             name, region, key, keyid, profile)
-    nodes = [value['instance_id'] for value in health]
+    nodes = [value['instance_id'] for value in health
+             if value['description'] != 'Instance deregistration currently in progress.']
     new = [value for value in instances if value not in nodes]
     if not len(new):
         msg = 'Instance/s {0} already exist.'.format(str(instances).strip('[]'))
@@ -1312,7 +1313,7 @@ def _tags_present(name, tags, region, key, keyid, profile):
         tags_to_add = tags
         tags_to_update = {}
         tags_to_remove = []
-        if lb['tags']:
+        if lb.get('tags'):
             for _tag in lb['tags']:
                 if _tag not in tags.keys():
                     if _tag not in tags_to_remove:

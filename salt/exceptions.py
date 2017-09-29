@@ -266,6 +266,12 @@ class SaltCacheError(SaltException):
     '''
 
 
+class TimeoutError(SaltException):
+    '''
+    Thrown when an opration cannot be completet within a given time limit.
+    '''
+
+
 class SaltReqTimeoutError(SaltException):
     '''
     Thrown when a salt master request call fails to return within the timeout
@@ -393,7 +399,19 @@ class TemplateError(SaltException):
 # Validation related exceptions
 class InvalidConfigError(CommandExecutionError):
     '''
-    Used when the input is invalid
+    Used when the config is invalid
+    '''
+
+
+class ArgumentValueError(CommandExecutionError):
+    '''
+    Used when an invalid argument was passed to a command execution
+    '''
+
+
+class InvalidEntityError(CommandExecutionError):
+    '''
+    Used when an entity fails validation
     '''
 
 
@@ -421,6 +439,18 @@ class VMwareConnectionError(VMwareSaltError):
 class VMwareObjectRetrievalError(VMwareSaltError):
     '''
     Used when a VMware object cannot be retrieved
+    '''
+
+
+class VMwareObjectExistsError(VMwareSaltError):
+    '''
+    Used when a VMware object exists
+    '''
+
+
+class VMwareObjectNotFoundError(VMwareSaltError):
+    '''
+    Used when a VMware object was not found
     '''
 
 

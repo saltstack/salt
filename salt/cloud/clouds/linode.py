@@ -44,9 +44,6 @@ from salt.exceptions import (
     SaltCloudSystemExit
 )
 
-# Import Salt-Cloud Libs
-import salt.utils.cloud
-
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -1193,7 +1190,7 @@ def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields.
     '''
-    return salt.utils.cloud.list_nodes_select(
+    return __utils__['cloud.list_nodes_select'](
         list_nodes_full(), __opts__['query.selection'], call,
     )
 
@@ -1503,7 +1500,7 @@ def _query(action=None,
     if LASTCALL >= now:
         time.sleep(ratelimit_sleep)
 
-    result = salt.utils.http.query(
+    result = __utils__['http.query'](
         url,
         method,
         params=args,

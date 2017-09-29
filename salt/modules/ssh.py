@@ -153,12 +153,19 @@ def _replace_auth_key(
         # open the file for both reading AND writing
         with salt.utils.files.fopen(full, 'r') as _fh:
             for line in _fh:
+                # We don't need any whitespace-only containing lines or arbitrary doubled newlines
+                line = line.strip()
+                if line == '':
+                    continue
+                line += '\n'
+
                 if line.startswith('#'):
                     # Commented Line
                     lines.append(line)
                     continue
                 comps = re.findall(r'((.*)\s)?(ssh-[a-z0-9-]+|ecdsa-[a-z0-9-]+)\s([a-zA-Z0-9+/]+={0,2})(\s(.*))?', line)
                 if len(comps) > 0 and len(comps[0]) > 3 and comps[0][3] == key:
+                    # Found our key, replace it
                     lines.append(auth_line)
                 else:
                     lines.append(line)
@@ -183,6 +190,12 @@ def _validate_keys(key_file, fingerprint_hash_type):
     try:
         with salt.utils.files.fopen(key_file, 'r') as _fh:
             for line in _fh:
+                # We don't need any whitespace-only containing lines or arbitrary doubled newlines
+                line = line.strip()
+                if line == '':
+                    continue
+                line += '\n'
+
                 if line.startswith('#'):
                     # Commented Line
                     continue
@@ -572,6 +585,12 @@ def rm_auth_key(user,
             # and then write out the correct one. Open the file once
             with salt.utils.files.fopen(full, 'r') as _fh:
                 for line in _fh:
+                    # We don't need any whitespace-only containing lines or arbitrary doubled newlines
+                    line = line.strip()
+                    if line == '':
+                        continue
+                    line += '\n'
+
                     if line.startswith('#'):
                         # Commented Line
                         lines.append(line)
@@ -750,10 +769,13 @@ def set_auth_key(
             with salt.utils.files.fopen(fconfig, 'ab+') as _fh:
                 if new_file is False:
                     # Let's make sure we have a new line at the end of the file
-                    _fh.seek(1024, 2)
-                    if not _fh.read(1024).rstrip(six.b(' ')).endswith(six.b('\n')):
-                        _fh.seek(0, 2)
-                        _fh.write(six.b('\n'))
+                    _fh.seek(0, 2)
+                    if _fh.tell() > 0:
+                        # File isn't empty, check if last byte is a newline
+                        # If not, add one
+                        _fh.seek(-1, 2)
+                        if _fh.read(1) != six.b('\n'):
+                            _fh.write(six.b('\n'))
                 if six.PY3:
                     auth_line = auth_line.encode(__salt_system_encoding__)
                 _fh.write(auth_line)
@@ -779,6 +801,12 @@ def _parse_openssh_output(lines, fingerprint_hash_type=None):
     and yield dict with keys information, one by one.
     '''
     for line in lines:
+        # We don't need any whitespace-only containing lines or arbitrary doubled newlines
+        line = line.strip()
+        if line == '':
+            continue
+        line += '\n'
+
         if line.startswith('#'):
             continue
         try:

@@ -968,7 +968,14 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
             # We've loaded and merged options into the configuration, it's safe
             # to query about the pidfile
             if self.check_pidfile():
-                os.unlink(self.config['pidfile'])
+                try:
+                    os.unlink(self.config['pidfile'])
+                except OSError as err:
+                    self.info(
+                        'PIDfile could not be deleted: {0}'.format(
+                            self.config['pidfile']
+                        )
+                    )
 
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
@@ -1547,7 +1554,7 @@ class CloudQueriesMixIn(six.with_metaclass(MixInMeta, object)):
             action='store',
             help='Display a list of configured profiles. Pass in a cloud '
                  'provider to view the provider\'s associated profiles, '
-                 'such as digital_ocean, or pass in "all" to list all the '
+                 'such as digitalocean, or pass in "all" to list all the '
                  'configured profiles.'
         )
         self.add_option_group(group)
@@ -2200,9 +2207,17 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
     def _mixin_setup(self):
         file_opts_group = optparse.OptionGroup(self, 'File Options')
         file_opts_group.add_option(
+            '-C', '--chunked',
+            default=False,
+            dest='chunked',
+            action='store_true',
+            help='Use chunked files transfer. Supports big files, recursive '
+                 'lookup and directories creation.'
+        )
+        file_opts_group.add_option(
             '-n', '--no-compression',
             default=True,
-            dest='compression',
+            dest='gzip',
             action='store_false',
             help='Disable gzip compression.'
         )
@@ -2223,7 +2238,6 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
             self.config['tgt'] = self.args[0]
         self.config['src'] = [os.path.realpath(x) for x in self.args[1:-1]]
         self.config['dest'] = self.args[-1]
-        self.config['gzip'] = True
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
@@ -2395,6 +2409,16 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                   'Default: %default.')
         )
 
+        self.add_option(
+            '--preserve-minions',
+            default=False,
+            help=('Setting this to True prevents the master from deleting '
+                  'the minion cache when keys are deleted, this may have '
+                  'security implications if compromised minions auth with '
+                  'a previous deleted minion ID. '
+                  'Default: %default.')
+        )
+
         key_options_group = optparse.OptionGroup(
             self, 'Key Generation Options'
         )
@@ -2493,6 +2517,13 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                 self.options.rotate_aes_key = True
             elif self.options.rotate_aes_key.lower() == 'false':
                 self.options.rotate_aes_key = False
+
+    def process_preserve_minions(self):
+        if hasattr(self.options, 'preserve_minions') and isinstance(self.options.preserve_minions, str):
+            if self.options.preserve_minions.lower() == 'true':
+                self.options.preserve_minions = True
+            elif self.options.preserve_minions.lower() == 'false':
+                self.options.preserve_minions = False
 
     def process_list(self):
         # Filter accepted list arguments as soon as possible

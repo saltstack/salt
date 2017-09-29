@@ -23,6 +23,10 @@ import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
+__func_alias__ = {
+    'format_': 'format'
+}
+
 log = logging.getLogger(__name__)
 
 HAS_HDPARM = salt.utils.path.which('hdparm') is not None

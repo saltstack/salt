@@ -108,6 +108,10 @@ A REST API for Salt
         Collect and report statistics about the CherryPy server
 
         Reports are available via the :py:class:`Stats` URL.
+    stats_disable_auth : False
+        Do not require authentication to access the ``/stats`` endpoint.
+
+        .. versionadded:: Oxygen
     static
         A filesystem path to static HTML/JavaScript/CSS/image assets.
     static_path : ``/static``
@@ -2707,6 +2711,10 @@ class Stats(object):
     _cp_config = dict(LowDataAdapter._cp_config, **{
         'tools.salt_auth.on': True,
     })
+
+    def __init__(self):
+        if cherrypy.config['apiopts'].get('stats_disable_auth'):
+            self._cp_config['tools.salt_auth.on'] = False
 
     def GET(self):
         '''

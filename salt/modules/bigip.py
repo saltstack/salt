@@ -1164,7 +1164,7 @@ def delete_pool_member(hostname, username, password, name, member):
 
     CLI Example::
 
-        salt '*' bigip.delete_node bigip admin admin my-pool 10.2.2.2:80
+        salt '*' bigip.delete_pool_member bigip admin admin my-pool 10.2.2.2:80
     '''
 
     #build session

@@ -118,7 +118,7 @@ class NetworkTestCase(TestCase):
                         (2, 1, 6, '', ('192.30.255.113', 0)),
                     ],
                     'ipv6host.foo': [
-                        (10, 1, 6, '', ('2001:a71::1', 0, 0, 0)),
+                        (socket.AF_INET6, 1, 6, '', ('2001:a71::1', 0, 0, 0)),
                     ],
                 }[host]
             except KeyError:

@@ -36,7 +36,8 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it execute a chef client run and return a dict
         '''
-        self.assertDictEqual(chef.client(), {})
+        with patch.dict(chef.__opts__, {'cachedir': r'c:\salt\var\cache\salt\minion'}):
+            self.assertDictEqual(chef.client(), {})
 
     # 'solo' function tests: 1
 
@@ -44,4 +45,5 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it execute a chef solo run and return a dict
         '''
-        self.assertDictEqual(chef.solo('/dev/sda1'), {})
+        with patch.dict(chef.__opts__, {'cachedir': r'c:\salt\var\cache\salt\minion'}):
+            self.assertDictEqual(chef.solo('/dev/sda1'), {})
