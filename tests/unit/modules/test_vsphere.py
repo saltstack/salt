@@ -1174,6 +1174,92 @@ class CreateDatacenterTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+class EraseDiskPartitionsTestCase(TestCase, LoaderModuleMockMixin):
+    '''Tests for salt.modules.vsphere.erase_disk_partitions'''
+    def setup_loader_modules(self):
+        return {
+            vsphere: {
+                '__virtual__': MagicMock(return_value='vsphere'),
+                '_get_proxy_connection_details': MagicMock(),
+                '__proxy__': {'esxi.get_details': MagicMock(
+                    return_value={'esxi_host': 'fake_host'})}
+            }
+        }
+
+    def setUp(self):
+        attrs = (('mock_si', MagicMock()),
+                 ('mock_host', MagicMock()))
+        for attr, mock_obj in attrs:
+            setattr(self, attr, mock_obj)
+            self.addCleanup(delattr, self, attr)
+        attrs = (('mock_proxy_target', MagicMock(return_value=self.mock_host)),
+                 ('mock_erase_disk_partitions', MagicMock()))
+        for attr, mock_obj in attrs:
+            setattr(self, attr, mock_obj)
+            self.addCleanup(delattr, self, attr)
+
+        patches = (
+            ('salt.utils.vmware.get_service_instance',
+             MagicMock(return_value=self.mock_si)),
+            ('salt.modules.vsphere.get_proxy_type',
+             MagicMock(return_value='esxi')),
+            ('salt.modules.vsphere._get_proxy_target',
+             MagicMock(return_value=self.mock_host)),
+            ('salt.utils.vmware.erase_disk_partitions',
+             self.mock_erase_disk_partitions))
+        for module, mock_obj in patches:
+            patcher = patch(module, mock_obj)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def test_supported_proxies(self):
+        supported_proxies = ['esxi']
+        for proxy_type in supported_proxies:
+            with patch('salt.modules.vsphere.get_proxy_type',
+                       MagicMock(return_value=proxy_type)):
+                vsphere.erase_disk_partitions(disk_id='fake_disk')
+
+    def test_no_disk_id_or_scsi_address(self):
+        with self.assertRaises(ArgumentValueError) as excinfo:
+            vsphere.erase_disk_partitions()
+        self.assertEqual('Either \'disk_id\' or \'scsi_address\' needs to '
+                         'be specified', excinfo.exception.strerror)
+
+    def test_get_proxy_target(self):
+        mock_test_proxy_target = MagicMock()
+        with patch('salt.modules.vsphere._get_proxy_target',
+                   mock_test_proxy_target):
+            vsphere.erase_disk_partitions(disk_id='fake_disk')
+        mock_test_proxy_target.assert_called_once_with(self.mock_si)
+
+    def test_scsi_address_not_found(self):
+        mock = MagicMock(return_value={'bad_scsi_address': 'bad_disk_id'})
+        with patch('salt.utils.vmware.get_scsi_address_to_lun_map', mock):
+            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                vsphere.erase_disk_partitions(scsi_address='fake_scsi_address')
+        self.assertEqual('Scsi lun with address \'fake_scsi_address\' was '
+                         'not found on host \'fake_host\'',
+                         excinfo.exception.strerror)
+
+    def test_scsi_address_to_disk_id_map(self):
+        mock_disk_id = MagicMock(canonicalName='fake_scsi_disk_id')
+        mock_get_scsi_addr_to_lun = \
+                MagicMock(return_value={'fake_scsi_address': mock_disk_id})
+        with patch('salt.utils.vmware.get_scsi_address_to_lun_map',
+                   mock_get_scsi_addr_to_lun):
+            vsphere.erase_disk_partitions(scsi_address='fake_scsi_address')
+        mock_get_scsi_addr_to_lun.assert_called_once_with(self.mock_host)
+        self.mock_erase_disk_partitions.assert_called_once_with(
+            self.mock_si, self.mock_host, 'fake_scsi_disk_id',
+            hostname='fake_host')
+
+    def test_erase_disk_partitions(self):
+        vsphere.erase_disk_partitions(disk_id='fake_disk_id')
+        self.mock_erase_disk_partitions.assert_called_once_with(
+            self.mock_si, self.mock_host, 'fake_disk_id', hostname='fake_host')
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.vsphere.list_cluster'''
     def setup_loader_modules(self):
