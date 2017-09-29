@@ -44,6 +44,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 # Import salt libs
 import salt.utils
 import salt.utils.path
+import salt.utils.platform
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed,
         check_managed, check_managed_changes, source_list,
@@ -65,7 +66,7 @@ from salt.utils import namespaced_function as _namespaced_function
 
 HAS_WINDOWS_MODULES = False
 try:
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         import win32api
         import win32file
         import win32con
@@ -83,7 +84,7 @@ except ImportError:
 
 HAS_WIN_DACL = False
 try:
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         import salt.utils.win_dacl
         HAS_WIN_DACL = True
 except ImportError:
@@ -99,7 +100,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         if HAS_WINDOWS_MODULES:
             # Load functions from file.py
             global get_managed, manage_file
@@ -1687,9 +1688,6 @@ def check_perms(path,
                     perms = changes[user]['perms']
 
                 try:
-                    log.debug('*' * 68)
-                    log.debug(perms)
-                    log.debug('*' * 68)
                     salt.utils.win_dacl.set_permissions(
                         path, user, perms, 'deny', applies_to)
                     ret['changes']['deny_perms'][user] = changes[user]

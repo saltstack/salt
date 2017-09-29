@@ -19,7 +19,7 @@ import salt.client.ssh.client
 import salt.exceptions
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class NetapiClient(object):

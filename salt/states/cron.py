@@ -116,7 +116,7 @@ entry on the minion already contains a numeric value, then using the ``random``
 keyword will not modify it.
 
 Added the opportunity to set a job with a special keyword like '@reboot' or
-'@hourly'.
+'@hourly'. Quotes must be used, otherwise PyYAML will strip the '@' sign.
 
 .. code-block:: yaml
 
@@ -143,12 +143,18 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 from salt.modules.cron import (
     _needs_change,
     _cron_matched
 )
+
+
+def __virtual__():
+    if 'cron.list_tab' in __salt__:
+        return True
+    else:
+        return (False, 'cron module could not be loaded')
 
 
 def _check_cron(user,
@@ -296,7 +302,8 @@ def present(name,
         edits. This defaults to the state id
 
     special
-        A special keyword to specify periodicity (eg. @reboot, @hourly...)
+        A special keyword to specify periodicity (eg. @reboot, @hourly...).
+        Quotes must be used, otherwise PyYAML will strip the '@' sign.
 
         .. versionadded:: 2016.3.0
     '''
@@ -382,7 +389,8 @@ def absent(name,
         edits. This defaults to the state id
 
     special
-        The special keyword used in the job (eg. @reboot, @hourly...)
+        The special keyword used in the job (eg. @reboot, @hourly...).
+        Quotes must be used, otherwise PyYAML will strip the '@' sign.
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
     ###       cannot be removed from the function definition, otherwise the use
@@ -529,7 +537,7 @@ def file(name,
         return ret
 
     cron_path = salt.utils.files.mkstemp()
-    with salt.utils.fopen(cron_path, 'w+') as fp_:
+    with salt.utils.files.fopen(cron_path, 'w+') as fp_:
         raw_cron = __salt__['cron.raw_cron'](user)
         if not raw_cron.endswith('\n'):
             raw_cron = "{0}\n".format(raw_cron)

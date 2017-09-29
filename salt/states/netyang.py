@@ -38,7 +38,7 @@ except ImportError:
     HAS_NAPALM_YANG = False
 
 # Import salt modules
-from salt.utils import fopen
+import salt.utils.files
 import salt.utils.napalm
 
 # ------------------------------------------------------------------------------
@@ -92,6 +92,13 @@ def managed(name,
         Use certain profiles to generate the config.
         If not specified, will use the platform default profile(s).
 
+    compliance_report: ``False``
+        Return the compliance report in the comment.
+        The compliance report structured object can be found however
+        in the ``pchanges`` field of the output (not displayed on the CLI).
+
+        .. versionadded:: 2017.7.3
+
     test: ``False``
         Dry run? If set as ``True``, will apply the config, discard
         and return the changes. Default: ``False`` and will commit
@@ -140,13 +147,14 @@ def managed(name,
     debug = kwargs.get('debug', False) or __opts__.get('debug', False)
     commit = kwargs.get('commit', True) or __opts__.get('commit', True)
     replace = kwargs.get('replace', False) or __opts__.get('replace', False)
+    return_compliance_report = kwargs.get('compliance_report', False) or __opts__.get('compliance_report', False)
     profiles = kwargs.get('profiles', [])
     temp_file = __salt__['temp.file']()
     log.debug('Creating temp file: {0}'.format(temp_file))
     if 'to_dict' not in data:
         data = {'to_dict': data}
     data = [data]
-    with fopen(temp_file, 'w') as file_handle:
+    with salt.utils.files.fopen(temp_file, 'w') as file_handle:
         yaml.safe_dump(json.loads(json.dumps(data)), file_handle, encoding='utf-8', allow_unicode=True)
     device_config = __salt__['napalm_yang.parse'](models,
                                                   config=True,
@@ -180,7 +188,13 @@ def managed(name,
     log.debug('Loaded config result:')
     log.debug(loaded_changes)
     __salt__['file.remove'](temp_file)
-    return salt.utils.napalm.loaded_ret(ret, loaded_changes, test, debug)
+    loaded_changes['compliance_report'] = compliance_report
+    return salt.utils.napalm.loaded_ret(ret,
+                                        loaded_changes,
+                                        test,
+                                        debug,
+                                        opts=__opts__,
+                                        compliance_report=return_compliance_report)
 
 
 def configured(name,

@@ -15,6 +15,7 @@ import tempfile
 
 # Import salt libs
 import salt.utils
+import salt.utils.platform
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError, \
     SaltInvocationError
@@ -36,7 +37,7 @@ def __virtual__():
     for simulating UAC forces a GUI prompt, and is not compatible with
     salt-minion running as SYSTEM.
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return (False, 'Cannot load module chocolatey: Chocolatey requires '
                        'Windows')
 

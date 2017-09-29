@@ -14,7 +14,7 @@ import os
 import tempfile
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 from salt.exceptions import CommandExecutionError

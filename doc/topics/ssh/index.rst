@@ -64,7 +64,8 @@ Deploy ssh key for salt-ssh
 ===========================
 
 By default, salt-ssh will generate key pairs for ssh, the default path will be
-/etc/salt/pki/master/ssh/salt-ssh.rsa
+``/etc/salt/pki/master/ssh/salt-ssh.rsa``. The key generation happens when you run
+``salt-ssh`` for the first time.
 
 You can use ssh-copy-id, (the OpenSSH key deployment tool) to deploy keys to your servers.
 

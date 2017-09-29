@@ -43,11 +43,12 @@ from functools import partial
 from salt.loader import minion_mods
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 import salt.utils
+import salt.utils.stringutils
 
 # Import third party libs
 # pylint: disable=import-error
@@ -109,7 +110,7 @@ def _get_profile(service, region, key, keyid, profile):
     if keyid:
         hash_string = region + keyid + key
         if six.PY3:
-            hash_string = salt.utils.to_bytes(hash_string)
+            hash_string = salt.utils.stringutils.to_bytes(hash_string)
         cxkey = label + hashlib.md5(hash_string).hexdigest()
     else:
         cxkey = label + region
@@ -159,7 +160,7 @@ def cache_id_func(service):
     '''
     Returns a partial `cache_id` function for the provided service.
 
-    ... code-block:: python
+    .. code-block:: python
 
         cache_id = __utils__['boto.cache_id_func']('ec2')
         cache_id('myinstance', 'i-a1b2c3')
@@ -179,8 +180,9 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
     '''
 
     module = module or service
+    module, submodule = ('boto.' + module).rsplit('.', 1)
 
-    svc_mod = __import__('boto.' + module, fromlist=[module])
+    svc_mod = getattr(__import__(module, fromlist=[submodule]), submodule)
 
     cxkey, region, key, keyid = _get_profile(service, region, key,
                                              keyid, profile)
@@ -207,7 +209,7 @@ def get_connection_func(service, module=None):
     '''
     Returns a partial `get_connection` function for the provided service.
 
-    ... code-block:: python
+    .. code-block:: python
 
         get_conn = __utils__['boto.get_connection_func']('ec2')
         conn = get_conn()

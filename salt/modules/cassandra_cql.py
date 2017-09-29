@@ -85,7 +85,7 @@ import ssl
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 SSL_VERSION = 'ssl_version'

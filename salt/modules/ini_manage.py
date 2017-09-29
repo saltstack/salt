@@ -20,8 +20,8 @@ import re
 import json
 
 # Import Salt libs
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict
 
@@ -318,17 +318,18 @@ class _Section(OrderedDict):
         yield '{0}[{1}]{0}'.format(os.linesep, self.name)
         sections_dict = OrderedDict()
         for name, value in six.iteritems(self):
+            # Handle Comment Lines
             if com_regx.match(name):
                 yield '{0}{1}'.format(value, os.linesep)
+            # Handle Sections
             elif isinstance(value, _Section):
                 sections_dict.update({name: value})
+            # Key / Value pairs
+            # Adds spaces between the separator
             else:
                 yield '{0}{1}{2}{3}'.format(
                     name,
-                    (
-                        ' {0} '.format(self.sep) if self.sep != ' '
-                        else self.sep
-                    ),
+                    ' {0} '.format(self.sep) if self.sep != ' ' else self.sep,
                     value,
                     os.linesep
                 )
@@ -369,7 +370,7 @@ class _Ini(_Section):
     def refresh(self, inicontents=None):
         if inicontents is None:
             try:
-                with salt.utils.fopen(self.name) as rfh:
+                with salt.utils.files.fopen(self.name) as rfh:
                     inicontents = rfh.read()
             except (OSError, IOError) as exc:
                 raise CommandExecutionError(
@@ -395,7 +396,7 @@ class _Ini(_Section):
 
     def flush(self):
         try:
-            with salt.utils.fopen(self.name, 'w') as outfile:
+            with salt.utils.files.fopen(self.name, 'w') as outfile:
                 ini_gen = self.gen_ini()
                 next(ini_gen)
                 outfile.writelines(ini_gen)
