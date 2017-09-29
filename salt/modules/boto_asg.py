@@ -48,6 +48,7 @@ Connection module for Amazon Autoscale Groups
 # Import Python libs
 from __future__ import absolute_import
 import datetime
+import time
 import logging
 import json
 import sys
