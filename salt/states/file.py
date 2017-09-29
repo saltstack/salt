@@ -6637,6 +6637,28 @@ def cached(name,
     else:
         pre_hash = None
 
+    def _try_cache(path, checksum):
+        '''
+        This helper is not needed anymore in develop as the fileclient in the
+        develop branch now has means of skipping a download if the existing
+        hash matches one passed to cp.cache_file. Remove this helper and the
+        code that invokes it, once we have merged forward into develop.
+        '''
+        if not path or not checksum:
+            return True
+        form = salt.utils.files.HASHES_REVMAP.get(len(checksum))
+        if form is None:
+            # Shouldn't happen, an invalid checksum length should be caught
+            # before we get here. But in the event this gets through, don't let
+            # it cause any trouble, and just return True.
+            return True
+        try:
+            return salt.utils.get_hash(path, form=form) != checksum
+        except (IOError, OSError, ValueError):
+            # Again, shouldn't happen, but don't let invalid input/permissions
+            # in the call to get_hash blow this up.
+            return True
+
     # Cache the file. Note that this will not actually download the file if
     # either of the following is true:
     #   1. source is a salt:// URL and the fileserver determines that the hash
@@ -6645,14 +6667,18 @@ def cached(name,
     #      matches the cached copy.
     # Remote, non salt:// sources _will_ download if a copy of the file was
     # not already present in the minion cache.
-    try:
-        local_copy = __salt__['cp.cache_file'](
-            name,
-            saltenv=saltenv,
-            source_hash=source_sum.get('hsum'))
-    except Exception as exc:
-        ret['comment'] = exc.__str__()
-        return ret
+    if _try_cache(local_copy, source_sum.get('hsum')):
+        # The _try_cache helper is obsolete in the develop branch. Once merged
+        # forward, remove the helper as well as this if statement, and dedent
+        # the below block.
+        try:
+            local_copy = __salt__['cp.cache_file'](
+                name,
+                saltenv=saltenv,
+                source_hash=source_sum.get('hsum'))
+        except Exception as exc:
+            ret['comment'] = exc.__str__()
+            return ret
 
     if not local_copy:
         ret['comment'] = (
