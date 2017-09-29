@@ -20,6 +20,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.states.archive as archive
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+import salt.utils
 
 
 def _isfile_side_effect(path):
@@ -32,11 +33,14 @@ def _isfile_side_effect(path):
     If so, just add an entry in the dictionary for the path being used for tar.
     '''
     return {
-        '/tmp/foo.tar.gz': True,
-        '/tmp/out': False,
-        '/usr/bin/tar': True,
-        '/bin/tar': True,
-        '/tmp/test_extracted_tar': False,
+        os.sep + os.path.join('tmp', 'foo.tar.gz'): True,
+        os.path.join('c:\\tmp', 'foo.tar.gz'): True,
+        os.sep + os.path.join('tmp', 'out'): False,
+        os.path.join('c:\\tmp', 'out'): False,
+        os.sep + os.path.join('usr', 'bin', 'tar'): True,
+        os.sep + os.path.join('bin', 'tar'): True,
+        os.sep + os.path.join('tmp', 'test_extracted_tar'): False,
+        os.path.join('c:\\tmp', 'test_extracted_tar'): False,
     }[path]
 
 
@@ -59,8 +63,11 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         archive.extracted tar options
         '''
 
-        source = '/tmp/foo.tar.gz'
-        tmp_dir = '/tmp/test_extracted_tar'
+        source = os.sep + os.path.join('tmp', 'foo.tar.gz')
+        tmp_dir = os.sep + os.path.join('tmp', 'test_extracted_tar')
+        if salt.utils.is_windows():
+            source = os.path.join('c:\\tmp', 'foo.tar.gz')
+            tmp_dir = os.path.join('c:\\tmp', 'test_extracted_tar')
         test_tar_opts = [
             '--no-anchored foo',
             'v -p --opt',
@@ -103,7 +110,8 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                                'archive.list': list_mock,
                                                'file.source_list': mock_source_list}):
                 with patch.dict(archive.__states__, {'file.directory': mock_true}):
-                    with patch.object(os.path, 'isfile', isfile_mock):
+                    with patch.object(os.path, 'isfile', isfile_mock), \
+                            patch('salt.utils.which', MagicMock(return_value=True)):
                         for test_opts, ret_opts in zip(test_tar_opts, ret_tar_opts):
                             ret = archive.extracted(tmp_dir,
                                                     source,
@@ -119,7 +127,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         Tests the call of extraction with gnutar
         '''
         gnutar = MagicMock(return_value='tar (GNU tar)')
-        source = '/tmp/foo.tar.gz'
+        source = os.sep + os.path.join('tmp', 'foo.tar.gz')
         mock_false = MagicMock(return_value=False)
         mock_true = MagicMock(return_value=True)
         state_single_mock = MagicMock(return_value={'local': {'result': True}})
@@ -144,8 +152,9 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                            'archive.list': list_mock,
                                            'file.source_list': mock_source_list}):
             with patch.dict(archive.__states__, {'file.directory': mock_true}):
-                with patch.object(os.path, 'isfile', isfile_mock):
-                    ret = archive.extracted('/tmp/out',
+                with patch.object(os.path, 'isfile', isfile_mock), \
+                        patch('salt.utils.which', MagicMock(return_value=True)):
+                    ret = archive.extracted(os.path.join(os.sep + 'tmp', 'out'),
                                             source,
                                             options='xvzf',
                                             enforce_toplevel=False,
@@ -157,7 +166,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         Tests the call of extraction with bsdtar
         '''
         bsdtar = MagicMock(return_value='tar (bsdtar)')
-        source = '/tmp/foo.tar.gz'
+        source = os.sep + os.path.join('tmp', 'foo.tar.gz')
         mock_false = MagicMock(return_value=False)
         mock_true = MagicMock(return_value=True)
         state_single_mock = MagicMock(return_value={'local': {'result': True}})
@@ -182,8 +191,9 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                            'archive.list': list_mock,
                                            'file.source_list': mock_source_list}):
             with patch.dict(archive.__states__, {'file.directory': mock_true}):
-                with patch.object(os.path, 'isfile', isfile_mock):
-                    ret = archive.extracted('/tmp/out',
+                with patch.object(os.path, 'isfile', isfile_mock), \
+                        patch('salt.utils.which', MagicMock(return_value=True)):
+                    ret = archive.extracted(os.path.join(os.sep + 'tmp', 'out'),
                                             source,
                                             options='xvzf',
                                             enforce_toplevel=False,
