@@ -79,19 +79,19 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                             is_darwin=MagicMock(return_value=False),
                             is_freebsd=MagicMock(return_value=False),
                             is_openbsd=MagicMock(return_value=False),
-                            is_netbsd=MagicMock(return_value=False),
-                            which=MagicMock(return_value=True)):
-            with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(['1', '2', '3']))}):
-                with patch('time.time', MagicMock(return_value=m.now)):
-                    with patch('os.path.exists', MagicMock(return_value=True)):
-                        proc_uptime = '{0} {1}'.format(m.ut, m.idle)
-                        with patch('salt.utils.files.fopen', mock_open(read_data=proc_uptime)):
-                            ret = status.uptime()
-                            self.assertDictEqual(ret, m.ret)
+                            is_netbsd=MagicMock(return_value=False)), \
+                patch('salt.utils.path.which', MagicMock(return_value=True)), \
+                patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(['1', '2', '3']))}), \
+                patch('time.time', MagicMock(return_value=m.now)), \
+                patch('os.path.exists', MagicMock(return_value=True)):
+            proc_uptime = '{0} {1}'.format(m.ut, m.idle)
 
-                    with patch('os.path.exists', MagicMock(return_value=False)):
-                        with self.assertRaises(CommandExecutionError):
-                            status.uptime()
+            with patch('salt.utils.files.fopen', mock_open(read_data=proc_uptime)):
+                ret = status.uptime()
+                self.assertDictEqual(ret, m.ret)
+            with patch('os.path.exists', MagicMock(return_value=False)):
+                with self.assertRaises(CommandExecutionError):
+                    status.uptime()
 
     def test_uptime_sunos(self):
         '''
@@ -105,14 +105,13 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                             is_darwin=MagicMock(return_value=False),
                             is_freebsd=MagicMock(return_value=False),
                             is_openbsd=MagicMock(return_value=False),
-                            is_netbsd=MagicMock(return_value=False),
-                            which=MagicMock(return_value=True)):
-
-            with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(['1', '2', '3'])),
-                                              'cmd.run_all': MagicMock(return_value=m2.ret)}):
-                with patch('time.time', MagicMock(return_value=m.now)):
-                    ret = status.uptime()
-                    self.assertDictEqual(ret, m.ret)
+                            is_netbsd=MagicMock(return_value=False)), \
+                patch('salt.utils.path.which', MagicMock(return_value=True)), \
+                patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(['1', '2', '3'])),
+                                             'cmd.run_all': MagicMock(return_value=m2.ret)}), \
+                patch('time.time', MagicMock(return_value=m.now)):
+            ret = status.uptime()
+            self.assertDictEqual(ret, m.ret)
 
     def test_uptime_macos(self):
         '''
@@ -128,17 +127,18 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                             is_darwin=MagicMock(return_value=True),
                             is_freebsd=MagicMock(return_value=False),
                             is_openbsd=MagicMock(return_value=False),
-                            is_netbsd=MagicMock(return_value=False),
-                            which=MagicMock(return_value=True)):
-            with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(['1', '2', '3'])),
-                                              'sysctl.get': MagicMock(return_value=kern_boottime)}):
-                with patch('time.time', MagicMock(return_value=m.now)):
-                    ret = status.uptime()
-                    self.assertDictEqual(ret, m.ret)
+                            is_netbsd=MagicMock(return_value=False)), \
+                patch('salt.utils.path.which', MagicMock(return_value=True)), \
+                patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(['1', '2', '3'])),
+                                             'sysctl.get': MagicMock(return_value=kern_boottime)}), \
+                patch('time.time', MagicMock(return_value=m.now)):
 
-            with patch.dict(status.__salt__, {'sysctl.get': MagicMock(return_value='')}):
-                with self.assertRaises(CommandExecutionError):
-                    status.uptime()
+            ret = status.uptime()
+            self.assertDictEqual(ret, m.ret)
+
+        with patch.dict(status.__salt__, {'sysctl.get': MagicMock(return_value='')}):
+            with self.assertRaises(CommandExecutionError):
+                status.uptime()
 
     def test_uptime_return_success_not_supported(self):
         '''
