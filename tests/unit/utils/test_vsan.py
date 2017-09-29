@@ -287,6 +287,135 @@ class GetHostVsanSystemTestCase(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
+class CreateDiskgroupTestCase(TestCase):
+    '''Tests for salt.utils.vsan.create_diskgroup'''
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.mock_task = MagicMock()
+        self.mock_initialise_disk_mapping = \
+                MagicMock(return_value=self.mock_task)
+        self.mock_vsan_disk_mgmt_system = MagicMock(
+            InitializeDiskMappings=self.mock_initialise_disk_mapping)
+        self.mock_host_ref = MagicMock()
+        self.mock_cache_disk = MagicMock()
+        self.mock_cap_disk1 = MagicMock()
+        self.mock_cap_disk2 = MagicMock()
+        self.mock_spec = MagicMock()
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name',
+             MagicMock(return_value='fake_hostname')),
+            ('salt.utils.vsan.vim.VimVsanHostDiskMappingCreationSpec',
+             MagicMock(return_value=self.mock_spec)),
+            ('salt.utils.vsan._wait_for_tasks', MagicMock()))
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def test_get_hostname(self):
+        mock_get_managed_object_name = MagicMock(return_value='fake_hostname')
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   mock_get_managed_object_name):
+            vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
+                                  self.mock_host_ref, self.mock_cache_disk,
+                                  [self.mock_cap_disk1, self.mock_cap_disk2])
+        mock_get_managed_object_name.assert_called_once_with(
+            self.mock_host_ref)
+
+    def test_vsan_spec_all_flash(self):
+        self.mock_cap_disk1.ssd = True
+        vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
+                              self.mock_host_ref, self.mock_cache_disk,
+                              [self.mock_cap_disk1, self.mock_cap_disk2])
+        self.assertEqual(self.mock_spec.capacityDisks, [self.mock_cap_disk1,
+                                                        self.mock_cap_disk2])
+        self.assertEqual(self.mock_spec.cacheDisks, [self.mock_cache_disk])
+        self.assertEqual(self.mock_spec.creationType, 'allFlash')
+        self.assertEqual(self.mock_spec.host, self.mock_host_ref)
+
+    def test_vsan_spec_hybrid(self):
+        self.mock_cap_disk1.ssd = False
+        vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
+                              self.mock_host_ref, self.mock_cache_disk,
+                              [self.mock_cap_disk1, self.mock_cap_disk2])
+        self.mock_cap_disk1.ssd = False
+        self.assertEqual(self.mock_spec.creationType, 'hybrid')
+
+    def test_initialize_disk_mapping(self):
+        vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
+                              self.mock_host_ref, self.mock_cache_disk,
+                              [self.mock_cap_disk1, self.mock_cap_disk2])
+        self.mock_initialise_disk_mapping.assert_called_once_with(
+            self.mock_spec)
+
+    def test_initialize_disk_mapping_raise_no_permission(self):
+        err = vim.fault.NoPermission()
+        err.privilegeId = 'Fake privilege'
+        self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
+            MagicMock(side_effect=err)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
+                                  self.mock_host_ref, self.mock_cache_disk,
+                                  [self.mock_cap_disk1, self.mock_cap_disk2])
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_initialize_disk_mapping_raise_vim_fault(self):
+        err =  vim.fault.VimFault()
+        err.msg = 'vim_fault'
+        self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
+            MagicMock(side_effect=err)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
+                                  self.mock_host_ref, self.mock_cache_disk,
+                                  [self.mock_cap_disk1, self.mock_cap_disk2])
+        self.assertEqual(excinfo.exception.strerror, 'vim_fault')
+
+    def test_initialize_disk_mapping_raise_method_not_found(self):
+        err = vmodl.fault.MethodNotFound()
+        err.method = 'fake_method'
+        self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
+            MagicMock(side_effect=err)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
+                                  self.mock_host_ref, self.mock_cache_disk,
+                                  [self.mock_cap_disk1, self.mock_cap_disk2])
+        self.assertEqual(excinfo.exception.strerror,
+                         'Method \'fake_method\' not found')
+
+    def test_initialize_disk_mapping_raise_runtime_fault(self):
+        err = vmodl.RuntimeFault()
+        err.msg = 'runtime_fault'
+        self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
+            MagicMock(side_effect=err)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
+                                  self.mock_host_ref, self.mock_cache_disk,
+                                  [self.mock_cap_disk1, self.mock_cap_disk2])
+        self.assertEqual(excinfo.exception.strerror, 'runtime_fault')
+
+    def test__wait_for_tasks(self):
+        mock___wait_for_tasks = MagicMock()
+        with patch('salt.utils.vsan._wait_for_tasks',
+                   mock___wait_for_tasks):
+            vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
+                                  self.mock_host_ref, self.mock_cache_disk,
+                                  [self.mock_cap_disk1, self.mock_cap_disk2])
+        mock___wait_for_tasks.assert_called_once_with(
+            [self.mock_task], self.mock_si)
+
+    def test_result(self):
+        res = vsan.create_diskgroup(self.mock_si,
+                                    self.mock_vsan_disk_mgmt_system,
+                                    self.mock_host_ref, self.mock_cache_disk,
+                                    [self.mock_cap_disk1, self.mock_cap_disk2])
+        self.assertTrue(res)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
 class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.utils.vsan.get_cluster_vsan_info'''
     def setup_loader_modules(self):
