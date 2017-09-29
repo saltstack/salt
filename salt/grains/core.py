@@ -2578,7 +2578,6 @@ def _windows_iqn():
             continue
         line = line.rstrip()
         ret.extend([line])
-
     return ret
 
 
