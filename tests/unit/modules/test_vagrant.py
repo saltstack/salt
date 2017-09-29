@@ -30,7 +30,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
     def tearDownClass(cls):
         try:
             os.unlink(TEMP_DATABASE_FILE)
-        except:
+        except OSError:
             pass
 
     def setup_loader_modules(self):
