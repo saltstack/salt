@@ -316,14 +316,13 @@ def _call_function(name, returner=None, **kwargs):
     argspec = salt.utils.args.get_function_argspec(__salt__[name])
     func_kw = dict(zip(argspec.args[-len(argspec.defaults or []):],  # pylint: disable=incompatible-py3-code
                    argspec.defaults or []))
-    arg_type, na_type, kw_type = [], {}, False
+    arg_type, na_type = [], {}
     for funcset in reversed(kwargs.get('func_args') or []):
         if not isinstance(funcset, dict):
             arg_type.append(funcset)
-        elif isinstance(funcset, dict):
+        else:
             arg_type += funcset.values()
             na_type.update(funcset)
-        else:
             func_kw.update(funcset)
     arg_type.reverse()
 
