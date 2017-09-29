@@ -467,7 +467,7 @@ PATCHLEVEL = 3
 
     def test_windows_iscsi_iqn_grains(self):
         cmd_run_mock = MagicMock(
-            return_value={'stdout': 'iqn.1991-05.com.microsoft:username-pc.local'}
+            return_value={'stdout': 'iSCSINodeName\niqn.1991-05.com.microsoft:simon-x1\n'}
         )
 
         with patch.object(salt.utils.platform, 'is_linux',
@@ -481,7 +481,7 @@ PATCHLEVEL = 3
                             _grains = core.iscsi_iqn()
 
         self.assertEqual(_grains.get('iscsi_iqn'),
-                         ['iqn.1991-05.com.microsoft:username-pc.local'])
+                         ['iqn.1991-05.com.microsoft:simon-x1'])
 
     def test_aix_iscsi_iqn_grains(self):
         cmd_run_mock = MagicMock(
