@@ -672,6 +672,125 @@ class RemoveCapacityFromDiskGroup(TestCase):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
+class RemoveDiskgroup(TestCase):
+    '''Tests for salt.utils.vsan.remove_diskgroup'''
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.mock_task = MagicMock()
+        self.mock_remove_disk_mapping = \
+                MagicMock(return_value=self.mock_task)
+        self.mock_host_vsan_system = MagicMock(
+            RemoveDiskMapping_Task=self.mock_remove_disk_mapping)
+        self.mock_host_ref = MagicMock()
+        self.mock_cache_disk = MagicMock()
+        self.mock_diskgroup = MagicMock(ssd=self.mock_cache_disk)
+        self.mock_cap_disk1 = MagicMock()
+        self.mock_cap_disk2 = MagicMock()
+        self.mock_spec = MagicMock()
+        patches = (
+            ('salt.utils.vmware.get_managed_object_name',
+             MagicMock(return_value='fake_hostname')),
+            ('salt.utils.vsan.get_host_vsan_system',
+             MagicMock(return_value=self.mock_host_vsan_system)),
+            ('salt.utils.vsan.vim.HostMaintenanceSpec',
+             MagicMock(return_value=self.mock_spec)),
+            ('salt.utils.vsan.vim.VsanHostDecommissionMode', MagicMock()),
+            ('salt.utils.vmware.wait_for_task', MagicMock()))
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def test_get_hostname(self):
+        mock_get_managed_object_name = MagicMock(return_value='fake_hostname')
+        with patch('salt.utils.vmware.get_managed_object_name',
+                   mock_get_managed_object_name):
+            vsan.remove_diskgroup(
+                self.mock_si, self.mock_host_ref, self.mock_diskgroup)
+        mock_get_managed_object_name.assert_called_once_with(
+            self.mock_host_ref)
+
+    def test_maintenance_mode_evacuate_all_data(self):
+        vsan.remove_diskgroup(
+            self.mock_si, self.mock_host_ref, self.mock_diskgroup)
+        vsan.remove_capacity_from_diskgroup(
+            self.mock_si, self.mock_host_ref, self.mock_diskgroup,
+            [self.mock_cap_disk1, self.mock_cap_disk2])
+        self.assertEqual(self.mock_spec.vsanMode.objectAction,
+                         vim.VsanHostDecommissionModeObjectAction.evacuateAllData)
+
+    def test_maintenance_mode_no_action(self):
+        vsan.remove_diskgroup(
+            self.mock_si, self.mock_host_ref, self.mock_diskgroup)
+        vsan.remove_capacity_from_diskgroup(
+            self.mock_si, self.mock_host_ref, self.mock_diskgroup,
+            [self.mock_cap_disk1, self.mock_cap_disk2],
+            data_evacuation=False)
+        self.assertEqual(self.mock_spec.vsanMode.objectAction,
+                         vim.VsanHostDecommissionModeObjectAction.noAction)
+
+    def test_remove_disk_mapping(self):
+        vsan.remove_diskgroup(
+            self.mock_si, self.mock_host_ref, self.mock_diskgroup)
+        vsan.remove_capacity_from_diskgroup(
+            self.mock_si, self.mock_host_ref, self.mock_diskgroup,
+            [self.mock_cap_disk1, self.mock_cap_disk2])
+        self.mock_remove_disk_mapping.assert_called_once_with(
+            mapping=[self.mock_diskgroup],
+            maintenanceSpec=self.mock_spec)
+
+    def test_remove_disk_mapping_raise_no_permission(self):
+        vsan.remove_diskgroup(
+            self.mock_si, self.mock_host_ref, self.mock_diskgroup)
+        err = vim.fault.NoPermission()
+        err.privilegeId = 'Fake privilege'
+        self.mock_host_vsan_system.RemoveDiskMapping_Task= \
+            MagicMock(side_effect=err)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            vsan.remove_diskgroup(
+                self.mock_si, self.mock_host_ref, self.mock_diskgroup)
+        self.assertEqual(excinfo.exception.strerror,
+                         'Not enough permissions. Required privilege: '
+                         'Fake privilege')
+
+    def test_remove_disk_mapping_raise_vim_fault(self):
+        err =  vim.fault.VimFault()
+        err.msg = 'vim_fault'
+        self.mock_host_vsan_system.RemoveDiskMapping_Task= \
+            MagicMock(side_effect=err)
+        with self.assertRaises(VMwareApiError) as excinfo:
+            vsan.remove_diskgroup(
+                self.mock_si, self.mock_host_ref, self.mock_diskgroup)
+        self.assertEqual(excinfo.exception.strerror, 'vim_fault')
+
+    def test_remove_disk_mapping_raise_runtime_fault(self):
+        err = vmodl.RuntimeFault()
+        err.msg = 'runtime_fault'
+        self.mock_host_vsan_system.RemoveDiskMapping_Task= \
+            MagicMock(side_effect=err)
+        with self.assertRaises(VMwareRuntimeError) as excinfo:
+            vsan.remove_diskgroup(
+                self.mock_si, self.mock_host_ref, self.mock_diskgroup)
+        self.assertEqual(excinfo.exception.strerror, 'runtime_fault')
+
+    def test_wait_for_tasks(self):
+        mock_wait_for_task = MagicMock()
+        with patch('salt.utils.vmware.wait_for_task',
+                   mock_wait_for_task):
+            vsan.remove_diskgroup(
+                self.mock_si, self.mock_host_ref, self.mock_diskgroup)
+        mock_wait_for_task.assert_called_once_with(
+            self.mock_task, 'fake_hostname', 'remove_diskgroup')
+
+    def test_result(self):
+        res = vsan.remove_diskgroup(
+            self.mock_si, self.mock_host_ref, self.mock_diskgroup)
+        self.assertTrue(res)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@skipIf(not HAS_PYVSAN, 'The \'vsan\' ext library is missing')
 class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.utils.vsan.get_cluster_vsan_info'''
     def setup_loader_modules(self):
