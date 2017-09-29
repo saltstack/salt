@@ -1439,6 +1439,172 @@ class RemoveDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not vsphere.HAS_JSONSCHEMA, 'The \'jsonschema\' library is missing')
+class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
+    '''Tests for salt.modules.vsphere.remove_capacity_from_diskgroup'''
+    def setup_loader_modules(self):
+        return {
+            vsphere: {
+                '__virtual__': MagicMock(return_value='vsphere'),
+                '_get_proxy_connection_details': MagicMock(),
+                '__proxy__': {'esxi.get_details': MagicMock(
+                    return_value={'esxi_host': 'fake_host'})}
+            }
+        }
+
+    def setUp(self):
+        attrs = (('mock_si', MagicMock()),
+                 ('mock_schema', MagicMock()),
+                 ('mock_host', MagicMock()),
+                 ('mock_disk1', MagicMock(canonicalName='fake_disk1')),
+                 ('mock_disk2', MagicMock(canonicalName='fake_disk2')),
+                 ('mock_disk3', MagicMock(canonicalName='fake_disk3')),
+                 ('mock_diskgroup', MagicMock()))
+        for attr, mock_obj in attrs:
+            setattr(self, attr, mock_obj)
+            self.addCleanup(delattr, self, attr)
+
+        patches = (
+            ('salt.utils.vmware.get_service_instance',
+             MagicMock(return_value=self.mock_si)),
+            ('salt.modules.vsphere.DiskGroupsDiskIdSchema.serialize',
+             MagicMock(return_value=self.mock_schema)),
+            ('salt.modules.vsphere.jsonschema.validate', MagicMock()),
+            ('salt.modules.vsphere.get_proxy_type',
+             MagicMock(return_value='esxi')),
+            ('salt.modules.vsphere._get_proxy_target',
+             MagicMock(return_value=self.mock_host)),
+            ('salt.utils.vmware.get_disks',
+             MagicMock(return_value=[self.mock_disk1, self.mock_disk2,
+                                     self.mock_disk3])),
+            ('salt.utils.vmware.get_diskgroups',
+             MagicMock(return_value=[self.mock_diskgroup])),
+            ('salt.utils.vsan.remove_capacity_from_diskgroup', MagicMock()))
+        for module, mock_obj in patches:
+            patcher = patch(module, mock_obj)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def test_validate(self):
+        mock_schema_validate = MagicMock()
+        with patch('salt.modules.vsphere.jsonschema.validate',
+                   mock_schema_validate):
+            vsphere.remove_capacity_from_diskgroup(
+                cache_disk_id='fake_cache_disk_id',
+                capacity_disk_ids=['fake_disk1', 'fake_disk2'])
+        mock_schema_validate.assert_called_once_with(
+            {'diskgroups': [{'cache_id': 'fake_cache_disk_id',
+                             'capacity_ids': ['fake_disk1',
+                                              'fake_disk2']}]},
+            self.mock_schema)
+
+    def test_invalid_schema_validation(self):
+        mock_schema_validate = MagicMock(
+            side_effect=vsphere.jsonschema.exceptions.ValidationError('err'))
+        with patch('salt.modules.vsphere.jsonschema.validate',
+                   mock_schema_validate):
+            with self.assertRaises(ArgumentValueError) as excinfo:
+                vsphere.remove_capacity_from_diskgroup(
+                    cache_disk_id='fake_cache_disk_id',
+                    capacity_disk_ids=['fake_disk1', 'fake_disk2'])
+        self.assertEqual('err', excinfo.exception.strerror)
+
+    def test_supported_proxes(self):
+        supported_proxies = ['esxi']
+        for proxy_type in supported_proxies:
+            with patch('salt.modules.vsphere.get_proxy_type',
+                       MagicMock(return_value=proxy_type)):
+                vsphere.remove_capacity_from_diskgroup(
+                    cache_disk_id='fake_cache_disk_id',
+                    capacity_disk_ids=['fake_disk1', 'fake_disk2'])
+
+    def test__get_proxy_target_call(self):
+        mock__get_proxy_target = MagicMock(return_value=self.mock_host)
+        with patch('salt.modules.vsphere._get_proxy_target',
+                   mock__get_proxy_target):
+            vsphere.remove_capacity_from_diskgroup(
+                cache_disk_id='fake_cache_disk_id',
+                capacity_disk_ids=['fake_disk1', 'fake_disk2'])
+        mock__get_proxy_target.assert_called_once_with(self.mock_si)
+
+    def test_get_disks(self):
+        mock_get_disks = MagicMock(
+            return_value=[self.mock_disk1, self.mock_disk2, self.mock_disk3])
+        with patch('salt.utils.vmware.get_disks', mock_get_disks):
+            vsphere.remove_capacity_from_diskgroup(
+                cache_disk_id='fake_cache_disk_id',
+                capacity_disk_ids=['fake_disk1', 'fake_disk2'])
+        mock_get_disks.assert_called_once_with(
+            self.mock_host, disk_ids=['fake_disk1', 'fake_disk2'])
+
+    def test_disk_not_found_safety_checks_set(self):
+        mock_get_disks = MagicMock(
+            return_value=[self.mock_disk1, self.mock_disk2, self.mock_disk3])
+        with patch('salt.utils.vmware.get_disks', mock_get_disks):
+            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                vsphere.remove_capacity_from_diskgroup(
+                    cache_disk_id='fake_cache_disk_id',
+                    capacity_disk_ids=['fake_disk1', 'fake_disk4'],
+                    safety_checks=True)
+        self.assertEqual('No disk with id \'fake_disk4\' was found '
+                         'in ESXi host \'fake_host\'',
+                         excinfo.exception.strerror)
+
+    def test_get_diskgroups(self):
+        mock_get_diskgroups = MagicMock(return_value=[self.mock_diskgroup])
+        with patch('salt.utils.vmware.get_diskgroups',
+                   mock_get_diskgroups):
+            vsphere.remove_capacity_from_diskgroup(
+                cache_disk_id='fake_cache_disk_id',
+                capacity_disk_ids=['fake_disk1', 'fake_disk2'])
+        mock_get_diskgroups.assert_called_once_with(
+            self.mock_host, cache_disk_ids=['fake_cache_disk_id'])
+
+    def test_diskgroup_not_found(self):
+        with patch('salt.utils.vmware.get_diskgroups',
+                   MagicMock(return_value=[])):
+            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                vsphere.remove_capacity_from_diskgroup(
+                    cache_disk_id='fake_cache_disk_id',
+                    capacity_disk_ids=['fake_disk1', 'fake_disk2'])
+        self.assertEqual('No diskgroup with cache disk id '
+                         '\'fake_cache_disk_id\' was found in ESXi host '
+                         '\'fake_host\'',
+                         excinfo.exception.strerror)
+
+    def test_remove_capacity_from_diskgroup(self):
+        mock_remove_capacity_from_diskgroup = MagicMock()
+        with patch('salt.utils.vsan.remove_capacity_from_diskgroup',
+                   mock_remove_capacity_from_diskgroup):
+            vsphere.remove_capacity_from_diskgroup(
+                cache_disk_id='fake_cache_disk_id',
+                capacity_disk_ids=['fake_disk1', 'fake_disk2'])
+        mock_remove_capacity_from_diskgroup.assert_called_once_with(
+            self.mock_si, self.mock_host, self.mock_diskgroup,
+            capacity_disks=[self.mock_disk1, self.mock_disk2],
+            data_evacuation=True)
+
+    def test_remove_capacity_from_diskgroup_data_evacuation_false(self):
+        mock_remove_capacity_from_diskgroup = MagicMock()
+        with patch('salt.utils.vsan.remove_capacity_from_diskgroup',
+                   mock_remove_capacity_from_diskgroup):
+            vsphere.remove_capacity_from_diskgroup(
+                cache_disk_id='fake_cache_disk_id',
+                capacity_disk_ids=['fake_disk1', 'fake_disk2'],
+                data_evacuation=False)
+        mock_remove_capacity_from_diskgroup.assert_called_once_with(
+            self.mock_si, self.mock_host, self.mock_diskgroup,
+            capacity_disks=[self.mock_disk1, self.mock_disk2],
+            data_evacuation=False)
+
+    def test_success_output(self):
+        res = vsphere.remove_capacity_from_diskgroup(
+            cache_disk_id='fake_cache_disk_id',
+            capacity_disk_ids=['fake_disk1', 'fake_disk2'])
+        self.assertTrue(res)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.vsphere.list_cluster'''
     def setup_loader_modules(self):
