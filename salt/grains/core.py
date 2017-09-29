@@ -2574,10 +2574,9 @@ def _windows_iqn():
             wmic, namespace, mspath, get))
 
     for line in cmdret['stdout'].splitlines():
-        if line.isalpha():
-            continue
-        line = line.rstrip()
-        ret.extend([line])
+        if line.startswith('iqn.'):
+            line = line.rstrip()
+            ret.extend([line])
     return ret
 
 
