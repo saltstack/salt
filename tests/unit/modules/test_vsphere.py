@@ -1260,6 +1260,93 @@ class EraseDiskPartitionsTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+class RemoveDatastoreTestCase(TestCase, LoaderModuleMockMixin):
+    '''Tests for salt.modules.vsphere.remove_datastore'''
+    def setup_loader_modules(self):
+        return {
+            vsphere: {
+                '__virtual__': MagicMock(return_value='vsphere'),
+                '_get_proxy_connection_details': MagicMock(),
+                'get_proxy_type': MagicMock(return_value='esxdatacenter'),
+            }
+        }
+
+    def setUp(self):
+        attrs = (('mock_si', MagicMock()),
+                 ('mock_target', MagicMock()),
+                 ('mock_ds', MagicMock()))
+        for attr, mock_obj in attrs:
+            setattr(self, attr, mock_obj)
+            self.addCleanup(delattr, self, attr)
+
+        patches = (
+            ('salt.utils.vmware.get_service_instance',
+             MagicMock(return_value=self.mock_si)),
+            ('salt.modules.vsphere.get_proxy_type',
+             MagicMock(return_value='esxdatacenter')),
+            ('salt.modules.vsphere._get_proxy_target',
+             MagicMock(return_value=self.mock_target)),
+            ('salt.utils.vmware.get_datastores',
+             MagicMock(return_value=[self.mock_ds])),
+            ('salt.utils.vmware.remove_datastore', MagicMock()))
+        for module, mock_obj in patches:
+            patcher = patch(module, mock_obj)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def test_supported_proxes(self):
+        supported_proxies = ['esxi', 'esxcluster', 'esxdatacenter']
+        for proxy_type in supported_proxies:
+            with patch('salt.modules.vsphere.get_proxy_type',
+                       MagicMock(return_value=proxy_type)):
+                vsphere.remove_datastore(datastore='fake_ds_name')
+
+    def test__get_proxy_target_call(self):
+        mock__get_proxy_target = MagicMock(return_value=self.mock_target)
+        with patch('salt.modules.vsphere._get_proxy_target',
+                   mock__get_proxy_target):
+            vsphere.remove_datastore(datastore='fake_ds_name')
+        mock__get_proxy_target.assert_called_once_with(self.mock_si)
+
+    def test_get_datastores_call(self):
+        mock_get_datastores = MagicMock()
+        with patch('salt.utils.vmware.get_datastores',
+                   mock_get_datastores):
+            vsphere.remove_datastore(datastore='fake_ds')
+        mock_get_datastores.assert_called_once_with(
+            self.mock_si, reference=self.mock_target,
+            datastore_names=['fake_ds'])
+
+    def test_datastore_not_found(self):
+        with patch('salt.utils.vmware.get_datastores',
+                   MagicMock(return_value=[])):
+            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                vsphere.remove_datastore(datastore='fake_ds')
+        self.assertEqual('Datastore \'fake_ds\' was not found',
+                         excinfo.exception.strerror)
+
+    def test_multiple_datastores_found(self):
+        with patch('salt.utils.vmware.get_datastores',
+                   MagicMock(return_value=[MagicMock(), MagicMock()])):
+            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+                vsphere.remove_datastore(datastore='fake_ds')
+        self.assertEqual('Multiple datastores \'fake_ds\' were found',
+                         excinfo.exception.strerror)
+
+    def test_remove_datastore_call(self):
+        mock_remove_datastore = MagicMock()
+        with patch('salt.utils.vmware.remove_datastore',
+                   mock_remove_datastore):
+            vsphere.remove_datastore(datastore='fake_ds')
+        mock_remove_datastore.assert_called_once_with(
+            self.mock_si, self.mock_ds)
+
+    def test_success_output(self):
+        res = vsphere.remove_datastore(datastore='fake_ds')
+        self.assertTrue(res)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
     '''Tests for salt.modules.vsphere.list_cluster'''
     def setup_loader_modules(self):
