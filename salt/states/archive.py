@@ -950,6 +950,10 @@ def extracted(name,
                                                skip_verify=skip_verify,
                                                saltenv=__env__)
         except Exception as exc:
+            # Look for username & passwords and obfuscate.
+            if '@' in source_match:
+                source_match = re.sub('\/\w+\:\w+\@', '/xxxxxxx:xxxxxxx@', str)
+
             msg = 'Failed to cache {0}: {1}'.format(source_match, exc.__str__())
             log.exception(msg)
             ret['comment'] = msg
@@ -961,6 +965,10 @@ def extracted(name,
             # Get the path of the file in the minion cache
             cached = __salt__['cp.is_cached'](source_match)
         else:
+            # Look for username & passwords and obfuscate.
+            if '@' in source_match:
+                source_match = re.sub('\/\w+\:\w+\@', '/xxxxxxx:xxxxxxx@', str)
+
             log.debug(
                 'failed to download %s',
                 salt.utils.url.redact_http_basic_auth(source_match)
