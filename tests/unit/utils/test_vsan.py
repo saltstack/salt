@@ -16,7 +16,8 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, \
         PropertyMock
 
 # Import Salt libraries
-from salt.exceptions import VMwareApiError, VMwareRuntimeError
+from salt.exceptions import VMwareApiError, VMwareRuntimeError, \
+        VMwareObjectRetrievalError
 from salt.utils import vsan
 
 try:
@@ -134,6 +135,68 @@ class GetVsanClusterConfigSystemTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_return(self):
         ret = vsan.get_vsan_cluster_config_system(self.mock_si)
+        self.assertEqual(ret, self.mock_ret)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
+@skipIf(not HAS_PYVSAN, 'The \'pyvsan\' bindings are missing')
+class GetVsanDiskManagementSystemTestCase(TestCase, LoaderModuleMockMixin):
+    '''Tests for salt.utils.vsan.get_vsan_disk_management_system'''
+    def setup_loader_modules(self):
+        return {vsan: {
+            '__virtual__': MagicMock(return_value='vsan'),
+            'sys': MagicMock(),
+            'ssl': MagicMock()}}
+
+    def setUp(self):
+        self.stub_mock = MagicMock()
+        self.si_mock = MagicMock(_stub=self.stub_mock)
+
+    def setUp(self):
+        self.mock_si = MagicMock()
+        self.mock_ret = MagicMock()
+        patches = (('salt.utils.vsan.vsanapiutils.GetVsanVcMos',
+                    MagicMock(
+                        return_value={'vsan-disk-management-system':
+                                      self.mock_ret})),)
+        for mod, mock in patches:
+            patcher = patch(mod, mock)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+        type(vsan.sys).version_info = PropertyMock(return_value=(2, 7, 9))
+        self.mock_context = MagicMock()
+        self.mock_create_default_context = \
+                MagicMock(return_value=self.mock_context)
+        vsan.ssl.create_default_context = self.mock_create_default_context
+
+    def tearDown(self):
+        for attr in ('mock_si', 'mock_ret', 'mock_context',
+                     'mock_create_default_context'):
+            delattr(self, attr)
+
+    def test_ssl_default_context_loaded(self):
+        vsan.get_vsan_disk_management_system(self.mock_si)
+        self.mock_create_default_context.assert_called_once_with()
+        self.assertFalse(self.mock_context.check_hostname)
+        self.assertEqual(self.mock_context.verify_mode, vsan.ssl.CERT_NONE)
+
+    def test_ssl_default_context_not_loaded(self):
+        type(vsan.sys).version_info = PropertyMock(return_value=(2, 7, 8))
+        vsan.get_vsan_disk_management_system(self.mock_si)
+        self.assertEqual(self.mock_create_default_context.call_count, 0)
+
+    def test_GetVsanVcMos_call(self):
+        mock_get_vsan_vc_mos = MagicMock()
+        with patch('salt.utils.vsan.vsanapiutils.GetVsanVcMos',
+                   mock_get_vsan_vc_mos):
+            vsan.get_vsan_disk_management_system(self.mock_si)
+        mock_get_vsan_vc_mos.assert_called_once_with(self.mock_si._stub,
+                                                     context=self.mock_context)
+
+    def test_return(self):
+        ret = vsan.get_vsan_disk_management_system(self.mock_si)
         self.assertEqual(ret, self.mock_ret)
 
 
