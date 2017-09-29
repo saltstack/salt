@@ -236,12 +236,12 @@ def access_keys(opts):
 
     # Check other users matching ACL patterns
     if opts['client_acl_verify'] and HAS_PWD:
-        log.profile('Beginning pwd.getpwall() call in masterarpi access_keys function')
+        log.profile('Beginning pwd.getpwall() call in masterapi access_keys function')
         for user in pwd.getpwall():
             user = user.pw_name
             if user not in keys and salt.utils.check_whitelist_blacklist(user, whitelist=acl_users):
                 keys[user] = mk_key(opts, user)
-        log.profile('End pwd.getpwall() call in masterarpi access_keys function')
+        log.profile('End pwd.getpwall() call in masterapi access_keys function')
 
     return keys
 
