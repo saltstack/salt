@@ -35,7 +35,7 @@ import re
 import json
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
 
 # Import salt cloud libs

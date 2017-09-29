@@ -82,7 +82,7 @@ import json
 import datetime
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.boto3
 import salt.utils.compat
 from salt.utils.versions import LooseVersion as _LooseVersion

@@ -66,7 +66,7 @@ import os
 
 # Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.request import (
         urlopen as _urlopen,
         HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
@@ -77,7 +77,7 @@ from salt.ext.six.moves.urllib.request import (
 # pylint: enable=no-name-in-module,import-error
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 # ######################### PRIVATE METHODS ##############################
 
@@ -89,9 +89,9 @@ def __virtual__():
 
     Return: str/bool
     '''
-    if salt.utils.which('solr'):
+    if salt.utils.path.which('solr'):
         return 'solr'
-    if salt.utils.which('apache-solr'):
+    if salt.utils.path.which('apache-solr'):
         return 'solr'
     return (False, 'The solr execution module failed to load: requires both the solr and apache-solr binaries in the path.')
 

@@ -13,7 +13,7 @@ import logging
 import os.path
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ def restart_service(service_name, minimum_running_time=None):
         services = __salt__['cmd.run'](['/usr/bin/openstack-service', 'list', service_name]).split('\n')
         for service in services:
             service_info = __salt__['service.show'](service)
-            with salt.utils.fopen('/proc/uptime') as rfh:
+            with salt.utils.files.fopen('/proc/uptime') as rfh:
                 boot_time = float(rfh.read().split(' ')[0])
 
             expr_time = int(service_info.get('ExecMainStartTimestampMonotonic', 0)) / 1000000 < boot_time - minimum_running_time

@@ -28,11 +28,11 @@ import re
 import logging
 
 # Import Salt libs
+import salt.utils.dictdiffer as dictdiffer
 from salt.exceptions import SaltInvocationError
-from salt.utils import dictdiffer
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
