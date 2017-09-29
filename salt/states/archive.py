@@ -952,7 +952,9 @@ def extracted(name,
         except Exception as exc:
             # Look for username & passwords and obfuscate.
             if '@' in source_match:
-                source_match = re.sub('\/\w+\:\w+\@', '/xxxxxxx:xxxxxxx@', str)
+                source_match = re.sub(r'\/\w+\:\w+\@',
+                                      '/xxxxxxx:xxxxxxx@',
+                                      str)
 
             msg = 'Failed to cache {0}: {1}'.format(source_match, exc.__str__())
             log.exception(msg)
@@ -967,7 +969,9 @@ def extracted(name,
         else:
             # Look for username & passwords and obfuscate.
             if '@' in source_match:
-                source_match = re.sub('\/\w+\:\w+\@', '/xxxxxxx:xxxxxxx@', str)
+                source_match = re.sub(r'\/\w+\:\w+\@',
+                                      '/xxxxxxx:xxxxxxx@',
+                                      str)
 
             log.debug(
                 'failed to download %s',
