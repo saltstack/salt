@@ -93,11 +93,15 @@ __virtualname__ = 'pkg'
 
 def __virtual__():
     '''
-    Confirm this module is on a Debian based system
+    Confirm this module is on a Debian-based system
     '''
-    if __grains__.get('os_family') in ('Kali', 'Debian', 'neon'):
-        return __virtualname__
-    elif __grains__.get('os_family', False) == 'Cumulus':
+    # If your minion is running an OS which is Debian-based but does not have
+    # an "os_family" grain of Debian, then the proper fix is NOT to check for
+    # the minion's "os_family" grain here in the __virtual__. The correct fix
+    # is to add the value from the minion's "os" grain to the _OS_FAMILY_MAP
+    # dict in salt/grains/core.py, so that we assign the correct "os_family"
+    # grain to the minion.
+    if __grains__.get('os_family') == 'Debian':
         return __virtualname__
     return (False, 'The pkg module could not be loaded: unsupported OS family')
 
