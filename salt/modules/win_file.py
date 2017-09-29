@@ -802,11 +802,11 @@ def grep(path, pattern, *opts):
 
     Returns:
         str: Rows within the text file that match the pattern.
-		
+
     CLI Example:
-	
+
     .. code-block:: bash
-	
+
         salt '*' file.grep c:\\temp\\test.txt foobar
         salt '*' file.grep c:\\temp\\test.txt foobar /b
         salt '*' file.grep c:\\temp\\test.txt foobar /e /l
