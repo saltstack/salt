@@ -2517,7 +2517,7 @@ def _linux_iqn():
     if os.path.isfile(initiator):
         with salt.utils.files.fopen(initiator, 'r') as _iscsi:
             for line in _iscsi:
-                if line.starswith('InitiatorName='):
+                if line.startswith('InitiatorName='):
                     iqn = line.split('=')
                     final_iqn = iqn[1].rstrip()
                     ret.extend([final_iqn])
