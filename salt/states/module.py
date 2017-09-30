@@ -319,7 +319,7 @@ def _call_function(name, returner=None, **kwargs):
     func_kw = dict(zip(argspec.args[-len(argspec.defaults or []):],  # pylint: disable=incompatible-py3-code
                    argspec.defaults or []))
 
-    # func_args is initialized to a list of keyword arguments the function to be run accepts 
+    # func_args is initialized to a list of positional arguments that the function to be run accepts 
     func_args = argspec.args[:len(argspec.args or [] ) - len(argspec.defaults or [])]
     arg_type, na_type, kw_type = [], {}, False
     for funcset in reversed(kwargs.get('func_args') or []):
