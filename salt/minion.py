@@ -1333,6 +1333,7 @@ class Minion(MinionBase):
                 self._send_req_async(load, timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
         return True
 
+    @tornado.gen.coroutine
     def _handle_decoded_payload(self, data):
         '''
         Override this method if you wish to handle the decoded data
@@ -1365,6 +1366,15 @@ class Minion(MinionBase):
                 self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
                 self.schedule.functions = self.functions
                 self.schedule.returners = self.returners
+
+        process_count_max = self.opts.get('process_count_max')
+        if process_count_max > 0:
+            process_count = len(salt.utils.minion.running(self.opts))
+            while process_count >= process_count_max:
+                log.warn("Maximum number of processes reached while executing jid {0}, waiting...".format(data['jid']))
+                yield tornado.gen.sleep(10)
+                process_count = len(salt.utils.minion.running(self.opts))
+
         # We stash an instance references to allow for the socket
         # communication in Windows. You can't pickle functions, and thus
         # python needs to be able to reconstruct the reference on the other
@@ -1643,13 +1653,24 @@ class Minion(MinionBase):
         minion side execution.
         '''
         salt.utils.appendproctitle(u'{0}._thread_multi_return {1}'.format(cls.__name__, data[u'jid']))
-        ret = {
-            u'return': {},
-            u'retcode': {},
-            u'success': {}
-        }
-        for ind in range(0, len(data[u'fun'])):
-            ret[u'success'][data[u'fun'][ind]] = False
+        multifunc_ordered = opts.get(u'multifunc_ordered', False)
+        num_funcs = len(data[u'fun'])
+        if multifunc_ordered:
+            ret = {
+                u'return': [None] * num_funcs,
+                u'retcode': [None] * num_funcs,
+                u'success': [False] * num_funcs
+            }
+        else:
+            ret = {
+                u'return': {},
+                u'retcode': {},
+                u'success': {}
+            }
+
+        for ind in range(0, num_funcs):
+            if not multifunc_ordered:
+                ret[u'success'][data[u'fun'][ind]] = False
             try:
                 minion_blackout_violation = False
                 if minion_instance.connected and minion_instance.opts[u'pillar'].get(u'minion_blackout', False):
@@ -1673,16 +1694,27 @@ class Minion(MinionBase):
                     data[u'arg'][ind],
                     data)
                 minion_instance.functions.pack[u'__context__'][u'retcode'] = 0
-                ret[u'return'][data[u'fun'][ind]] = func(*args, **kwargs)
-                ret[u'retcode'][data[u'fun'][ind]] = minion_instance.functions.pack[u'__context__'].get(
-                    u'retcode',
-                    0
-                )
-                ret[u'success'][data[u'fun'][ind]] = True
+                if multifunc_ordered:
+                    ret[u'return'][ind] = func(*args, **kwargs)
+                    ret[u'retcode'][ind] = minion_instance.functions.pack[u'__context__'].get(
+                        u'retcode',
+                        0
+                    )
+                    ret[u'success'][ind] = True
+                else:
+                    ret[u'return'][data[u'fun'][ind]] = func(*args, **kwargs)
+                    ret[u'retcode'][data[u'fun'][ind]] = minion_instance.functions.pack[u'__context__'].get(
+                        u'retcode',
+                        0
+                    )
+                    ret[u'success'][data[u'fun'][ind]] = True
             except Exception as exc:
                 trb = traceback.format_exc()
                 log.warning(u'The minion function caused an exception: %s', exc)
-                ret[u'return'][data[u'fun'][ind]] = trb
+                if multifunc_ordered:
+                    ret[u'return'][ind] = trb
+                else:
+                    ret[u'return'][data[u'fun'][ind]] = trb
             ret[u'jid'] = data[u'jid']
             ret[u'fun'] = data[u'fun']
             ret[u'fun_args'] = data[u'arg']
@@ -2674,6 +2706,8 @@ class SyndicManager(MinionBase):
         '''
         if kwargs is None:
             kwargs = {}
+        successful = False
+        # Call for each master
         for master, syndic_future in self.iter_master_options(master_id):
             if not syndic_future.done() or syndic_future.exception():
                 log.error(
@@ -2684,15 +2718,15 @@ class SyndicManager(MinionBase):
 
             try:
                 getattr(syndic_future.result(), func)(*args, **kwargs)
-                return
+                successful = True
             except SaltClientError:
                 log.error(
                     u'Unable to call %s on %s, trying another...',
                     func, master
                 )
                 self._mark_master_dead(master)
-                continue
-        log.critical(u'Unable to call %s on any masters!', func)
+        if not successful:
+            log.critical(u'Unable to call %s on any masters!', func)
 
     def _return_pub_syndic(self, values, master_id=None):
         '''
