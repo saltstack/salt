@@ -2033,7 +2033,7 @@ This allows the following more convenient syntax to be used:
         name: {{ service }}
     % endfor
 
-As apposed to the following less convenient but equivalent syntax that would have to
+The following less convenient but equivalent syntax would have to
 be used if you had not set the line_statement and line_comment options:
 
 .. code-block:: yaml
