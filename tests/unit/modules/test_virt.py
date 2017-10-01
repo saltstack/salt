@@ -3,6 +3,7 @@
 # Import python libs
 from __future__ import absolute_import
 import re
+import os
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -13,6 +14,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 import salt.modules.virt as virt
 import salt.modules.config as config
 from salt._compat import ElementTree as ET
+import salt.config
 import salt.utils
 
 # Import third party libs
@@ -245,8 +247,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         disks = root.findall('.//disk')
         self.assertEqual(len(disks), 1)
         disk = disks[0]
-        self.assertTrue(disk.find('source').attrib['file'].startswith('/'))
-        self.assertTrue('hello/system' in disk.find('source').attrib['file'])
+        root_dir = salt.config.DEFAULT_MINION_OPTS.get('root_dir')
+        self.assertTrue(disk.find('source').attrib['file'].startswith(root_dir))
+        self.assertTrue(os.path.join('hello', 'system') in disk.find('source').attrib['file'])
         self.assertEqual(disk.find('target').attrib['dev'], 'vda')
         self.assertEqual(disk.find('target').attrib['bus'], 'virtio')
         self.assertEqual(disk.find('driver').attrib['name'], 'qemu')
@@ -284,7 +287,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(len(disks), 1)
         disk = disks[0]
         self.assertTrue('[0]' in disk.find('source').attrib['file'])
-        self.assertTrue('hello/system' in disk.find('source').attrib['file'])
+        self.assertTrue(os.path.join('hello', 'system') in disk.find('source').attrib['file'])
         self.assertEqual(disk.find('target').attrib['dev'], 'sda')
         self.assertEqual(disk.find('target').attrib['bus'], 'scsi')
         self.assertEqual(disk.find('address').attrib['unit'], '0')
