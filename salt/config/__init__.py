@@ -878,19 +878,17 @@ VALID_OPTS = {
     # check in with their lists of expected minions before giving up
     'syndic_wait': int,
 
-    # TODO documentation
+    # Override Jinja environment option defaults for all templates except sls templates
     'jinja_env': dict,
 
-    # TODO documentation
+    # Set Jinja environment options for sls templates
     'jinja_sls_env': dict,
 
     # If this is set to True leading spaces and tabs are stripped from the start
     # of a line to a block.
-    # TODO deprecated
     'jinja_lstrip_blocks': bool,
 
     # If this is set to True the first newline after a Jinja block is removed
-    # TODO deprecated
     'jinja_trim_blocks': bool,
 
     # Cache minion ID to file
