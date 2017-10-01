@@ -1,5 +1,5 @@
-salt.runners.mattermost module
-==============================
+salt.runners.mattermost
+=======================
 
 **Note for 2017.7 releases!**
 

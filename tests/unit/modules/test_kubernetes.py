@@ -97,19 +97,20 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_delete_deployments(self):
         '''
-        Tests deployment creation.
+        Tests deployment deletion
         :return:
         '''
         with patch('salt.modules.kubernetes.kubernetes') as mock_kubernetes_lib:
-            with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
-                mock_kubernetes_lib.client.V1DeleteOptions = Mock(return_value="")
-                mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
-                    **{"delete_namespaced_deployment.return_value.to_dict.return_value": {}}
-                )
-                self.assertEqual(kubernetes.delete_deployment("test"), {})
-                self.assertTrue(
-                    kubernetes.kubernetes.client.ExtensionsV1beta1Api().
-                    delete_namespaced_deployment().to_dict.called)
+            with patch('salt.modules.kubernetes.show_deployment', Mock(return_value=None)):
+                with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
+                    mock_kubernetes_lib.client.V1DeleteOptions = Mock(return_value="")
+                    mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
+                        **{"delete_namespaced_deployment.return_value.to_dict.return_value": {'code': ''}}
+                    )
+                    self.assertEqual(kubernetes.delete_deployment("test"), {'code': 200})
+                    self.assertTrue(
+                        kubernetes.kubernetes.client.ExtensionsV1beta1Api().
+                        delete_namespaced_deployment().to_dict.called)
 
     def test_create_deployments(self):
         '''
