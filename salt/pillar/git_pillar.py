@@ -492,6 +492,12 @@ except ImportError:
 PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs')
 PER_REMOTE_ONLY = ('name', 'mountpoint')
 
+# Fall back to default per-remote-only. This isn't technically needed since
+# salt.utils.gitfs.GitBase.init_remotes() will default to
+# salt.utils.gitfs.PER_REMOTE_ONLY for this value, so this is mainly for
+# runners and other modules that import salt.pillar.git_pillar.
+PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
+
 # Set up logging
 log = logging.getLogger(__name__)
 
