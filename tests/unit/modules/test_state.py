@@ -279,7 +279,7 @@ class MockTarFile(object):
     '''
         Mock tarfile class
     '''
-    path = "/tmp"
+    path = os.sep + "tmp"
 
     def __init__(self):
         pass
@@ -952,30 +952,27 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         '''
             Test to execute a packaged state run
         '''
+        tar_file = os.sep + os.path.join('tmp', 'state_pkg.tgz')
         mock = MagicMock(side_effect=[False, True, True, True, True, True])
         with patch.object(os.path, 'isfile', mock), \
                 patch('salt.modules.state.tarfile', MockTarFile), \
                 patch('salt.modules.state.json', MockJson()):
-            self.assertEqual(state.pkg("/tmp/state_pkg.tgz", "", "md5"), {})
+            self.assertEqual(state.pkg(tar_file, "", "md5"), {})
 
             mock = MagicMock(side_effect=[False, 0, 0, 0, 0])
             with patch.object(salt.utils, 'get_hash', mock):
-                self.assertDictEqual(state.pkg("/tmp/state_pkg.tgz", "", "md5"),
-                                     {})
+                # Verify hash
+                self.assertDictEqual(state.pkg(tar_file, "", "md5"), {})
 
-                self.assertDictEqual(state.pkg("/tmp/state_pkg.tgz", 0, "md5"),
-                                     {})
+                # Verify file outside intended root
+                self.assertDictEqual(state.pkg(tar_file, 0, "md5"), {})
 
                 MockTarFile.path = ""
                 MockJson.flag = True
                 with patch('salt.utils.fopen', mock_open()):
-                    self.assertListEqual(state.pkg("/tmp/state_pkg.tgz",
-                                                   0,
-                                                   "md5"),
-                                         [True])
+                    self.assertListEqual(state.pkg(tar_file, 0, "md5"), [True])
 
                 MockTarFile.path = ""
                 MockJson.flag = False
                 with patch('salt.utils.fopen', mock_open()):
-                    self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
-                                              0, "md5"))
+                    self.assertTrue(state.pkg(tar_file, 0, "md5"))

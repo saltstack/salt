@@ -140,10 +140,11 @@ class Batch(object):
         #   sure that the main while loop finishes even with unresp minions
         minion_tracker = {}
 
-        # We already know some minions didn't respond to the ping, so inform
-        # the user we won't be attempting to run a job on them
-        for down_minion in self.down_minions:
-            print_cli('Minion {0} did not respond. No job will be sent.'.format(down_minion))
+        if not self.quiet:
+            # We already know some minions didn't respond to the ping, so inform
+            # the user we won't be attempting to run a job on them
+            for down_minion in self.down_minions:
+                print_cli('Minion {0} did not respond. No job will be sent.'.format(down_minion))
 
         # Iterate while we still have things to execute
         while len(ret) < len(self.minions):

@@ -265,6 +265,12 @@ class SaltCacheError(SaltException):
     '''
 
 
+class TimeoutError(SaltException):
+    '''
+    Thrown when an opration cannot be completet within a given time limit.
+    '''
+
+
 class SaltReqTimeoutError(SaltException):
     '''
     Thrown when a salt master request call fails to return within the timeout
