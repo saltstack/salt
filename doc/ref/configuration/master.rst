@@ -1941,46 +1941,44 @@ the cloud profile or master config file, no templating will be performed.
 
     userdata_template: jinja
 
-.. conf_master:: jinja_line_statement_prefix
+.. conf_master:: jinja_env
 
-``jinja_line_statement_prefix``
----------------------
-
-.. versionadded:: Oxygen
-
-Default: ``''``
-
-If this is set to a string that is not empty, any line starting with this prefix
-will be interpreted as a line statement by the jinja renderer.
-Defaults to ``''`` and corresponds
-to the Jinja environment init variable ``line_statement_prefix``.
-
-.. code-block:: yaml
-
-    jinja_line_statement_prefix: ''
-
-.. conf_master:: jinja_line_comment_prefix
-
-``jinja_line_comment_prefix``
----------------------
+``jinja_env``
+-------------
 
 .. versionadded:: Oxygen
 
-Default: ``''``
+Default: ``{}``
 
-If this is set to a string that is not empty, any line starting with this prefix
-will be interpreted as a line comment by the jinja renderer.
-Defaults to ``''`` and corresponds
-to the Jinja environment init variable ``line_comment_prefix``.
+.. note::
+
+    The `Jinja2 Environment documentation <http://jinja.pocoo.org/docs/api/#jinja2.Environment>` is the official source for the default values. Not all the options listed in the jinja documentation can be overridden using jinja_env or jinja_sls_env.
+
+The default options are:
 
 .. code-block:: yaml
 
-    jinja_line_comment_prefix: ''
+    jinja_env:
+      block_start_string: '{%'
+      block_end_string: '%}'
+      variable_start_string: '{{'
+      variable_end_string: '}}'
+      comment_start_string: '{#'
+      comment_end_string: '#}'
+      line_statement_prefix: 
+      line_comment_prefix: 
+      trim_blocks: False
+      lstrip_blocks: False
+      newline_sequence: '\n'
+      keep_trailing_newline: False
 
 .. conf_master:: jinja_trim_blocks
 
 ``jinja_trim_blocks``
 ---------------------
+
+.. deprecated:: Oxygen
+    Replaced by :conf_master:`jinja_env` and :conf_master:`jinja_sls_env`
 
 .. versionadded:: 2014.1.0
 
@@ -1998,6 +1996,9 @@ to the Jinja environment init variable ``trim_blocks``.
 
 ``jinja_lstrip_blocks``
 -----------------------
+
+.. deprecated:: Oxygen
+    Replaced by :conf_master:`jinja_env` and :conf_master:`jinja_sls_env`
 
 .. versionadded:: 2014.1.0
 

@@ -537,24 +537,35 @@ syndic_user: salt
 # The renderer to use on the minions to render the state data
 #renderer: yaml_jinja
 
-# TODO documentation
-# Ignoring documentation for now
-# (until agreement on implementation has been reached)
-
-# Default jinja environment options for everything but
-# salt sls files
+# Default Jinja environment options for all templates except sls templates
 #jinja_env:
-#  line_statement_prefix: '#'
-#  line_comment_prefix: '##'
-#  trim_blocks: True
-#  lstrip_blocks: True
+#  block_start_string: '{%'
+#  block_end_string: '%}'
+#  variable_start_string: '{{'
+#  variable_end_string: '}}'
+#  comment_start_string: '{#'
+#  comment_end_string: '#}'
+#  line_statement_prefix: 
+#  line_comment_prefix: 
+#  trim_blocks: False
+#  lstrip_blocks: False
+#  newline_sequence: '\n'
+#  keep_trailing_newline: False
 
-# Jinja environment options for salt sls files
+# Jinja environment options for sls templates
 #jinja_sls_env:
-#  line_statement_prefix: '#'
-#  line_comment_prefix: '##'
-#  trim_blocks: True
-#  lstrip_blocks: True
+#  block_start_string: '{%'
+#  block_end_string: '%}'
+#  variable_start_string: '{{'
+#  variable_end_string: '}}'
+#  comment_start_string: '{#'
+#  comment_end_string: '#}'
+#  line_statement_prefix: 
+#  line_comment_prefix: 
+#  trim_blocks: False
+#  lstrip_blocks: False
+#  newline_sequence: '\n'
+#  keep_trailing_newline: False
 
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False
