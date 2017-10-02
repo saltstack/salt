@@ -60,22 +60,13 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
+from salt.utils.files import HASHES, HASHES_REVMAP
 
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'makedirs_': 'makedirs'
 }
-
-HASHES = {
-    'sha512': 128,
-    'sha384': 96,
-    'sha256': 64,
-    'sha224': 56,
-    'sha1': 40,
-    'md5': 32,
-}
-HASHES_REVMAP = dict([(y, x) for x, y in six.iteritems(HASHES)])
 
 
 def __virtual__():
@@ -2327,14 +2318,14 @@ def replace(path,
         if not_found_content is None:
             not_found_content = repl
         if prepend_if_not_found:
-            new_file.insert(0, not_found_content + b'\n')
+            new_file.insert(0, not_found_content + salt.utils.to_bytes(os.linesep))
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith(b'\n'):
-                    new_file[-1] += b'\n'
-            new_file.append(not_found_content + b'\n')
+                if not new_file[-1].endswith(salt.utils.to_bytes(os.linesep)):
+                    new_file[-1] += salt.utils.to_bytes(os.linesep)
+            new_file.append(not_found_content + salt.utils.to_bytes(os.linesep))
         has_changes = True
         if not dry_run:
             try:
@@ -2345,9 +2336,9 @@ def replace(path,
                 raise CommandExecutionError("Exception: {0}".format(exc))
             # write new content in the file while avoiding partial reads
             try:
-                fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
                 for line in new_file:
-                    fh_.write(salt.utils.stringutils.to_str(line))
+                    fh_.write(salt.utils.stringutils.to_bytes(line))
             finally:
                 fh_.close()
 
@@ -2517,9 +2508,10 @@ def blockreplace(path,
     try:
         fi_file = fileinput.input(path,
                     inplace=False, backup=False,
-                    bufsize=1, mode='r')
+                    bufsize=1, mode='rb')
         for line in fi_file:
 
+            line = salt.utils.to_str(line)
             result = line
 
             if marker_start in line:
@@ -2532,14 +2524,24 @@ def blockreplace(path,
                         # end of block detected
                         in_block = False
 
-                        # Check for multi-line '\n' terminated content as split will
-                        # introduce an unwanted additional new line.
-                        if content and content[-1] == '\n':
-                            content = content[:-1]
+                        # Handle situations where there may be multiple types
+                        # of line endings in the same file. Separate the content
+                        # into lines. Account for Windows-style line endings
+                        # using os.linesep, then by linux-style line endings
+                        # using '\n'
+                        split_content = []
+                        for linesep_line in content.split(os.linesep):
+                            for content_line in linesep_line.split('\n'):
+                                split_content.append(content_line)
+
+                        # Trim any trailing new lines to avoid unwanted
+                        # additional new lines
+                        while not split_content[-1]:
+                            split_content.pop()
 
                         # push new block content in file
-                        for cline in content.split('\n'):
-                            new_file.append(cline + '\n')
+                        for content_line in split_content:
+                            new_file.append(content_line + os.linesep)
 
                         done = True
 
@@ -2567,25 +2569,25 @@ def blockreplace(path,
     if not done:
         if prepend_if_not_found:
             # add the markers and content at the beginning of file
-            new_file.insert(0, marker_end + '\n')
+            new_file.insert(0, marker_end + os.linesep)
             if append_newline is True:
-                new_file.insert(0, content + '\n')
+                new_file.insert(0, content + os.linesep)
             else:
                 new_file.insert(0, content)
-            new_file.insert(0, marker_start + '\n')
+            new_file.insert(0, marker_start + os.linesep)
             done = True
         elif append_if_not_found:
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith('\n'):
-                    new_file[-1] += '\n'
+                if not new_file[-1].endswith(os.linesep):
+                    new_file[-1] += os.linesep
             # add the markers and content at the end of file
-            new_file.append(marker_start + '\n')
+            new_file.append(marker_start + os.linesep)
             if append_newline is True:
-                new_file.append(content + '\n')
+                new_file.append(content + os.linesep)
             else:
                 new_file.append(content)
-            new_file.append(marker_end + '\n')
+            new_file.append(marker_end + os.linesep)
             done = True
         else:
             raise CommandExecutionError(
@@ -2616,9 +2618,9 @@ def blockreplace(path,
 
             # write new content in the file while avoiding partial reads
             try:
-                fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
                 for line in new_file:
-                    fh_.write(line)
+                    fh_.write(salt.utils.to_bytes(line))
             finally:
                 fh_.close()
 
@@ -3758,6 +3760,14 @@ def source_list(source, source_hash, saltenv):
                 single_src = next(iter(single))
                 single_hash = single[single_src] if single[single_src] else source_hash
                 urlparsed_single_src = _urlparse(single_src)
+                # Fix this for Windows
+                if salt.utils.is_windows():
+                    # urlparse doesn't handle a local Windows path without the
+                    # protocol indicator (file://). The scheme will be the
+                    # drive letter instead of the protocol. So, we'll add the
+                    # protocol and re-parse
+                    if urlparsed_single_src.scheme.lower() in string.ascii_lowercase:
+                        urlparsed_single_src = _urlparse('file://' + single_src)
                 proto = urlparsed_single_src.scheme
                 if proto == 'salt':
                     path, senv = salt.utils.url.parse(single_src)
@@ -3767,18 +3777,17 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith('http') or proto == 'ftp':
-                    try:
-                        if __salt__['cp.cache_file'](single_src):
-                            ret = (single_src, single_hash)
-                            break
-                    except MinionError as exc:
-                        # Error downloading file. Log the caught exception and
-                        # continue on to the next source.
-                        log.exception(exc)
-                elif proto == 'file' and os.path.exists(urlparsed_single_src.path):
                     ret = (single_src, single_hash)
                     break
-                elif single_src.startswith('/') and os.path.exists(single_src):
+                elif proto == 'file' and (
+                         os.path.exists(urlparsed_single_src.netloc) or
+                         os.path.exists(urlparsed_single_src.path) or
+                         os.path.exists(os.path.join(
+                             urlparsed_single_src.netloc,
+                             urlparsed_single_src.path))):
+                    ret = (single_src, single_hash)
+                    break
+                elif single_src.startswith(os.sep) and os.path.exists(single_src):
                     ret = (single_src, single_hash)
                     break
             elif isinstance(single, six.string_types):
@@ -3789,15 +3798,26 @@ def source_list(source, source_hash, saltenv):
                     ret = (single, source_hash)
                     break
                 urlparsed_src = _urlparse(single)
+                if salt.utils.is_windows():
+                    # urlparse doesn't handle a local Windows path without the
+                    # protocol indicator (file://). The scheme will be the
+                    # drive letter instead of the protocol. So, we'll add the
+                    # protocol and re-parse
+                    if urlparsed_src.scheme.lower() in string.ascii_lowercase:
+                        urlparsed_src = _urlparse('file://' + single)
                 proto = urlparsed_src.scheme
-                if proto == 'file' and os.path.exists(urlparsed_src.path):
+                if proto == 'file' and (
+                        os.path.exists(urlparsed_src.netloc) or
+                        os.path.exists(urlparsed_src.path) or
+                        os.path.exists(os.path.join(
+                            urlparsed_src.netloc,
+                            urlparsed_src.path))):
                     ret = (single, source_hash)
                     break
                 elif proto.startswith('http') or proto == 'ftp':
-                    if __salt__['cp.cache_file'](single):
-                        ret = (single, source_hash)
-                        break
-                elif single.startswith('/') and os.path.exists(single):
+                    ret = (single, source_hash)
+                    break
+                elif single.startswith(os.sep) and os.path.exists(single):
                     ret = (single, source_hash)
                     break
         if ret is None:
@@ -4007,11 +4027,14 @@ def get_managed(
             else:
                 sfn = cached_dest
 
-        # If we didn't have the template or remote file, let's get it
-        # Similarly when the file has been updated and the cache has to be refreshed
+        # If we didn't have the template or remote file, or the file has been
+        # updated and the cache has to be refreshed, download the file.
         if not sfn or cache_refetch:
             try:
-                sfn = __salt__['cp.cache_file'](source, saltenv)
+                sfn = __salt__['cp.cache_file'](
+                    source,
+                    saltenv,
+                    source_hash=source_sum.get('hsum'))
             except Exception as exc:
                 # A 404 or other error code may raise an exception, catch it
                 # and return a comment that will fail the calling state.
@@ -4294,7 +4317,8 @@ def extract_hash(hash_fn,
 
 def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False):
     '''
-    Check the permissions on files, modify attributes and chown if needed
+    Check the permissions on files, modify attributes and chown if needed. File
+    attributes are only verified if lsattr(1) is installed.
 
     CLI Example:
 
@@ -4306,6 +4330,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
         ``follow_symlinks`` option added
     '''
     name = os.path.expanduser(name)
+    lsattr_cmd = salt.utils.path.which('lsattr')
 
     if not ret:
         ret = {'name': name,
@@ -4331,7 +4356,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     perms['lmode'] = salt.utils.normalize_mode(cur['mode'])
 
     is_dir = os.path.isdir(name)
-    if not salt.utils.platform.is_windows() and not is_dir:
+    if not salt.utils.platform.is_windows() and not is_dir and lsattr_cmd:
         # List attributes on file
         perms['lattrs'] = ''.join(lsattr(name)[name])
         # Remove attributes on file so changes can be enforced.
@@ -4442,7 +4467,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     if __opts__['test'] is True and ret['changes']:
         ret['result'] = None
 
-    if not salt.utils.platform.is_windows() and not is_dir:
+    if not salt.utils.platform.is_windows() and not is_dir and lsattr_cmd:
         # Replace attributes on file if it had been removed
         if perms['lattrs']:
             chattr(name, operator='add', attributes=perms['lattrs'])
@@ -4675,7 +4700,7 @@ def check_file_meta(
     '''
     changes = {}
     if not source_sum:
-        source_sum = dict()
+        source_sum = {}
     lstats = stats(name, hash_type=source_sum.get('hash_type', None), follow_symlinks=False)
     if not lstats:
         changes['newfile'] = name
@@ -4683,7 +4708,10 @@ def check_file_meta(
     if 'hsum' in source_sum:
         if source_sum['hsum'] != lstats['sum']:
             if not sfn and source:
-                sfn = __salt__['cp.cache_file'](source, saltenv)
+                sfn = __salt__['cp.cache_file'](
+                    source,
+                    saltenv,
+                    source_hash=source_sum['hsum'])
             if sfn:
                 try:
                     changes['diff'] = get_diff(
@@ -4750,7 +4778,9 @@ def get_diff(file1,
              saltenv='base',
              show_filenames=True,
              show_changes=True,
-             template=False):
+             template=False,
+             source_hash_file1=None,
+             source_hash_file2=None):
     '''
     Return unified diff of two files
 
@@ -4785,6 +4815,22 @@ def get_diff(file1,
 
         .. versionadded:: Oxygen
 
+    source_hash_file1
+        If ``file1`` is an http(s)/ftp URL and the file exists in the minion's
+        file cache, this option can be passed to keep the minion from
+        re-downloading the archive if the cached copy matches the specified
+        hash.
+
+        .. versionadded:: Oxygen
+
+    source_hash_file2
+        If ``file2`` is an http(s)/ftp URL and the file exists in the minion's
+        file cache, this option can be passed to keep the minion from
+        re-downloading the archive if the cached copy matches the specified
+        hash.
+
+        .. versionadded:: Oxygen
+
     CLI Examples:
 
     .. code-block:: bash
@@ -4793,14 +4839,17 @@ def get_diff(file1,
         salt '*' file.get_diff /tmp/foo.txt /tmp/bar.txt
     '''
     files = (file1, file2)
+    source_hashes = (source_hash_file1, source_hash_file2)
     paths = []
     errors = []
 
-    for filename in files:
+    for filename, source_hash in zip(files, source_hashes):
         try:
             # Local file paths will just return the same path back when passed
             # to cp.cache_file.
-            cached_path = __salt__['cp.cache_file'](filename, saltenv)
+            cached_path = __salt__['cp.cache_file'](filename,
+                                                    saltenv,
+                                                    source_hash=source_hash)
             if cached_path is False:
                 errors.append(
                     u'File {0} not found'.format(

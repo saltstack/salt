@@ -352,7 +352,7 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, **kwargs):
     return _client().get_dir(path, dest, saltenv, gzip)
 
 
-def get_url(path, dest='', saltenv='base', makedirs=False):
+def get_url(path, dest='', saltenv='base', makedirs=False, source_hash=None):
     '''
     .. versionchanged:: Oxygen
         ``dest`` can now be a directory
@@ -386,6 +386,13 @@ def get_url(path, dest='', saltenv='base', makedirs=False):
         Salt fileserver envrionment from which to retrieve the file. Ignored if
         ``path`` is not a ``salt://`` URL.
 
+    source_hash
+        If ``path`` is an http(s) or ftp URL and the file exists in the
+        minion's file cache, this option can be passed to keep the minion from
+        re-downloading the file if the cached copy matches the specified hash.
+
+        .. versionadded:: Oxygen
+
     CLI Example:
 
     .. code-block:: bash
@@ -394,9 +401,11 @@ def get_url(path, dest='', saltenv='base', makedirs=False):
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
     '''
     if isinstance(dest, six.string_types):
-        result = _client().get_url(path, dest, makedirs, saltenv)
+        result = _client().get_url(
+            path, dest, makedirs, saltenv, source_hash=source_hash)
     else:
-        result = _client().get_url(path, None, makedirs, saltenv, no_cache=True)
+        result = _client().get_url(
+            path, None, makedirs, saltenv, no_cache=True, source_hash=source_hash)
     if not result:
         log.error(
             'Unable to fetch file {0} from saltenv {1}.'.format(
@@ -429,11 +438,18 @@ def get_file_str(path, saltenv='base'):
     return fn_
 
 
-def cache_file(path, saltenv='base'):
+def cache_file(path, saltenv='base', source_hash=None):
     '''
     Used to cache a single file on the Minion
 
-    Returns the location of the new cached file on the Minion.
+    Returns the location of the new cached file on the Minion
+
+    source_hash
+        If ``name`` is an http(s) or ftp URL and the file exists in the
+        minion's file cache, this option can be passed to keep the minion from
+        re-downloading the file if the cached copy matches the specified hash.
+
+        .. versionadded:: Oxygen
 
     CLI Example:
 
@@ -485,7 +501,7 @@ def cache_file(path, saltenv='base'):
     if senv:
         saltenv = senv
 
-    result = _client().cache_file(path, saltenv)
+    result = _client().cache_file(path, saltenv, source_hash=source_hash)
     if not result:
         log.error(
             u'Unable to cache file \'%s\' from saltenv \'%s\'.',

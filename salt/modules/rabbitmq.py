@@ -851,7 +851,7 @@ def list_policies(vhost="/", runas=None):
     return ret
 
 
-def set_policy(vhost, name, pattern, definition, priority=None, runas=None):
+def set_policy(vhost, name, pattern, definition, priority=None, apply_to=None, runas=None):
     '''
     Set a policy based on rabbitmqctl set_policy.
 
@@ -874,6 +874,8 @@ def set_policy(vhost, name, pattern, definition, priority=None, runas=None):
     cmd = [RABBITMQCTL, 'set_policy', '-p', vhost]
     if priority:
         cmd.extend(['--priority', priority])
+    if apply_to:
+        cmd.extend(['--apply-to', apply_to])
     cmd.extend([name, pattern, definition])
     res = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
     log.debug('Set policy: {0}'.format(res['stdout']))

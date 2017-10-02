@@ -153,3 +153,61 @@ def check_result(running, recurse=False, highstate=None):
         if not ret:
             break
     return ret
+
+
+def merge_subreturn(original_return, sub_return, subkey=None):
+    '''
+    Update an existing state return (`original_return`) in place
+    with another state return (`sub_return`), i.e. for a subresource.
+
+    Returns:
+        dict: The updated state return.
+
+    The existing state return does not need to have all the required fields,
+    as this is meant to be called from the internals of a state function,
+    but any existing data will be kept and respected.
+
+    It is important after using this function to check the return value
+    to see if it is False, in which case the main state should return.
+    Prefer to check `_ret['result']` instead of `ret['result']`,
+    as the latter field may not yet be populated.
+
+    Code Example:
+
+    .. code-block:: python
+        def state_func(name, config, alarm=None):
+            ret = {'name': name, 'comment': '', 'changes': {}}
+            if alarm:
+                _ret = __states__['subresource.managed'](alarm)
+                __utils__['state.merge_subreturn'](ret, _ret)
+                if _ret['result'] is False:
+                    return ret
+    '''
+    if not subkey:
+        subkey = sub_return['name']
+
+    if sub_return['result'] is False:
+        # True or None stay the same
+        original_return['result'] = sub_return['result']
+
+    sub_comment = sub_return['comment']
+    if not isinstance(sub_comment, list):
+        sub_comment = [sub_comment]
+    original_return.setdefault('comment', [])
+    if isinstance(original_return['comment'], list):
+        original_return['comment'].extend(sub_comment)
+    else:
+        if original_return['comment']:
+            # Skip for empty original comments
+            original_return['comment'] += u'\n'
+        original_return['comment'] += u'\n'.join(sub_comment)
+
+    if sub_return['changes']:  # changes always exists
+        original_return.setdefault('changes', {})
+        original_return['changes'][subkey] = sub_return['changes']
+
+    if sub_return.get('pchanges'):  # pchanges may or may not exist
+        original_return.setdefault('pchanges', {})
+        original_return['pchanges'][subkey] = sub_return['pchanges']
+
+    return original_return

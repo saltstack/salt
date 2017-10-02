@@ -205,10 +205,6 @@ class Beacon(object):
         '''
         # Fire the complete event back along with the list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
-        b_conf = self.functions['config.merge']('beacons')
-        if not isinstance(self.opts['beacons'], dict):
-            self.opts['beacons'] = {}
-        self.opts['beacons'].update(b_conf)
         evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
                        tag='/salt/minion/minion_beacons_list_complete')
 

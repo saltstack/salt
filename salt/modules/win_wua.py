@@ -110,7 +110,7 @@ def available(software=True,
             Include software updates in the results (default is True)
 
         drivers (bool):
-            Include driver updates in the results (default is False)
+            Include driver updates in the results (default is True)
 
         summary (bool):
             - True: Return a summary of updates available for each category.
