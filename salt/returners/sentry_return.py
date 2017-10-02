@@ -45,7 +45,6 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import six
 
 # Import Salt libs
 import salt.utils.jid
@@ -135,7 +134,7 @@ def returner(ret):
         if ret_is_not_error(ret):
             data['level'] = 'info'
 
-        if raven_config.get('report_errors_only') and not data['level'] == 'error':
+        if raven_config.get('report_errors_only') and data['level'] != 'error':
             return
 
         if raven_config.get('dsn'):
@@ -154,9 +153,8 @@ def returner(ret):
                 )
             except KeyError as missing_key:
                 logger.error(
-                    'Sentry returner need config {0!r} in pillar'.format(
-                        missing_key
-                    )
+                    'Sentry returner needs key \'%s\' in pillar',
+                    missing_key
                 )
                 return
 
