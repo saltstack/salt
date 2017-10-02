@@ -178,6 +178,7 @@ from __future__ import absolute_import
 import salt.loader
 import salt.utils
 import salt.utils.jid
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
 from salt.exceptions import SaltInvocationError
@@ -315,7 +316,7 @@ def _call_function(name, returner=None, **kwargs):
     '''
     argspec = salt.utils.args.get_function_argspec(__salt__[name])
 
-    # func_kw is initialized to a dictinary of keyword arguments the function to be run accepts
+    # func_kw is initialized to a dictionary of keyword arguments the function to be run accepts
     func_kw = dict(zip(argspec.args[-len(argspec.defaults or []):],  # pylint: disable=incompatible-py3-code
                    argspec.defaults or []))
 
@@ -328,7 +329,7 @@ def _call_function(name, returner=None, **kwargs):
             # those to the arg list that we will pass to the func.
             arg_type.append(funcset)
         else:
-            for kwarg_key in funcset.keys():
+            for kwarg_key in six.iterkeys(funcset):
                 # We are going to pass in a keyword argument. The trick here is to make certain
                 # that if we find that in the *args* list that we pass it there and not as a kwarg
                 if kwarg_key in func_args:
