@@ -6573,7 +6573,8 @@ def cached(name,
             and parsed.scheme in salt.utils.files.REMOTE_PROTOS:
         ret['comment'] = (
             'Unable to verify upstream hash of source file {0}, please set '
-            'source_hash or set skip_verify to True'.format(name)
+            'source_hash or set skip_verify to True'.format(
+                salt.utils.url.redact_http_basic_auth(name))
         )
         return ret
 
@@ -6712,13 +6713,14 @@ def cached(name,
                 # for the 2017.7 release cycle.
                 #source_hash=source_sum.get('hsum'))
         except Exception as exc:
-            ret['comment'] = exc.__str__()
+            ret['comment'] = salt.utils.url.redact_http_basic_auth(exc.__str__())
             return ret
 
     if not local_copy:
         ret['comment'] = (
             'Failed to cache {0}, check minion log for more '
-            'information'.format(name)
+            'information'.format(
+                salt.utils.url.redact_http_basic_auth(name))
         )
         return ret
 
