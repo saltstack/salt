@@ -31,6 +31,7 @@ SDB_OPTS = {
                 }
             }
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SdbTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -41,7 +42,7 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
     def tearDownClass(cls):
         try:
             os.unlink(TEMP_DATABASE_FILE)
-        except:
+        except OSError:
             pass
 
     def setup_loader_modules(self):
@@ -52,7 +53,7 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
     def test_sqlite_get_not_found(self):
         what = sdb.sdb_get(
                 'sdb://test_sdb_data/thisKeyDoesNotExist', SDB_OPTS)
-        self.assertEqual(what, None, 'what is "{!r}"'.format(what))
+        self.assertEqual(what, None, 'what is "{0!r}"'.format(what))
 
     # test with SQLite database write and read
 
