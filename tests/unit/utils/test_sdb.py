@@ -53,7 +53,7 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
     def test_sqlite_get_not_found(self):
         what = sdb.sdb_get(
                 'sdb://test_sdb_data/thisKeyDoesNotExist', SDB_OPTS)
-        self.assertEqual(what, None, 'what is "{0!r}"'.format(what))
+        self.assertEqual(what, None)
 
     # test with SQLite database write and read
 
