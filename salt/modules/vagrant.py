@@ -511,15 +511,15 @@ def destroy(name):
     machine = vm_['machine']
 
     cmd = 'vagrant destroy -f {}'.format(machine)
-    try:
-        ret = __salt__['cmd.retcode'](cmd,
-                                      runas=vm_.get('runas'),
-                                      cwd=vm_.get('cwd'))
-    except (OSError, CommandExecutionError):
-        ret = 1
-    finally:
+
+    ret = __salt__['cmd.run_all'](cmd,
+                                  runas=vm_.get('runas'),
+                                  cwd=vm_.get('cwd'),
+                                  output_loglevel='info')
+    if ret['retcode'] == 0:
         _erase_vm_info(name)
-    return ret == 0
+        return True
+    return ret
 
 
 def get_ssh_config(name, network_mask='', get_private_key=False):
