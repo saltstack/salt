@@ -52,7 +52,7 @@ import logging
 log = logging.getLogger(__name__)
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     # pylint: disable=unused-import
     import boto
@@ -270,9 +270,9 @@ def get_all_security_groups(groupnames=None, group_ids=None, filters=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(groupnames, str):
+    if isinstance(groupnames, six.string_types):
         groupnames = [groupnames]
-    if isinstance(group_ids, str):
+    if isinstance(group_ids, six.string_types):
         groupnames = [group_ids]
 
     interesting = ['description', 'id', 'instances', 'name', 'owner_id',
@@ -597,7 +597,7 @@ def set_tags(tags,
         a dict of key:value pair of tags to set on the security group
 
     name
-        the name of the security gruop
+        the name of the security group
 
     group_id
         the group id of the security group (in lie of a name/vpc combo)

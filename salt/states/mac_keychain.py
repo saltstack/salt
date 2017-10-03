@@ -13,12 +13,12 @@ Install certificats to the macOS keychain
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 import os
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'keychain'
@@ -28,7 +28,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return __virtualname__
     return False
 

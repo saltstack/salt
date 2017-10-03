@@ -6,7 +6,7 @@ Pull sdb values from a YAML file
 :maturity:      New
 :platform:      all
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Configuration:
 
@@ -42,6 +42,7 @@ import logging
 import salt.exceptions
 import salt.loader
 import salt.utils
+import salt.utils.files
 import salt.utils.dictupdate
 
 log = logging.getLogger(__name__)
@@ -76,7 +77,7 @@ def _get_values(profile=None):
     ret = {}
     for fname in profile.get('files', []):
         try:
-            with salt.utils.flopen(fname) as f:
+            with salt.utils.files.flopen(fname) as f:
                 contents = serializers.yaml.deserialize(f)
                 ret = salt.utils.dictupdate.merge(ret, contents,
                         **profile.get('merge', {}))

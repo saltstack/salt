@@ -27,7 +27,7 @@ import yaml
 import urllib
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 HAS_LIBS = False
 try:
     import splunklib.client
