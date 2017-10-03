@@ -518,8 +518,8 @@ def destroy(name):
                                   output_loglevel='info')
     if ret['retcode'] == 0:
         _erase_vm_info(name)
-        return True
-    return ret
+        return u'Destroyed VM {0}'.format(name)
+    return False
 
 
 def get_ssh_config(name, network_mask='', get_private_key=False):
