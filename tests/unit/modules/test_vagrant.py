@@ -21,6 +21,7 @@ from salt.ext import six
 TEMP_DATABASE_FILE = '/tmp/salt-tests-tmpdir/test_vagrant.sqlite'
 
 
+@skipIf(six.PY3, 'TODO: Python3 loader raises KeyError, issue #43815')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class VagrantTestCase(TestCase, LoaderModuleMockMixin):
     '''
