@@ -1410,7 +1410,7 @@ The password used for HTTP proxy access.
 
 Default: ``[]``
 
-List of hosts to bypass proxy
+List of hosts to bypass HTTP proxy
 
 .. note::
     This key does nothing unless proxy_host etc is configured, it does not support any kind of wildcards.
