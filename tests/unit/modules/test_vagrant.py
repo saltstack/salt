@@ -47,6 +47,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
             '__salt__': {
                 'cmd.shell': cmd.shell,
                 'cmd.retcode': cmd.retcode,
+                'cmd.run_all': cmd.run_all
             },
             '__utils__': {
                 'sdb.sdb_set': sdb.sdb_set,
@@ -120,7 +121,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
         #  VM has a stored value
         self.assertEqual(vagrant.get_vm_info('test3')['name'], 'test3')
         #  clean up (an error is expected -- machine never started)
-        self.assertFalse(vagrant.destroy('test3'))
+        self.assertFalse(vagrant.destroy('test3')['retcode'] == 0)
         #  VM no longer exists
-        with self.assertRaises(salt.exceptions.SaltInvocationError):
+        with self.assertRaises(salt.exceptions.CommandExecutionError):
             vagrant.get_ssh_config('test3')
