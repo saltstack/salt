@@ -136,9 +136,9 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
             ret = status.uptime()
             self.assertDictEqual(ret, m.ret)
 
-        with patch.dict(status.__salt__, {'sysctl.get': MagicMock(return_value='')}):
-            with self.assertRaises(CommandExecutionError):
-                status.uptime()
+            with patch.dict(status.__salt__, {'sysctl.get': MagicMock(return_value='')}):
+                with self.assertRaises(CommandExecutionError):
+                    status.uptime()
 
     def test_uptime_return_success_not_supported(self):
         '''
