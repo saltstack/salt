@@ -63,7 +63,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         ))
         preferred_ip = extract_ipv4(roster_order, ip_list)
 
-        ret[minion_id] = __opts__.get('roster_defaults', {})
+        ret[minion_id] = __opts__.get('roster_defaults', {}).copy()
         ret[minion_id].update({'host': preferred_ip})
 
         ssh_username = salt.utils.cloud.ssh_usernames(vm_, cloud_opts)
