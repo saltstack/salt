@@ -835,7 +835,10 @@ class GitProvider(object):
         Set and automatically clear a lock
         '''
         if not isinstance(lock_type, six.string_types):
-            raise GitLockError('Invalid lock_type \'{0}\''.format(lock_type))
+            raise GitLockError(
+                errno.EINVAL,
+                'Invalid lock_type \'{0}\''.format(lock_type)
+            )
 
         # Make sure that we have a positive integer timeout, otherwise just set
         # it to zero.
