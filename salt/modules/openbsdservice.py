@@ -16,7 +16,7 @@ import fnmatch
 import logging
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 # Import Salt libs

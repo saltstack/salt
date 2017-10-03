@@ -54,7 +54,7 @@ import json
 # Import Salt libs
 import salt.utils
 import salt.utils.compat
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 

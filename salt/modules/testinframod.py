@@ -242,6 +242,8 @@ def _copy_function(module_name, name=None):
             elif hasattr(mod, '__call__'):
                 mod_sig = inspect.getargspec(mod.__call__)
             parameters = mod_sig.args
+        log.debug('Parameters accepted by module {0}: {1}'.format(module_name,
+                                                                  parameters))
         additional_args = {}
         for arg in set(parameters).intersection(set(methods)):
             additional_args[arg] = methods.pop(arg)
@@ -251,12 +253,15 @@ def _copy_function(module_name, name=None):
             else:
                 modinstance = mod()
         except TypeError:
-            modinstance = None
-        methods = {}
+            log.exception('Module failed to instantiate')
+            raise
+        valid_methods = {}
+        log.debug('Called methods are: {0}'.format(methods))
         for meth_name in methods:
             if not meth_name.startswith('_'):
-                methods[meth_name] = methods[meth_name]
-        for meth, arg in methods.items():
+                valid_methods[meth_name] = methods[meth_name]
+        log.debug('Valid methods are: {0}'.format(valid_methods))
+        for meth, arg in valid_methods.items():
             result = _get_method_result(mod, modinstance, meth, arg)
             assertion_result = _apply_assertion(arg, result)
             if not assertion_result:
@@ -291,7 +296,6 @@ def _register_functions():
         modules_ = [module_ for module_ in modules.modules]
 
     for mod_name in modules_:
-        mod_name = _to_snake_case(module_)
         mod_func = _copy_function(mod_name, str(mod_name))
         mod_func.__doc__ = _build_doc(mod_name)
         __all__.append(mod_name)

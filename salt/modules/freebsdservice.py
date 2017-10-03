@@ -17,7 +17,7 @@ import fnmatch
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 import salt.utils.decorators as decorators
 import salt.utils.files
 from salt.exceptions import CommandNotFoundError
@@ -51,11 +51,11 @@ def _cmd(jail=None):
 
     Support for jail (representing jid or jail name) keyword argument in kwargs
     '''
-    service = salt.utils.which('service')
+    service = salt.utils.path.which('service')
     if not service:
         raise CommandNotFoundError('\'service\' command not found')
     if jail:
-        jexec = salt.utils.which('jexec')
+        jexec = salt.utils.path.which('jexec')
         if not jexec:
             raise CommandNotFoundError('\'jexec\' command not found')
         service = '{0} {1} {2}'.format(jexec, jail, service)
@@ -71,7 +71,7 @@ def _get_jail_path(jail):
     jail
         The jid or jail name
     '''
-    jls = salt.utils.which('jls')
+    jls = salt.utils.path.which('jls')
     if not jls:
         raise CommandNotFoundError('\'jls\' command not found')
     jails = __salt__['cmd.run_stdout']('{0} -n jid name path'.format(jls))

@@ -47,7 +47,7 @@ import salt.syspaths as syspaths
 import salt.cache
 import salt.utils.files
 import salt.utils.http
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.exceptions import (CommandExecutionError, SaltRunnerError)
 from Crypto.PublicKey import RSA

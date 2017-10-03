@@ -24,7 +24,6 @@ import logging
 # Import salt libs
 from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
-import salt.utils.cloud as cloud
 
 # Import Third Party Libs
 try:
@@ -136,7 +135,7 @@ def create(vm_info):
     )
 
     log.debug("Going to fire event: starting create")
-    cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_info['name']),
@@ -151,7 +150,7 @@ def create(vm_info):
         'clone_from': vm_info['clonefrom']
     }
 
-    cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_info['name']),
@@ -174,10 +173,10 @@ def create(vm_info):
                 vm_info['key_filename'] = key_filename
                 vm_info['ssh_host'] = ip
 
-                res = cloud.bootstrap(vm_info, __opts__)
+                res = __utils__['cloud.bootstrap'](vm_info)
                 vm_result.update(res)
 
-    cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'created machine',
         'salt/cloud/{0}/created'.format(vm_info['name']),
@@ -269,7 +268,7 @@ def list_nodes(kwargs=None, call=None):
         "private_ips",
         "public_ips",
     ]
-    return cloud.list_nodes_select(
+    return __utils__['cloud.list_nodes_select'](
         list_nodes_full('function'), attributes, call,
     )
 
@@ -278,7 +277,7 @@ def list_nodes_select(call=None):
     """
     Return a list of the VMs that are on the provider, with select fields
     """
-    return cloud.list_nodes_select(
+    return __utils__['cloud.list_nodes_select'](
         list_nodes_full('function'), __opts__['query.selection'], call,
     )
 
@@ -306,7 +305,7 @@ def destroy(name, call=None):
     if not vb_machine_exists(name):
         return "{0} doesn't exist and can't be deleted".format(name)
 
-    cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
@@ -317,7 +316,7 @@ def destroy(name, call=None):
 
     vb_destroy_machine(name)
 
-    cloud.fire_event(
+    __utils__['cloud.fire_event'](
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),

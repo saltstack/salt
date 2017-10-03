@@ -18,10 +18,12 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.args
+import salt.utils.platform
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -40,18 +42,18 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The rbenv execution module failed to load: only available on non-Windows systems.')
     return True
 
 
 def _shlex_split(s):
-    # from python:salt.utils.shlex_split: passing None for s will read
+    # from python:salt.utils.args.shlex_split: passing None for s will read
     # the string to split from standard input.
     if s is None:
-        ret = salt.utils.shlex_split('')
+        ret = salt.utils.args.shlex_split('')
     else:
-        ret = salt.utils.shlex_split(s)
+        ret = salt.utils.args.shlex_split(s)
 
     return ret
 
@@ -381,9 +383,9 @@ def do(cmdline, runas=None, env=None):
     env['PATH'] = '{0}/shims:{1}'.format(path, os.environ['PATH'])
 
     try:
-        cmdline = salt.utils.shlex_split(cmdline)
+        cmdline = salt.utils.args.shlex_split(cmdline)
     except AttributeError:
-        cmdline = salt.utils.shlex_split(str(cmdline))
+        cmdline = salt.utils.args.shlex_split(str(cmdline))
 
     result = __salt__['cmd.run_all'](
         cmdline,
@@ -417,9 +419,9 @@ def do_with_ruby(ruby, cmdline, runas=None):
         raise SaltInvocationError('Command must be specified')
 
     try:
-        cmdline = salt.utils.shlex_split(cmdline)
+        cmdline = salt.utils.args.shlex_split(cmdline)
     except AttributeError:
-        cmdline = salt.utils.shlex_split(str(cmdline))
+        cmdline = salt.utils.args.shlex_split(str(cmdline))
 
     env = {}
     if ruby:

@@ -81,9 +81,9 @@ SCRIPT_TEMPLATES = {
     ],
     'common': [
         'from salt.scripts import salt_{0}\n',
-        'from salt.utils import is_windows\n\n',
+        'import salt.utils.platform\n\n',
         'if __name__ == \'__main__\':\n',
-        '    if is_windows():\n',
+        '    if salt.utils.platform.is_windows():\n',
         '        import os.path\n',
         '        import py_compile\n',
         '        cfile = os.path.splitext(__file__)[0] + ".pyc"\n',

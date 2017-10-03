@@ -21,7 +21,7 @@ import re
 import json
 import logging as logger
 import base64
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 
 # TODO Remove requests dependency

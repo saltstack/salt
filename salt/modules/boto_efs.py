@@ -55,7 +55,7 @@ import logging
 
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import boto3
     HAS_BOTO3 = True
@@ -97,7 +97,7 @@ def _get_conn(key=None,
     '''
     client = None
     if profile:
-        if isinstance(profile, str):
+        if isinstance(profile, six.string_types):
             if profile in __pillar__:
                 profile = __pillar__[profile]
             elif profile in __opts__:
@@ -135,6 +135,7 @@ def create_file_system(name,
                        key=None,
                        profile=None,
                        region=None,
+                       creation_token=None,
                        **kwargs):
     '''
     Creates a new, empty file system.
@@ -146,6 +147,10 @@ def create_file_system(name,
         (string) - The PerformanceMode of the file system. Can be either
         generalPurpose or maxIO
 
+    creation_token
+        (string) - A unique name to be used as reference when creating an EFS.
+        This will ensure idempotency. Set to name if not specified otherwise
+
     returns
         (dict) - A dict of the data for the elastic file system
 
@@ -155,9 +160,10 @@ def create_file_system(name,
 
         salt 'my-minion' boto_efs.create_file_system efs-name generalPurpose
     '''
-    import os
-    import base64
-    creation_token = base64.b64encode(os.urandom(46), ['-', '_'])
+
+    if creation_token is None:
+        creation_token = name
+
     tags = {"Key": "Name", "Value": name}
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
@@ -223,10 +229,23 @@ def create_mount_target(filesystemid,
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
-    return client.create_mount_point(FileSystemId=filesystemid,
-                                     SubnetId=subnetid,
-                                     IpAddress=ipaddress,
-                                     SecurityGroups=securitygroups)
+    if ipaddress is None and securitygroups is None:
+        return client.create_mount_target(FileSystemId=filesystemid,
+                                          SubnetId=subnetid)
+
+    if ipaddress is None:
+        return client.create_mount_target(FileSystemId=filesystemid,
+                                          SubnetId=subnetid,
+                                          SecurityGroups=securitygroups)
+    if securitygroups is None:
+        return client.create_mount_target(FileSystemId=filesystemid,
+                                          SubnetId=subnetid,
+                                          IpAddress=ipaddress)
+
+    return client.create_mount_target(FileSystemId=filesystemid,
+                                      SubnetId=subnetid,
+                                      IpAddress=ipaddress,
+                                      SecurityGroups=securitygroups)
 
 
 def create_tags(filesystemid,
@@ -359,6 +378,7 @@ def get_file_systems(filesystemid=None,
                      key=None,
                      profile=None,
                      region=None,
+                     creation_token=None,
                      **kwargs):
     '''
     Get all EFS properties or a specific instance property
@@ -366,6 +386,12 @@ def get_file_systems(filesystemid=None,
 
     filesystemid
         (string) - ID of the file system to retrieve properties
+
+    creation_token
+        (string) - A unique token that identifies an EFS.
+        If fileysystem created via create_file_system this would
+        either be explictitly passed in or set to name.
+        You can limit your search with this.
 
     returns
         (list[dict]) - list of all elastic file system properties
@@ -380,8 +406,15 @@ def get_file_systems(filesystemid=None,
     result = None
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
-    if filesystemid:
+    if filesystemid and creation_token:
+        response = client.describe_file_systems(FileSystemId=filesystemid,
+                                                CreationToken=creation_token)
+        result = response["FileSystems"]
+    elif filesystemid:
         response = client.describe_file_systems(FileSystemId=filesystemid)
+        result = response["FileSystems"]
+    elif creation_token:
+        response = client.describe_file_systems(CreationToken=creation_token)
         result = response["FileSystems"]
     else:
         response = client.describe_file_systems()
