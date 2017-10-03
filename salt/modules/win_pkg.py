@@ -1449,12 +1449,14 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
         name (str):
             The name(s) of the package(s) to be uninstalled. Can be a
             single package or a comma delimited list of packages, no spaces.
+
         version (str):
             The version of the package to be uninstalled. If this option is
             used to to uninstall multiple packages, then this version will be
             applied to all targeted packages. Recommended using only when
             uninstalling a single package. If this parameter is omitted, the
             latest version will be uninstalled.
+
         pkgs (list):
             A list of packages to delete. Must be passed as a python list. The
             ``name`` parameter will be ignored if this option is passed.
