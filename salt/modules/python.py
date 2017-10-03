@@ -4,9 +4,10 @@ Run python scripts inside salt.
 
 .. versionadded:: Oxygen
 '''
+from __future__ import absolute_import
+
 import os
 import sys
-import traceback
 
 if sys.version_info[:2] >= (3, 5):
     import importlib.machinery  # pylint: disable=no-name-in-module,import-error
@@ -93,8 +94,6 @@ def exec_(source=None, contents=None, entry=None, *args, **kwargs):
             filepath = source
         tmpfile, suffix = os.path.splitext(filepath)
         filedir, filename = os.path.dirname(tmpfile), os.path.basename(tmpfile)
-        sys.path.append(filedir)
-        
         if USE_IMPORTLIB:
             # pylint: disable=no-member
             # Package directory, look for __init__
@@ -112,7 +111,7 @@ def exec_(source=None, contents=None, entry=None, *args, **kwargs):
                 raise ImportError()
             module = spec.loader.load_module(filename)
         else:
-            with open(filepath, 'r') as fh_:
+            with __utils__['files.fopen'](filepath, 'r') as fh_:
                 module = imp.load_module(filename, fh_, filepath, suffix_map[suffix])
     elif contents:
         module = _DynamicModule()
