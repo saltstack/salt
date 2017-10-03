@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
@@ -19,7 +19,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils.sdb as sdb
 
-TEMP_DATABASE_FILE = os.path.join(TMP, 'test_sdb.sqlite')
+TEMP_DATABASE_FILE = os.path.join(RUNTIME_VARS.TMP, 'test_sdb.sqlite')
 
 SDB_OPTS = {
             'extension_modules': '',
