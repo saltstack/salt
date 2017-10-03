@@ -55,6 +55,7 @@ The new grains added are:
 
 * ``fc_wwn``: Show all fibre channel world wide port names for a host
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
+* ``swap_total``: Show the configured swap_total for Linux, *BSD, OS X and Solaris/SunOS
 
 Grains Changes
 --------------
