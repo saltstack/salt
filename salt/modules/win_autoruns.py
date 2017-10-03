@@ -4,12 +4,12 @@ Module for listing programs that automatically run on startup
 (very alpha...not tested on anything but my Win 7x64)
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 
 # Define a function alias in order not to shadow built-in's
@@ -26,7 +26,7 @@ def __virtual__():
     Only works on Windows systems
     '''
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return __virtualname__
     return (False, "Module win_autoruns: module only works on Windows systems")
 

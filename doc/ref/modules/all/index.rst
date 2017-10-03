@@ -9,6 +9,7 @@ execution modules
     .. toctree::
 
         salt.modules.group
+        salt.modules.kernelpkg
         salt.modules.pkg
         salt.modules.user
 
@@ -37,13 +38,13 @@ execution modules
     bcache
     beacons
     bigip
-    blockdev
     bluez
     boto3_elasticache
     boto3_route53
     boto_apigateway
     boto_asg
     boto_cfn
+    boto_cloudfront
     boto_cloudtrail
     boto_cloudwatch
     boto_cloudwatch_event
@@ -97,6 +98,7 @@ execution modules
     cytest
     daemontools
     data
+    datadog_api
     ddns
     deb_apache
     deb_postgres
@@ -117,6 +119,8 @@ execution modules
     drac
     dracr
     drbd
+    dummyproxy_package
+    dummyproxy_service
     ebuild
     eix
     elasticsearch
@@ -189,14 +193,18 @@ execution modules
     k8s
     kapacitor
     kerberos
+    kernelpkg_linux_apt
+    kernelpkg_linux_yum
     key
     keyboard
     keystone
     kmod
+    kubernetes
     launchctl
     layman
     ldap3
     ldapmod
+    libcloud_compute
     libcloud_dns
     libcloud_loadbalancer
     libcloud_storage
@@ -293,6 +301,7 @@ execution modules
     opkg
     oracle
     osquery
+    out
     pacman
     pagerduty
     pagerduty_util
@@ -318,6 +327,7 @@ execution modules
     ps
     publish
     puppet
+    purefa
     pushbullet
     pushover_notify
     pw_group
@@ -392,7 +402,6 @@ execution modules
     state
     status
     statuspage
-    stormpath
     supervisord
     suse_apache
     svn
@@ -410,6 +419,7 @@ execution modules
     test
     testinframod
     test_virtual
+    textfsm_mod
     timezone
     tls
     tomcat

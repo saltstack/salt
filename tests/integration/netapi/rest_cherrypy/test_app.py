@@ -6,6 +6,7 @@ import json
 
 # Import salt libs
 import salt.utils
+import salt.utils.stringutils
 
 # Import test support libs
 import tests.support.cherrypy_testclasses as cptc
@@ -195,7 +196,64 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
                 'Accept': 'application/json',
             }
         )
-        resp = json.loads(salt.utils.to_str(response.body[0]))
+        resp = json.loads(salt.utils.stringutils.to_str(response.body[0]))
         self.assertEqual(resp['return'][0]['args'], [1234])
         self.assertEqual(resp['return'][0]['kwargs'],
                          {'ext_source': 'redis'})
+
+
+class TestJobs(cptc.BaseRestCherryPyTest):
+    auth_creds = (
+        ('username', 'saltdev_auto'),
+        ('password', 'saltdev'),
+        ('eauth', 'auto'))
+
+    low = (
+        ('client', 'local'),
+        ('tgt', '*'),
+        ('fun', 'test.ping'),
+    )
+
+    def _token(self):
+        '''
+        Return the token
+        '''
+        body = urlencode(self.auth_creds)
+        request, response = self.request(
+            '/login',
+            method='POST',
+            body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+            }
+        )
+        return response.headers['X-Auth-Token']
+
+    def _add_job(self):
+        '''
+        Helper function to add a job to the job cache
+        '''
+        cmd = dict(self.low, **dict(self.auth_creds))
+        body = urlencode(cmd)
+
+        request, response = self.request('/run', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
+        self.assertEqual(response.status, '200 OK')
+
+    def test_all_jobs(self):
+        '''
+        test query to /jobs returns job data
+        '''
+        self._add_job()
+
+        request, response = self.request('/jobs', method='GET',
+            headers={
+                'Accept': 'application/json',
+                'X-Auth-Token': self._token(),
+        })
+
+        resp = json.loads(salt.utils.stringutils.to_str(response.body[0]))
+        self.assertIn('test.ping', str(resp['return']))
+        self.assertEqual(response.status, '200 OK')

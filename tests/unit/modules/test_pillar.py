@@ -14,7 +14,7 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.odict import OrderedDict
 import salt.modules.pillar as pillarmod
 
@@ -96,8 +96,8 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
                     if default_type == data_type:
                         continue
                     self.assertEqual(
-                        pillarmod.get(item, default=defaults[default_type], merge=True),
-                        pillarmod.__pillar__[item]
+                        pillarmod.get(data_type, default=defaults[default_type], merge=True),
+                        pillarmod.__pillar__[data_type]
                     )
 
             # Test recursive dict merging

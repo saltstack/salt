@@ -9,6 +9,7 @@ import threading
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.stringutils
 from salt.netapi.rest_tornado import saltnado
 from salt.utils.versions import StrictVersion
 
@@ -18,7 +19,7 @@ from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import zmq
     from zmq.eventloop.ioloop import ZMQIOLoop
@@ -90,7 +91,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response.headers['Location'], '/login')
 
     # Local client tests
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_simple_local_post(self):
         '''
         Test a basic API of /
@@ -326,7 +327,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         for minion_id, grains in six.iteritems(response_obj['return'][0]):
             self.assertEqual(minion_id, grains['id'])
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
         response = self.fetch('/minions/minion',
                               method='GET',
@@ -410,7 +411,7 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
         # test with no JID
         self.http_client.fetch(self.get_url('/jobs'),
@@ -463,7 +464,7 @@ class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
         low = [{'client': 'local',
                 'tgt': '*',
@@ -574,7 +575,7 @@ class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
             self.assertIn('headers', event['data'])
             self.assertEqual(
                 event['data']['post'],
-                {'foo': salt.utils.to_bytes('bar')}
+                {'foo': salt.utils.stringutils.to_bytes('bar')}
             )
         finally:
             self._future_resolved.clear()

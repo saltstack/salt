@@ -29,10 +29,10 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.integration.utils import testprogram
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -60,11 +60,11 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         config_file_name = 'minion'
         pid_path = os.path.join(config_dir, '{0}.pid'.format(config_file_name))
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
             config = yaml.load(fhr.read())
             config['log_file'] = 'file:///tmp/log/LOG_LOCAL3'
 
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
                 fhw.write(
                     yaml.dump(config, default_flow_style=False)
                 )
@@ -82,7 +82,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         # Now kill it if still running
         if os.path.exists(pid_path):
-            with salt.utils.fopen(pid_path) as fhr:
+            with salt.utils.files.fopen(pid_path) as fhr:
                 try:
                     os.kill(int(fhr.read()), signal.SIGKILL)
                 except OSError:
@@ -204,7 +204,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         default_dir = os.path.join(sysconf_dir, 'default')
         if not os.path.exists(default_dir):
             os.makedirs(default_dir)
-        with salt.utils.fopen(os.path.join(default_dir, 'salt'), 'w') as defaults:
+        with salt.utils.files.fopen(os.path.join(default_dir, 'salt'), 'w') as defaults:
             # Test suites is quite slow - extend the timeout
             defaults.write(
                 'TIMEOUT=60\n'
@@ -292,16 +292,18 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_NOUSER',
-            message='unknown user not on system',
-            stdout=stdout,
-            stderr=tests.integration.utils.decode_byte_list(stderr)
-        )
-        # Although the start-up should fail, call shutdown() to set the internal
-        # _shutdown flag and avoid the registered atexit calls to cause timeout
-        # exeptions and respective traceback
-        minion.shutdown()
+        try:
+            self.assert_exit_status(
+                status, 'EX_NOUSER',
+                message='unknown user not on system',
+                stdout=stdout,
+                stderr=tests.integration.utils.decode_byte_list(stderr)
+            )
+        finally:
+            # Although the start-up should fail, call shutdown() to set the
+            # internal _shutdown flag and avoid the registered atexit calls to
+            # cause timeout exeptions and respective traceback
+            minion.shutdown()
 
     # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
@@ -320,16 +322,18 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             catch_stderr=True,
             with_retcode=True,
         )
-        self.assert_exit_status(
-            status, 'EX_USAGE',
-            message='unknown argument',
-            stdout=stdout,
-            stderr=tests.integration.utils.decode_byte_list(stderr)
-        )
-        # Although the start-up should fail, call shutdown() to set the internal
-        # _shutdown flag and avoid the registered atexit calls to cause timeout
-        # exeptions and respective traceback
-        minion.shutdown()
+        try:
+            self.assert_exit_status(
+                status, 'EX_USAGE',
+                message='unknown argument',
+                stdout=stdout,
+                stderr=tests.integration.utils.decode_byte_list(stderr)
+            )
+        finally:
+            # Although the start-up should fail, call shutdown() to set the
+            # internal _shutdown flag and avoid the registered atexit calls to
+            # cause timeout exeptions and respective traceback
+            minion.shutdown()
 
     def test_exit_status_correct_usage(self):
         '''
@@ -352,4 +356,4 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             message='correct usage',
             stdout=stdout, stderr=stderr
         )
-        minion.shutdown()
+        minion.shutdown(wait_for_orphans=3)

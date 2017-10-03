@@ -3,7 +3,7 @@
 Manage Elasticache with boto3
 =============================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Create, destroy and update Elasticache clusters. Be aware that this interacts
 with Amazon's services, and so may incur charges.

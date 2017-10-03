@@ -102,7 +102,7 @@ def _write_incron_lines(user, lines):
         return ret
     else:
         path = salt.utils.files.mkstemp()
-        with salt.utils.fopen(path, 'w+') as fp_:
+        with salt.utils.files.fopen(path, 'w+') as fp_:
             fp_.writelines(lines)
         if __grains__['os_family'] == 'Solaris' and user != "root":
             __salt__['cmd.run']('chown {0} {1}'.format(user, path), python_shell=False)
@@ -121,7 +121,7 @@ def _write_file(folder, filename, data):
         msg = msg.format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
-    with salt.utils.fopen(path, 'w') as fp_:
+    with salt.utils.files.fopen(path, 'w') as fp_:
         fp_.write(data)
 
     return 0
@@ -133,7 +133,7 @@ def _read_file(folder, filename):
     '''
     path = os.path.join(folder, filename)
     try:
-        with salt.utils.fopen(path, 'rb') as contents:
+        with salt.utils.files.fopen(path, 'rb') as contents:
             return contents.readlines()
     except (OSError, IOError):
         return ''

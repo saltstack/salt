@@ -10,14 +10,17 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
 
 __salt__ = {
-    'cmd.run': salt.modules.cmdmod._run_quiet
+    'cmd.run': salt.modules.cmdmod._run_quiet,
+    'cmd.run_all': salt.modules.cmdmod._run_all_quiet
 }
 
 log = logging.getLogger(__name__)
@@ -27,10 +30,12 @@ def disks():
     '''
     Return list of disk devices
     '''
-    if salt.utils.is_freebsd():
+    if salt.utils.platform.is_freebsd():
         return _freebsd_geom()
-    elif salt.utils.is_linux():
+    elif salt.utils.platform.is_linux():
         return _linux_disks()
+    elif salt.utils.platform.is_windows():
+        return _windows_disks()
     else:
         log.trace('Disk grain does not support OS')
 
@@ -87,7 +92,7 @@ _geom_attribs = [_geomconsts.__dict__[key] for key in
 
 
 def _freebsd_geom():
-    geom = salt.utils.which('geom')
+    geom = salt.utils.path.which('geom')
     ret = {'disks': {}, 'SSDs': []}
 
     devices = __salt__['cmd.run']('{0} disk list'.format(geom))
@@ -127,7 +132,7 @@ def _linux_disks():
     ret = {'disks': [], 'SSDs': []}
 
     for entry in glob.glob('/sys/block/*/queue/rotational'):
-        with salt.utils.fopen(entry) as entry_fp:
+        with salt.utils.files.fopen(entry) as entry_fp:
             device = entry.split('/')[3]
             flag = entry_fp.read(1)
             if flag == '0':
@@ -139,4 +144,40 @@ def _linux_disks():
             else:
                 log.trace('Unable to identify device {0} as an SSD or HDD.'
                           ' It does not report 0 or 1'.format(device))
+    return ret
+
+
+def _windows_disks():
+    wmic = salt.utils.path.which('wmic')
+
+    namespace = r'\\root\microsoft\windows\storage'
+    path = 'MSFT_PhysicalDisk'
+    where = '(MediaType=3 or MediaType=4)'
+    get = 'DeviceID,MediaType'
+
+    ret = {'disks': [], 'SSDs': []}
+
+    cmdret = __salt__['cmd.run_all'](
+        '{0} /namespace:{1} path {2} where {3} get {4} /format:table'.format(
+            wmic, namespace, path, where, get))
+
+    if cmdret['retcode'] != 0:
+        log.trace('Disk grain does not support this version of Windows')
+    else:
+        for line in cmdret['stdout'].splitlines():
+            info = line.split()
+            if len(info) != 2 or not info[0].isdigit() or not info[1].isdigit():
+                continue
+            device = r'\\.\PhysicalDrive{0}'.format(info[0])
+            mediatype = info[1]
+            if mediatype == '3':
+                log.trace('Device {0} reports itself as an HDD'.format(device))
+                ret['disks'].append(device)
+            elif mediatype == '4':
+                log.trace('Device {0} reports itself as an SSD'.format(device))
+                ret['SSDs'].append(device)
+            else:
+                log.trace('Unable to identify device {0} as an SSD or HDD.'
+                          'It does not report 3 or 4'.format(device))
+
     return ret

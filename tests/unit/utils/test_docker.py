@@ -18,6 +18,7 @@ from tests.support.unit import TestCase
 # Import salt libs
 import salt.config
 import salt.loader
+import salt.utils.platform
 import salt.utils.docker as docker_utils
 import salt.utils.docker.translate as translate_funcs
 
@@ -29,7 +30,7 @@ def __test_stringlist(testcase, name):
     alias = salt.utils.docker.ALIASES_REVMAP.get(name)
     # Using file paths here because "volumes" must be passed through this
     # set of assertions and it requires absolute paths.
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         data = [r'c:\foo', r'c:\bar', r'c:\baz']
     else:
         data = ['/foo', '/bar', '/baz']
@@ -189,7 +190,7 @@ def assert_string(func):
         alias = salt.utils.docker.ALIASES_REVMAP.get(name)
         # Using file paths here because "working_dir" must be passed through
         # this set of assertions and it requires absolute paths.
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             data = r'c:\foo'
         else:
             data = '/foo'
@@ -384,7 +385,7 @@ def assert_device_rates(func):
                 continue
 
             # Error case: Not an absolute path
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 path = r'foo\bar\baz'
             else:
                 path = 'foo/bar/baz'
@@ -820,7 +821,7 @@ class TranslateInputTestCase(TestCase):
             expected
         )
 
-    @assert_stringlist
+    @assert_string
     def test_domainname(self):
         '''
         Should be a list of strings or converted to one
@@ -982,6 +983,28 @@ class TranslateInputTestCase(TestCase):
                 log_opt={'foo': 'bar', 'baz': 'qux'}
             ),
             expected
+        )
+
+        # Ensure passing either `log_driver` or `log_opt` works
+        self.assertEqual(
+            docker_utils.translate_input(
+                log_driver='foo'
+            ),
+            (
+                {'log_config': {'Type': 'foo',
+                                'Config': {}}},
+                {}, []
+            )
+        )
+        self.assertEqual(
+            docker_utils.translate_input(
+                log_opt={'foo': 'bar', 'baz': 'qux'}
+            ),
+            (
+                {'log_config': {'Type': 'none',
+                                'Config': {'foo': 'bar', 'baz': 'qux'}}},
+                {}, []
+            )
         )
 
     @assert_key_equals_value
@@ -1687,7 +1710,7 @@ class TranslateInputTestCase(TestCase):
         Should be a list of absolute paths
         '''
         # Error case: Not an absolute path
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             path = r'foo\bar\baz'
         else:
             path = 'foo/bar/baz'
@@ -1713,7 +1736,7 @@ class TranslateInputTestCase(TestCase):
         Should be a single absolute path
         '''
         # Error case: Not an absolute path
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             path = r'foo\bar\baz'
         else:
             path = 'foo/bar/baz'

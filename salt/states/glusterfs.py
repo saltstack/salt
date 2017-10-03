@@ -120,13 +120,13 @@ def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
     .. code-block:: yaml
 
         myvolume:
-          glusterfs.created:
+          glusterfs.volume_present:
             - bricks:
                 - host1:/srv/gluster/drive1
                 - host2:/srv/gluster/drive2
 
         Replicated Volume:
-          glusterfs.created:
+          glusterfs.volume_present:
             - name: volume2
             - bricks:
               - host1:/srv/gluster/drive2

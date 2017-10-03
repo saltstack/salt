@@ -49,21 +49,18 @@ import salt.minion
 import salt.runner
 import salt.output
 import salt.version
-import salt.utils
-import salt.utils.network
+import salt.utils  # Can be removed once appendproctitle is moved
+import salt.utils.color
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.process
+import salt.utils.stringutils
 import salt.log.setup as salt_log_setup
-from salt.ext import six
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
-
-try:
-    from salt.utils.gitfs import HAS_GITPYTHON, HAS_PYGIT2
-    HAS_GITFS = HAS_GITPYTHON or HAS_PYGIT2
-except ImportError:
-    HAS_GITFS = False
 
 try:
     import salt.master
@@ -74,7 +71,7 @@ except ImportError:
 # Import 3rd-party libs
 import yaml
 import msgpack
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import cStringIO
 
 try:
@@ -192,8 +189,8 @@ class TestDaemon(object):
 
     def __init__(self, parser):
         self.parser = parser
-        self.colors = salt.utils.get_colors(self.parser.options.no_colors is False)
-        if salt.utils.is_windows():
+        self.colors = salt.utils.color.get_colors(self.parser.options.no_colors is False)
+        if salt.utils.platform.is_windows():
             # There's no shell color support on windows...
             for key in self.colors:
                 self.colors[key] = ''
@@ -209,14 +206,6 @@ class TestDaemon(object):
 
         # Set up PATH to mockbin
         self._enter_mockbin()
-
-        if not HAS_GITFS:
-            sys.stdout.write(
-                ' * {LIGHT_RED}No suitable provider for git_pillar is installed. Install\n'
-                '   GitPython or Pygit2.{ENDC}\n'.format(
-                    **self.colors
-                )
-            )
 
         if self.parser.options.transport == 'zeromq':
             self.start_zeromq_daemons()
@@ -284,13 +273,6 @@ class TestDaemon(object):
         '''
         Fire up the daemons used for zeromq tests
         '''
-        if not salt.utils.network.ip_addrs():
-            sys.stdout.write(
-                ' * {LIGHT_RED}Unable to list IPv4 addresses. Test suite startup will be\n'
-                '   slower. Install iproute/ifconfig to fix this.{ENDC}\n'.format(
-                    **self.colors
-                )
-            )
         self.log_server = ThreadedSocketServer(('localhost', SALT_LOG_PORT), SocketServerRequestHandler)
         self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
         self.log_server_process.daemon = True
@@ -475,6 +457,43 @@ class TestDaemon(object):
             )
             sys.stdout.flush()
 
+        if self.parser.options.proxy:
+            try:
+                sys.stdout.write(
+                    ' * {LIGHT_YELLOW}Starting salt-proxy ... {ENDC}'.format(**self.colors)
+                )
+                sys.stdout.flush()
+                self.proxy_process = start_daemon(
+                    daemon_name='salt-proxy',
+                    daemon_id=self.master_opts['id'],
+                    daemon_log_prefix='salt-proxy/{}'.format(self.proxy_opts['id']),
+                    daemon_cli_script_name='proxy',
+                    daemon_config=self.proxy_opts,
+                    daemon_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+                    daemon_class=SaltProxy,
+                    bin_dir_path=SCRIPT_DIR,
+                    fail_hard=True,
+                    start_timeout=30)
+                sys.stdout.write(
+                    '\r{0}\r'.format(
+                        ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                    )
+                )
+                sys.stdout.write(
+                    ' * {LIGHT_GREEN}Starting salt-proxy ... STARTED!\n{ENDC}'.format(**self.colors)
+                )
+                sys.stdout.flush()
+            except (RuntimeWarning, RuntimeError):
+                sys.stdout.write(
+                    '\r{0}\r'.format(
+                        ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                    )
+                )
+                sys.stdout.write(
+                    ' * {LIGHT_RED}Starting salt-proxy ... FAILED!\n{ENDC}'.format(**self.colors)
+                )
+                sys.stdout.flush()
+
     def start_raet_daemons(self):
         '''
         Fire up the raet daemons!
@@ -512,8 +531,8 @@ class TestDaemon(object):
                 **self.colors
             )
         )
-        keygen = salt.utils.which('ssh-keygen')
-        sshd = salt.utils.which('sshd')
+        keygen = salt.utils.path.which('ssh-keygen')
+        sshd = salt.utils.path.which('sshd')
 
         if not (keygen and sshd):
             print('WARNING: Could not initialize SSH subsystem. Tests for salt-ssh may break!')
@@ -546,7 +565,7 @@ class TestDaemon(object):
         )
         _, keygen_err = keygen_process.communicate()
         if keygen_err:
-            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_err)))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_err)))
         sshd_config_path = os.path.join(FILES, 'conf/_ssh/sshd_config')
         shutil.copy(sshd_config_path, RUNTIME_VARS.TMP_CONF_DIR)
         auth_key_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test.pub')
@@ -589,7 +608,7 @@ class TestDaemon(object):
         )
         _, keygen_dsa_err = keygen_process_dsa.communicate()
         if keygen_dsa_err:
-            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_dsa_err)))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_dsa_err)))
 
         keygen_process_ecdsa = subprocess.Popen(
             [keygen, '-t',
@@ -609,7 +628,7 @@ class TestDaemon(object):
         )
         _, keygen_escda_err = keygen_process_ecdsa.communicate()
         if keygen_escda_err:
-            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_escda_err)))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_escda_err)))
 
         keygen_process_ed25519 = subprocess.Popen(
             [keygen, '-t',
@@ -629,9 +648,9 @@ class TestDaemon(object):
         )
         _, keygen_ed25519_err = keygen_process_ed25519.communicate()
         if keygen_ed25519_err:
-            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_ed25519_err)))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.stringutils.to_str(keygen_ed25519_err)))
 
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
             if not keygen_dsa_err:
                 ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
@@ -650,12 +669,12 @@ class TestDaemon(object):
         )
         _, sshd_err = self.sshd_process.communicate()
         if sshd_err:
-            print('sshd had errors on startup: {0}'.format(salt.utils.to_str(sshd_err)))
+            print('sshd had errors on startup: {0}'.format(salt.utils.stringutils.to_str(sshd_err)))
         else:
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
         shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
             roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
             roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
         sys.stdout.write(
@@ -675,6 +694,7 @@ class TestDaemon(object):
             * syndic
             * syndic_master
             * sub_minion
+            * proxy
         '''
         return RUNTIME_VARS.RUNTIME_CONFIGS[role]
 
@@ -708,7 +728,7 @@ class TestDaemon(object):
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR)
         print(' * Transplanting configuration files to \'{0}\''.format(RUNTIME_VARS.TMP_CONF_DIR))
         tests_known_hosts_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'salt_ssh_known_hosts')
-        with salt.utils.fopen(tests_known_hosts_file, 'w') as known_hosts:
+        with salt.utils.files.fopen(tests_known_hosts_file, 'w') as known_hosts:
             known_hosts.write('')
 
         # This master connects to syndic_master via a syndic
@@ -756,6 +776,16 @@ class TestDaemon(object):
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
         syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
 
+        # This proxy connects to master
+        proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))
+        proxy_opts['cachedir'] = os.path.join(TMP, 'rootdir-proxy', 'cache')
+        # proxy_opts['user'] = running_tests_user
+        proxy_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
+        proxy_opts['root_dir'] = os.path.join(TMP, 'rootdir-proxy')
+        proxy_opts['pki_dir'] = os.path.join(TMP, 'rootdir-proxy', 'pki')
+        proxy_opts['hosts.file'] = os.path.join(TMP, 'rootdir-proxy', 'hosts')
+        proxy_opts['aliases.file'] = os.path.join(TMP, 'rootdir-proxy', 'aliases')
+
         if transport == 'raet':
             master_opts['transport'] = 'raet'
             master_opts['raet_port'] = 64506
@@ -770,6 +800,7 @@ class TestDaemon(object):
             minion_opts['transport'] = 'tcp'
             sub_minion_opts['transport'] = 'tcp'
             syndic_master_opts['transport'] = 'tcp'
+            proxy_opts['transport'] = 'tcp'
 
         # Set up config options that require internal data
         master_opts['pillar_roots'] = syndic_master_opts['pillar_roots'] = {
@@ -798,7 +829,7 @@ class TestDaemon(object):
         for opts_dict in (master_opts, syndic_master_opts):
             if 'ext_pillar' not in opts_dict:
                 opts_dict['ext_pillar'] = []
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 opts_dict['ext_pillar'].append(
                     {'cmd_yaml': 'type {0}'.format(os.path.join(FILES, 'ext.yaml'))})
             else:
@@ -827,14 +858,16 @@ class TestDaemon(object):
             sub_minion_opts[optname] = optname_path
             syndic_opts[optname] = optname_path
             syndic_master_opts[optname] = optname_path
+            proxy_opts[optname] = optname_path
 
         master_opts['runtests_conn_check_port'] = get_unused_localhost_port()
         minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
         sub_minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
         syndic_opts['runtests_conn_check_port'] = get_unused_localhost_port()
         syndic_master_opts['runtests_conn_check_port'] = get_unused_localhost_port()
+        proxy_opts['runtests_conn_check_port'] = get_unused_localhost_port()
 
-        for conf in (master_opts, minion_opts, sub_minion_opts, syndic_opts, syndic_master_opts):
+        for conf in (master_opts, minion_opts, sub_minion_opts, syndic_opts, syndic_master_opts, proxy_opts):
             if 'engines' not in conf:
                 conf['engines'] = []
             conf['engines'].append({'salt_runtests': {}})
@@ -851,7 +884,7 @@ class TestDaemon(object):
 
         # ----- Transcribe Configuration ---------------------------------------------------------------------------->
         for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
-            if entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
+            if entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
                 # These have runtime computed values and will be handled
                 # differently
                 continue
@@ -867,24 +900,24 @@ class TestDaemon(object):
                     os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
                 )
 
-        for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
+        for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master', 'proxy'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
-            with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), 'w') as fp_:
+            with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), 'w') as fp_:
                 fp_.write(yaml.dump(computed_config, default_flow_style=False))
         sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'), 'w') as wfh:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'), 'w') as wfh:
             wfh.write(
                 yaml.dump(sub_minion_computed_config, default_flow_style=False)
             )
         shutil.copyfile(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'), os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'master'))
 
         syndic_master_computed_config = copy.deepcopy(syndic_master_opts)
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w') as wfh:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w') as wfh:
             wfh.write(
                 yaml.dump(syndic_master_computed_config, default_flow_style=False)
             )
         syndic_computed_config = copy.deepcopy(syndic_opts)
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w') as wfh:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w') as wfh:
             wfh.write(
                 yaml.dump(syndic_computed_config, default_flow_style=False)
             )
@@ -900,12 +933,14 @@ class TestDaemon(object):
         )
         sub_minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion'))
         syndic_master_opts = salt.config.master_config(os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, 'master'))
+        proxy_opts = salt.config.proxy_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'proxy'))
 
         RUNTIME_VARS.RUNTIME_CONFIGS['master'] = freeze(master_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS['minion'] = freeze(minion_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS['syndic'] = freeze(syndic_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS['sub_minion'] = freeze(sub_minion_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS['syndic_master'] = freeze(syndic_master_opts)
+        RUNTIME_VARS.RUNTIME_CONFIGS['proxy'] = freeze(proxy_opts)
 
         verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
@@ -952,9 +987,11 @@ class TestDaemon(object):
 
         cls.master_opts = master_opts
         cls.minion_opts = minion_opts
+        # cls.proxy_opts = proxy_opts
         cls.sub_minion_opts = sub_minion_opts
         cls.syndic_opts = syndic_opts
         cls.syndic_master_opts = syndic_master_opts
+        cls.proxy_opts = proxy_opts
         # <---- Verify Environment -----------------------------------------------------------------------------------
 
     def __exit__(self, type, value, traceback):
@@ -963,6 +1000,8 @@ class TestDaemon(object):
         '''
         self.sub_minion_process.terminate()
         self.minion_process.terminate()
+        if hasattr(self, 'proxy_process'):
+            self.proxy_process.terminate()
         self.master_process.terminate()
         try:
             self.syndic_process.terminate()
@@ -1026,7 +1065,7 @@ class TestDaemon(object):
             except OSError as exc:
                 if exc.errno != 3:
                     raise
-            with salt.utils.fopen(self.sshd_pidfile) as fhr:
+            with salt.utils.files.fopen(self.sshd_pidfile) as fhr:
                 try:
                     os.kill(int(fhr.read()), signal.SIGKILL)
                 except OSError as exc:

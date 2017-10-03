@@ -18,10 +18,10 @@ import os
 import decimal
 
 # Import salt libs
+import salt.utils.platform
 from salt.ext.six.moves import range
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext import six
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def __virtual__():
     Load only on Windows
     Requires PowerShell and the WebAdministration module
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Only available on Windows systems'
 
     powershell_info = __salt__['cmd.shell_info']('powershell', True)
@@ -303,7 +303,7 @@ def modify_site(name, sourcepath=None, apppool=None):
     '''
     Modify a basic website in IIS.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The IIS site name.
@@ -412,7 +412,7 @@ def stop_site(name):
     '''
     Stop a Web Site in IIS.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the website to stop.
@@ -437,7 +437,7 @@ def start_site(name):
     '''
     Start a Web Site in IIS.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the website to start.
@@ -462,7 +462,7 @@ def restart_site(name):
     '''
     Restart a Web Site in IIS.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the website to restart.
@@ -598,7 +598,7 @@ def modify_binding(site, binding, hostheader=None, ipaddress=None, port=None,
     Modify an IIS Web Binding. Use ``site`` and ``binding`` to target the
     binding.
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         site (str): The IIS site name.
@@ -837,6 +837,9 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
         # IIS 7.5 and earlier have different syntax for associating a certificate with a site
         # Modify IP spec to IIS 7.5 format
         iis7path = binding_path.replace(r"\*!", "\\0.0.0.0!")
+        # win 2008 uses the following format: ip!port and not ip!port!
+        if iis7path.endswith("!"):
+            iis7path = iis7path[:-1]
 
         ps_cmd = ['New-Item',
                   '-Path', "'{0}'".format(iis7path),
@@ -856,7 +859,7 @@ def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443,
 
     new_cert_bindings = list_cert_bindings(site)
 
-    if binding_info not in new_cert_bindings(site):
+    if binding_info not in new_cert_bindings:
         log.error('Binding not present: {0}'.format(binding_info))
         return False
 
@@ -1085,7 +1088,7 @@ def stop_apppool(name):
     '''
     Stop an IIS application pool.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the App Pool to stop.
@@ -1110,7 +1113,7 @@ def start_apppool(name):
     '''
     Start an IIS application pool.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the App Pool to start.
@@ -1255,6 +1258,9 @@ def set_container_setting(name, container, settings):
         salt '*' win_iis.set_container_setting name='MyTestPool' container='AppPools'
             settings="{'managedPipeLineMode': 'Integrated'}"
     '''
+
+    identityType_map2string = {'0': 'LocalSystem', '1': 'LocalService', '2': 'NetworkService', '3': 'SpecificUser', '4': 'ApplicationPoolIdentity'}
+    identityType_map2numeric = {'LocalSystem': '0', 'LocalService': '1', 'NetworkService': '2', 'SpecificUser': '3', 'ApplicationPoolIdentity': '4'}
     ps_cmd = list()
     container_path = r"IIS:\{0}\{1}".format(container, name)
 
@@ -1281,6 +1287,10 @@ def set_container_setting(name, container, settings):
         except ValueError:
             value = "'{0}'".format(settings[setting])
 
+        # Map to numeric to support server 2008
+        if setting == 'processModel.identityType' and settings[setting] in identityType_map2numeric.keys():
+            value = identityType_map2numeric[settings[setting]]
+
         ps_cmd.extend(['Set-ItemProperty',
                        '-Path', "'{0}'".format(container_path),
                        '-Name', "'{0}'".format(setting),
@@ -1300,6 +1310,10 @@ def set_container_setting(name, container, settings):
     failed_settings = dict()
 
     for setting in settings:
+        # map identity type from numeric to string for comparing
+        if setting == 'processModel.identityType' and settings[setting] in identityType_map2string.keys():
+            settings[setting] = identityType_map2string[settings[setting]]
+
         if str(settings[setting]) != str(new_settings[setting]):
             failed_settings[setting] = settings[setting]
 
@@ -1633,7 +1647,7 @@ def list_backups():
     r'''
     List the IIS Configuration Backups on the System.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     .. note::
         Backups are made when a configuration is edited. Manual backups are
@@ -1678,7 +1692,7 @@ def create_backup(name):
     r'''
     Backup an IIS Configuration on the System.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     .. note::
         Backups are stored in the ``$env:Windir\System32\inetsrv\backup``
@@ -1716,7 +1730,7 @@ def remove_backup(name):
     '''
     Remove an IIS Configuration backup from the System.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         name (str): The name of the backup to remove
@@ -1752,7 +1766,7 @@ def list_worker_processes(apppool):
     Returns a list of worker processes that correspond to the passed
     application pool.
 
-    ..versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Args:
         apppool (str): The application pool to query
@@ -1798,7 +1812,7 @@ def get_webapp_settings(name, site, settings):
         Available settings: physicalPath, applicationPool, userName, password
     Returns:
         dict: A dictionary of the provided settings and their values.
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     CLI Example:
     .. code-block:: bash
         salt '*' win_iis.get_webapp_settings name='app0' site='Default Web Site'
@@ -1871,7 +1885,7 @@ def set_webapp_settings(name, site, settings):
     :                       password: "connectAs" password for user
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     CLI Example:
     .. code-block:: bash
         salt '*' win_iis.set_webapp_settings name='app0' site='site0' settings="{'physicalPath': 'C:\site0', 'apppool': 'site0'}"

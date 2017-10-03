@@ -2,8 +2,8 @@
 Running States in Parallel
 ==========================
 
-Introduced in Salt version Nitrogen it is now possible to run select states
-in parallel. This is accomplished very easily by adding the `parallel: True`
+Introduced in Salt version ``2017.7.0`` it is now possible to run select states
+in parallel. This is accomplished very easily by adding the ``parallel: True``
 option to your state declaration:
 
 .. code_block:: yaml
@@ -12,7 +12,7 @@ option to your state declaration:
       service.running:
         - parallel: True
 
-Now `nginx` will be started in a seperate process from the normal state run
+Now ``nginx`` will be started in a seperate process from the normal state run
 and will therefore not block additional states.
 
 Parallel States and Requisites
@@ -40,16 +40,16 @@ Given this example:
       cmd.run:
         - parallel: True
 
-The `sleep 10` will be started first, then the state system will block on
-starting nginx until the `sleep 10` completes. Once nginx has been ensured to
-be running then the `sleep 5` will start.
+The ``sleep 10`` will be started first, then the state system will block on
+starting nginx until the ``sleep 10`` completes. Once nginx has been ensured to
+be running then the ``sleep 5`` will start.
 
 This means that the order of evaluation of Salt States and requisites are
-still honored, and given that in the above case, `parallel: True` does not
+still honored, and given that in the above case, ``parallel: True`` does not
 actually speed things up.
 
-To run the above state much faster make sure that the `sleep 5` is evaluated
-before the `nginx` state
+To run the above state much faster make sure that the ``sleep 5`` is evaluated
+before the ``nginx`` state
 
 .. code_block:: yaml
 
@@ -67,8 +67,8 @@ before the `nginx` state
         - require:
           - cmd: sleep 10
 
-Now both of the sleep calls will be started in parallel and `nginx` will still
-wait for the state it requires, but while it waits the `sleep 5` state will
+Now both of the sleep calls will be started in parallel and ``nginx`` will still
+wait for the state it requires, but while it waits the ``sleep 5`` state will
 also complete.
 
 Things to be Careful of

@@ -27,7 +27,7 @@ import traceback
 import multiprocessing
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
 
 # Let's define these custom logging levels before importing the salt.log.mixins
@@ -38,6 +38,7 @@ GARBAGE = logging.GARBAGE = 1
 QUIET = logging.QUIET = 1000
 
 # Import salt libs
+import salt.utils  # Can be removed once appendproctitle is moved
 from salt.textformat import TextFormat
 from salt.log.handlers import (TemporaryLoggingHandler,
                                StreamHandler,
@@ -837,7 +838,7 @@ def setup_multiprocessing_logging(queue=None):
     This code should be called from within a running multiprocessing
     process instance.
     '''
-    from salt.utils import is_windows
+    from salt.utils.platform import is_windows
 
     global __MP_LOGGING_CONFIGURED
     global __MP_LOGGING_QUEUE_HANDLER
@@ -997,7 +998,6 @@ def patch_python_logging_handlers():
 
 
 def __process_multiprocessing_logging_queue(opts, queue):
-    import salt.utils
     salt.utils.appendproctitle('MultiprocessingLoggingQueue')
 
     # Assign UID/GID of user to proc if set
@@ -1006,7 +1006,8 @@ def __process_multiprocessing_logging_queue(opts, queue):
     if user:
         check_user(user)
 
-    if salt.utils.is_windows():
+    from salt.utils.platform import is_windows
+    if is_windows():
         # On Windows, creating a new process doesn't fork (copy the parent
         # process image). Due to this, we need to setup all of our logging
         # inside this process.

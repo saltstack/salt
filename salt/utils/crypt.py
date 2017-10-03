@@ -19,7 +19,7 @@ def decrypt(data,
             opts=None,
             valid_rend=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Decrypt a data structure using the specified renderer. Written originally
     as a common codebase to handle decryption of encrypted elements within

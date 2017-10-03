@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import socket
 import ctypes
 import os
+import ipaddress
 
 
 class sockaddr(ctypes.Structure):
@@ -22,7 +23,7 @@ if hasattr(ctypes, 'windll'):
     WSAStringToAddressA = ctypes.windll.ws2_32.WSAStringToAddressA
     WSAAddressToStringA = ctypes.windll.ws2_32.WSAAddressToStringA
 else:
-    def not_windows():
+    def not_windows(*args):
         raise SystemError(
             "Invalid platform. ctypes.windll must be available."
         )
@@ -31,6 +32,24 @@ else:
 
 
 def inet_pton(address_family, ip_string):
+    # Verify IP Address
+    # This will catch IP Addresses such as 10.1.2
+    if address_family == socket.AF_INET:
+        try:
+            ipaddress.ip_address(ip_string.decode())
+        except ValueError:
+            raise socket.error('illegal IP address string passed to inet_pton')
+        return socket.inet_aton(ip_string)
+
+    # Verify IP Address
+    # The `WSAStringToAddressA` function handles notations used by Berkeley
+    # software which includes 3 part IP Addresses such as `10.1.2`. That's why
+    # the above check is needed to enforce more strict IP Address validation as
+    # used by the `inet_pton` function in Unix.
+    # See the following:
+    # https://stackoverflow.com/a/29286098
+    # Docs for the `inet_addr` function on MSDN
+    # https://msdn.microsoft.com/en-us/library/windows/desktop/ms738563.aspx
     addr = sockaddr()
     addr.sa_family = address_family
     addr_size = ctypes.c_int(ctypes.sizeof(addr))

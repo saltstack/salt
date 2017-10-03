@@ -13,6 +13,7 @@ from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 # from salt.modules import linux_acl as acl
 
 
@@ -28,7 +29,7 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         # Blindly copied from tests.integration.modules.file; Refactoring?
         self.myfile = os.path.join(TMP, 'myfile')
-        with salt.utils.fopen(self.myfile, 'w+') as fp:
+        with salt.utils.files.fopen(self.myfile, 'w+') as fp:
             fp.write('Hello\n')
         self.mydir = os.path.join(TMP, 'mydir/isawesome')
         if not os.path.isdir(self.mydir):
@@ -59,11 +60,13 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
 
     def test_getfacl_w_single_file_without_acl(self):
         ret = self.run_function('acl.getfacl', arg=[self.myfile])
+        user = salt.utils.get_user()
+        group = salt.utils.get_default_group(user)
         self.maxDiff = None
         self.assertEqual(
             ret,
             {self.myfile: {'other': [{'': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}],
-                           'user': [{'root': {'octal': 6, 'permissions': {'read': True, 'write': True, 'execute': False}}}],
-                           'group': [{'root': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}],
-                           'comment': {'owner': 'root', 'group': 'root', 'file': self.myfile}}}
+                           'user': [{user: {'octal': 6, 'permissions': {'read': True, 'write': True, 'execute': False}}}],
+                           'group': [{group: {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}],
+                           'comment': {'owner': user, 'group': group, 'file': self.myfile}}}
         )

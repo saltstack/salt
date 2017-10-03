@@ -14,7 +14,6 @@ Package support for openSUSE via the zypper package manager
 
 # Import python libs
 from __future__ import absolute_import
-import copy
 import fnmatch
 import logging
 import re
@@ -24,9 +23,7 @@ import datetime
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
-import salt.ext.six as six
-from salt.exceptions import SaltInvocationError
-import salt.utils.event
+from salt.ext import six
 from salt.ext.six.moves import configparser
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
@@ -36,9 +33,13 @@ from xml.parsers.expat import ExpatError
 
 # Import salt libs
 import salt.utils
+import salt.utils.event
+import salt.utils.files
+import salt.utils.path
+import salt.utils.pkg
 import salt.utils.systemd
-from salt.exceptions import (
-    CommandExecutionError, MinionError)
+from salt.utils.versions import LooseVersion
+from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ def __virtual__():
     if __grains__.get('os_family', '') != 'Suse':
         return (False, "Module zypper: non SUSE OS not suppored by zypper package manager")
     # Not all versions of SUSE use zypper, check that it is available
-    if not salt.utils.which('zypper'):
+    if not salt.utils.path.which('zypper'):
         return (False, "Module zypper: zypper package manager not found")
     return __virtualname__
 
@@ -274,7 +275,7 @@ class _Zypper(object):
 
             if os.path.exists(self.ZYPPER_LOCK):
                 try:
-                    with salt.utils.fopen(self.ZYPPER_LOCK) as rfh:
+                    with salt.utils.files.fopen(self.ZYPPER_LOCK) as rfh:
                         data = __salt__['ps.proc_info'](int(rfh.readline()),
                                                         attrs=['pid', 'name', 'cmdline', 'create_time'])
                         data['cmdline'] = ' '.join(data['cmdline'])
@@ -310,6 +311,86 @@ class _Zypper(object):
 
 
 __zypper__ = _Zypper()
+
+
+class Wildcard(object):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Converts string wildcard to a zypper query.
+    Example:
+       '1.2.3.4*' is '1.2.3.4.whatever.is.here' and is equal to:
+       '1.2.3.4 >= and < 1.2.3.5'
+
+    :param ptn: Pattern
+    :return: Query range
+    '''
+
+    Z_OP = ['<', '<=', '=', '>=', '>']
+
+    def __init__(self, zypper):
+        '''
+        :type zypper: a reference to an instance of a _Zypper class.
+        '''
+        self.name = None
+        self.version = None
+        self.zypper = zypper
+        self._attr_solvable_version = 'edition'
+        self._op = None
+
+    def __call__(self, pkg_name, pkg_version):
+        '''
+        Convert a string wildcard to a zypper query.
+
+        :param pkg_name:
+        :param pkg_version:
+        :return:
+        '''
+        if pkg_version:
+            self.name = pkg_name
+            self._set_version(pkg_version)  # Dissects possible operator
+            versions = sorted([LooseVersion(vrs)
+                               for vrs in self._get_scope_versions(self._get_available_versions())])
+            return versions and '{0}{1}'.format(self._op or '', versions[-1]) or None
+
+    def _get_available_versions(self):
+        '''
+        Get available versions of the package.
+        :return:
+        '''
+        solvables = self.zypper.nolock.xml.call('se', '-xv', self.name).getElementsByTagName('solvable')
+        if not solvables:
+            raise CommandExecutionError('No packages found matching \'{0}\''.format(self.name))
+
+        return sorted(set([slv.getAttribute(self._attr_solvable_version)
+                           for slv in solvables if slv.getAttribute(self._attr_solvable_version)]))
+
+    def _get_scope_versions(self, pkg_versions):
+        '''
+        Get available difference between next possible matches.
+
+        :return:
+        '''
+        get_in_versions = []
+        for p_version in pkg_versions:
+            if fnmatch.fnmatch(p_version, self.version):
+                get_in_versions.append(p_version)
+        return get_in_versions
+
+    def _set_version(self, version):
+        '''
+        Stash operator from the version, if any.
+
+        :return:
+        '''
+        if not version:
+            return
+
+        exact_version = re.sub(r'[<>=+]*', '', version)
+        self._op = version.replace(exact_version, '') or None
+        if self._op and self._op not in self.Z_OP:
+            raise CommandExecutionError('Zypper do not supports operator "{0}".'.format(self._op))
+        self.version = exact_version
 
 
 def _systemd_scope():
@@ -368,9 +449,9 @@ def info_installed(*names, **kwargs):
             summary, description.
 
     :param errors:
-        Handle RPM field errors (true|false). By default, various mistakes in the textual fields are simply ignored and
-        omitted from the data. Otherwise a field with a mistake is not returned, instead a 'N/A (bad UTF-8)'
-        (not available, broken) text is returned.
+        Handle RPM field errors. If 'ignore' is chosen, then various mistakes are simply ignored and omitted
+        from the texts or strings. If 'report' is chonen, then a field with a mistake is not returned, instead
+        a 'N/A (broken)' (not available, broken) text is placed.
 
         Valid attributes are:
             ignore, report
@@ -383,7 +464,8 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
         salt '*' pkg.info_installed <package1> attr=version,vendor
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor
-        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=true
+        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=ignore
+        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=report
     '''
     ret = dict()
     for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
@@ -397,7 +479,7 @@ def info_installed(*names, **kwargs):
                 else:
                     value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
                 if value != value_:
-                    value = kwargs.get('errors') and value_ or 'N/A (invalid UTF-8)'
+                    value = kwargs.get('errors', 'ignore') == 'ignore' and value_ or 'N/A (invalid UTF-8)'
                     log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
             if key == 'source_rpm':
                 t_nfo['source'] = value
@@ -568,8 +650,8 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
 
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
-    List the packages currently installed as a dict with versions
-    as a comma separated string::
+    List the packages currently installed as a dict. By default, the dict
+    contains versions as a comma separated string::
 
         {'<package_name>': '<version>[,<version>...]'}
 
@@ -577,6 +659,19 @@ def list_pkgs(versions_as_list=False, **kwargs):
         If set to true, the versions are provided as a list
 
         {'<package_name>': ['<version>', '<version>']}
+
+    attr:
+        If a list of package attributes is specified, returned value will
+        contain them in addition to version, eg.::
+
+        {'<package_name>': [{'version' : 'version', 'arch' : 'arch'}]}
+
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
+
+        If ``all`` is specified, all valid attributes will be returned.
+
+            .. versionadded:: Oxygen
 
     removed:
         not supported
@@ -589,6 +684,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.list_pkgs
+        salt '*' pkg.list_pkgs attr='["version", "arch"]'
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
     # not yet implemented or not applicable
@@ -596,30 +692,30 @@ def list_pkgs(versions_as_list=False, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
 
+    attr = kwargs.get("attr")
     if 'pkg.list_pkgs' in __context__:
-        if versions_as_list:
-            return __context__['pkg.list_pkgs']
-        else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
-            __salt__['pkg_resource.stringify'](ret)
-            return ret
+        cached = __context__['pkg.list_pkgs']
+        return __salt__['pkg_resource.format_pkg_list'](cached, versions_as_list, attr)
 
-    cmd = ['rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%|EPOCH?{%{EPOCH}}:{}|\\n']
+    cmd = ['rpm', '-qa', '--queryformat', (
+        "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-"
+        "%|EPOCH?{%{EPOCH}}:{}|_|-%{INSTALLTIME}\\n")]
     ret = {}
     for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
-        name, pkgver, rel, epoch = line.split('_|-')
-        if epoch:
-            pkgver = '{0}:{1}'.format(epoch, pkgver)
-        if rel:
-            pkgver += '-{0}'.format(rel)
-        __salt__['pkg_resource.add_pkg'](ret, name, pkgver)
+        name, pkgver, rel, arch, epoch, install_time = line.split('_|-')
+        install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
+        install_date_time_t = int(install_time)
 
-    __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
-    if not versions_as_list:
-        __salt__['pkg_resource.stringify'](ret)
+        all_attr = {'epoch': epoch, 'version': pkgver, 'release': rel, 'arch': arch,
+                    'install_date': install_date, 'install_date_time_t': install_date_time_t}
+        __salt__['pkg_resource.add_pkg'](ret, name, all_attr)
 
-    return ret
+    for pkgname in ret:
+        ret[pkgname] = sorted(ret[pkgname], key=lambda d: d['version'])
+
+    __context__['pkg.list_pkgs'] = ret
+
+    return __salt__['pkg_resource.format_pkg_list'](ret, versions_as_list, attr)
 
 
 def _get_configured_repos():
@@ -870,6 +966,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     ret = {}
     out = __zypper__.refreshable.call('refresh', '--force')
 
@@ -983,11 +1081,43 @@ def install(name=None,
         Zypper returns error code 106 if one of the repositories are not available for various reasons.
         In case to set strict check, this parameter needs to be set to True. Default: False.
 
+    diff_attr:
+        If a list of package attributes is specified, returned value will
+        contain them, eg.::
+
+            {'<package>': {
+                'old': {
+                    'version': '<old-version>',
+                    'arch': '<old-arch>'},
+
+                'new': {
+                    'version': '<new-version>',
+                    'arch': '<new-arch>'}}}
+
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
+
+        If ``all`` is specified, all valid attributes will be returned.
+
+        .. versionadded:: Oxygen
+
 
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
+
+    If an attribute list is specified in ``diff_attr``, the dict will also contain
+    any specified attribute, eg.::
+
+        {'<package>': {
+            'old': {
+                'version': '<old-version>',
+                'arch': '<old-arch>'},
+
+            'new': {
+                'version': '<new-version>',
+                'arch': '<new-arch>'}}}
     '''
     if refresh:
         refresh_db()
@@ -1000,33 +1130,20 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version_num = version
-    if version_num:
-        if pkgs is None and sources is None:
-            # Allow "version" to work for single package target
-            pkg_params = {name: version_num}
-        else:
-            log.warning("'version' parameter will be ignored for multiple package targets")
-
+    version_num = Wildcard(__zypper__)(name, version)
     if pkg_type == 'repository':
         targets = []
-        problems = []
         for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
+                log.debug('targeting package: %s', param)
                 targets.append(param)
             else:
-                match = re.match(r'^([<>])?(=)?([^<>=]+)$', version_num)
-                if match:
-                    gt_lt, equal, verstr = match.groups()
-                    targets.append('{0}{1}{2}'.format(param, ((gt_lt or '') + (equal or '')) or '=', verstr))
-                    log.debug(targets)
-                else:
-                    msg = ('Invalid version string \'{0}\' for package \'{1}\''.format(version_num, name))
-                    problems.append(msg)
-        if problems:
-            for problem in problems:
-                log.error(problem)
-            return {}
+                prefix, verstr = salt.utils.pkg.split_comparison(version_num)
+                if not prefix:
+                    prefix = '='
+                target = '{0}{1}{2}'.format(param, prefix, verstr)
+                log.debug('targeting package: %s', target)
+                targets.append(target)
     elif pkg_type == 'advisory':
         targets = []
         cur_patches = list_patches()
@@ -1038,7 +1155,8 @@ def install(name=None,
     else:
         targets = pkg_params
 
-    old = list_pkgs() if not downloadonly else list_downloaded()
+    diff_attr = kwargs.get("diff_attr")
+    old = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
     downgrades = []
     if fromrepo:
         fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
@@ -1076,12 +1194,22 @@ def install(name=None,
         __zypper__(no_repo_failure=ignore_repo_failure).call(*cmd)
 
     __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs() if not downloadonly else list_downloaded()
+    new = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
+
+    # Handle packages which report multiple new versions
+    # (affects only kernel packages at this point)
+    for pkg_name in new:
+        pkg_data = new[pkg_name]
+        if isinstance(pkg_data, six.string_types):
+            new[pkg_name] = pkg_data.split(',')[-1]
+
     ret = salt.utils.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
-            'Problem encountered installing package(s)',
+            'Problem encountered {0} package(s)'.format(
+                'downloading' if downloadonly else 'installing'
+            ),
             info={'errors': errors, 'changes': ret}
         )
 
@@ -1184,6 +1312,11 @@ def upgrade(refresh=True,
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+
+    # Handle packages which report multiple new versions
+    # (affects only kernel packages at this point)
+    for pkg in new:
+        new[pkg] = new[pkg].split(',')[-1]
     ret = salt.utils.compare_dicts(old, new)
 
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
@@ -1345,7 +1478,7 @@ def list_locks():
     '''
     locks = {}
     if os.path.exists(LOCKS):
-        with salt.utils.fopen(LOCKS) as fhr:
+        with salt.utils.files.fopen(LOCKS) as fhr:
             for meta in [item.split('\n') for item in fhr.read().split('\n\n')]:
                 lock = {}
                 for element in [el for el in meta if el]:
@@ -1721,7 +1854,7 @@ def list_products(all=False, refresh=False):
         if 'productline' in p_nfo and p_nfo['productline']:
             oem_file = os.path.join(OEM_PATH, p_nfo['productline'])
             if os.path.isfile(oem_file):
-                with salt.utils.fopen(oem_file, 'r') as rfile:
+                with salt.utils.files.fopen(oem_file, 'r') as rfile:
                     oem_release = rfile.readline().strip()
                     if oem_release:
                         p_nfo['release'] = oem_release
@@ -1781,7 +1914,7 @@ def download(*packages, **kwargs):
 
 def list_downloaded():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List prefetched packages downloaded by Zypper in the local disk.
 
@@ -1803,7 +1936,7 @@ def list_downloaded():
                 'path': package_path,
                 'size': os.path.getsize(package_path),
                 'creation_date_time_t': pkg_timestamp,
-                'creation_date_time': datetime.datetime.fromtimestamp(pkg_timestamp).isoformat(),
+                'creation_date_time': datetime.datetime.utcfromtimestamp(pkg_timestamp).isoformat(),
             }
     return ret
 
@@ -1865,7 +1998,7 @@ def _get_patches(installed_only=False):
 
 def list_patches(refresh=False):
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List all known advisory patches from available repos.
 
@@ -1888,7 +2021,7 @@ def list_patches(refresh=False):
 
 def list_installed_patches():
     '''
-    .. versionadded:: Oxygen
+    .. versionadded:: 2017.7.0
 
     List installed advisory patches on the system.
 

@@ -57,7 +57,16 @@ Writing Thorium Formulas
 ========================
 Like some other Salt subsystems, Thorium uses its own directory structure. The
 default location for this structure is ``/srv/thorium/``, but it can be changed
-using the ``thorium_roots_dir`` setting in the ``master`` configuration file.
+using the ``thorium_roots`` setting in the ``master`` configuration file.
+
+This would explicitly set the roots to the default:
+
+.. code-block:: yaml
+
+    thorium_roots:
+      base:
+        - /srv/thorium
+
 
 
 The Thorium top.sls File

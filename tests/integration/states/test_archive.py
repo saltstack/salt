@@ -2,37 +2,35 @@
 '''
 Tests for the archive state
 '''
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import errno
 import logging
 import os
-import socket
-import threading
-import tornado.httpserver
-import tornado.ioloop
-import tornado.web
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.paths import FILES
-from tests.support.helpers import get_unused_localhost_port, skip_if_not_root
+from tests.support.helpers import skip_if_not_root, Webserver
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.paths import FILES
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
 
 # Setup logging
 log = logging.getLogger(__name__)
 
-if salt.utils.is_windows():
-    ARCHIVE_DIR = os.path.join('c:/', 'tmp')
-else:
-    ARCHIVE_DIR = '/tmp/archive'
+ARCHIVE_DIR = os.path.join('c:/', 'tmp') \
+    if salt.utils.platform.is_windows() \
+    else '/tmp/archive'
 
+ARCHIVE_NAME = 'custom.tar.gz'
+ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/{1}'.format(9999, ARCHIVE_NAME)
+ARCHIVE_LOCAL_TAR_SOURCE = 'file://{0}'.format(os.path.join(FILES, 'file', 'base', ARCHIVE_NAME))
 UNTAR_FILE = os.path.join(ARCHIVE_DIR, 'custom/README')
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
-STATE_DIR = os.path.join(FILES, 'file', 'base')
+ARCHIVE_TAR_BAD_HASH = 'md5=d41d8cd98f00b204e9800998ecf8427e'
 
 
 class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
@@ -40,46 +38,14 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     Validate the archive state
     '''
     @classmethod
-    def webserver(cls):
-        '''
-        method to start tornado
-        static web app
-        '''
-        cls._ioloop = tornado.ioloop.IOLoop()
-        cls._ioloop.make_current()
-        cls._application = tornado.web.Application([(r'/(.*)', tornado.web.StaticFileHandler,
-                                                    {'path': STATE_DIR})])
-        cls._application.listen(cls.server_port)
-        cls._ioloop.start()
-
-    @classmethod
     def setUpClass(cls):
-        '''
-        start tornado app on thread
-        and wait till its running
-        '''
-        cls.server_port = get_unused_localhost_port()
-        cls.server_thread = threading.Thread(target=cls.webserver)
-        cls.server_thread.daemon = True
-        cls.server_thread.start()
-        cls.archive_tar_source = 'http://localhost:{0}/custom.tar.gz'.format(cls.server_port)
-        # check if tornado app is up
-        port_closed = True
-        while port_closed:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(('127.0.0.1', cls.server_port))
-            if result == 0:
-                port_closed = False
+        cls.webserver = Webserver()
+        cls.webserver.start()
+        cls.archive_tar_source = cls.webserver.url('custom.tar.gz')
 
     @classmethod
     def tearDownClass(cls):
-        cls._ioloop.add_callback(cls._ioloop.stop)
-        cls.server_thread.join()
-        for attrname in ('_ioloop', '_application', 'server_thread'):
-            try:
-                delattr(cls, attrname)
-            except AttributeError:
-                continue
+        cls.webserver.stop()
 
     def setUp(self):
         self._clear_archive_dir()
@@ -90,7 +56,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     @staticmethod
     def _clear_archive_dir():
         try:
-            salt.utils.rm_rf(ARCHIVE_DIR)
+            salt.utils.files.rm_rf(ARCHIVE_DIR)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise
@@ -138,10 +104,13 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test archive.extracted with user and group set to "root"
         '''
+        r_group = 'root'
+        if salt.utils.platform.is_darwin():
+            r_group = 'wheel'
         ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
                              source=self.archive_tar_source, archive_format='tar',
                              source_hash=ARCHIVE_TAR_HASH,
-                             user='root', group='root')
+                             user='root', group=r_group)
         log.debug('ret = %s', ret)
         if 'Timeout' in ret:
             self.skipTest('Timeout talking to local tornado server.')
@@ -214,3 +183,52 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         self._check_extracted(UNTAR_FILE)
+
+    def test_local_archive_extracted(self):
+        '''
+        test archive.extracted with local file
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=ARCHIVE_LOCAL_TAR_SOURCE, archive_format='tar')
+        log.debug('ret = %s', ret)
+
+        self.assertSaltTrueReturn(ret)
+
+        self._check_extracted(UNTAR_FILE)
+
+    def test_local_archive_extracted_skip_verify(self):
+        '''
+        test archive.extracted with local file, bad hash and skip_verify
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=ARCHIVE_LOCAL_TAR_SOURCE, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_BAD_HASH, skip_verify=True)
+        log.debug('ret = %s', ret)
+
+        self.assertSaltTrueReturn(ret)
+
+        self._check_extracted(UNTAR_FILE)
+
+    def test_local_archive_extracted_with_source_hash(self):
+        '''
+        test archive.extracted with local file and valid hash
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=ARCHIVE_LOCAL_TAR_SOURCE, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_HASH)
+        log.debug('ret = %s', ret)
+
+        self.assertSaltTrueReturn(ret)
+
+        self._check_extracted(UNTAR_FILE)
+
+    def test_local_archive_extracted_with_bad_source_hash(self):
+        '''
+        test archive.extracted with local file and bad hash
+        '''
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=ARCHIVE_LOCAL_TAR_SOURCE, archive_format='tar',
+                             source_hash=ARCHIVE_TAR_BAD_HASH)
+        log.debug('ret = %s', ret)
+
+        self.assertSaltFalseReturn(ret)

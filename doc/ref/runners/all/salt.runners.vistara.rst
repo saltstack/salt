@@ -1,5 +1,5 @@
-salt.runners.vistara module
-===========================
+salt.runners.vistara
+====================
 
 .. automodule:: salt.runners.vistara
     :members:

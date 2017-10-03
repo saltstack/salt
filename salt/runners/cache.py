@@ -10,10 +10,12 @@ import os
 
 # Import salt libs
 import salt.config
-import salt.ext.six as six
+from salt.ext import six
 import salt.log
 import salt.utils
+import salt.utils.args
 import salt.utils.master
+import salt.utils.versions
 import salt.payload
 import salt.cache
 from salt.exceptions import SaltInvocationError
@@ -32,7 +34,7 @@ __func_alias__ = {
 
 def grains(tgt=None, tgt_type='glob', **kwargs):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -45,7 +47,7 @@ def grains(tgt=None, tgt_type='glob', **kwargs):
         salt-run cache.grains
     '''
     if 'expr_form' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -63,7 +65,7 @@ def grains(tgt=None, tgt_type='glob', **kwargs):
 
 def pillar(tgt=None, tgt_type='glob', **kwargs):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -76,7 +78,7 @@ def pillar(tgt=None, tgt_type='glob', **kwargs):
         salt-run cache.pillar
     '''
     if 'expr_form' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -96,7 +98,7 @@ def pillar(tgt=None, tgt_type='glob', **kwargs):
 
 def mine(tgt=None, tgt_type='glob', **kwargs):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -109,7 +111,7 @@ def mine(tgt=None, tgt_type='glob', **kwargs):
         salt-run cache.mine
     '''
     if 'expr_form' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -152,7 +154,7 @@ def _clear_cache(tgt=None,
 
 def clear_pillar(tgt=None, tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -167,7 +169,7 @@ def clear_pillar(tgt=None, tgt_type='glob', expr_form=None):
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -180,7 +182,7 @@ def clear_pillar(tgt=None, tgt_type='glob', expr_form=None):
 
 def clear_grains(tgt=None, tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -195,7 +197,7 @@ def clear_grains(tgt=None, tgt_type='glob', expr_form=None):
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -208,7 +210,7 @@ def clear_grains(tgt=None, tgt_type='glob', expr_form=None):
 
 def clear_mine(tgt=None, tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -223,7 +225,7 @@ def clear_mine(tgt=None, tgt_type='glob', expr_form=None):
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -239,7 +241,7 @@ def clear_mine_func(tgt=None,
                     clear_mine_func_flag=None,
                     expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -256,7 +258,7 @@ def clear_mine_func(tgt=None,
 
 def clear_all(tgt=None, tgt_type='glob', expr_form=None):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -271,7 +273,7 @@ def clear_all(tgt=None, tgt_type='glob', expr_form=None):
     # remember to remove the expr_form argument from this function when
     # performing the cleanup on this deprecation.
     if expr_form is not None:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'the target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -321,10 +323,10 @@ def clear_git_lock(role, remote=None, **kwargs):
 
         salt-run cache.clear_git_lock git_pillar
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     type_ = salt.utils.split_input(kwargs.pop('type', ['update', 'checkout']))
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if role == 'gitfs':
         git_objects = [salt.utils.gitfs.GitFS(__opts__)]

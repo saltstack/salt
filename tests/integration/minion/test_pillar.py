@@ -21,10 +21,11 @@ from tests.support.helpers import requires_system_grains
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 import salt.pillar as pillar
 
 log = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ DEFAULT_OPTS = {
     'decrypt_pillar_renderers': ['gpg'],
 }
 ADDITIONAL_OPTS = (
+    'conf_file',
     'file_roots',
     'state_top',
     'renderer',
@@ -189,7 +191,7 @@ GPG_PILLAR_DECRYPTED = {
 }
 
 
-@skipIf(not salt.utils.which('gpg'), 'GPG is not installed')
+@skipIf(not salt.utils.path.which('gpg'), 'GPG is not installed')
 class DecryptGPGPillarTest(ModuleCase):
     '''
     Tests for pillar decryption
@@ -225,17 +227,29 @@ class DecryptGPGPillarTest(ModuleCase):
             log.debug('Result:\n%s', output)
 
             os.makedirs(PILLAR_BASE)
-            with salt.utils.fopen(TOP_SLS, 'w') as fp_:
+            with salt.utils.files.fopen(TOP_SLS, 'w') as fp_:
                 fp_.write(textwrap.dedent('''\
                 base:
                   '*':
                     - gpg
                 '''))
-            with salt.utils.fopen(GPG_SLS, 'w') as fp_:
+            with salt.utils.files.fopen(GPG_SLS, 'w') as fp_:
                 fp_.write(GPG_PILLAR_YAML)
 
     @classmethod
     def tearDownClass(cls):
+        cmd = ['gpg-connect-agent', '--homedir', GPG_HOMEDIR]
+        try:
+            log.debug('Killing gpg-agent using: %s', cmd)
+            output = subprocess.Popen(cmd,
+                                      stdin=subprocess.PIPE,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT,
+                                      shell=False).communicate(input=six.b('KILLAGENT'))[0]
+            log.debug('Result:\n%s', output)
+        except OSError:
+            log.debug('No need to kill: old gnupg doesn\'t start the agent.')
+
         if cls.created_gpg_homedir:
             try:
                 shutil.rmtree(GPG_HOMEDIR)

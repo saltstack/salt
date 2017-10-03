@@ -5,7 +5,7 @@ Capirca ACL
 
 Generate ACL (firewall) configuration for network devices.
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Robert Ankeny <robankeny@google.com>
 :maturity:   new
@@ -32,15 +32,15 @@ import datetime
 log = logging.getLogger(__file__)
 
 # Import third party libs
+from salt.ext import six
 try:
     import aclgen
     HAS_CAPIRCA = True
 except ImportError:
     HAS_CAPIRCA = False
 
-# Import Salt modules
-import salt.utils
-from salt.ext import six
+# Import Salt libs
+import salt.utils.files
 
 # ------------------------------------------------------------------------------
 # module properties
@@ -108,6 +108,7 @@ _TERM_FIELDS = {
     'fragment_offset': None,
     'hop_limit': None,
     'icmp_type': [],
+    'icmp_code': None,
     'ether_type': [],
     'traffic_class_count': None,
     'traffic_type': [],
@@ -212,7 +213,7 @@ def _get_services_mapping():
         return _SERVICES
     services_txt = ''
     try:
-        with salt.utils.fopen('/etc/services', 'r') as srv_f:
+        with salt.utils.files.fopen('/etc/services', 'r') as srv_f:
             services_txt = srv_f.read()
     except IOError as ioe:
         log.error('Unable to read from /etc/services:')

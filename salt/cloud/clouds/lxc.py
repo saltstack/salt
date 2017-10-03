@@ -30,7 +30,7 @@ import salt.runner
 
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)

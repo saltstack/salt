@@ -15,11 +15,12 @@ try:
 except ImportError:
     pass
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.locales
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.systemd
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'Cannot load locale module: windows platforms are unsupported')
 
     return __virtualname__
@@ -127,13 +128,14 @@ def get_locale():
         salt '*' locale.get_locale
     '''
     cmd = ''
-    if salt.utils.systemd.booted(__context__):
+    if 'Suse' in __grains__['os_family']:
+        # this block applies to all SUSE systems - also with systemd
+        cmd = 'grep "^RC_LANG" /etc/sysconfig/language'
+    elif salt.utils.systemd.booted(__context__):
         params = _parse_dbus_locale() if HAS_DBUS else _parse_localectl()
         return params.get('LANG', '')
     elif 'RedHat' in __grains__['os_family']:
         cmd = 'grep "^LANG=" /etc/sysconfig/i18n'
-    elif 'Suse' in __grains__['os_family']:
-        cmd = 'grep "^RC_LANG" /etc/sysconfig/language'
     elif 'Debian' in __grains__['os_family']:
         # this block only applies to Debian without systemd
         cmd = 'grep "^LANG=" /etc/default/locale'
@@ -161,7 +163,17 @@ def set_locale(locale):
 
         salt '*' locale.set_locale 'en_US.UTF-8'
     '''
-    if salt.utils.systemd.booted(__context__):
+    if 'Suse' in __grains__['os_family']:
+        # this block applies to all SUSE systems - also with systemd
+        if not __salt__['file.file_exists']('/etc/sysconfig/language'):
+            __salt__['file.touch']('/etc/sysconfig/language')
+        __salt__['file.replace'](
+            '/etc/sysconfig/language',
+            '^RC_LANG=.*',
+            'RC_LANG="{0}"'.format(locale),
+            append_if_not_found=True
+        )
+    elif salt.utils.systemd.booted(__context__):
         return _localectl_set(locale)
     elif 'RedHat' in __grains__['os_family']:
         if not __salt__['file.file_exists']('/etc/sysconfig/i18n'):
@@ -172,18 +184,9 @@ def set_locale(locale):
             'LANG="{0}"'.format(locale),
             append_if_not_found=True
         )
-    elif 'Suse' in __grains__['os_family']:
-        if not __salt__['file.file_exists']('/etc/sysconfig/language'):
-            __salt__['file.touch']('/etc/sysconfig/language')
-        __salt__['file.replace'](
-            '/etc/sysconfig/language',
-            '^RC_LANG=.*',
-            'RC_LANG="{0}"'.format(locale),
-            append_if_not_found=True
-        )
     elif 'Debian' in __grains__['os_family']:
         # this block only applies to Debian without systemd
-        update_locale = salt.utils.which('update-locale')
+        update_locale = salt.utils.path.which('update-locale')
         if update_locale is None:
             raise CommandExecutionError(
                 'Cannot set locale: "update-locale" was not found.')
@@ -316,7 +319,7 @@ def gen_locale(locale, **kwargs):
             append_if_not_found=True
         )
 
-    if salt.utils.which('locale-gen'):
+    if salt.utils.path.which('locale-gen'):
         cmd = ['locale-gen']
         if on_gentoo:
             cmd.append('--generate')
@@ -324,7 +327,7 @@ def gen_locale(locale, **kwargs):
             cmd.append(salt.utils.locales.normalize_locale(locale))
         else:
             cmd.append(locale)
-    elif salt.utils.which('localedef'):
+    elif salt.utils.path.which('localedef'):
         cmd = ['localedef', '--force', '-i', locale_search_str, '-f', locale_info['codeset'],
                '{0}.{1}'.format(locale_search_str,
                                 locale_info['codeset']),

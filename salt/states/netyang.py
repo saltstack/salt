@@ -6,7 +6,7 @@ NAPALM YANG state
 Manage the configuration of network devices according to
 the YANG models (OpenConfig/IETF).
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Dependencies
 ------------
@@ -23,6 +23,7 @@ Please check Installation_ for complete details.
 '''
 from __future__ import absolute_import
 
+import json
 import logging
 log = logging.getLogger(__file__)
 
@@ -37,7 +38,7 @@ except ImportError:
     HAS_NAPALM_YANG = False
 
 # Import salt modules
-from salt.utils import fopen
+import salt.utils.files
 import salt.utils.napalm
 
 # ------------------------------------------------------------------------------
@@ -75,7 +76,7 @@ def __virtual__():
 
 def managed(name,
             data,
-            *models,
+            models,
             **kwargs):
     '''
     Manage the device configuration given the input data strucuted
@@ -90,6 +91,13 @@ def managed(name,
     profiles: ``None``
         Use certain profiles to generate the config.
         If not specified, will use the platform default profile(s).
+
+    compliance_report: ``False``
+        Return the compliance report in the comment.
+        The compliance report structured object can be found however
+        in the ``pchanges`` field of the output (not displayed on the CLI).
+
+        .. versionadded:: 2017.7.3
 
     test: ``False``
         Dry run? If set as ``True``, will apply the config, discard
@@ -131,27 +139,30 @@ def managed(name,
                 config:
                   mtu: 9000
               Et2:
-                description: "description example"
+                config:
+                  description: "description example"
     '''
     ret = salt.utils.napalm.default_ret(name)
     test = kwargs.get('test', False) or __opts__.get('test', False)
     debug = kwargs.get('debug', False) or __opts__.get('debug', False)
     commit = kwargs.get('commit', True) or __opts__.get('commit', True)
     replace = kwargs.get('replace', False) or __opts__.get('replace', False)
+    return_compliance_report = kwargs.get('compliance_report', False) or __opts__.get('compliance_report', False)
     profiles = kwargs.get('profiles', [])
     temp_file = __salt__['temp.file']()
     log.debug('Creating temp file: {0}'.format(temp_file))
     if 'to_dict' not in data:
         data = {'to_dict': data}
-    with fopen(temp_file, 'w') as file_handle:
-        yaml.dump(data, file_handle)
-    device_config = __salt__['napalm_yang.parse'](*models,
+    data = [data]
+    with salt.utils.files.fopen(temp_file, 'w') as file_handle:
+        yaml.safe_dump(json.loads(json.dumps(data)), file_handle, encoding='utf-8', allow_unicode=True)
+    device_config = __salt__['napalm_yang.parse'](models,
                                                   config=True,
                                                   profiles=profiles)
     log.debug('Parsed the config from the device:')
     log.debug(device_config)
     compliance_report = __salt__['napalm_yang.compliance_report'](device_config,
-                                                                  *models,
+                                                                  models,
                                                                   filepath=temp_file)
     log.debug('Compliance report:')
     log.debug(compliance_report)
@@ -163,11 +174,12 @@ def managed(name,
         })
         log.debug('All good here.')
         return ret
-    data = data['to_dict']
+    log.debug('Does not comply, trying to generate and load config')
+    data = data[0]['to_dict']
     if '_kwargs' in data:
         data.pop('_kwargs')
     loaded_changes = __salt__['napalm_yang.load_config'](data,
-                                                         *models,
+                                                         models,
                                                          profiles=profiles,
                                                          test=test,
                                                          debug=debug,
@@ -176,12 +188,18 @@ def managed(name,
     log.debug('Loaded config result:')
     log.debug(loaded_changes)
     __salt__['file.remove'](temp_file)
-    return salt.utils.napalm.loaded_ret(ret, loaded_changes, test, debug)
+    loaded_changes['compliance_report'] = compliance_report
+    return salt.utils.napalm.loaded_ret(ret,
+                                        loaded_changes,
+                                        test,
+                                        debug,
+                                        opts=__opts__,
+                                        compliance_report=return_compliance_report)
 
 
 def configured(name,
                data,
-               *models,
+               models,
                **kwargs):
     '''
     Configure the network device, given the input data strucuted
@@ -248,7 +266,8 @@ def configured(name,
                 config:
                   mtu: 9000
               Et2:
-                description: "description example"
+                config:
+                  description: "description example"
     '''
     ret = salt.utils.napalm.default_ret(name)
     test = kwargs.get('test', False) or __opts__.get('test', False)
@@ -259,7 +278,7 @@ def configured(name,
     if '_kwargs' in data:
         data.pop('_kwargs')
     loaded_changes = __salt__['napalm_yang.load_config'](data,
-                                                         *models,
+                                                         models,
                                                          profiles=profiles,
                                                          test=test,
                                                          debug=debug,
