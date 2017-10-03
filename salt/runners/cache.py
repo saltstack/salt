@@ -310,20 +310,28 @@ def clear_git_lock(role, remote=None, **kwargs):
         have their lock cleared. For example, a ``remote`` value of **github**
         will remove the lock from all github.com remotes.
 
-    type : update,checkout
-        The types of lock to clear. Can be ``update``, ``checkout``, or both of
-    et (either comma-separated or as a Python list).
+    type : update,checkout,mountpoint
+        The types of lock to clear. Can be one or more of ``update``,
+        ``checkout``, and ``mountpoint``, and can be passed either as a
+        comma-separated or Python list.
 
         .. versionadded:: 2015.8.8
+        .. versionchanged:: Oxygen
+            ``mountpoint`` lock type added
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
+        salt-run cache.clear_git_lock gitfs
         salt-run cache.clear_git_lock git_pillar
+        salt-run cache.clear_git_lock git_pillar type=update
+        salt-run cache.clear_git_lock git_pillar type=update,checkout
+        salt-run cache.clear_git_lock git_pillar type='["update", "mountpoint"]'
     '''
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    type_ = salt.utils.args.split_input(kwargs.pop('type', ['update', 'checkout']))
+    type_ = salt.utils.args.split_input(
+        kwargs.pop('type', ['update', 'checkout', 'mountpoint']))
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
