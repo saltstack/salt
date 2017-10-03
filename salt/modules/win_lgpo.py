@@ -2773,22 +2773,44 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                     temp_ns = policy_ns
                     temp_ns = _updateNamespace(temp_ns, this_namespace)
                     policydefs_policyns_xpath(t_policy_definitions)[0].append(temp_ns)
-                adml_file = os.path.join(root, display_language, os.path.splitext(t_admfile)[0] + '.adml')
+
+                # We need to make sure the adml file exists. First we'll check
+                # the passed display_language (eg: en-US). Then we'll try the
+                # abbreviated version (en) to account for alternate locations.
+                # We'll do the same for the display_language_fallback (en_US).
+                adml_file = os.path.join(root, display_language,
+                        os.path.splitext(t_admfile)[0] + '.adml')
                 if not __salt__['file.file_exists'](adml_file):
                     msg = ('An ADML file in the specified ADML language "{0}" '
-                           'does not exist for the ADMX "{1}", the fallback '
-                           'language will be tried.')
+                           'does not exist for the ADMX "{1}", the abbreviated '
+                           'language code will be tried.')
                     log.info(msg.format(display_language, t_admfile))
-                    adml_file = os.path.join(root,
-                                             display_language_fallback,
-                                             os.path.splitext(t_admfile)[0] + '.adml')
+
+                    adml_file = os.path.join(root, display_language[:2],
+                            os.path.splitext(t_admfile)[0] + '.adml')
                     if not __salt__['file.file_exists'](adml_file):
-                        msg = ('An ADML file in the specified ADML language '
-                               '"{0}" and the fallback language "{1}" do not '
-                               'exist for the ADMX "{2}".')
-                        raise SaltInvocationError(msg.format(display_language,
-                                                             display_language_fallback,
-                                                             t_admfile))
+                        msg = ('An ADML file in the specified ADML language code "{0}" '
+                               'does not exist for the ADMX "{1}", the fallback '
+                               'language will be tried.')
+                        log.info(msg.format(display_language[:2], t_admfile))
+
+                        adml_file = os.path.join(root, display_language_fallback,
+                                os.path.splitext(t_admfile)[0] + '.adml')
+                        if not __salt__['file.file_exists'](adml_file):
+                            msg = ('An ADML file in the specified ADML fallback language "{0}" '
+                                   'does not exist for the ADMX "{1}", the abbreviated'
+                                   'fallback language code will be tried.')
+                            log.info(msg.format(display_language_fallback, t_admfile))
+
+                            adml_file = os.path.join(root, display_language_fallback[:2],
+                                    os.path.splitext(t_admfile)[0] + '.adml')
+                            if not __salt__['file.file_exists'](adml_file):
+                                msg = ('An ADML file in the specified ADML language '
+                                       '"{0}" and the fallback language "{1}" do not '
+                                       'exist for the ADMX "{2}".')
+                                raise SaltInvocationError(msg.format(display_language,
+                                                                     display_language_fallback,
+                                                                     t_admfile))
                 try:
                     xmltree = lxml.etree.parse(adml_file)
                 except lxml.etree.XMLSyntaxError:
@@ -2796,8 +2818,8 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                     try:
                         xmltree = _remove_unicode_encoding(adml_file)
                     except Exception:
-                        msg = ('An error was found while processing adml file {0}, all policy'
-                               ' languange data from this file will be unavailable via this module')
+                        msg = ('An error was found while processing adml file {0}, all policy '
+                               'language data from this file will be unavailable via this module')
                         log.error(msg.format(adml_file))
                         continue
                 if None in namespaces:
