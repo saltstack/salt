@@ -9,24 +9,27 @@ Management of the Salt beacons
 
     ps:
       beacon.present:
+        - save: True
         - enable: False
-        - salt-master: running
-        - apache2: stopped
+        - services:
+            salt-master: running
+            apache2: stopped
 
     sh:
-      beacon.present:
+      beacon.present: []
 
     load:
       beacon.present:
-        - 1m:
-            - 0.0
-            - 2.0
-        - 5m:
-            - 0.0
-            - 1.5
-        - 15m:
-            - 0.1
-            - 1.0
+        - averages:
+            1m:
+              - 0.0
+              - 2.0
+            5m:
+              - 0.0
+              - 1.5
+            15m:
+              - 0.1
+              - 1.0
 
 '''
 from __future__ import absolute_import
@@ -35,12 +38,15 @@ log = logging.getLogger(__name__)
 
 
 def present(name,
+            save=False,
             **kwargs):
     '''
     Ensure beacon is configured with the included beacon data.
 
     name
         The name of the beacon ensure is configured.
+    save
+        True/False, if True the beacons.conf file be updated too. Default is False.
 
     '''
 
@@ -50,7 +56,7 @@ def present(name,
            'comment': []}
 
     current_beacons = __salt__['beacons.list'](return_yaml=False)
-    beacon_data = kwargs
+    beacon_data = [kwargs]
 
     if name in current_beacons:
 
@@ -59,11 +65,11 @@ def present(name,
         else:
             if 'test' in __opts__ and __opts__['test']:
                 kwargs['test'] = True
-                result = __salt__['beacons.modify'](name, beacon_data, **kwargs)
+                result = __salt__['beacons.modify'](name, beacon_data)
                 ret['comment'].append(result['comment'])
                 ret['changes'] = result['changes']
             else:
-                result = __salt__['beacons.modify'](name, beacon_data, **kwargs)
+                result = __salt__['beacons.modify'](name, beacon_data)
                 if not result['result']:
                     ret['result'] = result['result']
                     ret['comment'] = result['comment']
@@ -74,13 +80,14 @@ def present(name,
                         ret['changes'] = result['changes']
                     else:
                         ret['comment'].append(result['comment'])
+
     else:
         if 'test' in __opts__ and __opts__['test']:
             kwargs['test'] = True
             result = __salt__['beacons.add'](name, beacon_data, **kwargs)
             ret['comment'].append(result['comment'])
         else:
-            result = __salt__['beacons.add'](name, beacon_data, **kwargs)
+            result = __salt__['beacons.add'](name, beacon_data)
             if not result['result']:
                 ret['result'] = result['result']
                 ret['comment'] = result['comment']
@@ -88,16 +95,24 @@ def present(name,
             else:
                 ret['comment'].append('Adding {0} to beacons'.format(name))
 
+    if save:
+        result = __salt__['beacons.save']()
+        ret['comment'].append('Beacon {0} saved'.format(name))
+
     ret['comment'] = '\n'.join(ret['comment'])
     return ret
 
 
-def absent(name, **kwargs):
+def absent(name,
+           save=False,
+           **kwargs):
     '''
     Ensure beacon is absent.
 
     name
         The name of the beacon ensured absent.
+    save
+        True/False, if True the beacons.conf file be updated too. Default is False.
 
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
@@ -125,6 +140,10 @@ def absent(name, **kwargs):
                 ret['comment'].append('Removed {0} from beacons'.format(name))
     else:
         ret['comment'].append('{0} not configured in beacons'.format(name))
+
+    if save:
+        result = __salt__['beacons.save']()
+        ret['comment'].append('Beacon {0} saved'.format(name))
 
     ret['comment'] = '\n'.join(ret['comment'])
     return ret

@@ -31,7 +31,7 @@ import salt.utils.minions
 import salt.wheel
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 import msgpack
 
 log = logging.getLogger(__name__)

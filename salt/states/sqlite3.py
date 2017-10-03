@@ -96,7 +96,7 @@ can be approximated with sqlite3's module functions and module.run:
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     import sqlite3
@@ -410,7 +410,7 @@ def table_present(name, db, schema, force=False):
 
         if len(tables) == 1:
             sql = None
-            if isinstance(schema, str):
+            if isinstance(schema, six.string_types):
                 sql = schema.strip()
             else:
                 sql = _get_sql_from_schema(name, schema)
@@ -441,7 +441,7 @@ def table_present(name, db, schema, force=False):
         elif len(tables) == 0:
             # Create the table
             sql = None
-            if isinstance(schema, str):
+            if isinstance(schema, six.string_types):
                 sql = schema
             else:
                 sql = _get_sql_from_schema(name, schema)

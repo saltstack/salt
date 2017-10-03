@@ -89,7 +89,7 @@ on the IAM role to be persistent. This functionality was added in 2015.8.0.
 from __future__ import absolute_import
 import logging
 import salt.utils.dictupdate as dictupdate
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

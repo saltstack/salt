@@ -16,7 +16,7 @@ import yaml
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
 import salt.utils.compat
 import salt.utils.files

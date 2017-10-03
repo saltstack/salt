@@ -87,7 +87,7 @@ import time
 import random
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.compat
 import salt.utils.files
 from salt.utils.versions import LooseVersion as _LooseVersion

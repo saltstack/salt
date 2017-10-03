@@ -21,12 +21,12 @@ from tests.support.paths import TMP
 from tests.support.helpers import skip_if_not_root
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipModuleTest(ModuleCase):
 
     def setUp(self):

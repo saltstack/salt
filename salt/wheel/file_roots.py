@@ -8,11 +8,10 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def find(path, saltenv='base'):
@@ -28,7 +27,7 @@ def find(path, saltenv='base'):
         if os.path.isfile(full):
             # Add it to the dict
             with salt.utils.files.fopen(full, 'rb') as fp_:
-                if salt.utils.istextfile(fp_):
+                if salt.utils.files.is_text_file(fp_):
                     ret.append({full: 'txt'})
                 else:
                     ret.append({full: 'bin'})

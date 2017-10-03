@@ -199,12 +199,15 @@ import subprocess
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 import salt.utils
+import salt.utils.args
 import salt.utils.decorators
 import salt.utils.docker
 import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.thin
 import salt.pillar
 import salt.exceptions
@@ -230,7 +233,8 @@ except ImportError:
     HAS_LZMA = False
 # pylint: enable=import-error
 
-HAS_NSENTER = bool(salt.utils.which('nsenter'))
+HAS_NSENTER = bool(salt.utils.path.which('nsenter'))
+HUB_PREFIX = 'docker.io/'
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -343,7 +347,7 @@ def _get_client(timeout=NOTSET, **kwargs):
             python_shell=False)
         try:
             docker_machine_json = \
-                json.loads(salt.utils.to_str(docker_machine_json))
+                json.loads(salt.utils.stringutils.to_str(docker_machine_json))
             docker_machine_tls = \
                 docker_machine_json['HostOptions']['AuthOptions']
             docker_machine_ip = docker_machine_json['Driver']['IPAddress']
@@ -389,7 +393,7 @@ def _docker_client(wrapped):
         '''
         Ensure that the client is present
         '''
-        kwargs = salt.utils.clean_kwargs(**kwargs)
+        kwargs = salt.utils.args.clean_kwargs(**kwargs)
         timeout = kwargs.pop('client_timeout', NOTSET)
         if 'docker.client' not in __context__ \
                 or not hasattr(__context__['docker.client'], 'timeout'):
@@ -421,7 +425,7 @@ def _ensure_exists(wrapped):
             raise CommandExecutionError(
                 'Container \'{0}\' does not exist'.format(name)
             )
-        return wrapped(name, *args, **salt.utils.clean_kwargs(**kwargs))
+        return wrapped(name, *args, **salt.utils.args.clean_kwargs(**kwargs))
     return wrapper
 
 
@@ -434,7 +438,7 @@ def _refresh_mine_cache(wrapped):
         '''
         refresh salt mine on exit.
         '''
-        returned = wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
+        returned = wrapped(*args, **salt.utils.args.clean_kwargs(**kwargs))
         __salt__['mine.send']('docker.ps', verbose=True, all=True, host=True)
         return returned
     return wrapper
@@ -559,6 +563,21 @@ def _prep_pull():
     __context__['docker._pull_status'] = [x[:12] for x in images(all=True)]
 
 
+def _scrub_links(links, name):
+    '''
+    Remove container name from HostConfig:Links values to enable comparing
+    container configurations correctly.
+    '''
+    if isinstance(links, list):
+        ret = []
+        for l in links:
+            ret.append(l.replace('/{0}/'.format(name), '/', 1))
+    else:
+        ret = links
+
+    return ret
+
+
 def _size_fmt(num):
     '''
     Format bytes as human-readable file sizes
@@ -619,7 +638,7 @@ def _client_wrapper(attr, *args, **kwargs):
             api_events = []
             try:
                 for event in ret:
-                    api_events.append(json.loads(salt.utils.to_str(event)))
+                    api_events.append(json.loads(salt.utils.stringutils.to_str(event)))
             except Exception as exc:
                 raise CommandExecutionError(
                     'Unable to interpret API event: \'{0}\''.format(event),
@@ -783,7 +802,7 @@ def get_client_args():
 
         salt myminion docker.get_client_args
     '''
-    return salt.utils.docker.get_client_args()
+    return __utils__['docker.get_client_args']()
 
 
 def _get_create_kwargs(image,
@@ -884,8 +903,20 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict][item]
             val2 = result2[conf_dict].get(item)
-            if val1 != val2:
-                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            if item in ('OomKillDisable',) or (val1 is None or val2 is None):
+                if bool(val1) != bool(val2):
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            elif item == 'Image':
+                image1 = inspect_image(val1)['Id']
+                image2 = inspect_image(val2)['Id']
+                if image1 != image2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
+            else:
+                if item == 'Links':
+                    val1 = _scrub_links(val1, first)
+                    val2 = _scrub_links(val2, second)
+                if val1 != val2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
         # and not the first.
         for item in result2[conf_dict]:
@@ -895,8 +926,20 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict].get(item)
             val2 = result2[conf_dict][item]
-            if val1 != val2:
-                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            if item in ('OomKillDisable',) or (val1 is None or val2 is None):
+                if bool(val1) != bool(val2):
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            elif item == 'Image':
+                image1 = inspect_image(val1)['Id']
+                image2 = inspect_image(val2)['Id']
+                if image1 != image2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
+            else:
+                if item == 'Links':
+                    val1 = _scrub_links(val1, first)
+                    val2 = _scrub_links(val2, second)
+                if val1 != val2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
     return ret
 
 
@@ -1447,6 +1490,43 @@ def list_tags():
     return sorted(ret)
 
 
+def resolve_tag(name, tags=None):
+    '''
+    .. versionadded:: 2017.7.2,Oxygen
+
+    Given an image tag, check the locally-pulled tags (using
+    :py:func:`docker.list_tags <salt.modules.dockermod.list_tags>`) and return
+    the matching tag. This helps disambiguate differences on some platforms
+    where images from the Docker Hub are prefixed with ``docker.io/``. If an
+    image name with no tag is passed, a tag of ``latest`` is assumed.
+
+    If the specified image is not pulled locally, this function will return
+    ``False``.
+
+    tags
+        An optional Python list of tags to check against. If passed, then
+        :py:func:`docker.list_tags <salt.modules.dockermod.list_tags>` will not
+        be run to get a list of tags. This is useful when resolving a number of
+        tags at the same time.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion docker.resolve_tag busybox
+        salt myminion docker.resolve_tag busybox:latest
+    '''
+    tag_name = ':'.join(salt.utils.docker.get_repo_tag(name))
+    if tags is None:
+        tags = list_tags()
+    if tag_name in tags:
+        return tag_name
+    full_name = HUB_PREFIX + tag_name
+    if not name.startswith(HUB_PREFIX) and full_name in tags:
+        return full_name
+    return False
+
+
 def logs(name):
     '''
     Returns the logs for the container. Equivalent to running the ``docker
@@ -1807,7 +1887,7 @@ def create(image,
         generate one for you (it will be included in the return data).
 
     skip_translate
-        This function translates Salt CLI input into the format which
+        This function translates Salt CLI or SLS input into the format which
         docker-py_ expects. However, in the event that Salt's translation logic
         fails (due to potential changes in the Docker Remote API, or to bugs in
         the translation code), this argument can be used to exert granular
@@ -2075,9 +2155,9 @@ def create(image,
         - ``dns_search="[foo1.domain.tld, foo2.domain.tld]"``
 
     domainname
-        Set custom DNS search domains
+        The domain name to use for the container
 
-        Example: ``domainname=domain.tld,domain2.tld``
+        Example: ``domainname=domain.tld``
 
     entrypoint
         Entrypoint for the container. Either a string (e.g. ``"mycmd --arg1
@@ -2946,10 +3026,10 @@ def rm_(name, force=False, volumes=False, **kwargs):
         salt myminion docker.rm mycontainer
         salt myminion docker.rm mycontainer force=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     stop_ = kwargs.pop('stop', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if state(name) == 'running' and not (force or stop_):
         raise CommandExecutionError(
@@ -3098,7 +3178,7 @@ def build(path=None,
     stream_data = []
     for line in response:
         stream_data.extend(
-            json.loads(salt.utils.to_str(line), cls=DockerJSONDecoder)
+            json.loads(salt.utils.stringutils.to_str(line), cls=DockerJSONDecoder)
         )
     errors = []
     # Iterate through API response and collect information
@@ -3816,7 +3896,6 @@ def save(name,
     if os.path.exists(path) and not overwrite:
         raise CommandExecutionError('{0} already exists'.format(path))
 
-    compression = kwargs.get('compression')
     if compression is None:
         if path.endswith('.tar.gz') or path.endswith('.tgz'):
             compression = 'gzip'
@@ -3854,8 +3933,9 @@ def save(name,
         saved_path = salt.utils.files.mkstemp()
     else:
         saved_path = path
-
-    cmd = ['docker', 'save', '-o', saved_path, inspect_image(name)['Id']]
+    # use the image name if its valid if not use the image id
+    image_to_save = name if name in inspect_image(name)['RepoTags'] else inspect_image(name)['Id']
+    cmd = ['docker', 'save', '-o', saved_path, image_to_save]
     time_started = time.time()
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     if result['retcode'] != 0:
@@ -3922,7 +4002,7 @@ def save(name,
     ret['Size_Human'] = _size_fmt(ret['Size'])
 
     # Process push
-    if kwargs.get(push, False):
+    if kwargs.get('push', False):
         ret['Push'] = __salt__['cp.push'](path)
 
     return ret
@@ -4002,7 +4082,10 @@ def networks(names=None, ids=None):
 
 def create_network(name,
                    driver=None,
-                   driver_opts=None):
+                   driver_opts=None,
+                   gateway=None,
+                   ip_range=None,
+                   subnet=None):
     '''
     Create a new network
 
@@ -4015,16 +4098,46 @@ def create_network(name,
     driver_opts
         Options for the network driver.
 
+    gateway
+        IPv4 or IPv6 gateway for the master subnet
+
+    ip_range
+        Allocate container IP from a sub-range within the subnet
+
+    subnet:
+        Subnet in CIDR format that represents a network segment
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion docker.create_network web_network driver=bridge
+        salt myminion docker.create_network macvlan_network \
+            driver=macvlan \
+            driver_opts="{'parent':'eth0'}" \
+            gateway=172.20.0.1 \
+            subnet=172.20.0.0/24
     '''
+    # If any settings which need to be set via the IPAM config are specified, create the IPAM config data structure
+    # with these values set.
+    if gateway or ip_range or subnet:
+        ipam = {
+            'Config': [{
+                'Gateway': gateway,
+                'IPRange': ip_range,
+                'Subnet': subnet
+            }],
+            'Driver': 'default',
+            'Options': {}
+        }
+    else:
+        ipam = None
+
     response = _client_wrapper('create_network',
                                name,
                                driver=driver,
                                options=driver_opts,
+                               ipam=ipam,
                                check_duplicate=True)
 
     _clear_context()
@@ -5345,7 +5458,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
             )
     if not isinstance(ret, dict):
         __context__['retcode'] = 1
-    elif not salt.utils.check_state_result(ret):
+    elif not __utils__['state.check_result'](ret):
         __context__['retcode'] = 2
     else:
         __context__['retcode'] = 0
@@ -5400,7 +5513,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         salt myminion docker.sls_build imgname base=mybase mods=rails,web
 
     '''
-    create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    create_kwargs = salt.utils.args.clean_kwargs(**copy.deepcopy(kwargs))
     for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
         try:
             del create_kwargs[key]
@@ -5419,7 +5532,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         # Now execute the state into the container
         ret = sls(id_, mods, saltenv, **kwargs)
         # fail if the state was not successful
-        if not dryrun and not salt.utils.check_state_result(ret):
+        if not dryrun and not __utils__['state.check_result'](ret):
             raise CommandExecutionError(ret)
         if dryrun is False:
             ret = commit(id_, name)

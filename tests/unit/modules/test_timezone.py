@@ -19,8 +19,9 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.modules.timezone as timezone
-import salt.ext.six as six
-import salt.utils
+from salt.ext import six
+import salt.utils.platform
+import salt.utils.stringutils
 
 GET_ZONE_FILE = 'salt.modules.timezone._get_zone_file'
 GET_ETC_LOCALTIME_PATH = 'salt.modules.timezone._get_etc_localtime_path'
@@ -77,7 +78,7 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
     def create_tempfile_with_contents(self, contents):
         temp = NamedTemporaryFile(delete=False)
         if six.PY3:
-            temp.write(salt.utils.to_bytes(contents))
+            temp.write(salt.utils.stringutils.to_bytes(contents))
         else:
             temp.write(contents)
         temp.close()
@@ -98,7 +99,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                                         'cmd.run': MagicMock(),
                                         'cmd.retcode': MagicMock(return_value=0)}}}
 
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     def test_get_zone_centos(self):
         '''
         Test CentOS is recognized
@@ -108,7 +109,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.modules.timezone._get_zone_etc_localtime', MagicMock(return_value=self.TEST_TZ)):
                 assert timezone.get_zone() == self.TEST_TZ
 
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     def test_get_zone_os_family_rh_suse(self):
         '''
         Test RedHat and Suse are recognized
@@ -119,7 +120,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                 with patch('salt.modules.timezone._get_zone_sysconfig', MagicMock(return_value=self.TEST_TZ)):
                     assert timezone.get_zone() == self.TEST_TZ
 
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     def test_get_zone_os_family_debian_gentoo(self):
         '''
         Test Debian and Gentoo are recognized
@@ -130,7 +131,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                 with patch('salt.modules.timezone._get_zone_etc_timezone', MagicMock(return_value=self.TEST_TZ)):
                     assert timezone.get_zone() == self.TEST_TZ
 
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     def test_get_zone_os_family_allbsd_nilinuxrt(self):
         '''
         Test *BSD and NILinuxRT are recognized
@@ -141,7 +142,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                 with patch('salt.modules.timezone._get_zone_etc_localtime', MagicMock(return_value=self.TEST_TZ)):
                     assert timezone.get_zone() == self.TEST_TZ
 
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     def test_get_zone_os_family_slowlaris(self):
         '''
         Test Slowlaris is recognized
@@ -151,7 +152,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.modules.timezone._get_zone_solaris', MagicMock(return_value=self.TEST_TZ)):
                 assert timezone.get_zone() == self.TEST_TZ
 
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     def test_get_zone_os_family_aix(self):
         '''
         Test IBM AIX is recognized
@@ -161,8 +162,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.modules.timezone._get_zone_aix', MagicMock(return_value=self.TEST_TZ)):
                 assert timezone.get_zone() == self.TEST_TZ
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -176,8 +177,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
             assert args == ('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="UTC"')
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -191,8 +192,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
             assert args == ('/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="UTC"')
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -210,8 +211,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                 name, args, kwargs = _fopen.return_value.__enter__.return_value.write.mock_calls[0]
                 assert args == ('UTC',)
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -229,8 +230,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                 name, args, kwargs = _fopen.return_value.__enter__.return_value.write.mock_calls[0]
                 assert args == ('UTC',)
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=True))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=True))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -244,8 +245,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.timezone._timedatectl', MagicMock(return_value={'stdout': 'rtc in local tz:yes'})):
             assert timezone.get_hwclock() == 'localtime'
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -260,8 +261,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             assert args == (['tail', '-n', '1', '/etc/adjtime'],)
             assert kwarg == {'python_shell': False}
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -281,7 +282,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         Test get hwclock on Debian
         :return:
         '''
-        with patch('salt.utils.which', MagicMock(return_value=False)):
+        with patch('salt.utils.path.which', MagicMock(return_value=False)):
             with patch('os.path.exists', MagicMock(return_value=True)):
                 with patch('os.unlink', MagicMock()):
                     with patch('os.symlink', MagicMock()):
@@ -291,8 +292,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                             assert args == (['tail', '-n', '1', '/etc/adjtime'],)
                             assert kwarg == {'python_shell': False}
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -307,8 +308,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.files.fopen', mock_open()):
                 assert timezone.get_hwclock() == 'localtime'
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -324,8 +325,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(timezone.__grains__, {'os_family': ['AIX']}):
             assert timezone.get_hwclock() == hwclock
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -340,8 +341,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
                     assert timezone.set_hwclock('forty two')
                 assert timezone.set_hwclock('UTC')
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -360,8 +361,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             assert args == (['rtc', '-z', 'GMT'],)
             assert kwargs == {'python_shell': False}
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -377,8 +378,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             assert args == (['timezonectl', 'set-local-rtc', 'false'],)
             assert kwargs == {'python_shell': False}
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -393,8 +394,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
             assert args == ('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="TEST_TIMEZONE"')
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -409,8 +410,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
             assert args == ('/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="TEST_TIMEZONE"')
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())
@@ -429,8 +430,8 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
             name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[1]
             assert args == ('/etc/default/rcS', '^UTC=.*', 'UTC=no')
 
-    @skipIf(salt.utils.is_windows(), 'os.symlink not available in Windows')
-    @patch('salt.utils.which', MagicMock(return_value=False))
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink not available in Windows')
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.unlink', MagicMock())
     @patch('os.symlink', MagicMock())

@@ -64,6 +64,8 @@ class GrainsTargetingTest(ShellCase):
         with salt.utils.files.fopen(key_file, 'a'):
             pass
 
+        import logging
+        log = logging.getLogger(__name__)
         # ping disconnected minion and ensure it times out and returns with correct message
         try:
             ret = ''

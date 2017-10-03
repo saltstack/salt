@@ -58,6 +58,7 @@ import salt.fileserver
 import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.path
 from salt.utils.versions import LooseVersion
 
 try:
@@ -69,7 +70,7 @@ except ImportError:
     HAS_AZURE = False
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 __virtualname__ = 'azurefs'
@@ -276,7 +277,7 @@ def file_hash(load, fnd):
     relpath = fnd['rel']
     path = fnd['path']
     hash_cachedir = os.path.join(__opts__['cachedir'], 'azurefs', 'hashes')
-    hashdest = salt.utils.path_join(hash_cachedir,
+    hashdest = salt.utils.path.join(hash_cachedir,
                                     load['saltenv'],
                                     '{0}.hash.{1}'.format(relpath,
                                                           __opts__['hash_type']))

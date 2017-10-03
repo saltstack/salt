@@ -10,13 +10,13 @@ import logging
 import threading
 
 # Import Salt Libs
-import salt.utils
-import salt.utils.files
-import salt.utils.process
 import salt.payload
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.process
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ def _check_cmdline(data):
 
     For non-Linux systems we punt and just return True
     '''
-    if not salt.utils.is_linux():
+    if not salt.utils.platform.is_linux():
         return True
     pid = data.get('pid')
     if not pid:

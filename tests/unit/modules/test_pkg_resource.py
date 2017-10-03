@@ -20,7 +20,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils
 import salt.modules.pkg_resource as pkg_resource
-import salt.ext.six as six
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

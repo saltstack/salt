@@ -16,7 +16,7 @@ import salt.utils
 import salt.utils.process
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 

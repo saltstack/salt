@@ -18,9 +18,11 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
 import salt.utils.pkg
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip
 
 # Import third party libs
@@ -37,7 +39,7 @@ def __virtual__():
     Confine this module to Mac OS with Homebrew.
     '''
 
-    if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
+    if salt.utils.path.which('brew') and __grains__['os'] == 'MacOS':
         return __virtualname__
     return (False, 'The brew module could not be loaded: brew not found or grain os != MacOS')
 
@@ -127,7 +129,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             name_and_versions = line.split(' ')
             name = name_and_versions[0]
             installed_versions = name_and_versions[1:]
-            key_func = functools.cmp_to_key(salt.utils.version_cmp)
+            key_func = functools.cmp_to_key(salt.utils.versions.version_cmp)
             newest_version = sorted(installed_versions, key=key_func).pop()
         except ValueError:
             continue

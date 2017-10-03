@@ -164,14 +164,16 @@ Create a cluster from scratch:
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 import os
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.files
-import salt.ext.six as six
+import salt.utils.path
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -180,7 +182,7 @@ def __virtual__():
     '''
     Only load if pcs package is installed
     '''
-    if salt.utils.which('pcs'):
+    if salt.utils.path.which('pcs'):
         return 'pcs'
     return False
 

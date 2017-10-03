@@ -69,7 +69,7 @@ import hashlib
 import json
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.dictupdate as dictupdate
 import salt.utils
 import salt.utils.files

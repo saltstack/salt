@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 import shutil
@@ -14,13 +14,14 @@ from tests.support.unit import skipIf
 from tests.support.paths import TMP
 from tests.support.mixins import SaltReturnAssertsMixin
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
@@ -108,7 +109,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertTrue(isinstance(ret['__sls__'], type(None)))
 
         for state, ret in sls2.items():
-            self.assertTrue(isinstance(ret['__sls__'], str))
+            self.assertTrue(isinstance(ret['__sls__'], six.string_types))
 
     def _remove_request_cache_file(self):
         '''
@@ -155,14 +156,14 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         self._remove_request_cache_file()
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.run_function('state.request', mods='modules.state.requested_win')
         else:
             self.run_function('state.request', mods='modules.state.requested')
 
         ret = self.run_function('state.run_request')
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             key = 'cmd_|-count_root_dir_contents_|-Get-ChildItem C:\\\\ | Measure-Object | %{$_.Count}_|-run'
         else:
             key = 'cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run'
@@ -208,7 +209,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             fi
             ''')
 
-        if not salt.utils.is_windows():
+        if not salt.utils.platform.is_windows():
             contents += os.linesep
 
         contents += textwrap.dedent('''\
@@ -218,7 +219,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             fi
             ''')
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             new_contents = contents.splitlines()
             contents = os.linesep.join(new_contents)
             contents += os.linesep
@@ -272,7 +273,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             fi
             ''')
 
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             new_contents = expected.splitlines()
             expected = os.linesep.join(new_contents)
             expected += os.linesep
@@ -365,7 +366,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 if os.path.isfile(fname):
                     os.remove(fname)
 
-    @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+    @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
     def test_issue_2068_template_str(self):
         venv_dir = os.path.join(
             TMP, 'issue-2068-template-str'

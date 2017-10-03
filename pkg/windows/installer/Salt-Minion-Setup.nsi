@@ -44,7 +44,7 @@ ${StrStrAdv}
     !define CPUARCH "x86"
 !endif
 
-; Part of the Trim function for Strings
+# Part of the Trim function for Strings
 !define Trim "!insertmacro Trim"
 !macro Trim ResultVar String
     Push "${String}"
@@ -61,27 +61,27 @@ ${StrStrAdv}
 !define MUI_UNICON "salt.ico"
 !define MUI_WELCOMEFINISHPAGE_BITMAP "panel.bmp"
 
-; Welcome page
+# Welcome page
 !insertmacro MUI_PAGE_WELCOME
 
-; License page
+# License page
 !insertmacro MUI_PAGE_LICENSE "LICENSE.txt"
 
-; Configure Minion page
+# Configure Minion page
 Page custom pageMinionConfig pageMinionConfig_Leave
 
-; Instfiles page
+# Instfiles page
 !insertmacro MUI_PAGE_INSTFILES
 
-; Finish page (Customized)
+# Finish page (Customized)
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW pageFinish_Show
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE pageFinish_Leave
 !insertmacro MUI_PAGE_FINISH
 
-; Uninstaller pages
+# Uninstaller pages
 !insertmacro MUI_UNPAGE_INSTFILES
 
-; Language files
+# Language files
 !insertmacro MUI_LANGUAGE "English"
 
 
@@ -201,8 +201,8 @@ ShowInstDetails show
 ShowUnInstDetails show
 
 
-; Check and install Visual C++ redist packages
-; See http://blogs.msdn.com/b/astebner/archive/2009/01/29/9384143.aspx for more info
+# Check and install Visual C++ redist packages
+# See http://blogs.msdn.com/b/astebner/archive/2009/01/29/9384143.aspx for more info
 Section -Prerequisites
 
     Var /GLOBAL VcRedistName
@@ -211,12 +211,12 @@ Section -Prerequisites
     Var /Global CheckVcRedist
     StrCpy $CheckVcRedist "False"
 
-    ; Visual C++ 2015 redist packages
+    # Visual C++ 2015 redist packages
     !define PY3_VC_REDIST_NAME "VC_Redist_2015"
     !define PY3_VC_REDIST_X64_GUID "{50A2BC33-C9CD-3BF1-A8FF-53C10A0B183C}"
     !define PY3_VC_REDIST_X86_GUID "{BBF2AC74-720C-3CB3-8291-5E34039232FA}"
 
-    ; Visual C++ 2008 SP1 MFC Security Update redist packages
+    # Visual C++ 2008 SP1 MFC Security Update redist packages
     !define PY2_VC_REDIST_NAME "VC_Redist_2008_SP1_MFC"
     !define PY2_VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
     !define PY2_VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
@@ -239,7 +239,7 @@ Section -Prerequisites
             StrCpy $VcRedistGuid ${PY2_VC_REDIST_X86_GUID}
         ${EndIf}
 
-        ; VCRedist 2008 only needed on Windows Server 2008R2/Windows 7 and below
+        # VCRedist 2008 only needed on Windows Server 2008R2/Windows 7 and below
         ${If} ${AtMostWin2008R2}
             StrCpy $CheckVcRedist "True"
         ${EndIf}
@@ -255,20 +255,41 @@ Section -Prerequisites
                 "$VcRedistName is currently not installed. Would you like to install?" \
                 /SD IDYES IDNO endVcRedist
 
-            ClearErrors
-            ; The Correct version of VCRedist is copied over by "build_pkg.bat"
+            # The Correct version of VCRedist is copied over by "build_pkg.bat"
             SetOutPath "$INSTDIR\"
             File "..\prereqs\vcredist.exe"
-            ; /passive used by 2015 installer
-            ; /qb! used by 2008 installer
-            ; It just ignores the unrecognized switches...
-            ExecWait "$INSTDIR\vcredist.exe /qb! /passive"
-            IfErrors 0 endVcRedist
+            # If an output variable is specified ($0 in the case below),
+            # ExecWait sets the variable with the exit code (and only sets the
+            # error flag if an error occurs; if an error occurs, the contents
+            # of the user variable are undefined).
+            # http://nsis.sourceforge.net/Reference/ExecWait
+            # /passive used by 2015 installer
+            # /qb! used by 2008 installer
+            # It just ignores the unrecognized switches...
+            ClearErrors
+            ExecWait '"$INSTDIR\vcredist.exe" /qb! /passive /norestart' $0
+            IfErrors 0 CheckVcRedistErrorCode
                 MessageBox MB_OK \
                     "$VcRedistName failed to install. Try installing the package manually." \
                     /SD IDOK
+                Goto endVcRedist
+
+            CheckVcRedistErrorCode:
+            # Check for Reboot Error Code (3010)
+            ${If} $0 == 3010
+                MessageBox MB_OK \
+                    "$VcRedistName installed but requires a restart to complete." \
+                    /SD IDOK
+
+            # Check for any other errors
+            ${ElseIfNot} $0 == 0
+                MessageBox MB_OK \
+                    "$VcRedistName failed with ErrorCode: $0. Try installing the package manually." \
+                    /SD IDOK
+            ${EndIf}
 
             endVcRedist:
+
         ${EndIf}
 
     ${EndIf}
@@ -294,12 +315,12 @@ Function .onInit
 
     Call parseCommandLineSwitches
 
-    ; Check for existing installation
+    # Check for existing installation
     ReadRegStr $R0 HKLM \
         "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
         "UninstallString"
     StrCmp $R0 "" checkOther
-    ; Found existing installation, prompt to uninstall
+    # Found existing installation, prompt to uninstall
     MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
         "${PRODUCT_NAME} is already installed.$\n$\n\
         Click `OK` to remove the existing installation." \
@@ -307,12 +328,12 @@ Function .onInit
     Abort
 
     checkOther:
-        ; Check for existing installation of full salt
+        # Check for existing installation of full salt
         ReadRegStr $R0 HKLM \
             "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OTHER}" \
             "UninstallString"
         StrCmp $R0 "" skipUninstall
-        ; Found existing installation, prompt to uninstall
+        # Found existing installation, prompt to uninstall
         MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
             "${PRODUCT_NAME_OTHER} is already installed.$\n$\n\
             Click `OK` to remove the existing installation." \
@@ -321,22 +342,22 @@ Function .onInit
 
     uninst:
 
-        ; Get current Silent status
+        # Get current Silent status
         StrCpy $R0 0
         ${If} ${Silent}
             StrCpy $R0 1
         ${EndIf}
 
-        ; Turn on Silent mode
+        # Turn on Silent mode
         SetSilent silent
 
-        ; Don't remove all directories
+        # Don't remove all directories
         StrCpy $DeleteInstallDir 0
 
-        ; Uninstall silently
+        # Uninstall silently
         Call uninstallSalt
 
-        ; Set it back to Normal mode, if that's what it was before
+        # Set it back to Normal mode, if that's what it was before
         ${If} $R0 == 0
             SetSilent normal
         ${EndIf}
@@ -350,7 +371,7 @@ Section -Post
 
     WriteUninstaller "$INSTDIR\uninst.exe"
 
-    ; Uninstall Registry Entries
+    # Uninstall Registry Entries
     WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
         "DisplayName" "$(^Name)"
     WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
@@ -366,26 +387,25 @@ Section -Post
     WriteRegStr HKLM "SYSTEM\CurrentControlSet\services\salt-minion" \
         "DependOnService" "nsi"
 
-    ; Set the estimated size
+    # Set the estimated size
     ${GetSize} "$INSTDIR\bin" "/S=OK" $0 $1 $2
     IntFmt $0 "0x%08X" $0
     WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
         "EstimatedSize" "$0"
 
-    ; Commandline Registry Entries
+    # Commandline Registry Entries
     WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "" "$INSTDIR\salt-call.bat"
     WriteRegStr HKLM "${PRODUCT_CALL_REGKEY}" "Path" "$INSTDIR\bin\"
     WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "" "$INSTDIR\salt-minion.bat"
     WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\"
 
-    ; Register the Salt-Minion Service
-    nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
-    nsExec::Exec "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
+    # Register the Salt-Minion Service
+    nsExec::Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe -E -s $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
     nsExec::Exec "nssm.exe set salt-minion Description Salt Minion from saltstack.com"
     nsExec::Exec "nssm.exe set salt-minion Start SERVICE_AUTO_START"
     nsExec::Exec "nssm.exe set salt-minion AppNoConsole 1"
-
-    RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
+    nsExec::Exec "nssm.exe set salt-minion AppStopMethodConsole 24000"
+    nsExec::Exec "nssm.exe set salt-minion AppStopMethodWindow 2000"
 
     Call updateMinionConfig
 
@@ -399,12 +419,12 @@ SectionEnd
 
 Function .onInstSuccess
 
-    ; If StartMinionDelayed is 1, then set the service to start delayed
+    # If StartMinionDelayed is 1, then set the service to start delayed
     ${If} $StartMinionDelayed == 1
         nsExec::Exec "nssm.exe set salt-minion Start SERVICE_DELAYED_AUTO_START"
     ${EndIf}
 
-    ; If start-minion is 1, then start the service
+    # If start-minion is 1, then start the service
     ${If} $StartMinion == 1
         nsExec::Exec 'net start salt-minion'
     ${EndIf}
@@ -414,10 +434,11 @@ FunctionEnd
 
 Function un.onInit
 
-    ; Load the parameters
+    # Load the parameters
     ${GetParameters} $R0
 
     # Uninstaller: Remove Installation Directory
+    ClearErrors
     ${GetOptions} $R0 "/delete-install-dir" $R1
     IfErrors delete_install_dir_not_found
         StrCpy $DeleteInstallDir 1
@@ -435,7 +456,7 @@ Section Uninstall
 
     Call un.uninstallSalt
 
-    ; Remove C:\salt from the Path
+    # Remove C:\salt from the Path
     Push "C:\salt"
     Call un.RemoveFromPath
 
@@ -445,27 +466,27 @@ SectionEnd
 !macro uninstallSalt un
 Function ${un}uninstallSalt
 
-    ; Make sure we're in the right directory
+    # Make sure we're in the right directory
     ${If} $INSTDIR == "c:\salt\bin\Scripts"
       StrCpy $INSTDIR "C:\salt"
     ${EndIf}
 
-    ; Stop and Remove salt-minion service
+    # Stop and Remove salt-minion service
     nsExec::Exec 'net stop salt-minion'
     nsExec::Exec 'sc delete salt-minion'
 
-    ; Stop and remove the salt-master service
+    # Stop and remove the salt-master service
     nsExec::Exec 'net stop salt-master'
     nsExec::Exec 'sc delete salt-master'
 
-    ; Remove files
+    # Remove files
     Delete "$INSTDIR\uninst.exe"
     Delete "$INSTDIR\nssm.exe"
     Delete "$INSTDIR\salt*"
     Delete "$INSTDIR\vcredist.exe"
     RMDir /r "$INSTDIR\bin"
 
-    ; Remove Registry entries
+    # Remove Registry entries
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY_OTHER}"
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_CALL_REGKEY}"
@@ -475,17 +496,17 @@ Function ${un}uninstallSalt
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_MINION_REGKEY}"
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_RUN_REGKEY}"
 
-    ; Automatically close when finished
+    # Automatically close when finished
     SetAutoClose true
 
-    ; Prompt to remove the Installation directory
+    # Prompt to remove the Installation directory
     ${IfNot} $DeleteInstallDir == 1
         MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
             "Would you like to completely remove $INSTDIR and all of its contents?" \
             /SD IDNO IDNO finished
     ${EndIf}
 
-    ; Make sure you're not removing Program Files
+    # Make sure you're not removing Program Files
     ${If} $INSTDIR != 'Program Files'
     ${AndIf} $INSTDIR != 'Program Files (x86)'
         RMDir /r "$INSTDIR"
@@ -527,7 +548,7 @@ FunctionEnd
 
 Function Trim
 
-    Exch $R1 ; Original string
+    Exch $R1 # Original string
     Push $R2
 
     Loop:
@@ -559,36 +580,36 @@ Function Trim
 FunctionEnd
 
 
-;------------------------------------------------------------------------------
-; StrStr Function
-; - find substring in a string
-;
-; Usage:
-;   Push "this is some string"
-;   Push "some"
-;   Call StrStr
-;   Pop $0 ; "some string"
-;------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# StrStr Function
+# - find substring in a string
+#
+# Usage:
+#   Push "this is some string"
+#   Push "some"
+#   Call StrStr
+#   Pop $0 ; "some string"
+#------------------------------------------------------------------------------
 !macro StrStr un
 Function ${un}StrStr
 
-    Exch $R1 ; $R1=substring, stack=[old$R1,string,...]
-    Exch     ;                stack=[string,old$R1,...]
-    Exch $R2 ; $R2=string,    stack=[old$R2,old$R1,...]
-    Push $R3 ; $R3=strlen(substring)
-    Push $R4 ; $R4=count
-    Push $R5 ; $R5=tmp
-    StrLen $R3 $R1 ; Get the length of the Search String
-    StrCpy $R4 0 ; Set the counter to 0
+    Exch $R1 # $R1=substring, stack=[old$R1,string,...]
+    Exch     #                stack=[string,old$R1,...]
+    Exch $R2 # $R2=string,    stack=[old$R2,old$R1,...]
+    Push $R3 # $R3=strlen(substring)
+    Push $R4 # $R4=count
+    Push $R5 # $R5=tmp
+    StrLen $R3 $R1 # Get the length of the Search String
+    StrCpy $R4 0 # Set the counter to 0
 
     loop:
-        StrCpy $R5 $R2 $R3 $R4 ; Create a moving window of the string that is
-                               ; the size of the length of the search string
-        StrCmp $R5 $R1 done    ; Is the contents of the window the same as
-                               ; search string, then done
-        StrCmp $R5 "" done     ; Is the window empty, then done
-        IntOp $R4 $R4 + 1      ; Shift the windows one character
-        Goto loop              ; Repeat
+        StrCpy $R5 $R2 $R3 $R4 # Create a moving window of the string that is
+                               # the size of the length of the search string
+        StrCmp $R5 $R1 done    # Is the contents of the window the same as
+                               # search string, then done
+        StrCmp $R5 "" done     # Is the window empty, then done
+        IntOp $R4 $R4 + 1      # Shift the windows one character
+        Goto loop              # Repeat
 
     done:
         StrCpy $R1 $R2 "" $R4
@@ -596,7 +617,7 @@ Function ${un}StrStr
         Pop $R4
         Pop $R3
         Pop $R2
-        Exch $R1 ; $R1=old$R1, stack=[result,...]
+        Exch $R1 # $R1=old$R1, stack=[result,...]
 
 FunctionEnd
 !macroend
@@ -604,74 +625,74 @@ FunctionEnd
 !insertmacro StrStr "un."
 
 
-;------------------------------------------------------------------------------
-; AddToPath Function
-; - Adds item to Path for All Users
-; - Overcomes NSIS ReadRegStr limitation of 1024 characters by using Native
-;   Windows Commands
-;
-; Usage:
-;   Push "C:\path\to\add"
-;   Call AddToPath
-;------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# AddToPath Function
+# - Adds item to Path for All Users
+# - Overcomes NSIS ReadRegStr limitation of 1024 characters by using Native
+#   Windows Commands
+#
+# Usage:
+#   Push "C:\path\to\add"
+#   Call AddToPath
+#------------------------------------------------------------------------------
 !define Environ 'HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"'
 Function AddToPath
 
-    Exch $0 ; Path to add
-    Push $1 ; Current Path
-    Push $2 ; Results of StrStr / Length of Path + Path to Add
-    Push $3 ; Handle to Reg / Length of Path
-    Push $4 ; Result of Registry Call
+    Exch $0 # Path to add
+    Push $1 # Current Path
+    Push $2 # Results of StrStr / Length of Path + Path to Add
+    Push $3 # Handle to Reg / Length of Path
+    Push $4 # Result of Registry Call
 
-    ; Open a handle to the key in the registry, handle in $3, Error in $4
+    # Open a handle to the key in the registry, handle in $3, Error in $4
     System::Call "advapi32::RegOpenKey(i 0x80000002, t'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', *i.r3) i.r4"
-    ; Make sure registry handle opened successfully (returned 0)
+    # Make sure registry handle opened successfully (returned 0)
     IntCmp $4 0 0 done done
 
-    ; Load the contents of path into $1, Error Code into $4, Path length into $2
+    # Load the contents of path into $1, Error Code into $4, Path length into $2
     System::Call "advapi32::RegQueryValueEx(i $3, t'PATH', i 0, i 0, t.r1, *i ${NSIS_MAX_STRLEN} r2) i.r4"
 
-    ; Close the handle to the registry ($3)
+    # Close the handle to the registry ($3)
     System::Call "advapi32::RegCloseKey(i $3)"
 
-    ; Check for Error Code 234, Path too long for the variable
-    IntCmp $4 234 0 +4 +4 ; $4 == ERROR_MORE_DATA
+    # Check for Error Code 234, Path too long for the variable
+    IntCmp $4 234 0 +4 +4 # $4 == ERROR_MORE_DATA
         DetailPrint "AddToPath Failed: original length $2 > ${NSIS_MAX_STRLEN}"
         MessageBox MB_OK \
             "You may add C:\salt to the %PATH% for convenience when issuing local salt commands from the command line." \
             /SD IDOK
         Goto done
 
-    ; If no error, continue
-    IntCmp $4 0 +5 ; $4 != NO_ERROR
-        ; Error 2 means the Key was not found
-        IntCmp $4 2 +3 ; $4 != ERROR_FILE_NOT_FOUND
+    # If no error, continue
+    IntCmp $4 0 +5 # $4 != NO_ERROR
+        # Error 2 means the Key was not found
+        IntCmp $4 2 +3 # $4 != ERROR_FILE_NOT_FOUND
             DetailPrint "AddToPath: unexpected error code $4"
             Goto done
         StrCpy $1 ""
 
-    ; Check if already in PATH
-    Push "$1;"          ; The string to search
-    Push "$0;"          ; The string to find
+    # Check if already in PATH
+    Push "$1;"          # The string to search
+    Push "$0;"          # The string to find
     Call StrStr
-    Pop $2              ; The result of the search
-    StrCmp $2 "" 0 done ; String not found, try again with ';' at the end
-                        ; Otherwise, it's already in the path
-    Push "$1;"          ; The string to search
-    Push "$0\;"         ; The string to find
+    Pop $2              # The result of the search
+    StrCmp $2 "" 0 done # String not found, try again with ';' at the end
+                        # Otherwise, it's already in the path
+    Push "$1;"          # The string to search
+    Push "$0\;"         # The string to find
     Call StrStr
-    Pop $2              ; The result
-    StrCmp $2 "" 0 done ; String not found, continue (add)
-                        ; Otherwise, it's already in the path
+    Pop $2              # The result
+    StrCmp $2 "" 0 done # String not found, continue (add)
+                        # Otherwise, it's already in the path
 
-    ; Prevent NSIS string overflow
-    StrLen $2 $0        ; Length of path to add ($2)
-    StrLen $3 $1        ; Length of current path ($3)
-    IntOp $2 $2 + $3    ; Length of current path + path to add ($2)
-    IntOp $2 $2 + 2     ; Account for the additional ';'
-                        ; $2 = strlen(dir) + strlen(PATH) + sizeof(";")
+    # Prevent NSIS string overflow
+    StrLen $2 $0        # Length of path to add ($2)
+    StrLen $3 $1        # Length of current path ($3)
+    IntOp $2 $2 + $3    # Length of current path + path to add ($2)
+    IntOp $2 $2 + 2     # Account for the additional ';'
+                        # $2 = strlen(dir) + strlen(PATH) + sizeof(";")
 
-    ; Make sure the new length isn't over the NSIS_MAX_STRLEN
+    # Make sure the new length isn't over the NSIS_MAX_STRLEN
     IntCmp $2 ${NSIS_MAX_STRLEN} +4 +4 0
         DetailPrint "AddToPath: new length $2 > ${NSIS_MAX_STRLEN}"
         MessageBox MB_OK \
@@ -679,18 +700,18 @@ Function AddToPath
             /SD IDOK
         Goto done
 
-    ; Append dir to PATH
+    # Append dir to PATH
     DetailPrint "Add to PATH: $0"
-    StrCpy $2 $1 1 -1       ; Copy the last character of the existing path
-    StrCmp $2 ";" 0 +2      ; Check for trailing ';'
-        StrCpy $1 $1 -1     ; remove trailing ';'
-    StrCmp $1 "" +2         ; Make sure Path is not empty
-        StrCpy $0 "$1;$0"   ; Append new path at the end ($0)
+    StrCpy $2 $1 1 -1       # Copy the last character of the existing path
+    StrCmp $2 ";" 0 +2      # Check for trailing ';'
+        StrCpy $1 $1 -1     # remove trailing ';'
+    StrCmp $1 "" +2         # Make sure Path is not empty
+        StrCpy $0 "$1;$0"   # Append new path at the end ($0)
 
-    ; We can use the NSIS command here. Only 'ReadRegStr' is affected
+    # We can use the NSIS command here. Only 'ReadRegStr' is affected
     WriteRegExpandStr ${Environ} "PATH" $0
 
-    ; Broadcast registry change to open programs
+    # Broadcast registry change to open programs
     SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
 
     done:
@@ -703,16 +724,16 @@ Function AddToPath
 FunctionEnd
 
 
-;------------------------------------------------------------------------------
-; RemoveFromPath Function
-; - Removes item from Path for All Users
-; - Overcomes NSIS ReadRegStr limitation of 1024 characters by using Native
-;   Windows Commands
-;
-; Usage:
-;   Push "C:\path\to\add"
-;   Call un.RemoveFromPath
-;------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# RemoveFromPath Function
+# - Removes item from Path for All Users
+# - Overcomes NSIS ReadRegStr limitation of 1024 characters by using Native
+#   Windows Commands
+#
+# Usage:
+#   Push "C:\path\to\add"
+#   Call un.RemoveFromPath
+#------------------------------------------------------------------------------
 Function un.RemoveFromPath
 
     Exch $0
@@ -723,59 +744,59 @@ Function un.RemoveFromPath
     Push $5
     Push $6
 
-    ; Open a handle to the key in the registry, handle in $3, Error in $4
+    # Open a handle to the key in the registry, handle in $3, Error in $4
     System::Call "advapi32::RegOpenKey(i 0x80000002, t'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', *i.r3) i.r4"
-    ; Make sure registry handle opened successfully (returned 0)
+    # Make sure registry handle opened successfully (returned 0)
     IntCmp $4 0 0 done done
 
-    ; Load the contents of path into $1, Error Code into $4, Path length into $2
+    # Load the contents of path into $1, Error Code into $4, Path length into $2
     System::Call "advapi32::RegQueryValueEx(i $3, t'PATH', i 0, i 0, t.r1, *i ${NSIS_MAX_STRLEN} r2) i.r4"
 
-    ; Close the handle to the registry ($3)
+    # Close the handle to the registry ($3)
     System::Call "advapi32::RegCloseKey(i $3)"
 
-    ; Check for Error Code 234, Path too long for the variable
-    IntCmp $4 234 0 +4 +4 ; $4 == ERROR_MORE_DATA
+    # Check for Error Code 234, Path too long for the variable
+    IntCmp $4 234 0 +4 +4 # $4 == ERROR_MORE_DATA
         DetailPrint "AddToPath: original length $2 > ${NSIS_MAX_STRLEN}"
         Goto done
 
-    ; If no error, continue
-    IntCmp $4 0 +5 ; $4 != NO_ERROR
-        ; Error 2 means the Key was not found
-        IntCmp $4 2 +3 ; $4 != ERROR_FILE_NOT_FOUND
+    # If no error, continue
+    IntCmp $4 0 +5 # $4 != NO_ERROR
+        # Error 2 means the Key was not found
+        IntCmp $4 2 +3 # $4 != ERROR_FILE_NOT_FOUND
             DetailPrint "AddToPath: unexpected error code $4"
             Goto done
         StrCpy $1 ""
 
-    ; Ensure there's a trailing ';'
-    StrCpy $5 $1 1 -1   ; Copy the last character of the path
-    StrCmp $5 ";" +2    ; Check for trailing ';', if found continue
-        StrCpy $1 "$1;" ; ensure trailing ';'
+    # Ensure there's a trailing ';'
+    StrCpy $5 $1 1 -1   # Copy the last character of the path
+    StrCmp $5 ";" +2    # Check for trailing ';', if found continue
+        StrCpy $1 "$1;" # ensure trailing ';'
 
-    ; Check for our directory inside the path
-    Push $1             ; String to Search
-    Push "$0;"          ; Dir to Find
+    # Check for our directory inside the path
+    Push $1             # String to Search
+    Push "$0;"          # Dir to Find
     Call un.StrStr
-    Pop $2              ; The results of the search
-    StrCmp $2 "" done   ; If results are empty, we're done, otherwise continue
+    Pop $2              # The results of the search
+    StrCmp $2 "" done   # If results are empty, we're done, otherwise continue
 
-    ; Remove our Directory from the Path
+    # Remove our Directory from the Path
     DetailPrint "Remove from PATH: $0"
-    StrLen $3 "$0;"       ; Get the length of our dir ($3)
-    StrLen $4 $2          ; Get the length of the return from StrStr ($4)
-    StrCpy $5 $1 -$4      ; $5 is now the part before the path to remove
-    StrCpy $6 $2 "" $3    ; $6 is now the part after the path to remove
-    StrCpy $3 "$5$6"      ; Combine $5 and $6
+    StrLen $3 "$0;"       # Get the length of our dir ($3)
+    StrLen $4 $2          # Get the length of the return from StrStr ($4)
+    StrCpy $5 $1 -$4      # $5 is now the part before the path to remove
+    StrCpy $6 $2 "" $3    # $6 is now the part after the path to remove
+    StrCpy $3 "$5$6"      # Combine $5 and $6
 
-    ; Check for Trailing ';'
-    StrCpy $5 $3 1 -1     ; Load the last character of the string
-    StrCmp $5 ";" 0 +2    ; Check for ';'
-        StrCpy $3 $3 -1     ; remove trailing ';'
+    # Check for Trailing ';'
+    StrCpy $5 $3 1 -1     # Load the last character of the string
+    StrCmp $5 ";" 0 +2    # Check for ';'
+        StrCpy $3 $3 -1   # remove trailing ';'
 
-    ; Write the new path to the registry
+    # Write the new path to the registry
     WriteRegExpandStr ${Environ} "PATH" $3
 
-    ; Broadcast the change to all open applications
+    # Broadcast the change to all open applications
     SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
 
     done:
@@ -809,6 +830,7 @@ Function getMinionConfig
     confFound:
     FileOpen $0 "$INSTDIR\conf\minion" r
 
+    ClearErrors
     confLoop:
         FileRead $0 $1
         IfErrors EndOfFile
@@ -839,68 +861,69 @@ FunctionEnd
 Function updateMinionConfig
 
     ClearErrors
-    FileOpen $0 "$INSTDIR\conf\minion" "r"               ; open target file for reading
-    GetTempFileName $R0                                  ; get new temp file name
-    FileOpen $1 $R0 "w"                                  ; open temp file for writing
+    FileOpen $0 "$INSTDIR\conf\minion" "r"               # open target file for reading
+    GetTempFileName $R0                                  # get new temp file name
+    FileOpen $1 $R0 "w"                                  # open temp file for writing
 
-    loop:                                                ; loop through each line
-    FileRead $0 $2                                       ; read line from target file
-    IfErrors done                                        ; end if errors are encountered (end of line)
+    loop:                                                # loop through each line
+    FileRead $0 $2                                       # read line from target file
+    IfErrors done                                        # end if errors are encountered (end of line)
 
-    ${If} $MasterHost_State != ""                        ; if master is empty
-    ${AndIf} $MasterHost_State != "salt"                 ; and if master is not 'salt'
-        ${StrLoc} $3 $2 "master:" ">"                    ; where is 'master:' in this line
-        ${If} $3 == 0                                    ; is it in the first...
-        ${OrIf} $3 == 1                                  ; or second position (account for comments)
-            StrCpy $2 "master: $MasterHost_State$\r$\n"  ; write the master
-        ${EndIf}                                         ; close if statement
-    ${EndIf}                                             ; close if statement
+    ${If} $MasterHost_State != ""                        # if master is empty
+    ${AndIf} $MasterHost_State != "salt"                 # and if master is not 'salt'
+        ${StrLoc} $3 $2 "master:" ">"                    # where is 'master:' in this line
+        ${If} $3 == 0                                    # is it in the first...
+        ${OrIf} $3 == 1                                  # or second position (account for comments)
+            StrCpy $2 "master: $MasterHost_State$\r$\n"  # write the master
+        ${EndIf}                                         # close if statement
+    ${EndIf}                                             # close if statement
 
-    ${If} $MinionName_State != ""                        ; if minion is empty
-    ${AndIf} $MinionName_State != "hostname"             ; and if minion is not 'hostname'
-        ${StrLoc} $3 $2 "id:" ">"                        ; where is 'id:' in this line
-        ${If} $3 == 0                                    ; is it in the first...
-        ${OrIf} $3 == 1                                  ; or the second position (account for comments)
-            StrCpy $2 "id: $MinionName_State$\r$\n"      ; change line
-        ${EndIf}                                         ; close if statement
-    ${EndIf}                                             ; close if statement
+    ${If} $MinionName_State != ""                        # if minion is empty
+    ${AndIf} $MinionName_State != "hostname"             # and if minion is not 'hostname'
+        ${StrLoc} $3 $2 "id:" ">"                        # where is 'id:' in this line
+        ${If} $3 == 0                                    # is it in the first...
+        ${OrIf} $3 == 1                                  # or the second position (account for comments)
+            StrCpy $2 "id: $MinionName_State$\r$\n"      # change line
+        ${EndIf}                                         # close if statement
+    ${EndIf}                                             # close if statement
 
-    FileWrite $1 $2                                      ; write changed or unchanged line to temp file
+    FileWrite $1 $2                                      # write changed or unchanged line to temp file
     Goto loop
 
     done:
-    FileClose $0                                         ; close target file
-    FileClose $1                                         ; close temp file
-    Delete "$INSTDIR\conf\minion"                        ; delete target file
-    CopyFiles /SILENT $R0 "$INSTDIR\conf\minion"         ; copy temp file to target file
-    Delete $R0                                           ; delete temp file
+    FileClose $0                                         # close target file
+    FileClose $1                                         # close temp file
+    Delete "$INSTDIR\conf\minion"                        # delete target file
+    CopyFiles /SILENT $R0 "$INSTDIR\conf\minion"         # copy temp file to target file
+    Delete $R0                                           # delete temp file
 
 FunctionEnd
 
 
 Function parseCommandLineSwitches
 
-    ; Load the parameters
+    # Load the parameters
     ${GetParameters} $R0
 
-    ; Check for start-minion switches
-    ; /start-service is to be deprecated, so we must check for both
+    # Check for start-minion switches
+    # /start-service is to be deprecated, so we must check for both
     ${GetOptions} $R0 "/start-service=" $R1
     ${GetOptions} $R0 "/start-minion=" $R2
 
     # Service: Start Salt Minion
     ${IfNot} $R2 == ""
-        ; If start-minion was passed something, then set it
+        # If start-minion was passed something, then set it
         StrCpy $StartMinion $R2
     ${ElseIfNot} $R1 == ""
-        ; If start-service was passed something, then set StartMinion to that
+        # If start-service was passed something, then set StartMinion to that
         StrCpy $StartMinion $R1
     ${Else}
-        ; Otherwise default to 1
+        # Otherwise default to 1
         StrCpy $StartMinion 1
     ${EndIf}
 
     # Service: Minion Startup Type Delayed
+    ClearErrors
     ${GetOptions} $R0 "/start-minion-delayed" $R1
     IfErrors start_minion_delayed_not_found
         StrCpy $StartMinionDelayed 1

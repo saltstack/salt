@@ -19,13 +19,13 @@ import time
 # Import third party libs
 import jinja2
 import jinja2.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 import salt.utils.odict
+import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
 
@@ -221,7 +221,7 @@ def _read_file(path):
     '''
     try:
         with salt.utils.files.flopen(path, 'rb') as contents:
-            return [salt.utils.to_str(line) for line in contents.readlines()]
+            return [salt.utils.stringutils.to_str(line) for line in contents.readlines()]
     except (OSError, IOError):
         return ''
 
@@ -2038,18 +2038,11 @@ def build_network_settings(**settings):
         # Write settings
         _write_file_network(network, _DEB_NETWORKING_FILE, True)
 
-    # Write hostname to /etc/hostname
+    # Get hostname and domain from opts
     sline = opts['hostname'].split('.', 1)
     opts['hostname'] = sline[0]
-    hostname = '{0}\n' . format(opts['hostname'])
     current_domainname = current_network_settings['domainname']
     current_searchdomain = current_network_settings['searchdomain']
-
-    # Only write the hostname if it has changed
-    if not opts['hostname'] == current_network_settings['hostname']:
-        if not ('test' in settings and settings['test']):
-            # TODO  replace wiht a call to network.mod_hostname instead
-            _write_file_network(hostname, _DEB_HOSTNAME_FILE)
 
     new_domain = False
     if len(sline) > 1:

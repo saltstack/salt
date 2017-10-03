@@ -14,13 +14,12 @@ Setup proxy settings on minions
             - localhost
             - 127.0.0.1
 '''
-
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import logging
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'proxy'
@@ -30,7 +29,7 @@ def __virtual__():
     '''
     Only work on Mac OS and Windows
     '''
-    if salt.utils.is_darwin() or salt.utils.is_windows():
+    if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
         return True
     return False
 

@@ -44,6 +44,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
 
@@ -58,7 +59,7 @@ def __virtual__():
     '''
     if __grains__['os_family'] == 'Solaris' \
             and float(__grains__['kernelrelease']) > 5.10 \
-            and salt.utils.which('pkg'):
+            and salt.utils.path.which('pkg'):
         return __virtualname__
     return (False,
             'The solarisips execution module failed to load: only available '

@@ -5,18 +5,21 @@
     :maturity: develop
     versionadded:: oxygen
 '''
+# pylint: disable=invalid-name,no-member
+
 from __future__ import absolute_import
 
 # Salt testing libs
 try:
     from tests.support.mock import MagicMock, patch
+    from salt.exceptions import CommandExecutionError
 except ImportError:
     pass
 
 
 class KernelPkgTestCase(object):
     '''
-    Test cases for salt.modules.yumkernelpkg
+    Test cases shared by all kernelpkg virtual modules
     '''
 
     def test_active(self):
@@ -171,3 +174,25 @@ class KernelPkgTestCase(object):
         with patch.object(self._kernelpkg, 'latest_available', return_value=self.KERNEL_LIST[0]):
             with patch.object(self._kernelpkg, 'latest_installed', return_value=self.KERNEL_LIST[-1]):
                 self.assertFalse(self._kernelpkg.upgrade_available())
+
+    def test_remove_active(self):
+        '''
+        Test - remove kernel package
+        '''
+        mock = MagicMock(return_value={'retcode': 0, 'stderr': []})
+        with patch.dict(self._kernelpkg.__salt__, {'cmd.run_all': mock}):
+            with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
+                with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
+                    self.assertRaises(CommandExecutionError, self._kernelpkg.remove, release=self.KERNEL_LIST[-1])
+                    self._kernelpkg.__salt__['cmd.run_all'].assert_not_called()
+
+    def test_remove_invalid(self):
+        '''
+        Test - remove kernel package
+        '''
+        mock = MagicMock(return_value={'retcode': 0, 'stderr': []})
+        with patch.dict(self._kernelpkg.__salt__, {'cmd.run_all': mock}):
+            with patch.object(self._kernelpkg, 'active', return_value=self.KERNEL_LIST[-1]):
+                with patch.object(self._kernelpkg, 'list_installed', return_value=self.KERNEL_LIST):
+                    self.assertRaises(CommandExecutionError, self._kernelpkg.remove, release='invalid')
+                    self._kernelpkg.__salt__['cmd.run_all'].assert_not_called()

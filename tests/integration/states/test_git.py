@@ -20,8 +20,8 @@ from tests.support.paths import TMP
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 
@@ -33,7 +33,7 @@ def __check_git_version(caller, min_version, skip_msg):
         actual_setup = getattr(caller, 'setUp', None)
 
         def setUp(self, *args, **kwargs):
-            if not salt.utils.which('git'):
+            if not salt.utils.path.which('git'):
                 self.skipTest('git is not installed')
             git_version = self.run_function('git.version')
             if _LooseVersion(git_version) < _LooseVersion(min_version):
@@ -45,7 +45,7 @@ def __check_git_version(caller, min_version, skip_msg):
 
     @functools.wraps(caller)
     def wrapper(self, *args, **kwargs):
-        if not salt.utils.which('git'):
+        if not salt.utils.path.which('git'):
             self.skipTest('git is not installed')
         git_version = self.run_function('git.version')
         if _LooseVersion(git_version) < _LooseVersion(min_version):

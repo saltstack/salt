@@ -1,22 +1,31 @@
 # -*- coding: utf-8 -*-
 '''
-Microsoft certificate management via the Pki PowerShell module.
+Microsoft certificate management via the PKI Client PowerShell module.
+https://technet.microsoft.com/en-us/itpro/powershell/windows/pkiclient/pkiclient
+
+The PKI Client PowerShell module is only available on Windows 8+ and Windows
+Server 2012+.
+https://technet.microsoft.com/en-us/library/hh848636(v=wps.620).aspx
 
 :platform:      Windows
 
+:depends:
+    - PowerShell 4
+    - PKI Client Module (Windows 8+ / Windows Server 2012+)
+
 .. versionadded:: 2016.11.0
 '''
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
+import ast
 import json
 import logging
+import os
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError
-import ast
-import os
-import salt.utils
+import salt.utils.platform
 import salt.utils.powershell
+from salt.exceptions import SaltInvocationError
 
 _DEFAULT_CONTEXT = 'LocalMachine'
 _DEFAULT_FORMAT = 'cer'
@@ -29,10 +38,16 @@ __virtualname__ = 'win_pki'
 
 def __virtual__():
     '''
-    Only works on Windows systems with the PKI PowerShell module installed.
+    Requires Windows
+    Requires Windows 8+ / Windows Server 2012+
+    Requires PowerShell
+    Requires PKI Client PowerShell module installed.
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, 'Only available on Windows Systems'
+
+    if salt.utils.version_cmp(__grains__['osversion'], '6.2.9200') == -1:
+        return False, 'Only available on Windows 8+ / Windows Server 2012 +'
 
     if not __salt__['cmd.shell_info']('powershell')['installed']:
         return False, 'Powershell not available'
@@ -155,7 +170,11 @@ def get_certs(context=_DEFAULT_CONTEXT, store=_DEFAULT_STORE):
             if key not in blacklist_keys:
                 cert_info[key.lower()] = item[key]
 
-        cert_info['dnsnames'] = [name.get('Unicode') for name in item.get('DnsNameList', {})]
+        names = item.get('DnsNameList', None)
+        if isinstance(names, list):
+            cert_info['dnsnames'] = [name.get('Unicode') for name in names]
+        else:
+            cert_info['dnsnames'] = []
         ret[item['Thumbprint']] = cert_info
     return ret
 

@@ -21,16 +21,17 @@ Dependencies
 
 from __future__ import absolute_import
 
-# Import python lib
+# Import Python lib
 import logging
 log = logging.getLogger(__name__)
 
-# salt libs
-from salt.ext import six
+# Import Salt libs
 import salt.utils.files
-import salt.utils.templates
 import salt.utils.napalm
-from salt.utils.napalm import proxy_napalm_wrap
+import salt.utils.templates
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -221,7 +222,7 @@ def _config_logic(napalm_device,
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def connected(**kwarvs):  # pylint: disable=unused-argument
     '''
     Specifies if the connection to the device succeeded.
@@ -238,7 +239,7 @@ def connected(**kwarvs):  # pylint: disable=unused-argument
     }
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def facts(**kwargs):  # pylint: disable=unused-argument
     '''
     Returns characteristics of the network device.
@@ -293,7 +294,7 @@ def facts(**kwargs):  # pylint: disable=unused-argument
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def environment(**kwargs):  # pylint: disable=unused-argument
     '''
     Returns the environment of the device.
@@ -360,7 +361,7 @@ def environment(**kwargs):  # pylint: disable=unused-argument
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     '''
     Returns a dictionary with the raw output of all commands passed as arguments.
@@ -653,7 +654,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
     return processed_cli_outputs
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def traceroute(destination, source=None, ttl=None, timeout=None, vrf=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -698,7 +699,7 @@ def traceroute(destination, source=None, ttl=None, timeout=None, vrf=None, **kwa
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def ping(destination, source=None, ttl=None, timeout=None, size=None, count=None, vrf=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -751,7 +752,7 @@ def ping(destination, source=None, ttl=None, timeout=None, size=None, count=None
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def arp(interface='', ipaddr='', macaddr='', **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -817,7 +818,7 @@ def arp(interface='', ipaddr='', macaddr='', **kwargs):  # pylint: disable=unuse
     return proxy_output
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def ipaddrs(**kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -877,7 +878,7 @@ def ipaddrs(**kwargs):  # pylint: disable=unused-argument
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def interfaces(**kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -924,7 +925,7 @@ def interfaces(**kwargs):  # pylint: disable=unused-argument
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def lldp(interface='', **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -986,7 +987,7 @@ def lldp(interface='', **kwargs):  # pylint: disable=unused-argument
     return proxy_output
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def mac(address='', interface='', vlan=0, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -1059,7 +1060,7 @@ def mac(address='', interface='', vlan=0, **kwargs):  # pylint: disable=unused-a
     return proxy_output
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def config(source=None, **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionadded:: 2017.7.0
@@ -1112,7 +1113,7 @@ def config(source=None, **kwargs):  # pylint: disable=unused-argument
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def optics(**kwargs):  # pylint: disable=unused-argument
     '''
     .. versionadded:: 2017.7.0
@@ -1162,7 +1163,7 @@ def optics(**kwargs):  # pylint: disable=unused-argument
 # ----- Configuration specific functions ------------------------------------------------------------------------------>
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def load_config(filename=None,
                 text=None,
                 test=False,
@@ -1272,7 +1273,7 @@ def load_config(filename=None,
                          loaded_config=loaded_config)
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def load_template(template_name,
                   template_source=None,
                   template_path=None,
@@ -1281,6 +1282,7 @@ def load_template(template_name,
                   template_user='root',
                   template_group='root',
                   template_mode='755',
+                  template_attrs='--------------e----',
                   saltenv=None,
                   template_engine='jinja',
                   skip_verify=False,
@@ -1367,10 +1369,15 @@ def load_template(template_name,
 
         .. versionadded:: 2016.11.2
 
-    template_user: 755
+    template_mode: 755
         Permissions of file.
 
         .. versionadded:: 2016.11.2
+
+    template_attrs: "--------------e----"
+        attributes of file. (see `man lsattr`)
+
+        .. versionadded:: oxygen
 
     saltenv: base
         Specifies the template environment.
@@ -1585,6 +1592,7 @@ def load_template(template_name,
                                                     user=template_user,
                                                     group=template_group,
                                                     mode=template_mode,
+                                                    attrs=template_attrs,
                                                     template=template_engine,
                                                     context=template_vars,
                                                     defaults=defaults,
@@ -1671,7 +1679,7 @@ def load_template(template_name,
                          loaded_config=loaded_config)
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def commit(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -1691,7 +1699,7 @@ def commit(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argu
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def discard_config(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
 
     """
@@ -1711,7 +1719,7 @@ def discard_config(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def compare_config(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -1731,7 +1739,7 @@ def compare_config(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def rollback(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -1751,7 +1759,7 @@ def rollback(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-ar
     )
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def config_changed(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
 
     '''
@@ -1782,7 +1790,7 @@ def config_changed(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
     return is_config_changed, reason
 
 
-@proxy_napalm_wrap
+@salt.utils.napalm.proxy_napalm_wrap
 def config_control(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argument
 
     '''

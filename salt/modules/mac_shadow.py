@@ -21,9 +21,9 @@ except ImportError:
     HAS_PWD = False
 
 # Import salt libs
-import salt.utils
 import logging
 import salt.utils.mac_utils
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)  # Start logging
@@ -33,7 +33,7 @@ __virtualname__ = 'shadow'
 
 def __virtual__():
     # Is this macOS?
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return False, 'Not macOS'
 
     if HAS_PWD:

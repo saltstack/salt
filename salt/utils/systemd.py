@@ -11,6 +11,7 @@ import subprocess
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
 import salt.utils
+import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ def version(context=None):
         ['systemctl', '--version'],
         close_fds=True,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]
-    outstr = salt.utils.to_str(stdout)
+    outstr = salt.utils.stringutils.to_str(stdout)
     try:
         ret = int(outstr.splitlines()[0].split()[-1])
     except (IndexError, ValueError):

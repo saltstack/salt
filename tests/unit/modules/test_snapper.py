@@ -22,7 +22,7 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 import salt.modules.snapper as snapper
 

@@ -23,11 +23,15 @@ import traceback
 import functools
 
 # Import salt libs
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 from salt.exceptions import SaltInvocationError
-import salt.utils
+import salt.utils  # Can be removed when chugid_and_umask is moved
 import salt.utils.files
+import salt.utils.path
 import salt.utils.vt
+
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 
 HAS_LIBS = False
 
@@ -50,7 +54,7 @@ def __virtual__():
     missing_util = False
     utils_reqd = ['gpg', 'rpm', 'rpmbuild', 'mock', 'createrepo']
     for named_util in utils_reqd:
-        if not salt.utils.which(named_util):
+        if not salt.utils.path.which(named_util):
             missing_util = True
             break
 
@@ -188,7 +192,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     _create_rpmmacros()
     tree_base = _mk_tree()
     spec_path = _get_spec(tree_base, spec, template, saltenv)
-    if isinstance(sources, str):
+    if isinstance(sources, six.string_types):
         sources = sources.split(',')
     for src in sources:
         _get_src(tree_base, src, saltenv)
