@@ -315,7 +315,7 @@ def version(*names, **kwargs):
     Returns:
         str: version string when a single packge is specified.
         dict: The package name(s) with the installed versions.
-        
+
 
     .. code-block:: cfg
         {['<version>', '<version>', ]} OR
@@ -340,7 +340,7 @@ def version(*names, **kwargs):
     saltenv = kwargs.get('saltenv', 'base')
     installed_pkgs = list_pkgs(saltenv=saltenv, refresh=kwargs.get('refresh', False))
 
-    if (len(names) == 1):
+    if len(names) == 1:
         return installed_pkgs.get(names[0], '')
 
     ret = {}
@@ -1628,7 +1628,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             if use_msiexec:
                 # Check if uninstaller is set to {guid}, if not we assume its a remote msi file.
                 # which has already been downloaded.
-                    arguments = '"{0}" /X "{1}"'.format(msiexec, cached_pkg)
+                arguments = '"{0}" /X "{1}"'.format(msiexec, cached_pkg)
             else:
                 arguments = '"{0}"'.format(cached_pkg)
 
