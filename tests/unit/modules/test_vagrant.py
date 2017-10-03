@@ -3,126 +3,158 @@
 # Import python libs
 from __future__ import absolute_import
 
-import os
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.modules.vagrant as vagrant
-import salt.modules.cmdmod as cmd
-import salt.utils.sdb as sdb
 import salt.exceptions
-
-# Import third party libs
-from salt.ext import six
 
 TEMP_DATABASE_FILE = '/tmp/salt-tests-tmpdir/test_vagrant.sqlite'
 
 
-@skipIf(six.PY3, 'TODO: Python3 loader raises KeyError, issue #43815')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class VagrantTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for the salt.modules.vagrant module.
     '''
-    @classmethod
-    def tearDownClass(cls):
-        try:
-            os.unlink(TEMP_DATABASE_FILE)
-        except OSError:
-            pass
-
-    def setup_loader_modules(self):
-        vagrant_globals = {
-            '__opts__': {
+    LOCAL_OPTS = {
                 'extension_modules': '',
                 'vagrant_sdb_data': {
                     'driver': 'sqlite3',
                     'database': TEMP_DATABASE_FILE,
                     'table': 'sdb',
                     'create_table': True
+                    }
                 }
-            },
-            '__salt__': {
-                'cmd.shell': cmd.shell,
-                'cmd.retcode': cmd.retcode,
-                'cmd.run_all': cmd.run_all
-            },
-            '__utils__': {
-                'sdb.sdb_set': sdb.sdb_set,
-                'sdb.sdb_get': sdb.sdb_get,
-                'sdb.sdb_delete': sdb.sdb_delete
+    def setup_loader_modules(self):
+        vagrant_globals = {
+            '__opts__': self.LOCAL_OPTS,
             }
-        }
         return {vagrant: vagrant_globals}
 
-    def test_vagrant_get_vm_info(self):
-        with self.assertRaises(salt.exceptions.SaltInvocationError):
-            vagrant.get_vm_info('thisNameDoesNotExist')
+    def test_vagrant_get_vm_info_not_found(self):
+        mock_sdb = MagicMock(return_value=None)
+        with patch.dict(vagrant.__utils__, {'sdb.sdb_get': mock_sdb}):
+            with self.assertRaises(salt.exceptions.SaltInvocationError):
+                vagrant.get_vm_info('thisNameDoesNotExist')
 
     def test_vagrant_init_positional(self):
-        resp = vagrant.init(
-            'test1',
-            '/tmp/nowhere',
-            'onetest',
-            'nobody',
-            False,
-            'french',
-            {'different': 'very'}
-            )
-        self.assertIsInstance(resp, six.string_types)
-        resp = vagrant.get_vm_info('test1')
-        expected = dict(name='test1',
-                        cwd='/tmp/nowhere',
-                        machine='onetest',
-                        runas='nobody',
-                        vagrant_provider='french',
-                        different='very'
-                        )
-        self.assertEqual(resp, expected)
+        mock_sdb = MagicMock(return_value=None)
+        with patch.dict(vagrant.__utils__, {'sdb.sdb_set': mock_sdb}):
+            resp = vagrant.init(
+                'test1',
+                '/tmp/nowhere',
+                'onetest',
+                'nobody',
+                False,
+                'french',
+                {'different': 'very'}
+                )
+            self.assertTrue(resp.startswith('Name test1 defined'))
+            expected = dict(name='test1',
+                            cwd='/tmp/nowhere',
+                            machine='onetest',
+                            runas='nobody',
+                            vagrant_provider='french',
+                            different='very'
+                            )
+            mock_sdb.assert_called_with(
+                'sdb://vagrant_sdb_data/onetest?/tmp/nowhere',
+                'test1',
+                self.LOCAL_OPTS)
+            mock_sdb.assert_any_call(
+                'sdb://vagrant_sdb_data/test1',
+                expected,
+                self.LOCAL_OPTS)
+
+    def test_vagrant_get_vm_info(self):
+        testdict = {'testone': 'one', 'machine': 'two'}
+        mock_sdb = MagicMock(return_value=testdict)
+        with patch.dict(vagrant.__utils__, {'sdb.sdb_get': mock_sdb}):
+            resp = vagrant.get_vm_info('test1')
+            self.assertEqual(resp, testdict)
 
     def test_vagrant_init_dict(self):
         testdict = dict(cwd='/tmp/anywhere',
                         machine='twotest',
                         runas='somebody',
                         vagrant_provider='english')
-        vagrant.init('test2', vm=testdict)
-        resp = vagrant.get_vm_info('test2')
-        testdict['name'] = 'test2'
-        self.assertEqual(resp, testdict)
+        expected = testdict.copy()
+        expected['name'] = 'test2'
+        mock_sdb = MagicMock(return_value=None)
+        with patch.dict(vagrant.__utils__, {'sdb.sdb_set': mock_sdb}):
+            vagrant.init('test2', vm=testdict)
+            mock_sdb.assert_any_call(
+                'sdb://vagrant_sdb_data/test2',
+                expected,
+                self.LOCAL_OPTS)
 
     def test_vagrant_init_arg_override(self):
         testdict = dict(cwd='/tmp/there',
                         machine='treetest',
                         runas='anybody',
                         vagrant_provider='spansh')
-        vagrant.init('test3',
+        mock_sdb = MagicMock(return_value=None)
+        with patch.dict(vagrant.__utils__, {'sdb.sdb_set': mock_sdb}):
+            vagrant.init('test3',
                         cwd='/tmp',
                         machine='threetest',
                         runas='him',
                         vagrant_provider='polish',
                         vm=testdict)
-        resp = vagrant.get_vm_info('test3')
-        expected = dict(name='test3',
+            expected = dict(name='test3',
                         cwd='/tmp',
                         machine='threetest',
                         runas='him',
                         vagrant_provider='polish')
-        self.assertEqual(resp, expected)
+            mock_sdb.assert_any_call(
+                'sdb://vagrant_sdb_data/test3',
+                expected,
+                self.LOCAL_OPTS)
 
     def test_vagrant_get_ssh_config_fails(self):
-        vagrant.init('test3', cwd='/tmp')
-        with self.assertRaises(salt.exceptions.CommandExecutionError):
-            vagrant.get_ssh_config('test3')  # has not been started
+        mock_sdb = MagicMock(return_value=None)
+        with patch.dict(vagrant.__utils__, {'sdb.sdb_set': mock_sdb}):
+            mock_sdb = MagicMock(return_value={})
+            with patch.dict(vagrant.__utils__, {'sdb.sdb_get': mock_sdb}):
+                vagrant.init('test3', cwd='/tmp')
+                with self.assertRaises(salt.exceptions.SaltInvocationError):
+                    vagrant.get_ssh_config('test3')  # has not been started
 
-    def test_vagrant_destroy_removes_cached_entry(self):
-        vagrant.init('test3', cwd='/tmp')
-        #  VM has a stored value
-        self.assertEqual(vagrant.get_vm_info('test3')['name'], 'test3')
-        #  clean up (an error is expected -- machine never started)
-        self.assertFalse(vagrant.destroy('test3')['retcode'] == 0)
-        #  VM no longer exists
-        with self.assertRaises(salt.exceptions.CommandExecutionError):
-            vagrant.get_ssh_config('test3')
+    def test_vagrant_destroy(self):
+        mock_cmd = MagicMock(return_value={'retcode': 0})
+        with patch.dict(vagrant.__salt__, {'cmd.run_all': mock_cmd}):
+            mock_sdb = MagicMock(return_value=None)
+            with patch.dict(vagrant.__utils__, {'sdb.sdb_delete': mock_sdb}):
+                mock_sdb_get = MagicMock(return_value={
+                    'machine': 'macfour', 'cwd': '/my/dir'})
+                with patch.dict(vagrant.__utils__, {'sdb.sdb_get': mock_sdb_get}):
+                    self.assertTrue(vagrant.destroy('test4'))
+                    mock_sdb.assert_any_call(
+                        'sdb://vagrant_sdb_data/macfour?/my/dir',
+                        self.LOCAL_OPTS)
+                    mock_sdb.assert_any_call(
+                        'sdb://vagrant_sdb_data/test4',
+                        self.LOCAL_OPTS)
+                    cmd = 'vagrant destroy -f macfour'
+                    mock_cmd.assert_called_with(cmd,
+                                                runas=None,
+                                                cwd='/my/dir',
+                                                output_loglevel='info')
+
+    def test_vagrant_start(self):
+        mock_cmd = MagicMock(return_value={'retcode': 0})
+        with patch.dict(vagrant.__salt__, {'cmd.run_all': mock_cmd}):
+            mock_sdb_get = MagicMock(return_value={
+                'machine': 'five', 'cwd': '/the/dir', 'runas': 'me',
+                'vagrant_provider': 'him'})
+            with patch.dict(vagrant.__utils__, {'sdb.sdb_get': mock_sdb_get}):
+                self.assertTrue(vagrant.start('test5'))
+                cmd = 'vagrant up five --provider=him'
+                mock_cmd.assert_called_with(cmd,
+                                            runas='me',
+                                            cwd='/the/dir',
+                                            output_loglevel='info')
