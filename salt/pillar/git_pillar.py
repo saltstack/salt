@@ -328,6 +328,12 @@ except ImportError:
 
 PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify')
 
+# Fall back to default per-remote-only. This isn't technically needed since
+# salt.utils.gitfs.GitBase.init_remotes() will default to
+# salt.utils.gitfs.PER_REMOTE_ONLY for this value, so this is mainly for
+# runners and other modules that import salt.pillar.git_pillar.
+PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
+
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -380,7 +386,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         opts['pillar_roots'] = {}
         opts['__git_pillar'] = True
         pillar = salt.utils.gitfs.GitPillar(opts)
-        pillar.init_remotes(repo, PER_REMOTE_OVERRIDES)
+        pillar.init_remotes(repo, PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
         if __opts__.get('__role') == 'minion':
             # If masterless, fetch the remotes. We'll need to remove this once
             # we make the minion daemon able to run standalone.
