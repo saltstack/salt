@@ -704,7 +704,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         network_name = devices['network'][device.deviceInfo.label]['name']
                         adapter_type = devices['network'][device.deviceInfo.label]['adapter_type'] if 'adapter_type' in devices['network'][device.deviceInfo.label] else ''
                         switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
-                        network_spec = _edit_existing_network_adapter(device, network_name, adapter_type, switch_type)
+                        network_spec = _edit_existing_network_adapter(device, network_name, adapter_type, switch_type, container_ref)
                         adapter_mapping = _set_network_adapter_mapping(devices['network'][device.deviceInfo.label])
                         device_specs.append(network_spec)
                         nics_map.append(adapter_mapping)
@@ -2577,7 +2577,7 @@ def create(vm_):
         config_spec.memoryMB = memory_mb
 
     if devices:
-        specs = _manage_devices(devices, vm=object_ref, new_vm_name=vm_name)
+        specs = _manage_devices(devices, vm=object_ref, container_ref=container_ref, new_vm_name=vm_name)
         config_spec.deviceChange = specs['device_specs']
 
     if extra_config:
