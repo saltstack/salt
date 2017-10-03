@@ -6,6 +6,7 @@
 # Import Python Libs
 from __future__ import absolute_import
 from inspect import ArgSpec
+import logging
 
 # Import Salt Libs
 import salt.states.module as module
@@ -19,6 +20,8 @@ from tests.support.mock import (
     MagicMock,
     patch
 )
+
+log = logging.getLogger(__name__)
 
 CMD = 'foo.bar'
 
@@ -91,8 +94,9 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(module.__salt__, {}, clear=True):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 ret = module.run(**{CMD: None})
-                assert ret['comment'] == "Unavailable function: {0}.".format(CMD)
-                assert not ret['result']
+                if ret['comment'] != "Unavailable function: {0}.".format(CMD) \
+                        or ret['result']:
+                    self.fail('module.run did not fail as expected: {0}'.format(ret))
 
     def test_module_run_hidden_varargs(self):
         '''
@@ -111,8 +115,9 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(module.__opts__, {'test': True, 'use_superseded': ['module.run']}):
             ret = module.run(**{CMD: None})
-            assert ret['comment'] == "Function {0} to be executed.".format(CMD)
-            assert ret['result']
+            if ret['comment'] != "Function {0} to be executed.".format(CMD) \
+                    or not ret['result']:
+                self.fail('module.run failed: {0}'.format(ret))
 
     def test_run_missing_arg(self):
         '''
@@ -122,7 +127,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(module.__salt__, {CMD: _mocked_func_named}):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 ret = module.run(**{CMD: None})
-                assert ret['comment'] == "'{0}' failed: Function expects 1 parameters, got only 0".format(CMD)
+                expected_comment = \
+                    "'{0}' failed: Function expects 1 parameters, got only 0".format(CMD)
+                if ret['comment'] != expected_comment:
+                    self.fail('module.run did not fail as expected: {0}'.format(ret))
 
     def test_run_correct_arg(self):
         '''
@@ -132,16 +140,17 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(module.__salt__, {CMD: _mocked_func_named}):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 ret = module.run(**{CMD: ['Fred']})
-                assert ret['comment'] == '{0}: Success'.format(CMD)
-                assert ret['result']
+                if ret['comment'] != '{0}: Success'.format(CMD) or not ret['result']:
+                    self.fail('module.run failed: {0}'.format(ret))
 
     def test_run_unexpected_keywords(self):
         with patch.dict(module.__salt__, {CMD: _mocked_func_args}):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 ret = module.run(**{CMD: [{'foo': 'bar'}]})
-                assert ret['comment'] == "'{0}' failed: {1}() got an unexpected keyword argument " \
-                                         "'foo'".format(CMD, module.__salt__[CMD].__name__)
-                assert not ret['result']
+                expected_comment = "'{0}' failed: {1}() got an unexpected keyword argument " \
+                                   "'foo'".format(CMD, module.__salt__[CMD].__name__)
+                if ret['comment'] != expected_comment or ret['result']:
+                    self.fail('module.run did not fail as expected: {0}'.format(ret))
 
     def test_run_args(self):
         '''
@@ -150,7 +159,17 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(module.__salt__, {CMD: _mocked_func_args}):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
-                assert module.run(**{CMD: ['foo', 'bar']})['result']
+                try:
+                    ret = module.run(**{CMD: ['foo', 'bar']})
+                except Exception as exc:
+                    log.exception('test_run_none_return: raised exception')
+                    self.fail('module.run raised exception: {0}'.format(exc))
+                if not ret['result']:
+                    log.exception(
+                        'test_run_none_return: test failed, result: %s',
+                        ret
+                    )
+                    self.fail('module.run failed: {0}'.format(ret))
 
     def test_run_none_return(self):
         '''
@@ -159,7 +178,17 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(module.__salt__, {CMD: _mocked_none_return}):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
-                assert module.run(**{CMD: None})['result']
+                try:
+                    ret = module.run(**{CMD: None})
+                except Exception as exc:
+                    log.exception('test_run_none_return: raised exception')
+                    self.fail('module.run raised exception: {0}'.format(exc))
+                if not ret['result']:
+                    log.exception(
+                        'test_run_none_return: test failed, result: %s',
+                        ret
+                    )
+                    self.fail('module.run failed: {0}'.format(ret))
 
     def test_run_typed_return(self):
         '''
@@ -169,7 +198,18 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         for val in [1, 0, 'a', '', (1, 2,), (), [1, 2], [], {'a': 'b'}, {}, True, False]:
             with patch.dict(module.__salt__, {CMD: _mocked_none_return}):
                 with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
-                    assert module.run(**{CMD: [{'ret': val}]})['result']
+                    log.debug('test_run_typed_return: trying %s', val)
+                    try:
+                        ret = module.run(**{CMD: [{'ret': val}]})
+                    except Exception as exc:
+                        log.exception('test_run_typed_return: raised exception')
+                        self.fail('module.run raised exception: {0}'.format(exc))
+                    if not ret['result']:
+                        log.exception(
+                            'test_run_typed_return: test failed, result: %s',
+                            ret
+                        )
+                        self.fail('module.run failed: {0}'.format(ret))
 
     def test_run_batch_call(self):
         '''
@@ -182,7 +222,18 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                              'second': _mocked_none_return,
                              'third': _mocked_none_return}, clear=True):
                 for f_name in module.__salt__:
-                    assert module.run(**{f_name: None})['result']
+                    log.debug('test_run_batch_call: trying %s', f_name)
+                    try:
+                        ret = module.run(**{f_name: None})
+                    except Exception as exc:
+                        log.exception('test_run_batch_call: raised exception')
+                        self.fail('module.run raised exception: {0}'.format(exc))
+                    if not ret['result']:
+                        log.exception(
+                            'test_run_batch_call: test failed, result: %s',
+                            ret
+                        )
+                        self.fail('module.run failed: {0}'.format(ret))
 
     def test_module_run_module_not_available(self):
         '''
