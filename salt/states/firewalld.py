@@ -443,7 +443,6 @@ def _present(name,
                                   {'old': default_zone,
                                    'new': name}})
 
-    masquerade = masquerade or False
     if masquerade:
         try:
             masquerade_ret = __salt__['firewalld.get_masquerade'](name,

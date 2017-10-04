@@ -629,8 +629,6 @@ def add_port(zone, port, permanent=True):
 
         salt '*' firewalld.add_port internal 443/tcp
     '''
-    if not get_masquerade(zone):
-        add_masquerade(zone)
 
     cmd = '--zone={0} --add-port={1}'.format(zone, port)
 
@@ -692,8 +690,6 @@ def add_port_fwd(zone, src, dest, proto='tcp', dstaddr='', permanent=True):
 
         salt '*' firewalld.add_port_fwd public 80 443 tcp
     '''
-    if not get_masquerade(zone):
-        add_masquerade(zone, permanent)
 
     cmd = '--zone={0} --add-forward-port=port={1}:proto={2}:toport={3}:toaddr={4}'.format(
         zone,
