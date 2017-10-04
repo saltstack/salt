@@ -659,11 +659,12 @@ def list_subnets(call=None, kwargs=None):  # pylint: disable=unused-argument
     for subnet in subnets:
         ret[subnet.name] = make_safe(subnet)
         ret[subnet.name]['ip_configurations'] = {}
-        for ip_ in subnet.ip_configurations:
-            comps = ip_.id.split('/')
-            name = comps[-1]
-            ret[subnet.name]['ip_configurations'][name] = make_safe(ip_)
-            ret[subnet.name]['ip_configurations'][name]['subnet'] = subnet.name
+        if subnet.ip_configurations:
+            for ip_ in subnet.ip_configurations:
+                comps = ip_.id.split('/')
+                name = comps[-1]
+                ret[subnet.name]['ip_configurations'][name] = make_safe(ip_)
+                ret[subnet.name]['ip_configurations'][name]['subnet'] = subnet.name
         ret[subnet.name]['resource_group'] = kwargs['resource_group']
     return ret
 
