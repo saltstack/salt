@@ -415,7 +415,7 @@ def get_jids_filter(count, filter_find_job=True):
         data = cur.fetchall()
         ret = []
         for jid, load in data:
-            ret.append(salt.utils.jid.format_jid_instance_ext(jid,load))
+            ret.append(salt.utils.jid.format_jid_instance_ext(jid, load))
         return ret
 
 
