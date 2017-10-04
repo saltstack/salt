@@ -312,6 +312,16 @@ def managed(name, ppa=None, **kwargs):
         ret['result'] = False
         ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
                          '"key_url" argument.'
+
+    if 'key_text' in kwargs and ('keyid' in kwargs or 'keyserver' in kwargs):
+        ret['result'] = False
+        ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
+                         '"key_text" argument.'
+    if 'key_text' in kwargs and ('key_url' in kwargs):
+        ret['result'] = False
+        ret['comment'] = 'You may not use both "key_url" and ' \
+                         '"key_text" argument.'
+
     if 'repo' in kwargs:
         ret['result'] = False
         ret['comment'] = ('\'repo\' is not a supported argument for this '
