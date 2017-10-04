@@ -171,7 +171,7 @@ def _get_pool_results(*args, **kwargs):
 
     # hash minion return values as a string
     for minion in sorted(minions):
-        digest = hashlib.sha256(str(minions[minion]).encode('utf-8')).hexdigest()  
+        digest = hashlib.sha256(str(minions[minion]).encode(__salt_system_encoding__)).hexdigest()  
         if digest not in ret:
             ret[digest] = {}
             ret[digest]['pool'] = []
