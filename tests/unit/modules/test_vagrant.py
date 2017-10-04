@@ -29,7 +29,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                     'create_table': True
                     }
                 }
-    
+
     def setup_loader_modules(self):
         vagrant_globals = {
             '__opts__': self.LOCAL_OPTS,
