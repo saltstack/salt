@@ -161,7 +161,7 @@ def _set_callables(modules):
     Set all Ansible modules callables
     :return:
     '''
-    def _mkf(cmd_name, doc):
+    def _set_function(cmd_name, doc):
         '''
         Create a Salt function for the Ansible module.
         '''
@@ -181,7 +181,7 @@ def _set_callables(modules):
         return _cmd
 
     for mod in modules:
-        setattr(sys.modules[__name__], mod, _mkf(mod, 'Available'))
+        setattr(sys.modules[__name__], mod, _set_function(mod, 'Available'))
 
 
 def __virtual__():
