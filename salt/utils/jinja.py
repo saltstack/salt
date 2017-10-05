@@ -582,7 +582,7 @@ def symmetric_difference(lst1, lst2):
 
 @jinja2.contextfunction
 def show_full_context(ctx):
-    return ctx
+    return salt.utils.simple_types_filter({key: value for key, value in ctx.items()})
 
 
 class SerializerExtension(Extension, object):
