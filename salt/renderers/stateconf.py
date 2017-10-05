@@ -363,7 +363,8 @@ def statelist(states_dict, sid_excludes=frozenset(['include', 'exclude'])):
 
 
 REQUISITES = set([
-    'require', 'require_in', 'watch', 'watch_in', 'use', 'use_in', 'listen', 'listen_in'
+    'require', 'require_in', 'watch', 'watch_in', 'use', 'use_in', 'listen', 'listen_in',
+    'onchanges', 'onchanges_in',  'onfail', 'onfail_in'
 ])
 
 
@@ -405,8 +406,8 @@ def rename_state_ids(data, sls, is_extend=False):
             del data[sid]
 
 
-REQUIRE = set(['require', 'watch', 'listen'])
-REQUIRE_IN = set(['require_in', 'watch_in', 'listen_in'])
+REQUIRE = set(['require', 'watch', 'listen', 'onchanges', 'onfail'])
+REQUIRE_IN = set(['require_in', 'watch_in', 'listen_in', 'onchanges_in', 'onfail_in'])
 EXTENDED_REQUIRE = {}
 EXTENDED_REQUIRE_IN = {}
 
@@ -414,8 +415,8 @@ from itertools import chain
 
 
 # To avoid cycles among states when each state requires the one before it:
-#   explicit require/watch/listen can only contain states before it
-#   explicit require_in/watch_in/listen_in can only contain states after it
+#   explicit require/watch/listen/onchanges/onfail can only contain states before it
+#   explicit require_in/watch_in/listen_in/onchanges_in/onfail_in can only contain states after it
 def add_implicit_requires(data):
 
     def T(sid, state):  # pylint: disable=C0103
@@ -449,7 +450,7 @@ def add_implicit_requires(data):
         for _, rstate, rsid in reqs:
             if T(rsid, rstate) in states_after:
                 raise SaltRenderError(
-                    'State({0}) can\'t require/watch/listen a state({1}) defined '
+                    'State({0}) can\'t require/watch/listen/onchanges/onfail a state({1}) defined '
                     'after it!'.format(tag, T(rsid, rstate))
                 )
 
@@ -459,7 +460,7 @@ def add_implicit_requires(data):
         for _, rstate, rsid in reqs:
             if T(rsid, rstate) in states_before:
                 raise SaltRenderError(
-                    'State({0}) can\'t require_in/watch_in/listen_in a state({1}) '
+                    'State({0}) can\'t require_in/watch_in/listen_in/onchanges_in/onfail_in a state({1}) '
                     'defined before it!'.format(tag, T(rsid, rstate))
                 )
 
@@ -571,7 +572,7 @@ def extract_state_confs(data, is_extend=False):
 
         if not is_extend and state_id in STATE_CONF_EXT:
             extend = STATE_CONF_EXT[state_id]
-            for requisite in 'require', 'watch', 'listen':
+            for requisite in 'require', 'watch', 'listen', 'onchanges', 'onfail':
                 if requisite in extend:
                     extend[requisite] += to_dict[state_id].get(requisite, [])
             to_dict[state_id].update(STATE_CONF_EXT[state_id])
