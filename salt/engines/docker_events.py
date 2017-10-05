@@ -50,8 +50,8 @@ def start(docker_url='unix://var/run/docker.sock',
     .. code-block:: yaml
 
         engines:
-          docker_events:
-            docker_url: unix://var/run/docker.sock
+          - docker_events:
+              docker_url: unix://var/run/docker.sock
 
     The config above sets up engines to listen
     for events from the Docker daemon and publish

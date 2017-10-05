@@ -21,9 +21,12 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.decorators as decorators
+import salt.utils.files
 from salt.utils.versions import LooseVersion as _LooseVersion
-import salt.ext.six as six
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -38,7 +41,7 @@ def __virtual__():
     '''
     Only work on MacOS
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return (False, 'Failed to load the mac_service module:\n'
                        'Only available on macOS systems.')
 
@@ -88,7 +91,7 @@ def _available_services():
                 try:
                     # This assumes most of the plist files
                     # will be already in XML format
-                    with salt.utils.fopen(file_path):
+                    with salt.utils.files.fopen(file_path):
                         plist = plistlib.readPlist(true_path)
 
                 except Exception:
@@ -102,7 +105,7 @@ def _available_services():
                         plist = plistlib.readPlistFromString(plist_xml)
                     else:
                         plist = plistlib.readPlistFromBytes(
-                            salt.utils.to_bytes(plist_xml))
+                            salt.utils.stringutils.to_bytes(plist_xml))
 
                 try:
                     available_services[plist.Label.lower()] = {

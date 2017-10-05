@@ -11,14 +11,14 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 import salt.syspaths
 
 __virtualname__ = 'sudo'
 
 
 def __virtual__():
-    if salt.utils.which('sudo') and __opts__.get('sudo_user'):
+    if salt.utils.path.which('sudo') and __opts__.get('sudo_user'):
         return __virtualname__
     return False
 
@@ -60,7 +60,7 @@ def execute(opts, data, func, args, kwargs):
            '-c', salt.syspaths.CONFIG_DIR,
            '--',
            data.get('fun')]
-    if data['fun'] == 'state.sls':
+    if data['fun'] in ('state.sls', 'state.highstate', 'state.apply'):
         kwargs['concurrent'] = True
     for arg in args:
         cmd.append(_cmd_quote(str(arg)))

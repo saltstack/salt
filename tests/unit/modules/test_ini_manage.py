@@ -9,44 +9,44 @@ import tempfile
 from tests.support.unit import TestCase
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 import salt.modules.ini_manage as ini
 
 
 class IniManageTestCase(TestCase):
 
-    TEST_FILE_CONTENT = '''\
-# Comment on the first line
-
-# First main option
-option1=main1
-
-# Second main option
-option2=main2
-
-
-[main]
-# Another comment
-test1=value 1
-
-test2=value 2
-
-[SectionB]
-test1=value 1B
-
-# Blank line should be above
-test3 = value 3B
-
-[SectionC]
-# The following option is empty
-empty_option=
-'''
+    TEST_FILE_CONTENT = os.linesep.join([
+        '# Comment on the first line',
+        '',
+        '# First main option',
+        'option1=main1',
+        '',
+        '# Second main option',
+        'option2=main2',
+        '',
+        '',
+        '[main]',
+        '# Another comment',
+        'test1=value 1',
+        '',
+        'test2=value 2',
+        '',
+        '[SectionB]',
+        'test1=value 1B',
+        '',
+        '# Blank line should be above',
+        'test3 = value 3B',
+        '',
+        '[SectionC]',
+        '# The following option is empty',
+        'empty_option='
+    ])
 
     maxDiff = None
 
     def setUp(self):
-        self.tfile = tempfile.NamedTemporaryFile(delete=False, mode='w+')
-        self.tfile.write(self.TEST_FILE_CONTENT)
+        self.tfile = tempfile.NamedTemporaryFile(delete=False, mode='w+b')
+        self.tfile.write(salt.utils.to_bytes(self.TEST_FILE_CONTENT))
         self.tfile.close()
 
     def tearDown(self):
@@ -119,42 +119,44 @@ empty_option=
         ini.set_option(self.tfile.name, {
             'SectionB': {'test3': 'new value 3B'},
         })
-        with salt.utils.fopen(self.tfile.name, 'r') as fp:
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             file_content = fp.read()
-        self.assertIn('\nempty_option = \n', file_content,
-                      'empty_option was not preserved')
+        expected = '{0}{1}{0}'.format(os.linesep, 'empty_option = ')
+        self.assertIn(expected, file_content, 'empty_option was not preserved')
 
     def test_empty_lines_preserved_after_edit(self):
         ini.set_option(self.tfile.name, {
             'SectionB': {'test3': 'new value 3B'},
         })
-        with salt.utils.fopen(self.tfile.name, 'r') as fp:
+        expected = os.linesep.join([
+            '# Comment on the first line',
+            '',
+            '# First main option',
+            'option1 = main1',
+            '',
+            '# Second main option',
+            'option2 = main2',
+            '',
+            '[main]',
+            '# Another comment',
+            'test1 = value 1',
+            '',
+            'test2 = value 2',
+            '',
+            '[SectionB]',
+            'test1 = value 1B',
+            '',
+            '# Blank line should be above',
+            'test3 = new value 3B',
+            '',
+            '[SectionC]',
+            '# The following option is empty',
+            'empty_option = ',
+            ''
+        ])
+        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
             file_content = fp.read()
-        self.assertEqual('''\
-# Comment on the first line
-
-# First main option
-option1 = main1
-
-# Second main option
-option2 = main2
-
-[main]
-# Another comment
-test1 = value 1
-
-test2 = value 2
-
-[SectionB]
-test1 = value 1B
-
-# Blank line should be above
-test3 = new value 3B
-
-[SectionC]
-# The following option is empty
-empty_option = 
-''', file_content)
+        self.assertEqual(expected, file_content)
 
     def test_empty_lines_preserved_after_multiple_edits(self):
         ini.set_option(self.tfile.name, {

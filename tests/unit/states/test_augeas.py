@@ -141,7 +141,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(augeas.__salt__, mock_dict_):
                 mock_filename = MagicMock(return_value='/etc/services')
                 with patch.object(augeas, '_workout_filename', mock_filename):
-                    with patch('salt.utils.fopen', MagicMock(mock_open)):
+                    with patch('salt.utils.files.fopen', MagicMock(mock_open)):
                         mock_diff = MagicMock(return_value=['+ zabbix-agent'])
                         with patch('difflib.unified_diff', mock_diff):
                             self.assertDictEqual(augeas.change(self.name,
@@ -218,7 +218,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
             mock_dict_ = {'augeas.execute': mock_execute,
                         'augeas.method_map': self.mock_method_map}
             with patch.dict(augeas.__salt__, mock_dict_):
-                with patch('salt.utils.fopen', MagicMock(mock_open)):
+                with patch('salt.utils.files.fopen', MagicMock(mock_open)):
                     self.assertDictEqual(augeas.change(self.name,
                                         context=self.context,
                                         changes=self.changes),

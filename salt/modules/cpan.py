@@ -12,7 +12,8 @@ import os.path
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ def __virtual__():
     '''
     Only work on supported POSIX-like systems
     '''
-    if salt.utils.which('cpan'):
+    if salt.utils.path.which('cpan'):
         return True
     return (False, 'Unable to locate cpan. Make sure it is installed and in the PATH.')
 
@@ -107,7 +108,7 @@ def remove(module, details=False):
         if 'MANIFEST' not in contents:
             continue
         mfile = os.path.join(build_dir, 'MANIFEST')
-        with salt.utils.fopen(mfile, 'r') as fh_:
+        with salt.utils.files.fopen(mfile, 'r') as fh_:
             for line in fh_.readlines():
                 if line.startswith('lib/'):
                     files.append(line.replace('lib/', ins_path).strip())

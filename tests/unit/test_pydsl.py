@@ -16,13 +16,14 @@ from tests.support.paths import TMP
 # Import Salt libs
 import salt.loader
 import salt.config
-import salt.utils
+import salt.utils.files
+import salt.utils.versions
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO
 
 
@@ -90,12 +91,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
 
     def render_sls(self, content, sls='', saltenv='base', **kws):
         if 'env' in kws:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             kws.pop('env')
 
         return self.HIGHSTATE.state.rend['pydsl'](
@@ -267,16 +263,18 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             '''))
         self.assertEqual(len(result), 3)
         self.assertEqual(result['A']['cmd'][0], 'run')
-        self.assertEqual(result['A']['cmd'][1]['name'], 'echo hello')
-        self.assertEqual(result['A']['cmd'][2]['cwd'], '/')
-        self.assertEqual(result['A']['cmd'][3]['name'], 'echo hello world')
+        self.assertIn({'name': 'echo hello'}, result['A']['cmd'])
+        self.assertIn({'cwd': '/'}, result['A']['cmd'])
+        self.assertIn({'name': 'echo hello world'}, result['A']['cmd'])
+        self.assertEqual(len(result['A']['cmd']), 4)
 
         self.assertEqual(len(result['B']['pkg']), 1)
         self.assertEqual(result['B']['pkg'][0], 'installed')
 
         self.assertEqual(result['B']['service'][0], 'running')
-        self.assertEqual(result['B']['service'][1]['require'][0]['pkg'], 'B')
-        self.assertEqual(result['B']['service'][2]['watch'][0]['cmd'], 'A')
+        self.assertIn({'require': [{'pkg': 'B'}]}, result['B']['service'])
+        self.assertIn({'watch': [{'cmd': 'A'}]}, result['B']['service'])
+        self.assertEqual(len(result['B']['service']), 3)
 
     def test_ordered_states(self):
         result = self.render_sls(textwrap.dedent('''
@@ -346,7 +344,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 '''.format(output, output, output)))
 
             self.state_highstate({'base': ['aaa']}, dirpath)
-            with salt.utils.fopen(output, 'r') as f:
+            with salt.utils.files.fopen(output, 'r') as f:
                 self.assertEqual(''.join(f.read().split()), "XYZABCDEF")
 
         finally:
@@ -379,9 +377,9 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 A()
                 '''.format(dirpath, dirpath, dirpath, dirpath)))
             self.state_highstate({'base': ['aaa']}, dirpath)
-            with salt.utils.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
+            with salt.utils.files.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
                 self.assertEqual(f.read(), 'hehe\nhoho\n')
-            with salt.utils.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
+            with salt.utils.files.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
                 self.assertEqual(f.read(), 'hehe\n')
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
@@ -454,5 +452,5 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
 
 
 def write_to(fpath, content):
-    with salt.utils.fopen(fpath, 'w') as f:
+    with salt.utils.files.fopen(fpath, 'w') as f:
         f.write(content)

@@ -89,7 +89,7 @@ they are being loaded for the correct proxytype, example below:
         Only work on proxy
         '''
         try:
-            if salt.utils.is_proxy() and \
+            if salt.utils.platform.is_proxy() and \
                __opts__['proxy']['proxytype'] == 'ssh_sample':
                 return __virtualname__
         except KeyError:
@@ -156,20 +156,23 @@ will need to be restarted to pick up any changes.  A corresponding utility funct
 ``saltutil.sync_proxymodules``, has been added to sync these modules to minions.
 
 In addition, a salt.utils helper function called `is_proxy()` was added to make
-it easier to tell when the running minion is a proxy minion.
+it easier to tell when the running minion is a proxy minion. **NOTE: This
+function was renamed to salt.utils.platform.is_proxy() for the Oxygen release**
 
 New in 2015.8
 -------------
 
-Starting with the 2015.8 release of Salt, proxy processes are no longer forked off from a controlling minion.
-Instead, they have their own script ``salt-proxy`` which takes mostly the same arguments that the
-standard Salt minion does with the addition of ``--proxyid``.  This is the id that the salt-proxy will
-use to identify itself to the master.  Proxy configurations are still best kept in Pillar and their format
-has not changed.
+Starting with the 2015.8 release of Salt, proxy processes are no longer forked
+off from a controlling minion.  Instead, they have their own script
+``salt-proxy`` which takes mostly the same arguments that the standard Salt
+minion does with the addition of ``--proxyid``.  This is the id that the
+salt-proxy will use to identify itself to the master.  Proxy configurations are
+still best kept in Pillar and their format has not changed.
 
-This change allows for better process control and logging.  Proxy processes can now be listed with standard
-process management utilities (``ps`` from the command line).  Also, a full Salt minion is no longer
-required (though it is still strongly recommended) on machines hosting proxies.
+This change allows for better process control and logging.  Proxy processes can
+now be listed with standard process management utilities (``ps`` from the
+command line).  Also, a full Salt minion is no longer required (though it is
+still strongly recommended) on machines hosting proxies.
 
 
 Getting Started
@@ -619,9 +622,10 @@ in the proxymodule itself.  This might be useful if a proxymodule author wants t
 all the code for the proxy interface in the same place instead of splitting it between
 the proxy and grains directories.
 
-This function will only be called automatically if the configuration variable ``proxy_merge_grains_in_module``
-is set to True in the proxy configuration file (default ``/etc/salt/proxy``).  This
-variable defaults to ``True`` in the release code-named *2017.7.0*.
+This function will only be called automatically if the configuration variable
+``proxy_merge_grains_in_module`` is set to True in the proxy configuration file
+(default ``/etc/salt/proxy``).  This variable defaults to ``True`` in the
+release code-named *2017.7.0*.
 
 
 .. code: python::
@@ -640,7 +644,7 @@ variable defaults to ``True`` in the release code-named *2017.7.0*.
 
     def __virtual__():
         try:
-            if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+            if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
                 return __virtualname__
         except KeyError:
             pass
@@ -708,7 +712,7 @@ Example from ``salt/grains/rest_sample.py``:
 
     def __virtual__():
         try:
-            if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+            if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
                 return __virtualname__
         except KeyError:
             pass

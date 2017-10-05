@@ -381,7 +381,7 @@ from functools import partial
 import yaml
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     from mako.lookup import TemplateLookup

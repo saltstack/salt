@@ -14,7 +14,7 @@ import re
 import logging
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = "certutil"
@@ -24,7 +24,7 @@ def __virtual__():
     '''
     Only work on Windows
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return __virtualname__
     return False
 
@@ -42,9 +42,10 @@ def get_cert_serial(cert_file):
 
         salt '*' certutil.get_cert_serial <certificate name>
     '''
-    cmd = "certutil.exe -verify {0}".format(cert_file)
+    cmd = "certutil.exe -silent -verify {0}".format(cert_file)
     out = __salt__['cmd.run'](cmd)
-    matches = re.search(r"Serial: (.*)", out)
+    # match serial number by paragraph to work with multiple languages
+    matches = re.search(r":\s*(\w*)\r\n\r\n", out)
     if matches is not None:
         return matches.groups()[0].strip()
     else:
@@ -66,7 +67,8 @@ def get_stored_cert_serials(store):
     '''
     cmd = "certutil.exe -store {0}".format(store)
     out = __salt__['cmd.run'](cmd)
-    matches = re.findall(r"Serial Number: (.*)\r", out)
+    # match serial numbers by header position to work with multiple languages
+    matches = re.findall(r"={16}\r\n.*:\s*(\w*)\r\n", out)
     return matches
 
 

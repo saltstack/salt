@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
 import shutil
@@ -14,8 +14,9 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 # Import 3rd-party libs
 import yaml
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -36,7 +37,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         try:
             add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
             add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
-                                    USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD))
+                                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD))
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_call('user.list_users')
@@ -255,10 +256,10 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
             config = yaml.load(fhr.read())
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
                 fhw.write(
                     yaml.dump(config, default_flow_style=False)
                 )

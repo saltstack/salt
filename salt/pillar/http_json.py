@@ -27,6 +27,16 @@ in <> brackets) in the url in order to populate pillar data based on the grain v
         url: http://example.com/api/<nodename>
         with_grains: True
 
+.. versionchanged:: Oxygen
+
+    If %s is present in the url, it will be automaticaly replaced by the minion_id:
+
+    .. code-block:: yaml
+
+        ext_pillar:
+          - http_json:
+              url: http://example.com/api/%s
+
 Module Documentation
 ====================
 '''
@@ -64,6 +74,9 @@ def ext_pillar(minion_id,
     :return: A dictionary of the pillar data to add.
     :rtype: dict
     '''
+
+    url = url.replace('%s', _quote(minion_id))
+
     grain_pattern = r'<(?P<grain_name>.*?)>'
 
     if with_grains:

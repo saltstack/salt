@@ -10,7 +10,7 @@ import salt.utils.http
 import logging
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 log = logging.getLogger(__name__)

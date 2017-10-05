@@ -19,7 +19,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.nftables as nftables
-import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
 
@@ -79,7 +79,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return a data structure of the rules in the conf file
         '''
         with patch.dict(nftables.__grains__, {'os_family': 'Debian'}):
-            with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
+            with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                 self.assertListEqual(nftables.get_saved_rules(), [])
 
     # 'get_rules' function tests: 1
@@ -105,10 +105,10 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(nftables.__grains__, {'os_family': 'Debian'}):
             mock = MagicMock(return_value=False)
             with patch.dict(nftables.__salt__, {'cmd.run': mock}):
-                with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
+                with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                     self.assertEqual(nftables.save(), '#! nft -f\n\n')
 
-                with patch.object(salt.utils, 'fopen',
+                with patch.object(salt.utils.files, 'fopen',
                                   MagicMock(side_effect=IOError)):
                     self.assertRaises(CommandExecutionError, nftables.save)
 

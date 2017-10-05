@@ -83,10 +83,11 @@ except ImportError:
 
 # Import salt libs
 from salt.utils import namespaced_function
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.cloud
+import salt.utils.files
+import salt.utils.http
 import salt.config as config
-from salt.utils import http
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
     SaltCloudSystemExit,
@@ -2614,12 +2615,12 @@ def update_pricing(kwargs=None, call=None):
     .. versionadded:: 2015.8.0
     '''
     url = 'https://cloudpricingcalculator.appspot.com/static/data/pricelist.json'
-    price_json = http.query(url, decode=True, decode_type='json')
+    price_json = salt.utils.http.query(url, decode=True, decode_type='json')
 
     outfile = os.path.join(
         __opts__['cachedir'], 'gce-pricing.p'
     )
-    with salt.utils.fopen(outfile, 'w') as fho:
+    with salt.utils.files.fopen(outfile, 'w') as fho:
         msgpack.dump(price_json['dict'], fho)
 
     return True
@@ -2642,7 +2643,7 @@ def show_pricing(kwargs=None, call=None):
     if not profile:
         return {'Error': 'The requested profile was not found'}
 
-    # Make sure the profile belongs to Digital Ocean
+    # Make sure the profile belongs to DigitalOcean
     provider = profile.get('provider', '0:0')
     comps = provider.split(':')
     if len(comps) < 2 or comps[1] != 'gce':
@@ -2658,7 +2659,7 @@ def show_pricing(kwargs=None, call=None):
     if not os.path.exists(pricefile):
         update_pricing()
 
-    with salt.utils.fopen(pricefile, 'r') as fho:
+    with salt.utils.files.fopen(pricefile, 'r') as fho:
         sizes = msgpack.load(fho)
 
     per_hour = float(sizes['gcp_price_list'][size][region])

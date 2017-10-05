@@ -21,13 +21,14 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 import salt.modules.zypper as zypper
+import salt.modules.pkg_resource as pkg_resource
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext.six.moves import configparser
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.pkg
 
 
@@ -46,7 +47,7 @@ def get_test_data(filename):
     '''
     Return static test data
     '''
-    with salt.utils.fopen(
+    with salt.utils.files.fopen(
             os.path.join(
                 os.path.join(
                     os.path.dirname(os.path.abspath(__file__)), 'zypp'), filename)) as rfh:
@@ -391,17 +392,23 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}])):
                     ret = zypper.upgrade(dist_upgrade=True, dryrun=True)
                     zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run')
-                    zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run', '--debug-solver')
+                    zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses',
+                                                '--dry-run', '--debug-solver')
 
                 with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}])):
-                    ret = zypper.upgrade(dist_upgrade=True, dryrun=True, fromrepo=["Dummy", "Dummy2"], novendorchange=True)
-                    zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run', '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change')
-                    zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run', '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change', '--debug-solver')
+                    ret = zypper.upgrade(dist_upgrade=True, dryrun=True,
+                                         fromrepo=["Dummy", "Dummy2"], novendorchange=True)
+                    zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run',
+                                                '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change')
+                    zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run',
+                                                '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change',
+                                                '--debug-solver')
 
                 with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
                     ret = zypper.upgrade(dist_upgrade=True, fromrepo=["Dummy", "Dummy2"], novendorchange=True)
                     self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
-                    zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change')
+                    zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--from', "Dummy",
+                                                '--from', 'Dummy2', '--no-allow-vendor-change')
 
     def test_upgrade_kernel(self):
         '''
@@ -412,7 +419,8 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zypper.__grains__, {'osrelease_info': [12, 1]}), \
              patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True)), \
              patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False)):
-            with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=(['kernel-default'], None))}):
+            with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=(['kernel-default'],
+                                                                                                    None))}):
                 with patch('salt.modules.zypper.__zypper__.noraise.call', MagicMock()):
                     with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[
                         {"kernel-default": "3.12.49-11.1"}, {"kernel-default": "3.12.49-11.1,3.12.51-60.20.2"}])):
@@ -455,7 +463,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                     ret = zypper.upgrade(dist_upgrade=True, fromrepo=["DUMMY"])
                 self.assertEqual(cmd_exc.exception.info['changes'], {})
                 self.assertEqual(cmd_exc.exception.info['result']['stdout'], zypper_out)
-                zypper_mock.noraise.call.assert_called_with('dist-upgrade', '--auto-agree-with-licenses', '--from', 'DUMMY')
+                zypper_mock.noraise.call.assert_called_with('dist-upgrade', '--auto-agree-with-licenses',
+                                                            '--from', 'DUMMY')
 
     def test_upgrade_available(self):
         '''
@@ -478,30 +487,92 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         :return:
         '''
         def _add_data(data, key, value):
-            data[key] = value
+            data.setdefault(key, []).append(value)
 
         rpm_out = [
-            'protobuf-java_|-2.6.1_|-3.1.develHead_|-',
-            'yast2-ftp-server_|-3.1.8_|-8.1_|-',
-            'jose4j_|-0.4.4_|-2.1.develHead_|-',
-            'apache-commons-cli_|-1.2_|-1.233_|-',
-            'jakarta-commons-discovery_|-0.4_|-129.686_|-',
-            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-',
+            'protobuf-java_|-2.6.1_|-3.1.develHead_|-noarch_|-_|-1499257756',
+            'yast2-ftp-server_|-3.1.8_|-8.1_|-x86_64_|-_|-1499257798',
+            'jose4j_|-0.4.4_|-2.1.develHead_|-noarch_|-_|-1499257756',
+            'apache-commons-cli_|-1.2_|-1.233_|-noarch_|-_|-1498636510',
+            'jakarta-commons-discovery_|-0.4_|-129.686_|-noarch_|-_|-1498636511',
+            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-noarch_|-_|-1498636510',
         ]
-        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}):
-            with patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}):
-                with patch.dict(zypper.__salt__, {'pkg_resource.sort_pkglist': MagicMock()}):
-                    with patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
-                        pkgs = zypper.list_pkgs()
-                        for pkg_name, pkg_version in {
-                            'jakarta-commons-discovery': '0.4-129.686',
-                            'yast2-ftp-server': '3.1.8-8.1',
-                            'protobuf-java': '2.6.1-3.1.develHead',
-                            'susemanager-build-keys-web': '12.0-5.1.develHead',
-                            'apache-commons-cli': '1.2-1.233',
-                            'jose4j': '0.4.4-2.1.develHead'}.items():
-                            self.assertTrue(pkgs.get(pkg_name))
-                            self.assertEqual(pkgs[pkg_name], pkg_version)
+        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
+            pkgs = zypper.list_pkgs(versions_as_list=True)
+            for pkg_name, pkg_version in {
+                'jakarta-commons-discovery': '0.4-129.686',
+                'yast2-ftp-server': '3.1.8-8.1',
+                'protobuf-java': '2.6.1-3.1.develHead',
+                'susemanager-build-keys-web': '12.0-5.1.develHead',
+                'apache-commons-cli': '1.2-1.233',
+                'jose4j': '0.4.4-2.1.develHead'}.items():
+                self.assertTrue(pkgs.get(pkg_name))
+                self.assertEqual(pkgs[pkg_name], [pkg_version])
+
+    def test_list_pkgs_with_attr(self):
+        '''
+        Test packages listing with the attr parameter
+
+        :return:
+        '''
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        rpm_out = [
+            'protobuf-java_|-2.6.1_|-3.1.develHead_|-noarch_|-_|-1499257756',
+            'yast2-ftp-server_|-3.1.8_|-8.1_|-x86_64_|-_|-1499257798',
+            'jose4j_|-0.4.4_|-2.1.develHead_|-noarch_|-_|-1499257756',
+            'apache-commons-cli_|-1.2_|-1.233_|-noarch_|-_|-1498636510',
+            'jakarta-commons-discovery_|-0.4_|-129.686_|-noarch_|-_|-1498636511',
+            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-noarch_|-_|-1498636510',
+        ]
+        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
+            pkgs = zypper.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
+            for pkg_name, pkg_attr in {
+                'jakarta-commons-discovery': {
+                    'version': '0.4',
+                    'release': '129.686',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1498636511,
+                },
+                'yast2-ftp-server': {
+                    'version': '3.1.8',
+                    'release': '8.1',
+                    'arch': 'x86_64',
+                    'install_date_time_t': 1499257798,
+                },
+                'protobuf-java': {
+                    'version': '2.6.1',
+                    'release': '3.1.develHead',
+                    'install_date_time_t': 1499257756,
+                    'arch': 'noarch',
+                },
+                'susemanager-build-keys-web': {
+                    'version': '12.0',
+                    'release': '5.1.develHead',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1498636510,
+                },
+                'apache-commons-cli': {
+                    'version': '1.2',
+                    'release': '1.233',
+                    'arch': 'noarch',
+                    'install_date_time_t': 1498636510,
+                },
+                'jose4j': {
+                    'arch': 'noarch',
+                    'version': '0.4.4',
+                    'release': '2.1.develHead',
+                    'install_date_time_t': 1499257756,
+                }}.items():
+                self.assertTrue(pkgs.get(pkg_name))
+                self.assertEqual(pkgs[pkg_name], [pkg_attr])
 
     def test_list_patches(self):
         '''
@@ -548,7 +619,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             }
         }
 
-        with patch.dict(zypper.__salt__, {'lowpkg.bin_pkg_info': MagicMock(return_value={'name': 'test-package', 'version': '1.0'})}):
+        with patch.dict(zypper.__salt__, {'lowpkg.bin_pkg_info': MagicMock(return_value={'name': 'test-package',
+                                                                                         'version': '1.0'})}):
             list_downloaded = zypper.list_downloaded()
             self.assertEqual(len(list_downloaded), 1)
             self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
@@ -579,14 +651,19 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 self.assertEqual(zypper.download("nmap", "foo"), test_out)
 
     @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
-    @patch('salt.modules.zypper.list_downloaded', MagicMock(side_effect=[{}, {'vim': {'1.1': {'path': '/foo/bar/test.rpm', 'size': 1234, 'creation_date_time_t': 1234567890, 'creation_date_time': '2009-02-13T23:31:30'}}}]))
+    @patch('salt.modules.zypper.list_downloaded',
+           MagicMock(side_effect=[{}, {'vim': {'1.1': {'path': '/foo/bar/test.rpm',
+                                                       'size': 1234,
+                                                       'creation_date_time_t': 1234567890,
+                                                       'creation_date_time': '2009-02-13T23:31:30'}}}]))
     def test_install_with_downloadonly(self):
         '''
         Test a package installation with downloadonly=True.
 
         :return:
         '''
-        with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=({'vim': None}, 'repository'))}):
+        with patch.dict(zypper.__salt__,
+                        {'pkg_resource.parse_targets': MagicMock(return_value=({'vim': None}, 'repository'))}):
             with patch('salt.modules.zypper.__zypper__.noraise.call', MagicMock()) as zypper_mock:
                 ret = zypper.install(pkgs=['vim'], downloadonly=True)
                 zypper_mock.assert_called_once_with(
@@ -597,17 +674,26 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                     '--download-only',
                     'vim'
                 )
-                self.assertDictEqual(ret, {'vim': {'new': {'1.1': {'path': '/foo/bar/test.rpm', 'size': 1234, 'creation_date_time_t': 1234567890, 'creation_date_time': '2009-02-13T23:31:30'}}, 'old': ''}})
+                self.assertDictEqual(ret, {'vim': {'new': {'1.1': {'path': '/foo/bar/test.rpm',
+                                                                   'size': 1234,
+                                                                   'creation_date_time_t': 1234567890,
+                                                                   'creation_date_time': '2009-02-13T23:31:30'}},
+                                                   'old': ''}})
 
     @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
-    @patch('salt.modules.zypper.list_downloaded', MagicMock(return_value={'vim': {'1.1': {'path': '/foo/bar/test.rpm', 'size': 1234, 'creation_date_time_t': 1234567890, 'creation_date_time': '2017-01-01T11:00:00'}}}))
+    @patch('salt.modules.zypper.list_downloaded',
+           MagicMock(return_value={'vim': {'1.1': {'path': '/foo/bar/test.rpm',
+                                                   'size': 1234,
+                                                   'creation_date_time_t': 1234567890,
+                                                   'creation_date_time': '2017-01-01T11:00:00'}}}))
     def test_install_with_downloadonly_already_downloaded(self):
         '''
         Test a package installation with downloadonly=True when package is already downloaded.
 
         :return:
         '''
-        with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=({'vim': None}, 'repository'))}):
+        with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=({'vim': None},
+                                                                                                'repository'))}):
             with patch('salt.modules.zypper.__zypper__.noraise.call', MagicMock()) as zypper_mock:
                 ret = zypper.install(pkgs=['vim'], downloadonly=True)
                 zypper_mock.assert_called_once_with(
@@ -621,7 +707,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 self.assertDictEqual(ret, {})
 
     @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
-    @patch('salt.modules.zypper._get_patches', MagicMock(return_value={'SUSE-PATCH-1234': {'installed': False, 'summary': 'test'}}))
+    @patch('salt.modules.zypper._get_patches',
+           MagicMock(return_value={'SUSE-PATCH-1234': {'installed': False, 'summary': 'test'}}))
     @patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}]))
     def test_install_advisory_patch_ok(self):
         '''
@@ -629,7 +716,9 @@ Repository 'DUMMY' not found by its alias, number, or URI.
 
         :return:
         '''
-        with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=({'SUSE-PATCH-1234': None}, 'advisory'))}):
+        with patch.dict(zypper.__salt__,
+                        {'pkg_resource.parse_targets': MagicMock(return_value=({'SUSE-PATCH-1234': None},
+                                                                               'advisory'))}):
             with patch('salt.modules.zypper.__zypper__.noraise.call', MagicMock()) as zypper_mock:
                 ret = zypper.install(advisory_ids=['SUSE-PATCH-1234'])
                 zypper_mock.assert_called_once_with(
@@ -642,7 +731,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
 
     @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
-    @patch('salt.modules.zypper._get_patches', MagicMock(return_value={'SUSE-PATCH-1234': {'installed': False, 'summary': 'test'}}))
+    @patch('salt.modules.zypper._get_patches',
+           MagicMock(return_value={'SUSE-PATCH-1234': {'installed': False, 'summary': 'test'}}))
     @patch('salt.modules.zypper.list_pkgs', MagicMock(return_value={"vim": "1.1"}))
     def test_install_advisory_patch_failure(self):
         '''
@@ -650,7 +740,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
 
         :return:
         '''
-        with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=({'SUSE-PATCH-XXX': None}, 'advisory'))}):
+        with patch.dict(zypper.__salt__,
+                        {'pkg_resource.parse_targets': MagicMock(return_value=({'SUSE-PATCH-XXX': None}, 'advisory'))}):
             with patch('salt.modules.zypper.__zypper__.noraise.call', MagicMock()) as zypper_mock:
                 with self.assertRaisesRegex(CommandExecutionError, '^Advisory id "SUSE-PATCH-XXX" not found$'):
                     zypper.install(advisory_ids=['SUSE-PATCH-XXX'])
@@ -1069,7 +1160,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         """
         _zpr = MagicMock()
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
-        assert isinstance(zypper.Wildcard(_zpr)('libzypp', '*.1'), str)
+        assert isinstance(zypper.Wildcard(_zpr)('libzypp', '*.1'), six.string_types)
 
     def test_wildcard_to_query_condition_preservation(self):
         '''

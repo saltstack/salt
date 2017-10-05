@@ -46,6 +46,7 @@ These guides go into detail how to install Salt on a given platform.
 
     arch
     debian
+    eos
     fedora
     freebsd
     gentoo

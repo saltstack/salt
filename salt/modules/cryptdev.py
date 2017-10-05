@@ -12,11 +12,12 @@ import os
 import re
 
 # Import salt libraries
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import filter, zip  # pylint: disable=import-error,redefined-builtin
 
 # Set up logger
@@ -30,7 +31,7 @@ def __virtual__():
     '''
     Only load on POSIX-like systems
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The cryptdev module cannot be loaded: not a POSIX-like system')
 
     return True
@@ -140,7 +141,7 @@ def crypttab(config='/etc/crypttab'):
     ret = {}
     if not os.path.isfile(config):
         return ret
-    with salt.utils.fopen(config) as ifile:
+    with salt.utils.files.fopen(config) as ifile:
         for line in ifile:
             try:
                 entry = _crypttab_entry.dict_from_line(line)
@@ -177,7 +178,7 @@ def rm_crypttab(name, config='/etc/crypttab'):
     # the list. At the end, re-create the config from just those lines.
     lines = []
     try:
-        with salt.utils.fopen(config, 'r') as ifile:
+        with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
                 try:
                     if criteria.match(line):
@@ -194,7 +195,7 @@ def rm_crypttab(name, config='/etc/crypttab'):
 
     if modified:
         try:
-            with salt.utils.fopen(config, 'w+') as ofile:
+            with salt.utils.files.fopen(config, 'w+') as ofile:
                 ofile.writelines(lines)
         except (IOError, OSError) as exc:
             msg = "Couldn't write to {0}: {1}"
@@ -271,7 +272,7 @@ def set_crypttab(
         raise CommandExecutionError('Bad config file "{0}"'.format(config))
 
     try:
-        with salt.utils.fopen(config, 'r') as ifile:
+        with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
                 try:
                     if criteria.match(line):
@@ -301,7 +302,7 @@ def set_crypttab(
     if ret != 'present':  # ret in ['new', 'change']:
         if not test:
             try:
-                with salt.utils.fopen(config, 'w+') as ofile:
+                with salt.utils.files.fopen(config, 'w+') as ofile:
                     # The line was changed, commit it!
                     ofile.writelines(lines)
             except (IOError, OSError):

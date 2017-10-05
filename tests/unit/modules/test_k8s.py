@@ -16,7 +16,7 @@ from tests.support.unit import TestCase
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 import salt.modules.k8s as k8s
 
 # Import 3rd-party libs
@@ -86,7 +86,7 @@ class TestK8SSecrets(TestCase):
     def test_get_one_secret(self):
         name = self.name
         filename = "/tmp/{0}.json".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             json.dump(self.request, f)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -102,7 +102,7 @@ class TestK8SSecrets(TestCase):
     def test_get_decoded_secret(self):
         name = self.name
         filename = "/tmp/{0}.json".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             json.dump(self.request, f)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -118,7 +118,7 @@ class TestK8SSecrets(TestCase):
         expected_data = {}
         for i in range(2):
             names.append("/tmp/{0}-{1}".format(name, i))
-            with salt.utils.fopen("/tmp/{0}-{1}".format(name, i), 'w') as f:
+            with salt.utils.files.fopen("/tmp/{0}-{1}".format(name, i), 'w') as f:
                 expected_data["{0}-{1}".format(name, i)] = base64.b64encode("{0}{1}".format(name, i))
                 f.write("{0}{1}".format(name, i))
         res = k8s.create_secret("default", name, names, apiserver_url="http://127.0.0.1:8080")
@@ -132,7 +132,7 @@ class TestK8SSecrets(TestCase):
     def test_update_secret(self):
         name = self.name
         filename = "/tmp/{0}.json".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             json.dump(self.request, f)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -142,7 +142,7 @@ class TestK8SSecrets(TestCase):
         names = []
         for i in range(3):
             names.append("/tmp/{0}-{1}-updated".format(name, i))
-            with salt.utils.fopen("/tmp/{0}-{1}-updated".format(name, i), 'w') as f:
+            with salt.utils.files.fopen("/tmp/{0}-{1}-updated".format(name, i), 'w') as f:
                 expected_data["{0}-{1}-updated".format(name, i)] = base64.b64encode("{0}{1}-updated".format(name, i))
                 f.write("{0}{1}-updated".format(name, i))
 
@@ -158,7 +158,7 @@ class TestK8SSecrets(TestCase):
     def test_delete_secret(self):
         name = self.name
         filename = "/tmp/{0}.json".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             json.dump(self.request, f)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -205,7 +205,7 @@ spec:
     services: "5"
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace={0}".format(namespace), "create", "-f", filename], stdout=PIPE)
@@ -239,7 +239,7 @@ spec:
     services: "5"
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace={0}".format(namespace), "create", "-f", filename], stdout=PIPE)
@@ -286,7 +286,7 @@ spec:
     services: "5"
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace={0}".format(namespace), "create", "-f", filename], stdout=PIPE)
@@ -352,7 +352,7 @@ spec:
             }
         }
         filename = "/tmp/{0}.yaml".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)
@@ -390,7 +390,7 @@ spec:
     type: Container
 """.format(name)
         filename = "/tmp/{0}.yaml".format(name)
-        with salt.utils.fopen(filename, 'w') as f:
+        with salt.utils.files.fopen(filename, 'w') as f:
             f.write(request)
 
         create = Popen(["kubectl", "--namespace=default", "create", "-f", filename], stdout=PIPE)

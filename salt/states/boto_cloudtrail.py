@@ -59,7 +59,7 @@ import os
 import os.path
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
 
 log = logging.getLogger(__name__)

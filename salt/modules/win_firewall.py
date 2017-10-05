@@ -4,11 +4,11 @@ Module for configuring Windows Firewall using ``netsh``
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import re
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -19,7 +19,7 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return False, "Module win_firewall: module only available on Windows"
 
     return __virtualname__
@@ -155,7 +155,7 @@ def get_rule(name='all'):
         salt '*' firewall.get_rule 'MyAppPort'
     '''
     cmd = ['netsh', 'advfirewall', 'firewall', 'show', 'rule',
-           'name="{0}"'.format(name)]
+           'name={0}'.format(name)]
     ret = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
     if ret['retcode'] != 0:
         raise CommandExecutionError(ret['stdout'])
@@ -245,7 +245,7 @@ def add_rule(name, localport, protocol='tcp', action='allow', dir='in',
     return True
 
 
-def delete_rule(name,
+def delete_rule(name=None,
                 localport=None,
                 protocol=None,
                 dir=None,
@@ -261,10 +261,11 @@ def delete_rule(name,
         name (str): The name of the rule to delete. If the name ``all`` is used
             you must specify additional parameters.
 
-        localport (Optional[str]): The port of the rule. Must specify a
-            protocol.
+        localport (Optional[str]): The port of the rule. If protocol is not
+            specified, protocol will be set to ``tcp``
 
-        protocol (Optional[str]): The protocol of the rule.
+        protocol (Optional[str]): The protocol of the rule. Default is ``tcp``
+            when ``localport`` is specified
 
         dir (Optional[str]): The direction of the rule.
 
@@ -293,8 +294,9 @@ def delete_rule(name,
         # Delete a rule called 'allow80':
         salt '*' firewall.delete_rule allow80
     '''
-    cmd = ['netsh', 'advfirewall', 'firewall', 'delete', 'rule',
-           'name={0}'.format(name)]
+    cmd = ['netsh', 'advfirewall', 'firewall', 'delete', 'rule']
+    if name:
+        cmd.append('name={0}'.format(name))
     if protocol:
         cmd.append('protocol={0}'.format(protocol))
     if dir:
@@ -305,6 +307,8 @@ def delete_rule(name,
     if protocol is None \
             or ('icmpv4' not in protocol and 'icmpv6' not in protocol):
         if localport:
+            if not protocol:
+                cmd.append('protocol=tcp')
             cmd.append('localport={0}'.format(localport))
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
