@@ -373,7 +373,7 @@ def _file_lists(load, form):
                         # join UNC and non-UNC paths, just assume the original
                         # path.
                         log.trace(
-                            'roots: %s is a UNCH path, using %s instead',
+                            'roots: %s is a UNC path, using %s instead',
                             link_dest, abs_path
                         )
                         link_dest = abs_path
