@@ -74,8 +74,12 @@ def start(docker_url='unix://var/run/docker.sock',
         else:
             __salt__['event.send'](tag, msg)
 
-    client = docker.Client(base_url=docker_url,
-                           timeout=timeout)
+    try:
+        # docker-py 2.0 renamed this client attribute
+        client = docker.APIClient(base_url=docker_url, timeout=timeout)
+    except AttributeError:
+        client = docker.Client(base_url=docker_url, timeout=timeout)
+
     try:
         events = client.events()
         for event in events:

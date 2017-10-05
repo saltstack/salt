@@ -1990,7 +1990,7 @@ def request_instance(vm_=None, call=None):
             params[termination_key] = str(set_del_root_vol_on_destroy).lower()
 
             # Use default volume type if not specified
-            if ex_blockdevicemappings and 'Ebs.VolumeType' not in ex_blockdevicemappings[dev_index]:
+            if ex_blockdevicemappings and dev_index < len(ex_blockdevicemappings) and 'Ebs.VolumeType' not in ex_blockdevicemappings[dev_index]:
                 type_key = '{0}BlockDeviceMapping.{1}.Ebs.VolumeType'.format(spot_prefix, dev_index)
                 params[type_key] = rd_type
 
@@ -3539,16 +3539,15 @@ def list_nodes_min(location=None, call=None):
 
     for instance in instances:
         if isinstance(instance['instancesSet']['item'], list):
-            for item in instance['instancesSet']['item']:
-                state = item['instanceState']['name']
-                name = _extract_name_tag(item)
-                id = item['instanceId']
+            items = instance['instancesSet']['item']
         else:
-            item = instance['instancesSet']['item']
+            items = [instance['instancesSet']['item']]
+
+        for item in items:
             state = item['instanceState']['name']
             name = _extract_name_tag(item)
             id = item['instanceId']
-        ret[name] = {'state': state, 'id': id}
+            ret[name] = {'state': state, 'id': id}
     return ret
 
 
