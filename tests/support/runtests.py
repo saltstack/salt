@@ -59,7 +59,7 @@ import multiprocessing
 import tests.support.paths as paths
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import coverage  # pylint: disable=import-error
     HAS_COVERAGE = True

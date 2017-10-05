@@ -57,9 +57,9 @@ except ImportError as exc:
     raise exc
 
 from tests.integration import TestDaemon  # pylint: disable=W0403
-import salt.utils
+import salt.utils.platform
 
-if not salt.utils.is_windows():
+if not salt.utils.platform.is_windows():
     import resource
 
 # Import Salt Testing libs
@@ -435,8 +435,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             # Turn on expensive tests execution
             os.environ['EXPENSIVE_TESTS'] = 'True'
 
-        import salt.utils
-        if salt.utils.is_windows():
+        # This fails even with salt.utils.platform imported in the global
+        # scope, unless we import it again here.
+        import salt.utils.platform
+        if salt.utils.platform.is_windows():
             import salt.utils.win_functions
             current_user = salt.utils.win_functions.get_current_user()
             if current_user == 'SYSTEM':
@@ -448,7 +450,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         if self.options.coverage and any((
                     self.options.name,
-                    is_admin,
+                    not is_admin,
                     not self.options.run_destructive)) \
                 and self._check_enabled_suites(include_unit=True):
             self.error(
@@ -490,7 +492,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         return self.run_suite(full_path, display_name, suffix='test_*.py')
 
     def start_daemons_only(self):
-        if not salt.utils.is_windows():
+        if not salt.utils.platform.is_windows():
             self.set_filehandle_limits('integration')
         try:
             print_header(
@@ -566,7 +568,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         for integration tests or unit tests
         '''
         # Get current limits
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             import win32file
             prev_hard = win32file._getmaxstdio()
             prev_soft = 512
@@ -602,7 +604,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 '{0}, hard: {1}'.format(soft, hard)
             )
             try:
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     hard = 2048 if hard > 2048 else hard
                     win32file._setmaxstdio(hard)
                 else:
@@ -639,7 +641,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             # `unit.<whatever>` to --name.  We don't need the tests daemon
             # running
             return [True]
-        if not salt.utils.is_windows():
+        if not salt.utils.platform.is_windows():
             self.set_filehandle_limits('integration')
 
         try:
