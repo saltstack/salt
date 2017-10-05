@@ -1641,7 +1641,7 @@ in the current Jinja context.
 
 .. code-block:: jinja
 
-    Context is: {{ show_full_context() }}
+    Context is: {{ show_full_context()|yaml(False) }}
 
 .. jinja_ref:: logs
 
