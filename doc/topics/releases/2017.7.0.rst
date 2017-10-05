@@ -21,6 +21,9 @@ Salt will no longer support Python 2.6. We will provide python2.7 packages on ou
 
 .. _repo: https://repo.saltstack.com/
 
+As this will impact the installation of additional dependencies for salt modules please use pip packages if there is not a package available in a repository. You will need to install the python27-pip package to get access to the correct pip27 executable: ``yum install python27-pip``
+
+
 ============
 Known Issues
 ============

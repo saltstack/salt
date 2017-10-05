@@ -401,8 +401,9 @@ def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
         pass
 
     for node in nodes:
-        if not nodes[node]['resource_group'] == active_resource_group:
-            continue
+        if active_resource_group is not None:
+            if nodes[node]['resource_group'] != active_resource_group:
+                continue
         ret[node] = {'name': node}
         for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
             ret[node][prop] = nodes[node].get(prop)
