@@ -401,8 +401,9 @@ def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
         pass
 
     for node in nodes:
-        if not nodes[node]['resource_group'] == active_resource_group:
-            continue
+        if active_resource_group is not None:
+            if nodes[node]['resource_group'] != active_resource_group:
+                continue
         ret[node] = {'name': node}
         for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
             ret[node][prop] = nodes[node].get(prop)
@@ -659,11 +660,12 @@ def list_subnets(call=None, kwargs=None):  # pylint: disable=unused-argument
     for subnet in subnets:
         ret[subnet.name] = make_safe(subnet)
         ret[subnet.name]['ip_configurations'] = {}
-        for ip_ in subnet.ip_configurations:
-            comps = ip_.id.split('/')
-            name = comps[-1]
-            ret[subnet.name]['ip_configurations'][name] = make_safe(ip_)
-            ret[subnet.name]['ip_configurations'][name]['subnet'] = subnet.name
+        if subnet.ip_configurations:
+            for ip_ in subnet.ip_configurations:
+                comps = ip_.id.split('/')
+                name = comps[-1]
+                ret[subnet.name]['ip_configurations'][name] = make_safe(ip_)
+                ret[subnet.name]['ip_configurations'][name]['subnet'] = subnet.name
         ret[subnet.name]['resource_group'] = kwargs['resource_group']
     return ret
 

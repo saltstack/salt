@@ -265,6 +265,11 @@ def update():
             os.unlink(lk_fn)
         except Exception:
             pass
+        try:
+            hash_cachedir = os.path.join(__opts__['cachedir'], 'azurefs', 'hashes')
+            shutil.rmtree(hash_cachedir)
+        except Exception:
+            log.exception('Problem occurred trying to invalidate hash cach for azurefs')
 
 
 def file_hash(load, fnd):
