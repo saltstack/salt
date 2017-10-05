@@ -364,7 +364,7 @@ def statelist(states_dict, sid_excludes=frozenset(['include', 'exclude'])):
 
 REQUISITES = set([
     'require', 'require_in', 'watch', 'watch_in', 'use', 'use_in', 'listen', 'listen_in',
-    'onchanges', 'onchanges_in',  'onfail', 'onfail_in'
+    'onchanges', 'onchanges_in', 'onfail', 'onfail_in'
 ])
 
 
