@@ -186,10 +186,11 @@ def present(
             Indicates what volume type to use. Valid values are standard, io1, gp2.
             Default is standard.
 
-    delete_on_termination
-        Indicates whether to delete the volume on instance termination (true) or
-        not (false). Default is "None" which corresponds to not specified.
-        Amazon has different defaults for root and additional volumes.
+        delete_on_termination
+            Whether the volume should be explicitly marked for deletion when its instance is
+            terminated (True), or left around (False).  If not provided, or None is explicitly passed,
+            the default AWS behaviour is used, which is True for ROOT volumes of instances, and
+            False for all others.
 
         iops
             For Provisioned IOPS (SSD) volumes only. The number of I/O operations per
