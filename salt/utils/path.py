@@ -120,6 +120,11 @@ def readlink(path):
         # comes out in 8.3 form; convert it to LFN to make it look nicer
         target = win32file.GetLongPathName(target)
     except pywinerror as exc:
+        # If target is on a UNC share, the decoded target will be in the format
+        # "UNC\hostanme\sharename\additional\subdirs\under\share". So, in
+        # these cases, return the target path in the proper UNC path format.
+        if target.startswith('UNC\\'):
+            return re.sub(r'^UNC\\+', r'\\\\', target)
         # if file is not found (i.e. bad symlink), return it anyway like on *nix
         if exc.winerror == 2:
             return target
