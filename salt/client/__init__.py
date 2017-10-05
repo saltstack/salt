@@ -1582,7 +1582,7 @@ class LocalClient(object):
                                          timeout=timeout,
                                          tgt=tgt,
                                          tgt_type=tgt_type,
-                                         expect_minions=(verbose or show_timeout),
+                                         expect_minions=(kwargs.pop('expect_minions', False) or verbose or show_timeout),
                                          **kwargs
                                          ):
             log.debug('return event: %s', ret)
