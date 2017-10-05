@@ -124,7 +124,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
-                time.sleept(5)
+                time.sleep(5)
                 retries -= 1
                 continue
             log.error(e)
@@ -210,7 +210,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
-                time.sleept(5)
+                time.sleep(5)
                 retries -= 1
                 continue
             log.error(e)
@@ -293,7 +293,7 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
-                time.sleept(5)
+                time.sleep(5)
                 retries -= 1
                 continue
             log.error(e)
@@ -422,7 +422,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
-                time.sleept(5)
+                time.sleep(5)
                 retries -= 1
                 continue
             log.error(e)
@@ -488,7 +488,7 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
-                time.sleept(5)
+                time.sleep(5)
                 retries -= 1
                 continue
             log.error(e)
@@ -558,7 +558,7 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
-                time.sleept(5)
+                time.sleep(5)
                 retries -= 1
                 continue
             log.error(e)
@@ -582,7 +582,7 @@ def get_all_launch_configurations(region=None, key=None, keyid=None,
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
-                time.sleept(5)
+                time.sleep(5)
                 retries -= 1
                 continue
             log.error(e)
@@ -625,7 +625,7 @@ def describe_launch_configuration(name, region=None, key=None, keyid=None,
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
-                time.sleept(5)
+                time.sleep(5)
                 retries -= 1
                 continue
             log.error(e)
@@ -699,7 +699,7 @@ def create_launch_configuration(name, image_id, key_name=None,
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
-                time.sleept(5)
+                time.sleep(5)
                 retries -= 1
                 continue
             log.error(e)
@@ -727,7 +727,7 @@ def delete_launch_configuration(name, region=None, key=None, keyid=None,
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
-                time.sleept(5)
+                time.sleep(5)
                 retries -= 1
                 continue
             log.error(e)
@@ -784,7 +784,7 @@ def get_all_groups(region=None, key=None, keyid=None, profile=None):
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
-                time.sleept(5)
+                time.sleep(5)
                 retries -= 1
                 continue
             log.error(e)
@@ -828,7 +828,7 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy",
         except boto.exception.BotoServerError as e:
             if retries and e.code == 'Throttling':
                 log.debug('Throttled by AWS API, retrying in 5 seconds...')
-                time.sleept(5)
+                time.sleep(5)
                 retries -= 1
                 continue
             log.error(e)
