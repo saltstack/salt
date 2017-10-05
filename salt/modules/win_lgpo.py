@@ -44,6 +44,8 @@ from __future__ import absolute_import
 import os
 import logging
 import re
+import locale
+import ctypes
 
 # Import salt libs
 import salt.utils
@@ -117,6 +119,15 @@ try:
     ADMX_DISPLAYNAME_SEARCH_XPATH = etree.XPath('//*[local-name() = "policy" and @*[local-name() = "displayName"] = $display_name and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class) ]')
     PRESENTATION_ANCESTOR_XPATH = etree.XPath('ancestor::*[local-name() = "presentation"]')
     TEXT_ELEMENT_XPATH = etree.XPath('.//*[local-name() = "text"]')
+    # Get the System Install Language
+    # https://msdn.microsoft.com/en-us/library/dd318123(VS.85).aspx
+    # local.windows_locale is a dict
+    # GetSystemDefaultUILanguage() returns a 4 digit language code that
+    # corresponds to an entry in the dict
+    # Not available in win32api, so we have to use ctypes
+    # Default to `en-US` (1033)
+    windll = ctypes.windll.kernel32
+    INSTALL_LANGUAGE = locale.windows_locale.get(windll.GetSystemDefaultUILanguage(), 1033)
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
@@ -2709,7 +2720,8 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
     helper function to process all ADMX files in the specified policy_def_path
     and build a single XML doc that we can search/use for ADMX policy processing
     '''
-    display_language_fallback = 'en-US'
+    # Fallback to the System Install Language
+    display_language_fallback = INSTALL_LANGUAGE
     t_policy_definitions = lxml.etree.Element('policyDefinitions')
     t_policy_definitions.append(lxml.etree.Element('categories'))
     t_policy_definitions.append(lxml.etree.Element('policies'))
