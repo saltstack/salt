@@ -13,6 +13,7 @@ import re
 import salt.utils
 import salt.utils.path
 import salt.utils.files
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -185,12 +186,7 @@ def set_file(path, saltenv='base', **kwargs):
         salt '*' debconf.set_file salt://pathto/pkg.selections
     '''
     if '__env__' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'__env__\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('__env__')
 
     path = __salt__['cp.cache_file'](path, saltenv)

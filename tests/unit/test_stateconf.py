@@ -102,8 +102,9 @@ test:
     - name: echo sls_dir={{sls_dir}}
     - cwd: /
 ''', sls='path.to.sls')
-        self.assertEqual(result['test']['cmd.run'][0]['name'],
-                         'echo sls_dir=path/to')
+        self.assertEqual(
+            result['test']['cmd.run'][0]['name'],
+            'echo sls_dir=path{0}to'.format(os.sep))
 
     def test_states_declared_with_shorthand_no_args(self):
         result = self._render_sls('''

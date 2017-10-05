@@ -16,6 +16,7 @@ import os
 import json
 import socket
 import sys
+import glob
 import re
 import platform
 import logging
@@ -65,6 +66,7 @@ __salt__ = {
     'cmd.run_all': salt.modules.cmdmod._run_all_quiet,
     'smbios.records': salt.modules.smbios.records,
     'smbios.get': salt.modules.smbios.get,
+    'cmd.run_ps': salt.modules.cmdmod.powershell,
 }
 log = logging.getLogger(__name__)
 
@@ -543,7 +545,7 @@ def _virtual(osdata):
             command = 'system_profiler'
             args = ['SPDisplaysDataType']
         elif osdata['kernel'] == 'SunOS':
-            virtinfo = salt.utils.which('virtinfo')
+            virtinfo = salt.utils.path.which('virtinfo')
             if virtinfo:
                 try:
                     ret = __salt__['cmd.run_all']('{0} -a'.format(virtinfo))
@@ -805,6 +807,8 @@ def _virtual(osdata):
                         grains['virtual_subtype'] = 'ovirt'
                     elif 'Google' in output:
                         grains['virtual'] = 'gce'
+                    elif 'BHYVE' in output:
+                        grains['virtual'] = 'bhyve'
             except IOError:
                 pass
     elif osdata['kernel'] == 'FreeBSD':
@@ -1203,6 +1207,10 @@ _OS_FAMILY_MAP = {
     'Raspbian': 'Debian',
     'Devuan': 'Debian',
     'antiX': 'Debian',
+    'Kali': 'Debian',
+    'neon': 'Debian',
+    'Cumulus': 'Debian',
+    'Deepin': 'Debian',
     'NILinuxRT': 'NILinuxRT',
     'NILinuxRT-XFCE': 'NILinuxRT',
     'KDE neon': 'Debian',
@@ -2423,4 +2431,167 @@ def get_master():
     #   master
     return {'master': __opts__.get('master', '')}
 
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
+
+def default_gateway():
+    '''
+    Populates grains which describe whether a server has a default gateway
+    configured or not. Uses `ip -4 route show` and `ip -6 route show` and greps
+    for a `default` at the beginning of any line. Assuming the standard
+    `default via <ip>` format for default gateways, it will also parse out the
+    ip address of the default gateway, and put it in ip4_gw or ip6_gw.
+
+    If the `ip` command is unavailable, no grains will be populated.
+
+    Currently does not support multiple default gateways. The grains will be
+    set to the first default gateway found.
+
+    List of grains:
+
+        ip4_gw: True  # ip/True/False if default ipv4 gateway
+        ip6_gw: True  # ip/True/False if default ipv6 gateway
+        ip_gw: True   # True if either of the above is True, False otherwise
+    '''
+    grains = {}
+    if not salt.utils.path.which('ip'):
+        return {}
+    grains['ip_gw'] = False
+    grains['ip4_gw'] = False
+    grains['ip6_gw'] = False
+    if __salt__['cmd.run']('ip -4 route show | grep "^default"', python_shell=True):
+        grains['ip_gw'] = True
+        grains['ip4_gw'] = True
+        try:
+            gateway_ip = __salt__['cmd.run']('ip -4 route show | grep "^default via"', python_shell=True).split(' ')[2].strip()
+            grains['ip4_gw'] = gateway_ip if gateway_ip else True
+        except Exception as exc:
+            pass
+    if __salt__['cmd.run']('ip -6 route show | grep "^default"', python_shell=True):
+        grains['ip_gw'] = True
+        grains['ip6_gw'] = True
+        try:
+            gateway_ip = __salt__['cmd.run']('ip -6 route show | grep "^default via"', python_shell=True).split(' ')[2].strip()
+            grains['ip6_gw'] = gateway_ip if gateway_ip else True
+        except Exception as exc:
+            pass
+    return grains
+
+
+def fc_wwn():
+    '''
+    Return list of fiber channel HBA WWNs
+    '''
+    grains = {}
+    grains['fc_wwn'] = False
+    if salt.utils.platform.is_linux():
+        grains['fc_wwn'] = _linux_wwns()
+    elif salt.utils.platform.is_windows():
+        grains['fc_wwn'] = _windows_wwns()
+    return grains
+
+
+def iscsi_iqn():
+    '''
+    Return iSCSI IQN
+    '''
+    grains = {}
+    grains['iscsi_iqn'] = False
+    if salt.utils.platform.is_linux():
+        grains['iscsi_iqn'] = _linux_iqn()
+    elif salt.utils.platform.is_windows():
+        grains['iscsi_iqn'] = _windows_iqn()
+    elif salt.utils.platform.is_aix():
+        grains['iscsi_iqn'] = _aix_iqn()
+    return grains
+
+
+def _linux_iqn():
+    '''
+    Return iSCSI IQN from a Linux host.
+    '''
+    ret = []
+
+    initiator = '/etc/iscsi/initiatorname.iscsi'
+
+    if os.path.isfile(initiator):
+        with salt.utils.files.fopen(initiator, 'r') as _iscsi:
+            for line in _iscsi:
+                if line.find('InitiatorName') != -1:
+                    iqn = line.split('=')
+                    final_iqn = iqn[1].rstrip()
+                    ret.extend([final_iqn])
+    return ret
+
+
+def _aix_iqn():
+    '''
+    Return iSCSI IQN from an AIX host.
+    '''
+    ret = []
+
+    aixcmd = 'lsattr -E -l iscsi0 | grep initiator_name'
+
+    aixret = __salt__['cmd.run'](aixcmd)
+    if aixret[0].isalpha():
+        iqn = aixret.split()
+        final_iqn = iqn[1].rstrip()
+        ret.extend([final_iqn])
+    return ret
+
+
+def _linux_wwns():
+    '''
+    Return Fibre Channel port WWNs from a Linux host.
+    '''
+    ret = []
+
+    for fcfile in glob.glob('/sys/class/fc_host/*/port_name'):
+        with salt.utils.files.fopen(fcfile, 'r') as _wwn:
+            for line in _wwn:
+                line = line.rstrip()
+                ret.extend([line[2:]])
+    return ret
+
+
+def _windows_iqn():
+    '''
+    Return iSCSI IQN from a Windows host.
+    '''
+    ret = []
+
+    wmic = salt.utils.path.which('wmic')
+
+    if not wmic:
+        return ret
+
+    namespace = r'\\root\WMI'
+    mspath = 'MSiSCSIInitiator_MethodClass'
+    get = 'iSCSINodeName'
+
+    cmdret = __salt__['cmd.run_all'](
+        '{0} /namespace:{1} path {2} get {3} /format:table'.format(
+            wmic, namespace, mspath, get))
+
+    for line in cmdret['stdout'].splitlines():
+        if line[0].isalpha():
+            continue
+        line = line.rstrip()
+        ret.extend([line])
+
+    return ret
+
+
+def _windows_wwns():
+    '''
+    Return Fibre Channel port WWNs from a Windows host.
+    '''
+    ps_cmd = r'Get-WmiObject -class MSFC_FibrePortHBAAttributes -namespace "root\WMI" | Select -Expandproperty Attributes | %{($_.PortWWN | % {"{0:x2}" -f $_}) -join ""}'
+
+    ret = []
+
+    cmdret = __salt__['cmd.run_ps'](ps_cmd)
+
+    for line in cmdret:
+        line = line.rstrip()
+        ret.append(line)
+
+    return ret

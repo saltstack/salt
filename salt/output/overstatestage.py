@@ -11,7 +11,7 @@ and should not be called directly.
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.utils
+import salt.utils.color
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -27,7 +27,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Format the data for printing stage information from the overstate system
     '''
-    colors = salt.utils.get_colors(
+    colors = salt.utils.color.get_colors(
             __opts__.get('color'),
             __opts__.get('color_theme'))
     ostr = ''

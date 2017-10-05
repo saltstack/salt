@@ -336,20 +336,22 @@ def ext_pillar(minion_id,
                 if (os.path.isdir(nodegroups_dir) and
                         nodegroup in master_ngroups):
                     ckminions = salt.utils.minions.CkMinions(__opts__)
-                    match = ckminions.check_minions(
+                    _res = ckminions.check_minions(
                         master_ngroups[nodegroup],
                         'compound')
+                    match = _res['minions']
                     if minion_id in match:
                         ngroup_dir = os.path.join(
                             nodegroups_dir, str(nodegroup))
-                        ngroup_pillar.update(
+                        ngroup_pillar = salt.utils.dictupdate.merge(ngroup_pillar,
                             _construct_pillar(ngroup_dir,
                                               follow_dir_links,
                                               keep_newline,
                                               render_default,
                                               renderer_blacklist,
                                               renderer_whitelist,
-                                              template)
+                                              template),
+                            strategy='recurse'
                         )
         else:
             if debug is True:

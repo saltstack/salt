@@ -21,14 +21,23 @@ import salt.utils.event
 import salt.utils.kinds as kinds
 from salt import transport
 from salt import syspaths
-from raet import raeting, nacling
-from raet.lane.stacking import LaneStack
-from raet.lane.yarding import RemoteYard
+
+try:
+    from raet import raeting, nacling
+    from raet.lane.stacking import LaneStack
+    from raet.lane.yarding import RemoteYard
+    HAS_RAET = True
+except ImportError:
+    HAS_RAET = False
 
 # Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    return HAS_RAET
 
 
 class RAETEvent(object):

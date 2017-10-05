@@ -539,6 +539,7 @@ def install(name=None,
     cmd.append('pacman')
 
     errors = []
+    targets = []
     if pkg_type == 'file':
         cmd.extend(['-U', '--noprogressbar', '--noconfirm'])
         cmd.extend(pkg_params)
@@ -549,7 +550,6 @@ def install(name=None,
         if sysupgrade:
             cmd.append('-u')
         cmd.extend(['--noprogressbar', '--noconfirm', '--needed'])
-        targets = []
         wildcards = []
         for param, version_num in six.iteritems(pkg_params):
             if version_num is None:

@@ -15,7 +15,7 @@ the minion config:
 .. code-block:: yaml
 
     beacons:
-      status: {}
+      status: []
 
 By default, all of the information from the following execution module
 functions will be returned:
@@ -103,12 +103,12 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'status'
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the the config is a dict
     '''
-    if not isinstance(config, dict):
-        return False, ('Configuration for status beacon must be a dictionary.')
+    if not isinstance(config, list):
+        return False, ('Configuration for status beacon must be a list.')
     return True, 'Valid beacon configuration'
 
 

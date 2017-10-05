@@ -183,8 +183,8 @@ The directory to store the pki authentication keys.
 
 Directory for custom modules. This directory can contain subdirectories for
 each of Salt's module types such as ``runners``, ``output``, ``wheel``,
-``modules``, ``states``, ``returners``, ``engines``, etc. This path is appended to
-:conf_master:`root_dir`.
+``modules``, ``states``, ``returners``, ``engines``, ``utils``, etc.
+This path is appended to :conf_master:`root_dir`.
 
 .. code-block:: yaml
 
@@ -234,6 +234,7 @@ Valid options:
   - clouds
   - tops
   - roster
+  - tokens
 
 .. conf_master:: module_dirs
 
@@ -1730,6 +1731,22 @@ Set additional directories to search for runner modules.
     runner_dirs:
       - /var/lib/salt/runners
 
+.. conf_master:: utils_dirs
+
+``utils_dirs``
+---------------
+
+.. versionadded:: Oxygen
+
+Default: ``[]``
+
+Set additional directories to search for util modules.
+
+.. code-block:: yaml
+
+    utils_dirs:
+      - /var/lib/salt/utils
+
 .. conf_master:: cython_enable
 
 ``cython_enable``
@@ -1994,11 +2011,14 @@ output for states that failed or states that have changes.
 
 Default: ``full``
 
-The state_output setting changes if the output is the full multi line
-output for each changed state if set to 'full', but if set to 'terse'
-the output will be shortened to a single line.  If set to 'mixed', the output
-will be terse unless a state failed, in which case that output will be full.
-If set to 'changes', the output will be full unless the state didn't change.
+The state_output setting controls which results will be output full multi line:
+
+* ``full``, ``terse`` - each state will be full/terse
+* ``mixed`` - only states with errors will be full
+* ``changes`` - states with changes and errors will be full
+
+``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
+when set, the state ID will be used as name in the output.
 
 .. code-block:: yaml
 
@@ -3770,7 +3790,7 @@ they were created by a different master.
 Default: ``True``
 
 Normally, when processing :ref:`git_pillar remotes
-<git-pillar-2015-8-0-and-later>`, if more than one repo under the same ``git``
+<git-pillar-configuration>`, if more than one repo under the same ``git``
 section in the ``ext_pillar`` configuration refers to the same pillar
 environment, then each repo in a given environment will have access to the
 other repos' files to be referenced in their top files. However, it may be
@@ -4158,7 +4178,9 @@ information.
 
 .. code-block:: yaml
 
-    reactor: []
+    reactor:
+      - 'salt/minion/*/start':
+        - salt://reactor/startup_tasks.sls
 
 .. conf_master:: reactor_refresh_interval
 

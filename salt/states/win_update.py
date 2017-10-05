@@ -82,8 +82,8 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import Salt libs
-import salt.utils
 import salt.utils.platform
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -466,7 +466,7 @@ def installed(name, categories=None, skips=None, retries=10):
     deprecation_msg = 'The \'win_update\' module is deprecated, and will be ' \
                       'removed in Salt Fluorine. Please use the \'win_wua\' ' \
                       'module instead.'
-    salt.utils.warn_until('Fluorine', deprecation_msg)
+    salt.utils.versions.warn_until('Fluorine', deprecation_msg)
     ret.setdefault('warnings', []).append(deprecation_msg)
     if not categories:
         categories = [name]
@@ -550,7 +550,7 @@ def downloaded(name, categories=None, skips=None, retries=10):
     deprecation_msg = 'The \'win_update\' module is deprecated, and will be ' \
                       'removed in Salt Fluorine. Please use the \'win_wua\' ' \
                       'module instead.'
-    salt.utils.warn_until('Fluorine', deprecation_msg)
+    salt.utils.versions.warn_until('Fluorine', deprecation_msg)
     ret.setdefault('warnings', []).append(deprecation_msg)
 
     if not categories:

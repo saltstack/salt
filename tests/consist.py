@@ -9,13 +9,13 @@ import pprint
 import optparse
 
 # Import Salt libs
-import salt.utils
+import salt.utils.color
 
 # Import 3rd-party libs
 import yaml
 from salt.ext import six
 
-colors = salt.utils.get_colors()
+colors = salt.utils.color.get_colors()
 
 
 def parse():

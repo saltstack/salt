@@ -21,6 +21,7 @@ import multiprocessing
 from random import randint, shuffle
 from stat import S_IMODE
 import salt.serializers.msgpack
+from binascii import crc32
 
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -102,6 +103,7 @@ import salt.defaults.exitcodes
 import salt.cli.daemons
 import salt.log.setup
 
+import salt.utils.dictupdate
 from salt.config import DEFAULT_MINION_OPTS
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler
@@ -443,13 +445,30 @@ class MinionBase(object):
             if opts[u'master_type'] == u'func':
                 eval_master_func(opts)
 
-            # if failover is set, master has to be of type list
-            elif opts[u'master_type'] == u'failover':
+            # if failover or distributed is set, master has to be of type list
+            elif opts[u'master_type'] in (u'failover', u'distributed'):
                 if isinstance(opts[u'master'], list):
                     log.info(
                         u'Got list of available master addresses: %s',
                         opts[u'master']
                     )
+
+                    if opts[u'master_type'] == u'distributed':
+                        master_len = len(opts[u'master'])
+                        if master_len > 1:
+                            secondary_masters = opts[u'master'][1:]
+                            master_idx = crc32(opts[u'id']) % master_len
+                            try:
+                                preferred_masters = opts[u'master']
+                                preferred_masters[0] = opts[u'master'][master_idx]
+                                preferred_masters[1:] = [m for m in opts[u'master'] if m != preferred_masters[0]]
+                                opts[u'master'] = preferred_masters
+                                log.info(u'Distributed to the master at \'{0}\'.'.format(opts[u'master'][0]))
+                            except (KeyError, AttributeError, TypeError):
+                                log.warning(u'Failed to distribute to a specific master.')
+                        else:
+                            log.warning(u'master_type = distributed needs more than 1 master.')
+
                     if opts[u'master_shuffle']:
                         if opts[u'master_failback']:
                             secondary_masters = opts[u'master'][1:]
@@ -497,7 +516,7 @@ class MinionBase(object):
                     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
                 # If failover is set, minion have to failover on DNS errors instead of retry DNS resolve.
                 # See issue 21082 for details
-                if opts[u'retry_dns']:
+                if opts[u'retry_dns'] and opts[u'master_type'] == u'failover':
                     msg = (u'\'master_type\' set to \'failover\' but \'retry_dns\' is not 0. '
                            u'Setting \'retry_dns\' to 0 to failover to the next master on DNS errors.')
                     log.critical(msg)
@@ -845,7 +864,7 @@ class MinionManager(MinionBase):
         Spawn all the coroutines which will sign in to masters
         '''
         masters = self.opts[u'master']
-        if self.opts[u'master_type'] == u'failover' or not isinstance(self.opts[u'master'], list):
+        if (self.opts[u'master_type'] in (u'failover', u'distributed')) or not isinstance(self.opts[u'master'], list):
             masters = [masters]
 
         for master in masters:
@@ -951,7 +970,7 @@ class Minion(MinionBase):
         # Flag meaning minion has finished initialization including first connect to the master.
         # True means the Minion is fully functional and ready to handle events.
         self.ready = False
-        self.jid_queue = jid_queue
+        self.jid_queue = jid_queue or []
 
         if io_loop is None:
             if HAS_ZMQ:
@@ -1275,7 +1294,7 @@ class Minion(MinionBase):
         ret = yield channel.send(load, timeout=timeout)
         raise tornado.gen.Return(ret)
 
-    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True):
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True, timeout_handler=None):
         '''
         Fire an event on the master, or drop message if unable to send.
         '''
@@ -1294,10 +1313,6 @@ class Minion(MinionBase):
         else:
             return
 
-        def timeout_handler(*_):
-            log.info(u'fire_master failed: master could not be contacted. Request timed out.')
-            return True
-
         if sync:
             try:
                 self._send_req_sync(load, timeout)
@@ -1308,10 +1323,17 @@ class Minion(MinionBase):
                 log.info(u'fire_master failed: %s', traceback.format_exc())
                 return False
         else:
+            if timeout_handler is None:
+                def handle_timeout(*_):
+                    log.info(u'fire_master failed: master could not be contacted. Request timed out.')
+                    return True
+                timeout_handler = handle_timeout
+
             with tornado.stack_context.ExceptionStackContext(timeout_handler):
                 self._send_req_async(load, timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
         return True
 
+    @tornado.gen.coroutine
     def _handle_decoded_payload(self, data):
         '''
         Override this method if you wish to handle the decoded data
@@ -1344,6 +1366,15 @@ class Minion(MinionBase):
                 self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
                 self.schedule.functions = self.functions
                 self.schedule.returners = self.returners
+
+        process_count_max = self.opts.get('process_count_max')
+        if process_count_max > 0:
+            process_count = len(salt.utils.minion.running(self.opts))
+            while process_count >= process_count_max:
+                log.warn("Maximum number of processes reached while executing jid {0}, waiting...".format(data['jid']))
+                yield tornado.gen.sleep(10)
+                process_count = len(salt.utils.minion.running(self.opts))
+
         # We stash an instance references to allow for the socket
         # communication in Windows. You can't pickle functions, and thus
         # python needs to be able to reconstruct the reference on the other
@@ -1453,13 +1484,21 @@ class Minion(MinionBase):
         function_name = data[u'fun']
         if function_name in minion_instance.functions:
             try:
+                minion_blackout_violation = False
                 if minion_instance.connected and minion_instance.opts[u'pillar'].get(u'minion_blackout', False):
-                    # this minion is blacked out. Only allow saltutil.refresh_pillar
-                    if function_name != u'saltutil.refresh_pillar' and \
-                            function_name not in minion_instance.opts[u'pillar'].get(u'minion_blackout_whitelist', []):
-                        raise SaltInvocationError(u'Minion in blackout mode. Set \'minion_blackout\' '
-                                                 u'to False in pillar to resume operations. Only '
-                                                 u'saltutil.refresh_pillar allowed in blackout mode.')
+                    whitelist = minion_instance.opts[u'pillar'].get(u'minion_blackout_whitelist', [])
+                    # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
+                    if function_name != u'saltutil.refresh_pillar' and function_name not in whitelist:
+                        minion_blackout_violation = True
+                elif minion_instance.opts[u'grains'].get(u'minion_blackout', False):
+                    whitelist = minion_instance.opts[u'grains'].get(u'minion_blackout_whitelist', [])
+                    if function_name != u'saltutil.refresh_pillar' and function_name not in whitelist:
+                        minion_blackout_violation = True
+                if minion_blackout_violation:
+                    raise SaltInvocationError(u'Minion in blackout mode. Set \'minion_blackout\' '
+                                             u'to False in pillar or grains to resume operations. Only '
+                                             u'saltutil.refresh_pillar allowed in blackout mode.')
+
                 func = minion_instance.functions[function_name]
                 args, kwargs = load_args_and_kwargs(
                     func,
@@ -1614,37 +1653,68 @@ class Minion(MinionBase):
         minion side execution.
         '''
         salt.utils.appendproctitle(u'{0}._thread_multi_return {1}'.format(cls.__name__, data[u'jid']))
-        ret = {
-            u'return': {},
-            u'retcode': {},
-            u'success': {}
-        }
-        for ind in range(0, len(data[u'fun'])):
-            ret[u'success'][data[u'fun'][ind]] = False
+        multifunc_ordered = opts.get(u'multifunc_ordered', False)
+        num_funcs = len(data[u'fun'])
+        if multifunc_ordered:
+            ret = {
+                u'return': [None] * num_funcs,
+                u'retcode': [None] * num_funcs,
+                u'success': [False] * num_funcs
+            }
+        else:
+            ret = {
+                u'return': {},
+                u'retcode': {},
+                u'success': {}
+            }
+
+        for ind in range(0, num_funcs):
+            if not multifunc_ordered:
+                ret[u'success'][data[u'fun'][ind]] = False
             try:
+                minion_blackout_violation = False
                 if minion_instance.connected and minion_instance.opts[u'pillar'].get(u'minion_blackout', False):
-                    # this minion is blacked out. Only allow saltutil.refresh_pillar
-                    if data[u'fun'][ind] != u'saltutil.refresh_pillar' and \
-                            data[u'fun'][ind] not in minion_instance.opts[u'pillar'].get(u'minion_blackout_whitelist', []):
-                        raise SaltInvocationError(u'Minion in blackout mode. Set \'minion_blackout\' '
-                                                 u'to False in pillar to resume operations. Only '
-                                                 u'saltutil.refresh_pillar allowed in blackout mode.')
+                    whitelist = minion_instance.opts[u'pillar'].get(u'minion_blackout_whitelist', [])
+                    # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
+                    if data[u'fun'][ind] != u'saltutil.refresh_pillar' and data[u'fun'][ind] not in whitelist:
+                        minion_blackout_violation = True
+                elif minion_instance.opts[u'grains'].get(u'minion_blackout', False):
+                    whitelist = minion_instance.opts[u'grains'].get(u'minion_blackout_whitelist', [])
+                    if data[u'fun'][ind] != u'saltutil.refresh_pillar' and data[u'fun'][ind] not in whitelist:
+                        minion_blackout_violation = True
+                if minion_blackout_violation:
+                    raise SaltInvocationError(u'Minion in blackout mode. Set \'minion_blackout\' '
+                                             u'to False in pillar or grains to resume operations. Only '
+                                             u'saltutil.refresh_pillar allowed in blackout mode.')
+
                 func = minion_instance.functions[data[u'fun'][ind]]
+
                 args, kwargs = load_args_and_kwargs(
                     func,
                     data[u'arg'][ind],
                     data)
                 minion_instance.functions.pack[u'__context__'][u'retcode'] = 0
-                ret[u'return'][data[u'fun'][ind]] = func(*args, **kwargs)
-                ret[u'retcode'][data[u'fun'][ind]] = minion_instance.functions.pack[u'__context__'].get(
-                    u'retcode',
-                    0
-                )
-                ret[u'success'][data[u'fun'][ind]] = True
+                if multifunc_ordered:
+                    ret[u'return'][ind] = func(*args, **kwargs)
+                    ret[u'retcode'][ind] = minion_instance.functions.pack[u'__context__'].get(
+                        u'retcode',
+                        0
+                    )
+                    ret[u'success'][ind] = True
+                else:
+                    ret[u'return'][data[u'fun'][ind]] = func(*args, **kwargs)
+                    ret[u'retcode'][data[u'fun'][ind]] = minion_instance.functions.pack[u'__context__'].get(
+                        u'retcode',
+                        0
+                    )
+                    ret[u'success'][data[u'fun'][ind]] = True
             except Exception as exc:
                 trb = traceback.format_exc()
                 log.warning(u'The minion function caused an exception: %s', exc)
-                ret[u'return'][data[u'fun'][ind]] = trb
+                if multifunc_ordered:
+                    ret[u'return'][ind] = trb
+                else:
+                    ret[u'return'][data[u'fun'][ind]] = trb
             ret[u'jid'] = data[u'jid']
             ret[u'fun'] = data[u'fun']
             ret[u'fun_args'] = data[u'arg']
@@ -1911,6 +1981,10 @@ class Minion(MinionBase):
             self.beacons.disable_beacon(name)
         elif func == u'list':
             self.beacons.list_beacons()
+        elif func == u'list_available':
+            self.beacons.list_available_beacons()
+        elif func == u'validate_beacon':
+            self.beacons.validate_beacon(name, beacon_data)
 
     def environ_setenv(self, tag, data):
         '''
@@ -2010,8 +2084,9 @@ class Minion(MinionBase):
         elif tag.startswith(u'_minion_mine'):
             self._mine_send(tag, data)
         elif tag.startswith(u'fire_master'):
-            log.debug(u'Forwarding master event tag=%s', data[u'tag'])
-            self._fire_master(data[u'data'], data[u'tag'], data[u'events'], data[u'pretag'])
+            if self.connected:
+                log.debug(u'Forwarding master event tag=%s', data[u'tag'])
+                self._fire_master(data[u'data'], data[u'tag'], data[u'events'], data[u'pretag'])
         elif tag.startswith(master_event(type=u'disconnected')) or tag.startswith(master_event(type=u'failback')):
             # if the master disconnect event is for a different master, raise an exception
             if tag.startswith(master_event(type=u'disconnected')) and data[u'master'] != self.opts[u'master']:
@@ -2232,13 +2307,15 @@ class Minion(MinionBase):
         if ping_interval > 0 and self.connected:
             def ping_master():
                 try:
-                    if not self._fire_master(u'ping', u'minion_ping'):
+                    def ping_timeout_handler(*_):
                         if not self.opts.get(u'auth_safemode', True):
                             log.error(u'** Master Ping failed. Attempting to restart minion**')
                             delay = self.opts.get(u'random_reauth_delay', 5)
                             log.info(u'delaying random_reauth_delay %ss', delay)
                             # regular sys.exit raises an exception -- which isn't sufficient in a thread
                             os._exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+
+                    self._fire_master('ping', 'minion_ping', sync=False, timeout_handler=ping_timeout_handler)
                 except Exception:
                     log.warning(u'Attempt to ping master failed.', exc_on_loglevel=logging.DEBUG)
             self.periodic_callbacks[u'ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
@@ -2253,7 +2330,7 @@ class Minion(MinionBase):
             except Exception:
                 log.critical(u'The beacon errored: ', exc_info=True)
             if beacons and self.connected:
-                self._fire_master(events=beacons)
+                self._fire_master(events=beacons, sync=False)
 
         self.periodic_callbacks[u'beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
 
@@ -2629,6 +2706,8 @@ class SyndicManager(MinionBase):
         '''
         if kwargs is None:
             kwargs = {}
+        successful = False
+        # Call for each master
         for master, syndic_future in self.iter_master_options(master_id):
             if not syndic_future.done() or syndic_future.exception():
                 log.error(
@@ -2639,15 +2718,15 @@ class SyndicManager(MinionBase):
 
             try:
                 getattr(syndic_future.result(), func)(*args, **kwargs)
-                return
+                successful = True
             except SaltClientError:
                 log.error(
                     u'Unable to call %s on %s, trying another...',
                     func, master
                 )
                 self._mark_master_dead(master)
-                continue
-        log.critical(u'Unable to call %s on any masters!', func)
+        if not successful:
+            log.critical(u'Unable to call %s on any masters!', func)
 
     def _return_pub_syndic(self, values, master_id=None):
         '''
@@ -3168,6 +3247,26 @@ class ProxyMinion(Minion):
 
         if u'proxy' not in self.opts:
             self.opts[u'proxy'] = self.opts[u'pillar'][u'proxy']
+
+        if self.opts.get(u'proxy_merge_pillar_in_opts'):
+            # Override proxy opts with pillar data when the user required.
+            self.opts = salt.utils.dictupdate.merge(self.opts,
+                                                    self.opts[u'pillar'],
+                                                    strategy=self.opts.get(u'proxy_merge_pillar_in_opts_strategy'),
+                                                    merge_lists=self.opts.get(u'proxy_deep_merge_pillar_in_opts', False))
+        elif self.opts.get(u'proxy_mines_pillar'):
+            # Even when not required, some details such as mine configuration
+            # should be merged anyway whenever possible.
+            if u'mine_interval' in self.opts[u'pillar']:
+                self.opts[u'mine_interval'] = self.opts[u'pillar'][u'mine_interval']
+            if u'mine_functions' in self.opts[u'pillar']:
+                general_proxy_mines = self.opts.get(u'mine_functions', [])
+                specific_proxy_mines = self.opts[u'pillar'][u'mine_functions']
+                try:
+                    self.opts[u'mine_functions'] = general_proxy_mines + specific_proxy_mines
+                except TypeError as terr:
+                    log.error(u'Unable to merge mine functions from the pillar in the opts, for proxy {}'.format(
+                        self.opts[u'id']))
 
         fq_proxyname = self.opts[u'proxy'][u'proxytype']
 

@@ -44,6 +44,7 @@ execution modules
     boto_apigateway
     boto_asg
     boto_cfn
+    boto_cloudfront
     boto_cloudtrail
     boto_cloudwatch
     boto_cloudwatch_event
@@ -97,6 +98,7 @@ execution modules
     cytest
     daemontools
     data
+    datadog_api
     ddns
     deb_apache
     deb_postgres
@@ -325,6 +327,7 @@ execution modules
     ps
     publish
     puppet
+    purefa
     pushbullet
     pushover_notify
     pw_group
@@ -416,6 +419,7 @@ execution modules
     test
     testinframod
     test_virtual
+    textfsm_mod
     timezone
     tls
     tomcat

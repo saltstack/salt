@@ -20,6 +20,7 @@ import logging
 import salt.utils
 import salt.utils.path
 import salt.utils.pkg
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext import six
 from salt.ext.six.moves import zip
@@ -128,7 +129,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             name_and_versions = line.split(' ')
             name = name_and_versions[0]
             installed_versions = name_and_versions[1:]
-            key_func = functools.cmp_to_key(salt.utils.version_cmp)
+            key_func = functools.cmp_to_key(salt.utils.versions.version_cmp)
             newest_version = sorted(installed_versions, key=key_func).pop()
         except ValueError:
             continue

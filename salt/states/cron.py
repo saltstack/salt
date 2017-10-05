@@ -116,7 +116,7 @@ entry on the minion already contains a numeric value, then using the ``random``
 keyword will not modify it.
 
 Added the opportunity to set a job with a special keyword like '@reboot' or
-'@hourly'.
+'@hourly'. Quotes must be used, otherwise PyYAML will strip the '@' sign.
 
 .. code-block:: yaml
 
@@ -302,7 +302,8 @@ def present(name,
         edits. This defaults to the state id
 
     special
-        A special keyword to specify periodicity (eg. @reboot, @hourly...)
+        A special keyword to specify periodicity (eg. @reboot, @hourly...).
+        Quotes must be used, otherwise PyYAML will strip the '@' sign.
 
         .. versionadded:: 2016.3.0
     '''
@@ -388,7 +389,8 @@ def absent(name,
         edits. This defaults to the state id
 
     special
-        The special keyword used in the job (eg. @reboot, @hourly...)
+        The special keyword used in the job (eg. @reboot, @hourly...).
+        Quotes must be used, otherwise PyYAML will strip the '@' sign.
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
     ###       cannot be removed from the function definition, otherwise the use

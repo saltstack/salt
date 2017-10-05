@@ -6,6 +6,7 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import logging
 import pwd
 import grp
 import random
@@ -20,6 +21,8 @@ from salt.utils.pycrypto import gen_hash
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
+log = logging.getLogger(__name__)
 
 
 def gen_password():
@@ -99,6 +102,7 @@ class AuthTest(ShellCase):
         cmd = ('-a pam "*" test.ping '
                '--username {0} --password {1}'.format(self.userA, password))
         resp = self.run_salt(cmd)
+        log.debug('resp = %s', resp)
         self.assertTrue(
             'minion:' in resp
         )

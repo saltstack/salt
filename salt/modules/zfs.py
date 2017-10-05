@@ -77,6 +77,9 @@ def __virtual__():
     ) == 0:
         return 'zfs'
 
+    if __grains__['kernel'] == 'OpenBSD':
+        return False
+
     _zfs_fuse = lambda f: __salt__['service.' + f]('zfs-fuse')
     if _zfs_fuse('available') and (_zfs_fuse('status') or _zfs_fuse('start')):
         return 'zfs'

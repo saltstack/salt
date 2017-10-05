@@ -72,7 +72,7 @@ class ThorState(salt.state.HighState):
         cache = {'grains': {}, 'pillar': {}}
         if self.grains or self.pillar:
             if self.opts.get('minion_data_cache'):
-                minions = self.cache.ls('minions')
+                minions = self.cache.list('minions')
                 if not minions:
                     return cache
                 for minion in minions:

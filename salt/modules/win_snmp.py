@@ -302,6 +302,11 @@ def get_community_names():
     # Windows SNMP service GUI.
     if isinstance(current_values, list):
         for current_value in current_values:
+
+            # Ignore error values
+            if not isinstance(current_value, dict):
+                continue
+
             permissions = str()
             for permission_name in _PERMISSION_TYPES:
                 if current_value['vdata'] == _PERMISSION_TYPES[permission_name]:

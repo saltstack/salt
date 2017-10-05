@@ -448,6 +448,30 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
+    def test_master_id_function(self):
+        try:
+            tempdir = tempfile.mkdtemp(dir=TMP)
+            master_config = os.path.join(tempdir, 'master')
+
+            with salt.utils.fopen(master_config, 'w') as fp_:
+                fp_.write(
+                    'id_function:\n'
+                    '  test.echo:\n'
+                    '    text: hello_world\n'
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(tempdir, master_config)
+                )
+
+            # Let's load the configuration
+            config = sconfig.master_config(master_config)
+
+            self.assertEqual(config['log_file'], master_config)
+            # 'master_config' appends '_master' to the ID
+            self.assertEqual(config['id'], 'hello_world_master')
+        finally:
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
     def test_minion_file_roots_glob(self):
         # Config file and stub file_roots.
         fpath = tempfile.mktemp()
@@ -505,6 +529,29 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             if os.path.isfile(fpath):
                 os.unlink(fpath)
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
+
+    def test_minion_id_function(self):
+        try:
+            tempdir = tempfile.mkdtemp(dir=TMP)
+            minion_config = os.path.join(tempdir, 'minion')
+
+            with salt.utils.fopen(minion_config, 'w') as fp_:
+                fp_.write(
+                    'id_function:\n'
+                    '  test.echo:\n'
+                    '    text: hello_world\n'
+                    'root_dir: {0}\n'
+                    'log_file: {1}\n'.format(tempdir, minion_config)
+                )
+
+            # Let's load the configuration
+            config = sconfig.minion_config(minion_config)
+
+            self.assertEqual(config['log_file'], minion_config)
+            self.assertEqual(config['id'], 'hello_world')
+        finally:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
@@ -680,8 +727,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Tests passing in valid provider and profile config files successfully
         '''
         providers = {'test-provider':
-                         {'digital_ocean':
-                              {'driver': 'digital_ocean', 'profiles': {}}}}
+                         {'digitalocean':
+                              {'driver': 'digitalocean', 'profiles': {}}}}
         overrides = {'test-profile':
                          {'provider': 'test-provider',
                           'image': 'Ubuntu 12.10 x64',
@@ -689,7 +736,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                      'conf_file': PATH}
         ret = {'test-profile':
                    {'profile': 'test-profile',
-                    'provider': 'test-provider:digital_ocean',
+                    'provider': 'test-provider:digitalocean',
                     'image': 'Ubuntu 12.10 x64',
                     'size': '512MB'}}
         self.assertEqual(sconfig.apply_vm_profiles_config(providers,

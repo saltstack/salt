@@ -12,10 +12,10 @@ import codecs
 import logging
 
 # Import Salt libs
-import salt.utils  # Can be removed when warn_until is moved
 import salt.utils.files
 import salt.utils.locales
 import salt.utils.stringio
+import salt.utils.versions
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -51,12 +51,7 @@ def compile_template(template,
     log.debug(u'compile template: %s', template)
 
     if u'env' in kwargs:
-        salt.utils.warn_until(
-            u'Oxygen',
-            u'Parameter \'env\' has been detected in the argument list.  This '
-            u'parameter is no longer used and has been replaced by \'saltenv\' '
-            u'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop(u'env')
 
     if template != u':string:':

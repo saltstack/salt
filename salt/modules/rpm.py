@@ -11,11 +11,11 @@ import re
 import datetime
 
 # Import Salt libs
-import salt.utils
 import salt.utils.decorators.path
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.pkg.rpm
+import salt.utils.versions
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import zip
 from salt.ext import six
@@ -688,7 +688,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                 elif result['retcode'] == 12:
                     return -1
                 else:
-                    # We'll need to fall back to salt.utils.version_cmp()
+                    # We'll need to fall back to salt.utils.versions.version_cmp()
                     log.warning(
                         'Failed to interpret results of rpmdev-vercmp output. '
                         'This is probably a bug, and should be reported. '
@@ -696,7 +696,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                         result['retcode'], result['stdout']
                     )
             else:
-                # We'll need to fall back to salt.utils.version_cmp()
+                # We'll need to fall back to salt.utils.versions.version_cmp()
                 log.warning(
                     'rpmdevtools is not installed, please install it for '
                     'more accurate version comparisons'
@@ -728,7 +728,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
     # We would already have normalized the versions at the beginning of this
     # function if ignore_epoch=True, so avoid unnecessary work and just pass
     # False for this value.
-    return salt.utils.version_cmp(ver1, ver2, ignore_epoch=False)
+    return salt.utils.versions.version_cmp(ver1, ver2, ignore_epoch=False)
 
 
 def checksum(*paths):

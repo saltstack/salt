@@ -31,6 +31,25 @@ Functions to interact with Hashicorp Vault.
         Currently only token auth is supported. The token must be able to create
         tokens with the policies that should be assigned to minions. Required.
 
+        You can still use the token via a OS environment variable via this
+        config example:
+
+        .. code-block: yaml
+
+           vault:
+             url: https://vault.service.domain:8200
+             auth:
+               method: token
+               token: sdb://osenv/VAULT_TOKEN
+           osenv:
+             driver: env
+
+
+        And then export the VAULT_TOKEN variable in your OS:
+
+        .. code-block: bash
+           export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
+
     policies
         Policies that are assigned to minions when requesting a token. These can
         either be static, eg saltstack/minions, or templated, eg

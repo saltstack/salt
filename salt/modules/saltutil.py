@@ -54,6 +54,7 @@ import salt.utils.files
 import salt.utils.minion
 import salt.utils.process
 import salt.utils.url
+import salt.utils.versions
 import salt.wheel
 
 HAS_PSUTIL = True
@@ -1285,7 +1286,7 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
 
 def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
     if 'expr_form' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '

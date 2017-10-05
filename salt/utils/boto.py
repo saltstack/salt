@@ -160,7 +160,7 @@ def cache_id_func(service):
     '''
     Returns a partial `cache_id` function for the provided service.
 
-    ... code-block:: python
+    .. code-block:: python
 
         cache_id = __utils__['boto.cache_id_func']('ec2')
         cache_id('myinstance', 'i-a1b2c3')
@@ -209,7 +209,7 @@ def get_connection_func(service, module=None):
     '''
     Returns a partial `get_connection` function for the provided service.
 
-    ... code-block:: python
+    .. code-block:: python
 
         get_conn = __utils__['boto.get_connection_func']('ec2')
         conn = get_conn()

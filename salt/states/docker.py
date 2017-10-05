@@ -60,8 +60,8 @@ import copy
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.versions
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -95,7 +95,7 @@ def running(name, **kwargs):
         'docker_container.running. To get rid of this warning, update your '
         'SLS to use the new name.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
     return ret
 
@@ -114,7 +114,7 @@ def stopped(**kwargs):
         'docker_container.stopped. To get rid of this warning, update your '
         'SLS to use the new name.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
     return ret
 
@@ -134,7 +134,7 @@ def absent(name, **kwargs):
         'docker_container.absent. To get rid of this warning, update your '
         'SLS to use the new name.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
     return ret
 
@@ -154,7 +154,7 @@ def network_present(name, **kwargs):
         'docker_network.present. To get rid of this warning, update your SLS '
         'to use the new name.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
     return ret
 
@@ -174,7 +174,7 @@ def network_absent(name, **kwargs):
         'docker_network.absent. To get rid of this warning, update your SLS '
         'to use the new name.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
     return ret
 
@@ -194,7 +194,7 @@ def image_present(name, **kwargs):
         'docker_image.present. To get rid of this warning, update your SLS '
         'to use the new name.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
     return ret
 
@@ -213,7 +213,7 @@ def image_absent(**kwargs):
         'docker_image.absent. To get rid of this warning, update your SLS to '
         'use the new name.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
     return ret
 
@@ -233,7 +233,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
         'docker_volume.present. To get rid of this warning, update your SLS '
         'to use the new name.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
     return ret
 
@@ -250,7 +250,7 @@ def volume_absent(name, driver=None):
         'docker_volume.absent. To get rid of this warning, update your SLS '
         'to use the new name.'
     )
-    salt.utils.warn_until('Fluorine', msg)
+    salt.utils.versions.warn_until('Fluorine', msg)
     ret.setdefault('warnings', []).append(msg)
     return ret
 

@@ -42,7 +42,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Determine if URL-referenced NPM module can be successfully installed.
         '''
-        ret = self.run_state('npm.installed', name='git://github.com/request/request')
+        ret = self.run_state('npm.installed', name='request/request#v2.81.1')
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('npm.removed', name='git://github.com/request/request')
         self.assertSaltTrueReturn(ret)
@@ -54,7 +54,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         Basic test to determine if NPM module successfully installs multiple
         packages.
         '''
-        ret = self.run_state('npm.installed', name=None, pkgs=['pm2', 'grunt'])
+        ret = self.run_state('npm.installed', name='unused', pkgs=['pm2', 'grunt'])
         self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.path.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),
@@ -64,5 +64,5 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Basic test to determine if NPM successfully cleans its cached packages.
         '''
-        ret = self.run_state('npm.cache_cleaned', name=None, force=True)
+        ret = self.run_state('npm.cache_cleaned', name='unused', force=True)
         self.assertSaltTrueReturn(ret)

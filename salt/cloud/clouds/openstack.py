@@ -151,7 +151,9 @@ import os
 import logging
 import socket
 import pprint
-from salt.utils.versions import LooseVersion as _LooseVersion
+
+# This import needs to be here so the version check can be done below
+import salt.utils.versions
 
 # Import libcloud
 try:
@@ -170,7 +172,8 @@ try:
     # However, older versions of libcloud must still be supported with this work-around.
     # This work-around can be removed when the required minimum version of libcloud is
     # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
-    if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
+    if salt.utils.versions.LooseVersion(libcloud.__version__) < \
+            salt.utils.versions.LooseVersion('1.4.0'):
         # See https://github.com/saltstack/salt/issues/32743
         import libcloud.security
         libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
@@ -182,7 +185,7 @@ except Exception:
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 
 # Import salt libs
-import salt.utils  # Can be removed once namespaced_function and warn_until have been moved
+import salt.utils  # Can be removed once namespaced_function has been moved
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.pycrypto
@@ -237,7 +240,7 @@ def __virtual__():
     if get_dependencies() is False:
         return False
 
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Oxygen',
         'This driver has been deprecated and will be removed in the '
         '{version} release of Salt. Please use the nova driver instead.'

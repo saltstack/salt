@@ -12,8 +12,9 @@ import os
 
 # Import Salt libs
 import salt.version
-import salt.utils
+import salt.utils  # Can be removed once alias_function is moved
 import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
@@ -227,7 +228,7 @@ def managed(name,
     if use_wheel:
         min_version = '1.4'
         cur_version = __salt__['pip.version'](bin_env=name)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+        if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
@@ -238,7 +239,7 @@ def managed(name,
     if no_use_wheel:
         min_version = '1.4'
         cur_version = __salt__['pip.version'](bin_env=name)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+        if not salt.utils.versions.compare(ver1=cur_version, oper='>=',
                                            ver2=min_version):
             ret['result'] = False
             ret['comment'] = ('The \'no_use_wheel\' option is only supported '
