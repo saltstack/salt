@@ -5,7 +5,7 @@ import sys
 
 # Import salt libs
 import salt.scripts
-from salt.utils import is_windows
+import salt.utils.platform
 
 
 def get_avail():
@@ -43,7 +43,7 @@ def redirect():
 
 
 if __name__ == '__main__':
-    if is_windows():
+    if salt.utils.platform.is_windows():
         # Since this file does not have a '.py' extension, when running on
         # Windows, spawning any addional processes will fail due to Python
         # not being able to load this 'module' in the new process.

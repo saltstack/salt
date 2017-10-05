@@ -10,8 +10,9 @@ import re
 import subprocess
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
 import salt.utils.files
+import salt.utils.stringutils
 
 # Define the module's virtual name
 __virtualname__ = 'jail'
@@ -125,7 +126,7 @@ def show_config(jail):
     ret = {}
     if subprocess.call(["jls", "-nq", "-j", jail]) == 0:
         jls = subprocess.check_output(["jls", "-nq", "-j", jail])  # pylint: disable=minimum-python-version
-        jailopts = salt.utils.shlex_split(salt.utils.to_str(jls))
+        jailopts = salt.utils.args.shlex_split(salt.utils.stringutils.to_str(jls))
         for jailopt in jailopts:
             if '=' not in jailopt:
                 ret[jailopt.strip().rstrip(";")] = '1'

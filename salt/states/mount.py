@@ -45,7 +45,7 @@ import re
 from salt.ext.six import string_types
 
 import logging
-import salt.ext.six as six
+from salt.ext import six
 log = logging.getLogger(__name__)
 
 
@@ -75,7 +75,8 @@ def mounted(name,
             extra_mount_invisible_keys=None,
             extra_mount_ignore_fs_keys=None,
             extra_mount_translate_options=None,
-            hidden_opts=None):
+            hidden_opts=None,
+            **kwargs):
     '''
     Verify that a device is mounted
 
@@ -195,6 +196,8 @@ def mounted(name,
            'changes': {},
            'result': True,
            'comment': ''}
+
+    update_mount_cache = False
 
     if device_name_regex is None:
         device_name_regex = []
@@ -438,6 +441,50 @@ def mounted(name,
                                 # don't write remount into fstab
                                 if 'remount' in opts:
                                     opts.remove('remount')
+
+                            # Update the cache
+                            update_mount_cache = True
+
+                mount_cache = __salt__['mount.read_mount_cache'](real_name)
+                if 'opts' in mount_cache:
+                    _missing = [opt for opt in mount_cache['opts']
+                                if opt not in opts]
+
+                    if _missing:
+                        if __opts__['test']:
+                            ret['result'] = None
+                            ret['comment'] = ('Remount would be forced because'
+                                              ' options ({0})'
+                                              'changed'.format(','.join(_missing)))
+                            return ret
+                        else:
+                            # Some file systems require umounting and mounting if options change
+                            # add others to list that require similiar functionality
+                            if fstype in ['nfs', 'cvfs'] or fstype.startswith('fuse'):
+                                ret['changes']['umount'] = "Forced unmount and mount because " \
+                                                            + "options ({0}) changed".format(opt)
+                                unmount_result = __salt__['mount.umount'](real_name)
+                                if unmount_result is True:
+                                    mount_result = __salt__['mount.mount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
+                                    ret['result'] = mount_result
+                                else:
+                                    ret['result'] = False
+                                    ret['comment'] = 'Unable to unmount {0}: {1}.'.format(real_name, unmount_result)
+                                    return ret
+                            else:
+                                ret['changes']['umount'] = "Forced remount because " \
+                                                            + "options ({0}) changed".format(opt)
+                                remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
+                                ret['result'] = remount_result
+                                # Cleanup after the remount, so we
+                                # don't write remount into fstab
+                                if 'remount' in opts:
+                                    opts.remove('remount')
+
+                        update_mount_cache = True
+                else:
+                    update_mount_cache = True
+
             if real_device not in device_list:
                 # name matches but device doesn't - need to umount
                 _device_mismatch_is_ignored = None
@@ -468,6 +515,7 @@ def mounted(name,
                         ret['comment'] = "Unable to unmount"
                         ret['result'] = None
                         return ret
+                    update_mount_cache = True
             else:
                 ret['comment'] = 'Target was already mounted'
     # using a duplicate check so I can catch the results of a umount
@@ -491,6 +539,7 @@ def mounted(name,
 
             out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts, user=user)
             active = __salt__['mount.active'](extended=True)
+            update_mount_cache = True
             if isinstance(out, string_types):
                 # Failed to (re)mount, the state has failed!
                 ret['comment'] = out
@@ -589,6 +638,13 @@ def mounted(name,
                                                   pass_num,
                                                   config,
                                                   match_on=match_on)
+
+        if update_mount_cache:
+            cache_result = __salt__['mount.write_mount_cache'](real_name,
+                                                               device,
+                                                               mkmnt=mkmnt,
+                                                               fstype=fstype,
+                                                               opts=opts)
 
         if out == 'present':
             ret['comment'] += '. Entry already exists in the fstab.'
@@ -698,7 +754,8 @@ def unmounted(name,
               device=None,
               config='/etc/fstab',
               persist=False,
-              user=None):
+              user=None,
+              **kwargs):
     '''
     .. versionadded:: 0.17.0
 
@@ -728,6 +785,8 @@ def unmounted(name,
            'result': True,
            'comment': ''}
 
+    update_mount_cache = False
+
     # Get the active data
     active = __salt__['mount.active'](extended=True)
     if name not in active:
@@ -742,8 +801,10 @@ def unmounted(name,
             return ret
         if device:
             out = __salt__['mount.umount'](name, device, user=user)
+            update_mount_cache = True
         else:
             out = __salt__['mount.umount'](name, user=user)
+            update_mount_cache = True
         if isinstance(out, string_types):
             # Failed to umount, the state has failed!
             ret['comment'] = out
@@ -755,6 +816,9 @@ def unmounted(name,
         else:
             ret['comment'] = 'Execute set to False, Target was not unmounted'
             ret['result'] = True
+
+    if update_mount_cache:
+        cache_result = __salt__['mount.delete_mount_cache'](name)
 
     if persist:
         # Override default for Mac OS

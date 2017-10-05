@@ -22,11 +22,14 @@ import time
 import traceback
 
 # Import salt libs
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
-from salt.exceptions import SaltInvocationError, CommandExecutionError
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 import salt.utils.vt
+from salt.exceptions import SaltInvocationError, CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 
 HAS_LIBS = False
 
@@ -51,7 +54,7 @@ def __virtual__():
         missing_util = False
         utils_reqd = ['gpg', 'debuild', 'pbuilder', 'reprepro']
         for named_util in utils_reqd:
-            if not salt.utils.which(named_util):
+            if not salt.utils.path.which(named_util):
                 missing_util = True
                 break
         if HAS_LIBS and not missing_util:
@@ -66,7 +69,7 @@ def _check_repo_sign_utils_support(name):
     '''
     Check for specified command name in search path
     '''
-    if salt.utils.which(name):
+    if salt.utils.path.which(name):
         return True
     else:
         raise CommandExecutionError(
@@ -314,7 +317,7 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     spec_pathfile = _get_spec(tree_base, spec, template, saltenv)
 
     # build salt equivalents from scratch
-    if isinstance(sources, str):
+    if isinstance(sources, six.string_types):
         sources = sources.split(',')
     for src in sources:
         _get_src(tree_base, src, saltenv)
@@ -633,7 +636,7 @@ def make_repo(repodir,
 
         if not older_gnupg:
             _check_repo_sign_utils_support('gpg2')
-            cmd = '{0} --with-keygrip --list-secret-keys'.format(salt.utils.which('gpg2'))
+            cmd = '{0} --with-keygrip --list-secret-keys'.format(salt.utils.path.which('gpg2'))
             local_keys2_keygrip = __salt__['cmd.run'](cmd, runas=runas)
             local_keys2 = iter(local_keys2_keygrip.splitlines())
             try:

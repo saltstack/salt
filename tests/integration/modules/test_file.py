@@ -15,8 +15,8 @@ from tests.support.unit import skipIf
 from tests.support.paths import FILES, TMP
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.platform
 
 
 class FileModuleTest(ModuleCase):
@@ -51,7 +51,7 @@ class FileModuleTest(ModuleCase):
         shutil.rmtree(self.mydir, ignore_errors=True)
         super(FileModuleTest, self).tearDown()
 
-    @skipIf(salt.utils.is_windows(), 'No chgrp on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'No chgrp on Windows')
     def test_chown(self):
         user = getpass.getuser()
         if sys.platform == 'darwin':
@@ -64,14 +64,14 @@ class FileModuleTest(ModuleCase):
         self.assertEqual(fstat.st_uid, os.getuid())
         self.assertEqual(fstat.st_gid, grp.getgrnam(group).gr_gid)
 
-    @skipIf(salt.utils.is_windows(), 'No chgrp on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'No chgrp on Windows')
     def test_chown_no_user(self):
         user = 'notanyuseriknow'
         group = grp.getgrgid(pwd.getpwuid(os.getuid()).pw_gid).gr_name
         ret = self.run_function('file.chown', arg=[self.myfile, user, group])
         self.assertIn('not exist', ret)
 
-    @skipIf(salt.utils.is_windows(), 'No chgrp on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'No chgrp on Windows')
     def test_chown_no_user_no_group(self):
         user = 'notanyuseriknow'
         group = 'notanygroupyoushoulduse'
@@ -79,7 +79,7 @@ class FileModuleTest(ModuleCase):
         self.assertIn('Group does not exist', ret)
         self.assertIn('User does not exist', ret)
 
-    @skipIf(salt.utils.is_windows(), 'No chgrp on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'No chgrp on Windows')
     def test_chown_no_path(self):
         user = getpass.getuser()
         if sys.platform == 'darwin':
@@ -90,7 +90,7 @@ class FileModuleTest(ModuleCase):
                                 arg=['/tmp/nosuchfile', user, group])
         self.assertIn('File not found', ret)
 
-    @skipIf(salt.utils.is_windows(), 'No chgrp on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'No chgrp on Windows')
     def test_chown_noop(self):
         user = ''
         group = ''
@@ -100,7 +100,7 @@ class FileModuleTest(ModuleCase):
         self.assertEqual(fstat.st_uid, os.getuid())
         self.assertEqual(fstat.st_gid, os.getgid())
 
-    @skipIf(salt.utils.is_windows(), 'No chgrp on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'No chgrp on Windows')
     def test_chgrp(self):
         if sys.platform == 'darwin':
             group = 'everyone'
@@ -111,7 +111,7 @@ class FileModuleTest(ModuleCase):
         fstat = os.stat(self.myfile)
         self.assertEqual(fstat.st_gid, grp.getgrnam(group).gr_gid)
 
-    @skipIf(salt.utils.is_windows(), 'No chgrp on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'No chgrp on Windows')
     def test_chgrp_failure(self):
         group = 'thisgroupdoesntexist'
         ret = self.run_function('file.chgrp', arg=[self.myfile, group])

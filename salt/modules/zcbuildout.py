@@ -35,7 +35,7 @@ import copy
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six import string_types, text_type
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
@@ -124,7 +124,7 @@ def _salt_callback(func, **kwargs):
         LOG.clear()
         # before returning, trying to compact the log output
         for k in ['comment', 'out', 'outlog']:
-            if status[k] and isinstance(status[k], string_types):
+            if status[k] and isinstance(status[k], six.string_types):
                 status[k] = '\n'.join([
                     log
                     for log in status[k].split('\n')
@@ -142,7 +142,7 @@ class _Logger(object):
         self._by_level = {}
 
     def _log(self, level, msg):
-        if not isinstance(msg, text_type):
+        if not isinstance(msg, six.text_type):
             msg = msg.decode('utf-8')
         if level not in self._by_level:
             self._by_level[level] = []
@@ -185,7 +185,7 @@ LOG = _Logger()
 
 
 def _encode_string(string):
-    if isinstance(string, text_type):
+    if isinstance(string, six.text_type):
         string = string.encode('utf-8')
     return string
 
@@ -217,7 +217,7 @@ def _set_status(m,
     m['logs_by_level'] = LOG.by_level.copy()
     outlog, outlog_by_level = '', ''
     m['comment'] = comment
-    if out and isinstance(out, string_types):
+    if out and isinstance(out, six.string_types):
         outlog += HR
         outlog += 'OUTPUT:\n'
         outlog += '{0}\n'.format(_encode_string(out))
@@ -1029,17 +1029,17 @@ def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
         status['status'] = False
         retcode = __salt__['cmd.retcode']
         if onlyif is not None:
-            if not isinstance(onlyif, string_types):
+            if not isinstance(onlyif, six.string_types):
                 if not onlyif:
                     _valid(status, 'onlyif execution failed')
-            elif isinstance(onlyif, string_types):
+            elif isinstance(onlyif, six.string_types):
                 if retcode(onlyif, cwd=directory, runas=runas, env=env) != 0:
                     _valid(status, 'onlyif execution failed')
         if unless is not None:
-            if not isinstance(unless, string_types):
+            if not isinstance(unless, six.string_types):
                 if unless:
                     _valid(status, 'unless execution succeeded')
-            elif isinstance(unless, string_types):
+            elif isinstance(unless, six.string_types):
                 if retcode(unless, cwd=directory, runas=runas, env=env, python_shell=False) == 0:
                     _valid(status, 'unless execution succeeded')
     if status['status']:

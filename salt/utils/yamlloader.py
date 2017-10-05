@@ -37,7 +37,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
     to make things like sls file more intuitive.
     '''
     def __init__(self, stream, dictclass=dict):
-        yaml.SafeLoader.__init__(self, stream)
+        super(SaltYamlSafeLoader, self).__init__(stream)
         if dictclass is not dict:
             # then assume ordered dict and use it for both !map and !omap
             self.add_constructor(
@@ -46,9 +46,9 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
             self.add_constructor(
                 u'tag:yaml.org,2002:omap',
                 type(self).construct_yaml_map)
-            self.add_constructor(
-                u'tag:yaml.org,2002:python/unicode',
-                type(self).construct_unicode)
+        self.add_constructor(
+            u'tag:yaml.org,2002:python/unicode',
+            type(self).construct_unicode)
         self.dictclass = dictclass
 
     def construct_yaml_map(self, node):

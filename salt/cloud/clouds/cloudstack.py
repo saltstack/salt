@@ -30,6 +30,8 @@ import logging
 
 # Import salt cloud libs
 import salt.config as config
+import salt.utils.cloud
+import salt.utils.event
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.utils import namespaced_function
 from salt.exceptions import SaltCloudSystemExit

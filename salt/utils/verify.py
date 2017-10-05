@@ -27,8 +27,9 @@ from salt.log.setup import LOG_LEVELS
 from salt.exceptions import SaltClientError, SaltSystemExit, \
     CommandExecutionError
 import salt.defaults.exitcodes
-import salt.utils
+import salt.utils  # Can be removed once get_jid_list and get_user are moved
 import salt.utils.files
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -146,7 +147,7 @@ def verify_files(files, user):
     '''
     Verify that the named files exist and are owned by the named user
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return True
     import pwd  # after confirming not running Windows
     try:
@@ -198,7 +199,7 @@ def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return win_verify_env(dirs, permissive, pki_dir, skip_extra)
     import pwd  # after confirming not running Windows
     try:
@@ -299,7 +300,7 @@ def check_user(user):
     '''
     Check user and assign process uid/gid.
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return True
     if user == salt.utils.get_user():
         return True
@@ -481,12 +482,21 @@ def clean_path(root, path, subdir=False):
     return ''
 
 
+def clean_id(id_):
+    '''
+    Returns if the passed id is clean.
+    '''
+    if re.search(r'\.\.\{sep}'.format(sep=os.sep), id_):
+        return False
+    return True
+
+
 def valid_id(opts, id_):
     '''
     Returns if the passed id is valid
     '''
     try:
-        return bool(clean_path(opts['pki_dir'], id_))
+        return bool(clean_path(opts['pki_dir'], id_)) and clean_id(id_)
     except (AttributeError, KeyError, TypeError) as e:
         return False
 

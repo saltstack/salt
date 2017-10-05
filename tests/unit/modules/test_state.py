@@ -19,10 +19,14 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.config
+import salt.loader
 import salt.utils
 import salt.utils.odict
+import salt.utils.platform
 import salt.modules.state as state
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
 
 
 class MockState(object):
@@ -344,6 +348,10 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
+        utils = salt.loader.utils(
+            salt.config.DEFAULT_MINION_OPTS,
+            whitelist=['state']
+        )
         patcher = patch('salt.modules.state.salt.state', MockState())
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -354,6 +362,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     'environment': None,
                     '__cli': 'salt',
                 },
+                '__utils__': utils,
             },
         }
 
@@ -824,7 +833,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(state, 'check_request', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'umask', mock):
-                        with patch.object(salt.utils, 'is_windows', mock):
+                        with patch.object(salt.utils.platform, 'is_windows', mock):
                             with patch.dict(state.__salt__, {'cmd.run': mock}):
                                 with patch('salt.utils.files.fopen', mock_open()):
                                     mock = MagicMock(return_value=True)
@@ -935,7 +944,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(os.path, 'join', mock):
             with patch.object(os, 'umask', mock):
                 mock = MagicMock(return_value=False)
-                with patch.object(salt.utils, 'is_windows', mock):
+                with patch.object(salt.utils.platform, 'is_windows', mock):
                     mock = MagicMock(return_value=True)
                     with patch.object(os, 'umask', mock):
                         with patch.object(state, '_set_retcode', mock):
@@ -976,6 +985,12 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
                 MockTarFile.path = ""
                 MockJson.flag = False
-                with patch('salt.utils.files.fopen', mock_open()):
-                    self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
-                                              0, "md5"))
+                if six.PY2:
+                    with patch('salt.utils.files.fopen', mock_open()), \
+                            patch.dict(state.__utils__, {'state.check_result': MagicMock(return_value=True)}):
+                        self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
+                                                  0, "md5"))
+                else:
+                    with patch('salt.utils.files.fopen', mock_open()):
+                        self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
+                                                  0, "md5"))

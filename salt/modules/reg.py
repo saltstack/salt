@@ -47,8 +47,8 @@ try:
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 PY2 = sys.version_info[0] == 2
@@ -62,7 +62,7 @@ def __virtual__():
     '''
     Only works on Windows systems with the _winreg python module
     '''
-    if not salt.utils.is_windows():
+    if not salt.utils.platform.is_windows():
         return (False, 'reg execution module failed to load: '
                        'The module will only run on Windows systems')
 

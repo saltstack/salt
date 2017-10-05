@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 import salt.utils.decorators
 from salt.ext.six.moves import range
 
@@ -61,7 +61,7 @@ def __virtual__():
     We are available if we are have zoneadm and are the global zone on
     Solaris 10, OmniOS, OpenIndiana, OpenSolaris, or Smartos.
     '''
-    if _is_globalzone() and salt.utils.which('zoneadm'):
+    if _is_globalzone() and salt.utils.path.which('zoneadm'):
         if __grains__['os'] in ['OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana']:
             return __virtualname__
         elif __grains__['os'] == 'Oracle Solaris' and int(__grains__['osmajorrelease']) == 10:

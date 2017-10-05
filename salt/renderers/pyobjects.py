@@ -306,7 +306,7 @@ import salt.utils.files
 import salt.loader
 from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
-import salt.ext.six as six
+from salt.ext import six
 
 # our import regexes
 FROM_RE = re.compile(r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$')

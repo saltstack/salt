@@ -9,7 +9,7 @@ import shutil
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.request import urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
@@ -21,8 +21,8 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import requires_network, skip_if_binaries_missing
 
 # Import Salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 import salt.modules.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
 
@@ -88,7 +88,7 @@ class Base(TestCase, LoaderModuleMockMixin):
             '{0} --no-site-packages {1};'
             '{1}/bin/pip install -U setuptools; '
             '{1}/bin/easy_install -U distribute;').format(
-                salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
                 cls.ppy_st
             )
         )
@@ -121,7 +121,7 @@ class Base(TestCase, LoaderModuleMockMixin):
 
 
 @skipIf(True, 'These tests are not running reliably')
-@skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
+@skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         'The \'virtualenv\' packaged needs to be installed')
 @skip_if_binaries_missing(['tar'])
 class BuildoutTestCase(Base):
@@ -313,7 +313,7 @@ class BuildoutTestCase(Base):
         self.assertEqual(time2, time3)
 
 
-@skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
+@skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         'The \'virtualenv\' packaged needs to be installed')
 @skipIf(True, 'These tests are not running reliably')
 class BuildoutOnlineTestCase(Base):
@@ -329,14 +329,14 @@ class BuildoutOnlineTestCase(Base):
         try:
             ret20 = buildout._Popen((
                 '{0} --no-site-packages --no-setuptools --no-pip {1}'.format(
-                    salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
                     cls.ppy_dis
                 )
             ))
         except buildout._BuildoutError:
             ret20 = buildout._Popen((
                 '{0} --no-site-packages {1}'.format(
-                    salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
                     cls.ppy_dis
                 ))
             )
@@ -357,14 +357,14 @@ class BuildoutOnlineTestCase(Base):
         try:
             ret3 = buildout._Popen((
                 '{0} --no-site-packages --no-setuptools --no-pip {1}'.format(
-                    salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
                     cls.ppy_blank
                 )
             ))
         except buildout._BuildoutError:
             ret3 = buildout._Popen((
                 '{0} --no-site-packages {1}'.format(
-                    salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
+                    salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES),
                     cls.ppy_blank
                 )
             ))

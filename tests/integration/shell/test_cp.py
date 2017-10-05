@@ -27,7 +27,7 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 import salt.utils.files
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class CopyTest(ShellCase, ShellCaseCommonTestsMixin):

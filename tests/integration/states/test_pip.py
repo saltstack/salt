@@ -26,14 +26,15 @@ from tests.support.helpers import (
     skip_if_not_root
 )
 # Import salt libs
-from tests.support.case import ModuleCase
-import salt.utils
 import salt.utils.files
+import salt.utils.path
+import salt.utils.versions
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from salt.exceptions import CommandExecutionError
+from tests.support.case import ModuleCase
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class VirtualEnv(object):
@@ -50,7 +51,7 @@ class VirtualEnv(object):
             shutil.rmtree(self.venv_dir)
 
 
-@skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skip_if_not_root
@@ -238,7 +239,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             )
         except (AssertionError, CommandExecutionError):
             pip_version = self.run_function('pip.version', [venv_dir])
-            if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='7.0.0'):
+            if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='7.0.0'):
                 self.skipTest('the --mirrors arg has been deprecated and removed in pip==7.0.0')
         finally:
             if os.path.isdir(venv_dir):

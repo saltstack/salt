@@ -17,6 +17,7 @@ except ImportError:
 
 import yaml
 import collections
+
 from salt.utils.odict import OrderedDict
 
 try:
@@ -27,7 +28,7 @@ except ImportError:
     HAS_IOFLO = False
 
 
-class IndentMixin(object):
+class IndentMixin(Dumper):
     '''
     Mixin that improves YAML dumped list readability
     by indenting them by two spaces,

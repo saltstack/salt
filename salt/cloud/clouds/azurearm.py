@@ -65,7 +65,8 @@ import salt.config as config
 import salt.utils
 import salt.utils.cloud
 import salt.utils.files
-import salt.ext.six as six
+from salt.utils.versions import LooseVersion
+from salt.ext import six
 import salt.version
 from salt.exceptions import (
     SaltCloudSystemExit,
@@ -79,7 +80,6 @@ HAS_LIBS = False
 try:
     import salt.utils.msazure
     from salt.utils.msazure import object_to_dict
-    import azure.storage
     from azure.common.credentials import (
         UserPassCredentials,
         ServicePrincipalCredentials,
@@ -115,7 +115,9 @@ try:
     from azure.mgmt.storage import StorageManagementClient
     from azure.mgmt.web import WebSiteManagementClient
     from msrestazure.azure_exceptions import CloudError
-    HAS_LIBS = True
+    from azure.multiapi.storage.v2016_05_31 import CloudStorageAccount
+    from azure.cli import core
+    HAS_LIBS = LooseVersion(core.__version__) >= LooseVersion("2.0.12")
 except ImportError:
     pass
 # pylint: enable=wrong-import-position,wrong-import-order
@@ -399,8 +401,9 @@ def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
         pass
 
     for node in nodes:
-        if not nodes[node]['resource_group'] == active_resource_group:
-            continue
+        if active_resource_group is not None:
+            if nodes[node]['resource_group'] != active_resource_group:
+                continue
         ret[node] = {'name': node}
         for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
             ret[node][prop] = nodes[node].get(prop)
@@ -657,11 +660,12 @@ def list_subnets(call=None, kwargs=None):  # pylint: disable=unused-argument
     for subnet in subnets:
         ret[subnet.name] = make_safe(subnet)
         ret[subnet.name]['ip_configurations'] = {}
-        for ip_ in subnet.ip_configurations:
-            comps = ip_.id.split('/')
-            name = comps[-1]
-            ret[subnet.name]['ip_configurations'][name] = make_safe(ip_)
-            ret[subnet.name]['ip_configurations'][name]['subnet'] = subnet.name
+        if subnet.ip_configurations:
+            for ip_ in subnet.ip_configurations:
+                comps = ip_.id.split('/')
+                name = comps[-1]
+                ret[subnet.name]['ip_configurations'][name] = make_safe(ip_)
+                ret[subnet.name]['ip_configurations'][name]['subnet'] = subnet.name
         ret[subnet.name]['resource_group'] = kwargs['resource_group']
     return ret
 
@@ -1728,7 +1732,7 @@ def list_containers(call=None, kwargs=None):  # pylint: disable=unused-argument
     if not storconn:
         storconn = get_conn(StorageManagementClient)
 
-    storageaccount = azure.storage.CloudStorageAccount(
+    storageaccount = CloudStorageAccount(
         config.get_cloud_config_value(
             'storage_account',
             get_configured_provider(), __opts__, search_global=False
@@ -1769,7 +1773,7 @@ def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
             'A container must be specified'
         )
 
-    storageaccount = azure.storage.CloudStorageAccount(
+    storageaccount = CloudStorageAccount(
         config.get_cloud_config_value(
             'storage_account',
             get_configured_provider(), __opts__, search_global=False
@@ -1809,7 +1813,7 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
             'A blob must be specified'
         )
 
-    storageaccount = azure.storage.CloudStorageAccount(
+    storageaccount = CloudStorageAccount(
         config.get_cloud_config_value(
             'storage_account',
             get_configured_provider(), __opts__, search_global=False

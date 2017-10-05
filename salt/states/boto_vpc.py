@@ -147,7 +147,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.dictupdate as dictupdate
 
 __virtualname__ = 'boto_vpc'

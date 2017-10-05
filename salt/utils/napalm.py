@@ -14,18 +14,19 @@ Utils for the NAPALM modules and proxy.
 
 .. versionadded:: 2017.7.0
 '''
-
+# Import Python libs
 from __future__ import absolute_import
-
 import traceback
 import logging
 import importlib
 from functools import wraps
-log = logging.getLogger(__file__)
 
-import salt.utils
+# Import Salt libs
+import salt.output
+import salt.utils.platform
 
-# Import third party lib
+# Import 3rd-party libs
+from salt.ext import six
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
@@ -45,14 +46,14 @@ try:
 except ImportError:
     HAS_CONN_CLOSED_EXC_CLASS = False
 
-from salt.ext import six as six
+log = logging.getLogger(__file__)
 
 
 def is_proxy(opts):
     '''
     Is this a NAPALM proxy?
     '''
-    return salt.utils.is_proxy() and opts.get('proxy', {}).get('proxytype') == 'napalm'
+    return salt.utils.platform.is_proxy() and opts.get('proxy', {}).get('proxytype') == 'napalm'
 
 
 def is_always_alive(opts):
@@ -73,7 +74,7 @@ def is_minion(opts):
     '''
     Is this a NAPALM straight minion?
     '''
-    return not salt.utils.is_proxy() and 'napalm' in opts
+    return not salt.utils.platform.is_proxy() and 'napalm' in opts
 
 
 def virtual(opts, virtualname, filename):
@@ -243,6 +244,11 @@ def get_device_opts(opts, salt_obj=None):
     network_device = {}
     # by default, look in the proxy config details
     device_dict = opts.get('proxy', {}) or opts.get('napalm', {})
+    if opts.get('proxy') or opts.get('napalm'):
+        opts['multiprocessing'] = device_dict.get('multiprocessing', False)
+        # Most NAPALM drivers are SSH-based, so multiprocessing should default to False.
+        # But the user can be allows to have a different value for the multiprocessing, which will
+        #   override the opts.
     if salt_obj and not device_dict:
         # get the connection details from the opts
         device_dict = salt_obj['config.merge']('napalm')
@@ -349,11 +355,11 @@ def proxy_napalm_wrap(func):
         # the execution modules will make use of this variable from now on
         # previously they were accessing the device properties through the __proxy__ object
         always_alive = opts.get('proxy', {}).get('always_alive', True)
-        if salt.utils.is_proxy() and always_alive:
+        if salt.utils.platform.is_proxy() and always_alive:
             # if it is running in a proxy and it's using the default always alive behaviour,
             # will get the cached copy of the network device
             wrapped_global_namespace['napalm_device'] = proxy['napalm.get_device']()
-        elif salt.utils.is_proxy() and not always_alive:
+        elif salt.utils.platform.is_proxy() and not always_alive:
             # if still proxy, but the user does not want the SSH session always alive
             # get a new device instance
             # which establishes a new connection
@@ -427,58 +433,58 @@ def default_ret(name):
     return ret
 
 
-def loaded_ret(ret, loaded, test, debug):
+def loaded_ret(ret, loaded, test, debug, compliance_report=False, opts=None):
     '''
     Return the final state output.
-
     ret
         The initial state output structure.
-
     loaded
         The loaded dictionary.
     '''
     # Always get the comment
-    ret.update({
-        'comment': loaded.get('comment', '')
-    })
+    changes = {}
     pchanges = {}
+    ret['comment'] = loaded['comment']
+    if 'diff' in loaded:
+        changes['diff'] = loaded['diff']
+        pchanges['diff'] = loaded['diff']
+    if 'compliance_report' in loaded:
+        if compliance_report:
+            changes['compliance_report'] = loaded['compliance_report']
+        pchanges['compliance_report'] = loaded['compliance_report']
+    if debug and 'loaded_config' in loaded:
+        changes['loaded_config'] = loaded['loaded_config']
+        pchanges['loaded_config'] = loaded['loaded_config']
+    ret['pchanges'] = pchanges
+    if changes.get('diff'):
+        ret['comment'] = '{comment_base}\n\nConfiguration diff:\n\n{diff}'.format(comment_base=ret['comment'],
+                                                                                  diff=changes['diff'])
+    if changes.get('loaded_config'):
+        ret['comment'] = '{comment_base}\n\nLoaded config:\n\n{loaded_cfg}'.format(
+            comment_base=ret['comment'],
+            loaded_cfg=changes['loaded_config'])
+    if changes.get('compliance_report'):
+        ret['comment'] = '{comment_base}\n\nCompliance report:\n\n{compliance}'.format(
+            comment_base=ret['comment'],
+            compliance=salt.output.string_format(changes['compliance_report'], 'nested', opts=opts))
     if not loaded.get('result', False):
         # Failure of some sort
         return ret
-    if debug:
-        # Always check for debug
-        pchanges.update({
-            'loaded_config': loaded.get('loaded_config', '')
-        })
-        ret.update({
-            "pchanges": pchanges
-        })
     if not loaded.get('already_configured', True):
         # We're making changes
-        pchanges.update({
-            "diff": loaded.get('diff', '')
-        })
-        ret.update({
-            'pchanges': pchanges
-        })
         if test:
-            for k, v in pchanges.items():
-                ret.update({
-                    "comment": "{}:\n{}\n\n{}".format(k, v, ret.get("comment", ''))
-                })
-            ret.update({
-                'result': None,
-            })
+            ret['result'] = None
             return ret
         # Not test, changes were applied
         ret.update({
             'result': True,
-            'changes': pchanges,
-            'comment': "Configuration changed!\n{}".format(ret.get('comment', ''))
+            'changes': changes,
+            'comment': "Configuration changed!\n{}".format(loaded['comment'])
         })
         return ret
     # No changes
     ret.update({
-        'result': True
+        'result': True,
+        'changes': {}
     })
     return ret

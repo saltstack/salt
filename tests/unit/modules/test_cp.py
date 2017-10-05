@@ -20,9 +20,9 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils.files
+import salt.utils.templates as templates
 import salt.transport
 import salt.modules.cp as cp
-from salt.utils import templates
 from salt.exceptions import CommandExecutionError
 
 

@@ -20,7 +20,7 @@ import logging
 
 # Import salt libs
 import salt.utils.http
-import salt.ext.six as six
+from salt.ext import six
 from salt._compat import ElementTree as ET
 
 log = logging.getLogger(__name__)

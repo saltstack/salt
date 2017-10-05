@@ -26,7 +26,7 @@ from __future__ import absolute_import
 import os
 import sys
 import logging
-import salt.ext.six as six
+from salt.ext import six
 try:
     import psutil
     HAS_PSUTIL = True

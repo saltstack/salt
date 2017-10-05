@@ -12,7 +12,7 @@ import re
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def __virtual__():
     '''
     Check to see if firewall-cmd exists
     '''
-    if salt.utils.which('firewall-cmd'):
+    if salt.utils.path.which('firewall-cmd'):
         return True
 
     return (False, 'The firewalld execution module cannot be loaded: the firewall-cmd binary is not in the path.')
@@ -31,7 +31,7 @@ def __firewall_cmd(cmd):
     '''
     Return the firewall-cmd location
     '''
-    firewall_cmd = '{0} {1}'.format(salt.utils.which('firewall-cmd'), cmd)
+    firewall_cmd = '{0} {1}'.format(salt.utils.path.which('firewall-cmd'), cmd)
     out = __salt__['cmd.run_all'](firewall_cmd)
 
     if out['retcode'] != 0:

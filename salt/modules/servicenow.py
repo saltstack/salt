@@ -131,7 +131,7 @@ def non_structured_query(table, query=None, **kwargs):
     client = _get_client()
     client.table = table
     # underlying lib doesn't use six or past.basestring,
-    # does isinstance(x,str)
+    # does isinstance(x, str)
     # http://bit.ly/1VkMmpE
     if query is None:
         # try and assemble a query by keyword

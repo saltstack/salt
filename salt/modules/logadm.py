@@ -14,6 +14,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 import salt.utils.decorators as decorators
 import salt.utils.files
 
@@ -268,7 +269,7 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
 
     '''
     ## cleanup kwargs
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     ## inject name into kwargs
     if 'entryname' not in kwargs and name and not name.startswith('/'):

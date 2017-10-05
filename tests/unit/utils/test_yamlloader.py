@@ -5,6 +5,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import textwrap
 
 # Import Salt Libs
 from yaml.constructor import ConstructorError
@@ -36,12 +37,11 @@ class YamlLoaderTestCase(TestCase):
         '''
         Test parsing an ordinary path
         '''
-
         self.assertEqual(
-            self._render_yaml(b'''
-p1:
-  - alpha
-  - beta'''),
+            self._render_yaml(textwrap.dedent('''\
+                p1:
+                  - alpha
+                  - beta''')),
             {'p1': ['alpha', 'beta']}
         )
 
@@ -49,38 +49,37 @@ p1:
         '''
         Test YAML anchors
         '''
-
         # Simple merge test
         self.assertEqual(
-            self._render_yaml(b'''
-p1: &p1
-  v1: alpha
-p2:
-  <<: *p1
-  v2: beta'''),
+            self._render_yaml(textwrap.dedent('''\
+                p1: &p1
+                  v1: alpha
+                p2:
+                  <<: *p1
+                  v2: beta''')),
             {'p1': {'v1': 'alpha'}, 'p2': {'v1': 'alpha', 'v2': 'beta'}}
         )
 
         # Test that keys/nodes are overwritten
         self.assertEqual(
-            self._render_yaml(b'''
-p1: &p1
-  v1: alpha
-p2:
-  <<: *p1
-  v1: new_alpha'''),
+            self._render_yaml(textwrap.dedent('''\
+                p1: &p1
+                  v1: alpha
+                p2:
+                  <<: *p1
+                  v1: new_alpha''')),
             {'p1': {'v1': 'alpha'}, 'p2': {'v1': 'new_alpha'}}
         )
 
         # Test merging of lists
         self.assertEqual(
-            self._render_yaml(b'''
-p1: &p1
-  v1: &v1
-    - t1
-    - t2
-p2:
-  v2: *v1'''),
+            self._render_yaml(textwrap.dedent('''\
+                p1: &p1
+                  v1: &v1
+                    - t1
+                    - t2
+                p2:
+                  v2: *v1''')),
             {"p2": {"v2": ["t1", "t2"]}, "p1": {"v1": ["t1", "t2"]}}
         )
 
@@ -89,15 +88,27 @@ p2:
         Test that duplicates still throw an error
         '''
         with self.assertRaises(ConstructorError):
-            self._render_yaml(b'''
-p1: alpha
-p1: beta''')
+            self._render_yaml(textwrap.dedent('''\
+                p1: alpha
+                p1: beta'''))
 
         with self.assertRaises(ConstructorError):
-            self._render_yaml(b'''
-p1: &p1
-  v1: alpha
-p2:
-  <<: *p1
-  v2: beta
-  v2: betabeta''')
+            self._render_yaml(textwrap.dedent('''\
+                p1: &p1
+                  v1: alpha
+                p2:
+                  <<: *p1
+                  v2: beta
+                  v2: betabeta'''))
+
+    def test_yaml_with_unicode_literals(self):
+        '''
+        Test proper loading of unicode literals
+        '''
+        self.assertEqual(
+            self._render_yaml(textwrap.dedent('''\
+                foo:
+                  a: Д
+                  b: {'a': u'\\u0414'}''')),
+            {'foo': {'a': u'\u0414', 'b': {'a': u'\u0414'}}}
+        )

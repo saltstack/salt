@@ -20,10 +20,11 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.platform
 import salt.grains.core as core
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -34,7 +35,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {core: {}}
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_gnu_slash_linux_in_os_name(self):
         '''
         Test to return a list of all enabled services
@@ -68,7 +69,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             return orig_import(name, *args)
 
         # Skip the first if statement
-        with patch.object(salt.utils, 'is_proxy',
+        with patch.object(salt.utils.platform, 'is_proxy',
                           MagicMock(return_value=False)):
             # Skip the selinux/systemd stuff (not pertinent)
             with patch.object(core, '_linux_bin_exists',
@@ -124,7 +125,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(os_grains.get('os_family'), 'Debian')
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_from_cpe_data(self):
         '''
         Test if 'os' grain is parsed from CPE_NAME of /etc/os-release
@@ -165,7 +166,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             return orig_import(name, *args)
 
         # Skip the first if statement
-        with patch.object(salt.utils, 'is_proxy',
+        with patch.object(salt.utils.platform, 'is_proxy',
                           MagicMock(return_value=False)):
             # Skip the selinux/systemd stuff (not pertinent)
             with patch.object(core, '_linux_bin_exists',
@@ -213,7 +214,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             return orig_import(name, *args)
 
         # Skip the first if statement
-        with patch.object(salt.utils, 'is_proxy',
+        with patch.object(salt.utils.platform, 'is_proxy',
                           MagicMock(return_value=False)):
             # Skip the selinux/systemd stuff (not pertinent)
             with patch.object(core, '_linux_bin_exists',
@@ -249,7 +250,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertListEqual(list(os_grains.get('osrelease_info')), os_release_map['osrelease_info'])
         self.assertEqual(os_grains.get('osmajorrelease'), os_release_map['osmajorrelease'])
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles11sp3(self):
         '''
         Test if OS grains are parsed correctly in SLES 11 SP3
@@ -268,7 +269,7 @@ PATCHLEVEL = 3
         }
         self._run_suse_os_grains_tests(_os_release_map)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles11sp4(self):
         '''
         Test if OS grains are parsed correctly in SLES 11 SP4
@@ -292,7 +293,7 @@ PATCHLEVEL = 3
         }
         self._run_suse_os_grains_tests(_os_release_map)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles12(self):
         '''
         Test if OS grains are parsed correctly in SLES 12
@@ -316,7 +317,7 @@ PATCHLEVEL = 3
         }
         self._run_suse_os_grains_tests(_os_release_map)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_grains_sles12sp1(self):
         '''
         Test if OS grains are parsed correctly in SLES 12 SP1
@@ -340,7 +341,7 @@ PATCHLEVEL = 3
         }
         self._run_suse_os_grains_tests(_os_release_map)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_grains_opensuse_leap_42_1(self):
         '''
         Test if OS grains are parsed correctly in openSUSE Leap 42.1
@@ -364,7 +365,7 @@ PATCHLEVEL = 3
         }
         self._run_suse_os_grains_tests(_os_release_map)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_suse_os_grains_tumbleweed(self):
         '''
         Test if OS grains are parsed correctly in openSUSE Tumbleweed
@@ -388,7 +389,7 @@ PATCHLEVEL = 3
         }
         self._run_suse_os_grains_tests(_os_release_map)
 
-    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_ubuntu_os_grains(self):
         '''
         Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
@@ -429,7 +430,7 @@ PATCHLEVEL = 3
             return orig_import(name, *args)
 
         # Skip the first if statement
-        with patch.object(salt.utils, 'is_proxy',
+        with patch.object(salt.utils.platform, 'is_proxy',
                           MagicMock(return_value=False)):
             # Skip the selinux/systemd stuff (not pertinent)
             with patch.object(core, '_linux_bin_exists',

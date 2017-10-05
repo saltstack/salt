@@ -13,6 +13,7 @@ import os
 import salt.utils
 import salt.utils.files
 import salt.utils.mac_utils
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __virtualname__ = 'softwareupdate'
@@ -22,7 +23,7 @@ def __virtual__():
     '''
     Only for MacOS
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return (False, 'The softwareupdate module could not be loaded: '
                        'module only works on MacOS systems.')
 

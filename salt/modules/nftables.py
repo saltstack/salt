@@ -9,8 +9,8 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import (
     CommandExecutionError
@@ -37,7 +37,7 @@ def __virtual__():
     '''
     Only load the module if nftables is installed
     '''
-    if salt.utils.which('nft'):
+    if salt.utils.path.which('nft'):
         return 'nftables'
     return (False, 'The nftables execution module failed to load: nftables is not installed.')
 

@@ -52,6 +52,7 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
 
 # Import 3rd-party libs
+from salt.ext import six
 HAS_LIBS = False
 try:
     import azure
@@ -709,7 +710,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     if kwargs is None:
         kwargs = {}
 
-    if isinstance(kwargs['volumes'], str):
+    if isinstance(kwargs['volumes'], six.string_types):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
@@ -803,7 +804,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     if kwargs is None:
         kwargs = {}
 
-    if isinstance(kwargs['volumes'], str):
+    if isinstance(kwargs['volumes'], six.string_types):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
