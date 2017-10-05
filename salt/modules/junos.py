@@ -19,6 +19,8 @@ from __future__ import absolute_import
 import logging
 import json
 import os
+import glob
+import yaml
 
 try:
     from lxml import etree
@@ -39,6 +41,9 @@ try:
     from jnpr.junos.utils.scp import SCP
     import jnpr.junos.utils
     import jnpr.junos.cfg
+    import jnpr.junos as tables_par_dir
+    from jnpr.junos.factory.factory_loader import FactoryLoader
+    from jnpr.junos.factory.optable import OpTable
     import jxmlease
     # pylint: enable=W0611
     HAS_JUNOS = True
@@ -1308,4 +1313,68 @@ def commit_check():
         ret['message'] = 'Commit check failed with {0}'.format(exception)
         ret['out'] = False
 
+    return ret
+
+def get_table(table, file, path=None):
+    """
+    Retrieve data from a Junos device using Tables/Views
+
+    Usage:
+
+    .. code-block:: bash
+
+        salt 'device_name' junos.get_table
+
+    Parameters:
+      Required
+        * table:
+          Name of PyEZ Table
+        * file:
+          YAML file that has the table specified in table parameter
+      Optional
+        * path:
+          Path of location of the YAML file.
+          defaults to op directory in jnpr.junos.op
+    """
+
+    conn = __proxy__['junos.conn']()
+    ret = dict()
+    ret['out'] = True
+    table_path = path or os.path.dirname(os.path.abspath(tables_par_dir.__file__))
+    try:
+        file_loc = glob.glob(os.path.join(table_path, '*/{}'.format(file)))
+        if len(file_loc)==1:
+            file_name = file_loc[0]
+        elif len(file_loc)>1:
+            ret['message'] = 'Given table file %s is located at multiple location'\
+                      %file
+            ret['out'] = False
+            return ret
+        elif len(file_loc)==0:
+            ret['message'] = 'Given table file %s cannot be located' % file
+            ret['out'] = False
+            return ret
+        try:
+            ret['table'] = yaml.load(open(file_name).read())
+            globals().update(FactoryLoader().load(ret['table']))
+        except IOError as err:
+            ret['message'] = 'Unable to find file: {0}'.format(file_name)
+            ret['out'] = False
+            return ret
+        try:
+            data = globals()[table](conn)
+            data.get()
+        except KeyError:
+            ret['message'] = 'Unable to find Table %s in provided yaml file %s' \
+                             %(table, file_name)
+            ret['out'] = False
+            return ret
+        if data.__class__.__bases__[0] == OpTable:
+            ret['reply'] = json.loads(data.to_json())
+        else:
+            ret['reply'] = dict(data)
+    except Exception as err:
+        ret['message'] = 'Uncaught exception - please report: {0}'.format(str(err))
+        ret['out'] = False
+        return ret
     return ret
