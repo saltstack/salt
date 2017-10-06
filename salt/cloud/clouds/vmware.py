@@ -3641,6 +3641,10 @@ def remove_snapshot(name, kwargs=None, call=None):
 
     snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
     remove_children = kwargs.get('remove_children') if kwargs and 'remove_children' in kwargs else False
+    all_vms = remove_children = kwargs.get('all_vms') if kwargs and 'all_vms' in kwargs else None
+
+    if all_vms:
+        vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, ["snapshot", ])
 
     if not snapshot_name:
         raise SaltCloudSystemExit(
