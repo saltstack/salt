@@ -147,7 +147,12 @@ def __virtual__():
         return False
 
     if get_dependencies() is False:
-        return False
+        return (
+            False,
+            'The following dependencies are required to use the AzureARM driver: '
+            'Microsoft Azure SDK for Python >= 2.0rc5, '
+            'Microsoft Azure Storage SDK for Python >= 0.32, '
+            'Microsoft Azure CLI >= 2.0.12'
 
     global cache  # pylint: disable=global-statement,invalid-name
     cache = salt.cache.Cache(__opts__)
