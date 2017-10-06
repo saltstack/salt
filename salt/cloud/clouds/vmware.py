@@ -3630,6 +3630,11 @@ def remove_snapshot(name, kwargs=None, call=None):
         salt-cloud -a remove_snapshot vmname snapshot_name="mySnapshot"
         salt-cloud -a remove_snapshot vmname snapshot_name="mySnapshot" [remove_children=True]
     '''
+
+
+    # TODO: check if no snapshot name, then delete the last one
+    # TODO: add logic for all_vms
+
     if call != 'action':
         raise SaltCloudSystemExit(
             'The create_snapshot action must be called with '
