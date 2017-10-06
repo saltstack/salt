@@ -110,6 +110,10 @@ class _LDAPConnection(object):
             self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
 
             if not anonymous:
+                if self.bindpw is None or len(self.bindpw) < 1:
+                    raise CommandExecutionError(
+                        'LDAP bind password is not set: password cannot be empty if auth.ldap.anonymous is False'
+                    )
                 self.ldap.simple_bind_s(self.binddn, self.bindpw)
         except Exception as ldap_error:
             raise CommandExecutionError(
