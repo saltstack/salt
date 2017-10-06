@@ -98,6 +98,7 @@ import salt.utils.minions
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.schedule
+import salt.utils.user
 import salt.utils.zeromq
 import salt.defaults.exitcodes
 import salt.cli.daemons
@@ -1112,7 +1113,7 @@ class Minion(MinionBase):
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
         self.beacons = salt.beacons.Beacon(self.opts, self.functions)
-        uid = salt.utils.get_uid(user=self.opts.get(u'user', None))
+        uid = salt.utils.user.get_uid(user=self.opts.get(u'user', None))
         self.proc_dir = get_proc_dir(self.opts[u'cachedir'], uid=uid)
 
         self.schedule = salt.utils.schedule.Schedule(
@@ -1445,7 +1446,7 @@ class Minion(MinionBase):
             if not hasattr(minion_instance, u'serial'):
                 minion_instance.serial = salt.payload.Serial(opts)
             if not hasattr(minion_instance, u'proc_dir'):
-                uid = salt.utils.get_uid(user=opts.get(u'user', None))
+                uid = salt.utils.user.get_uid(user=opts.get(u'user', None))
                 minion_instance.proc_dir = (
                     get_proc_dir(opts[u'cachedir'], uid=uid)
                     )
@@ -2022,7 +2023,7 @@ class Minion(MinionBase):
         try:
             log.info(
                 u'%s is starting as user \'%s\'',
-                self.__class__.__name__, salt.utils.get_user()
+                self.__class__.__name__, salt.utils.user.get_user()
             )
         except Exception as err:
             # Only windows is allowed to fail here. See #3189. Log as debug in
@@ -3321,7 +3322,7 @@ class ProxyMinion(Minion):
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
         self.beacons = salt.beacons.Beacon(self.opts, self.functions)
-        uid = salt.utils.get_uid(user=self.opts.get(u'user', None))
+        uid = salt.utils.user.get_uid(user=self.opts.get(u'user', None))
         self.proc_dir = get_proc_dir(self.opts[u'cachedir'], uid=uid)
 
         if self.connected and self.opts[u'pillar']:
@@ -3467,7 +3468,7 @@ class ProxyMinion(Minion):
             if not hasattr(minion_instance, u'serial'):
                 minion_instance.serial = salt.payload.Serial(opts)
             if not hasattr(minion_instance, u'proc_dir'):
-                uid = salt.utils.get_uid(user=opts.get(u'user', None))
+                uid = salt.utils.user.get_uid(user=opts.get(u'user', None))
                 minion_instance.proc_dir = (
                     get_proc_dir(opts[u'cachedir'], uid=uid)
                     )

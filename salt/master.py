@@ -76,6 +76,7 @@ import salt.utils.minions
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
+import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -508,7 +509,7 @@ class Master(SMaster):
         Turn on the master server components
         '''
         self._pre_flight()
-        log.info(u'salt-master is starting as user \'%s\'', salt.utils.get_user())
+        log.info(u'salt-master is starting as user \'%s\'', salt.utils.user.get_user())
 
         enable_sigusr1_handler()
         enable_sigusr2_handler()
@@ -1706,7 +1707,7 @@ class ClearFuncs(object):
                 if salt.auth.AuthUser(username).is_sudo():
                     username = self.opts.get(u'user', u'root')
             else:
-                username = salt.utils.get_user()
+                username = salt.utils.user.get_user()
 
         # Authorized. Do the job!
         try:
@@ -1761,7 +1762,7 @@ class ClearFuncs(object):
                 if salt.auth.AuthUser(username).is_sudo():
                     username = self.opts.get(u'user', u'root')
             else:
-                username = salt.utils.get_user()
+                username = salt.utils.user.get_user()
 
         # Authorized. Do the job!
         try:
