@@ -153,6 +153,7 @@ def __virtual__():
             'Microsoft Azure SDK for Python >= 2.0rc5, '
             'Microsoft Azure Storage SDK for Python >= 0.32, '
             'Microsoft Azure CLI >= 2.0.12'
+        )
 
     global cache  # pylint: disable=global-statement,invalid-name
     cache = salt.cache.Cache(__opts__)
