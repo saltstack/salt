@@ -12,10 +12,10 @@ import logging
 import salt.exceptions
 import salt.loader
 import salt.minion
-import salt.utils  # Can be removed when get_specific_user is moved
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
+import salt.utils.user
 from salt.client import mixins
 from salt.output import display_output
 from salt.utils.lazy import verify_fun
@@ -230,7 +230,7 @@ class Runner(RunnerClient):
                         low.update(res)
                         low[u'eauth'] = self.opts[u'eauth']
                 else:
-                    user = salt.utils.get_specific_user()
+                    user = salt.utils.user.get_specific_user()
 
                 if low[u'fun'] == u'state.orchestrate':
                     low[u'kwarg'][u'orchestration_jid'] = async_pub[u'jid']
