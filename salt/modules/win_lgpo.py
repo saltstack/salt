@@ -41,6 +41,7 @@ Current known limitations
 
 # Import python libs
 from __future__ import absolute_import
+import io
 import os
 import logging
 import re
@@ -2862,13 +2863,14 @@ def _findOptionValueInSeceditFile(option):
     '''
     try:
         _d = uuid.uuid4().hex
-        _tfile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'),
+        _tfile = '{0}\\{1}'.format(__opts__['cachedir'],
                                    'salt-secedit-dump-{0}.txt'.format(_d))
         _ret = __salt__['cmd.run']('secedit /export /cfg {0}'.format(_tfile))
         if _ret:
-            _reader = codecs.open(_tfile, 'r', encoding='utf-16')
-            _secdata = _reader.readlines()
-            _reader.close()
+            with io.open(_tfile, encoding='utf-16') as _reader:
+                _secdata = _reader.readlines()
+            while not _reader.closed:
+                _reader.close()
             if __salt__['file.file_exists'](_tfile):
                 _ret = __salt__['file.remove'](_tfile)
             for _line in _secdata:
@@ -2886,9 +2888,9 @@ def _importSeceditConfig(infdata):
     '''
     try:
         _d = uuid.uuid4().hex
-        _tSdbfile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'),
+        _tSdbfile = '{0}\\{1}'.format(__opts__['cachedir'],
                                       'salt-secedit-import-{0}.sdb'.format(_d))
-        _tInfFile = '{0}\\{1}'.format(__salt__['config.get']('cachedir'),
+        _tInfFile = '{0}\\{1}'.format(__opts__['cachedir'],
                                       'salt-secedit-config-{0}.inf'.format(_d))
         # make sure our temp files don't already exist
         if __salt__['file.file_exists'](_tSdbfile):
