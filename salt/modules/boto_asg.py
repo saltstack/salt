@@ -691,6 +691,7 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
         except boto.exception.BotoServerError as e:
             if e.error_code != 'Throttling':
                 raise
+            log.debug('Throttled by API, will retry in 5 seconds')
             time.sleep(5)
 
     log.error('Maximum number of retries exceeded')
