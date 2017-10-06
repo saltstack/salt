@@ -1342,7 +1342,8 @@ def get_table(table, file, path=None):
     ret['out'] = True
     table_path = path or os.path.dirname(os.path.abspath(tables_par_dir.__file__))
     try:
-        file_loc = glob.glob(os.path.join(table_path, '*/{}'.format(file)))
+        file_loc = glob.glob(os.path.join(table_path, '*/{}'.format(file))) or \
+                   glob.glob(os.path.join(table_path, '{}'.format(file)))
         if len(file_loc)==1:
             file_name = file_loc[0]
         elif len(file_loc)>1:
