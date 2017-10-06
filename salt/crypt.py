@@ -50,13 +50,14 @@ import salt.defaults.exitcodes
 import salt.payload
 import salt.transport.client
 import salt.transport.frame
-import salt.utils
+import salt.utils  # Can be removed when pem_finger, reinit_crypto are moved
 import salt.utils.decorators
 import salt.utils.event
 import salt.utils.files
 import salt.utils.rsax931
 import salt.utils.sdb
 import salt.utils.stringutils
+import salt.utils.user
 import salt.utils.verify
 import salt.version
 from salt.exceptions import (
@@ -858,7 +859,7 @@ class AsyncAuth(object):
                     self.opts[u'master']
                 )
                 m_pub_fn = os.path.join(self.opts[u'pki_dir'], self.mpub)
-                uid = salt.utils.get_uid(self.opts.get(u'user', None))
+                uid = salt.utils.user.get_uid(self.opts.get(u'user', None))
                 with salt.utils.files.fpopen(m_pub_fn, u'wb+', uid=uid) as wfh:
                     wfh.write(salt.utils.stringutils.to_bytes(payload[u'pub_key']))
                 return True

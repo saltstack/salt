@@ -42,7 +42,7 @@ from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
 
 # Import Salt libs
-import salt.utils  # Can be removed once get_group_list is moved
+import salt.utils.user
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd-party libs
@@ -214,4 +214,4 @@ def groups(username, *args, **kwargs):
 
     Uses system groups
     '''
-    return salt.utils.get_group_list(username)
+    return salt.utils.user.get_group_list(username)

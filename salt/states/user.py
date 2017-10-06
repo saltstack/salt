@@ -29,8 +29,9 @@ import os
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils  # Can be removed once date_format is moved
 import salt.utils.platform
+import salt.utils.user
 from salt.utils.locales import sdecode, sdecode_if_string
 
 # Import 3rd-party libs
@@ -799,7 +800,7 @@ def absent(name, purge=False, force=False):
             ret['result'] = None
             ret['comment'] = 'User {0} set for removal'.format(name)
             return ret
-        beforegroups = set(salt.utils.get_group_list(name))
+        beforegroups = set(salt.utils.user.get_group_list(name))
         ret['result'] = __salt__['user.delete'](name, purge, force)
         aftergroups = set([g for g in beforegroups if __salt__['group.info'](g)])
         if ret['result']:
