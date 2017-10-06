@@ -36,8 +36,9 @@ import uuid
 import string
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
 import salt.utils.files
+import salt.utils.path
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
 from salt.ext import six
@@ -50,7 +51,7 @@ def __virtual__():
     '''
     Only load the module if iptables is installed
     '''
-    if not salt.utils.which('iptables'):
+    if not salt.utils.path.which('iptables'):
         return (False, 'The iptables execution module cannot be loaded: iptables not installed.')
 
     return True
@@ -61,9 +62,9 @@ def _iptables_cmd(family='ipv4'):
     Return correct command based on the family, e.g. ipv4 or ipv6
     '''
     if family == 'ipv6':
-        return salt.utils.which('ip6tables')
+        return salt.utils.path.which('ip6tables')
     else:
-        return salt.utils.which('iptables')
+        return salt.utils.path.which('iptables')
 
 
 def _has_option(option, family='ipv4'):
@@ -500,8 +501,11 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
                 after_jump.append('--{0} {1}'.format(after_jump_argument, value))
             del kwargs[after_jump_argument]
 
-    for key, value in kwargs.items():
+    for key in kwargs:
         negation = maybe_add_negation(key)
+        # don't use .items() since maybe_add_negation removes the prefix from
+        # the value in the kwargs, thus we need to fetch it after that has run
+        value = kwargs[key]
         flag = '-' if len(key) == 1 else '--'
         value = '' if value in (None, '') else ' {0}'.format(value)
         rule.append('{0}{1}{2}{3}'.format(negation, flag, key, value))
@@ -998,7 +1002,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
             ret[table][chain]['rules'] = []
             ret[table][chain]['rules_comment'] = {}
         elif line.startswith('-A'):
-            args = salt.utils.shlex_split(line)
+            args = salt.utils.args.shlex_split(line)
             index = 0
             while index + 1 < len(args):
                 swap = args[index] == '!' and args[index + 1].startswith('-')
@@ -1459,6 +1463,8 @@ def _parser():
     add_arg('--or-mark', dest='or-mark', action='append')
     add_arg('--xor-mark', dest='xor-mark', action='append')
     add_arg('--set-mark', dest='set-mark', action='append')
+    add_arg('--nfmask', dest='nfmask', action='append')
+    add_arg('--ctmask', dest='ctmask', action='append')
     ## CONNSECMARK
     add_arg('--save', dest='save', action='append')
     add_arg('--restore', dest='restore', action='append')

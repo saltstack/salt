@@ -13,8 +13,8 @@ import logging
 
 # Import Salt libs
 import salt.syspaths
-import salt.utils
 import salt.utils.files
+import salt.utils.stringutils
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -185,7 +185,7 @@ def hash_file(path, hashobj, conn=None):
         return ''
 
     with salt.utils.files.fopen(path, 'r') as f:
-        hashobj.update(salt.utils.to_bytes(f.read()))
+        hashobj.update(salt.utils.stringutils.to_bytes(f.read()))
         return hashobj.hexdigest()
 
 

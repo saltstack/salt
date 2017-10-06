@@ -12,8 +12,11 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 import salt.utils.files
 import salt.utils.itertools
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.url
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -30,7 +33,7 @@ def __virtual__():
     '''
     Only load if git exists on the system
     '''
-    if salt.utils.which('git') is None:
+    if salt.utils.path.which('git') is None:
         return (False,
                 'The git execution module cannot be loaded: git unavailable.')
     else:
@@ -64,10 +67,10 @@ def _config_getter(get_opt,
     Common code for config.get_* functions, builds and runs the git CLI command
     and returns the result dict for the calling function to parse.
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if cwd is None:
         if not global_:
@@ -133,7 +136,7 @@ def _format_opts(opts):
         if not isinstance(opts, six.string_types):
             opts = [str(opts)]
         else:
-            opts = salt.utils.shlex_split(opts)
+            opts = salt.utils.args.shlex_split(opts)
     try:
         if opts[-1] == '--':
             # Strip the '--' if it was passed at the end of the opts string,
@@ -219,7 +222,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                 salt.utils.templates.TEMPLATE_DIRNAME,
                 'git/ssh-id-wrapper'
             )
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 for suffix in ('', ' (x86)'):
                     ssh_exe = (
                         'C:\\Program Files{0}\\Git\\bin\\ssh.exe'
@@ -270,7 +273,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                     redirect_stderr=redirect_stderr,
                     **kwargs)
             finally:
-                if not salt.utils.is_windows() and 'GIT_SSH' in env:
+                if not salt.utils.platform.is_windows() and 'GIT_SSH' in env:
                     os.remove(env['GIT_SSH'])
 
                 # Cleanup the temporary identity file
@@ -574,10 +577,10 @@ def archive(cwd,
     # allows us to accept 'format' as an argument to this function without
     # shadowing the format() global, while also not allowing unwanted arguments
     # to be passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     format_ = kwargs.pop('format', None)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     command = ['git'] + _format_git_opts(git_opts)
     command.append('archive')
@@ -935,7 +938,7 @@ def clone(cwd,
         # https://github.com/saltstack/salt/issues/15519#issuecomment-128531310
         # On Windows, just fall back to None (runs git clone command using the
         # home directory as the cwd).
-        clone_cwd = '/tmp' if not salt.utils.is_windows() else None
+        clone_cwd = '/tmp' if not salt.utils.platform.is_windows() else None
     _git_run(command,
              cwd=clone_cwd,
              user=user,
@@ -1281,11 +1284,11 @@ def config_set(key,
         salt myminion git.config_set user.email me@example.com cwd=/path/to/repo
         salt myminion git.config_set user.email foo@bar.com global=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     add_ = kwargs.pop('add', False)
     global_ = kwargs.pop('global', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if cwd is None:
         if not global_:
@@ -1408,11 +1411,11 @@ def config_unset(key,
         salt myminion git.config_unset /path/to/repo foo.bar
         salt myminion git.config_unset /path/to/repo foo.bar all=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     all_ = kwargs.pop('all', False)
     global_ = kwargs.pop('global', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if cwd is None:
         if not global_:
@@ -2236,10 +2239,10 @@ def list_worktrees(cwd,
     if not _check_worktree_support(failhard=True):
         return {}
     cwd = _expand_path(cwd, user)
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     all_ = kwargs.pop('all', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if all_ and stale:
         raise CommandExecutionError(
@@ -2693,9 +2696,9 @@ def merge(cwd,
         # .. or merge another rev
         salt myminion git.merge /path/to/repo rev=upstream/foo
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
@@ -2825,10 +2828,10 @@ def merge_base(cwd,
         salt myminion git.merge_base /path/to/repo refs=mybranch fork_point=upstream/master
     '''
     cwd = _expand_path(cwd, user)
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     all_ = kwargs.pop('all', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if all_ and (independent or is_ancestor or fork_point):
         raise SaltInvocationError(
@@ -3191,9 +3194,9 @@ def push(cwd,
         # Delete remote branch 'upstream/temp'
         salt myminion git.push /path/to/repo upstream :temp
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
     command = ['git'] + _format_git_opts(git_opts)
@@ -3283,7 +3286,7 @@ def rebase(cwd,
     command.extend(opts)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
-    command.extend(salt.utils.shlex_split(rev))
+    command.extend(salt.utils.args.shlex_split(rev))
     return _git_run(command,
                     cwd=cwd,
                     user=user,
@@ -4203,10 +4206,10 @@ def submodule(cwd,
         # Unregister submodule (2015.8.0 and later)
         salt myminion git.submodule /path/to/repo/sub/repo deinit
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     init_ = kwargs.pop('init', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
     if init_:
@@ -4468,10 +4471,10 @@ def worktree_add(cwd,
         salt myminion git.worktree_add /path/to/repo/main ../hotfix branch=hotfix21 ref=v2.1.9.3
     '''
     _check_worktree_support()
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     branch_ = kwargs.pop('branch', None)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
     if branch_ and detach:

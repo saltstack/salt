@@ -11,10 +11,11 @@ import hmac
 
 # Import Salt libs
 import salt.exceptions
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
 import salt.utils.files
 import salt.utils.hashutils
+import salt.utils.stringutils
 
 if six.PY2:
     import StringIO
@@ -281,7 +282,7 @@ def github_signature(string, shared_secret, challenge_hmac):
     key = shared_secret
     hashtype, challenge = challenge_hmac.split('=')
     if six.PY3:
-        msg = salt.utils.to_bytes(msg)
-        key = salt.utils.to_bytes(key)
+        msg = salt.utils.stringutils.to_bytes(msg)
+        key = salt.utils.stringutils.to_bytes(key)
     hmac_hash = hmac.new(key, msg, getattr(hashlib, hashtype))
     return hmac_hash.hexdigest() == challenge

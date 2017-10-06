@@ -11,8 +11,10 @@ import re
 import datetime
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once compare_dicts is moved
+import salt.utils.args
 import salt.utils.files
+import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -258,10 +260,10 @@ def _get_pkg_info(*packages, **kwargs):
     :param failhard: Throw an exception if no packages found.
     :return:
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     failhard = kwargs.pop('failhard', True)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if __grains__['os'] == 'Ubuntu' and __grains__['osrelease_info'] < (12, 4):
         bin_var = '${binary}'
@@ -355,7 +357,7 @@ def _get_pkg_ds_avail():
     :return:
     '''
     avail = "/var/lib/dpkg/available"
-    if not salt.utils.which('dselect') or not os.path.exists(avail):
+    if not salt.utils.path.which('dselect') or not os.path.exists(avail):
         return dict()
 
     # Do not update with dselect, just read what is.
@@ -406,10 +408,10 @@ def info(*packages, **kwargs):
     # However, this file is operated by dselect which has to be installed.
     dselect_pkg_avail = _get_pkg_ds_avail()
 
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     failhard = kwargs.pop('failhard', True)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     ret = dict()
     for pkg in _get_pkg_info(*packages, failhard=failhard):

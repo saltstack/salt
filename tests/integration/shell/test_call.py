@@ -30,7 +30,7 @@ from tests.integration.utils import testprogram
 
 # Import salt libs
 import salt.utils.files
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

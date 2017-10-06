@@ -18,7 +18,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2017.05.24"
+__ScriptVersion="2017.08.17"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -121,8 +121,7 @@ __check_command_exists() {
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __check_pip_allowed
-#   DESCRIPTION:  Simple function to let the users know that -P needs to be
-#                 used.
+#   DESCRIPTION:  Simple function to let the users know that -P needs to be used.
 #----------------------------------------------------------------------------------------------------------------------
 __check_pip_allowed() {
     if [ $# -eq 1 ]; then
@@ -155,10 +154,16 @@ __check_config_dir() {
             __fetch_url "/tmp/${CC_DIR_BASE}" "${CC_DIR_NAME}"
             CC_DIR_NAME="/tmp/${CC_DIR_BASE}"
             ;;
+        *://*)
+            echoerror "Unsupported URI scheme for $CC_DIR_NAME"
+            echo "null"
+            return
+            ;;
         *)
             if [ ! -e "${CC_DIR_NAME}" ]; then
+                echoerror "The configuration directory or archive $CC_DIR_NAME does not exist."
                 echo "null"
-                return 0
+                return
             fi
             ;;
     esac
@@ -185,6 +190,28 @@ __check_config_dir() {
     esac
 
     echo "${CC_DIR_NAME}"
+}
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#         NAME:  __check_unparsed_options
+#  DESCRIPTION:  Checks the placed after the install arguments
+#----------------------------------------------------------------------------------------------------------------------
+__check_unparsed_options() {
+    shellopts="$1"
+    # grep alternative for SunOS
+    if [ -f /usr/xpg4/bin/grep ]; then
+        grep='/usr/xpg4/bin/grep'
+    else
+        grep='grep'
+    fi
+    unparsed_options=$( echo "$shellopts" | ${grep} -E '(^|[[:space:]])[-]+[[:alnum:]]' )
+    if [ "$unparsed_options" != "" ]; then
+        __usage
+        echo
+        echoerror "options are only allowed before install arguments"
+        echo
+        exit 1
+    fi
 }
 
 
@@ -242,6 +269,10 @@ _QUIET_GIT_INSTALLATION=$BS_FALSE
 _REPO_URL="repo.saltstack.com"
 _PY_EXE=""
 _INSTALL_PY="$BS_FALSE"
+
+# Defaults for install arguments
+ITYPE="stable"
+
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #         NAME:  __usage
@@ -380,19 +411,7 @@ do
     v )  echo "$0 -- Version $__ScriptVersion"; exit 0  ;;
     n )  _COLORS=0; __detect_color_support              ;;
     D )  _ECHO_DEBUG=$BS_TRUE                           ;;
-
-    c )  _TEMP_CONFIG_DIR=$(__check_config_dir "$OPTARG")
-         # If the configuration directory does not exist, error out
-         if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
-             echoerror "Unsupported URI scheme for $OPTARG"
-             exit 1
-         fi
-         if [ ! -d "$_TEMP_CONFIG_DIR" ]; then
-             echoerror "The configuration directory ${_TEMP_CONFIG_DIR} does not exist."
-             exit 1
-         fi
-         ;;
-
+    c )  _TEMP_CONFIG_DIR="$OPTARG"                     ;;
     g )  _SALT_REPO_URL=$OPTARG                         ;;
 
     G )  echowarn "The '-G' option is DEPRECATED and will be removed in the future stable release!"
@@ -401,14 +420,7 @@ do
          ;;
 
     w )  _DOWNSTREAM_PKG_REPO=$BS_TRUE                  ;;
-
-    k )  _TEMP_KEYS_DIR="$OPTARG"
-         # If the configuration directory does not exist, error out
-         if [ ! -d "$_TEMP_KEYS_DIR" ]; then
-             echoerror "The pre-seed keys directory ${_TEMP_KEYS_DIR} does not exist."
-             exit 1
-         fi
-         ;;
+    k )  _TEMP_KEYS_DIR="$OPTARG"                       ;;
     s )  _SLEEP=$OPTARG                                 ;;
     M )  _INSTALL_MASTER=$BS_TRUE                       ;;
     S )  _INSTALL_SYNDIC=$BS_TRUE                       ;;
@@ -451,205 +463,28 @@ done
 shift $((OPTIND-1))
 
 
-__check_unparsed_options() {
-    shellopts="$1"
-    # grep alternative for SunOS
-    if [ -f /usr/xpg4/bin/grep ]; then
-        grep='/usr/xpg4/bin/grep'
-    else
-        grep='grep'
-    fi
-    unparsed_options=$( echo "$shellopts" | ${grep} -E '(^|[[:space:]])[-]+[[:alnum:]]' )
-    if [ "$unparsed_options" != "" ]; then
-        __usage
-        echo
-        echoerror "options are only allowed before install arguments"
-        echo
-        exit 1
-    fi
-}
+# Define our logging file and pipe paths
+LOGFILE="/tmp/$( echo "$__ScriptName" | sed s/.sh/.log/g )"
+LOGPIPE="/tmp/$( echo "$__ScriptName" | sed s/.sh/.logpipe/g )"
 
-
-# Check that we're actually installing one of minion/master/syndic
-if [ "$_INSTALL_MINION" -eq $BS_FALSE ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && [ "$_CONFIG_ONLY" -eq $BS_FALSE ]; then
-    echowarn "Nothing to install or configure"
-    exit 0
-fi
-
-# Check that we're installing a minion if we're being passed a master address
-if [ "$_INSTALL_MINION" -eq $BS_FALSE ] && [ "$_SALT_MASTER_ADDRESS" != "null" ]; then
-    echoerror "Don't pass a master address (-A) if no minion is going to be bootstrapped."
+# Create our logging pipe
+# On FreeBSD we have to use mkfifo instead of mknod
+mknod "$LOGPIPE" p >/dev/null 2>&1 || mkfifo "$LOGPIPE" >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echoerror "Failed to create the named pipe required to log"
     exit 1
 fi
 
-# Check that we're installing a minion if we're being passed a minion id
-if [ "$_INSTALL_MINION" -eq $BS_FALSE ] && [ "$_SALT_MINION_ID" != "null" ]; then
-    echoerror "Don't pass a minion id (-i) if no minion is going to be bootstrapped."
-    exit 1
-fi
+# What ever is written to the logpipe gets written to the logfile
+tee < "$LOGPIPE" "$LOGFILE" &
 
-# Check that we're installing or configuring a master if we're being passed a master config json dict
-if [ "$_CUSTOM_MASTER_CONFIG" != "null" ]; then
-    if [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && [ "$_CONFIG_ONLY" -eq $BS_FALSE ]; then
-        echoerror "Don't pass a master config JSON dict (-J) if no master is going to be bootstrapped or configured."
-        exit 1
-    fi
-fi
+# Close STDOUT, reopen it directing it to the logpipe
+exec 1>&-
+exec 1>"$LOGPIPE"
+# Close STDERR, reopen it directing it to the logpipe
+exec 2>&-
+exec 2>"$LOGPIPE"
 
-# Check that we're installing or configuring a minion if we're being passed a minion config json dict
-if [ "$_CUSTOM_MINION_CONFIG" != "null" ]; then
-    if [ "$_INSTALL_MINION" -eq $BS_FALSE ] && [ "$_CONFIG_ONLY" -eq $BS_FALSE ]; then
-        echoerror "Don't pass a minion config JSON dict (-j) if no minion is going to be bootstrapped or configured."
-        exit 1
-    fi
-fi
-
-# Define installation type
-if [ "$#" -eq 0 ];then
-    ITYPE="stable"
-else
-    __check_unparsed_options "$*"
-    ITYPE=$1
-    shift
-fi
-
-# Check installation type
-if [ "$(echo "$ITYPE" | egrep '(stable|testing|daily|git)')" = "" ]; then
-    echoerror "Installation type \"$ITYPE\" is not known..."
-    exit 1
-fi
-
-# If doing a git install, check what branch/tag/sha will be checked out
-if [ "$ITYPE" = "git" ]; then
-    if [ "$#" -eq 0 ];then
-        GIT_REV="develop"
-    else
-        __check_unparsed_options "$*"
-        GIT_REV="$1"
-        shift
-    fi
-
-    # Disable shell warning about unbound variable during git install
-    STABLE_REV="latest"
-
-# If doing stable install, check if version specified
-elif [ "$ITYPE" = "stable" ]; then
-    if [ "$#" -eq 0 ];then
-        STABLE_REV="latest"
-    else
-        __check_unparsed_options "$*"
-
-        if [ "$(echo "$1" | egrep '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5|2015\.8|2016\.3|2016\.11)$')" != "" ]; then
-            STABLE_REV="$1"
-            shift
-        elif [ "$(echo "$1" | egrep '^([0-9]*\.[0-9]*\.[0-9]*)$')" != "" ]; then
-            STABLE_REV="archive/$1"
-            shift
-        else
-            echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, 2015.8, 2016.3, 2016.11, latest, \$MAJOR.\$MINOR.\$PATCH)"
-            exit 1
-        fi
-    fi
-fi
-
-# -a and -V only work from git
-if [ "$ITYPE" != "git" ]; then
-    if [ $_PIP_ALL -eq $BS_TRUE ]; then
-        echoerror "Pip installing all python packages with -a is only possible when installing Salt via git"
-        exit 1
-    fi
-    if [ "$_VIRTUALENV_DIR" != "null" ]; then
-        echoerror "Virtualenv installs via -V is only possible when installing Salt via git"
-        exit 1
-    fi
-fi
-
-# Set the _REPO_URL value based on if -R was passed or not. Defaults to repo.saltstack.com.
-if [ "$_CUSTOM_REPO_URL" != "null" ]; then
-    _REPO_URL="$_CUSTOM_REPO_URL"
-
-    # Check for -r since -R is being passed. Set -r with a warning.
-    if [ "$_DISABLE_REPOS" -eq $BS_FALSE ]; then
-        echowarn "Detected -R option. No other repositories will be configured when -R is used. Setting -r option to True."
-        _DISABLE_REPOS=$BS_TRUE
-    fi
-fi
-
-# Check for any unparsed arguments. Should be an error.
-if [ "$#" -gt 0 ]; then
-    __check_unparsed_options "$*"
-    __usage
-    echo
-    echoerror "Too many arguments."
-    exit 1
-fi
-
-# Check the _DISABLE_SSL value and set HTTP or HTTPS.
-if [ "$_DISABLE_SSL" -eq $BS_TRUE ]; then
-    HTTP_VAL="http"
-else
-    HTTP_VAL="https"
-fi
-
-# Check the _QUIET_GIT_INSTALLATION value and set SETUP_PY_INSTALL_ARGS.
-if [ "$_QUIET_GIT_INSTALLATION" -eq $BS_TRUE ]; then
-    SETUP_PY_INSTALL_ARGS="-q"
-else
-    SETUP_PY_INSTALL_ARGS=""
-fi
-
-# whoami alternative for SunOS
-if [ -f /usr/xpg4/bin/id ]; then
-    whoami='/usr/xpg4/bin/id -un'
-else
-    whoami='whoami'
-fi
-
-# Root permissions are required to run this script
-if [ "$($whoami)" != "root" ]; then
-    echoerror "Salt requires root privileges to install. Please re-run this script as root."
-    exit 1
-fi
-
-# Export the http_proxy configuration to our current environment
-if [ "${_HTTP_PROXY}" != "" ]; then
-    export http_proxy="$_HTTP_PROXY"
-    export https_proxy="$_HTTP_PROXY"
-fi
-
-# Let's discover how we're being called
-# shellcheck disable=SC2009
-CALLER=$(ps -a -o pid,args | grep $$ | grep -v grep | tr -s ' ' | cut -d ' ' -f 3)
-
-if [ "${CALLER}x" = "${0}x" ]; then
-    CALLER="shell pipe"
-fi
-
-# Work around for 'Docker + salt-bootstrap failure' https://github.com/saltstack/salt-bootstrap/issues/394
-if [ "${_DISABLE_SALT_CHECKS}" -eq $BS_FALSE ] && [ -f /tmp/disable_salt_checks ]; then
-    # shellcheck disable=SC2016
-    echowarn 'Found file: /tmp/disable_salt_checks, setting _DISABLE_SALT_CHECKS=$BS_TRUE'
-    _DISABLE_SALT_CHECKS=$BS_TRUE
-fi
-
-# Because -a can only be installed into virtualenv
-if [ "${_PIP_ALL}" -eq $BS_TRUE ] && [ "${_VIRTUALENV_DIR}" = "null" ]; then
-    usage
-    # Could possibly set up a default virtualenv location when -a flag is passed
-    echoerror "Using -a requires -V because pip pkgs should be siloed from python system pkgs"
-    exit 1
-fi
-
-# Make sure virtualenv directory does not already exist
-if [ -d "${_VIRTUALENV_DIR}" ]; then
-    echoerror "The directory ${_VIRTUALENV_DIR} for virtualenv already exists"
-    exit 1
-fi
-
-echoinfo "Running version: ${__ScriptVersion}"
-echoinfo "Executed by: ${CALLER}"
-echoinfo "Command line: '${__ScriptFullName} ${__ScriptArgs}'"
-#echowarn "Running the unstable version of ${__ScriptName}"
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __exit_cleanup
@@ -684,8 +519,10 @@ __exit_cleanup() {
     fi
 
     # Remove the logging pipe when the script exits
-    echodebug "Removing the logging pipe $LOGPIPE"
-    rm -f "$LOGPIPE"
+    if [ -p "$LOGPIPE" ]; then
+        echodebug "Removing the logging pipe $LOGPIPE"
+        rm -f "$LOGPIPE"
+    fi
 
     # Kill tee when exiting, CentOS, at least requires this
     # shellcheck disable=SC2009
@@ -713,28 +550,192 @@ __exit_cleanup() {
 trap "__exit_cleanup" EXIT INT
 
 
-# Define our logging file and pipe paths
-LOGFILE="/tmp/$( echo "$__ScriptName" | sed s/.sh/.log/g )"
-LOGPIPE="/tmp/$( echo "$__ScriptName" | sed s/.sh/.logpipe/g )"
+# Let's discover how we're being called
+# shellcheck disable=SC2009
+CALLER=$(ps -a -o pid,args | grep $$ | grep -v grep | tr -s ' ' | cut -d ' ' -f 3)
 
-# Create our logging pipe
-# On FreeBSD we have to use mkfifo instead of mknod
-mknod "$LOGPIPE" p >/dev/null 2>&1 || mkfifo "$LOGPIPE" >/dev/null 2>&1
-if [ $? -ne 0 ]; then
-    echoerror "Failed to create the named pipe required to log"
+if [ "${CALLER}x" = "${0}x" ]; then
+    CALLER="shell pipe"
+fi
+
+echoinfo "Running version: ${__ScriptVersion}"
+echoinfo "Executed by: ${CALLER}"
+echoinfo "Command line: '${__ScriptFullName} ${__ScriptArgs}'"
+#echowarn "Running the unstable version of ${__ScriptName}"
+
+# Define installation type
+if [ "$#" -gt 0 ];then
+    __check_unparsed_options "$*"
+    ITYPE=$1
+    shift
+fi
+
+# Check installation type
+if [ "$(echo "$ITYPE" | egrep '(stable|testing|daily|git)')" = "" ]; then
+    echoerror "Installation type \"$ITYPE\" is not known..."
     exit 1
 fi
 
-# What ever is written to the logpipe gets written to the logfile
-tee < "$LOGPIPE" "$LOGFILE" &
+# If doing a git install, check what branch/tag/sha will be checked out
+if [ "$ITYPE" = "git" ]; then
+    if [ "$#" -eq 0 ];then
+        GIT_REV="develop"
+    else
+        GIT_REV="$1"
+        shift
+    fi
 
-# Close STDOUT, reopen it directing it to the logpipe
-exec 1>&-
-exec 1>"$LOGPIPE"
-# Close STDERR, reopen it directing it to the logpipe
-exec 2>&-
-exec 2>"$LOGPIPE"
+    # Disable shell warning about unbound variable during git install
+    STABLE_REV="latest"
 
+# If doing stable install, check if version specified
+elif [ "$ITYPE" = "stable" ]; then
+    if [ "$#" -eq 0 ];then
+        STABLE_REV="latest"
+    else
+        if [ "$(echo "$1" | egrep '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5|2015\.8|2016\.3|2016\.11|2017\.7)$')" != "" ]; then
+            STABLE_REV="$1"
+            shift
+        elif [ "$(echo "$1" | egrep '^([0-9]*\.[0-9]*\.[0-9]*)$')" != "" ]; then
+            STABLE_REV="archive/$1"
+            shift
+        else
+            echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, 2015.8, 2016.3, 2016.11, 2017.7, latest, \$MAJOR.\$MINOR.\$PATCH)"
+            exit 1
+        fi
+    fi
+fi
+
+# Check for any unparsed arguments. Should be an error.
+if [ "$#" -gt 0 ]; then
+    __usage
+    echo
+    echoerror "Too many arguments."
+    exit 1
+fi
+
+# whoami alternative for SunOS
+if [ -f /usr/xpg4/bin/id ]; then
+    whoami='/usr/xpg4/bin/id -un'
+else
+    whoami='whoami'
+fi
+
+# Root permissions are required to run this script
+if [ "$($whoami)" != "root" ]; then
+    echoerror "Salt requires root privileges to install. Please re-run this script as root."
+    exit 1
+fi
+
+# Check that we're actually installing one of minion/master/syndic
+if [ "$_INSTALL_MINION" -eq $BS_FALSE ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && [ "$_CONFIG_ONLY" -eq $BS_FALSE ]; then
+    echowarn "Nothing to install or configure"
+    exit 1
+fi
+
+# Check that we're installing a minion if we're being passed a master address
+if [ "$_INSTALL_MINION" -eq $BS_FALSE ] && [ "$_SALT_MASTER_ADDRESS" != "null" ]; then
+    echoerror "Don't pass a master address (-A) if no minion is going to be bootstrapped."
+    exit 1
+fi
+
+# Check that we're installing a minion if we're being passed a minion id
+if [ "$_INSTALL_MINION" -eq $BS_FALSE ] && [ "$_SALT_MINION_ID" != "null" ]; then
+    echoerror "Don't pass a minion id (-i) if no minion is going to be bootstrapped."
+    exit 1
+fi
+
+# Check that we're installing or configuring a master if we're being passed a master config json dict
+if [ "$_CUSTOM_MASTER_CONFIG" != "null" ]; then
+    if [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && [ "$_CONFIG_ONLY" -eq $BS_FALSE ]; then
+        echoerror "Don't pass a master config JSON dict (-J) if no master is going to be bootstrapped or configured."
+        exit 1
+    fi
+fi
+
+# Check that we're installing or configuring a minion if we're being passed a minion config json dict
+if [ "$_CUSTOM_MINION_CONFIG" != "null" ]; then
+    if [ "$_INSTALL_MINION" -eq $BS_FALSE ] && [ "$_CONFIG_ONLY" -eq $BS_FALSE ]; then
+        echoerror "Don't pass a minion config JSON dict (-j) if no minion is going to be bootstrapped or configured."
+        exit 1
+    fi
+fi
+
+# If the configuration directory or archive does not exist, error out
+if [ "$_TEMP_CONFIG_DIR" != "null" ]; then
+    _TEMP_CONFIG_DIR="$(__check_config_dir "$_TEMP_CONFIG_DIR")"
+    [ "$_TEMP_CONFIG_DIR" = "null" ] && exit 1
+fi
+
+# If the pre-seed keys directory does not exist, error out
+if [ "$_TEMP_KEYS_DIR" != "null" ] && [ ! -d "$_TEMP_KEYS_DIR" ]; then
+    echoerror "The pre-seed keys directory ${_TEMP_KEYS_DIR} does not exist."
+    exit 1
+fi
+
+# -a and -V only work from git
+if [ "$ITYPE" != "git" ]; then
+    if [ $_PIP_ALL -eq $BS_TRUE ]; then
+        echoerror "Pip installing all python packages with -a is only possible when installing Salt via git"
+        exit 1
+    fi
+    if [ "$_VIRTUALENV_DIR" != "null" ]; then
+        echoerror "Virtualenv installs via -V is only possible when installing Salt via git"
+        exit 1
+    fi
+fi
+
+# Set the _REPO_URL value based on if -R was passed or not. Defaults to repo.saltstack.com.
+if [ "$_CUSTOM_REPO_URL" != "null" ]; then
+    _REPO_URL="$_CUSTOM_REPO_URL"
+
+    # Check for -r since -R is being passed. Set -r with a warning.
+    if [ "$_DISABLE_REPOS" -eq $BS_FALSE ]; then
+        echowarn "Detected -R option. No other repositories will be configured when -R is used. Setting -r option to True."
+        _DISABLE_REPOS=$BS_TRUE
+    fi
+fi
+
+# Check the _DISABLE_SSL value and set HTTP or HTTPS.
+if [ "$_DISABLE_SSL" -eq $BS_TRUE ]; then
+    HTTP_VAL="http"
+else
+    HTTP_VAL="https"
+fi
+
+# Check the _QUIET_GIT_INSTALLATION value and set SETUP_PY_INSTALL_ARGS.
+if [ "$_QUIET_GIT_INSTALLATION" -eq $BS_TRUE ]; then
+    SETUP_PY_INSTALL_ARGS="-q"
+else
+    SETUP_PY_INSTALL_ARGS=""
+fi
+
+# Export the http_proxy configuration to our current environment
+if [ "${_HTTP_PROXY}" != "" ]; then
+    export http_proxy="$_HTTP_PROXY"
+    export https_proxy="$_HTTP_PROXY"
+fi
+
+# Work around for 'Docker + salt-bootstrap failure' https://github.com/saltstack/salt-bootstrap/issues/394
+if [ "${_DISABLE_SALT_CHECKS}" -eq $BS_FALSE ] && [ -f /tmp/disable_salt_checks ]; then
+    # shellcheck disable=SC2016
+    echowarn 'Found file: /tmp/disable_salt_checks, setting _DISABLE_SALT_CHECKS=$BS_TRUE'
+    _DISABLE_SALT_CHECKS=$BS_TRUE
+fi
+
+# Because -a can only be installed into virtualenv
+if [ "${_PIP_ALL}" -eq $BS_TRUE ] && [ "${_VIRTUALENV_DIR}" = "null" ]; then
+    usage
+    # Could possibly set up a default virtualenv location when -a flag is passed
+    echoerror "Using -a requires -V because pip pkgs should be siloed from python system pkgs"
+    exit 1
+fi
+
+# Make sure virtualenv directory does not already exist
+if [ -d "${_VIRTUALENV_DIR}" ]; then
+    echoerror "The directory ${_VIRTUALENV_DIR} for virtualenv already exists"
+    exit 1
+fi
 
 # Handle the insecure flags
 if [ "$_INSECURE_DL" -eq $BS_TRUE ]; then
@@ -856,8 +857,10 @@ __derive_debian_numeric_version() {
         elif [ "$INPUT_VERSION" = "jessie/sid" ]; then
             NUMERIC_VERSION=$(__parse_version_string "8.0")
         elif [ "$INPUT_VERSION" = "stretch/sid" ]; then
-            # Let's start detecting the upcoming Debian 9 (Stretch)
             NUMERIC_VERSION=$(__parse_version_string "9.0")
+        elif [ "$INPUT_VERSION" = "buster/sid" ]; then
+            # Let's start detecting the upcoming Debian 10 (Buster) release
+            NUMERIC_VERSION=$(__parse_version_string "10.0")
         else
             echowarn "Unable to parse the Debian Version (codename: '$INPUT_VERSION')"
         fi
@@ -1089,11 +1092,11 @@ __gather_linux_system_info() {
 
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
-#          NAME:  __install_python_and_deps()
-#   DESCRIPTION:  Install a different version of python and its dependencies on a host. Currently this has only been
-#                 tested on Centos 6 and is considered experimental.
+#          NAME:  __install_python()
+#   DESCRIPTION:  Install a different version of python on a host. Currently this has only been tested on CentOS 6 and
+#                 is considered experimental.
 #----------------------------------------------------------------------------------------------------------------------
-__install_python_and_deps() {
+__install_python() {
     if [ "$_PY_EXE" = "" ]; then
         echoerror "Must specify -x <pythonversion> with -y to install a specific python version"
         exit 1
@@ -1103,7 +1106,7 @@ __install_python_and_deps() {
     __PACKAGES="${PY_PKG_V}"
 
 
-    if [ $_DISABLE_REPOS -eq $BS_FALSE ]; then
+    if [ ${_DISABLE_REPOS} -eq ${BS_FALSE} ]; then
         echoinfo "Attempting to install a repo to help provide a separate python package"
         echoinfo "$DISTRO_NAME_L"
         case "$DISTRO_NAME_L" in
@@ -1112,7 +1115,7 @@ __install_python_and_deps() {
                 ;;
             *)
                 echoerror "Installing a repo to provide a python package is only supported on Redhat/CentOS.
-                If a repo is already available please try running script with -r"
+                If a repo is already available, please try running script with -r."
                 exit 1
                 ;;
         esac
@@ -1123,13 +1126,6 @@ __install_python_and_deps() {
 
     echoinfo "Installing ${__PACKAGES}"
     __yum_install_noinput "${__PACKAGES}" || return 1
-
-    _PIP_PACKAGES="tornado PyYAML msgpack-python jinja2 pycrypto zmq"
-    if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
-        _PIP_PACKAGES="${_PIP_PACKAGES} apache-libcloud"
-    fi
-
-    __install_pip_pkgs "${_PIP_PACKAGES}" "${_PY_EXE}" || return 1
 }
 
 
@@ -1244,22 +1240,6 @@ __gather_system_info() {
 
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
-#          NAME:  __get_dpkg_architecture
-#   DESCRIPTION:  Determine primary architecture for packages to install on Debian and derivatives
-#----------------------------------------------------------------------------------------------------------------------
-__get_dpkg_architecture() {
-    if __check_command_exists dpkg; then
-        DPKG_ARCHITECTURE="$(dpkg --print-architecture)"
-    else
-        echoerror "dpkg: command not found."
-        return 1
-    fi
-
-    return 0
-}
-
-
-#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __ubuntu_derivatives_translation
 #   DESCRIPTION:  Map Ubuntu derivatives to their Ubuntu base versions.
 #                 If distro has a known Ubuntu base version, use those install
@@ -1301,6 +1281,63 @@ __ubuntu_derivatives_translation() {
             DISTRO_NAME_L="ubuntu"
             DISTRO_VERSION="$_ubuntu_version"
         fi
+    fi
+}
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __check_dpkg_architecture
+#   DESCRIPTION:  Determine the primary architecture for packages to install on Debian and derivatives
+#                 and issue all necessary error messages.
+#----------------------------------------------------------------------------------------------------------------------
+__check_dpkg_architecture() {
+    if __check_command_exists dpkg; then
+        DPKG_ARCHITECTURE="$(dpkg --print-architecture)"
+    else
+        echoerror "dpkg: command not found."
+        return 1
+    fi
+
+    __REPO_ARCH="$DPKG_ARCHITECTURE"
+    __return_code=0
+
+    case $DPKG_ARCHITECTURE in
+        "i386")
+            error_msg="$_REPO_URL likely doesn't have all required 32-bit packages for $DISTRO_NAME $DISTRO_MAJOR_VERSION."
+            # amd64 is just a part of repository URI, 32-bit pkgs are hosted under the same location
+            __REPO_ARCH="amd64"
+            ;;
+        "amd64")
+            error_msg=""
+            ;;
+        "armhf")
+            if [ "$DISTRO_NAME_L" = "ubuntu" ] || [ "$DISTRO_MAJOR_VERSION" -lt 8 ]; then
+                error_msg="Support for armhf packages at $_REPO_URL is limited to Debian/Raspbian 8 platforms."
+                __return_code=1
+            else
+                error_msg=""
+            fi
+            ;;
+        *)
+            error_msg="$_REPO_URL doesn't have packages for your system architecture: $DPKG_ARCHITECTURE."
+            __return_code=1
+            ;;
+    esac
+
+    if [ "${error_msg}" != "" ]; then
+        echoerror "${error_msg}"
+        if [ "$ITYPE" != "git" ]; then
+            echoerror "You can try git installation mode, i.e.: sh ${__ScriptName} git v2016.11.5."
+            echoerror "It may be necessary to use git installation mode with pip and disable the SaltStack apt repository."
+            echoerror "For example:"
+            echoerror "    sh ${__ScriptName} -r -P git v2016.11.5"
+        fi
+    fi
+
+    if [ "${__return_code}" -eq 0 ]; then
+        return 0
+    else
+        return 1
     fi
 }
 
@@ -1403,18 +1440,172 @@ __debian_derivatives_translation() {
 
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
-#          NAME:  __check_and_refresh_suse_pkg_repo
-#   DESCRIPTION:  Check if zypper knows about systemsmanagement_saltstack repo yet.
-#                 If it doesn't, add the repo and refresh with the SUSE_PKG_URL.
+#          NAME:  __debian_codename_translation
+#   DESCRIPTION:  Map Debian major versions to their corresponding code names
 #----------------------------------------------------------------------------------------------------------------------
-__check_and_refresh_suse_pkg_repo() {
-    # Check to see if systemsmanagement_saltstack exists
-    __zypper repos | grep systemsmanagement_saltstack >/dev/null 2>&1
+# shellcheck disable=SC2034
+__debian_codename_translation() {
 
-    if [ $? -eq 1 ]; then
-        # zypper does not yet know anything about systemsmanagement_saltstack
-        __zypper addrepo --refresh "${SUSE_PKG_URL}" || return 1
-    fi
+    case $DISTRO_MAJOR_VERSION in
+        "7")
+            DISTRO_CODENAME="wheezy"
+            ;;
+        "8")
+            DISTRO_CODENAME="jessie"
+            ;;
+        "9")
+            DISTRO_CODENAME="stretch"
+            ;;
+        "10")
+            DISTRO_CODENAME="buster"
+            ;;
+        *)
+            DISTRO_CODENAME="jessie"
+            ;;
+    esac
+}
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __check_end_of_life_versions
+#   DESCRIPTION:  Check for end of life distribution versions
+#----------------------------------------------------------------------------------------------------------------------
+__check_end_of_life_versions() {
+    case "${DISTRO_NAME_L}" in
+        debian)
+            # Debian versions below 7 are not supported
+            if [ "$DISTRO_MAJOR_VERSION" -lt 7 ]; then
+                echoerror "End of life distributions are not supported."
+                echoerror "Please consider upgrading to the next stable. See:"
+                echoerror "    https://wiki.debian.org/DebianReleases"
+                exit 1
+            fi
+            ;;
+
+        ubuntu)
+            # Ubuntu versions not supported
+            #
+            #  < 14.04
+            #  = 14.10
+            #  = 15.04, 15.10
+            if [ "$DISTRO_MAJOR_VERSION" -lt 14 ] || \
+               [ "$DISTRO_MAJOR_VERSION" -eq 15 ] || \
+               ([ "$DISTRO_MAJOR_VERSION" -lt 16 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]); then
+                echoerror "End of life distributions are not supported."
+                echoerror "Please consider upgrading to the next stable. See:"
+                echoerror "    https://wiki.ubuntu.com/Releases"
+                exit 1
+            fi
+            ;;
+
+        opensuse)
+            # openSUSE versions not supported
+            #
+            #  <= 12.1
+            if ([ "$DISTRO_MAJOR_VERSION" -eq 12 ] && [ "$DISTRO_MINOR_VERSION" -eq 1 ]) || [ "$DISTRO_MAJOR_VERSION" -lt 12 ]; then
+                echoerror "End of life distributions are not supported."
+                echoerror "Please consider upgrading to the next stable. See:"
+                echoerror "    http://en.opensuse.org/Lifetime"
+                exit 1
+            fi
+            ;;
+
+        suse)
+            # SuSE versions not supported
+            #
+            # < 11 SP2
+            SUSE_PATCHLEVEL=$(awk '/PATCHLEVEL/ {print $3}' /etc/SuSE-release )
+            if [ "${SUSE_PATCHLEVEL}" = "" ]; then
+                SUSE_PATCHLEVEL="00"
+            fi
+            if ([ "$DISTRO_MAJOR_VERSION" -eq 11 ] && [ "$SUSE_PATCHLEVEL" -lt 02 ]) || [ "$DISTRO_MAJOR_VERSION" -lt 11 ]; then
+                echoerror "Versions lower than SuSE 11 SP2 are not supported."
+                echoerror "Please consider upgrading to the next stable"
+                exit 1
+            fi
+            ;;
+
+        fedora)
+            # Fedora lower than 24 are no longer supported
+            if [ "$DISTRO_MAJOR_VERSION" -lt 24 ]; then
+                echoerror "End of life distributions are not supported."
+                echoerror "Please consider upgrading to the next stable. See:"
+                echoerror "    https://fedoraproject.org/wiki/Releases"
+                exit 1
+            fi
+            ;;
+
+        centos)
+            # CentOS versions lower than 6 are no longer supported
+            if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
+                echoerror "End of life distributions are not supported."
+                echoerror "Please consider upgrading to the next stable. See:"
+                echoerror "    http://wiki.centos.org/Download"
+                exit 1
+            fi
+            ;;
+
+        red_hat*linux)
+            # Red Hat (Enterprise) Linux versions lower than 6 are no longer supported
+            if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
+                echoerror "End of life distributions are not supported."
+                echoerror "Please consider upgrading to the next stable. See:"
+                echoerror "    https://access.redhat.com/support/policy/updates/errata/"
+                exit 1
+            fi
+            ;;
+
+        oracle*linux)
+            # Oracle Linux versions lower than 6 are no longer supported
+            if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
+                echoerror "End of life distributions are not supported."
+                echoerror "Please consider upgrading to the next stable. See:"
+                echoerror "    http://www.oracle.com/us/support/library/elsp-lifetime-069338.pdf"
+                exit 1
+            fi
+            ;;
+
+        scientific*linux)
+            # Scientific Linux versions lower than 6 are no longer supported
+            if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
+                echoerror "End of life distributions are not supported."
+                echoerror "Please consider upgrading to the next stable. See:"
+                echoerror "    https://www.scientificlinux.org/downloads/sl-versions/"
+                exit 1
+            fi
+            ;;
+
+        cloud*linux)
+            # Cloud Linux versions lower than 6 are no longer supported
+            if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
+                echoerror "End of life distributions are not supported."
+                echoerror "Please consider upgrading to the next stable. See:"
+                echoerror "    https://docs.cloudlinux.com/index.html?cloudlinux_life-cycle.html"
+                exit 1
+            fi
+            ;;
+
+        amazon*linux*ami)
+            # Amazon Linux versions lower than 2012.0X no longer supported
+            if [ "$DISTRO_MAJOR_VERSION" -lt 2012 ]; then
+                echoerror "End of life distributions are not supported."
+                echoerror "Please consider upgrading to the next stable. See:"
+                echoerror "    https://aws.amazon.com/amazon-linux-ami/"
+                exit 1
+            fi
+            ;;
+
+        freebsd)
+            # FreeBSD versions lower than 9.1 are not supported.
+            if ([ "$DISTRO_MAJOR_VERSION" -eq 9 ] && [ "$DISTRO_MINOR_VERSION" -lt 01 ]) || [ "$DISTRO_MAJOR_VERSION" -lt 9 ]; then
+                echoerror "Versions lower than FreeBSD 9.1 are not supported."
+                exit 1
+            fi
+            ;;
+
+        *)
+            ;;
+    esac
 }
 
 
@@ -1428,6 +1619,37 @@ echoinfo "  OS Name:      ${OS_NAME}"
 echoinfo "  OS Version:   ${OS_VERSION}"
 echoinfo "  Distribution: ${DISTRO_NAME} ${DISTRO_VERSION}"
 echo
+
+# Simplify distro name naming on functions
+DISTRO_NAME_L=$(echo "$DISTRO_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9_ ]//g' | sed -re 's/([[:space:]])+/_/g')
+
+# Simplify version naming on functions
+if [ "$DISTRO_VERSION" = "" ] || [ ${_SIMPLIFY_VERSION} -eq $BS_FALSE ]; then
+    DISTRO_MAJOR_VERSION=""
+    DISTRO_MINOR_VERSION=""
+    PREFIXED_DISTRO_MAJOR_VERSION=""
+    PREFIXED_DISTRO_MINOR_VERSION=""
+else
+    DISTRO_MAJOR_VERSION=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).*/\1/g')
+    DISTRO_MINOR_VERSION=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).\([0-9]*\).*/\2/g')
+    PREFIXED_DISTRO_MAJOR_VERSION="_${DISTRO_MAJOR_VERSION}"
+    if [ "${PREFIXED_DISTRO_MAJOR_VERSION}" = "_" ]; then
+        PREFIXED_DISTRO_MAJOR_VERSION=""
+    fi
+    PREFIXED_DISTRO_MINOR_VERSION="_${DISTRO_MINOR_VERSION}"
+    if [ "${PREFIXED_DISTRO_MINOR_VERSION}" = "_" ]; then
+        PREFIXED_DISTRO_MINOR_VERSION=""
+    fi
+fi
+
+# For Ubuntu derivatives, pretend to be their Ubuntu base version
+__ubuntu_derivatives_translation
+
+# For Debian derivates, pretend to be their Debian base version
+__debian_derivatives_translation
+
+# Fail soon for end of life versions
+__check_end_of_life_versions
 
 echodebug "Binaries will be searched using the following \$PATH: ${PATH}"
 
@@ -1469,36 +1691,13 @@ if [ $_START_DAEMONS -eq $BS_FALSE ]; then
     echoinfo "Daemons will not be started"
 fi
 
-# Simplify distro name naming on functions
-DISTRO_NAME_L=$(echo "$DISTRO_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9_ ]//g' | sed -re 's/([[:space:]])+/_/g')
-
-# For Ubuntu derivatives, pretend to be their Ubuntu base version
-__ubuntu_derivatives_translation
-
-# For Debian derivates, pretend to be their Debian base version
-__debian_derivatives_translation
-
-# Simplify version naming on functions
-if [ "$DISTRO_VERSION" = "" ] || [ ${_SIMPLIFY_VERSION} -eq $BS_FALSE ]; then
-    DISTRO_MAJOR_VERSION=""
-    DISTRO_MINOR_VERSION=""
-    PREFIXED_DISTRO_MAJOR_VERSION=""
-    PREFIXED_DISTRO_MINOR_VERSION=""
-else
-    DISTRO_MAJOR_VERSION=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).*/\1/g')
-    DISTRO_MINOR_VERSION=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).\([0-9]*\).*/\2/g')
-    PREFIXED_DISTRO_MAJOR_VERSION="_${DISTRO_MAJOR_VERSION}"
-    if [ "${PREFIXED_DISTRO_MAJOR_VERSION}" = "_" ]; then
-        PREFIXED_DISTRO_MAJOR_VERSION=""
-    fi
-    PREFIXED_DISTRO_MINOR_VERSION="_${DISTRO_MINOR_VERSION}"
-    if [ "${PREFIXED_DISTRO_MINOR_VERSION}" = "_" ]; then
-        PREFIXED_DISTRO_MINOR_VERSION=""
-    fi
+if [ "${DISTRO_NAME_L}" = "ubuntu" ]; then
+  # For ubuntu versions, obtain the codename from the release version
+  __ubuntu_codename_translation
+elif [ "${DISTRO_NAME_L}" = "debian" ]; then
+  # For debian versions, obtain the codename from the release version
+  __debian_codename_translation
 fi
-
-# For ubuntu versions, obtain the codename from the release version
-__ubuntu_codename_translation
 
 # Only Ubuntu has daily packages, let's let users know about that
 if ([ "${DISTRO_NAME_L}" != "ubuntu" ] && [ "$ITYPE" = "daily" ]); then
@@ -1525,14 +1724,18 @@ if ([ "${DISTRO_NAME_L}" != "ubuntu" ] && [ "$_VIRTUALENV_DIR" != "null" ]); the
 fi
 
 # Only Ubuntu has support for pip installing all packages
-if ([ "${DISTRO_NAME_L}" != "ubuntu" ] && [ $_PIP_ALL -eq $BS_TRUE ]);then
+if ([ "${DISTRO_NAME_L}" != "ubuntu" ] && [ $_PIP_ALL -eq $BS_TRUE ]); then
     echoerror "${DISTRO_NAME} does not have -a support"
     exit 1
 fi
 
-# Starting from Ubuntu 16.10, gnupg-curl has been renamed to gnupg1-curl.
+# Starting from Debian 9 and Ubuntu 16.10, gnupg-curl has been renamed to gnupg1-curl.
 GNUPG_CURL="gnupg-curl"
-if [ "${DISTRO_NAME_L}" = "ubuntu" ]; then
+if [ "$DISTRO_NAME_L" = "debian" ]; then
+    if [ "$DISTRO_MAJOR_VERSION" -gt 8 ]; then
+        GNUPG_CURL="gnupg1-curl"
+    fi
+elif [ "$DISTRO_NAME_L" = "ubuntu" ]; then
     if [ "${DISTRO_VERSION}" = "16.10" ] || [ "$DISTRO_MAJOR_VERSION" -gt 16 ]; then
         GNUPG_CURL="gnupg1-curl"
     fi
@@ -1624,7 +1827,9 @@ __rpm_import_gpg() {
 __yum_install_noinput() {
 
     ENABLE_EPEL_CMD=""
-    if [ $_DISABLE_REPOS -eq $BS_FALSE ]; then
+    # Skip Amazon Linux for the first round, since EPEL is no longer required.
+    # See issue #724
+    if [ $_DISABLE_REPOS -eq $BS_FALSE ] && [ "$DISTRO_NAME_L" != "amazon_linux_ami" ]; then
         ENABLE_EPEL_CMD="--enablerepo=${_EPEL_REPO}"
     fi
 
@@ -1766,152 +1971,6 @@ __git_clone_and_checkout() {
     echoinfo "Cloning Salt's git repository succeeded"
     return 0
 }
-
-
-#---  FUNCTION  -------------------------------------------------------------------------------------------------------
-#          NAME:  __check_end_of_life_versions
-#   DESCRIPTION:  Check for end of life distribution versions
-#----------------------------------------------------------------------------------------------------------------------
-__check_end_of_life_versions() {
-    case "${DISTRO_NAME_L}" in
-        debian)
-            # Debian versions bellow 6 are not supported
-            if [ "$DISTRO_MAJOR_VERSION" -lt 7 ]; then
-                echoerror "End of life distributions are not supported."
-                echoerror "Please consider upgrading to the next stable. See:"
-                echoerror "    https://wiki.debian.org/DebianReleases"
-                exit 1
-            fi
-            ;;
-
-        ubuntu)
-            # Ubuntu versions not supported
-            #
-            #  < 12.04
-            #  13.x, 15.x
-            #  12.10, 14.10
-            if [ "$DISTRO_MAJOR_VERSION" -lt 12 ] || \
-               [ "$DISTRO_MAJOR_VERSION" -eq 13 ] || \
-               [ "$DISTRO_MAJOR_VERSION" -eq 15 ] || \
-               ([ "$DISTRO_MAJOR_VERSION" -lt 16 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]); then
-                echoerror "End of life distributions are not supported."
-                echoerror "Please consider upgrading to the next stable. See:"
-                echoerror "    https://wiki.ubuntu.com/Releases"
-                exit 1
-            fi
-            ;;
-
-        opensuse)
-            # openSUSE versions not supported
-            #
-            #  <= 12.1
-            if ([ "$DISTRO_MAJOR_VERSION" -eq 12 ] && [ "$DISTRO_MINOR_VERSION" -eq 1 ]) || [ "$DISTRO_MAJOR_VERSION" -lt 12 ]; then
-                echoerror "End of life distributions are not supported."
-                echoerror "Please consider upgrading to the next stable. See:"
-                echoerror "    http://en.opensuse.org/Lifetime"
-                exit 1
-            fi
-            ;;
-
-        suse)
-            # SuSE versions not supported
-            #
-            # < 11 SP2
-            SUSE_PATCHLEVEL=$(awk '/PATCHLEVEL/ {print $3}' /etc/SuSE-release )
-            if [ "${SUSE_PATCHLEVEL}" = "" ]; then
-                SUSE_PATCHLEVEL="00"
-            fi
-            if ([ "$DISTRO_MAJOR_VERSION" -eq 11 ] && [ "$SUSE_PATCHLEVEL" -lt 02 ]) || [ "$DISTRO_MAJOR_VERSION" -lt 11 ]; then
-                echoerror "Versions lower than SuSE 11 SP2 are not supported."
-                echoerror "Please consider upgrading to the next stable"
-                exit 1
-            fi
-            ;;
-
-        fedora)
-            # Fedora lower than 18 are no longer supported
-            if [ "$DISTRO_MAJOR_VERSION" -lt 23 ]; then
-                echoerror "End of life distributions are not supported."
-                echoerror "Please consider upgrading to the next stable. See:"
-                echoerror "    https://fedoraproject.org/wiki/Releases"
-                exit 1
-            fi
-            ;;
-
-        centos)
-            # CentOS versions lower than 5 are no longer supported
-            if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
-                echoerror "End of life distributions are not supported."
-                echoerror "Please consider upgrading to the next stable. See:"
-                echoerror "    http://wiki.centos.org/Download"
-                exit 1
-            fi
-            ;;
-
-        red_hat*linux)
-            # Red Hat (Enterprise) Linux versions lower than 5 are no longer supported
-            if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
-                echoerror "End of life distributions are not supported."
-                echoerror "Please consider upgrading to the next stable. See:"
-                echoerror "    https://access.redhat.com/support/policy/updates/errata/"
-                exit 1
-            fi
-            ;;
-
-        oracle*linux)
-            # Oracle Linux versions lower than 5 are no longer supported
-            if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
-                echoerror "End of life distributions are not supported."
-                echoerror "Please consider upgrading to the next stable. See:"
-                echoerror "    http://www.oracle.com/us/support/library/elsp-lifetime-069338.pdf"
-                exit 1
-            fi
-            ;;
-
-        scientific*linux)
-            # Scientific Linux versions lower than 5 are no longer supported
-            if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
-                echoerror "End of life distributions are not supported."
-                echoerror "Please consider upgrading to the next stable. See:"
-                echoerror "    https://www.scientificlinux.org/downloads/sl-versions/"
-                exit 1
-            fi
-            ;;
-
-        cloud*linux)
-            # Cloud Linux versions lower than 5 are no longer supported
-            if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
-                echoerror "End of life distributions are not supported."
-                echoerror "Please consider upgrading to the next stable. See:"
-                echoerror "    https://docs.cloudlinux.com/index.html?cloudlinux_life-cycle.html"
-                exit 1
-            fi
-            ;;
-
-        amazon*linux*ami)
-            # Amazon Linux versions lower than 2012.0X no longer supported
-            if [ "$DISTRO_MAJOR_VERSION" -lt 2012 ]; then
-                echoerror "End of life distributions are not supported."
-                echoerror "Please consider upgrading to the next stable. See:"
-                echoerror "    https://aws.amazon.com/amazon-linux-ami/"
-                exit 1
-            fi
-            ;;
-
-        freebsd)
-            # FreeBSD versions lower than 9.1 are not supported.
-            if ([ "$DISTRO_MAJOR_VERSION" -eq 9 ] && [ "$DISTRO_MINOR_VERSION" -lt 01 ]) || [ "$DISTRO_MAJOR_VERSION" -lt 9 ]; then
-                echoerror "Versions lower than FreeBSD 9.1 are not supported."
-                exit 1
-            fi
-            ;;
-
-        *)
-            ;;
-    esac
-}
-# Fail soon for end of life versions
-__check_end_of_life_versions
 
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -2479,38 +2538,55 @@ __enable_universe_repository() {
     return 0
 }
 
-install_ubuntu_deps() {
-    if [ "$DISTRO_MAJOR_VERSION" -gt 12 ]; then
-        # Above Ubuntu 12.04 add-apt-repository is in a different package
-        __apt_get_install_noinput software-properties-common || return 1
+__install_saltstack_ubuntu_repository() {
+
+    # Workaround for latest non-LTS ubuntu
+    if [ "$DISTRO_VERSION" = "16.10" ] || [ "$DISTRO_MAJOR_VERSION" -gt 16 ]; then
+        echowarn "Non-LTS Ubuntu detected, but stable packages requested. Trying packages from latest LTS release. You may experience problems."
+        UBUNTU_VERSION=16.04
+        UBUNTU_CODENAME="xenial"
     else
-        __apt_get_install_noinput python-software-properties || return 1
+        UBUNTU_VERSION=$DISTRO_VERSION
+        UBUNTU_CODENAME=$DISTRO_CODENAME
     fi
 
+    # SaltStack's stable Ubuntu repository:
+    SALTSTACK_UBUNTU_URL="${HTTP_VAL}://${_REPO_URL}/apt/ubuntu/${UBUNTU_VERSION}/${__REPO_ARCH}/${STABLE_REV}"
+    echo "deb $SALTSTACK_UBUNTU_URL $UBUNTU_CODENAME main" > /etc/apt/sources.list.d/saltstack.list
+
+    # Make sure https transport is available
+    if [ "$HTTP_VAL" = "https" ] ; then
+        __apt_get_install_noinput apt-transport-https ca-certificates || return 1
+    fi
+
+    __apt_key_fetch "$SALTSTACK_UBUNTU_URL/SALTSTACK-GPG-KEY.pub" || return 1
+
+    apt-get update
+}
+
+install_ubuntu_deps() {
     if [ $_DISABLE_REPOS -eq $BS_FALSE ]; then
-        __enable_universe_repository || return 1
-
-        # Versions starting with 2015.5.6 and 2015.8.1 are hosted at repo.saltstack.com
-        if [ "$(echo "$STABLE_REV" | egrep '^(2015\.5|2015\.8|2016\.3|2016\.11|latest|archive\/)')" = "" ]; then
-            if [ "$DISTRO_MAJOR_VERSION" -lt 14 ]; then
-                echoinfo "Installing Python Requests/Chardet from Chris Lea's PPA repository"
-                add-apt-repository -y "ppa:chris-lea/python-requests" || return 1
-                add-apt-repository -y "ppa:chris-lea/python-chardet" || return 1
-                add-apt-repository -y "ppa:chris-lea/python-urllib3" || return 1
-                add-apt-repository -y "ppa:chris-lea/python-crypto" || return 1
-            fi
-
+        # Install add-apt-repository
+        if ! __check_command_exists add-apt-repository; then
+            __apt_get_install_noinput software-properties-common || return 1
         fi
+
+        __enable_universe_repository || return 1
 
         apt-get update
     fi
 
-    # Minimal systems might not have upstart installed, install it
-    __PACKAGES="upstart"
+    __PACKAGES=''
+
+    if [ "$DISTRO_MAJOR_VERSION" -lt 16 ]; then
+        # Minimal systems might not have upstart installed, install it
+        __PACKAGES="upstart"
+    fi
 
     if [ "$DISTRO_MAJOR_VERSION" -ge 16 ]; then
         __PACKAGES="${__PACKAGES} python2.7"
     fi
+
     if [ "$_VIRTUALENV_DIR" != "null" ]; then
         __PACKAGES="${__PACKAGES} python-virtualenv"
     fi
@@ -2564,59 +2640,10 @@ install_ubuntu_stable_deps() {
         __apt_get_upgrade_noinput || return 1
     fi
 
-    if [ ${_DISABLE_REPOS} -eq $BS_FALSE ]; then
-         __get_dpkg_architecture || return 1
-        __REPO_ARCH="$DPKG_ARCHITECTURE"
+    __check_dpkg_architecture || return 1
 
-        if [ "$DPKG_ARCHITECTURE" = "i386" ]; then
-            echoerror "$_REPO_URL likely doesn't have all required 32-bit packages for Ubuntu $DISTRO_MAJOR_VERSION (yet?)."
-
-            # amd64 is just a part of repository URI, 32-bit pkgs are hosted under the same location
-            __REPO_ARCH="amd64"
-        elif [ "$DPKG_ARCHITECTURE" != "amd64" ]; then
-            echoerror "$_REPO_URL doesn't have packages for your system architecture: $DPKG_ARCHITECTURE."
-            if [ "$ITYPE" != "git" ]; then
-                echoerror "You can try git installation mode, i.e.: sh ${__ScriptName} git v2016.3.1"
-                exit 1
-            fi
-        fi
-
-        # Versions starting with 2015.5.6, 2015.8.1 and 2016.3.0 are hosted at repo.saltstack.com
-        if [ "$(echo "$STABLE_REV" | egrep '^(2015\.5|2015\.8|2016\.3|2016\.11|latest|archive\/)')" != "" ]; then
-            # Workaround for latest non-LTS ubuntu
-            if [ "$DISTRO_VERSION" = "16.10" ] || [ "$DISTRO_MAJOR_VERSION" -gt 16 ]; then
-                echowarn "Non-LTS Ubuntu detected, but stable packages requested. Trying packages from latest LTS release. You may experience problems."
-                UBUNTU_VERSION=16.04
-                UBUNTU_CODENAME="xenial"
-            else
-                UBUNTU_VERSION=$DISTRO_VERSION
-                UBUNTU_CODENAME=$DISTRO_CODENAME
-            fi
-
-            # SaltStack's stable Ubuntu repository:
-            SALTSTACK_UBUNTU_URL="${HTTP_VAL}://${_REPO_URL}/apt/ubuntu/${UBUNTU_VERSION}/${__REPO_ARCH}/${STABLE_REV}"
-            echo "deb $SALTSTACK_UBUNTU_URL $UBUNTU_CODENAME main" > /etc/apt/sources.list.d/saltstack.list
-
-            # Make sure https transport is available
-            if [ "$HTTP_VAL" = "https" ] ; then
-                __apt_get_install_noinput apt-transport-https ca-certificates || return 1
-            fi
-
-            __apt_key_fetch "$SALTSTACK_UBUNTU_URL/SALTSTACK-GPG-KEY.pub" || return 1
-        else
-            # Alternate PPAs: salt16, salt17, salt2014-1, salt2014-7
-            if [ ! "$(echo "$STABLE_REV" | egrep '^(1\.6|1\.7)$')" = "" ]; then
-              STABLE_PPA="saltstack/salt$(echo "$STABLE_REV" | tr -d .)"
-            elif [ ! "$(echo "$STABLE_REV" | egrep '^(2014\.1|2014\.7)$')" = "" ]; then
-              STABLE_PPA="saltstack/salt$(echo "$STABLE_REV" | tr . -)"
-            else
-              STABLE_PPA="saltstack/salt"
-            fi
-
-            add-apt-repository -y "ppa:$STABLE_PPA" || return 1
-        fi
-
-        apt-get update
+    if [ "$_DISABLE_REPOS" -eq "$BS_FALSE" ] || [ "$_CUSTOM_REPO_URL" != "null" ]; then
+        __install_saltstack_ubuntu_repository || return 1
     fi
 
     install_ubuntu_deps || return 1
@@ -2624,13 +2651,6 @@ install_ubuntu_stable_deps() {
 
 install_ubuntu_daily_deps() {
     install_ubuntu_stable_deps || return 1
-
-    if [ "$DISTRO_MAJOR_VERSION" -gt 12 ]; then
-        __apt_get_install_noinput software-properties-common || return 1
-    else
-        # Ubuntu 12.04 needs python-software-properties to get add-apt-repository binary
-        __apt_get_install_noinput python-software-properties || return 1
-    fi
 
     if [ $_DISABLE_REPOS -eq $BS_FALSE ]; then
         __enable_universe_repository || return 1
@@ -2716,11 +2736,13 @@ install_ubuntu_stable() {
 
     # shellcheck disable=SC2086
     __apt_get_install_noinput ${__PACKAGES} || return 1
+
     return 0
 }
 
 install_ubuntu_daily() {
     install_ubuntu_stable || return 1
+
     return 0
 }
 
@@ -2735,6 +2757,7 @@ install_ubuntu_git() {
     else
         python setup.py ${SETUP_PY_INSTALL_ARGS} install --install-layout=deb || return 1
     fi
+
     return 0
 }
 
@@ -2760,6 +2783,8 @@ install_ubuntu_stable_post() {
             update-rc.d salt-$fname defaults
         fi
     done
+
+    return 0
 }
 
 install_ubuntu_git_post() {
@@ -2772,7 +2797,7 @@ install_ubuntu_git_post() {
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /bin/systemctl ] && [ "$DISTRO_MAJOR_VERSION" -ge 16 ]; then
-            __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/deb/salt-${fname}.service" "/lib/systemd/system/salt-${fname}.service"
+            __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.service" "/lib/systemd/system/salt-${fname}.service"
 
             # Skip salt-api since the service should be opt-in and not necessarily started on boot
             [ $fname = "api" ] && continue
@@ -2796,10 +2821,10 @@ install_ubuntu_git_post() {
                 /sbin/initctl reload-configuration || return 1
             fi
         # No upstart support in Ubuntu!?
-        elif [ -f "${_SALT_GIT_CHECKOUT_DIR}/debian/salt-${fname}.init" ]; then
+        elif [ -f "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.init" ]; then
             echodebug "There's NO upstart support!?"
-            echodebug "Copying ${_SALT_GIT_CHECKOUT_DIR}/debian/salt-${fname}.init to /etc/init.d/salt-$fname"
-            __copyfile "${_SALT_GIT_CHECKOUT_DIR}/debian/salt-${fname}.init" "/etc/init.d/salt-$fname"
+            echodebug "Copying ${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.init to /etc/init.d/salt-$fname"
+            __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.init" "/etc/init.d/salt-$fname"
             chmod +x /etc/init.d/salt-$fname
 
             # Skip salt-api since the service should be opt-in and not necessarily started on boot
@@ -2810,6 +2835,8 @@ install_ubuntu_git_post() {
             echoerror "Neither upstart nor init.d was setup for salt-$fname"
         fi
     done
+
+    return 0
 }
 
 install_ubuntu_restart_daemons() {
@@ -2862,6 +2889,7 @@ install_ubuntu_restart_daemons() {
         /etc/init.d/salt-$fname stop > /dev/null 2>&1
         /etc/init.d/salt-$fname start
     done
+
     return 0
 }
 
@@ -2895,6 +2923,33 @@ install_ubuntu_check_services() {
 #
 #   Debian Install Functions
 #
+__install_saltstack_debian_repository() {
+    if [ "$DISTRO_MAJOR_VERSION" -eq 10 ]; then
+        # Packages for Debian 10 at repo.saltstack.com are not yet available
+        # Set up repository for Debian 9 for Debian 10 for now until support
+        # is available at repo.saltstack.com for Debian 10.
+        echowarn "Debian 10 distribution detected, but stable packages requested. Trying packages from Debian 9. You may experience problems."
+        DEBIAN_RELEASE="9"
+        DEBIAN_CODENAME="stretch"
+    else
+        DEBIAN_RELEASE="$DISTRO_MAJOR_VERSION"
+        DEBIAN_CODENAME="$DISTRO_CODENAME"
+    fi
+
+    # amd64 is just a part of repository URI, 32-bit pkgs are hosted under the same location
+    SALTSTACK_DEBIAN_URL="${HTTP_VAL}://${_REPO_URL}/apt/debian/${DEBIAN_RELEASE}/${__REPO_ARCH}/${STABLE_REV}"
+    echo "deb $SALTSTACK_DEBIAN_URL $DEBIAN_CODENAME main" > "/etc/apt/sources.list.d/saltstack.list"
+
+    if [ "$HTTP_VAL" = "https" ] ; then
+        __apt_get_install_noinput apt-transport-https ca-certificates || return 1
+    fi
+
+    __apt_key_fetch "$SALTSTACK_DEBIAN_URL/SALTSTACK-GPG-KEY.pub" || return 1
+
+    apt-get update
+
+}
+
 install_debian_deps() {
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
         echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
@@ -2915,95 +2970,7 @@ install_debian_deps() {
         __apt_get_upgrade_noinput || return 1
     fi
 
-    # Install procps and pciutils which allows for Docker bootstraps. See #366#issuecomment-39666813
-    __PACKAGES="procps pciutils"
-    __PIP_PACKAGES=""
-
-    # YAML module is used for generating custom master/minion configs
-    __PACKAGES="${__PACKAGES} python-yaml"
-
-    # shellcheck disable=SC2086
-    __apt_get_install_noinput ${__PACKAGES} || return 1
-
-    if [ "${_EXTRA_PACKAGES}" != "" ]; then
-        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
-        # shellcheck disable=SC2086
-        __apt_get_install_noinput ${_EXTRA_PACKAGES} || return 1
-    fi
-
-    if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
-        # shellcheck disable=SC2089
-        __PIP_PACKAGES="${__PIP_PACKAGES} 'apache-libcloud>=$_LIBCLOUD_MIN_VERSION'"
-    fi
-
-    if [ "${__PIP_PACKAGES}" != "" ]; then
-        # shellcheck disable=SC2086,SC2090
-        pip install -U ${__PIP_PACKAGES} || return 1
-    fi
-
-    return 0
-}
-
-install_debian_7_deps() {
-    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
-    fi
-
-    # No user interaction, libc6 restart services for example
-    export DEBIAN_FRONTEND=noninteractive
-
-    apt-get update
-
-    if [ "${_UPGRADE_SYS}" -eq $BS_TRUE ]; then
-        # Try to update GPG keys first if allowed
-        if [ "${_INSECURE_DL}" -eq $BS_TRUE ]; then
-            __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring &&
-                apt-key update && apt-get update
-        fi
-
-        __apt_get_upgrade_noinput || return 1
-    fi
-
-    if [ "${_DISABLE_REPOS}" -eq $BS_FALSE ]; then
-         __get_dpkg_architecture || return 1
-
-        __REPO_ARCH="$DPKG_ARCHITECTURE"
-
-        if [ "$DPKG_ARCHITECTURE" = "i386" ]; then
-            echoerror "$_REPO_URL likely doesn't have all required 32-bit packages for Debian $DISTRO_MAJOR_VERSION (yet?)."
-
-            if [ "$ITYPE" != "git" ]; then
-                echoerror "You can try git installation mode, i.e.: sh ${__ScriptName} git v2016.3.1"
-            fi
-
-            # amd64 is just a part of repository URI, 32-bit pkgs are hosted under the same location
-            __REPO_ARCH="amd64"
-        elif [ "$DPKG_ARCHITECTURE" != "amd64" ]; then
-            echoerror "$_REPO_URL doesn't have packages for your system architecture: $DPKG_ARCHITECTURE."
-            exit 1
-        fi
-
-        # Versions starting with 2015.8.7 and 2016.3.0 are hosted at repo.saltstack.com
-        if [ "$(echo "$STABLE_REV" | egrep '^(2015\.8|2016\.3|2016\.11|latest|archive\/201[5-6]\.)')" != "" ]; then
-            # amd64 is just a part of repository URI, 32-bit pkgs are hosted under the same location
-            SALTSTACK_DEBIAN_URL="${HTTP_VAL}://${_REPO_URL}/apt/debian/${DISTRO_MAJOR_VERSION}/${__REPO_ARCH}/${STABLE_REV}"
-            echo "deb $SALTSTACK_DEBIAN_URL wheezy main" > "/etc/apt/sources.list.d/saltstack.list"
-
-            if [ "$HTTP_VAL" = "https" ] ; then
-                __apt_get_install_noinput apt-transport-https ca-certificates || return 1
-            fi
-
-            __apt_key_fetch "$SALTSTACK_DEBIAN_URL/SALTSTACK-GPG-KEY.pub" || return 1
-        elif [ -n "$STABLE_REV" ]; then
-            echoerror "Installation of Salt ${STABLE_REV#*/} packages not supported by ${__ScriptName} ${__ScriptVersion} on Debian $DISTRO_MAJOR_VERSION."
-
-            return 1
-        fi
-
-        apt-get update
-    else
-        echowarn "Packages from $_REPO_URL are required to install Salt version 2015.8 or higher on Debian $DISTRO_MAJOR_VERSION."
-    fi
+    __check_dpkg_architecture || return 1
 
     # Additionally install procps and pciutils which allows for Docker bootstraps. See 366#issuecomment-39666813
     __PACKAGES='procps pciutils'
@@ -3011,87 +2978,17 @@ install_debian_7_deps() {
     # YAML module is used for generating custom master/minion configs
     __PACKAGES="${__PACKAGES} python-yaml"
 
-    # shellcheck disable=SC2086
-    __apt_get_install_noinput ${__PACKAGES} || return 1
-
-    if [ "${_EXTRA_PACKAGES}" != "" ]; then
-        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
-        # shellcheck disable=SC2086
-        __apt_get_install_noinput ${_EXTRA_PACKAGES} || return 1
+    # Debian 9 needs the dirmgr package in order to import the GPG key later
+    if [ "$DISTRO_MAJOR_VERSION" -ge 9 ]; then
+        __PACKAGES="${__PACKAGES} dirmngr"
     fi
-
-    return 0
-}
-
-install_debian_8_deps() {
-    if [ $_START_DAEMONS -eq $BS_FALSE ]; then
-        echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
-    fi
-
-    # No user interaction, libc6 restart services for example
-    export DEBIAN_FRONTEND=noninteractive
-
-    apt-get update
-
-    if [ "${_UPGRADE_SYS}" -eq $BS_TRUE ]; then
-        # Try to update GPG keys first if allowed
-        if [ "${_INSECURE_DL}" -eq $BS_TRUE ]; then
-            __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring &&
-                apt-key update && apt-get update
-        fi
-
-        __apt_get_upgrade_noinput || return 1
-    fi
-
-    if [ ${_DISABLE_REPOS} -eq $BS_FALSE ]; then
-         __get_dpkg_architecture || return 1
-
-        __REPO_ARCH="$DPKG_ARCHITECTURE"
-
-        if [ "$DPKG_ARCHITECTURE" = "i386" ]; then
-            echoerror "$_REPO_URL likely doesn't have all required 32-bit packages for Debian $DISTRO_MAJOR_VERSION (yet?)."
-
-            if [ "$ITYPE" != "git" ]; then
-                echoerror "You can try git installation mode, i.e.: sh ${__ScriptName} git v2016.3.1"
-            fi
-
-            # amd64 is just a part of repository URI, 32-bit pkgs are hosted under the same location
-            __REPO_ARCH="amd64"
-        elif [ "$DPKG_ARCHITECTURE" != "amd64" ] && [ "$DPKG_ARCHITECTURE" != "armhf" ]; then
-            echoerror "$_REPO_URL doesn't have packages for your system architecture: $DPKG_ARCHITECTURE."
-            echoerror "Try git installation mode with pip and disable SaltStack apt repository, for example:"
-            echoerror "    sh ${__ScriptName} -r -P git v2016.3.1"
-
-            exit 1
-        fi
-
-        # Versions starting with 2015.5.6, 2015.8.1 and 2016.3.0 are hosted at repo.saltstack.com
-        if [ "$(echo "$STABLE_REV" | egrep '^(2015\.5|2015\.8|2016\.3|2016\.11|latest|archive\/201[5-6]\.)')" != "" ]; then
-            SALTSTACK_DEBIAN_URL="${HTTP_VAL}://${_REPO_URL}/apt/debian/${DISTRO_MAJOR_VERSION}/${__REPO_ARCH}/${STABLE_REV}"
-            echo "deb $SALTSTACK_DEBIAN_URL jessie main" > "/etc/apt/sources.list.d/saltstack.list"
-
-            if [ "$HTTP_VAL" = "https" ] ; then
-                __apt_get_install_noinput apt-transport-https ca-certificates || return 1
-            fi
-
-            __apt_key_fetch "$SALTSTACK_DEBIAN_URL/SALTSTACK-GPG-KEY.pub" || return 1
-        elif [ -n "$STABLE_REV" ]; then
-            echoerror "Installation of Salt ${STABLE_REV#*/} packages not supported by ${__ScriptName} ${__ScriptVersion} on Debian $DISTRO_MAJOR_VERSION."
-
-            return 1
-        fi
-
-        apt-get update
-    fi
-
-    # Additionally install procps and pciutils which allows for Docker bootstraps. See 366#issuecomment-39666813
-    __PACKAGES='procps pciutils'
 
     # shellcheck disable=SC2086
     __apt_get_install_noinput ${__PACKAGES} || return 1
 
-    # YAML module is used for generating custom master/minion configs
-    __PACKAGES="${__PACKAGES} python-yaml"
+    if [ "$_DISABLE_REPOS" -eq "$BS_FALSE" ] || [ "$_CUSTOM_REPO_URL" != "null" ]; then
+        __install_saltstack_debian_repository || return 1
+    fi
 
     if [ "${_EXTRA_PACKAGES}" != "" ]; then
         echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
@@ -3135,14 +3032,14 @@ install_debian_git_deps() {
 }
 
 install_debian_7_git_deps() {
-    install_debian_7_deps || return 1
+    install_debian_deps || return 1
     install_debian_git_deps || return 1
 
     return 0
 }
 
 install_debian_8_git_deps() {
-    install_debian_8_deps || return 1
+    install_debian_deps || return 1
 
     if ! __check_command_exists git; then
         __apt_get_install_noinput git || return 1
@@ -3204,6 +3101,45 @@ install_debian_8_git_deps() {
     return 0
 }
 
+install_debian_9_git_deps() {
+    install_debian_deps || return 1
+
+    if ! __check_command_exists git; then
+        __apt_get_install_noinput git || return 1
+    fi
+
+    if [ "$_INSECURE_DL" -eq $BS_FALSE ] && [ "${_SALT_REPO_URL%%://*}" = "https" ]; then
+        __apt_get_install_noinput ca-certificates
+    fi
+
+    __git_clone_and_checkout || return 1
+
+    __PACKAGES="libzmq5 lsb-release python-apt python-backports-abc python-crypto"
+    __PACKAGES="${__PACKAGES} python-jinja2 python-msgpack python-requests python-systemd"
+    __PACKAGES="${__PACKAGES} python-tornado python-yaml python-zmq"
+
+    if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
+        # Install python-libcloud if asked to
+        __PACKAGES="${__PACKAGES} python-libcloud"
+    fi
+
+    # shellcheck disable=SC2086
+    __apt_get_install_noinput ${__PACKAGES} || return 1
+
+    # Let's trigger config_salt()
+    if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
+        _TEMP_CONFIG_DIR="${_SALT_GIT_CHECKOUT_DIR}/conf/"
+        CONFIG_SALT_FUNC="config_salt"
+    fi
+
+    return 0
+}
+
+install_debian_10_git_deps() {
+    install_debian_9_git_deps || return 1
+    return 0
+}
+
 install_debian_stable() {
     __PACKAGES=""
 
@@ -3236,9 +3172,14 @@ install_debian_8_stable() {
     return 0
 }
 
+install_debian_9_stable() {
+    install_debian_stable || return 1
+    return 0
+}
+
 install_debian_git() {
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
-      python setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install --install-layout=deb || return 1
+        python setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install --install-layout=deb || return 1
     else
         python setup.py ${SETUP_PY_INSTALL_ARGS} install --install-layout=deb || return 1
     fi
@@ -3250,6 +3191,11 @@ install_debian_7_git() {
 }
 
 install_debian_8_git() {
+    install_debian_git || return 1
+    return 0
+}
+
+install_debian_9_git() {
     install_debian_git || return 1
     return 0
 }
@@ -3267,9 +3213,9 @@ install_debian_git_post() {
         if [ -f /bin/systemctl ]; then
             if [ ! -f /lib/systemd/system/salt-${fname}.service ] || \
                 ([ -f /lib/systemd/system/salt-${fname}.service ] && [ $_FORCE_OVERWRITE -eq $BS_TRUE ]); then
-                if [ -f "${_SALT_GIT_CHECKOUT_DIR}/pkg/deb/salt-${fname}.service" ]; then
-                    __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/deb/salt-${fname}.service" /lib/systemd/system
-                    __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/deb/salt-${fname}.environment" "/etc/default/salt-${fname}"
+                if [ -f "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.service" ]; then
+                    __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.service" /lib/systemd/system
+                    __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.environment" "/etc/default/salt-${fname}"
                 else
                     # workaround before adding Debian-specific unit files to the Salt main repo
                     __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.service" /lib/systemd/system
@@ -3286,9 +3232,9 @@ install_debian_git_post() {
         # Install initscripts for Debian 7 "Wheezy"
         elif [ ! -f "/etc/init.d/salt-$fname" ] || \
             ([ -f "/etc/init.d/salt-$fname" ] && [ "$_FORCE_OVERWRITE" -eq $BS_TRUE ]); then
-            if [ -f "${_SALT_GIT_CHECKOUT_DIR}/pkg/deb/salt-$fname.init" ]; then
-                __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/deb/salt-${fname}.init" "/etc/init.d/salt-${fname}"
-                __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/deb/salt-${fname}.environment" "/etc/default/salt-${fname}"
+            if [ -f "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-$fname.init" ]; then
+                __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.init" "/etc/init.d/salt-${fname}"
+                __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.environment" "/etc/default/salt-${fname}"
             else
                 # Make sure wget is available
                 __check_command_exists wget || __apt_get_install_noinput wget || return 1
@@ -3442,23 +3388,7 @@ install_fedora_git_deps() {
 
     __git_clone_and_checkout || return 1
 
-    __PACKAGES="systemd-python"
-    __PIP_PACKAGES=""
-
-    if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
-        # We're on the develop branch, install whichever tornado is on the requirements file
-        __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
-        if [ "${__REQUIRED_TORNADO}" != "" ]; then
-            __check_pip_allowed "You need to allow pip based installations (-P) in order to install tornado"
-
-            # Install pip and pip dependencies
-            if ! __check_command_exists pip; then
-                __PACKAGES="${__PACKAGES} python-setuptools python-pip gcc python-devel"
-            fi
-
-            __PIP_PACKAGES="${__PIP_PACKAGES} tornado"
-        fi
-    fi
+    __PACKAGES="python2-tornado systemd-python"
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         __PACKAGES="${__PACKAGES} python-libcloud python-netaddr"
@@ -3466,11 +3396,6 @@ install_fedora_git_deps() {
 
     # shellcheck disable=SC2086
     dnf install -y ${__PACKAGES} || return 1
-
-    if [ "${__PIP_PACKAGES}" != "" ]; then
-        # shellcheck disable=SC2086,SC2090
-        pip install -U ${__PIP_PACKAGES} || return 1
-    fi
 
     # Let's trigger config_salt()
     if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
@@ -3558,13 +3483,6 @@ __install_epel_repository() {
 
     # Check if epel repo is already enabled and flag it accordingly
     yum repolist | grep -q "^[!]\?${_EPEL_REPO}/"
-    if [ $? -eq 0 ]; then
-        _EPEL_REPOS_INSTALLED=$BS_TRUE
-        return 0
-    fi
-
-    # Check if epel-release is already installed and flag it accordingly
-    rpm --nodigest --nosignature -q epel-release > /dev/null 2>&1
     if [ $? -eq 0 ]; then
         _EPEL_REPOS_INSTALLED=$BS_TRUE
         return 0
@@ -3754,8 +3672,29 @@ install_centos_git_deps() {
         __PACKAGES="${__PACKAGES} python-libcloud"
     fi
 
-    if [ "${_INSTALL_PY}" = "${BS_TRUE}" ]; then
-        __install_python_and_deps || return 1
+    if [ "${_INSTALL_PY}" -eq "${BS_TRUE}" ]; then
+        # Install Python if "-y" was passed in.
+        __install_python || return 1
+    fi
+
+    if [ "${_PY_EXE}" != "" ]; then
+        # If "-x" is defined, install dependencies with pip based on the Python version given.
+        _PIP_PACKAGES="jinja2 msgpack-python pycrypto PyYAML tornado zmq"
+
+        if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
+            for SINGLE_PACKAGE in $_PIP_PACKAGES; do
+                __REQUIRED_VERSION="$(grep "${SINGLE_PACKAGE}" "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
+                if [ "${__REQUIRED_VERSION}" != "" ]; then
+                    _PIP_PACKAGES=$(echo "$_PIP_PACKAGES" | sed "s/${SINGLE_PACKAGE}/${__REQUIRED_VERSION}/")
+                fi
+            done
+        fi
+
+        if [ "$_INSTALL_CLOUD" -eq "${BS_TRUE}" ]; then
+            _PIP_PACKAGES="${_PIP_PACKAGES} apache-libcloud"
+        fi
+
+        __install_pip_pkgs "${_PIP_PACKAGES}" "${_PY_EXE}" || return 1
     else
         # shellcheck disable=SC2086
         __yum_install_noinput ${__PACKAGES} || return 1
@@ -4460,44 +4399,37 @@ daemons_running_alpine_linux() {
 install_amazon_linux_ami_deps() {
     # Shim to figure out if we're using old (rhel) or new (aws) rpms.
     _USEAWS=$BS_FALSE
+    pkg_append="python"
 
     repo_rev="$(echo "${STABLE_REV}"  | sed 's|.*\/||g')"
 
-    if echo "$repo_rev" | egrep -q '^(latest|2016\.11)$'; then
+    if echo "$repo_rev" | egrep -q '^(latest|2016\.11)$' || \
+           ( echo "$repo_rev" | egrep -q '^[0-9]+$' && [ "$(echo "$repo_rev" | cut -c1-4)" -gt 2016 ] ); then
        _USEAWS=$BS_TRUE
-    elif echo "$repo_rev" | egrep -q '^[0-9]+$' && [ "$(echo "$repo_rev" | cut -c1-4)" -gt 2016 ]; then
-       _USEAWS=$BS_TRUE
+       pkg_append="python27"
     fi
 
     # We need to install yum-utils before doing anything else when installing on
     # Amazon Linux ECS-optimized images. See issue #974.
-    yum -y install yum-utils
+    __yum_install_noinput yum-utils
 
-    ENABLE_EPEL_CMD=""
-    if [ $_DISABLE_REPOS -eq $BS_TRUE ]; then
-        ENABLE_EPEL_CMD="--enablerepo=${_EPEL_REPO}"
+    # Do upgrade early
+    if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
+        yum -y update || return 1
     fi
 
-    if [ $_DISABLE_REPOS -eq $BS_FALSE ]; then
-        # enable the EPEL repo
-        /usr/bin/yum-config-manager --enable epel || return 1
-
-        # exclude Salt and ZeroMQ packages from EPEL
-        /usr/bin/yum-config-manager epel --setopt "epel.exclude=zeromq* salt* python-zmq*" --save || return 1
-
+    if [ $_DISABLE_REPOS -eq $BS_FALSE ] || [ "$_CUSTOM_REPO_URL" != "null" ]; then
         __REPO_FILENAME="saltstack-repo.repo"
 
         # Set a few vars to make life easier.
         if [ $_USEAWS -eq $BS_TRUE ]; then
-           base_url="$HTTP_VAL://repo.saltstack.com/yum/amazon/latest/\$basearch/$repo_rev/"
+           base_url="$HTTP_VAL://${_REPO_URL}/yum/amazon/latest/\$basearch/$repo_rev/"
            gpg_key="${base_url}SALTSTACK-GPG-KEY.pub"
            repo_name="SaltStack repo for Amazon Linux"
-           pkg_append="python27"
         else
-           base_url="$HTTP_VAL://repo.saltstack.com/yum/redhat/6/\$basearch/$repo_rev/"
+           base_url="$HTTP_VAL://${_REPO_URL}/yum/redhat/6/\$basearch/$repo_rev/"
            gpg_key="${base_url}SALTSTACK-GPG-KEY.pub"
            repo_name="SaltStack repo for RHEL/CentOS 6"
-           pkg_append="python"
         fi
 
         # This should prob be refactored to use __install_saltstack_rhel_repository()
@@ -4515,21 +4447,19 @@ baseurl=$base_url
 _eof
         fi
 
-        if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
-            yum -y update || return 1
-        fi
     fi
-    #ordereddict removed.
-    #Package python-ordereddict-1.1-2.el6.noarch is obsoleted by python26-2.6.9-2.88.amzn1.x86_64 which is already installed
+
+    # Package python-ordereddict-1.1-2.el6.noarch is obsoleted by python26-2.6.9-2.88.amzn1.x86_64
+    # which is already installed
     __PACKAGES="${pkg_append}-PyYAML ${pkg_append}-crypto ${pkg_append}-msgpack ${pkg_append}-zmq ${pkg_append}-jinja2 ${pkg_append}-requests"
 
     # shellcheck disable=SC2086
-    yum -y install ${__PACKAGES} ${ENABLE_EPEL_CMD} || return 1
+    __yum_install_noinput ${__PACKAGES} || return 1
 
     if [ "${_EXTRA_PACKAGES}" != "" ]; then
         echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
         # shellcheck disable=SC2086
-        yum install -y ${_EXTRA_PACKAGES} ${ENABLE_EPEL_CMD} || return 1
+        __yum_install_noinput ${_EXTRA_PACKAGES} || return 1
     fi
 }
 
@@ -4549,13 +4479,8 @@ install_amazon_linux_ami_git_deps() {
 
     install_amazon_linux_ami_deps || return 1
 
-    ENABLE_EPEL_CMD=""
-    if [ $_DISABLE_REPOS -eq $BS_TRUE ]; then
-        ENABLE_EPEL_CMD="--enablerepo=${_EPEL_REPO}"
-    fi
-
     if ! __check_command_exists git; then
-        yum -y install git ${ENABLE_EPEL_CMD} || return 1
+        __yum_install_noinput git || return 1
     fi
 
     __git_clone_and_checkout || return 1
@@ -4579,7 +4504,7 @@ install_amazon_linux_ami_git_deps() {
 
     if [ "${__PACKAGES}" != "" ]; then
         # shellcheck disable=SC2086
-        yum -y install ${__PACKAGES} ${ENABLE_EPEL_CMD} || return 1
+        __yum_install_noinput ${__PACKAGES} || return 1
     fi
 
     if [ "${__PIP_PACKAGES}" != "" ]; then
@@ -4660,7 +4585,7 @@ install_arch_linux_stable_deps() {
     pacman -Su --noconfirm --needed python2-yaml
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
-        pacman -Su --noconfirm --needed apache-libcloud || return 1
+        pacman -Su --noconfirm --needed python2-apache-libcloud || return 1
     fi
 
     if [ "${_EXTRA_PACKAGES}" != "" ]; then
@@ -5458,6 +5383,16 @@ install_smartos_restart_daemons() {
 #
 __ZYPPER_REQUIRES_REPLACE_FILES=-1
 
+__check_and_refresh_suse_pkg_repo() {
+    # Check to see if systemsmanagement_saltstack exists
+    __zypper repos | grep systemsmanagement_saltstack >/dev/null 2>&1
+
+    if [ $? -eq 1 ]; then
+        # zypper does not yet know anything about systemsmanagement_saltstack
+        __zypper addrepo --refresh "${SUSE_PKG_URL}" || return 1
+    fi
+}
+
 __set_suse_pkg_repo() {
     suse_pkg_url_path="${DISTRO_REPO}/systemsmanagement:saltstack.repo"
     if [ "$_DOWNSTREAM_PKG_REPO" -eq $BS_TRUE ]; then
@@ -6151,11 +6086,15 @@ install_suse_check_services() {
 #
 #    Gentoo Install Functions.
 #
+__autounmask() {
+    emerge --autounmask-write --autounmask-only "${@}"; return $?
+}
+
 __emerge() {
     if [ "$_GENTOO_USE_BINHOST" -eq $BS_TRUE ]; then
-        emerge --autounmask-write --getbinpkg "${@}"; return $?
+        emerge --getbinpkg "${@}"; return $?
     fi
-    emerge --autounmask-write "${@}"; return $?
+    emerge "${@}"; return $?
 }
 
 __gentoo_config_protection() {
@@ -6165,6 +6104,9 @@ __gentoo_config_protection() {
     # cfg-update and then restart the bootstrapping script, so instead we allow
     # at this point to modify certain config files directly
     export CONFIG_PROTECT_MASK="${CONFIG_PROTECT_MASK:-} /etc/portage/package.accept_keywords /etc/portage/package.keywords /etc/portage/package.license /etc/portage/package.unmask /etc/portage/package.use"
+
+    # emerge currently won't write to files that aren't there, so we need to ensure their presence
+    touch /etc/portage/package.accept_keywords /etc/portage/package.keywords /etc/portage/package.license /etc/portage/package.unmask /etc/portage/package.use
 }
 
 __gentoo_pre_dep() {
@@ -6193,14 +6135,20 @@ __gentoo_post_dep() {
     __gentoo_config_protection
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
+        __autounmask 'dev-python/libcloud'
         __emerge -v 'dev-python/libcloud'
     fi
+
+    __autounmask 'dev-python/requests'
+    __autounmask 'app-admin/salt'
 
     __emerge -vo 'dev-python/requests'
     __emerge -vo 'app-admin/salt'
 
     if [ "${_EXTRA_PACKAGES}" != "" ]; then
         echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+        # shellcheck disable=SC2086
+        __autounmask ${_EXTRA_PACKAGES} || return 1
         # shellcheck disable=SC2086
         __emerge -v ${_EXTRA_PACKAGES} || return 1
     fi
@@ -6437,12 +6385,12 @@ config_salt() {
 
         # Copy the minion's keys if found
         if [ -f "$_TEMP_CONFIG_DIR/minion.pem" ]; then
-            __movefile "$_TEMP_CONFIG_DIR/minion.pem" "$_PKI_DIR/minion/" "$_CONFIG_ONLY" || return 1
+            __movefile "$_TEMP_CONFIG_DIR/minion.pem" "$_PKI_DIR/minion/" "$_FORCE_OVERWRITE" || return 1
             chmod 400 "$_PKI_DIR/minion/minion.pem" || return 1
             CONFIGURED_ANYTHING=$BS_TRUE
         fi
         if [ -f "$_TEMP_CONFIG_DIR/minion.pub" ]; then
-            __movefile "$_TEMP_CONFIG_DIR/minion.pub" "$_PKI_DIR/minion/" "$_CONFIG_ONLY" || return 1
+            __movefile "$_TEMP_CONFIG_DIR/minion.pub" "$_PKI_DIR/minion/" "$_FORCE_OVERWRITE" || return 1
             chmod 664 "$_PKI_DIR/minion/minion.pub" || return 1
             CONFIGURED_ANYTHING=$BS_TRUE
         fi

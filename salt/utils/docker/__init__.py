@@ -13,12 +13,13 @@ import os
 
 # Import Salt libs
 import salt.utils
+import salt.utils.args
 import salt.utils.docker.translate
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.args import get_function_argspec as _argspec
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 try:
     import docker
@@ -174,7 +175,7 @@ def translate_input(**kwargs):
     have their translation skipped. Optionally, skip_translate can be set to
     True to skip *all* translation.
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     invalid = {}
     collisions = []
 

@@ -171,8 +171,14 @@ def boolean(name, value, persist=False):
                 name, rvalue)
         return ret
 
-    if __salt__['selinux.setsebool'](name, rvalue, persist):
+    ret['result'] = __salt__['selinux.setsebool'](name, rvalue, persist)
+    if ret['result']:
         ret['comment'] = 'Boolean {0} has been set to {1}'.format(name, rvalue)
+        ret['changes'].update({'State': {'old': bools[name]['State'],
+                                         'new': rvalue}})
+        if persist and not default:
+            ret['changes'].update({'Default': {'old': bools[name]['Default'],
+                                               'new': rvalue}})
         return ret
     ret['comment'] = 'Failed to set the boolean {0} to {1}'.format(name, rvalue)
     return ret
@@ -304,17 +310,27 @@ def module_remove(name):
 
 def fcontext_policy_present(name, sel_type, filetype='a', sel_user=None, sel_level=None):
     '''
-    Makes sure a SELinux policy for a given filespec (name),
-    filetype and SELinux context type is present.
+    .. versionadded:: 2017.7.0
 
-    name: filespec of the file or directory. Regex syntax is allowed.
-    sel_type: SELinux context type. There are many.
-    filetype: The SELinux filetype specification.
-              Use one of [a, f, d, c, b, s, l, p].
-              See also `man semanage-fcontext`.
-              Defaults to 'a' (all files)
-    sel_user: The SELinux user.
-    sel_level: The SELinux MLS range
+    Makes sure a SELinux policy for a given filespec (name), filetype
+    and SELinux context type is present.
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    sel_type
+        SELinux context type. There are many.
+
+    filetype
+        The SELinux filetype specification. Use one of [a, f, d, c, b,
+        s, l, p]. See also `man semanage-fcontext`. Defaults to 'a'
+        (all files).
+
+    sel_user
+        The SELinux user.
+
+    sel_level
+        The SELinux MLS range.
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
     new_state = {}
@@ -377,17 +393,27 @@ def fcontext_policy_present(name, sel_type, filetype='a', sel_user=None, sel_lev
 
 def fcontext_policy_absent(name, filetype='a', sel_type=None, sel_user=None, sel_level=None):
     '''
-    Makes sure an SELinux file context policy for a given filespec (name),
-    filetype and SELinux context type is absent.
+    .. versionadded:: 2017.7.0
 
-    name: filespec of the file or directory. Regex syntax is allowed.
-    filetype: The SELinux filetype specification.
-              Use one of [a, f, d, c, b, s, l, p].
-              See also `man semanage-fcontext`.
-              Defaults to 'a' (all files).
-    sel_type: The SELinux context type. There are many.
-    sel_user: The SELinux user.
-    sel_level: The SELinux MLS range
+    Makes sure an SELinux file context policy for a given filespec
+    (name), filetype and SELinux context type is absent.
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    filetype
+        The SELinux filetype specification. Use one of [a, f, d, c, b,
+        s, l, p]. See also `man semanage-fcontext`. Defaults to 'a'
+        (all files).
+
+    sel_type
+        The SELinux context type. There are many.
+
+    sel_user
+        The SELinux user.
+
+    sel_level
+        The SELinux MLS range.
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
     new_state = {}
@@ -427,7 +453,10 @@ def fcontext_policy_absent(name, filetype='a', sel_type=None, sel_user=None, sel
 
 def fcontext_policy_applied(name, recursive=False):
     '''
-    Checks and makes sure the SELinux policies for a given filespec are applied.
+    .. versionadded:: 2017.7.0
+
+    Checks and makes sure the SELinux policies for a given filespec are
+    applied.
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
 

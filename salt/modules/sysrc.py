@@ -7,7 +7,7 @@ sysrc module for FreeBSD
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 
@@ -22,7 +22,7 @@ def __virtual__():
     '''
     Only runs if sysrc exists
     '''
-    if salt.utils.which('sysrc') is not None:
+    if salt.utils.path.which('sysrc') is not None:
         return True
     return (False, 'The sysrc execution module failed to load: the sysrc binary is not in the path.')
 

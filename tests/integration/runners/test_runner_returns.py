@@ -15,7 +15,7 @@ from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.payload
-import salt.utils
+import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
 
@@ -61,9 +61,9 @@ class RunnerReturnsTest(ShellCase):
         '''
         # Remove pub_kwargs
         data['fun_args'][1] = \
-            salt.utils.clean_kwargs(**data['fun_args'][1])
+            salt.utils.args.clean_kwargs(**data['fun_args'][1])
         data['return']['kwargs'] = \
-            salt.utils.clean_kwargs(**data['return']['kwargs'])
+            salt.utils.args.clean_kwargs(**data['return']['kwargs'])
 
         # Pop off the timestamp (do not provide a 2nd argument, if the stamp is
         # missing we want to know!)

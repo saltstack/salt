@@ -9,8 +9,8 @@ import textwrap
 from tests.support.case import ModuleCase
 
 # Import Salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.platform
 
 
 class PyDSLRendererIncludeTestCase(ModuleCase):
@@ -37,7 +37,7 @@ class PyDSLRendererIncludeTestCase(ModuleCase):
 
         # Windows adds `linefeed` in addition to `newline`. There's also an
         # unexplainable space before the `linefeed`...
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             expected = 'X1 \r\n' \
                        'X2 \r\n' \
                        'X3 \r\n' \

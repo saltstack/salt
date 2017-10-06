@@ -58,7 +58,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to build an interface script for a network interface.
         '''
-        with patch.dict(rh_ip.__grains__, {'os': 'Fedora'}):
+        with patch.dict(rh_ip.__grains__, {'os': 'Fedora', 'osmajorrelease': 26}):
             with patch.object(rh_ip, '_raise_error_iface', return_value=None):
 
                 self.assertRaises(AttributeError,

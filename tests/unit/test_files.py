@@ -14,7 +14,7 @@ import tempfile
 from tests.support.unit import TestCase
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.files
 
 

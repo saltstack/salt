@@ -14,6 +14,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -32,7 +33,7 @@ def __virtual__():
     Only work when npm is installed.
     '''
     try:
-        if salt.utils.which('npm') is not None:
+        if salt.utils.path.which('npm') is not None:
             _check_valid_version()
             return True
         else:

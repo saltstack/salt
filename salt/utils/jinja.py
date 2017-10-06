@@ -8,18 +8,18 @@ from __future__ import absolute_import
 import collections
 import json
 import logging
+import os.path
 import pipes
 import pprint
 import re
 import uuid
 from functools import wraps
-from os import path
 from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 # Import third party libs
 import jinja2
-import salt.ext.six as six
+from salt.ext import six
 import yaml
 from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
@@ -27,11 +27,10 @@ from jinja2.exceptions import TemplateRuntimeError
 from jinja2.ext import Extension
 
 # Import salt libs
-import salt
 import salt.fileclient
 import salt.utils.files
 import salt.utils.url
-from salt.utils.decorators import jinja_filter, jinja_test, jinja_global
+from salt.utils.decorators.jinja import jinja_filter, jinja_test, jinja_global
 from salt.utils.odict import OrderedDict
 from salt.exceptions import TemplateError
 
@@ -76,7 +75,7 @@ class SaltCacheLoader(BaseLoader):
             else:
                 self.searchpath = opts['file_roots'][saltenv]
         else:
-            self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
+            self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
         self._file_client = None
         self.cached = []
@@ -118,7 +117,7 @@ class SaltCacheLoader(BaseLoader):
         self.check_cache(template)
 
         if environment and template:
-            tpldir = path.dirname(template).replace('\\', '/')
+            tpldir = os.path.dirname(template).replace('\\', '/')
             tpldata = {
                 'tplfile': template,
                 'tpldir': '.' if tpldir == '' else tpldir,
@@ -128,15 +127,15 @@ class SaltCacheLoader(BaseLoader):
 
         # pylint: disable=cell-var-from-loop
         for spath in self.searchpath:
-            filepath = path.join(spath, template)
+            filepath = os.path.join(spath, template)
             try:
                 with salt.utils.files.fopen(filepath, 'rb') as ifile:
                     contents = ifile.read().decode(self.encoding)
-                    mtime = path.getmtime(filepath)
+                    mtime = os.path.getmtime(filepath)
 
                     def uptodate():
                         try:
-                            return path.getmtime(filepath) == mtime
+                            return os.path.getmtime(filepath) == mtime
                         except OSError:
                             return False
                     return contents, filepath, uptodate

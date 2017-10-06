@@ -39,7 +39,7 @@ import salt.utils.files
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 __all__ = ['render']

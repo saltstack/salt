@@ -16,10 +16,11 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.path
 import salt.crypt
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ def __virtual__():
     '''
     Only load if qemu-img and qemu-nbd are installed
     '''
-    if salt.utils.which('qemu-nbd'):
+    if salt.utils.path.which('qemu-nbd'):
         return 'qemu_nbd'
     return (False, 'The qemu_nbd execution module cannot be loaded: the qemu-nbd binary is not in the path.')
 
@@ -49,7 +50,7 @@ def connect(image):
                     '{0} does not exist'.format(image))
         return ''
 
-    if salt.utils.which('sfdisk'):
+    if salt.utils.path.which('sfdisk'):
         fdisk = 'sfdisk -d'
     else:
         fdisk = 'fdisk -l'

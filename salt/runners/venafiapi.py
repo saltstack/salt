@@ -38,7 +38,7 @@ import json
 import salt.syspaths as syspaths
 import salt.cache
 import salt.utils.files
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'venafi'

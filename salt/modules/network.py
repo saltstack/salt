@@ -13,15 +13,18 @@ import os
 import socket
 
 # Import salt libs
-import salt.utils
-import salt.utils.decorators as decorators
+import salt.utils  # Can be removed when alias_function mac_str_to_bytes are moved
+import salt.utils.decorators.path
 import salt.utils.files
 import salt.utils.network
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 if six.PY3:
     import ipaddress
@@ -37,7 +40,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     # Disable on Windows, a specific file module exists:
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The network execution module cannot be loaded on Windows: use win_network instead.')
     return True
 
@@ -761,7 +764,7 @@ def netstat():
         salt '*' network.netstat
     '''
     if __grains__['kernel'] == 'Linux':
-        if not salt.utils.which('netstat'):
+        if not salt.utils.path.which('netstat'):
             return _ss_linux()
         else:
             return _netstat_linux()
@@ -841,7 +844,7 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    if not salt.utils.which('traceroute'):
+    if not salt.utils.path.which('traceroute'):
         log.info('This minion does not have traceroute installed')
         return ret
 
@@ -850,7 +853,7 @@ def traceroute(host):
     out = __salt__['cmd.run'](cmd)
 
     # Parse version of traceroute
-    if salt.utils.is_sunos() or salt.utils.is_aix():
+    if salt.utils.platform.is_sunos() or salt.utils.platform.is_aix():
         traceroute_version = [0, 0, 0]
     else:
         cmd2 = 'traceroute --version'
@@ -883,7 +886,7 @@ def traceroute(host):
         if line.startswith('traceroute'):
             continue
 
-        if salt.utils.is_aix():
+        if salt.utils.platform.is_aix():
             if line.startswith('trying to get source for'):
                 continue
 
@@ -956,7 +959,7 @@ def traceroute(host):
     return ret
 
 
-@decorators.which('dig')
+@salt.utils.decorators.path.which('dig')
 def dig(host):
     '''
     Performs a DNS lookup with dig
@@ -971,7 +974,7 @@ def dig(host):
     return __salt__['cmd.run'](cmd)
 
 
-@decorators.which('arp')
+@salt.utils.decorators.path.which('arp')
 def arp():
     '''
     Return the arp table from the minion
@@ -1268,10 +1271,10 @@ def mod_hostname(hostname):
     if hostname is None:
         return False
 
-    hostname_cmd = salt.utils.which('hostnamectl') or salt.utils.which('hostname')
-    if salt.utils.is_sunos():
-        uname_cmd = '/usr/bin/uname' if salt.utils.is_smartos() else salt.utils.which('uname')
-        check_hostname_cmd = salt.utils.which('check-hostname')
+    hostname_cmd = salt.utils.path.which('hostnamectl') or salt.utils.path.which('hostname')
+    if salt.utils.platform.is_sunos():
+        uname_cmd = '/usr/bin/uname' if salt.utils.platform.is_smartos() else salt.utils.path.which('uname')
+        check_hostname_cmd = salt.utils.path.which('check-hostname')
 
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
@@ -1281,7 +1284,7 @@ def mod_hostname(hostname):
             line = line.split(':')
             if 'Static hostname' in line[0]:
                 o_hostname = line[1].strip()
-    elif not salt.utils.is_sunos():
+    elif not salt.utils.platform.is_sunos():
         # don't run hostname -f because -f is not supported on all platforms
         o_hostname = socket.getfqdn()
     else:
@@ -1290,7 +1293,7 @@ def mod_hostname(hostname):
 
     if hostname_cmd.endswith('hostnamectl'):
         __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
-    elif not salt.utils.is_sunos():
+    elif not salt.utils.platform.is_sunos():
         __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
     else:
         __salt__['cmd.run']('{0} -S {1}'.format(uname_cmd, hostname.split('.')[0]))
@@ -1306,7 +1309,7 @@ def mod_hostname(hostname):
 
             try:
                 host[host.index(o_hostname)] = hostname
-                if salt.utils.is_sunos():
+                if salt.utils.platform.is_sunos():
                     # also set a copy of the hostname
                     host[host.index(o_hostname.split('.')[0])] = hostname.split('.')[0]
             except ValueError:
@@ -1324,9 +1327,9 @@ def mod_hostname(hostname):
             for net in network_c:
                 if net.startswith('HOSTNAME'):
                     old_hostname = net.split('=', 1)[1].rstrip()
-                    quote_type = salt.utils.is_quoted(old_hostname)
+                    quote_type = salt.utils.stringutils.is_quoted(old_hostname)
                     fh_.write('HOSTNAME={1}{0}{1}\n'.format(
-                        salt.utils.dequote(hostname), quote_type))
+                        salt.utils.stringutils.dequote(hostname), quote_type))
                 else:
                     fh_.write(net)
     elif __grains__['os_family'] in ('Debian', 'NILinuxRT'):
@@ -1337,7 +1340,7 @@ def mod_hostname(hostname):
             fh_.write(hostname + '\n')
 
     # Update /etc/nodename and /etc/defaultdomain on SunOS
-    if salt.utils.is_sunos():
+    if salt.utils.platform.is_sunos():
         with salt.utils.files.fopen('/etc/nodename', 'w') as fh_:
             fh_.write(hostname.split('.')[0] + '\n')
         with salt.utils.files.fopen('/etc/defaultdomain', 'w') as fh_:
@@ -1602,7 +1605,7 @@ def routes(family=None):
         raise CommandExecutionError('Invalid address family {0}'.format(family))
 
     if __grains__['kernel'] == 'Linux':
-        if not salt.utils.which('netstat'):
+        if not salt.utils.path.which('netstat'):
             routes_ = _ip_route_linux()
         else:
             routes_ = _netstat_route_linux()

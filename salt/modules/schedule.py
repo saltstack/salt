@@ -19,7 +19,7 @@ import salt.utils.files
 import salt.utils.odict
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 __proxyenabled__ = ['*']
 

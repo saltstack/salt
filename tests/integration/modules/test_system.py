@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import datetime
 import logging
@@ -13,16 +13,17 @@ from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 import salt.states.file
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
 
-@skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
+@skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
 class SystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the system module
@@ -300,7 +301,7 @@ class SystemModuleTest(ModuleCase):
         '''
         res = self.run_function('system.get_computer_desc')
 
-        hostname_cmd = salt.utils.which('hostnamectl')
+        hostname_cmd = salt.utils.path.which('hostnamectl')
         if hostname_cmd:
             desc = self.run_function('cmd.run', ["hostnamectl status --pretty"])
             self.assertEqual(res, desc)

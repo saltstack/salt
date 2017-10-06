@@ -52,7 +52,7 @@ import re
 import sys
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def _present_test(user, name, enc, comment, options, source, config, fingerprint_hash_type):
