@@ -3324,11 +3324,11 @@ def _cache_id(minion_id, cache_file):
     path = os.path.dirname(cache_file)
     try:
         os.makedirs(path)
-    except OSError:
+    except OSError as exc:
         if os.path.isdir(path):
             pass
         else:
-            raise
+            log.error('Failed to create dirs to minion_id file: {0}'.format(exc))
 
     try:
         with salt.utils.files.fopen(cache_file, 'w') as idf:
