@@ -259,6 +259,14 @@ def managed(name, ppa=None, **kwargs):
 
            Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
 
+    key_text
+        The string representation of the GPG key to install.
+
+       .. note::
+
+           Use either ``keyid``/``keyserver``, ``key_url``, or ``key_text`` but
+           not more than one method.
+
     consolidate : False
        If set to ``True``, this will consolidate all sources definitions to the
        sources.list file, cleanup the now unused files, consolidate components
