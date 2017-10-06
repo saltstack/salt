@@ -26,8 +26,9 @@ import salt.utils
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
+import salt.utils.kinds
 import salt.utils.sdb
-import salt.utils.kinds as kinds
+import salt.utils.user
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
@@ -145,7 +146,7 @@ class KeyCLI(object):
                 low.update(res)
                 low[u'eauth'] = self.opts[u'eauth']
         else:
-            low[u'user'] = salt.utils.get_specific_user()
+            low[u'user'] = salt.utils.user.get_specific_user()
             low[u'key'] = salt.utils.get_master_key(low[u'user'], self.opts, skip_perm_errors)
 
         self.auth = low
@@ -364,7 +365,7 @@ class Key(object):
     def __init__(self, opts, io_loop=None):
         self.opts = opts
         kind = self.opts.get(u'__role', u'')  # application kind
-        if kind not in kinds.APPL_KINDS:
+        if kind not in salt.utils.kinds.APPL_KINDS:
             emsg = (u"Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + u'\n')
             raise ValueError(emsg)
@@ -1000,7 +1001,7 @@ class RaetKey(Key):
                             cache.flush(u'{0}/{1}'.format(self.ACC, minion))
 
         kind = self.opts.get(u'__role', u'')  # application kind
-        if kind not in kinds.APPL_KINDS:
+        if kind not in salt.utils.kinds.APPL_KINDS:
             emsg = (u"Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + u'\n')
             raise ValueError(emsg)
