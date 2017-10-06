@@ -36,6 +36,7 @@ import salt.utils.files
 import salt.utils.jid
 import salt.utils.kinds as kinds
 import salt.utils.platform
+import salt.utils.user
 import salt.utils.xdg
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
@@ -772,7 +773,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # Since we're not be able to write to the log file or its parent
             # directory (if the log file does not exit), are we the same user
             # as the one defined in the configuration file?
-            current_user = salt.utils.get_user()
+            current_user = salt.utils.user.get_user()
             if self.config['user'] != current_user:
                 # Yep, not the same user!
                 # Is the current user in ACL?
