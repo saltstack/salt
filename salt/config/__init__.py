@@ -24,13 +24,14 @@ from salt.ext.six.moves.urllib.parse import urlparse
 # pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once is_dictlist, ip_bracket are moved
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yamlloader as yamlloader
@@ -69,7 +70,7 @@ if salt.utils.platform.is_windows():
 else:
     _DFLT_IPC_MODE = 'ipc'
     _MASTER_TRIES = 1
-    _MASTER_USER = salt.utils.get_user()
+    _MASTER_USER = salt.utils.user.get_user()
 
 
 def _gather_buffer_space():
@@ -1145,7 +1146,7 @@ DEFAULT_MINION_OPTS = {
     'always_verify_signature': False,
     'master_sign_key_name': 'master_sign',
     'syndic_finger': '',
-    'user': salt.utils.get_user(),
+    'user': salt.utils.user.get_user(),
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': '',

@@ -21,13 +21,13 @@ from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.cloud
-import salt.utils.cloud
 import salt.config
 import salt.defaults.exitcodes
 import salt.output
 import salt.syspaths as syspaths
-import salt.utils
+import salt.utils.cloud
 import salt.utils.parsers
+import salt.utils.user
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 from salt.utils.verify import check_user, verify_env, verify_files, verify_log
 
@@ -48,7 +48,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
 
         salt_master_user = self.config.get('user')
         if salt_master_user is None:
-            salt_master_user = salt.utils.get_user()
+            salt_master_user = salt.utils.user.get_user()
 
         if not check_user(salt_master_user):
             self.error(

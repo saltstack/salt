@@ -373,10 +373,11 @@ class _Ini(_Section):
                 with salt.utils.files.fopen(self.name) as rfh:
                     inicontents = rfh.read()
             except (OSError, IOError) as exc:
-                raise CommandExecutionError(
-                    "Unable to open file '{0}'. "
-                    "Exception: {1}".format(self.name, exc)
-                )
+                if __opts__['test'] is False:
+                    raise CommandExecutionError(
+                        "Unable to open file '{0}'. "
+                        "Exception: {1}".format(self.name, exc)
+                    )
         if not inicontents:
             return
         # Remove anything left behind from a previous run.
