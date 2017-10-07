@@ -3389,8 +3389,10 @@ def _cache_id(minion_id, cache_file):
     '''
     path = os.path.dirname(cache_file)
     try:
-        os.makedirs(path)
+        if not os.path.isdir(path):
+            os.makedirs(path)
     except OSError as exc:
+        # Handle race condition where dir is created after os.path.isdir check
         if os.path.isdir(path):
             pass
         else:
