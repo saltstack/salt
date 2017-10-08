@@ -67,7 +67,7 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
             Allow mulitiple versions of the package to be installed. Do not use
             with ``force``. Does not work with all packages. Default is False.
 
-            .. versionadded:: Nitrogen
+            .. versionadded:: 2017.7.0
 
     .. code-block:: yaml
 
@@ -92,34 +92,66 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
 
     # Determine action
     # Package not installed
-    if name not in pre_install:
+    if name.lower() not in [package.lower() for package in pre_install.keys()]:
         if version:
             ret['changes'] = {name: 'Version {0} will be installed'
                                     ''.format(version)}
         else:
-            ret['changes'] = {name: 'Will be installed'}
+            ret['changes'] = {name: 'Latest version will be installed'}
+
     # Package installed
     else:
         version_info = __salt__['chocolatey.version'](name, check_remote=True)
 
         full_name = name
-        lower_name = name.lower()
         for pkg in version_info:
-            if lower_name == pkg.lower():
+            if name.lower() == pkg.lower():
                 full_name = pkg
 
-        available_version = version_info[full_name]['available'][0]
-        version = version if version else available_version
+        installed_version = version_info[full_name]['installed'][0]
 
-        if force:
-            ret['changes'] = {name: 'Version {0} will be forcibly installed'
-                                    ''.format(version)}
-        elif allow_multiple:
-            ret['changes'] = {name: 'Version {0} will be installed side by side'
-                                    ''.format(version)}
+        if version:
+            if salt.utils.compare_versions(
+                    ver1=installed_version, oper="==", ver2=version):
+                if force:
+                    ret['changes'] = {
+                        name: 'Version {0} will be reinstalled'.format(version)}
+                    ret['comment'] = 'Reinstall {0} {1}' \
+                                     ''.format(full_name, version)
+                else:
+                    ret['comment'] = '{0} {1} is already installed' \
+                                     ''.format(name, version)
+                    if __opts__['test']:
+                        ret['result'] = None
+                    return ret
+            else:
+                if allow_multiple:
+                    ret['changes'] = {
+                        name: 'Version {0} will be installed side by side with '
+                              'Version {1} if supported'
+                              ''.format(version, installed_version)}
+                    ret['comment'] = 'Install {0} {1} side-by-side with {0} {2}' \
+                                     ''.format(full_name, version, installed_version)
+                else:
+                    ret['changes'] = {
+                        name: 'Version {0} will be installed over Version {1} '
+                              ''.format(version, installed_version)}
+                    ret['comment'] = 'Install {0} {1} over {0} {2}' \
+                                     ''.format(full_name, version, installed_version)
+                    force = True
         else:
-            ret['comment'] = 'The Package {0} is already installed'.format(name)
-            return ret
+            version = installed_version
+            if force:
+                ret['changes'] = {
+                    name: 'Version {0} will be reinstalled'.format(version)}
+                ret['comment'] = 'Reinstall {0} {1}' \
+                                 ''.format(full_name, version)
+            else:
+                ret['comment'] = '{0} {1} is already installed' \
+                                 ''.format(name, version)
+                if __opts__['test']:
+                    ret['result'] = None
+                return ret
 
     if __opts__['test']:
         ret['result'] = None
@@ -193,9 +225,13 @@ def uninstalled(name, version=None, uninstall_args=None, override_args=False):
     pre_uninstall = __salt__['chocolatey.list'](local_only=True)
 
     # Determine if package is installed
-    if name in pre_uninstall:
-        ret['changes'] = {name: '{0} version {1} will be removed'
-                                ''.format(name, pre_uninstall[name][0])}
+    if name.lower() in [package.lower() for package in pre_uninstall.keys()]:
+        try:
+            ret['changes'] = {name: '{0} version {1} will be removed'
+                                    ''.format(name, pre_uninstall[name][0])}
+        except KeyError:
+            ret['changes'] = {name: '{0} will be removed'
+                                    ''.format(name)}
     else:
         ret['comment'] = 'The package {0} is not installed'.format(name)
         return ret

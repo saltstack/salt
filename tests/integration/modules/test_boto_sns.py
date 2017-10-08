@@ -8,35 +8,28 @@ from __future__ import absolute_import
 import re
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 # Import 3rd-party libs
-NO_BOTO_MODULE = True
-BOTO_NOT_CONFIGURED = True
 try:
     import boto
     NO_BOTO_MODULE = False
-    try:
-        boto.connect_iam()
-        BOTO_NOT_CONFIGURED = False
-    except boto.exception.NoAuthHandlerFound:
-        pass
 except ImportError:
-    pass
+    NO_BOTO_MODULE = True
 
 
 @skipIf(
     NO_BOTO_MODULE,
     'Please install the boto library before running boto integration tests.'
 )
-@skipIf(
-    BOTO_NOT_CONFIGURED,
-    'Please setup boto AWS credentials before running boto integration tests.'
-)
-class BotoSNSTest(integration.ModuleCase):
+class BotoSNSTest(ModuleCase):
 
     def setUp(self):
+        try:
+            boto.connect_iam()
+        except boto.exception.NoAuthHandlerFound:
+            self.skipTest('Please setup boto AWS credentials before running boto integration tests.')
         # The name of the topic you want to create.
         # Constraints: Topic names must be made up of only uppercase and
         # lowercase ASCII letters, numbers, underscores, and hyphens,

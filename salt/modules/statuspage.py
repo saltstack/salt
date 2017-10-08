@@ -16,7 +16,7 @@ In the minion configuration file, the following block is required:
     api_key: <API_KEY>
     page_id: <PAGE_ID>
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 '''
 
 from __future__ import absolute_import
@@ -184,7 +184,7 @@ def create(endpoint='incidents',
 
     Example output:
 
-    .. code-block:: yaml
+    .. code-block:: bash
 
         minion:
             ----------
@@ -277,7 +277,7 @@ def retrieve(endpoint='incidents',
 
     Example output:
 
-    .. code-block:: yaml
+    .. code-block:: bash
 
         minion:
             ----------
@@ -417,7 +417,7 @@ def update(endpoint='incidents',
 
     Example output:
 
-    .. code-block:: yaml
+    .. code-block:: bash
 
         minion:
             ----------
@@ -518,7 +518,7 @@ def delete(endpoint='incidents',
 
     Example output:
 
-    .. code-block:: yaml
+    .. code-block:: bash
 
         minion:
             ----------

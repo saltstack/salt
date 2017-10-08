@@ -2,7 +2,7 @@
 '''
 Simple script to dump the contents of msgpack files to the terminal
 '''
-
+# pylint: disable=resource-leakage
 # Import python libs
 from __future__ import absolute_import, print_function
 import os

@@ -27,12 +27,12 @@ import logging
 
 
 # Import Salt libs
-import salt.utils
 import salt.utils.fsutils
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    return not salt.utils.is_windows() and __grains__.get('kernel') == 'Linux'
+    return not salt.utils.platform.is_windows() and __grains__.get('kernel') == 'Linux'
 
 
 def version():

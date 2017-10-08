@@ -6,6 +6,8 @@ Tests for the Git state
 # Import python libs
 from __future__ import absolute_import
 import errno
+import functools
+import inspect
 import os
 import shutil
 import socket
@@ -13,21 +15,75 @@ import string
 import tempfile
 
 # Import Salt Testing libs
-import tests.integration as integration
-from tests.support.helpers import skip_if_binaries_missing
+from tests.support.case import ModuleCase
+from tests.support.paths import TMP
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 
-@skip_if_binaries_missing('git')
-class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+def __check_git_version(caller, min_version, skip_msg):
+    '''
+    Common logic for version check
+    '''
+    if inspect.isclass(caller):
+        actual_setup = getattr(caller, 'setUp', None)
+
+        def setUp(self, *args, **kwargs):
+            if not salt.utils.path.which('git'):
+                self.skipTest('git is not installed')
+            git_version = self.run_function('git.version')
+            if _LooseVersion(git_version) < _LooseVersion(min_version):
+                self.skipTest(skip_msg.format(min_version, git_version))
+            if actual_setup is not None:
+                actual_setup(self, *args, **kwargs)
+        caller.setUp = setUp
+        return caller
+
+    @functools.wraps(caller)
+    def wrapper(self, *args, **kwargs):
+        if not salt.utils.path.which('git'):
+            self.skipTest('git is not installed')
+        git_version = self.run_function('git.version')
+        if _LooseVersion(git_version) < _LooseVersion(min_version):
+            self.skipTest(skip_msg.format(min_version, git_version))
+        return caller(self, *args, **kwargs)
+    return wrapper
+
+
+def ensure_min_git(caller):
+    '''
+    Skip test if minimum supported git version is not installed
+    '''
+    min_version = '1.6.5'
+    return __check_git_version(
+        caller,
+        min_version,
+        'git {0} or newer required to run this test (detected {1})'
+    )
+
+
+def uses_git_opts(caller):
+    '''
+    Skip test if git_opts is not supported
+    '''
+    min_version = '1.7.2'
+    return __check_git_version(
+        caller,
+        min_version,
+        'git_opts only supported in git {0} and newer (detected {1})'
+    )
+
+
+@ensure_min_git
+class GitTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the git state
     '''
-
     def setUp(self):
-        super(GitTest, self).setUp()
         self.__domain = 'github.com'
         try:
             if hasattr(socket, 'setdefaulttimeout'):
@@ -46,7 +102,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         git.latest
         '''
-        name = os.path.join(integration.TMP, 'salt_repo')
+        name = os.path.join(TMP, 'salt_repo')
         try:
             ret = self.run_state(
                 'git.latest',
@@ -62,7 +118,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         git.latest
         '''
-        name = os.path.join(integration.TMP, 'salt_repo')
+        name = os.path.join(TMP, 'salt_repo')
         try:
             ret = self.run_state(
                 'git.latest',
@@ -80,7 +136,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         git.latest
         '''
-        name = os.path.join(integration.TMP, 'salt_repo')
+        name = os.path.join(TMP, 'salt_repo')
         try:
             ret = self.run_state(
                 'git.latest',
@@ -98,7 +154,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         git.latest
         '''
-        name = os.path.join(integration.TMP, 'salt_repo')
+        name = os.path.join(TMP, 'salt_repo')
         if not os.path.isdir(name):
             os.mkdir(name)
         try:
@@ -119,7 +175,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         cwd=target was being passed to _run_check which blew up if
         target dir did not already exist.
         '''
-        name = os.path.join(integration.TMP, 'salt_repo')
+        name = os.path.join(TMP, 'salt_repo')
         if os.path.isdir(name):
             shutil.rmtree(name)
         try:
@@ -140,7 +196,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         git.latest with numeric revision
         '''
-        name = os.path.join(integration.TMP, 'salt_repo')
+        name = os.path.join(TMP, 'salt_repo')
         try:
             ret = self.run_state(
                 'git.latest',
@@ -160,7 +216,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         Ensure that we fail the state when there are local changes and succeed
         when force_reset is True.
         '''
-        name = os.path.join(integration.TMP, 'salt_repo')
+        name = os.path.join(TMP, 'salt_repo')
         try:
             # Clone repo
             ret = self.run_state(
@@ -172,7 +228,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertTrue(os.path.isdir(os.path.join(name, '.git')))
 
             # Make change to LICENSE file.
-            with salt.utils.fopen(os.path.join(name, 'LICENSE'), 'a') as fp_:
+            with salt.utils.files.fopen(os.path.join(name, 'LICENSE'), 'a') as fp_:
                 fp_.write('Lorem ipsum dolor blah blah blah....\n')
 
             # Make sure that we now have uncommitted changes
@@ -207,6 +263,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
+    @uses_git_opts
     def test_latest_fast_forward(self):
         '''
         Test running git.latest state a second time after changes have been
@@ -216,10 +273,10 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             return self.run_function('git.rev_parse', [cwd, 'HEAD'])
 
         repo_url = 'https://{0}/saltstack/salt-test-repo.git'.format(self.__domain)
-        mirror_dir = os.path.join(integration.TMP, 'salt_repo_mirror')
+        mirror_dir = os.path.join(TMP, 'salt_repo_mirror')
         mirror_url = 'file://' + mirror_dir
-        admin_dir = os.path.join(integration.TMP, 'salt_repo_admin')
-        clone_dir = os.path.join(integration.TMP, 'salt_repo')
+        admin_dir = os.path.join(TMP, 'salt_repo_admin')
+        clone_dir = os.path.join(TMP, 'salt_repo')
 
         try:
             # Mirror the repo
@@ -239,7 +296,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # Make a change to the repo by editing the file in the admin copy
             # of the repo and committing.
             head_pre = _head(admin_dir)
-            with open(os.path.join(admin_dir, 'LICENSE'), 'a') as fp_:
+            with salt.utils.files.fopen(os.path.join(admin_dir, 'LICENSE'), 'a') as fp_:
                 fp_.write('Hello world!')
             self.run_function(
                 'git.commit', [admin_dir, 'added a line'],
@@ -272,7 +329,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         We're testing two almost identical cases, the only thing that differs
         is the rev used for the git.latest state.
         '''
-        name = os.path.join(integration.TMP, 'salt_repo')
+        name = os.path.join(TMP, 'salt_repo')
         try:
             # Clone repo
             ret = self.run_state(
@@ -286,7 +343,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # Check out a new branch in the clone and make a commit, to ensure
             # that when we re-run the state, it is not a fast-forward change
             self.run_function('git.checkout', [name, 'new_branch'], opts='-b')
-            with salt.utils.fopen(os.path.join(name, 'foo'), 'w'):
+            with salt.utils.files.fopen(os.path.join(name, 'foo'), 'w'):
                 pass
             self.run_function('git.add', [name, '.'])
             self.run_function(
@@ -309,6 +366,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
+    @uses_git_opts
     def test_latest_changed_local_branch_rev_head(self):
         '''
         Test for presence of hint in failure message when the local branch has
@@ -323,6 +381,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             'branch (new_branch)'
         )
 
+    @uses_git_opts
     def test_latest_changed_local_branch_rev_develop(self):
         '''
         Test for presence of hint in failure message when the local branch has
@@ -334,19 +393,20 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             'branch (new_branch)'
         )
 
+    @uses_git_opts
     def test_latest_updated_remote_rev(self):
         '''
         Ensure that we don't exit early when checking for a fast-forward
         '''
-        name = tempfile.mkdtemp(dir=integration.TMP)
-        target = os.path.join(integration.TMP, 'test_latest_updated_remote_rev')
+        name = tempfile.mkdtemp(dir=TMP)
+        target = os.path.join(TMP, 'test_latest_updated_remote_rev')
 
         # Initialize a new git repository
         self.run_function('git.init', [name])
 
         try:
             # Add and commit a file
-            with salt.utils.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
+            with salt.utils.files.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
                 fp_.write('Hello world\n')
             self.run_function('git.add', [name, '.'])
             self.run_function(
@@ -363,7 +423,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertSaltTrueReturn(ret)
 
             # Add another commit
-            with salt.utils.fopen('foo.txt', 'w') as fp_:
+            with salt.utils.files.fopen(os.path.join(name, 'foo.txt'), 'w') as fp_:
                 fp_.write('Added a line\n')
             self.run_function(
                 'git.commit', [name, 'added a line'],
@@ -391,7 +451,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         git.present
         '''
-        name = os.path.join(integration.TMP, 'salt_repo')
+        name = os.path.join(TMP, 'salt_repo')
         try:
             ret = self.run_state(
                 'git.present',
@@ -407,13 +467,13 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         git.present
         '''
-        name = os.path.join(integration.TMP, 'salt_repo')
+        name = os.path.join(TMP, 'salt_repo')
         if not os.path.isdir(name):
             os.mkdir(name)
         try:
             fname = os.path.join(name, 'stoptheprocess')
 
-            with salt.utils.fopen(fname, 'a') as fh_:
+            with salt.utils.files.fopen(fname, 'a') as fh_:
                 fh_.write('')
 
             ret = self.run_state(
@@ -430,7 +490,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         git.present
         '''
-        name = os.path.join(integration.TMP, 'salt_repo')
+        name = os.path.join(TMP, 'salt_repo')
         if not os.path.isdir(name):
             os.mkdir(name)
         try:
@@ -448,7 +508,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         git.config
         '''
-        name = tempfile.mkdtemp(dir=integration.TMP)
+        name = tempfile.mkdtemp(dir=TMP)
         self.addCleanup(shutil.rmtree, name, ignore_errors=True)
         self.run_function('git.init', [name])
 
@@ -461,8 +521,9 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertSaltTrueReturn(ret)
 
 
-@skip_if_binaries_missing('git')
-class LocalRepoGitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+@ensure_min_git
+@uses_git_opts
+class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Tests which do no require connectivity to github.com
     '''
@@ -471,9 +532,9 @@ class LocalRepoGitTest(integration.ModuleCase, integration.SaltReturnAssertsMixI
         Test the case where the remote branch has been removed
         https://github.com/saltstack/salt/issues/36242
         '''
-        repo = tempfile.mkdtemp(dir=integration.TMP)
-        admin = tempfile.mkdtemp(dir=integration.TMP)
-        name = tempfile.mkdtemp(dir=integration.TMP)
+        repo = tempfile.mkdtemp(dir=TMP)
+        admin = tempfile.mkdtemp(dir=TMP)
+        name = tempfile.mkdtemp(dir=TMP)
         for dirname in (repo, admin, name):
             self.addCleanup(shutil.rmtree, dirname, ignore_errors=True)
 
@@ -482,7 +543,7 @@ class LocalRepoGitTest(integration.ModuleCase, integration.SaltReturnAssertsMixI
         # Clone bare repo
         self.run_function('git.clone', [admin], url=repo)
         # Create, add, commit, and push file
-        with salt.utils.fopen(os.path.join(admin, 'foo'), 'w'):
+        with salt.utils.files.fopen(os.path.join(admin, 'foo'), 'w'):
             pass
         self.run_function('git.add', [admin, '.'])
         self.run_function(
@@ -497,7 +558,7 @@ class LocalRepoGitTest(integration.ModuleCase, integration.SaltReturnAssertsMixI
             os.path.join(repo, 'refs', 'heads', 'develop')
         )
 
-        # Run git.latest state. This should successfuly clone and fail with a
+        # Run git.latest state. This should successfully clone and fail with a
         # specific error in the comment field.
         ret = self.run_state(
             'git.latest',

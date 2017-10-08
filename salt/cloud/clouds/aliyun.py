@@ -50,7 +50,8 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
-# Import Third Party Libs
+# Import 3rd-party libs
+from salt.ext import six
 try:
     import requests
     HAS_REQUESTS = True
@@ -655,7 +656,7 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args=__utils__['cloud.filter_event']('requesting', kwargs, kwargs.keys()),
+        args=__utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -745,7 +746,7 @@ def _compute_signature(parameters, access_key_secret):
     '''
 
     def percent_encode(line):
-        if not isinstance(line, str):
+        if not isinstance(line, six.string_types):
             return line
 
         s = line

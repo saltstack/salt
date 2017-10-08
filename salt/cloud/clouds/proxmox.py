@@ -35,7 +35,7 @@ import re
 import json
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
 
 # Import salt cloud libs
@@ -762,7 +762,7 @@ def create_node(vm_, newid):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
-            'kwargs': __utils__['cloud.filter_event']('requesting', newnode, newnode.keys()),
+            'kwargs': __utils__['cloud.filter_event']('requesting', newnode, list(newnode)),
         },
         sock_dir=__opts__['sock_dir'],
     )

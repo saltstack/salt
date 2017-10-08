@@ -4,6 +4,9 @@
 from __future__ import absolute_import
 import random
 import string
+import logging
+import os
+from tempfile import NamedTemporaryFile
 
 # linux_distribution deprecated in py3.7
 try:
@@ -12,6 +15,7 @@ except ImportError:
     from distro import linux_distribution
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -22,19 +26,16 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.config
-import salt.ext.six as six
 import salt.loader
-from salt.modules import boto_lambda
+import salt.modules.boto_lambda as boto_lambda
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 import salt.utils
+import salt.utils.stringutils
 
 # Import 3rd-party libs
-from tempfile import NamedTemporaryFile
-import logging
-import os
-
+from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto3
@@ -96,14 +97,6 @@ event_source_mapping_ret = dict(UUID='1234-1-123',
 
 log = logging.getLogger(__name__)
 
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_lambda.__utils__ = utils
-boto_lambda.__init__(opts)
-boto_lambda.__salt__ = {}
-
 
 def _has_required_boto():
     '''
@@ -126,13 +119,19 @@ def _has_required_boto():
          'and botocore must be greater than or equal to {1}'.format(
              required_boto3_version, required_botocore_version)))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoLambdaTestCaseBase(TestCase):
+class BotoLambdaTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
-    # Set up MagicMock to replace the boto3 session
+    def setup_loader_modules(self):
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        return {boto_lambda: {'__utils__': utils}}
+
     def setUp(self):
-        boto_lambda.__context__ = {}
-        context.clear()
+        super(BotoLambdaTestCaseBase, self).setUp()
+        boto_lambda.__init__(self.opts)
+        del self.opts
+        # Set up MagicMock to replace the boto3 session
         # connections keep getting cached from prior tests, can't find the
         # correct context object to clear it. So randomize the cache key, to prevent any
         # cache hits
@@ -141,11 +140,13 @@ class BotoLambdaTestCaseBase(TestCase):
 
         self.patcher = patch('boto3.session.Session')
         self.addCleanup(self.patcher.stop)
+        self.addCleanup(delattr, self, 'patcher')
         mock_session = self.patcher.start()
 
         session_instance = mock_session.return_value
         self.conn = MagicMock()
         session_instance.client.return_value = self.conn
+        self.addCleanup(delattr, self, 'conn')
 
 
 class TempZipFile(object):
@@ -155,7 +156,7 @@ class TempZipFile(object):
                 suffix='.zip', prefix='salt_test_', delete=False) as tmp:
             to_write = '###\n'
             if six.PY3:
-                to_write = salt.utils.to_bytes(to_write)
+                to_write = salt.utils.stringutils.to_bytes(to_write)
             tmp.write(to_write)
             self.zipfile = tmp.name
         return self.zipfile
@@ -244,8 +245,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegexp(SaltInvocationError,
-                                         'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
+            with self.assertRaisesRegex(SaltInvocationError,
+                                        'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
                 lambda_creation_result = boto_lambda.create_function(
                     FunctionName='testfunction',
                     Runtime='python2.7',
@@ -258,8 +259,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegexp(SaltInvocationError,
-                                         'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
+            with self.assertRaisesRegex(SaltInvocationError,
+                                        'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
                 with TempZipFile() as zipfile:
                     lambda_creation_result = boto_lambda.create_function(
                         FunctionName='testfunction',
@@ -400,7 +401,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                 SaltInvocationError,
                 ('Either ZipFile must be specified, or S3Bucket '
                  'and S3Key must be provided.')):
@@ -713,7 +714,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         tests Deleting a mapping without identifier
         '''
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             SaltInvocationError,
             ('Either UUID must be specified, or EventSourceArn '
              'and FunctionName must be provided.')):

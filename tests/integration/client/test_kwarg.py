@@ -4,10 +4,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 
 
-class StdTest(integration.ModuleCase):
+class StdTest(ModuleCase):
     '''
     Test standard client calls
     '''
@@ -94,3 +94,25 @@ class StdTest(integration.ModuleCase):
         ret = self.client.cmd('minion', 'test.ping', full_return=True)
         for mid, data in ret.items():
             self.assertIn('retcode', data)
+
+    def test_cmd_arg_kwarg_parsing(self):
+        ret = self.client.cmd('minion', 'test.arg_clean',
+            arg=[
+                'foo',
+                'bar=off',
+                'baz={qux: 123}'
+            ],
+            kwarg={
+                'quux': 'Quux',
+            })
+
+        self.assertEqual(ret['minion'], {
+            'args': ['foo'],
+            'kwargs': {
+                'bar': False,
+                'baz': {
+                    'qux': 123,
+                },
+                'quux': 'Quux',
+            },
+        })

@@ -5,21 +5,18 @@ Test module for syslog_ng state
 
 # Import python libs
 from __future__ import absolute_import
-import yaml
+import os
 import re
 import tempfile
-import os
+import yaml
 
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
-import salt.utils
-from salt.states import syslog_ng
-from salt.modules import syslog_ng as syslog_ng_module
-
-syslog_ng.__salt__ = {}
-syslog_ng_module.__salt__ = {}
-syslog_ng_module.__opts__ = {'test': False}
+import salt.utils.files
+import salt.states.syslog_ng as syslog_ng
+import salt.modules.syslog_ng as syslog_ng_module
 
 SOURCE_1_CONFIG = {
     "id": "s_tail",
@@ -299,8 +296,13 @@ def remove_whitespaces(source):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-# @skipIf(syslog_ng.__virtual__() is False, 'Syslog-ng must be installed')
-class SyslogNGTestCase(TestCase):
+class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            syslog_ng: {},
+            syslog_ng_module: {'__opts__': {'test': False}}
+        }
+
     def test_generate_source_config(self):
         self._config_generator_template(SOURCE_1_CONFIG, SOURCE_1_EXPECTED)
 
@@ -360,7 +362,7 @@ class SyslogNGTestCase(TestCase):
                 got = syslog_ng.config(id, config=parsed_yaml_config, write=True)
 
             written_config = ""
-            with salt.utils.fopen(config_file_name, "r") as f:
+            with salt.utils.files.fopen(config_file_name, "r") as f:
                 written_config = f.read()
 
             config_without_whitespaces = remove_whitespaces(written_config)

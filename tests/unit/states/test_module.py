@@ -8,9 +8,10 @@ from __future__ import absolute_import
 from inspect import ArgSpec
 
 # Import Salt Libs
-from salt.states import module
+import salt.states.module as module
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -20,9 +21,6 @@ from tests.support.mock import (
 )
 
 CMD = 'foo.bar'
-MOCK = MagicMock()
-module.__salt__ = {CMD: MOCK}
-module.__opts__ = {'test': False}
 
 
 def _mocked_func_named(name, names=('Fred', 'Swen',)):
@@ -56,15 +54,34 @@ def _mocked_none_return(ret=None):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ModuleStateTest(TestCase):
+class ModuleStateTest(TestCase, LoaderModuleMockMixin):
     '''
     Tests module state (salt/states/module.py)
     '''
+    def setup_loader_modules(self):
+        return {
+            module: {
+                '__opts__': {'test': False},
+                '__salt__': {CMD: MagicMock()}
+            }
+        }
 
-    aspec = ArgSpec(args=['hello', 'world'],
-                    varargs=None,
-                    keywords=None,
-                    defaults=False)
+    @classmethod
+    def setUpClass(cls):
+        cls.aspec = ArgSpec(args=['hello', 'world'],
+                            varargs=None,
+                            keywords=None,
+                            defaults=False)
+
+        cls.bspec = ArgSpec(args=[],
+                            varargs='names',
+                            keywords='kwargs',
+                            defaults=None)
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.aspec
+        del cls.bspec
 
     def test_run_module_not_available(self):
         '''
@@ -76,6 +93,16 @@ class ModuleStateTest(TestCase):
                 ret = module.run(**{CMD: None})
                 assert ret['comment'] == "Unavailable function: {0}.".format(CMD)
                 assert not ret['result']
+
+    def test_module_run_hidden_varargs(self):
+        '''
+        Tests the return of module.run state when hidden varargs are used with
+        wrong type.
+        '''
+        with patch('salt.utils.args.get_function_argspec', MagicMock(return_value=self.bspec)):
+            ret = module._run(CMD, m_names='anyname')
+            comment = "'names' must be a list."
+            self.assertEqual(ret['comment'], comment)
 
     def test_run_testmode(self):
         '''
@@ -95,7 +122,7 @@ class ModuleStateTest(TestCase):
         with patch.dict(module.__salt__, {CMD: _mocked_func_named}):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 ret = module.run(**{CMD: None})
-                assert ret['comment'] == "'{0}' failed: Missing arguments: name".format(CMD)
+                assert ret['comment'] == "'{0}' failed: Function expects 1 parameters, got only 0".format(CMD)
 
     def test_run_correct_arg(self):
         '''
@@ -104,7 +131,7 @@ class ModuleStateTest(TestCase):
         '''
         with patch.dict(module.__salt__, {CMD: _mocked_func_named}):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
-                ret = module.run(**{CMD: [{'name': 'Fred'}]})
+                ret = module.run(**{CMD: ['Fred']})
                 assert ret['comment'] == '{0}: Success'.format(CMD)
                 assert ret['result']
 
@@ -177,13 +204,13 @@ class ModuleStateTest(TestCase):
             comment = 'Module function {0} is set to execute'.format(CMD)
             self.assertEqual(ret['comment'], comment)
 
-    @patch('salt.utils.args.get_function_argspec', MagicMock(return_value=aspec))
     def test_module_run_missing_arg(self):
         '''
         Tests the return of module.run state when arguments are missing
         '''
-        ret = module._run(CMD)
-        comment = 'The following arguments are missing:'
-        self.assertIn(comment, ret['comment'])
-        self.assertIn('world', ret['comment'])
-        self.assertIn('hello', ret['comment'])
+        with patch('salt.utils.args.get_function_argspec', MagicMock(return_value=self.aspec)):
+            ret = module._run(CMD)
+            comment = 'The following arguments are missing:'
+            self.assertIn(comment, ret['comment'])
+            self.assertIn('world', ret['comment'])
+            self.assertIn('hello', ret['comment'])
