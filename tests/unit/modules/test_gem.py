@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
 
-# Import Pytohn libs
+# Import Python libs
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
 import salt.modules.gem as gem
 
-gem.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestGemModule(TestCase):
+class TestGemModule(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {gem: {}}
 
     def test_gem(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
@@ -63,7 +65,8 @@ class TestGemModule(TestCase):
         with patch.dict(gem.__salt__,
                         {'rvm.is_installed': MagicMock(return_value=False),
                          'rbenv.is_installed': MagicMock(return_value=True),
-                         'rbenv.do': mock}):
+                         'rbenv.do': mock}),\
+                patch('salt.utils.platform.is_windows', return_value=False):
             gem._gem(['install', 'rails'])
             mock.assert_called_once_with(
                 ['gem', 'install', 'rails'],

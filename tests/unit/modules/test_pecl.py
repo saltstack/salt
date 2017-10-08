@@ -15,7 +15,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import pecl
+import salt.modules.pecl as pecl
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

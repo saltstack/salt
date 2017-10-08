@@ -7,27 +7,24 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
 # Import Salt Libs
-from salt.modules import win_ntp
-
-# Globals
-win_ntp.__salt__ = {}
-
-# Make sure this module runs on Windows system
-IS_WIN = win_ntp.__virtual__()
+import salt.modules.win_ntp as win_ntp
 
 
-@skipIf(not IS_WIN, "This test case runs only on Windows system")
-class WinNtpTestCase(TestCase):
+class WinNtpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_ntp
     '''
+    def setup_loader_modules(self):
+        return {win_ntp: {}}
+
     # 'set_servers' function tests: 1
 
     def test_set_servers(self):

@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import swift
+import salt.modules.swift as swift
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

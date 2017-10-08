@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,17 +16,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import process
-
-process.__opts__ = {}
-process.__salt__ = {}
+import salt.states.process as process
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ProcessTestCase(TestCase):
+class ProcessTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.process
     '''
+    def setup_loader_modules(self):
+        return {process: {}}
+
     # 'absent' function tests: 1
 
     def test_absent(self):

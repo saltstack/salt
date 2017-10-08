@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -15,21 +16,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import debian_service
-
-
-# Globals
-debian_service.__grains__ = {}
-debian_service.__salt__ = {}
-debian_service.__context__ = {}
-debian_service.__opts__ = {}
+import salt.modules.debian_service as debian_service
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DebianServicesTestCase(TestCase):
+class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.debian_service
     '''
+    def setup_loader_modules(self):
+        return {debian_service: {}}
+
     def test_get_enabled(self):
         '''
         Test for Return a list of service that are enabled on boot

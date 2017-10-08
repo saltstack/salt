@@ -12,13 +12,13 @@ them onto a logstash endpoint via HTTP requests.
 
         engines:
           - http_logstash:
-                url: http://blabla.com/salt-stuff
-                tags:
-                    - salt/job/*/new
-                    - salt/job/*/ret/*
-                funs:
-                    - probes.results
-                    - bgp.config
+              url: http://blabla.com/salt-stuff
+              tags:
+                  - salt/job/*/new
+                  - salt/job/*/ret/*
+              funs:
+                  - probes.results
+                  - bgp.config
 '''
 
 from __future__ import absolute_import

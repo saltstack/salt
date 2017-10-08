@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -17,18 +18,19 @@ from tests.support.mock import (
 )
 
 # Import salt libs
-import salt.ext.six as six
-from salt.runners import vault
+from salt.ext import six
+import salt.runners.vault as vault
 
 log = logging.getLogger(__name__)
 
-vault.__opts__ = {}
 
-
-class VaultTest(TestCase):
+class VaultTest(TestCase, LoaderModuleMockMixin):
     '''
     Tests for the runner module of the Vault integration
     '''
+
+    def setup_loader_modules(self):
+        return {vault: {}}
 
     def setUp(self):
         self.grains = {
@@ -45,12 +47,11 @@ class VaultTest(TestCase):
                                 }
                             }
                         },
-                        'mixedcase': 'UP-low-UP',
-                        'dictlist': [
-                            {'foo': 'bar'},
-                            {'baz': 'qux'}
-                        ]
+                        'mixedcase': 'UP-low-UP'
                       }
+
+    def tearDown(self):
+        del self.grains
 
     def test_pattern_list_expander(self):
         '''
@@ -88,6 +89,26 @@ class VaultTest(TestCase):
                 log.debug('Expected:\n\t{0}\nGot\n\t{1}'.format(output, correct_output))
                 log.debug('Difference:\n\t{0}'.format(diff))
             self.assertEqual(output, correct_output)
+
+    def test_get_policies_for_nonexisting_minions(self):
+        minion_id = 'salt_master'
+        # For non-existing minions, or the master-minion, grains will be None
+        cases = {
+                    'no-tokens-to-replace': ['no-tokens-to-replace'],
+                    'single-dict:{minion}': ['single-dict:{0}'.format(minion_id)],
+                    'single-list:{grains[roles]}': []
+        }
+        with patch('salt.utils.minions.get_minion_data',
+                   MagicMock(return_value=(None, None, None))):
+            for case, correct_output in six.iteritems(cases):
+                test_config = {'policies': [case]}
+                output = vault._get_policies(minion_id, test_config)  # pylint: disable=protected-access
+                diff = set(output).symmetric_difference(set(correct_output))
+                if len(diff) != 0:
+                    log.debug('Test {0} failed'.format(case))
+                    log.debug('Expected:\n\t{0}\nGot\n\t{1}'.format(output, correct_output))
+                    log.debug('Difference:\n\t{0}'.format(diff))
+                self.assertEqual(output, correct_output)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_get_policies(self):

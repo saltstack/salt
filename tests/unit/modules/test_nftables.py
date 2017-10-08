@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -17,20 +18,19 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import nftables
-import salt.utils
+import salt.modules.nftables as nftables
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
-
-# Globals
-nftables.__grains__ = {}
-nftables.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class NftablesTestCase(TestCase):
+class NftablesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.nftables
     '''
+    def setup_loader_modules(self):
+        return {nftables: {}}
+
     # 'version' function tests: 1
 
     def test_version(self):
@@ -79,7 +79,7 @@ class NftablesTestCase(TestCase):
         Test if it return a data structure of the rules in the conf file
         '''
         with patch.dict(nftables.__grains__, {'os_family': 'Debian'}):
-            with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
+            with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                 self.assertListEqual(nftables.get_saved_rules(), [])
 
     # 'get_rules' function tests: 1
@@ -105,10 +105,10 @@ class NftablesTestCase(TestCase):
         with patch.dict(nftables.__grains__, {'os_family': 'Debian'}):
             mock = MagicMock(return_value=False)
             with patch.dict(nftables.__salt__, {'cmd.run': mock}):
-                with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
+                with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                     self.assertEqual(nftables.save(), '#! nft -f\n\n')
 
-                with patch.object(salt.utils, 'fopen',
+                with patch.object(salt.utils.files, 'fopen',
                                   MagicMock(side_effect=IOError)):
                     self.assertRaises(CommandExecutionError, nftables.save)
 
@@ -277,14 +277,14 @@ class NftablesTestCase(TestCase):
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.new_chain(chain='input'), ret)
 
-    @patch('salt.modules.nftables.check_chain', MagicMock(return_value=False))
-    @patch('salt.modules.nftables.check_table', MagicMock(return_value=True))
     def test_new_chain_variable(self):
         '''
         Test if it create new chain to the specified table.
         '''
         mock = MagicMock(return_value='')
-        with patch.dict(nftables.__salt__, {'cmd.run': mock}):
+        with patch.dict(nftables.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.nftables.check_chain', MagicMock(return_value=False)), \
+                patch('salt.modules.nftables.check_table', MagicMock(return_value=True)):
             self.assertEqual(nftables.new_chain(chain='input',
                                                 table_type='filter'),
                              'Error: table_type hook and priority required')
@@ -312,14 +312,14 @@ class NftablesTestCase(TestCase):
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.delete_chain(chain='input'), ret)
 
-    @patch('salt.modules.nftables.check_chain', MagicMock(return_value=True))
-    @patch('salt.modules.nftables.check_table', MagicMock(return_value=True))
     def test_delete_chain_variables(self):
         '''
         Test if it delete the chain from the specified table.
         '''
         mock = MagicMock(return_value='')
-        with patch.dict(nftables.__salt__, {'cmd.run': mock}):
+        with patch.dict(nftables.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.nftables.check_chain', MagicMock(return_value=True)), \
+                patch('salt.modules.nftables.check_table', MagicMock(return_value=True)):
             self.assertTrue(nftables.delete_chain(chain='input'))
 
     # 'append' function tests: 2
@@ -350,16 +350,16 @@ class NftablesTestCase(TestCase):
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertTrue(nftables.append(chain='input', rule=_ru))
 
-    @patch('salt.modules.nftables.check', MagicMock(return_value=False))
-    @patch('salt.modules.nftables.check_chain', MagicMock(return_value=True))
-    @patch('salt.modules.nftables.check_table', MagicMock(return_value=True))
     def test_append_rule(self):
         '''
         Test if it append a rule to the specified table & chain.
         '''
         _ru = 'input tcp dport 22 log accept'
         mock = MagicMock(side_effect=['1', ''])
-        with patch.dict(nftables.__salt__, {'cmd.run': mock}):
+        with patch.dict(nftables.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.nftables.check', MagicMock(return_value=False)), \
+                patch('salt.modules.nftables.check_chain', MagicMock(return_value=True)), \
+                patch('salt.modules.nftables.check_table', MagicMock(return_value=True)):
             self.assertFalse(nftables.append(chain='input', rule=_ru))
             self.assertTrue(nftables.append(chain='input', rule=_ru))
 
@@ -392,9 +392,6 @@ class NftablesTestCase(TestCase):
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertTrue(nftables.insert(chain='input', rule=_ru))
 
-    @patch('salt.modules.nftables.check', MagicMock(return_value=False))
-    @patch('salt.modules.nftables.check_chain', MagicMock(return_value=True))
-    @patch('salt.modules.nftables.check_table', MagicMock(return_value=True))
     def test_insert_rule(self):
         '''
         Test if it insert a rule into the specified table & chain,
@@ -402,7 +399,10 @@ class NftablesTestCase(TestCase):
         '''
         _ru = 'input tcp dport 22 log accept'
         mock = MagicMock(side_effect=['1', ''])
-        with patch.dict(nftables.__salt__, {'cmd.run': mock}):
+        with patch.dict(nftables.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.nftables.check', MagicMock(return_value=False)), \
+                patch('salt.modules.nftables.check_chain', MagicMock(return_value=True)), \
+                patch('salt.modules.nftables.check_table', MagicMock(return_value=True)):
             self.assertFalse(nftables.insert(chain='input', rule=_ru))
             self.assertTrue(nftables.insert(chain='input', rule=_ru))
 
@@ -436,9 +436,6 @@ class NftablesTestCase(TestCase):
             self.assertTrue(nftables.delete(table='filter', chain='input',
                                             rule=_ru))
 
-    @patch('salt.modules.nftables.check', MagicMock(return_value=True))
-    @patch('salt.modules.nftables.check_chain', MagicMock(return_value=True))
-    @patch('salt.modules.nftables.check_table', MagicMock(return_value=True))
     def test_delete_rule(self):
         '''
         Test if it delete a rule from the specified table & chain,
@@ -446,7 +443,10 @@ class NftablesTestCase(TestCase):
         the rule's position in the chain.
         '''
         mock = MagicMock(side_effect=['1', ''])
-        with patch.dict(nftables.__salt__, {'cmd.run': mock}):
+        with patch.dict(nftables.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.nftables.check', MagicMock(return_value=True)), \
+                patch('salt.modules.nftables.check_chain', MagicMock(return_value=True)), \
+                patch('salt.modules.nftables.check_table', MagicMock(return_value=True)):
             self.assertFalse(nftables.delete(table='filter', chain='input',
                                              position='3'))
             self.assertTrue(nftables.delete(table='filter', chain='input',
@@ -469,14 +469,14 @@ class NftablesTestCase(TestCase):
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.flush(table='filter', chain='input'), ret)
 
-    @patch('salt.modules.nftables.check_chain', MagicMock(return_value=True))
-    @patch('salt.modules.nftables.check_table', MagicMock(return_value=True))
     def test_flush_chain(self):
         '''
         Test if it flush the chain in the specified table, flush all chains
         in the specified table if chain is not specified.
         '''
         mock = MagicMock(side_effect=['1', ''])
-        with patch.dict(nftables.__salt__, {'cmd.run': mock}):
+        with patch.dict(nftables.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.nftables.check_chain', MagicMock(return_value=True)), \
+                patch('salt.modules.nftables.check_table', MagicMock(return_value=True)):
             self.assertFalse(nftables.flush(table='filter', chain='input'))
             self.assertTrue(nftables.flush(table='filter', chain='input'))

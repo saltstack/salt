@@ -11,28 +11,31 @@ import os
 import yaml
 import tarfile
 import shutil
-import msgpack
-import datetime
 import hashlib
 import logging
-import pwd
-import grp
 import sys
+try:
+    import pwd
+    import grp
+except ImportError:
+    pass
 
 # Import Salt libs
 import salt.client
 import salt.config
 import salt.loader
 import salt.cache
-import salt.utils
-import salt.utils.http as http
 import salt.syspaths as syspaths
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
-from salt.ext.six.moves import zip
 from salt.ext.six.moves import filter
 from salt.template import compile_template
+import salt.utils.files
+import salt.utils.http as http
+import salt.utils.platform
+import salt.utils.win_functions
+from salt.utils.yamldumper import SafeOrderedDumper
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -355,12 +358,12 @@ class SPMClient(object):
                 dl_url = dl_url.replace('file://', '')
                 shutil.copyfile(dl_url, out_file)
             else:
-                response = http.query(dl_url, text=True)
-                with salt.utils.fopen(out_file, 'w') as outf:
-                    outf.write(response.get('text'))
+                with salt.utils.files.fopen(out_file, 'w') as outf:
+                    outf.write(self._query_http(dl_url, repo_info['info']))
 
         # First we download everything, then we install
         for package in dl_list:
+            out_file = dl_list[package]['dest_file']
             # Kick off the install
             self._install_indv_pkg(package, out_file)
         return
@@ -492,10 +495,16 @@ class SPMClient(object):
 
         # No defaults for this in config.py; default to the current running
         # user and group
-        uid = self.opts.get('spm_uid', os.getuid())
-        gid = self.opts.get('spm_gid', os.getgid())
-        uname = pwd.getpwuid(uid)[0]
-        gname = grp.getgrgid(gid)[0]
+        if salt.utils.platform.is_windows():
+            uname = gname = salt.utils.win_functions.get_current_user()
+            uname_sid = salt.utils.win_functions.get_sid_from_name(uname)
+            uid = self.opts.get('spm_uid', uname_sid)
+            gid = self.opts.get('spm_gid', uname_sid)
+        else:
+            uid = self.opts.get('spm_uid', os.getuid())
+            gid = self.opts.get('spm_gid', os.getgid())
+            uname = pwd.getpwuid(uid)[0]
+            gname = grp.getgrgid(gid)[0]
 
         # Second pass: install the files
         for member in pkg_files:
@@ -614,7 +623,7 @@ class SPMClient(object):
 
         for repo_file in repo_files:
             repo_path = '{0}.d/{1}'.format(self.opts['spm_repos_config'], repo_file)
-            with salt.utils.fopen(repo_path) as rph:
+            with salt.utils.files.fopen(repo_path) as rph:
                 repo_data = yaml.safe_load(rph)
                 for repo in repo_data:
                     if repo_data[repo].get('enabled', True) is False:
@@ -622,6 +631,45 @@ class SPMClient(object):
                     if repo_name is not None and repo != repo_name:
                         continue
                     callback(repo, repo_data[repo])
+
+    def _query_http(self, dl_path, repo_info):
+        '''
+        Download files via http
+        '''
+        query = None
+        response = None
+
+        try:
+            if 'username' in repo_info:
+                try:
+                    if 'password' in repo_info:
+                        query = http.query(
+                            dl_path, text=True,
+                            username=repo_info['username'],
+                            password=repo_info['password']
+                        )
+                    else:
+                        raise SPMException('Auth defined, but password is not set for username: \'{0}\''
+                                           .format(repo_info['username']))
+                except SPMException as exc:
+                    self.ui.error(str(exc))
+            else:
+                query = http.query(dl_path, text=True)
+        except SPMException as exc:
+            self.ui.error(str(exc))
+
+        try:
+            if query:
+                if 'SPM-METADATA' in dl_path:
+                    response = yaml.safe_load(query.get('text', '{}'))
+                else:
+                    response = query.get('text')
+            else:
+                raise SPMException('Response is empty, please check for Errors above.')
+        except SPMException as exc:
+            self.ui.error(str(exc))
+
+        return response
 
     def _download_repo_metadata(self, args):
         '''
@@ -633,11 +681,10 @@ class SPMClient(object):
             dl_path = '{0}/SPM-METADATA'.format(repo_info['url'])
             if dl_path.startswith('file://'):
                 dl_path = dl_path.replace('file://', '')
-                with salt.utils.fopen(dl_path, 'r') as rpm:
+                with salt.utils.files.fopen(dl_path, 'r') as rpm:
                     metadata = yaml.safe_load(rpm)
             else:
-                response = http.query(dl_path, text=True)
-                metadata = yaml.safe_load(response.get('text', '{}'))
+                metadata = self._query_http(dl_path, repo_info)
 
             cache.store('.', repo, metadata)
 
@@ -673,7 +720,7 @@ class SPMClient(object):
             raise SPMInvocationError('A path to a directory must be specified')
 
         if args[1] == '.':
-            repo_path = os.environ['PWD']
+            repo_path = os.getcwdu()
         else:
             repo_path = args[1]
 
@@ -745,8 +792,15 @@ class SPMClient(object):
                     repo_metadata[spm_name]['filename'] = spm_file
 
         metadata_filename = '{0}/SPM-METADATA'.format(repo_path)
-        with salt.utils.fopen(metadata_filename, 'w') as mfh:
-            yaml.dump(repo_metadata, mfh, indent=4, canonical=False, default_flow_style=False)
+        with salt.utils.files.fopen(metadata_filename, 'w') as mfh:
+            yaml.dump(
+                repo_metadata,
+                mfh,
+                indent=4,
+                canonical=False,
+                default_flow_style=False,
+                Dumper=SafeOrderedDumper
+            )
 
         log.debug('Wrote {0}'.format(metadata_filename))
 
@@ -973,7 +1027,7 @@ class SPMClient(object):
         formula_path = '{0}/FORMULA'.format(self.abspath)
         if not os.path.exists(formula_path):
             raise SPMPackageError('Formula file {0} not found'.format(formula_path))
-        with salt.utils.fopen(formula_path) as fp_:
+        with salt.utils.files.fopen(formula_path) as fp_:
             formula_conf = yaml.safe_load(fp_)
 
         for field in ('name', 'version', 'release', 'summary', 'description'):

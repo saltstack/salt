@@ -7,10 +7,11 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import mac_sysctl
+import salt.modules.mac_sysctl as mac_sysctl
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -21,15 +22,14 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-# Globals
-mac_sysctl.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DarwinSysctlTestCase(TestCase):
+class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.mac_sysctl module
     '''
+    def setup_loader_modules(self):
+        return {mac_sysctl: {}}
 
     def test_get(self):
         '''
@@ -63,37 +63,37 @@ class DarwinSysctlTestCase(TestCase):
             self.assertEqual(mac_sysctl.assign(
                 'net.inet.icmp.icmplim', 50), ret)
 
-    @patch('os.path.isfile', MagicMock(return_value=False))
     def test_persist_no_conf_failure(self):
         '''
         Tests adding of config file failure
         '''
-        with patch('salt.utils.fopen', mock_open()) as m_open:
+        with patch('salt.utils.files.fopen', mock_open()) as m_open, \
+                patch('os.path.isfile', MagicMock(return_value=False)):
             m_open.side_effect = IOError(13, 'Permission denied', '/file')
             self.assertRaises(CommandExecutionError,
                               mac_sysctl.persist,
                               'net.inet.icmp.icmplim',
                               50, config=None)
 
-    @patch('os.path.isfile', MagicMock(return_value=False))
     def test_persist_no_conf_success(self):
         '''
         Tests successful add of config file when previously not one
         '''
-        with patch('salt.utils.fopen', mock_open()) as m_open:
+        with patch('salt.utils.files.fopen', mock_open()) as m_open, \
+                patch('os.path.isfile', MagicMock(return_value=False)):
             mac_sysctl.persist('net.inet.icmp.icmplim', 50)
             helper_open = m_open()
             helper_open.write.assert_called_once_with(
                 '#\n# Kernel sysctl configuration\n#\n')
 
-    @patch('os.path.isfile', MagicMock(return_value=True))
     def test_persist_success(self):
         '''
         Tests successful write to existing sysctl file
         '''
         to_write = '#\n# Kernel sysctl configuration\n#\n'
         m_calls_list = [call.writelines(['net.inet.icmp.icmplim=50', '\n'])]
-        with patch('salt.utils.fopen', mock_open(read_data=to_write)) as m_open:
+        with patch('salt.utils.files.fopen', mock_open(read_data=to_write)) as m_open, \
+                patch('os.path.isfile', MagicMock(return_value=True)):
             mac_sysctl.persist('net.inet.icmp.icmplim', 50, config=to_write)
             helper_open = m_open()
             calls_list = helper_open.method_calls

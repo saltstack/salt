@@ -4,20 +4,26 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
 # Import salt libs
 import salt.modules.rvm as rvm
 
-rvm.__salt__ = {
-    'cmd.has_exec': MagicMock(return_value=True),
-    'config.option': MagicMock(return_value=None)
-}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class TestRvmModule(TestCase):
+class TestRvmModule(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {
+            rvm: {
+                '__salt__': {
+                    'cmd.has_exec': MagicMock(return_value=True),
+                    'config.option': MagicMock(return_value=None)
+                }
+            }
+        }
 
     def test_rvm(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
@@ -27,7 +33,8 @@ class TestRvmModule(TestCase):
                 ['/usr/local/rvm/bin/rvm', 'install', '1.9.3'],
                 runas=None,
                 cwd=None,
-                python_shell=False
+                python_shell=False,
+                env=None
             )
 
     def test_rvm_do(self):
@@ -38,7 +45,8 @@ class TestRvmModule(TestCase):
                 ['/usr/local/rvm/bin/rvm', '1.9.3', 'do', 'gemset', 'list'],
                 runas=None,
                 cwd=None,
-                python_shell=False
+                python_shell=False,
+                env=None
             )
 
     def test_install(self):
@@ -54,18 +62,55 @@ class TestRvmModule(TestCase):
                 ['/usr/local/rvm/bin/rvm', 'autolibs', 'disable', '2.0.0'],
                 runas='rvm',
                 cwd=None,
-                python_shell=False
+                python_shell=False,
+                env=None
             ),
             call(
-                ['/usr/local/rvm/bin/rvm', 'install',
-                 '--disable-binary', '2.0.0'],
+                ['/usr/local/rvm/bin/rvm', 'install', '2.0.0',
+                    '--disable-binary'],
                 runas='rvm',
                 cwd=None,
-                python_shell=False
+                python_shell=False,
+                env=None
             )
         ]
         with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
             rvm.install_ruby('2.0.0', runas='rvm')
+            self.assertEqual(mock.call_args_list, expected)
+
+    def test_install_with_env(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout'})
+        expected = [
+            call(
+                ['/usr/local/rvm/bin/rvm', 'install', '2.0.0'],
+                runas=None,
+                cwd=None,
+                python_shell=False,
+                env=[{'RUBY_CONFIGURE_OPTS': '--foobar'}]
+            )
+        ]
+        with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
+            rvm.install_ruby('2.0.0', env=[{'RUBY_CONFIGURE_OPTS': '--foobar'}])
+            self.assertEqual(mock.call_args_list, expected)
+
+    def test_install_with_opts(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout'})
+        expected = [
+            call(
+                ['/usr/local/rvm/bin/rvm', 'install', '2.0.0',
+                    '-C --enable-shared,--with-readline-dir=$HOME/.rvm/usr',
+                    '--patch /path/to/awesome.patch'],
+                runas=None,
+                cwd=None,
+                python_shell=False,
+                env=None
+            )
+        ]
+        with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
+            rvm.install_ruby('2.0.0', opts=[
+                    '-C --enable-shared,--with-readline-dir=$HOME/.rvm/usr',
+                    '--patch /path/to/awesome.patch'
+                ])
             self.assertEqual(mock.call_args_list, expected)
 
     def test_list(self):

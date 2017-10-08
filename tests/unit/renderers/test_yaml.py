@@ -4,24 +4,26 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
 # Import Salt libs
-from salt.renderers import yaml
-
-yaml.__salt__ = {}
-yaml.__opts__ = {}
+import salt.renderers.yaml as yaml
 
 
-class YAMLRendererTestCase(TestCase):
+class YAMLRendererTestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {yaml: {}}
+
     def test_yaml_render_string(self):
-        data = "string"
+        data = 'string'
         result = yaml.render(data)
 
         self.assertEqual(result, data)
 
     def test_yaml_render_unicode(self):
-        data = "!!python/unicode python unicode string"
+        data = '!!python/unicode python unicode string'
         result = yaml.render(data)
 
-        self.assertEqual(result, u"python unicode string")
+        self.assertEqual(result, u'python unicode string')

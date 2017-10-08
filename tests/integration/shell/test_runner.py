@@ -4,26 +4,31 @@
 Tests for the salt-run command
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
-import yaml
 import shutil
 
 # Import Salt Testing libs
-import tests.integration as integration
 from tests.integration.utils import testprogram
-from tests.support.unit import skipIf
+from tests.support.case import ShellCase
+from tests.support.paths import TMP
+from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.helpers import skip_if_not_root
 
-# Import salt libs
-import salt.utils
+# Import 3rd-party libs
+import yaml
+
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
 HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
 
 
-class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
+class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     '''
     Test the salt-run command
     '''
@@ -37,7 +42,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
         try:
             add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
             add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
-                                    USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD))
+                                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD))
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_call('user.list_users')
@@ -89,17 +94,17 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
             config = yaml.load(fhr.read())
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
                 fhw.write(
                     yaml.dump(config, default_flow_style=False)
                 )
@@ -113,7 +118,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
             with_retcode=True
         )
         try:
-            self.assertIn("'doc.runner:'", ret[0])
+            self.assertIn('doc.runner:', ret[0])
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         except AssertionError:
             if os.path.exists('/dev/log') and ret[2] != 2:
@@ -174,7 +179,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
             stdout=stdout, stderr=stderr
         )
 
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @skip_if_not_root
     def test_salt_run_with_eauth_all_args(self):
         '''
         test salt-run with eauth
@@ -189,7 +194,7 @@ class RunTest(integration.ShellCase, testprogram.TestProgramCase, integration.Sh
             self.assertEqual(expect, run_cmd)
         self._remove_user()
 
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @skip_if_not_root
     def test_salt_run_with_eauth_bad_passwd(self):
         '''
         test salt-run with eauth and bad password

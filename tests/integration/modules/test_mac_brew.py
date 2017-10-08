@@ -5,19 +5,19 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
-# Import third party libs
-import salt.ext.six as six
+# Import 3rd-party libs
+from salt.ext import six
 
 # Brew doesn't support local package installation - So, let's
 # Grab some small packages available online for brew
@@ -26,10 +26,10 @@ DEL_PKG = 'acme'
 
 
 @destructiveTest
-@skipIf(not salt.utils.is_darwin(), 'Test only applies to macOS')
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-@skipIf(not salt.utils.which('brew'), 'This test requires the brew binary')
-class BrewModuleTest(integration.ModuleCase):
+@skip_if_not_root
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only applies to macOS')
+@skipIf(not salt.utils.path.which('brew'), 'This test requires the brew binary')
+class BrewModuleTest(ModuleCase):
     '''
     Integration tests for the brew module
     '''

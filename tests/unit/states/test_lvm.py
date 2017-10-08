@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,17 +16,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import lvm
-
-lvm.__opts__ = {}
-lvm.__salt__ = {}
+import salt.states.lvm as lvm
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LvmTestCase(TestCase):
+class LvmTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.lvm
     '''
+    def setup_loader_modules(self):
+        return {lvm: {}}
+
     # 'pv_present' function tests: 1
 
     def test_pv_present(self):
@@ -147,6 +148,28 @@ class LvmTestCase(TestCase):
             ret.update({'comment': comt, 'result': None})
             with patch.dict(lvm.__opts__, {'test': True}):
                 self.assertDictEqual(lvm.lv_present(name), ret)
+
+    def test_lv_present_with_force(self):
+        '''
+        Test to create a new logical volume with force=True
+        '''
+        name = '/dev/sda5'
+
+        comt = ('Logical Volume {0} already present'.format(name))
+
+        ret = {'name': name,
+               'changes': {},
+               'result': True,
+               'comment': comt}
+
+        mock = MagicMock(side_effect=[True, False])
+        with patch.dict(lvm.__salt__, {'lvm.lvdisplay': mock}):
+            self.assertDictEqual(lvm.lv_present(name, force=True), ret)
+
+            comt = ('Logical Volume {0} is set to be created'.format(name))
+            ret.update({'comment': comt, 'result': None})
+            with patch.dict(lvm.__opts__, {'test': True}):
+                self.assertDictEqual(lvm.lv_present(name, force=True), ret)
 
     # 'lv_absent' function tests: 1
 

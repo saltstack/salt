@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,17 +15,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import drac
-
-drac.__salt__ = {}
-drac.__opts__ = {}
+import salt.states.drac as drac
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DracTestCase(TestCase):
+class DracTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.drac
     '''
+    def setup_loader_modules(self):
+        return {drac: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

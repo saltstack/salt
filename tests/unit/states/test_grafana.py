@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import json
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,18 +17,18 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import grafana
+import salt.states.grafana as grafana
 from salt.exceptions import SaltInvocationError
-
-grafana.__opts__ = {}
-grafana.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GrafanaTestCase(TestCase):
+class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.grafana
     '''
+    def setup_loader_modules(self):
+        return {grafana: {}}
+
     # 'dashboard_present' function tests: 1
 
     def test_dashboard_present(self):

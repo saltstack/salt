@@ -46,7 +46,7 @@ import json
 import sys
 
 # import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltInvocationError, SaltMasterError
 
 try:

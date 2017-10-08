@@ -4,11 +4,12 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 
 # Import Salt Module
-from salt.modules import nginx
+import salt.modules.nginx as nginx
 
 MOCK_STATUS_OUTPUT = """Active connections: 7
 server accepts handled requests
@@ -26,10 +27,14 @@ class MockUrllibStatus(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.utils.which', Mock(return_value='/usr/bin/nginx'))
-class NginxTestCase(TestCase):
+class NginxTestCase(TestCase, LoaderModuleMockMixin):
 
-    @patch('salt.modules.nginx._urlopen', Mock(return_value=MockUrllibStatus()))
+    def setup_loader_modules(self):
+        patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/nginx'))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return {nginx: {'_urlopen': Mock(return_value=MockUrllibStatus())}}
+
     def test_nginx_status(self):
         result = nginx.status()
         nginx._urlopen.assert_called_once_with('http://127.0.0.1/status')
@@ -43,7 +48,6 @@ class NginxTestCase(TestCase):
             'waiting': 0,
         })
 
-    @patch('salt.modules.nginx._urlopen', Mock(return_value=MockUrllibStatus()))
     def test_nginx_status_with_arg(self):
         other_path = 'http://localhost/path'
         result = nginx.status(other_path)

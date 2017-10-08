@@ -10,6 +10,7 @@ import glob
 import tempfile
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,16 +20,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import qemu_nbd
-
-qemu_nbd.__salt__ = {}
+import salt.modules.qemu_nbd as qemu_nbd
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class QemuNbdTestCase(TestCase):
+class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.qemu_nbd
     '''
+    def setup_loader_modules(self):
+        return {qemu_nbd: {}}
+
     # 'connect' function tests: 1
 
     def test_connect(self):
@@ -78,15 +80,14 @@ class QemuNbdTestCase(TestCase):
         with patch.dict(qemu_nbd.__salt__, {'cmd.run': mock}):
             self.assertEqual(qemu_nbd.init('/srv/image.qcow2'), '')
 
-        with patch.object(os.path, 'isfile', mock):
-            with patch.object(glob, 'glob',
-                              MagicMock(return_value=['/dev/nbd0'])):
-                with patch.dict(qemu_nbd.__salt__,
-                                {'cmd.run': mock,
-                                 'mount.mount': mock,
-                                 'cmd.retcode': MagicMock(side_effect=[1, 0])}):
-                    self.assertDictEqual(qemu_nbd.init('/srv/image.qcow2'),
-                                         {'{0}/nbd/nbd0/nbd0'.format(tempfile.gettempdir()): '/dev/nbd0'})
+        with patch.object(os.path, 'isfile', mock),\
+                patch.object(glob, 'glob', MagicMock(return_value=['/dev/nbd0'])),\
+                patch.dict(qemu_nbd.__salt__,
+                           {'cmd.run': mock,
+                            'mount.mount': mock,
+                            'cmd.retcode': MagicMock(side_effect=[1, 0])}):
+            expected = {os.sep.join([tempfile.gettempdir(), 'nbd', 'nbd0', 'nbd0']): '/dev/nbd0'}
+            self.assertDictEqual(qemu_nbd.init('/srv/image.qcow2'), expected)
 
     # 'clear' function tests: 1
 

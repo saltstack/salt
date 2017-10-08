@@ -15,7 +15,7 @@ the minion config:
 .. code-block:: yaml
 
     beacons:
-      status: {}
+      status: []
 
 By default, all of the information from the following execution module
 functions will be returned:
@@ -81,6 +81,12 @@ markers for specific list items:
           - 0
           - 1
           - 2
+
+
+.. warning::
+    Not all status functions are supported for every operating system. Be certain
+    to check the minion log for errors after configuring this beacon.
+
 '''
 
 # Import python libs
@@ -90,26 +96,24 @@ import datetime
 import salt.exceptions
 
 # Import salt libs
-import salt.utils
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'status'
 
-def __validate__(config):
+
+def validate(config):
     '''
     Validate the the config is a dict
     '''
-    if not isinstance(config, dict):
-        return False, ('Configuration for status beacon must be a dictionary.')
+    if not isinstance(config, list):
+        return False, ('Configuration for status beacon must be a list.')
     return True, 'Valid beacon configuration'
 
 
 def __virtual__():
-    # TODO Find a way to check the existence of the module itself, not just a single func
-    if 'status.w' not in __salt__:
-        return (False, 'The \'status\' execution module is not available on this system')
-    else:
-        return True
+    return __virtualname__
 
 
 def beacon(config):
@@ -119,7 +123,7 @@ def beacon(config):
     log.debug(config)
     ctime = datetime.datetime.utcnow().isoformat()
     ret = {}
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return [{
             'tag': ctime,
             'data': ret,

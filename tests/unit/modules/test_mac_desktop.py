@@ -7,6 +7,7 @@ Unit Tests for the mac_desktop execution module.
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +17,18 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import mac_desktop
+import salt.modules.mac_desktop as mac_desktop
 from salt.exceptions import CommandExecutionError
-
-# Globals
-mac_desktop.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MacDesktopTestCase(TestCase):
+class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.mac_desktop
     '''
+    def setup_loader_modules(self):
+        return {mac_desktop: {}}
+
     # 'get_output_volume' function tests: 2
 
     def test_get_output_volume(self):
@@ -49,14 +50,14 @@ class MacDesktopTestCase(TestCase):
 
     # 'set_output_volume' function tests: 2
 
-    @patch('salt.modules.mac_desktop.get_output_volume',
-           MagicMock(return_value='25'))
     def test_set_output_volume(self):
         '''
         Test if it set the volume of sound (range 0 to 100)
         '''
         mock = MagicMock(return_value={'retcode': 0})
-        with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}), \
+                patch('salt.modules.mac_desktop.get_output_volume',
+                      MagicMock(return_value='25')):
             self.assertTrue(mac_desktop.set_output_volume('25'))
 
     def test_set_output_volume_error(self):

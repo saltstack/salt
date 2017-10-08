@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,56 +17,53 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import incron
-
-# Globals
-incron.__grains__ = {}
-incron.__salt__ = {}
-incron.__context__ = {}
-incron.__opts__ = {}
+import salt.modules.incron as incron
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class IncronTestCase(TestCase):
+class IncronTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.incron
     '''
+    def setup_loader_modules(self):
+        return {incron: {}}
+
     # 'write_incron_file' function tests: 1
 
-    @patch('salt.modules.incron._get_incron_cmdstr',
-           MagicMock(return_value='incrontab'))
     def test_write_incron_file(self):
         '''
         Test if it writes the contents of a file to a user's crontab
         '''
         mock = MagicMock(return_value=0)
-        with patch.dict(incron.__salt__, {'cmd.retcode': mock}):
+        with patch.dict(incron.__salt__, {'cmd.retcode': mock}), \
+               patch('salt.modules.incron._get_incron_cmdstr',
+                     MagicMock(return_value='incrontab')):
             self.assertTrue(incron.write_incron_file('cybage',
                                                      '/home/cybage/new_cron'))
 
     # 'write_cron_file_verbose' function tests: 1
 
-    @patch('salt.modules.incron._get_incron_cmdstr',
-           MagicMock(return_value='incrontab'))
     def test_write_cron_file_verbose(self):
         '''
         Test if it writes the contents of a file to a user's crontab and
         return error message on error
         '''
         mock = MagicMock(return_value=True)
-        with patch.dict(incron.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(incron.__salt__, {'cmd.run_all': mock}), \
+                patch('salt.modules.incron._get_incron_cmdstr',
+                      MagicMock(return_value='incrontab')):
             self.assertTrue(incron.write_incron_file_verbose
                             ('cybage', '/home/cybage/new_cron'))
 
     # 'raw_system_incron' function tests: 1
 
-    @patch('salt.modules.incron._read_file',
-           MagicMock(return_value='salt'))
     def test_raw_system_incron(self):
         '''
         Test if it return the contents of the system wide incrontab
         '''
-        self.assertEqual(incron.raw_system_incron(), 'salt')
+        with patch('salt.modules.incron._read_file',
+                   MagicMock(return_value='salt')):
+            self.assertEqual(incron.raw_system_incron(), 'salt')
 
     # 'raw_incron' function tests: 1
 

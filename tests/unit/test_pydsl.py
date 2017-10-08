@@ -11,18 +11,19 @@ import copy
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
+from tests.support.paths import TMP
 
 # Import Salt libs
-import tests.integration as integration
 import salt.loader
 import salt.config
-import salt.utils
+import salt.utils.files
+import salt.utils.versions
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO
 
 
@@ -32,7 +33,7 @@ REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 class CommonTestCaseBoilerplate(TestCase):
 
     def setUp(self):
-        self.root_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.root_dir = tempfile.mkdtemp(dir=TMP)
         self.state_tree_dir = os.path.join(self.root_dir, 'state_tree')
         self.cache_dir = os.path.join(self.root_dir, 'cachedir')
         if not os.path.isdir(self.root_dir):
@@ -60,6 +61,8 @@ class CommonTestCaseBoilerplate(TestCase):
             self.HIGHSTATE.pop_active()
         except IndexError:
             pass
+        del self.config
+        del self.HIGHSTATE
 
     def state_highstate(self, state, dirpath):
         opts = copy.copy(self.config)
@@ -88,12 +91,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
 
     def render_sls(self, content, sls='', saltenv='base', **kws):
         if 'env' in kws:
-            salt.utils.warn_until(
-                'Oxygen',
-                'Parameter \'env\' has been detected in the argument list.  This '
-                'parameter is no longer used and has been replaced by \'saltenv\' '
-                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-                )
+            # "env" is not supported; Use "saltenv".
             kws.pop('env')
 
         return self.HIGHSTATE.state.rend['pydsl'](
@@ -230,14 +228,14 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertEqual(ret['changes']['stdout'], 'this is state G')
 
     def test_multiple_state_func_in_state_mod(self):
-        with self.assertRaisesRegexp(PyDslError, 'Multiple state functions'):
+        with self.assertRaisesRegex(PyDslError, 'Multiple state functions'):
             self.render_sls(textwrap.dedent('''
                 state('A').cmd.run('echo hoho')
                 state('A').cmd.wait('echo hehe')
             '''))
 
     def test_no_state_func_in_state_mod(self):
-        with self.assertRaisesRegexp(PyDslError, 'No state function specified'):
+        with self.assertRaisesRegex(PyDslError, 'No state function specified'):
             self.render_sls(textwrap.dedent('''
                 state('B').cmd.require(cmd='hoho')
             '''))
@@ -265,16 +263,18 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             '''))
         self.assertEqual(len(result), 3)
         self.assertEqual(result['A']['cmd'][0], 'run')
-        self.assertEqual(result['A']['cmd'][1]['name'], 'echo hello')
-        self.assertEqual(result['A']['cmd'][2]['cwd'], '/')
-        self.assertEqual(result['A']['cmd'][3]['name'], 'echo hello world')
+        self.assertIn({'name': 'echo hello'}, result['A']['cmd'])
+        self.assertIn({'cwd': '/'}, result['A']['cmd'])
+        self.assertIn({'name': 'echo hello world'}, result['A']['cmd'])
+        self.assertEqual(len(result['A']['cmd']), 4)
 
         self.assertEqual(len(result['B']['pkg']), 1)
         self.assertEqual(result['B']['pkg'][0], 'installed')
 
         self.assertEqual(result['B']['service'][0], 'running')
-        self.assertEqual(result['B']['service'][1]['require'][0]['pkg'], 'B')
-        self.assertEqual(result['B']['service'][2]['watch'][0]['cmd'], 'A')
+        self.assertIn({'require': [{'pkg': 'B'}]}, result['B']['service'])
+        self.assertIn({'watch': [{'cmd': 'A'}]}, result['B']['service'])
+        self.assertEqual(len(result['B']['service']), 3)
 
     def test_ordered_states(self):
         result = self.render_sls(textwrap.dedent('''
@@ -292,7 +292,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertEqual(result['B']['file'][1]['require'][0]['cmd'], 'C')
 
     def test_pipe_through_stateconf(self):
-        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        dirpath = tempfile.mkdtemp(dir=TMP)
         if not os.path.isdir(dirpath):
             self.skipTest(
                 'The temporary directory \'{0}\' was not created'.format(
@@ -344,7 +344,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 '''.format(output, output, output)))
 
             self.state_highstate({'base': ['aaa']}, dirpath)
-            with salt.utils.fopen(output, 'r') as f:
+            with salt.utils.files.fopen(output, 'r') as f:
                 self.assertEqual(''.join(f.read().split()), "XYZABCDEF")
 
         finally:
@@ -353,7 +353,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
     def test_compile_time_state_execution(self):
         if not sys.stdin.isatty():
             self.skipTest('Not attached to a TTY')
-        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        dirpath = tempfile.mkdtemp(dir=TMP)
         if not os.path.isdir(dirpath):
             self.skipTest(
                 'The temporary directory \'{0}\' was not created'.format(
@@ -377,15 +377,15 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 A()
                 '''.format(dirpath, dirpath, dirpath, dirpath)))
             self.state_highstate({'base': ['aaa']}, dirpath)
-            with salt.utils.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
+            with salt.utils.files.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
                 self.assertEqual(f.read(), 'hehe\nhoho\n')
-            with salt.utils.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
+            with salt.utils.files.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
                 self.assertEqual(f.read(), 'hehe\n')
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
     def test_nested_high_state_execution(self):
-        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        dirpath = tempfile.mkdtemp(dir=TMP)
         if not os.path.isdir(dirpath):
             self.skipTest(
                 'The temporary directory \'{0}\' was not created'.format(
@@ -417,7 +417,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             shutil.rmtree(dirpath, ignore_errors=True)
 
     def test_repeat_includes(self):
-        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        dirpath = tempfile.mkdtemp(dir=TMP)
         if not os.path.isdir(dirpath):
             self.skipTest(
                 'The temporary directory \'{0}\' was not created'.format(
@@ -452,5 +452,5 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
 
 
 def write_to(fpath, content):
-    with salt.utils.fopen(fpath, 'w') as f:
+    with salt.utils.files.fopen(fpath, 'w') as f:
         f.write(content)

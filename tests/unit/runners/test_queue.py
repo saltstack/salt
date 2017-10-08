@@ -5,8 +5,11 @@ unit tests for the cache runner
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -16,17 +19,23 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.runners import queue as queue_mod
-
-queue_mod.__opts__ = {'sock_dir': '/var/run/salt/master', 'transport': 'zeromq'}
-queue_mod.__salt__ = {}
+import salt.runners.queue as queue_mod
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class QueueTest(TestCase):
+class QueueTest(TestCase, LoaderModuleMockMixin):
     '''
     Validate the queue runner
     '''
+    def setup_loader_modules(self):
+        return {
+            queue_mod: {
+                '__opts__': {
+                    'sock_dir': os.path.join(TMP, 'queue-runner-sock-dir'),
+                    'transport': 'zeromq'
+                }
+            }
+        }
 
     def test_insert_runner(self):
         queue_insert = MagicMock(return_value=True)
@@ -52,9 +61,9 @@ class QueueTest(TestCase):
 
         queue_pop = MagicMock(return_value=ret)
         test_stdout_print = MagicMock(return_value=True)
-        queue_mod.__salt__['test.stdout_print'] = test_stdout_print
-        with patch.object(queue_mod, 'pop', queue_pop):
-            queue_mod.process_runner(queue='salt')
-        queue_pop.assert_called_once_with(queue='salt', quantity=1, backend='pgjsonb')
-        test_stdout_print.assert_called_once_with()
-        queue_pop.assert_called_once_with(queue='salt', quantity=1, backend='pgjsonb')
+        with patch.dict(queue_mod.__salt__, {'test.stdout_print': test_stdout_print}):
+            with patch.object(queue_mod, 'pop', queue_pop):
+                queue_mod.process_runner(queue='salt')
+            queue_pop.assert_called_once_with(queue='salt', quantity=1, backend='pgjsonb')
+            test_stdout_print.assert_called_once_with()
+            queue_pop.assert_called_once_with(queue='salt', quantity=1, backend='pgjsonb')

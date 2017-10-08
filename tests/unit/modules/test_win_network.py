@@ -5,11 +5,10 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import salt.utils
-import sys
 import types
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -19,18 +18,9 @@ from tests.support.mock import (
     NO_MOCK_REASON
 )
 
-# wmi modules are platform specific...
-wmi = types.ModuleType('wmi')
-sys.modules['wmi'] = wmi
-
-if NO_MOCK is False:
-    WMI = Mock()
-    wmi.WMI = Mock(return_value=WMI)
-
 # Import Salt Libs
-from salt.modules import win_network
-
-win_network.__salt__ = {}
+import salt.utils
+import salt.modules.win_network as win_network
 
 
 class Mockwmi(object):
@@ -57,19 +47,30 @@ class Mockwinapi(object):
         def __init__(self):
             pass
 
-        @staticmethod
-        def Com():
+        class Com(object):
             '''
             Mock Com method
             '''
-            return True
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc_info):
+                return False
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinNetworkTestCase(TestCase):
+class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_network
     '''
+    def setup_loader_modules(self):
+        # wmi modules are platform specific...
+        wmi = types.ModuleType('wmi')
+        self.WMI = Mock()
+        self.addCleanup(delattr, self, 'WMI')
+        wmi.WMI = Mock(return_value=self.WMI)
+        return {win_network: {'wmi': wmi}}
+
     # 'ping' function tests: 1
 
     def test_ping(self):
@@ -155,17 +156,17 @@ class WinNetworkTestCase(TestCase):
 
     # 'interfaces_names' function tests: 1
 
-    @patch('salt.utils', Mockwinapi)
     def test_interfaces_names(self):
         '''
         Test if it return a list of all the interfaces names
         '''
-        WMI.Win32_NetworkAdapter = MagicMock(return_value=Mockwmi)
-        with patch('salt.utils.winapi.Com', MagicMock()):
-            with patch.object(WMI, 'Win32_NetworkAdapter',
-                              return_value=[Mockwmi()]):
-                self.assertListEqual(win_network.interfaces_names(),
-                                     ['Ethernet'])
+        self.WMI.Win32_NetworkAdapter = MagicMock(return_value=Mockwmi)
+        with patch('salt.utils.winapi.Com', MagicMock()), \
+                patch.object(self.WMI, 'Win32_NetworkAdapter',
+                             return_value=[Mockwmi()]), \
+                patch('salt.utils', Mockwinapi):
+            self.assertListEqual(win_network.interfaces_names(),
+                                 ['Ethernet'])
 
     # 'interfaces' function tests: 1
 
@@ -208,3 +209,54 @@ class WinNetworkTestCase(TestCase):
         with patch.object(salt.utils.network, 'in_subnet',
                           MagicMock(return_value=True)):
             self.assertTrue(win_network.in_subnet('10.1.1.0/16'))
+
+    # 'get_route' function tests: 1
+
+    def test_get_route(self):
+        '''
+        Test if it return information on open ports and states
+        '''
+        ret = ('\n\n'
+               'IPAddress         : 10.0.0.15\n'
+               'InterfaceIndex    : 3\n'
+               'InterfaceAlias    : Wi-Fi\n'
+               'AddressFamily     : IPv4\n'
+               'Type              : Unicast\n'
+               'PrefixLength      : 24\n'
+               'PrefixOrigin      : Dhcp\n'
+               'SuffixOrigin      : Dhcp\n'
+               'AddressState      : Preferred\n'
+               'ValidLifetime     : 6.17:52:39\n'
+               'PreferredLifetime : 6.17:52:39\n'
+               'SkipAsSource      : False\n'
+               'PolicyStore       : ActiveStore\n'
+               '\n\n'
+               'Caption            :\n'
+               'Description        :\n'
+               'ElementName        :\n'
+               'InstanceID         : :8:8:8:9:55=55;:8;8;:8;55;\n'
+               'AdminDistance      :\n'
+               'DestinationAddress :\n'
+               'IsStatic           :\n'
+               'RouteMetric        : 0\n'
+               'TypeOfRoute        : 3\n'
+               'AddressFamily      : IPv4\n'
+               'CompartmentId      : 1\n'
+               'DestinationPrefix  : 0.0.0.0/0\n'
+               'InterfaceAlias     : Wi-Fi\n'
+               'InterfaceIndex     : 3\n'
+               'NextHop            : 10.0.0.1\n'
+               'PreferredLifetime  : 6.23:14:43\n'
+               'Protocol           : NetMgmt\n'
+               'Publish            : No\n'
+               'Store              : ActiveStore\n'
+               'ValidLifetime      : 6.23:14:43\n'
+               'PSComputerName     :\n'
+               'ifIndex            : 3')
+        mock = MagicMock(return_value=ret)
+        with patch.dict(win_network.__salt__, {'cmd.run': mock}):
+            self.assertDictEqual(win_network.get_route('192.0.0.8'),
+                                 {'destination': '192.0.0.8',
+                                  'gateway': '10.0.0.1',
+                                  'interface': 'Wi-Fi',
+                                  'source': '10.0.0.15'})

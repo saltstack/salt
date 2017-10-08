@@ -1,5 +1,6 @@
-salt.auth.rest module
-=====================
+==============
+salt.auth.rest
+==============
 
 .. automodule:: salt.auth.rest
     :members:

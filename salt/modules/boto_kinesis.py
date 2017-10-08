@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon Kinesis
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :configuration: This module accepts explicit Kinesis credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
@@ -66,15 +66,17 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'boto_kinesis'
+
 
 def __virtual__():
     '''
     Only load if boto3 libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return False, 'The boto_kinesis module could not be loaded: boto libraries not found.'
     __utils__['boto3.assign_funcs'](__name__, 'kinesis')
-    return True
+    return __virtualname__
 
 
 def _get_basic_stream(stream_name, conn):

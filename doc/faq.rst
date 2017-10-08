@@ -147,7 +147,7 @@ should be opened on our tracker_, with the following information:
 Why aren't my custom modules/states/etc. available on my Minions?
 -----------------------------------------------------------------
 
-Custom modules are synced to Minions when 
+Custom modules are synced to Minions when
 :mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`,
 or :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
 Custom modules are also synced by :mod:`state.apply` when run without
@@ -165,6 +165,11 @@ when run without any arguments.
 Other custom types (renderers, outputters, etc.) have similar behavior, see the
 documentation for the :mod:`saltutil <salt.modules.saltutil>` module for more
 information.
+
+:ref:`This reactor example <minion-start-reactor>` can be used to automatically
+sync custom types when the minion connects to the master, to help with this
+chicken-and-egg issue.
+
 
 Module ``X`` isn't available, even though the shell command it uses is installed. Why?
 --------------------------------------------------------------------------------------
@@ -184,6 +189,8 @@ PATH using a :mod:`file.symlink <salt.states.file.symlink>` state.
     /usr/bin/foo:
       file.symlink:
         - target: /usr/local/bin/foo
+
+.. _which-version:
 
 Can I run different versions of Salt on my Master and Minion?
 -------------------------------------------------------------
@@ -255,15 +262,15 @@ service. But restarting the service while in the middle of a state run
 interrupts the process of the Minion running states and sending results back to
 the Master. A common way to workaround that is to schedule restarting of the
 Minion service using :ref:`masterless mode <masterless-quickstart>` after all
-other states have been applied. This allows to keep Minion to Master connection
-alive for the Minion to report the final results to the Master, while the
-service is restarting in the background.
+other states have been applied. This allows the minion to keep Minion to Master
+connection alive for the Minion to report the final results to the Master, while
+the service is restarting in the background.
 
 Upgrade without automatic restart
 *********************************
 
 Doing the Minion upgrade seems to be a simplest state in your SLS file at
-first. But the operating systems such as Debian GNU/Linux, Ununtu and their
+first. But the operating systems such as Debian GNU/Linux, Ubuntu and their
 derivatives start the service after the package installation by default.
 To prevent this, we need to create policy layer which will prevent the Minion
 service to restart right after the upgrade:
@@ -314,7 +321,27 @@ Restart using states
 ********************
 
 Now we can apply the workaround to restart the Minion in reliable way.
-The following example works on both UNIX-like and Windows operating systems:
+The following example works on UNIX-like operating systems:
+
+.. code-block:: jinja
+
+    {%- if grains['os'] != 'Windows' %}
+    Restart Salt Minion:
+      cmd.run:
+        - name: 'salt-call --local service.restart salt-minion'
+        - bg: True
+        - onchanges:
+          - pkg: Upgrade Salt Minion
+    {%- endif %}
+
+Note that restarting the ``salt-minion`` service on Windows operating systems is
+not always necessary when performing an upgrade. The installer stops the
+``salt-minion`` service, removes it, deletes the contents of the ``\salt\bin``
+directory, installs the new code, re-creates the ``salt-minion`` service, and
+starts it (by default). The restart step **would** be necessary during the
+upgrade process, however, if the minion config was edited after the upgrade or
+installation. If a minion restart is necessary, the state above can be edited
+as follows:
 
 .. code-block:: jinja
 
@@ -330,8 +357,8 @@ The following example works on both UNIX-like and Windows operating systems:
           - pkg: Upgrade Salt Minion
 
 However, it requires more advanced tricks to upgrade from legacy version of
-Salt (before ``2016.3.0``), where executing commands in the background is not
-supported:
+Salt (before ``2016.3.0``) on UNIX-like operating systems, where executing
+commands in the background is not supported:
 
 .. code-block:: jinja
 

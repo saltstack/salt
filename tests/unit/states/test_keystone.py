@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,17 +16,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import keystone
-
-keystone.__opts__ = {}
-keystone.__salt__ = {}
+import salt.states.keystone as keystone
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class KeystoneTestCase(TestCase):
+class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.keystone
     '''
+    def setup_loader_modules(self):
+        return {keystone: {}}
+
     # 'user_present' function tests: 1
 
     def test_user_present(self):
@@ -293,6 +294,7 @@ class KeystoneTestCase(TestCase):
         Test to ensure the specified endpoints exists for service
         '''
         name = 'nova'
+        region = 'RegionOne'
 
         ret = {'name': name,
                'changes': {},
@@ -300,7 +302,7 @@ class KeystoneTestCase(TestCase):
                'comment': ''}
 
         endpoint = {'adminurl': None,
-                    'region': 'RegionOne',
+                    'region': None,
                     'internalurl': None,
                     'publicurl': None,
                     'id': 1, 'service_id': None}
@@ -310,25 +312,22 @@ class KeystoneTestCase(TestCase):
         mock = MagicMock(return_value=True)
         with patch.dict(keystone.__salt__, {'keystone.endpoint_get': mock_lst,
                                             'keystone.endpoint_create': mock}):
+
             comt = ('Endpoint for service "{0}" already exists'.format(name))
-            ret.update({'comment': comt})
+            ret.update({'comment': comt, 'result': True, 'changes': {}})
             self.assertDictEqual(keystone.endpoint_present(name), ret)
 
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = ('Endpoint for service "{0}" will be added'.format(name))
-                ret.update({'comment': comt, 'result': None,
-                            'changes': {'Endpoint': 'Will be created'}})
+                ret.update({'comment': comt, 'result': None, 'changes': {'Endpoint': 'Will be created'}})
                 self.assertDictEqual(keystone.endpoint_present(name), ret)
 
-                comt = ('Endpoint for service "{0}" will be updated'
-                        .format(name))
-                ret.update({'comment': comt,
-                            'changes': {'Endpoint': 'Will be updated'}})
+                comt = ('Endpoint for service "{0}" already exists'.format(name))
+                ret.update({'comment': comt, 'result': True, 'changes': {}})
                 self.assertDictEqual(keystone.endpoint_present(name), ret)
 
             with patch.dict(keystone.__opts__, {'test': False}):
-                comt = ('Endpoint for service "{0}" has been added'
-                        .format(name))
+                comt = ('Endpoint for service "{0}" has been added'.format(name))
                 ret.update({'comment': comt, 'result': True, 'changes': True})
                 self.assertDictEqual(keystone.endpoint_present(name), ret)
 
@@ -340,6 +339,7 @@ class KeystoneTestCase(TestCase):
          exist in Keystone catalog
         '''
         name = 'nova'
+        region = 'RegionOne'
         comment = ('Endpoint for service "{0}" is already absent'.format(name))
         ret = {'name': name,
                'changes': {},
@@ -348,10 +348,10 @@ class KeystoneTestCase(TestCase):
 
         mock_lst = MagicMock(side_effect=[[], ['Error']])
         with patch.dict(keystone.__salt__, {'keystone.endpoint_get': mock_lst}):
-            self.assertDictEqual(keystone.endpoint_absent(name), ret)
+            self.assertDictEqual(keystone.endpoint_absent(name, region), ret)
 
             with patch.dict(keystone.__opts__, {'test': True}):
                 comt = ('Endpoint for service "{0}" will be deleted'
                         .format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(keystone.endpoint_absent(name), ret)
+                self.assertDictEqual(keystone.endpoint_absent(name, region), ret)

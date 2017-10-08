@@ -6,7 +6,7 @@
     Salt Tests CLI access classes
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013-2017 by the SaltStack Team, see AUTHORS for more details
+    :copyright: Copyright 2013-2017 by the SaltStack Team, see AUTHORS for more details
     :license: Apache 2.0, see LICENSE for more details.
 '''
 # pylint: disable=repr-flag-used-in-string
@@ -25,7 +25,6 @@ import traceback
 import subprocess
 import warnings
 from functools import partial
-from contextlib import closing
 from collections import namedtuple
 
 from tests.support import helpers
@@ -33,7 +32,7 @@ from tests.support.unit import TestLoader, TextTestRunner
 from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     from tests.support.ext import console
     WIDTH, HEIGHT = console.getTerminalSize()
@@ -303,10 +302,14 @@ class SaltTestingParser(optparse.OptionParser):
     def parse_args(self, args=None, values=None):
         self.options, self.args = optparse.OptionParser.parse_args(self, args, values)
         if self.options.names_file:
-            with open(self.options.names_file, 'rb') as fp_:
+            with open(self.options.names_file, 'rb') as fp_:  # pylint: disable=resource-leakage
                 lines = []
                 for line in fp_.readlines():
-                    lines.append(line.strip())
+                    if six.PY2:
+                        lines.append(line.strip())
+                    else:
+                        lines.append(
+                            line.decode(__salt_system_encoding__).strip())
             if self.options.name:
                 self.options.name.extend(lines)
             else:
@@ -843,7 +846,7 @@ class SaltTestingParser(optparse.OptionParser):
             try:
                 time.sleep(0.15)
                 if cid_printed is False:
-                    with closing(open(cidfile)) as cidfile_fd:
+                    with open(cidfile) as cidfile_fd:  # pylint: disable=resource-leakage
                         cid = cidfile_fd.read()
                         if cid:
                             print(cid)

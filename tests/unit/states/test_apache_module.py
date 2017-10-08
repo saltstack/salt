@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,17 +16,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import apache_module
-
-apache_module.__opts__ = {}
-apache_module.__salt__ = {}
+import salt.states.apache_module as apache_module
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ApacheModuleTestCase(TestCase):
+class ApacheModuleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.apache_module
     '''
+    def setup_loader_modules(self):
+        return {apache_module: {}}
+
     # 'enabled' function tests: 1
 
     def test_enabled(self):

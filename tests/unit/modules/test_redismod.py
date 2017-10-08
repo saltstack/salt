@@ -4,25 +4,18 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+from datetime import datetime
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
-    MagicMock,
-    patch)
+    MagicMock)
 
 # Import Salt Libs
-from salt.modules import redismod
-from datetime import datetime
-
-
-# Globals
-redismod.__grains__ = {}
-redismod.__salt__ = {}
-redismod.__context__ = {}
-redismod.__opts__ = {}
+import salt.modules.redismod as redismod
 
 
 class Mockredis(object):
@@ -34,8 +27,6 @@ class Mockredis(object):
         Mock ConnectionError class
         '''
         pass
-
-redismod.redis = Mockredis
 
 
 class MockConnect(object):
@@ -276,11 +267,18 @@ class MockConnect(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.modules.redismod._connect', MagicMock(return_value=MockConnect()))
-class RedismodTestCase(TestCase):
+class RedismodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.redismod
     '''
+    def setup_loader_modules(self):
+        return {
+            redismod: {
+                'redis': Mockredis,
+                '_connect': MagicMock(return_value=MockConnect())
+            }
+        }
+
     def test_bgrewriteaof(self):
         '''
         Test to asynchronously rewrite the append-only file

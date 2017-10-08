@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,16 +15,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import pkgng
-
-pkgng.__salt__ = {}
+import salt.states.pkgng as pkgng
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PkgngTestCase(TestCase):
+class PkgngTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.pkgng
     '''
+    def setup_loader_modules(self):
+        return {pkgng: {}}
+
     # 'update_packaging_site' function tests: 1
 
     def test_update_packaging_site(self):

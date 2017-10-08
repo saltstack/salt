@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
@@ -15,30 +16,23 @@ import salt.states.environ as envstate
 import salt.modules.environ as envmodule
 
 
-class TestEnvironState(TestCase):
+class TestEnvironState(TestCase, LoaderModuleMockMixin):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.setup_env = os.environ
-
-    @classmethod
-    def tearDownClass(cls):
-        os.environ = cls.setup_env
+    def setup_loader_modules(self):
+        loader_globals = {
+            '__env__': 'base',
+            '__opts__': {'test': False},
+            '__salt__': {'environ.setenv': envmodule.setenv}
+        }
+        return {envstate: loader_globals, envmodule: loader_globals}
 
     def setUp(self):
-        envstate.__env__ = 'base'
-        envstate.__opts__ = {'test': False}
-        envstate.__salt__ = {'environ.setenv': envmodule.setenv}
-        envmodule.__salt__ = {}
+        original_environ = os.environ.copy()
+        os.environ = {'INITIAL': 'initial'}
 
-        shared = {'INITIAL': 'initial'}
-        envstate.os.environ = shared
-        envmodule.os.environ = shared
-
-    def tearDown(self):
-        import os
-        envstate.os.environ = os.environ
-        envmodule.os.environ = os.environ
+        def reset_environ(original_environ):
+            os.environ = original_environ
+        self.addCleanup(reset_environ, original_environ)
 
     def test_setenv(self):
         '''test that a subsequent calls of setenv changes nothing'''
@@ -53,9 +47,9 @@ class TestEnvironState(TestCase):
         ret = envstate.setenv('test', 'other')
         self.assertEqual(ret['changes'], {})
 
-    @patch('salt.utils.is_windows', MagicMock(return_value=True))
     def test_setenv_permanent(self):
-        with patch.dict(envmodule.__salt__, {'reg.set_value': MagicMock(), 'reg.delete_value': MagicMock()}):
+        with patch.dict(envmodule.__salt__, {'reg.set_value': MagicMock(), 'reg.delete_value': MagicMock()}), \
+                patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
             ret = envstate.setenv('test', 'value', permanent=True)
             self.assertEqual(ret['changes'], {'test': 'value'})
             envmodule.__salt__['reg.set_value'].assert_called_with("HKCU", "Environment", 'test', 'value')
@@ -102,18 +96,21 @@ class TestEnvironState(TestCase):
         ret = envstate.setenv('notimportant', {'foo': 'bar'})
         self.assertEqual(ret['changes'], {'foo': 'bar'})
 
-        ret = envstate.setenv('notimportant', {'test': False, 'foo': 'baz'}, false_unsets=True)
+        with patch.dict(envstate.__salt__, {'reg.read_value': MagicMock()}):
+            ret = envstate.setenv(
+                'notimportant', {'test': False, 'foo': 'baz'}, false_unsets=True)
         self.assertEqual(ret['changes'], {'test': None, 'foo': 'baz'})
         self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'foo': 'baz'})
 
-        ret = envstate.setenv('notimportant', {'test': False, 'foo': 'bax'})
+        with patch.dict(envstate.__salt__, {'reg.read_value': MagicMock()}):
+            ret = envstate.setenv('notimportant', {'test': False, 'foo': 'bax'})
         self.assertEqual(ret['changes'], {'test': '', 'foo': 'bax'})
         self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'foo': 'bax', 'test': ''})
 
     def test_setenv_test_mode(self):
         '''test that imitating action returns good values'''
-        envstate.__opts__ = {'test': True}
-        ret = envstate.setenv('test', 'value')
-        self.assertEqual(ret['changes'], {'test': 'value'})
-        ret = envstate.setenv('INITIAL', 'initial')
-        self.assertEqual(ret['changes'], {})
+        with patch.dict(envstate.__opts__, {'test': True}):
+            ret = envstate.setenv('test', 'value')
+            self.assertEqual(ret['changes'], {'test': 'value'})
+            ret = envstate.setenv('INITIAL', 'initial')
+            self.assertEqual(ret['changes'], {})

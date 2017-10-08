@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -17,17 +18,17 @@ from tests.support.mock import (
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Libs
-from salt.states import sysctl
-
-sysctl.__opts__ = {}
-sysctl.__salt__ = {}
+import salt.states.sysctl as sysctl
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SysctlTestCase(TestCase):
+class SysctlTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.sysctl
     '''
+    def setup_loader_modules(self):
+        return {sysctl: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

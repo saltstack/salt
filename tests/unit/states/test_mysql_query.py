@@ -4,8 +4,10 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,18 +16,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import mysql_query
-import os
-
-mysql_query.__salt__ = {}
-mysql_query.__opts__ = {}
+import salt.states.mysql_query as mysql_query
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MysqlQueryTestCase(TestCase):
+class MysqlQueryTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.mysql_query
     '''
+    def setup_loader_modules(self):
+        return {mysql_query: {}}
+
     # 'run' function tests: 1
 
     def test_run(self):

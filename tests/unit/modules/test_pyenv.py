@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import pyenv
-
-# Globals
-pyenv.__grains__ = {}
-pyenv.__salt__ = {}
+import salt.modules.pyenv as pyenv
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PyenvTestCase(TestCase):
+class PyenvTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pyenv
     '''
+    def setup_loader_modules(self):
+        return {pyenv: {}}
+
     # 'install' function tests: 1
 
     def test_install(self):

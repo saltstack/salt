@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,9 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import smtp
-
-smtp.__salt__ = {}
+import salt.modules.smtp as smtp
 
 
 class SMTPRecipientsRefused(Exception):
@@ -221,15 +220,20 @@ class MockSmtplib(object):
             raise MockGaierror('gaierror')
         return MockSMTP('server')
 
-smtp.smtplib = MockSmtplib()
-smtp.socket = MockSocket()
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SmtpTestCase(TestCase):
+class SmtpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.smtp
     '''
+    def setup_loader_modules(self):
+        return {
+            smtp: {
+                'socket': MockSocket(),
+                'smtplib': MockSmtplib()
+            }
+        }
+
     # 'send_msg' function tests: 1
 
     def test_send_msg(self):

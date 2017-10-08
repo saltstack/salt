@@ -6,8 +6,10 @@
 from __future__ import absolute_import
 import os
 import shutil
+import uuid
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -17,19 +19,18 @@ from tests.support.mock import (
 
 
 # Import Salt Libs
+import salt.utils.files
 import salt.utils.odict
-from salt.modules import seed
-
-# Globals
-seed.__salt__ = {}
-seed.__opts__ = {}
+import salt.modules.seed as seed
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SeedTestCase(TestCase):
+class SeedTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.seed
     '''
+    def setup_loader_modules(self):
+        return {seed: {}}
 
     def test_mkconfig_odict(self):
         with patch.dict(seed.__opts__,
@@ -38,7 +39,7 @@ class SeedTestCase(TestCase):
             ddd['b'] = 'b'
             ddd['a'] = 'b'
             data = seed.mkconfig(ddd, approve_key=False)
-            with open(data['config']) as fic:
+            with salt.utils.files.fopen(data['config']) as fic:
                 fdata = fic.read()
                 self.assertEqual(fdata, 'b: b\na: b\nmaster: foo\n')
 
@@ -46,13 +47,19 @@ class SeedTestCase(TestCase):
         '''
         Test to update and get the random script to a random place
         '''
-        with patch.dict(seed.__salt__,
-                        {'config.gather_bootstrap_script': MagicMock()}):
-            with patch.object(os.path, 'join', return_value='A'):
-                with patch.object(os.path, 'exists', return_value=True):
-                    with patch.object(os, 'chmod', return_value=None):
-                        with patch.object(shutil, 'copy', return_value=None):
-                            self.assertEqual(seed.prep_bootstrap('mpt'), ('A', 'A'))
+        with patch.dict(seed.__salt__, {'config.gather_bootstrap_script': MagicMock(return_value=os.path.join('BS_PATH', 'BS'))}),\
+                patch.object(uuid, 'uuid4', return_value='UUID'),\
+                patch.object(os.path, 'exists', return_value=True),\
+                patch.object(os, 'chmod', return_value=None),\
+                patch.object(shutil, 'copy', return_value=None):
+
+            expect = (os.path.join('MPT', 'tmp', 'UUID', 'BS'),
+                      os.sep + os.path.join('tmp', 'UUID'))
+            self.assertEqual(seed.prep_bootstrap('MPT'), expect)
+
+            expect = (os.sep + os.path.join('MPT', 'tmp', 'UUID', 'BS'),
+                      os.sep + os.path.join('tmp', 'UUID'))
+            self.assertEqual(seed.prep_bootstrap(os.sep + 'MPT'), expect)
 
     def test_apply_(self):
         '''

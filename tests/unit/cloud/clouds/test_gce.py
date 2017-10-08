@@ -21,24 +21,10 @@ from salt.exceptions import SaltCloudSystemExit
 from salt.utils.versions import LooseVersion
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, __version__ as mock_version
 
-# Global Variables
-gce.__active_provider_name__ = ''
-gce.__opts__ = {
-    'providers': {
-        'my-google-cloud': {
-            'gce': {
-                'project': 'daenerys-cloud',
-                'service_account_email_address': 'dany@targaryen.westeros.cloud',
-                'service_account_private_key': '/home/dany/PRIVKEY.pem',
-                'driver': 'gce',
-                'ssh_interface': 'public_ips'
-            }
-        }
-    }
-}
 VM_NAME = 'kings_landing'
 DUMMY_TOKEN = {
     'refresh_token': None,
@@ -50,17 +36,42 @@ DUMMY_TOKEN = {
 # Use certifi if installed
 try:
     if HAS_LIBCLOUD:
-        import certifi
-        libcloud.security.CA_CERTS_PATH.append(certifi.where())
+        # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
+        # However, older versions of libcloud must still be supported with this work-around.
+        # This work-around can be removed when the required minimum version of libcloud is
+        # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+        if LooseVersion(libcloud.__version__) < LooseVersion('1.4.0'):
+            import certifi
+            libcloud.security.CA_CERTS_PATH.append(certifi.where())
 except ImportError:
     pass
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GCETestCase(TestCase):
+class GCETestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.gce module.
     '''
+
+    def setup_loader_modules(self):
+        return {
+            gce: {
+                '__active_provider_name__': '',
+                '__opts__': {
+                    'providers': {
+                        'my-google-cloud': {
+                            'gce': {
+                                'project': 'daenerys-cloud',
+                                'service_account_email_address': 'dany@targaryen.westeros.cloud',
+                                'service_account_private_key': '/home/dany/PRIVKEY.pem',
+                                'driver': 'gce',
+                                'ssh_interface': 'public_ips'
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
     def test_destroy_call(self):
         '''
@@ -94,7 +105,7 @@ class GCETestCase(TestCase):
             get_deps = gce.get_dependencies()
             self.assertEqual(get_deps, True)
             if LooseVersion(mock_version) >= LooseVersion('2.0.0'):
-                p.assert_called_once()
+                self.assert_called_once(p)
 
     def test_provider_matches(self):
         """

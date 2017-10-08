@@ -91,6 +91,50 @@ firewall.
 
    yast2 firewall
 
+
+Windows
+=======
+
+Windows Firewall is the default component of Microsoft Windows that provides
+firewalling and packet filtering. There are many 3rd party firewalls available
+for Windows, some of which use rules from the Windows Firewall. If you are
+experiencing problems see the vendor's specific documentation for opening the
+required ports.
+
+The Windows Firewall can be configured using the Windows Interface or from the
+command line.
+
+**Windows Firewall (interface)**:
+
+1. Open the Windows Firewall Interface by typing ``wf.msc`` at the command
+   prompt or in a run dialog (*Windows Key + R*)
+
+2. Navigate to **Inbound Rules** in the console tree
+
+3. Add a new rule by clicking **New Rule...** in the Actions area
+
+4. Change the Rule Type to **Port**. Click **Next**
+
+5. Set the Protocol to **TCP** and specify local ports **4505-4506**. Click
+   **Next**
+
+6. Set the Action to **Allow the connection**. Click **Next**
+
+7. Apply the rule to **Domain**, **Private**, and **Public**. Click **Next**
+
+8. Give the new rule a Name, ie: **Salt**. You may also add a description. Click
+   **Finish**
+
+**Windows Firewall (command line)**:
+
+The Windows Firewall rule can be created by issuing a single command. Run the
+following command from the command line or a run prompt:
+
+.. code-block:: cmd
+
+    netsh advfirewall firewall add rule name="Salt" dir=in action=allow protocol=TCP localport=4505-4506
+
+
 .. _linux-iptables:
 
 iptables

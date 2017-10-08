@@ -7,26 +7,22 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-from salt.modules import bridge
-
-# Globals
-bridge.__grains__ = {}
+import salt.modules.bridge as bridge
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BridgeTestCase(TestCase):
+class BridgeTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.bridge
     '''
+    def setup_loader_modules(self):
+        return {bridge: {}}
+
     def test_show(self):
         '''
         Test for Returns bridges interfaces

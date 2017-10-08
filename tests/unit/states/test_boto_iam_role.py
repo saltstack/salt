@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,17 +15,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import boto_iam_role
-
-boto_iam_role.__salt__ = {}
-boto_iam_role.__opts__ = {}
+import salt.states.boto_iam_role as boto_iam_role
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoIAMRoleTestCase(TestCase):
+class BotoIAMRoleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_iam_role
     '''
+    def setup_loader_modules(self):
+        return {boto_iam_role: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

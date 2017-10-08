@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,11 +17,8 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import win_ip
+import salt.modules.win_ip as win_ip
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Globals
-win_ip.__salt__ = {}
 
 ETHERNET_CONFIG = ('Configuration for interface "Ethernet"\n'
                    'DHCP enabled: Yes\n'
@@ -40,10 +38,13 @@ ETHERNET_ENABLE = ('Ethernet\n'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinShadowTestCase(TestCase):
+class WinShadowTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_ip
     '''
+    def setup_loader_modules(self):
+        return {win_ip: {}}
+
     # 'raw_interface_configs' function tests: 1
 
     def test_raw_interface_configs(self):

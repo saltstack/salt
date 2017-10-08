@@ -10,8 +10,9 @@ Manage groups on Windows
 '''
 from __future__ import absolute_import
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
+import salt.utils.win_functions
 
 
 try:
@@ -30,14 +31,22 @@ def __virtual__():
     '''
     Set the group module if the kernel is Windows
     '''
-    if salt.utils.is_windows() and HAS_DEPENDENCIES:
+    if salt.utils.platform.is_windows() and HAS_DEPENDENCIES:
         return __virtualname__
     return (False, "Module win_groupadd: module only works on Windows systems")
 
 
-def add(name, gid=None, system=False):
+def add(name, **kwargs):
     '''
     Add the specified group
+
+    Args:
+
+        name (str):
+            The name of the group to add
+
+    Returns:
+        dict: A dictionary of results
 
     CLI Example:
 
@@ -57,28 +66,31 @@ def add(name, gid=None, system=False):
             compObj = nt.GetObject('', 'WinNT://.,computer')
             newGroup = compObj.Create('group', name)
             newGroup.SetInfo()
-            ret['changes'].append((
-                    'Successfully created group {0}'
-                    ).format(name))
+            ret['changes'].append('Successfully created group {0}'.format(name))
         except pywintypes.com_error as com_err:
             ret['result'] = False
             if len(com_err.excepinfo) >= 2:
                 friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-            ret['comment'] = (
-                    'Failed to create group {0}.  {1}'
-                    ).format(name, friendly_error)
+            ret['comment'] = 'Failed to create group {0}. {1}' \
+                             ''.format(name, friendly_error)
     else:
         ret['result'] = None
-        ret['comment'] = (
-                'The group {0} already exists.'
-                ).format(name)
+        ret['comment'] = 'The group {0} already exists.'.format(name)
 
     return ret
 
 
-def delete(name):
+def delete(name, **kwargs):
     '''
     Remove the named group
+
+    Args:
+
+        name (str):
+            The name of the group to remove
+
+    Returns:
+        dict: A dictionary of results
 
     CLI Example:
 
@@ -118,6 +130,14 @@ def info(name):
     '''
     Return information about a group
 
+    Args:
+
+        name (str):
+            The name of the group for which to get information
+
+    Returns:
+        dict: A dictionary of information about the group
+
     CLI Example:
 
     .. code-block:: bash
@@ -151,6 +171,17 @@ def getent(refresh=False):
     '''
     Return info on all groups
 
+    Args:
+
+        refresh (bool):
+            Refresh the info for all groups in ``__context__``. If False only
+            the groups in ``__context__`` wil be returned. If True the
+            ``__context__`` will be refreshed with current data and returned.
+            Default is False
+
+    Returns:
+        A list of groups and their information
+
     CLI Example:
 
     .. code-block:: bash
@@ -182,16 +213,26 @@ def getent(refresh=False):
     return ret
 
 
-def adduser(name, username):
+def adduser(name, username, **kwargs):
     '''
-    add a user to a group
+    Add a user to a group
+
+    Args:
+
+        name (str):
+            The name of the group to modify
+
+        username (str):
+            The name of the user to add to the group
+
+    Returns:
+        dict: A dictionary of results
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.adduser foo username
-
     '''
 
     ret = {'name': name,
@@ -209,7 +250,7 @@ def adduser(name, username):
                 '/', '\\').encode('ascii', 'backslashreplace').lower())
 
     try:
-        if __fixlocaluser(username.lower()) not in existingMembers:
+        if salt.utils.win_functions.get_sam_name(username) not in existingMembers:
             if not __opts__['test']:
                 groupObj.Add('WinNT://' + username.replace('\\', '/'))
 
@@ -231,16 +272,26 @@ def adduser(name, username):
     return ret
 
 
-def deluser(name, username):
+def deluser(name, username, **kwargs):
     '''
-    remove a user from a group
+    Remove a user from a group
+
+    Args:
+
+        name (str):
+            The name of the group to modify
+
+        username (str):
+            The name of the user to remove from the group
+
+    Returns:
+        dict: A dictionary of results
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.deluser foo username
-
     '''
 
     ret = {'name': name,
@@ -258,7 +309,7 @@ def deluser(name, username):
                 '/', '\\').encode('ascii', 'backslashreplace').lower())
 
     try:
-        if __fixlocaluser(username.lower()) in existingMembers:
+        if salt.utils.win_functions.get_sam_name(username) in existingMembers:
             if not __opts__['test']:
                 groupObj.Remove('WinNT://' + username.replace('\\', '/'))
 
@@ -280,16 +331,27 @@ def deluser(name, username):
     return ret
 
 
-def members(name, members_list):
+def members(name, members_list, **kwargs):
     '''
-    remove a user from a group
+    Ensure a group contains only the members in the list
+
+    Args:
+
+        name (str):
+            The name of the group to modify
+
+        members_list (str):
+            A single user or a comma separated list of users. The group will
+            contain only the users specified in this list.
+
+    Returns:
+        dict: A dictionary of results
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' group.members foo 'user1,user2,user3'
-
     '''
 
     ret = {'name': name,
@@ -297,7 +359,7 @@ def members(name, members_list):
            'changes': {'Users Added': [], 'Users Removed': []},
            'comment': []}
 
-    members_list = [__fixlocaluser(thisMember) for thisMember in members_list.lower().split(",")]
+    members_list = [salt.utils.win_functions.get_sam_name(m) for m in members_list.split(",")]
     if not isinstance(members_list, list):
         ret['result'] = False
         ret['comment'].append('Members is not a list object')
@@ -364,27 +426,26 @@ def members(name, members_list):
     return ret
 
 
-def __fixlocaluser(username):
-    '''
-    prefixes a username w/o a backslash with the computername
-
-    i.e. __fixlocaluser('Administrator') would return 'computername\administrator'
-    '''
-    if '\\' not in username:
-        username = ('{0}\\{1}').format(__salt__['grains.get']('host'), username)
-
-    return username.lower()
-
-
 def list_groups(refresh=False):
     '''
     Return a list of groups
+
+    Args:
+
+        refresh (bool):
+            Refresh the info for all groups in ``__context__``. If False only
+            the groups in ``__context__`` wil be returned. If True, the
+            ``__context__`` will be refreshed with current data and returned.
+            Default is False
+
+    Returns:
+        list: A list of groups on the machine
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' group.getent
+        salt '*' group.list_groups
     '''
     if 'group.list_groups' in __context__ and not refresh:
         return __context__['group.getent']

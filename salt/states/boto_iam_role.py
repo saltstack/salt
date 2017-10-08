@@ -89,7 +89,7 @@ on the IAM role to be persistent. This functionality was added in 2015.8.0.
 from __future__ import absolute_import
 import logging
 import salt.utils.dictupdate as dictupdate
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ def present(
         defined here will be appended with the policy document statements
         defined in the policy_document argument.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     path
         The path to the role/instance profile. (See https://boto.readthedocs.io/en/latest/ref/iam.html#boto.iam.connection.IAMConnection.create_role)
@@ -491,7 +491,7 @@ def _policies_attached(
                                                                 keyid=keyid,
                                                                 profile=profile)
                 newpolicies = [x.get('policy_arn') for x in _list]
-                ret['changes']['new'] = {'manged_policies': newpolicies}
+                ret['changes']['new'] = {'managed_policies': newpolicies}
                 ret['result'] = False
                 msg = 'Failed to add policy {0} to role {1}'
                 ret['comment'] = msg.format(policy_name, name)

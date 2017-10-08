@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,17 +16,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import slack
-
-slack.__salt__ = {}
-slack.__opts__ = {}
+import salt.states.slack as slack
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SlackTestCase(TestCase):
+class SlackTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.slack
     '''
+    def setup_loader_modules(self):
+        return {slack: {}}
+
     # 'post_message' function tests: 1
 
     def test_post_message(self):

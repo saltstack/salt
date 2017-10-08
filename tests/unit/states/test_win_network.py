@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import win_network
-
-# Globals
-win_network.__salt__ = {}
-win_network.__opts__ = {}
+import salt.states.win_network as win_network
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinNetworkTestCase(TestCase):
+class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the nftables state
     '''
+    def setup_loader_modules(self):
+        return {win_network: {}}
+
     def test_managed(self):
         '''
             Test to ensure that the named interface is configured properly.

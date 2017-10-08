@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,18 +16,18 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import blockdev
-import salt.utils
-
-blockdev.__salt__ = {}
-blockdev.__opts__ = {}
+import salt.states.blockdev as blockdev
+import salt.utils.path
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BlockdevTestCase(TestCase):
+class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.blockdev
     '''
+    def setup_loader_modules(self):
+        return {blockdev: {}}
+
     # 'tuned' function tests: 1
 
     def test_tuned(self):
@@ -84,7 +85,7 @@ class BlockdevTestCase(TestCase):
             with patch.dict(blockdev.__salt__, {'cmd.run': MagicMock(return_value='')}):
                 ret.update({'comment': 'Invalid fs_type: foo-bar',
                             'result': False})
-                with patch.object(salt.utils, 'which',
+                with patch.object(salt.utils.path, 'which',
                                   MagicMock(return_value=False)):
                     self.assertDictEqual(blockdev.formatted(name, fs_type='foo-bar'), ret)
 
@@ -92,7 +93,7 @@ class BlockdevTestCase(TestCase):
             with patch.dict(blockdev.__salt__, {'cmd.run': MagicMock(return_value='new-thing')}):
                 comt = ('Changes to {0} will be applied '.format(name))
                 ret.update({'comment': comt, 'result': None})
-                with patch.object(salt.utils, 'which',
+                with patch.object(salt.utils.path, 'which',
                                   MagicMock(return_value=True)):
                     with patch.dict(blockdev.__opts__, {'test': True}):
                         self.assertDictEqual(blockdev.formatted(name), ret)
@@ -102,7 +103,7 @@ class BlockdevTestCase(TestCase):
                                                 'disk.format_': MagicMock(return_value=True)}):
                 comt = ('Failed to format {0}'.format(name))
                 ret.update({'comment': comt, 'result': False})
-                with patch.object(salt.utils, 'which',
+                with patch.object(salt.utils.path, 'which',
                                   MagicMock(return_value=True)):
                     with patch.dict(blockdev.__opts__, {'test': False}):
                         self.assertDictEqual(blockdev.formatted(name), ret)

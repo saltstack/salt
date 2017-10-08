@@ -216,13 +216,13 @@ import logging
 from subprocess import Popen, PIPE
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 import salt.utils.stringio
 import salt.syspaths
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -233,7 +233,7 @@ def _get_gpg_exec():
     '''
     return the GPG executable or raise an error
     '''
-    gpg_exec = salt.utils.which('gpg')
+    gpg_exec = salt.utils.path.which('gpg')
     if gpg_exec:
         return gpg_exec
     else:
@@ -244,11 +244,22 @@ def _get_key_dir():
     '''
     return the location of the GPG key directory
     '''
+    gpg_keydir = None
     if 'config.get' in __salt__:
         gpg_keydir = __salt__['config.get']('gpg_keydir')
-    else:
-        gpg_keydir = __opts__.get('gpg_keydir')
-    return gpg_keydir or os.path.join(__opts__['config_dir'], 'gpgkeys')
+
+    if not gpg_keydir:
+        gpg_keydir = __opts__.get(
+            'gpg_keydir',
+            os.path.join(
+                __opts__.get(
+                    'config_dir',
+                    os.path.dirname(__opts__['conf_file']),
+                ),
+                'gpgkeys'
+            ))
+
+    return gpg_keydir
 
 
 def _decrypt_ciphertext(cipher, translate_newlines=False):

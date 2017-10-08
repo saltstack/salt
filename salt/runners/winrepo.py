@@ -11,7 +11,7 @@ from __future__ import absolute_import, print_function
 import os
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import msgpack
 except ImportError:
@@ -19,7 +19,7 @@ except ImportError:
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltRenderError
-import salt.utils
+import salt.utils.files
 import salt.utils.gitfs
 import logging
 import salt.minion
@@ -30,6 +30,12 @@ log = logging.getLogger(__name__)
 
 # Global parameters which can be overridden on a per-remote basis
 PER_REMOTE_OVERRIDES = ('ssl_verify', 'refspecs')
+
+# Fall back to default per-remote-only. This isn't technically needed since
+# salt.utils.gitfs.GitBase.init_remotes() will default to
+# salt.utils.gitfs.PER_REMOTE_ONLY for this value, so this is mainly for
+# runners and other modules that import salt.runners.winrepo.
+PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
 
 
 def genrepo(opts=None, fire_event=True):
@@ -119,7 +125,7 @@ def genrepo(opts=None, fire_event=True):
                             revmap[repodata['full_name']] = pkgname
                     ret.setdefault('repo', {}).update(config)
                     ret.setdefault('name_map', {}).update(revmap)
-    with salt.utils.fopen(
+    with salt.utils.files.fopen(
             os.path.join(winrepo_dir, winrepo_cachefile), 'w+b') as repo:
         repo.write(msgpack.dumps(ret))
     return ret
@@ -211,7 +217,8 @@ def update_git_repos(opts=None, clean=False, masterless=False):
             # New winrepo code utilizing salt.utils.gitfs
             try:
                 winrepo = salt.utils.gitfs.WinRepo(opts, base_dir)
-                winrepo.init_remotes(remotes, PER_REMOTE_OVERRIDES)
+                winrepo.init_remotes(
+                    remotes, PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
                 winrepo.fetch_remotes()
                 # Since we're not running update(), we need to manually call
                 # clear_old_remotes() to remove directories from remotes that

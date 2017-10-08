@@ -12,8 +12,8 @@ from tests.support.mock import (
     NO_MOCK_REASON)
 
 # Import Salt Libs
-from salt.states import modjk
-import salt.ext.six as six
+import salt.states.modjk as modjk
+from salt.ext import six
 
 
 if six.PY2:

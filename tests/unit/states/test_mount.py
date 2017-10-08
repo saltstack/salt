@@ -4,8 +4,10 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,19 +16,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import mount
-import os
-
-mount.__salt__ = {}
-mount.__opts__ = {}
-mount.__grains__ = {}
+import salt.states.mount as mount
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MountTestCase(TestCase):
+class MountTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.mount
     '''
+    def setup_loader_modules(self):
+        return {mount: {}}
+
     # 'mounted' function tests: 1
 
     def test_mounted(self):
@@ -62,6 +62,8 @@ class MountTestCase(TestCase):
         mock_str = MagicMock(return_value='salt')
         mock_user = MagicMock(return_value={'uid': 510})
         mock_group = MagicMock(return_value={'gid': 100})
+        mock_read_cache = MagicMock(return_value={})
+        mock_write_cache = MagicMock(return_value=True)
         umount1 = ("Forced unmount because devices don't match. "
                    "Wanted: /dev/sdb6, current: /dev/sdb5, /dev/sdb5")
         with patch.dict(mount.__grains__, {'os': 'Darwin'}):
@@ -163,6 +165,8 @@ class MountTestCase(TestCase):
             with patch.dict(mount.__salt__, {'mount.active': mock_mnt,
                                              'mount.mount': mock_str,
                                              'mount.umount': mock_f,
+                                             'mount.read_mount_cache': mock_read_cache,
+                                             'mount.write_mount_cache': mock_write_cache,
                                              'mount.set_fstab': mock,
                                              'user.info': mock_user,
                                              'group.info': mock_group}):

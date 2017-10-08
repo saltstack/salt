@@ -26,7 +26,7 @@ except ImportError:
     HAS_PWD = False
 
 from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.files
 
 
 try:
@@ -491,7 +491,7 @@ def modify_snapshot(snapshot_id=None,
 
     snapshot = get_snapshot(config=config, number=snapshot_id)
     try:
-        # Updating only the explicitely provided attributes by the user
+        # Updating only the explicitly provided attributes by the user
         updated_opts = {
             'description': description if description is not None else snapshot['description'],
             'cleanup': cleanup if cleanup is not None else snapshot['cleanup'],
@@ -669,7 +669,7 @@ def undo(config='root', files=None, num_pre=None, num_post=None):
     the files into the state of num_pre.
 
     .. warning::
-        If one of the files has changes after num_post, they will be overwriten
+        If one of the files has changes after num_post, they will be overwritten
         The snapshots are used to determine the file list, but the current
         version of the files will be overwritten by the versions in num_pre.
 
@@ -790,20 +790,22 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
             if filepath.startswith(SUBVOLUME):
                 _filepath = filepath[len(SUBVOLUME):]
 
-            # Just in case, removing posible double '/' from the final file paths
+            # Just in case, removing possible double '/' from the final file paths
             pre_file = os.path.normpath(pre_mount + "/" + _filepath).replace("//", "/")
             post_file = os.path.normpath(post_mount + "/" + _filepath).replace("//", "/")
 
             if os.path.isfile(pre_file):
                 pre_file_exists = True
-                pre_file_content = salt.utils.fopen(pre_file).readlines()
+                with salt.utils.files.fopen(pre_file) as rfh:
+                    pre_file_content = rfh.readlines()
             else:
                 pre_file_content = []
                 pre_file_exists = False
 
             if os.path.isfile(post_file):
                 post_file_exists = True
-                post_file_content = salt.utils.fopen(post_file).readlines()
+                with salt.utils.files.fopen(post_file) as rfh:
+                    post_file_content = rfh.readlines()
             else:
                 post_file_content = []
                 post_file_exists = False

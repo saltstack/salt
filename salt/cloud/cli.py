@@ -20,23 +20,24 @@ import logging
 from salt.ext.six.moves import input
 
 # Import salt libs
+import salt.cloud
 import salt.config
 import salt.defaults.exitcodes
 import salt.output
-import salt.utils
-from salt.utils import parsers
+import salt.syspaths as syspaths
+import salt.utils.cloud
+import salt.utils.parsers
+import salt.utils.user
+from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 from salt.utils.verify import check_user, verify_env, verify_files, verify_log
 
-# Import salt.cloud libs
-import salt.cloud
-import salt.utils.cloud
-from salt.exceptions import SaltCloudException, SaltCloudSystemExit
-import salt.ext.six as six
-import salt.syspaths as syspaths
+# Import 3rd-party libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 
 
-class SaltCloud(parsers.SaltCloudParser):
+class SaltCloud(salt.utils.parsers.SaltCloudParser):
 
     def run(self):
         '''
@@ -47,7 +48,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
         salt_master_user = self.config.get('user')
         if salt_master_user is None:
-            salt_master_user = salt.utils.get_user()
+            salt_master_user = salt.utils.user.get_user()
 
         if not check_user(salt_master_user):
             self.error(
@@ -364,11 +365,8 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.bootstrap:
             host = self.options.bootstrap
-            if len(self.args) > 0:
-                if '=' not in self.args[0]:
-                    minion_id = self.args.pop(0)
-                else:
-                    minion_id = host
+            if self.args and '=' not in self.args[0]:
+                minion_id = self.args.pop(0)
             else:
                 minion_id = host
 

@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import copy
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -15,18 +16,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import boto_elb
-
-boto_elb.__salt__ = {}
-boto_elb.__opts__ = {}
-boto_elb.__states__ = {}
+import salt.states.boto_elb as boto_elb
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoElbTestCase(TestCase):
+class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_elb
     '''
+    def setup_loader_modules(self):
+        return {boto_elb: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -142,7 +142,7 @@ class BotoElbTestCase(TestCase):
         instances = ['instance-id1', 'instance-id2']
 
         ret = {'name': name,
-               'result': None,
+               'result': False,
                'changes': {},
                'comment': ''}
 
@@ -174,5 +174,5 @@ class BotoElbTestCase(TestCase):
 
             with patch.dict(boto_elb.__opts__, {'test': True}):
                 comt = ('ELB {0} is set to be removed.'.format(name))
-                ret.update({'comment': comt, 'result': True})
+                ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(boto_elb.absent(name), ret)

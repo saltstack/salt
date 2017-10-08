@@ -3,24 +3,26 @@
 integration tests for shadow linux
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import random
 import string
 import os
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
 from salt.ext.six.moves import range
 
 
-@skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
-class ShadowModuleTest(integration.ModuleCase):
+@skip_if_not_root
+@skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
+class ShadowModuleTest(ModuleCase):
     '''
     Validate the linux shadow system module
     '''
@@ -43,8 +45,6 @@ class ShadowModuleTest(integration.ModuleCase):
                     **os_grain
                 )
             )
-        if salt.utils.get_uid(salt.utils.get_user()) != 0:
-            self.skipTest('Test requires root')
 
     def tearDown(self):
         '''
@@ -218,7 +218,7 @@ class ShadowModuleTest(integration.ModuleCase):
         #saving shadow file
         if not os.access("/etc/shadow", os.R_OK | os.W_OK):
             self.skipTest('Could not save initial state of /etc/shadow')
-        with salt.utils.fopen('/etc/shadow', 'r') as sFile:
+        with salt.utils.files.fopen('/etc/shadow', 'r') as sFile:
             shadow = sFile.read()
         #set root password
         self.assertTrue(self.run_function('shadow.set_password', ['root', self._password]))
@@ -229,5 +229,5 @@ class ShadowModuleTest(integration.ModuleCase):
         self.assertEqual(
             self.run_function('shadow.info', ['root'])['passwd'], '')
         #restore shadow file
-        with salt.utils.fopen('/etc/shadow', 'w') as sFile:
+        with salt.utils.files.fopen('/etc/shadow', 'w') as sFile:
             sFile.write(shadow)

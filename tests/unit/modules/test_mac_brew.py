@@ -7,17 +7,14 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import mac_brew
+import salt.modules.mac_brew as mac_brew
 from salt.exceptions import CommandExecutionError
+import salt.utils.pkg
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-
-# Global Variables
-mac_brew.__context__ = {}
-mac_brew.__salt__ = {}
-mac_brew.__opts__ = {'user': MagicMock(return_value='bar')}
+from tests.support.mock import MagicMock, Mock, patch, NO_MOCK, NO_MOCK_REASON
 
 TAPS_STRING = 'homebrew/dupes\nhomebrew/science\nhomebrew/x11'
 TAPS_LIST = ['homebrew/dupes', 'homebrew/science', 'homebrew/x11']
@@ -25,10 +22,12 @@ HOMEBREW_BIN = '/usr/local/bin/brew'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BrewTestCase(TestCase):
+class BrewTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.mac_brew module
     '''
+    def setup_loader_modules(self):
+        return {mac_brew: {'__opts__': {'user': MagicMock(return_value='bar')}}}
 
     # '_list_taps' function tests: 1
 
@@ -41,20 +40,19 @@ class BrewTestCase(TestCase):
         mock_user = MagicMock(return_value='foo')
         mock_cmd = MagicMock(return_value='')
         with patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
-                                        'cmd.run_all': mock_taps,
-                                        'cmd.run': mock_cmd}):
+                                            'cmd.run_all': mock_taps,
+                                            'cmd.run': mock_cmd}):
             self.assertEqual(mac_brew._list_taps(), TAPS_LIST)
 
     # '_tap' function tests: 3
 
-    @patch('salt.modules.mac_brew._list_taps', MagicMock(return_value=TAPS_LIST))
     def test_tap_installed(self):
         '''
         Tests if tap argument is already installed or not
         '''
-        self.assertTrue(mac_brew._tap('homebrew/science'))
+        with patch('salt.modules.mac_brew._list_taps', MagicMock(return_value=TAPS_LIST)):
+            self.assertTrue(mac_brew._tap('homebrew/science'))
 
-    @patch('salt.modules.mac_brew._list_taps', MagicMock(return_value={}))
     def test_tap_failure(self):
         '''
         Tests if the tap installation failed
@@ -66,10 +64,10 @@ class BrewTestCase(TestCase):
         mock_cmd = MagicMock(return_value='')
         with patch.dict(mac_brew.__salt__, {'cmd.run_all': mock_failure,
                                         'file.get_user': mock_user,
-                                        'cmd.run': mock_cmd}):
+                                        'cmd.run': mock_cmd}), \
+                patch('salt.modules.mac_brew._list_taps', MagicMock(return_value={})):
             self.assertFalse(mac_brew._tap('homebrew/test'))
 
-    @patch('salt.modules.mac_brew._list_taps', MagicMock(return_value=TAPS_LIST))
     def test_tap(self):
         '''
         Tests adding unofficial GitHub repos to the list of brew taps
@@ -78,8 +76,9 @@ class BrewTestCase(TestCase):
         mock_user = MagicMock(return_value='foo')
         mock_cmd = MagicMock(return_value='')
         with patch.dict(mac_brew.__salt__, {'cmd.run_all': mock_failure,
-                                        'file.get_user': mock_user,
-                                        'cmd.run': mock_cmd}):
+                                            'file.get_user': mock_user,
+                                            'cmd.run': mock_cmd}), \
+                patch('salt.modules.mac_brew._list_taps', MagicMock(return_value=TAPS_LIST)):
             self.assertTrue(mac_brew._tap('homebrew/test'))
 
     # '_homebrew_bin' function tests: 1
@@ -128,21 +127,17 @@ class BrewTestCase(TestCase):
     # Only tested a few basics
     # Full functionality should be tested in integration phase
 
-    @patch('salt.modules.mac_brew.list_pkgs',
-           MagicMock(return_value={'test': '0.1.5'}))
     def test_remove(self):
         '''
         Tests if package to be removed exists
         '''
         mock_params = MagicMock(return_value=({'foo': None}, 'repository'))
-        with patch.dict(mac_brew.__salt__,
-                        {'pkg_resource.parse_targets': mock_params}):
+        with patch('salt.modules.mac_brew.list_pkgs', return_value={'test': '0.1.5'}), \
+                patch.dict(mac_brew.__salt__, {'pkg_resource.parse_targets': mock_params}):
             self.assertEqual(mac_brew.remove('foo'), {})
 
     # 'refresh_db' function tests: 2
 
-    @patch('salt.modules.mac_brew._homebrew_bin',
-           MagicMock(return_value=HOMEBREW_BIN))
     def test_refresh_db_failure(self):
         '''
         Tests an update of homebrew package repository failure
@@ -152,11 +147,12 @@ class BrewTestCase(TestCase):
                                                'stderr': '',
                                                'retcode': 1})
         with patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
-                                        'cmd.run_all': mock_failure}):
-            self.assertRaises(CommandExecutionError, mac_brew.refresh_db)
+                                            'cmd.run_all': mock_failure}), \
+                patch('salt.modules.mac_brew._homebrew_bin',
+                      MagicMock(return_value=HOMEBREW_BIN)):
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                self.assertRaises(CommandExecutionError, mac_brew.refresh_db)
 
-    @patch('salt.modules.mac_brew._homebrew_bin',
-           MagicMock(return_value=HOMEBREW_BIN))
     def test_refresh_db(self):
         '''
         Tests a successful update of homebrew package repository
@@ -164,8 +160,11 @@ class BrewTestCase(TestCase):
         mock_user = MagicMock(return_value='foo')
         mock_success = MagicMock(return_value={'retcode': 0})
         with patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
-                                        'cmd.run_all': mock_success}):
-            self.assertTrue(mac_brew.refresh_db())
+                                        'cmd.run_all': mock_success}), \
+                patch('salt.modules.mac_brew._homebrew_bin',
+                      MagicMock(return_value=HOMEBREW_BIN)):
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                self.assertTrue(mac_brew.refresh_db())
 
     # 'install' function tests: 1
     # Only tested a few basics

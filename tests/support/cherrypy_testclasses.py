@@ -3,7 +3,6 @@ from __future__ import absolute_import
 
 try:
     import cherrypy
-
     HAS_CHERRYPY = True
 except ImportError:
     HAS_CHERRYPY = False
@@ -11,6 +10,7 @@ except ImportError:
 import os
 
 import salt.config
+from tests.support.mock import patch
 from tests.support.paths import TMP_CONF_DIR
 
 if HAS_CHERRYPY:
@@ -34,20 +34,32 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
     This mocks all interactions with Salt-core and sets up a dummy
     (unsubscribed) CherryPy web server.
     '''
-    __opts__ = None
+    def __get_opts__(self):
+        return None
 
-    def __init__(self, *args, **kwargs):
-        super(BaseRestCherryPyTest, self).__init__(*args, **kwargs)
-
+    @classmethod
+    def setUpClass(cls):
         master_conf = os.path.join(TMP_CONF_DIR, 'master')
-        self.config = salt.config.client_config(master_conf)
+        cls.config = salt.config.client_config(master_conf)
+        cls.base_opts = {}
+        cls.base_opts.update(cls.config)
 
-    def setUp(self, *args, **kwargs):
+    @classmethod
+    def tearDownClass(cls):
+        del cls.config
+        del cls.base_opts
+
+    def setUp(self):
         # Make a local reference to the CherryPy app so we can mock attributes.
         self.app = app
+        self.addCleanup(delattr, self, 'app')
 
-        __opts__ = self.config.copy()
-        __opts__.update(self.__opts__ or {
+        master_conf = os.path.join(TMP_CONF_DIR, 'master')
+        client_config = salt.config.client_config(master_conf)
+        base_opts = {}
+        base_opts.update(client_config)
+
+        base_opts.update(self.__get_opts__() or {
             'external_auth': {
                 'auto': {
                     'saltdev': [
@@ -71,15 +83,19 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
             },
         })
 
-        root, apiopts, conf = app.get_app(__opts__)
-
+        root, apiopts, conf = app.get_app(base_opts)
         cherrypy.tree.mount(root, '/', conf)
         cherrypy.server.unsubscribe()
         cherrypy.engine.start()
 
-    def tearDown(self):
-        cherrypy.engine.exit()
-        del self.app
+        # Make sure cherrypy does not memleak on it's bus since it keeps
+        # adding handlers without cleaning the old ones each time we setup
+        # a new application
+        for value in cherrypy.engine.listeners.values():
+            value.clear()
+        cherrypy.engine._priorities.clear()
+
+        self.addCleanup(cherrypy.engine.exit)
 
 
 class Root(object):
@@ -102,25 +118,30 @@ if HAS_CHERRYPY:
         '''
         A base class so tests can selectively turn individual tools on for testing
         '''
-        conf = {
-            '/': {
-                'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
-            },
-        }
+        def __get_conf__(self):
+            return {
+                '/': {
+                    'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
+                },
+            }
+
+        def __get_cp_config__(self):
+            return {}
 
         def setUp(self):
-            if not hasattr(self, '_cp_config'):
-                self._cp_config = {}
-            Root._cp_config = self._cp_config
             root = Root()
+            patcher = patch.object(root, '_cp_config', self.__get_cp_config__())
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
-            cherrypy.tree.mount(root, '/', self.conf)
+            # Make sure cherrypy does not memleak on it's bus since it keeps
+            # adding handlers without cleaning the old ones each time we setup
+            # a new application
+            for value in cherrypy.engine.listeners.values():
+                value.clear()
+            cherrypy.engine._priorities.clear()
+
+            app = cherrypy.tree.mount(root, '/', self.__get_conf__())
             cherrypy.server.unsubscribe()
             cherrypy.engine.start()
-
-        def tearDown(self):
-            cherrypy.engine.exit()
-            try:
-                del self._cp_config
-            except AttributeError:
-                pass
+            self.addCleanup(cherrypy.engine.exit)

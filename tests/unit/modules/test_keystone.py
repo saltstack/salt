@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,10 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import keystone
-
-# Globals
-keystone.__salt__ = {}
+import salt.modules.keystone as keystone
 
 
 class MockEC2(object):
@@ -80,7 +78,7 @@ class MockEndpoints(object):
     """
     def __init__(self):
         self.id = '007'
-        self.region = 'region'
+        self.region = 'RegionOne'
         self.adminurl = 'adminurl'
         self.internalurl = 'internalurl'
         self.publicurl = 'publicurl'
@@ -406,7 +404,7 @@ class MockClient(object):
     """
     flag = None
 
-    def __init__(self):
+    def __init__(self, profile=None, **conn_args):
         self.ec2 = MockEC2()
         self.endpoints = MockEndpoints()
         self.services = MockServices()
@@ -423,19 +421,25 @@ class MockClient(object):
             raise Unauthorized
         return True
 
-keystone.client = MockClient()
-keystone.keystoneclient = MockKeystoneClient()
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.modules.keystone.auth', return_value=MockClient())
-class KeystoneTestCase(TestCase):
+class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.keystone
     '''
+
+    def setup_loader_modules(self):
+        return {
+            keystone: {
+                'auth': MockClient,
+                'client': MockClient(),
+                'keystoneclient': MockKeystoneClient()
+            }
+        }
+
     # 'ec2_credentials_create' function tests: 1
 
-    def test_ec2_credentials_create(self, mock):
+    def test_ec2_credentials_create(self):
         '''
         Test if it create EC2-compatible credentials for user per tenant
         '''
@@ -452,7 +456,7 @@ class KeystoneTestCase(TestCase):
 
     # 'ec2_credentials_delete' function tests: 1
 
-    def test_ec2_credentials_delete(self, mock):
+    def test_ec2_credentials_delete(self):
         '''
         Test if it delete EC2-compatible credentials
         '''
@@ -465,7 +469,7 @@ class KeystoneTestCase(TestCase):
 
     # 'ec2_credentials_get' function tests: 1
 
-    def test_ec2_credentials_get(self, mock):
+    def test_ec2_credentials_get(self):
         '''
         Test if it return ec2_credentials for a user
         (keystone ec2-credentials-get)
@@ -484,7 +488,7 @@ class KeystoneTestCase(TestCase):
 
     # 'ec2_credentials_list' function tests: 1
 
-    def test_ec2_credentials_list(self, mock):
+    def test_ec2_credentials_list(self):
         '''
         Test if it return a list of ec2_credentials
         for a specific user (keystone ec2-credentials-list)
@@ -499,42 +503,50 @@ class KeystoneTestCase(TestCase):
 
     # 'endpoint_get' function tests: 1
 
-    def test_endpoint_get(self, mock):
+    def test_endpoint_get(self):
         '''
         Test if it return a specific endpoint (keystone endpoint-get)
         '''
-        self.assertDictEqual(keystone.endpoint_get('nova', profile='openstack'),
+        self.assertDictEqual(keystone.endpoint_get('nova',
+                                                   'RegionOne',
+                                                   profile='openstack'),
                              {'Error': 'Could not find the specified service'})
 
         ret = {'Error': 'Could not find endpoint for the specified service'}
         MockServices.flag = 1
         self.assertDictEqual(keystone.endpoint_get('iptables',
+                                                   'RegionOne',
                                                    profile='openstack'), ret)
 
         MockServices.flag = 0
         self.assertDictEqual(keystone.endpoint_get('iptables',
+                                                   'RegionOne',
                                                    profile='openstack'),
-                             {'adminurl': 'adminurl', 'id': '007',
+                             {'adminurl': 'adminurl',
+                              'id': '007',
                               'internalurl': 'internalurl',
-                              'publicurl': 'publicurl', 'region': 'region',
+                              'publicurl': 'publicurl',
+                              'region': 'RegionOne',
                               'service_id': '117'})
 
     # 'endpoint_list' function tests: 1
 
-    def test_endpoint_list(self, mock):
+    def test_endpoint_list(self):
         '''
         Test if it return a list of available endpoints
         (keystone endpoints-list)
         '''
         self.assertDictEqual(keystone.endpoint_list(profile='openstack1'),
-                             {'007': {'adminurl': 'adminurl', 'id': '007',
+                             {'007': {'adminurl': 'adminurl',
+                                      'id': '007',
                                       'internalurl': 'internalurl',
                                       'publicurl': 'publicurl',
-                                      'region': 'region', 'service_id': '117'}})
+                                      'region': 'RegionOne',
+                                      'service_id': '117'}})
 
     # 'endpoint_create' function tests: 1
 
-    def test_endpoint_create(self, mock):
+    def test_endpoint_create(self):
         '''
         Test if it create an endpoint for an Openstack service
         '''
@@ -545,28 +557,31 @@ class KeystoneTestCase(TestCase):
         self.assertDictEqual(keystone.endpoint_create('iptables',
                                                       'http://public/url',
                                                       'http://internal/url',
-                                                      'http://adminurl/url'),
-                             {'adminurl': 'adminurl', 'id': '007',
+                                                      'http://adminurl/url',
+                                                      'RegionOne'),
+                             {'adminurl': 'adminurl',
+                              'id': '007',
                               'internalurl': 'internalurl',
-                              'publicurl': 'publicurl', 'region': 'region',
+                              'publicurl': 'publicurl',
+                              'region': 'RegionOne',
                               'service_id': '117'})
 
     # 'endpoint_delete' function tests: 1
 
-    def test_endpoint_delete(self, mock):
+    def test_endpoint_delete(self):
         '''
         Test if it delete an endpoint for an Openstack service
         '''
         ret = {'Error': 'Could not find any endpoints for the service'}
-        self.assertDictEqual(keystone.endpoint_delete('nova'), ret)
+        self.assertDictEqual(keystone.endpoint_delete('nova', 'RegionOne'), ret)
 
         with patch.object(keystone, 'endpoint_get',
                           MagicMock(side_effect=[{'id': '117'}, None])):
-            self.assertTrue(keystone.endpoint_delete('iptables'))
+            self.assertTrue(keystone.endpoint_delete('iptables', 'RegionOne'))
 
     # 'role_create' function tests: 1
 
-    def test_role_create(self, mock):
+    def test_role_create(self):
         '''
         Test if it create named role
         '''
@@ -578,7 +593,7 @@ class KeystoneTestCase(TestCase):
 
     # 'role_delete' function tests: 1
 
-    def test_role_delete(self, mock):
+    def test_role_delete(self):
         '''
         Test if it delete a role (keystone role-delete)
         '''
@@ -590,7 +605,7 @@ class KeystoneTestCase(TestCase):
 
     # 'role_get' function tests: 1
 
-    def test_role_get(self, mock):
+    def test_role_get(self):
         '''
         Test if it return a specific roles (keystone role-get)
         '''
@@ -602,7 +617,7 @@ class KeystoneTestCase(TestCase):
 
     # 'role_list' function tests: 1
 
-    def test_role_list(self, mock):
+    def test_role_list(self):
         '''
         Test if it return a list of available roles (keystone role-list)
         '''
@@ -612,7 +627,7 @@ class KeystoneTestCase(TestCase):
 
     # 'service_create' function tests: 1
 
-    def test_service_create(self, mock):
+    def test_service_create(self):
         '''
         Test if it add service to Keystone service catalog
         '''
@@ -626,7 +641,7 @@ class KeystoneTestCase(TestCase):
 
     # 'service_delete' function tests: 1
 
-    def test_service_delete(self, mock):
+    def test_service_delete(self):
         '''
         Test if it delete a service from Keystone service catalog
         '''
@@ -635,7 +650,7 @@ class KeystoneTestCase(TestCase):
 
     # 'service_get' function tests: 1
 
-    def test_service_get(self, mock):
+    def test_service_get(self):
         '''
         Test if it return a list of available services (keystone services-list)
         '''
@@ -652,7 +667,7 @@ class KeystoneTestCase(TestCase):
 
     # 'service_list' function tests: 1
 
-    def test_service_list(self, mock):
+    def test_service_list(self):
         '''
         Test if it return a list of available services (keystone services-list)
         '''
@@ -664,7 +679,7 @@ class KeystoneTestCase(TestCase):
 
     # 'tenant_create' function tests: 1
 
-    def test_tenant_create(self, mock):
+    def test_tenant_create(self):
         '''
         Test if it create a keystone tenant
         '''
@@ -675,7 +690,7 @@ class KeystoneTestCase(TestCase):
 
     # 'tenant_delete' function tests: 1
 
-    def test_tenant_delete(self, mock):
+    def test_tenant_delete(self):
         '''
         Test if it delete a tenant (keystone tenant-delete)
         '''
@@ -687,7 +702,7 @@ class KeystoneTestCase(TestCase):
 
     # 'tenant_get' function tests: 1
 
-    def test_tenant_get(self, mock):
+    def test_tenant_get(self):
         '''
         Test if it return a specific tenants (keystone tenant-get)
         '''
@@ -701,7 +716,7 @@ class KeystoneTestCase(TestCase):
 
     # 'tenant_list' function tests: 1
 
-    def test_tenant_list(self, mock):
+    def test_tenant_list(self):
         '''
         Test if it return a list of available tenants (keystone tenants-list)
         '''
@@ -712,7 +727,7 @@ class KeystoneTestCase(TestCase):
 
     # 'tenant_update' function tests: 1
 
-    def test_tenant_update(self, mock):
+    def test_tenant_update(self):
         '''
         Test if it update a tenant's information (keystone tenant-update)
         '''
@@ -721,7 +736,7 @@ class KeystoneTestCase(TestCase):
 
     # 'token_get' function tests: 1
 
-    def test_token_get(self, mock):
+    def test_token_get(self):
         '''
         Test if it return the configured tokens (keystone token-get)
         '''
@@ -732,7 +747,7 @@ class KeystoneTestCase(TestCase):
 
     # 'user_list' function tests: 1
 
-    def test_user_list(self, mock):
+    def test_user_list(self):
         '''
         Test if it return a list of available users (keystone user-list)
         '''
@@ -746,7 +761,7 @@ class KeystoneTestCase(TestCase):
 
     # 'user_get' function tests: 1
 
-    def test_user_get(self, mock):
+    def test_user_get(self):
         '''
         Test if it return a specific users (keystone user-get)
         '''
@@ -760,7 +775,7 @@ class KeystoneTestCase(TestCase):
                                        'email': 'salt@saltstack.com'}})
     # 'user_create' function tests: 1
 
-    def test_user_create(self, mock):
+    def test_user_create(self):
         '''
         Test if it create a user (keystone user-create)
         '''
@@ -774,7 +789,7 @@ class KeystoneTestCase(TestCase):
 
     # 'user_delete' function tests: 1
 
-    def test_user_delete(self, mock):
+    def test_user_delete(self):
         '''
         Test if it delete a user (keystone user-delete)
         '''
@@ -786,7 +801,7 @@ class KeystoneTestCase(TestCase):
 
     # 'user_update' function tests: 1
 
-    def test_user_update(self, mock):
+    def test_user_update(self):
         '''
         Test if it update a user's information (keystone user-update)
         '''
@@ -798,7 +813,7 @@ class KeystoneTestCase(TestCase):
 
     # 'user_verify_password' function tests: 1
 
-    def test_user_verify_password(self, mock):
+    def test_user_verify_password(self):
         '''
         Test if it verify a user's password
         '''
@@ -816,7 +831,7 @@ class KeystoneTestCase(TestCase):
 
     # 'user_password_update' function tests: 1
 
-    def test_user_password_update(self, mock):
+    def test_user_password_update(self):
         '''
         Test if it update a user's password (keystone user-password-update)
         '''
@@ -828,7 +843,7 @@ class KeystoneTestCase(TestCase):
 
     # 'user_role_add' function tests: 1
 
-    def test_user_role_add(self, mock):
+    def test_user_role_add(self):
         '''
         Test if it add role for user in tenant (keystone user-role-add)
         '''
@@ -851,7 +866,7 @@ class KeystoneTestCase(TestCase):
 
     # 'user_role_remove' function tests: 1
 
-    def test_user_role_remove(self, mock):
+    def test_user_role_remove(self):
         '''
         Test if it add role for user in tenant (keystone user-role-add)
         '''
@@ -879,7 +894,7 @@ class KeystoneTestCase(TestCase):
 
     # 'user_role_list' function tests: 1
 
-    def test_user_role_list(self, mock):
+    def test_user_role_list(self):
         '''
         Test if it return a list of available user_roles
         (keystone user-roles-list)

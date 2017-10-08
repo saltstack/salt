@@ -11,7 +11,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-from salt.modules import mac_power
+import salt.modules.mac_power as mac_power
 from salt.exceptions import SaltInvocationError
 
 

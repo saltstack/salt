@@ -19,6 +19,7 @@ except ImportError:
 # Import Salt libs
 import salt.utils
 import salt.utils.aws
+import salt.utils.files
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError
@@ -147,37 +148,38 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not data:
         data = None
 
-    if method == 'PUT':
-        if local_file:
-            data = salt.utils.fopen(local_file, 'r')
-        result = requests.request(method,
-                                  requesturl,
-                                  headers=headers,
-                                  data=data,
-                                  verify=verify_ssl,
-                                  stream=True)
-        response = result.content
-    elif method == 'GET' and local_file and not return_bin:
-        result = requests.request(method,
-                                  requesturl,
-                                  headers=headers,
-                                  data=data,
-                                  verify=verify_ssl,
-                                  stream=True)
-        response = result.content
-    else:
-        result = requests.request(method,
-                                  requesturl,
-                                  headers=headers,
-                                  data=data,
-                                  verify=verify_ssl)
-        response = result.content
+    try:
+        if method == 'PUT':
+            if local_file:
+                data = salt.utils.files.fopen(local_file, 'r')  # pylint: disable=resource-leakage
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl,
+                                      stream=True)
+        elif method == 'GET' and local_file and not return_bin:
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl,
+                                      stream=True)
+        else:
+            result = requests.request(method,
+                                      requesturl,
+                                      headers=headers,
+                                      data=data,
+                                      verify=verify_ssl)
+    finally:
+        if data is not None:
+            data.close()
 
     err_code = None
     err_msg = None
     if result.status_code >= 400:
         # On error the S3 API response should contain error message
-        err_text = response or result.content or 'Unknown error'
+        err_text = result.content or 'Unknown error'
         log.debug('    Response content: {0}'.format(err_text))
 
         # Try to get err info from response xml
@@ -232,7 +234,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
                 'Failed to get file. {0}: {1}'.format(err_code, err_msg))
 
         log.debug('Saving to local file: {0}'.format(local_file))
-        with salt.utils.fopen(local_file, 'wb') as out:
+        with salt.utils.files.fopen(local_file, 'wb') as out:
             for chunk in result.iter_content(chunk_size=chunk_size):
                 out.write(chunk)
         return 'Saved to local file: {0}'.format(local_file)
@@ -243,10 +245,10 @@ def query(key, keyid, method='GET', params=None, headers=None,
 
     # This can be used to return a binary object wholesale
     if return_bin:
-        return response
+        return result.content
 
-    if response:
-        items = ET.fromstring(response)
+    if result.content:
+        items = ET.fromstring(result.content)
 
         ret = []
         for item in items:

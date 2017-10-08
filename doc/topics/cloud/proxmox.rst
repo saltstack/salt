@@ -212,7 +212,7 @@ QEMU profile file (for a clone):
 
   proxmox-win7:
     # Enable Clone
-    clone: 1
+    clone: True
 
     # New VM description
     clone_description: 'description'

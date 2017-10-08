@@ -27,7 +27,9 @@ from salt.log.setup import LOG_LEVELS
 from salt.exceptions import SaltClientError, SaltSystemExit, \
     CommandExecutionError
 import salt.defaults.exitcodes
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.user
 
 log = logging.getLogger(__name__)
 
@@ -145,7 +147,7 @@ def verify_files(files, user):
     '''
     Verify that the named files exist and are owned by the named user
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return True
     import pwd  # after confirming not running Windows
     try:
@@ -167,7 +169,7 @@ def verify_files(files, user):
                     if err.errno != errno.EEXIST:
                         raise
             if not os.path.isfile(fn_):
-                with salt.utils.fopen(fn_, 'w+') as fp_:
+                with salt.utils.files.fopen(fn_, 'w+') as fp_:
                     fp_.write('')
 
         except IOError as err:
@@ -197,14 +199,14 @@ def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return win_verify_env(dirs, permissive, pki_dir, skip_extra)
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
         gid = pwnam[3]
-        groups = salt.utils.get_gid_list(user, include_default=False)
+        groups = salt.utils.user.get_gid_list(user, include_default=False)
 
     except KeyError:
         err = ('Failed to prepare the Salt environment for user '
@@ -298,9 +300,9 @@ def check_user(user):
     '''
     Check user and assign process uid/gid.
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return True
-    if user == salt.utils.get_user():
+    if user == salt.utils.user.get_user():
         return True
     import pwd  # after confirming not running Windows
     try:
@@ -309,7 +311,7 @@ def check_user(user):
             if hasattr(os, 'initgroups'):
                 os.initgroups(user, pwuser.pw_gid)  # pylint: disable=minimum-python-version
             else:
-                os.setgroups(salt.utils.get_gid_list(user, include_default=False))
+                os.setgroups(salt.utils.user.get_gid_list(user, include_default=False))
             os.setgid(pwuser.pw_gid)
             os.setuid(pwuser.pw_uid)
 
@@ -381,7 +383,7 @@ def check_path_traversal(path, user='root', skip_perm_errors=False):
             if not os.path.exists(tpath):
                 msg += ' Path does not exist.'
             else:
-                current_user = salt.utils.get_user()
+                current_user = salt.utils.user.get_user()
                 # Make the error message more intelligent based on how
                 # the user invokes salt-call or whatever other script.
                 if user != current_user:
@@ -480,13 +482,22 @@ def clean_path(root, path, subdir=False):
     return ''
 
 
+def clean_id(id_):
+    '''
+    Returns if the passed id is clean.
+    '''
+    if re.search(r'\.\.\{sep}'.format(sep=os.sep), id_):
+        return False
+    return True
+
+
 def valid_id(opts, id_):
     '''
     Returns if the passed id is valid
     '''
     try:
-        return bool(clean_path(opts['pki_dir'], id_))
-    except (AttributeError, KeyError) as e:
+        return bool(clean_path(opts['pki_dir'], id_)) and clean_id(id_)
+    except (AttributeError, KeyError, TypeError) as e:
         return False
 
 

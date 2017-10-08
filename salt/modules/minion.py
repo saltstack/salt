@@ -14,7 +14,7 @@ import salt.utils
 import salt.key
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range
 
 # Don't shadow built-ins.

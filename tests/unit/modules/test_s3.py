@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -15,14 +16,15 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import s3
-
-s3.__salt__ = {}
-s3.__utils__ = {'s3.query': MagicMock(return_value='A')}
+import salt.modules.s3 as s3
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class S3TestCase(TestCase):
+class S3TestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {s3: {'__utils__': {'s3.query': MagicMock(return_value='A')}}}
+
     def test__get_key_defaults(self):
         mock = MagicMock(return_value='')
         with patch.dict(s3.__salt__, {'config.option': mock}):

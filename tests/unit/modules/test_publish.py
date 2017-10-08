@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,13 +17,8 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import publish
-import salt.crypt
-import salt.transport
+import salt.modules.publish as publish
 from salt.exceptions import SaltReqTimeoutError
-
-# Globals
-publish.__opts__ = {}
 
 
 class SAuth(object):
@@ -66,18 +62,33 @@ class Channel(object):
             raise SaltReqTimeoutError
         return True
 
-salt.transport.Channel = Channel()
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.crypt.SAuth', return_value=SAuth(publish.__opts__))
-class PublishTestCase(TestCase):
+class PublishTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.publish
     '''
+    def setup_loader_modules(self):
+        return {publish: {}}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.channel_patcher = patch('salt.transport.Channel', Channel())
+        cls.channel_patcher.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.channel_patcher.stop()
+        del cls.channel_patcher
+
+    def setUp(self):
+        patcher = patch('salt.crypt.SAuth', return_value=SAuth(publish.__opts__))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     # 'publish' function tests: 1
 
-    def test_publish(self, mock):
+    def test_publish(self):
         '''
         Test if it publish a command from the minion out to other minions.
         '''
@@ -85,7 +96,7 @@ class PublishTestCase(TestCase):
 
     # 'full_data' function tests: 1
 
-    def test_full_data(self, mock):
+    def test_full_data(self):
         '''
         Test if it return the full data about the publication
         '''
@@ -93,7 +104,7 @@ class PublishTestCase(TestCase):
 
     # 'runner' function tests: 1
 
-    def test_runner(self, mock):
+    def test_runner(self):
         '''
         Test if it execute a runner on the master and return the data
         from the runner function

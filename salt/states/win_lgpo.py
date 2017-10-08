@@ -44,7 +44,7 @@ Multiple policy configuration
                 Minimum password age: 1
                 Minimum password length: 14
                 Password must meet complexity requirements: Enabled
-                Store passwords using reversible encrytion: Disabled
+                Store passwords using reversible encryption: Disabled
                 Configure Automatic Updates:
                     Configure automatic updating: 4 - Auto download and schedule the intsall
                     Scheduled install day: 7 - Every Saturday
@@ -108,8 +108,11 @@ from __future__ import absolute_import
 import logging
 import json
 
+# Import salt libs
+import salt.utils.dictdiffer
+
 # Import 3rd party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'
@@ -298,10 +301,11 @@ def set_(name,
                                         adml_language=adml_language)
             if _ret:
                 ret['result'] = _ret
-                ret['changes']['old'] = current_policy
-                ret['changes']['new'] = __salt__['lgpo.get'](policy_class=policy_class,
-                                                             adml_language=adml_language,
-                                                             hierarchical_return=False)
+                ret['changes'] = salt.utils.dictdiffer.deep_diff(
+                    current_policy,
+                    __salt__['lgpo.get'](policy_class=policy_class,
+                                         adml_language=adml_language,
+                                         hierarchical_return=False))
             else:
                 ret['result'] = False
                 ret['comment'] = 'Errors occurred while attempting to configure policies: {0}'.format(_ret)

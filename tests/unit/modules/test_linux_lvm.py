@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os.path
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -17,18 +18,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import linux_lvm
+import salt.modules.linux_lvm as linux_lvm
 from salt.exceptions import CommandExecutionError
-
-# Globals
-linux_lvm.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LinuxLVMTestCase(TestCase):
+class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.linux_lvm module
     '''
+    def setup_loader_modules(self):
+        return {linux_lvm: {}}
 
     def test_version(self):
         '''
@@ -252,6 +252,21 @@ class LinuxLVMTestCase(TestCase):
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
             with patch.object(linux_lvm, 'lvdisplay', return_value={}):
                 self.assertDictEqual(linux_lvm.lvcreate(None, None, None, 1),
+                                     {'Output from lvcreate': 'A'})
+
+    def test_lvcreate_with_force(self):
+        '''
+        Test create a new logical volume, with option
+        for which physical volume to be used
+        '''
+        mock = MagicMock(return_value='A\nB')
+        with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
+            with patch.object(linux_lvm, 'lvdisplay', return_value={}):
+                self.assertDictEqual(linux_lvm.lvcreate(None,
+                                                        None,
+                                                        None,
+                                                        1,
+                                                        force=True),
                                      {'Output from lvcreate': 'A'})
 
     def test_vgremove(self):

@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import influx08
+import salt.modules.influx08 as influx08
 
 DB_LIST = ['A', 'B', 'C']
 USER_LIST = [{'name': 'A'}, {'name': 'B'}]

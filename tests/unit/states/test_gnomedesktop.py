@@ -12,7 +12,7 @@ from tests.support.mock import (
     NO_MOCK_REASON)
 
 # Import Salt Libs
-from salt.states import gnomedesktop
+import salt.states.gnomedesktop as gnomedesktop
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

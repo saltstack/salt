@@ -4,8 +4,10 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -15,21 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import environ
-import os
-
-
-# Globals
-environ.__grains__ = {}
-environ.__salt__ = {}
-environ.__context__ = {}
+import salt.modules.environ as environ
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class EnvironTestCase(TestCase):
+class EnvironTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.environ
     '''
+    def setup_loader_modules(self):
+        return {environ: {}}
+
     def test_setval(self):
         '''
         Test for set a single salt process environment variable. Returns True
@@ -50,11 +48,11 @@ class EnvironTestCase(TestCase):
         with patch.dict(os.environ, mock_environ):
             self.assertFalse(environ.setval('key', True))
 
-    @patch('salt.utils.is_windows', MagicMock(return_value=True))
     def test_set_val_permanent(self):
-        with patch.dict(os.environ, {}):
-            environ.__salt__['reg.set_value'] = MagicMock()
-            environ.__salt__['reg.delete_value'] = MagicMock()
+        with patch.dict(os.environ, {}), \
+                patch.dict(environ.__salt__, {'reg.set_value': MagicMock(),
+                                              'reg.delete_value': MagicMock()}), \
+                    patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
 
             environ.setval('key', 'Test', permanent=True)
             environ.__salt__['reg.set_value'].assert_called_with('HKCU', 'Environment', 'key', 'Test')
@@ -72,7 +70,7 @@ class EnvironTestCase(TestCase):
         Set multiple salt process environment variables from a dict.
         Returns a dict.
         '''
-        mock_environ = {'key': 'value'}
+        mock_environ = {'KEY': 'value'}
         with patch.dict(os.environ, mock_environ):
             self.assertFalse(environ.setenv('environ'))
 
@@ -85,7 +83,7 @@ class EnvironTestCase(TestCase):
         with patch.dict(os.environ, mock_environ):
             mock_setval = MagicMock(return_value=None)
             with patch.object(environ, 'setval', mock_setval):
-                self.assertEqual(environ.setenv({}, False, True, False)['key'],
+                self.assertEqual(environ.setenv({}, False, True, False)['KEY'],
                                  None)
 
     def test_get(self):

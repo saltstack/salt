@@ -4,19 +4,21 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import win_license as license
+import salt.states.win_license as win_license
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
-license.__salt__ = {}
 
+class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
-class LicenseTestCase(TestCase):
+    def setup_loader_modules(self):
+        return {win_license: {}}
 
     def test_activate(self):
         '''
@@ -39,10 +41,10 @@ class LicenseTestCase(TestCase):
         info_mock = MagicMock(return_value=info)
         install_mock = MagicMock(return_value='Installed successfully')
         activate_mock = MagicMock(return_value='Activated successfully')
-        with patch.dict(license.__salt__, {'license.info': info_mock,
-                                           'license.install': install_mock,
-                                           'license.activate': activate_mock}):
-            out = license.activate('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
+        with patch.dict(win_license.__salt__, {'license.info': info_mock,
+                                               'license.install': install_mock,
+                                               'license.activate': activate_mock}):
+            out = win_license.activate('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
             info_mock.assert_called_once_with()
             install_mock.assert_called_once_with('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
             activate_mock.assert_called_once_with()
@@ -69,10 +71,10 @@ class LicenseTestCase(TestCase):
         info_mock = MagicMock(return_value=info)
         install_mock = MagicMock(return_value='Installed successfully')
         activate_mock = MagicMock(return_value='Activated successfully')
-        with patch.dict(license.__salt__, {'license.info': info_mock,
-                                           'license.install': install_mock,
-                                           'license.activate': activate_mock}):
-            out = license.activate('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
+        with patch.dict(win_license.__salt__, {'license.info': info_mock,
+                                               'license.install': install_mock,
+                                               'license.activate': activate_mock}):
+            out = win_license.activate('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
             info_mock.assert_called_once_with()
             assert not install_mock.called
             activate_mock.assert_called_once_with()
@@ -99,10 +101,10 @@ class LicenseTestCase(TestCase):
         info_mock = MagicMock(return_value=info)
         install_mock = MagicMock(return_value='Installed successfully')
         activate_mock = MagicMock(return_value='Activated successfully')
-        with patch.dict(license.__salt__, {'license.info': info_mock,
-                                           'license.install': install_mock,
-                                           'license.activate': activate_mock}):
-            out = license.activate('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
+        with patch.dict(win_license.__salt__, {'license.info': info_mock,
+                                               'license.install': install_mock,
+                                               'license.activate': activate_mock}):
+            out = win_license.activate('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
             info_mock.assert_called_once_with()
             assert not install_mock.called
             assert not activate_mock.called
@@ -129,10 +131,10 @@ class LicenseTestCase(TestCase):
         info_mock = MagicMock(return_value=info)
         install_mock = MagicMock(return_value='Failed')
         activate_mock = MagicMock()
-        with patch.dict(license.__salt__, {'license.info': info_mock,
-                                           'license.install': install_mock,
-                                           'license.activate': activate_mock}):
-            out = license.activate('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
+        with patch.dict(win_license.__salt__, {'license.info': info_mock,
+                                               'license.install': install_mock,
+                                               'license.activate': activate_mock}):
+            out = win_license.activate('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
             info_mock.assert_called_once_with()
             install_mock.assert_called_once_with('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
             assert not activate_mock.called
@@ -159,10 +161,10 @@ class LicenseTestCase(TestCase):
         info_mock = MagicMock(return_value=info)
         install_mock = MagicMock()
         activate_mock = MagicMock(return_value='Failed to activate')
-        with patch.dict(license.__salt__, {'license.info': info_mock,
-                                           'license.install': install_mock,
-                                           'license.activate': activate_mock}):
-            out = license.activate('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
+        with patch.dict(win_license.__salt__, {'license.info': info_mock,
+                                               'license.install': install_mock,
+                                               'license.activate': activate_mock}):
+            out = win_license.activate('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
             info_mock.assert_called_once_with()
             assert not install_mock.called
             activate_mock.assert_called_once_with()

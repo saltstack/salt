@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -17,22 +18,19 @@ from tests.support.mock import (
 import os
 
 # Import Salt Libs
-from salt.modules import daemontools
+import salt.modules.daemontools as daemontools
 from salt.exceptions import CommandExecutionError
 
 
-# Globals
-daemontools.__grains__ = {}
-daemontools.__salt__ = {}
-daemontools.__context__ = {}
-daemontools.__opts__ = {}
-
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DaemontoolsTestCase(TestCase):
+class DaemontoolsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.daemontools
     '''
+
+    def setup_loader_modules(self):
+        return {daemontools: {}}
+
     def test_start(self):
         '''
         Test for Starts service via daemontools
@@ -91,17 +89,17 @@ class DaemontoolsTestCase(TestCase):
         with patch.object(daemontools, 'restart', mock):
             self.assertEqual(daemontools.restart('name'), None)
 
-    @patch('re.search', MagicMock(return_value=1))
     def test_status(self):
         '''
         Test for Return the status for a service via
         daemontools, return pid if running
         '''
-        mock = MagicMock(return_value='')
-        with patch.object(daemontools, '_service_path', mock):
-            mock = MagicMock(return_value='name')
-            with patch.dict(daemontools.__salt__, {'cmd.run_stdout': mock}):
-                self.assertEqual(daemontools.status('name'), '')
+        with patch('re.search', MagicMock(return_value=1)):
+            mock = MagicMock(return_value='')
+            with patch.object(daemontools, '_service_path', mock):
+                mock = MagicMock(return_value='name')
+                with patch.dict(daemontools.__salt__, {'cmd.run_stdout': mock}):
+                    self.assertEqual(daemontools.status('name'), '')
 
     def test_available(self):
         '''
@@ -126,7 +124,7 @@ class DaemontoolsTestCase(TestCase):
         '''
         self.assertRaises(CommandExecutionError, daemontools.get_all)
 
-        daemontools.SERVICE_DIR = 'A'
-        mock = MagicMock(return_value='A')
-        with patch.object(os, 'listdir', mock):
-            self.assertEqual(daemontools.get_all(), ['A'])
+        with patch.object(daemontools, 'SERVICE_DIR', 'A'):
+            mock = MagicMock(return_value='A')
+            with patch.object(os, 'listdir', mock):
+                self.assertEqual(daemontools.get_all(), ['A'])

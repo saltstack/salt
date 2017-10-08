@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,7 +17,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import win_service
+import salt.modules.win_service as win_service
 
 # Import 3rd Party Libs
 try:
@@ -25,14 +26,15 @@ try:
 except ImportError:
     WINAPI = False
 
-win_service.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinServiceTestCase(TestCase):
+class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.win_service
     '''
+    def setup_loader_modules(self):
+        return {win_service: {}}
+
     def test_get_enabled(self):
         '''
             Test to return the enabled services
@@ -141,14 +143,14 @@ class WinServiceTestCase(TestCase):
                                            {'Status': 'Stop Pending'},
                                            {'Status': 'Stopped'}])
 
-        with patch.object(win_service, 'status', mock_false):
+        with patch.dict(win_service.__salt__, {'cmd.run': MagicMock(return_value="service was stopped")}):
             self.assertTrue(win_service.stop('spongebob'))
 
-        with patch.object(win_service, 'status', mock_true):
-            with patch.object(win32serviceutil, 'StopService', mock_true):
-                with patch.object(win_service, 'info', mock_info):
-                    with patch.object(win_service, 'status', mock_false):
-                        self.assertTrue(win_service.stop('spongebob'))
+        with patch.dict(win_service.__salt__, {'cmd.run': MagicMock(return_value="service was stopped")}), \
+                patch.object(win32serviceutil, 'StopService', mock_true), \
+                patch.object(win_service, 'info', mock_info), \
+                patch.object(win_service, 'status', mock_false):
+            self.assertTrue(win_service.stop('spongebob'))
 
     def test_restart(self):
         '''
@@ -182,6 +184,7 @@ class WinServiceTestCase(TestCase):
         with patch.dict(win_service.__salt__, {'task.run': mock_true}):
             self.assertTrue(win_service.execute_salt_restart_task())
 
+    @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_status(self):
         '''
             Test to return the status for a service
@@ -211,7 +214,8 @@ class WinServiceTestCase(TestCase):
             Test to enable the named service to start at boot
         '''
         mock_modify = MagicMock(return_value=True)
-        mock_info = MagicMock(return_value={'StartType': 'Auto'})
+        mock_info = MagicMock(return_value={'StartType': 'Auto',
+                                            'StartTypeDelayed': False})
         with patch.object(win_service, 'modify', mock_modify):
             with patch.object(win_service, 'info', mock_info):
                 self.assertTrue(win_service.enable('spongebob'))

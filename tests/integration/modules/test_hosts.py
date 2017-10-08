@@ -8,15 +8,16 @@ import os
 import shutil
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.paths import FILES, TMP
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
-HFN = os.path.join(integration.TMP, 'hosts')
+HFN = os.path.join(TMP, 'hosts')
 
 
-class HostsModuleTest(integration.ModuleCase):
+class HostsModuleTest(ModuleCase):
     '''
     Test the hosts module
     '''
@@ -27,7 +28,7 @@ class HostsModuleTest(integration.ModuleCase):
         '''
         Clean out the hosts file
         '''
-        shutil.copyfile(os.path.join(integration.FILES, 'hosts'), HFN)
+        shutil.copyfile(os.path.join(FILES, 'hosts'), HFN)
 
     def __clear_hosts(self):
         '''
@@ -166,7 +167,7 @@ class HostsModuleTest(integration.ModuleCase):
         # use an empty one so we can prove the syntax of the entries
         # being added by the hosts module
         self.__clear_hosts()
-        with salt.utils.fopen(HFN, 'w'):
+        with salt.utils.files.fopen(HFN, 'w'):
             pass
 
         self.assertTrue(
@@ -205,7 +206,7 @@ class HostsModuleTest(integration.ModuleCase):
         )
 
         # now read the lines and ensure they're formatted correctly
-        with salt.utils.fopen(HFN, 'r') as fp_:
+        with salt.utils.files.fopen(HFN, 'r') as fp_:
             lines = fp_.read().splitlines()
         self.assertEqual(lines, [
             '192.168.1.3\t\thost3.fqdn.com',

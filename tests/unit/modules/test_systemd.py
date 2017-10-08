@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-from salt.exceptions import CommandExecutionError
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -18,12 +18,9 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import systemd
+import salt.modules.systemd as systemd
 import salt.utils.systemd
-
-# Globals
-systemd.__salt__ = {}
-systemd.__context__ = {}
+from salt.exceptions import CommandExecutionError
 
 _SYSTEMCTL_STATUS = {
     'sshd.service': {
@@ -67,10 +64,13 @@ timer3.timer                               static'''
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SystemdTestCase(TestCase):
+class SystemdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.modules.systemd
     '''
+    def setup_loader_modules(self):
+        return {systemd: {}}
+
     def test_systemctl_reload(self):
         '''
             Test to Reloads systemctl
@@ -86,7 +86,7 @@ class SystemdTestCase(TestCase):
              'pid': 54321},
         ])
         with patch.dict(systemd.__salt__, {'cmd.run_all': mock}):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 CommandExecutionError,
                 'Problem performing systemctl daemon-reload: Who knows why?',
                 systemd.systemctl_reload
@@ -165,8 +165,8 @@ class SystemdTestCase(TestCase):
         '''
         listdir_mock = MagicMock(side_effect=[
             ['foo.service', 'multi-user.target.wants', 'mytimer.timer'],
+            [],
             ['foo.service', 'multi-user.target.wants', 'bar.service'],
-            ['mysql', 'nginx', 'README'],
             ['mysql', 'nginx', 'README']
         ])
         access_mock = MagicMock(
@@ -262,11 +262,14 @@ class SystemdTestCase(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SystemdScopeTestCase(TestCase):
+class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test case for salt.modules.systemd, for functions which use systemd
         scopes
     '''
+    def setup_loader_modules(self):
+        return {systemd: {}}
+
     unit_name = 'foo'
     mock_none = MagicMock(return_value=None)
     mock_success = MagicMock(return_value=0)
@@ -304,8 +307,8 @@ class SystemdScopeTestCase(TestCase):
 
         with patch.object(systemd, '_check_for_unit_changes', self.mock_none):
             with patch.object(systemd, '_unit_file_changed', self.mock_none):
-                with patch.object(systemd, '_get_sysv_services', self.mock_empty_list):
-                    with patch.object(systemd, 'unmask', self.mock_true):
+                with patch.object(systemd, '_check_unmask', self.mock_none):
+                    with patch.object(systemd, '_get_sysv_services', self.mock_empty_list):
 
                         # Has scopes available
                         with patch.object(salt.utils.systemd, 'has_scope', self.mock_true):
@@ -314,10 +317,10 @@ class SystemdScopeTestCase(TestCase):
                             with patch.dict(
                                     systemd.__salt__,
                                     {'config.get': self.mock_true,
-                                     'cmd.retcode': self.mock_success}):
+                                     'cmd.run_all': self.mock_run_all_success}):
                                 ret = func(self.unit_name, no_block=no_block)
                                 self.assertTrue(ret)
-                                self.mock_success.assert_called_with(
+                                self.mock_run_all_success.assert_called_with(
                                     scope_prefix + systemctl_command,
                                     **assert_kwargs)
 
@@ -325,10 +328,17 @@ class SystemdScopeTestCase(TestCase):
                             with patch.dict(
                                     systemd.__salt__,
                                     {'config.get': self.mock_true,
-                                     'cmd.retcode': self.mock_failure}):
-                                ret = func(self.unit_name, no_block=no_block)
-                                self.assertFalse(ret)
-                                self.mock_failure.assert_called_with(
+                                     'cmd.run_all': self.mock_run_all_failure}):
+                                if action in ('stop', 'disable'):
+                                    ret = func(self.unit_name, no_block=no_block)
+                                    self.assertFalse(ret)
+                                else:
+                                    self.assertRaises(
+                                        CommandExecutionError,
+                                        func,
+                                        self.unit_name,
+                                        no_block=no_block)
+                                self.mock_run_all_failure.assert_called_with(
                                     scope_prefix + systemctl_command,
                                     **assert_kwargs)
 
@@ -336,10 +346,10 @@ class SystemdScopeTestCase(TestCase):
                             with patch.dict(
                                     systemd.__salt__,
                                     {'config.get': self.mock_false,
-                                     'cmd.retcode': self.mock_success}):
+                                     'cmd.run_all': self.mock_run_all_success}):
                                 ret = func(self.unit_name, no_block=no_block)
                                 self.assertTrue(ret)
-                                self.mock_success.assert_called_with(
+                                self.mock_run_all_success.assert_called_with(
                                     systemctl_command,
                                     **assert_kwargs)
 
@@ -347,10 +357,17 @@ class SystemdScopeTestCase(TestCase):
                             with patch.dict(
                                     systemd.__salt__,
                                     {'config.get': self.mock_false,
-                                     'cmd.retcode': self.mock_failure}):
-                                ret = func(self.unit_name, no_block=no_block)
-                                self.assertFalse(ret)
-                                self.mock_failure.assert_called_with(
+                                     'cmd.run_all': self.mock_run_all_failure}):
+                                if action in ('stop', 'disable'):
+                                    ret = func(self.unit_name, no_block=no_block)
+                                    self.assertFalse(ret)
+                                else:
+                                    self.assertRaises(
+                                        CommandExecutionError,
+                                        func,
+                                        self.unit_name,
+                                        no_block=no_block)
+                                self.mock_run_all_failure.assert_called_with(
                                     systemctl_command,
                                     **assert_kwargs)
 
@@ -367,10 +384,10 @@ class SystemdScopeTestCase(TestCase):
                                 with patch.dict(
                                         systemd.__salt__,
                                         {'config.get': scope_mock,
-                                         'cmd.retcode': self.mock_success}):
+                                         'cmd.run_all': self.mock_run_all_success}):
                                     ret = func(self.unit_name, no_block=no_block)
                                     self.assertTrue(ret)
-                                    self.mock_success.assert_called_with(
+                                    self.mock_run_all_success.assert_called_with(
                                         systemctl_command,
                                         **assert_kwargs)
 
@@ -378,10 +395,18 @@ class SystemdScopeTestCase(TestCase):
                                 with patch.dict(
                                         systemd.__salt__,
                                         {'config.get': scope_mock,
-                                         'cmd.retcode': self.mock_failure}):
-                                    ret = func(self.unit_name, no_block=no_block)
-                                    self.assertFalse(ret)
-                                    self.mock_failure.assert_called_with(
+                                         'cmd.run_all': self.mock_run_all_failure}):
+                                    if action in ('stop', 'disable'):
+                                        ret = func(self.unit_name,
+                                                   no_block=no_block)
+                                        self.assertFalse(ret)
+                                    else:
+                                        self.assertRaises(
+                                            CommandExecutionError,
+                                            func,
+                                            self.unit_name,
+                                            no_block=no_block)
+                                    self.mock_run_all_failure.assert_called_with(
                                         systemctl_command,
                                         **assert_kwargs)
 
@@ -393,6 +418,8 @@ class SystemdScopeTestCase(TestCase):
         # systemd execution module, so don't provide a fallback value for the
         # call to getattr() here.
         func = getattr(systemd, action)
+        # Remove trailing _ in "unmask_"
+        action = action.rstrip('_').replace('_', '-')
         systemctl_command = ['systemctl', action]
         if runtime:
             systemctl_command.append('--runtime')
@@ -412,7 +439,7 @@ class SystemdScopeTestCase(TestCase):
                 with patch.dict(systemd.__salt__, {'cmd.run_all': mock_not_run}):
                     with patch.object(systemd, 'masked', self.mock_false):
                         # Test not masked (should take no action and return True)
-                        self.assertTrue(systemd.unmask(self.unit_name))
+                        self.assertTrue(systemd.unmask_(self.unit_name))
                         # Also should not have called cmd.run_all
                         self.assertTrue(mock_not_run.call_count == 0)
 
@@ -540,7 +567,7 @@ class SystemdScopeTestCase(TestCase):
         self._mask_unmask('mask', True)
 
     def test_unmask(self):
-        self._mask_unmask('unmask', False)
+        self._mask_unmask('unmask_', False)
 
     def test_unmask_runtime(self):
-        self._mask_unmask('unmask', True)
+        self._mask_unmask('unmask_', True)

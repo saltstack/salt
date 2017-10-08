@@ -4,19 +4,21 @@
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.modules import mac_keychain as keychain
+import salt.modules.mac_keychain as keychain
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch
 )
 
-keychain.__salt__ = {}
 
+class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
-class KeychainTestCase(TestCase):
+    def setup_loader_modules(self):
+        return {keychain: {}}
 
     def test_install_cert(self):
         '''
@@ -28,13 +30,13 @@ class KeychainTestCase(TestCase):
             mock.assert_called_once_with('security import /path/to/cert.p12 -P passw0rd '
                                          '-k /Library/Keychains/System.keychain')
 
-    @patch('salt.modules.mac_keychain.unlock_keychain')
-    def test_install_cert_extras(self, unlock_mock):
+    def test_install_cert_extras(self):
         '''
             Test installing a certificate into the macOS keychain with extras
         '''
         mock = MagicMock()
-        with patch.dict(keychain.__salt__, {'cmd.run': mock}):
+        with patch.dict(keychain.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.mac_keychain.unlock_keychain') as unlock_mock:
             keychain.install('/path/to/cert.p12', 'passw0rd', '/path/to/chain', allow_any=True,
                              keychain_password='passw0rd1')
             unlock_mock.assert_called_once_with('/path/to/chain', 'passw0rd1')

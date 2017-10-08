@@ -12,8 +12,11 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 import salt.utils.files
 import salt.utils.itertools
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.url
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -30,7 +33,7 @@ def __virtual__():
     '''
     Only load if git exists on the system
     '''
-    if salt.utils.which('git') is None:
+    if salt.utils.path.which('git') is None:
         return (False,
                 'The git execution module cannot be loaded: git unavailable.')
     else:
@@ -64,10 +67,10 @@ def _config_getter(get_opt,
     Common code for config.get_* functions, builds and runs the git CLI command
     and returns the result dict for the calling function to parse.
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     global_ = kwargs.pop('global', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if cwd is None:
         if not global_:
@@ -133,7 +136,7 @@ def _format_opts(opts):
         if not isinstance(opts, six.string_types):
             opts = [str(opts)]
         else:
-            opts = salt.utils.shlex_split(opts)
+            opts = salt.utils.args.shlex_split(opts)
     try:
         if opts[-1] == '--':
             # Strip the '--' if it was passed at the end of the opts string,
@@ -144,6 +147,21 @@ def _format_opts(opts):
     except IndexError:
         pass
     return opts
+
+
+def _format_git_opts(opts):
+    '''
+    Do a version check and make sure that the installed version of git can
+    support git -c
+    '''
+    if opts:
+        version_ = version(versioninfo=False)
+        if _LooseVersion(version_) < _LooseVersion('1.7.2'):
+            raise SaltInvocationError(
+                'git_opts is only supported for git versions >= 1.7.2 '
+                '(detected: {0})'.format(version_)
+            )
+    return _format_opts(opts)
 
 
 def _git_run(command, cwd=None, user=None, password=None, identity=None,
@@ -170,15 +188,24 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
             identity = [identity]
 
         # try each of the identities, independently
+        tmp_identity_file = None
         for id_file in identity:
             if 'salt://' in id_file:
-                _id_file = id_file
-                id_file = __salt__['cp.cache_file'](id_file, saltenv)
+                with salt.utils.files.set_umask(0o077):
+                    tmp_identity_file = salt.utils.mkstemp()
+                    _id_file = id_file
+                    id_file = __salt__['cp.get_file'](id_file,
+                                                      tmp_identity_file,
+                                                      saltenv)
                 if not id_file:
                     log.error('identity {0} does not exist.'.format(_id_file))
+                    __salt__['file.remove'](tmp_identity_file)
                     continue
                 else:
-                    __salt__['file.set_mode'](id_file, '0600')
+                    if user:
+                        os.chown(id_file,
+                                 __salt__['file.user_to_uid'](user),
+                                 -1)
             else:
                 if not __salt__['file.file_exists'](id_file):
                     missing_keys.append(id_file)
@@ -195,7 +222,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                 salt.utils.templates.TEMPLATE_DIRNAME,
                 'git/ssh-id-wrapper'
             )
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 for suffix in ('', ' (x86)'):
                     ssh_exe = (
                         'C:\\Program Files{0}\\Git\\bin\\ssh.exe'
@@ -246,8 +273,13 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
                     redirect_stderr=redirect_stderr,
                     **kwargs)
             finally:
-                if not salt.utils.is_windows() and 'GIT_SSH' in env:
+                if not salt.utils.platform.is_windows() and 'GIT_SSH' in env:
                     os.remove(env['GIT_SSH'])
+
+                # Cleanup the temporary identity file
+                if tmp_identity_file and os.path.exists(tmp_identity_file):
+                    log.debug('Removing identity file {0}'.format(tmp_identity_file))
+                    __salt__['file.remove'](tmp_identity_file)
 
             # If the command was successful, no need to try additional IDs
             if result['retcode'] == 0:
@@ -384,7 +416,10 @@ def add(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -415,7 +450,7 @@ def add(cwd,
     cwd = _expand_path(cwd, user)
     if not isinstance(filename, six.string_types):
         filename = str(filename)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.extend(['add', '--verbose'])
     command.extend(
         [x for x in _format_opts(opts) if x not in ('-v', '--verbose')]
@@ -506,7 +541,10 @@ def archive(cwd,
         ``archive`` subcommand), in a single string. This is useful for passing
         ``-c`` to run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -539,12 +577,12 @@ def archive(cwd,
     # allows us to accept 'format' as an argument to this function without
     # shadowing the format() global, while also not allowing unwanted arguments
     # to be passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     format_ = kwargs.pop('format', None)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('archive')
     # If prefix was set to '' then we skip adding the --prefix option
     if prefix != '':
@@ -608,7 +646,10 @@ def branch(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -643,7 +684,7 @@ def branch(cwd,
         salt myminion git.branch /path/to/repo newbranch opts='-m oldbranch'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('branch')
     command.extend(_format_opts(opts))
     if name is not None:
@@ -684,7 +725,10 @@ def checkout(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     rev
         The remote branch or revision to checkout.
@@ -728,7 +772,7 @@ def checkout(cwd,
         salt myminion git.checkout /path/to/repo opts='-b newbranch'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('checkout')
     if force:
         command.append('--force')
@@ -795,7 +839,10 @@ def clone(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -872,7 +919,7 @@ def clone(cwd,
     except ValueError as exc:
         raise SaltInvocationError(exc.__str__())
 
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('clone')
     command.extend(_format_opts(opts))
     command.extend(['--', url])
@@ -891,7 +938,7 @@ def clone(cwd,
         # https://github.com/saltstack/salt/issues/15519#issuecomment-128531310
         # On Windows, just fall back to None (runs git clone command using the
         # home directory as the cwd).
-        clone_cwd = '/tmp' if not salt.utils.is_windows() else None
+        clone_cwd = '/tmp' if not salt.utils.platform.is_windows() else None
     _git_run(command,
              cwd=clone_cwd,
              user=user,
@@ -936,7 +983,10 @@ def commit(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -976,7 +1026,7 @@ def commit(cwd,
         salt myminion git.commit /path/to/repo 'The commit message' filename=foo/bar.py
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.extend(['commit', '-m', message])
     command.extend(_format_opts(opts))
     if filename:
@@ -1234,11 +1284,11 @@ def config_set(key,
         salt myminion git.config_set user.email me@example.com cwd=/path/to/repo
         salt myminion git.config_set user.email foo@bar.com global=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     add_ = kwargs.pop('add', False)
     global_ = kwargs.pop('global', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if cwd is None:
         if not global_:
@@ -1361,11 +1411,11 @@ def config_unset(key,
         salt myminion git.config_unset /path/to/repo foo.bar
         salt myminion git.config_unset /path/to/repo foo.bar all=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     all_ = kwargs.pop('all', False)
     global_ = kwargs.pop('global', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if cwd is None:
         if not global_:
@@ -1563,7 +1613,10 @@ def diff(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -1625,7 +1678,7 @@ def diff(cwd,
             'The \'no_index\' and \'cached\' options cannot be used together'
         )
 
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('diff')
     command.extend(_format_opts(opts))
 
@@ -1731,7 +1784,10 @@ def fetch(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -1788,7 +1844,7 @@ def fetch(cwd,
         salt myminion git.fetch /path/to/repo identity=/root/.ssh/id_rsa
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('fetch')
     if force:
         command.append('--force')
@@ -1898,7 +1954,10 @@ def init(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -1931,7 +1990,7 @@ def init(cwd,
         salt myminion git.init /path/to/bare/repo.git bare=True
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('init')
     if bare:
         command.append('--bare')
@@ -1997,7 +2056,7 @@ def is_worktree(cwd,
         return False
     gitdir = os.path.join(toplevel, '.git')
     try:
-        with salt.utils.fopen(gitdir, 'r') as fp_:
+        with salt.utils.files.fopen(gitdir, 'r') as fp_:
             for line in fp_:
                 try:
                     label, path = line.split(None, 1)
@@ -2180,10 +2239,10 @@ def list_worktrees(cwd,
     if not _check_worktree_support(failhard=True):
         return {}
     cwd = _expand_path(cwd, user)
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     all_ = kwargs.pop('all', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if all_ and stale:
         raise CommandExecutionError(
@@ -2339,7 +2398,7 @@ def list_worktrees(cwd,
             Return contents of a single line file with EOF newline stripped
             '''
             try:
-                with salt.utils.fopen(path, 'r') as fp_:
+                with salt.utils.files.fopen(path, 'r') as fp_:
                     for line in fp_:
                         ret = line.strip()
                         # Ignore other lines, if they exist (which they
@@ -2464,7 +2523,10 @@ def ls_remote(cwd=None,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -2539,7 +2601,7 @@ def ls_remote(cwd=None,
                                                     https_only=True)
     except ValueError as exc:
         raise SaltInvocationError(exc.__str__())
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('ls-remote')
     command.extend(_format_opts(opts))
     if not isinstance(remote, six.string_types):
@@ -2599,7 +2661,10 @@ def merge(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -2631,12 +2696,12 @@ def merge(cwd,
         # .. or merge another rev
         salt myminion git.merge /path/to/repo rev=upstream/foo
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('merge')
     command.extend(_format_opts(opts))
     if rev:
@@ -2728,7 +2793,10 @@ def merge_base(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -2760,10 +2828,10 @@ def merge_base(cwd,
         salt myminion git.merge_base /path/to/repo refs=mybranch fork_point=upstream/master
     '''
     cwd = _expand_path(cwd, user)
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     all_ = kwargs.pop('all', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if all_ and (independent or is_ancestor or fork_point):
         raise SaltInvocationError(
@@ -2819,7 +2887,7 @@ def merge_base(cwd,
                               password=password,
                               ignore_retcode=ignore_retcode) == first_commit
 
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('merge-base')
     command.extend(_format_opts(opts))
     if all_:
@@ -2951,7 +3019,10 @@ def pull(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3006,7 +3077,7 @@ def pull(cwd,
         salt myminion git.pull /path/to/repo opts='--rebase origin master'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('pull')
     command.extend(_format_opts(opts))
     return _git_run(command,
@@ -3060,7 +3131,10 @@ def push(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3120,12 +3194,12 @@ def push(cwd,
         # Delete remote branch 'upstream/temp'
         salt myminion git.push /path/to/repo upstream :temp
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('push')
     command.extend(_format_opts(opts))
     if not isinstance(remote, six.string_types):
@@ -3171,7 +3245,10 @@ def rebase(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3204,12 +3281,12 @@ def rebase(cwd,
     opts = _format_opts(opts)
     if any(x for x in opts if x in ('-i', '--interactive')):
         raise SaltInvocationError('Interactive rebases are not supported')
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('rebase')
     command.extend(opts)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
-    command.extend(salt.utils.shlex_split(rev))
+    command.extend(salt.utils.args.shlex_split(rev))
     return _git_run(command,
                     cwd=cwd,
                     user=user,
@@ -3617,7 +3694,10 @@ def reset(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3648,7 +3728,7 @@ def reset(cwd,
         salt myminion git.reset /path/to/repo opts='--hard origin/master'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('reset')
     command.extend(_format_opts(opts))
     return _git_run(command,
@@ -3689,7 +3769,10 @@ def rev_parse(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3726,7 +3809,7 @@ def rev_parse(cwd,
         salt myminion git.rev_parse /path/to/repo opts='--is-bare-repository'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('rev-parse')
     command.extend(_format_opts(opts))
     if rev is not None:
@@ -3827,7 +3910,10 @@ def rm_(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3857,7 +3943,7 @@ def rm_(cwd,
         salt myminion git.rm /path/to/repo foo/baz opts='-r'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('rm')
     command.extend(_format_opts(opts))
     command.extend(['--', filename])
@@ -3893,7 +3979,10 @@ def stash(cwd,
         subcommand), in a single string. This is useful for passing ``-c`` to
         run git with temporary changes to the git configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -3928,7 +4017,7 @@ def stash(cwd,
         # No numeric actions but this will prevent a traceback when the git
         # command is run.
         action = str(action)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.extend(['stash', action])
     command.extend(_format_opts(opts))
     return _git_run(command,
@@ -4041,7 +4130,10 @@ def submodule(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     init : False
         If ``True``, ensures that new submodules are initialized
@@ -4114,10 +4206,10 @@ def submodule(cwd,
         # Unregister submodule (2015.8.0 and later)
         salt myminion git.submodule /path/to/repo/sub/repo deinit
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     init_ = kwargs.pop('init', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
     if init_:
@@ -4128,7 +4220,7 @@ def submodule(cwd,
         )
     if not isinstance(command, six.string_types):
         command = str(command)
-    cmd = ['git'] + _format_opts(git_opts)
+    cmd = ['git'] + _format_git_opts(git_opts)
     cmd.extend(['submodule', command])
     cmd.extend(_format_opts(opts))
     return _git_run(cmd,
@@ -4176,7 +4268,10 @@ def symbolic_ref(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -4209,7 +4304,7 @@ def symbolic_ref(cwd,
         salt myminion git.symbolic_ref /path/to/repo FOO opts='--delete'
     '''
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.append('symbolic-ref')
     opts = _format_opts(opts)
     if value is not None and any(x in opts for x in ('-d', '--delete')):
@@ -4344,7 +4439,10 @@ def worktree_add(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -4373,10 +4471,10 @@ def worktree_add(cwd,
         salt myminion git.worktree_add /path/to/repo/main ../hotfix branch=hotfix21 ref=v2.1.9.3
     '''
     _check_worktree_support()
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     branch_ = kwargs.pop('branch', None)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     cwd = _expand_path(cwd, user)
     if branch_ and detach:
@@ -4384,7 +4482,7 @@ def worktree_add(cwd,
             'Only one of \'branch\' and \'detach\' is allowed'
         )
 
-    command = ['git'] + _format_opts(git_opts)
+    command = ['git'] + _format_git_opts(git_opts)
     command.extend(['worktree', 'add'])
     if detach:
         if force:
@@ -4466,7 +4564,10 @@ def worktree_prune(cwd,
         passing ``-c`` to run git with temporary changes to the git
         configuration.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
+
+        .. note::
+            This is only supported in git 1.7.2 and newer.
 
     user
         User under which to run the git command. By default, the command is run
@@ -4498,8 +4599,8 @@ def worktree_prune(cwd,
     '''
     _check_worktree_support()
     cwd = _expand_path(cwd, user)
-    command = ['git'] + _format_opts(git_opts)
-    command.append(['worktree', 'prune'])
+    command = ['git'] + _format_git_opts(git_opts)
+    command.extend(['worktree', 'prune'])
     if dry_run:
         command.append('--dry-run')
     if verbose:
@@ -4555,7 +4656,7 @@ def worktree_rm(cwd, user=None):
     elif not is_worktree(cwd):
         raise CommandExecutionError(cwd + ' is not a git worktree')
     try:
-        salt.utils.rm_rf(cwd)
+        salt.utils.files.rm_rf(cwd)
     except Exception as exc:
         raise CommandExecutionError(
             'Unable to remove {0}: {1}'.format(cwd, exc)

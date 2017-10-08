@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -13,30 +14,30 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-from salt.renderers import gpg
+import salt.renderers.gpg as gpg
 from salt.exceptions import SaltRenderError
-
-gpg.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GPGTestCase(TestCase):
+class GPGTestCase(TestCase, LoaderModuleMockMixin):
     '''
     unit test GPG renderer
     '''
+    def setup_loader_modules(self):
+        return {gpg: {}}
+
     def test__get_gpg_exec(self):
         '''
         test _get_gpg_exec
         '''
         gpg_exec = '/bin/gpg'
 
-        with patch('salt.utils.which', MagicMock(return_value=gpg_exec)):
+        with patch('salt.utils.path.which', MagicMock(return_value=gpg_exec)):
             self.assertEqual(gpg._get_gpg_exec(), gpg_exec)
 
-        with patch('salt.utils.which', MagicMock(return_value=False)):
+        with patch('salt.utils.path.which', MagicMock(return_value=False)):
             self.assertRaises(SaltRenderError, gpg._get_gpg_exec)
 
-    @patch('salt.utils.which', MagicMock())
     def test__decrypt_ciphertext(self):
         '''
         test _decrypt_ciphertext
@@ -53,7 +54,8 @@ class GPGTestCase(TestCase):
             def communicate(self, *args, **kwargs):
                 return [None, 'decrypt error']
 
-        with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
+        with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)), \
+                patch('salt.utils.path.which', MagicMock()):
             with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGDecrypt())):
                 self.assertEqual(gpg._decrypt_ciphertext(crypted), secret)
             with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGNotDecrypt())):

@@ -4,27 +4,44 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import textwrap
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    patch)
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt Libs
-from salt.states import boto_sqs
-
-boto_sqs.__salt__ = {}
-boto_sqs.__opts__ = {}
+import salt.config
+import salt.loader
+import salt.states.boto_sqs as boto_sqs
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoSqsTestCase(TestCase):
+class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_sqs
     '''
+    def setup_loader_modules(self):
+        utils = salt.loader.utils(
+            self.opts,
+            whitelist=['boto3', 'yamldumper'],
+            context={}
+        )
+        return {
+            boto_sqs: {
+                '__utils__': utils,
+            }
+        }
+
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.DEFAULT_MINION_OPTS
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
+
     # 'present' function tests: 1
 
     def test_present(self):
@@ -32,37 +49,57 @@ class BotoSqsTestCase(TestCase):
         Test to ensure the SQS queue exists.
         '''
         name = 'mysqs'
-        attributes = {'ReceiveMessageWaitTimeSeconds': 20}
+        attributes = {'DelaySeconds': 20}
+        base_ret = {'name': name, 'changes': {}}
 
-        ret = {'name': name,
-               'result': False,
-               'changes': {},
-               'comment': ''}
-
-        mock = MagicMock(side_effect=[False, False, True, True])
-        mock_bool = MagicMock(return_value=False)
-        mock_attr = MagicMock(return_value={})
+        mock = MagicMock(
+            side_effect=[{'result': b} for b in [False, False, True, True]],
+        )
+        mock_bool = MagicMock(return_value={'error': 'create error'})
+        mock_attr = MagicMock(return_value={'result': {}})
         with patch.dict(boto_sqs.__salt__,
                         {'boto_sqs.exists': mock,
                          'boto_sqs.create': mock_bool,
                          'boto_sqs.get_attributes': mock_attr}):
             with patch.dict(boto_sqs.__opts__, {'test': False}):
-                comt = ('Failed to create {0} AWS queue'.format(name))
-                ret.update({'comment': comt})
+                comt = ['Failed to create SQS queue {0}: create error'.format(
+                    name,
+                )]
+                ret = base_ret.copy()
+                ret.update({'result': False, 'comment': comt})
                 self.assertDictEqual(boto_sqs.present(name), ret)
 
             with patch.dict(boto_sqs.__opts__, {'test': True}):
-                comt = ('AWS SQS queue {0} is set to be created.'.format(name))
-                ret.update({'comment': comt, 'result': None})
+                comt = ['SQS queue {0} is set to be created.'.format(name)]
+                ret = base_ret.copy()
+                ret.update({
+                    'result': None,
+                    'comment': comt,
+                    'pchanges': {'old': None, 'new': 'mysqs'},
+                })
                 self.assertDictEqual(boto_sqs.present(name), ret)
-
-                comt = ('Attribute(s) ReceiveMessageWaitTimeSeconds'
-                        ' to be set on mysqs.')
-                ret.update({'comment': comt})
+                diff = textwrap.dedent('''\
+                    --- 
+                    +++ 
+                    @@ -1 +1 @@
+                    -{}
+                    +DelaySeconds: 20
+                ''')
+                comt = [
+                    'SQS queue mysqs present.',
+                    'Attribute(s) DelaySeconds set to be updated:\n{0}'.format(
+                        diff,
+                    ),
+                ]
+                ret.update({
+                    'comment': comt,
+                    'pchanges': {'attributes': {'diff': diff}},
+                })
                 self.assertDictEqual(boto_sqs.present(name, attributes), ret)
 
-            comt = ('mysqs present. Attributes set.')
-            ret.update({'comment': comt, 'result': True})
+            comt = ['SQS queue mysqs present.']
+            ret = base_ret.copy()
+            ret.update({'result': True, 'comment': comt})
             self.assertDictEqual(boto_sqs.present(name), ret)
 
     # 'absent' function tests: 1
@@ -72,20 +109,22 @@ class BotoSqsTestCase(TestCase):
         Test to ensure the named sqs queue is deleted.
         '''
         name = 'test.example.com.'
+        base_ret = {'name': name, 'changes': {}}
 
-        ret = {'name': name,
-               'result': True,
-               'changes': {},
-               'comment': ''}
-
-        mock = MagicMock(side_effect=[False, True])
+        mock = MagicMock(side_effect=[{'result': False}, {'result': True}])
         with patch.dict(boto_sqs.__salt__,
                         {'boto_sqs.exists': mock}):
-            comt = ('{0} does not exist in None.'.format(name))
-            ret.update({'comment': comt})
+            comt = ('SQS queue {0} does not exist in None.'.format(name))
+            ret = base_ret.copy()
+            ret.update({'result': True, 'comment': comt})
             self.assertDictEqual(boto_sqs.absent(name), ret)
 
             with patch.dict(boto_sqs.__opts__, {'test': True}):
-                comt = ('AWS SQS queue {0} is set to be removed.'.format(name))
-                ret.update({'comment': comt, 'result': None})
+                comt = ('SQS queue {0} is set to be removed.'.format(name))
+                ret = base_ret.copy()
+                ret.update({
+                    'result': None,
+                    'comment': comt,
+                    'pchanges': {'old': name, 'new': None},
+                })
                 self.assertDictEqual(boto_sqs.absent(name), ret)

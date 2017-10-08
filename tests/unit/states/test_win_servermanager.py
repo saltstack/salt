@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import win_servermanager
-
-# Globals
-win_servermanager.__salt__ = {}
-win_servermanager.__opts__ = {}
+import salt.states.win_servermanager as win_servermanager
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinServermanagerTestCase(TestCase):
+class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the win_servermanager state
     '''
+    def setup_loader_modules(self):
+        return {win_servermanager: {}}
+
     def test_installed(self):
         '''
             Test to install the windows feature
@@ -40,15 +40,26 @@ class WinServermanagerTestCase(TestCase):
                           'squidward': 'patrick'}])
         mock_install = MagicMock(
             return_value={'Success': True,
+                          'Restarted': False,
                           'RestartNeeded': False,
-                          'ExitCode': 1234})
+                          'ExitCode': 1234,
+                          'Features': {
+                              'squidward': {
+                                  'DisplayName': 'Squidward',
+                                  'Message': '',
+                                  'RestartNeeded': True,
+                                  'SkipReason': 0,
+                                  'Success': True
+                              }
+                          }})
         with patch.dict(win_servermanager.__salt__,
                         {"win_servermanager.list_installed": mock_list,
                          "win_servermanager.install": mock_install}):
             ret = {'name': 'spongebob',
                    'changes': {},
                    'result': True,
-                   'comment': 'The feature spongebob is already installed'}
+                   'comment': 'The following features are already installed:\n'
+                              '- spongebob'}
             self.assertDictEqual(win_servermanager.installed('spongebob'), ret)
 
             with patch.dict(win_servermanager.__opts__, {"test": True}):
@@ -56,21 +67,16 @@ class WinServermanagerTestCase(TestCase):
                        'result': None,
                        'comment': '',
                        'changes': {
-                           'feature': 'spongebob will be installed '
-                                      'recurse=False'}}
+                           'spongebob': 'Will be installed recurse=False'}}
                 self.assertDictEqual(
                     win_servermanager.installed('spongebob'), ret)
 
             with patch.dict(win_servermanager.__opts__, {"test": False}):
                 ret = {'name': 'squidward',
                        'result': True,
-                       'comment': 'Installed squidward',
+                       'comment': 'Installed the following:\n- squidward',
                        'changes': {
-                           'Success': True,
-                           'RestartNeeded': False,
-                           'ExitCode': 1234,
-                           'feature': {'squidward': {'new': 'patrick',
-                                                     'old': ''}}}}
+                           'squidward': {'new': 'patrick', 'old': ''}}}
                 self.assertDictEqual(
                     win_servermanager.installed('squidward'), ret)
 
@@ -87,14 +93,25 @@ class WinServermanagerTestCase(TestCase):
         mock_remove = MagicMock(
             return_value={'Success': True,
                           'RestartNeeded': False,
-                          'ExitCode': 1234})
+                          'Restarted': False,
+                          'ExitCode': 1234,
+                          'Features': {
+                              'squidward': {
+                                  'DisplayName': 'Squidward',
+                                  'Message': '',
+                                  'RestartNeeded': True,
+                                  'SkipReason': 0,
+                                  'Success': True
+                              }
+                          }})
         with patch.dict(win_servermanager.__salt__,
                         {"win_servermanager.list_installed": mock_list,
                          "win_servermanager.remove": mock_remove}):
             ret = {'name': 'squidward',
                    'changes': {},
                    'result': True,
-                   'comment': 'The feature squidward is not installed'}
+                   'comment': 'The following features are not installed:\n'
+                              '- squidward'}
             self.assertDictEqual(
                 win_servermanager.removed('squidward'), ret)
 
@@ -102,19 +119,15 @@ class WinServermanagerTestCase(TestCase):
                 ret = {'name': 'squidward',
                        'result': None,
                        'comment': '',
-                       'changes': {'feature': 'squidward will be removed'}}
+                       'changes': {'squidward': 'Will be removed'}}
                 self.assertDictEqual(
                     win_servermanager.removed('squidward'), ret)
 
             with patch.dict(win_servermanager.__opts__, {"test": False}):
                 ret = {'name': 'squidward',
                        'result': True,
-                       'comment': 'Removed squidward',
+                       'comment': 'Removed the following:\n- squidward',
                        'changes': {
-                           'Success': True,
-                           'RestartNeeded': False,
-                           'ExitCode': 1234,
-                           'feature': {'squidward': {'new': '',
-                                                     'old': 'patrick'}}}}
+                           'squidward': {'new': '', 'old': 'patrick'}}}
                 self.assertDictEqual(
                     win_servermanager.removed('squidward'), ret)

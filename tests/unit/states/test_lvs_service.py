@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,17 +15,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import lvs_service
-
-lvs_service.__salt__ = {}
-lvs_service.__opts__ = {}
+import salt.states.lvs_service as lvs_service
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LvsServiceTestCase(TestCase):
+class LvsServiceTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.lvs_service
     '''
+    def setup_loader_modules(self):
+        return {lvs_service: {}}
+
     # 'present' function tests: 1
 
     def test_present(self):

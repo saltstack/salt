@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import keyboard
-
-# Globals
-keyboard.__salt__ = {}
-keyboard.__grains__ = {'os_family': ''}
+import salt.modules.keyboard as keyboard
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class KeyboardTestCase(TestCase):
+class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.keyboard
     '''
+    def setup_loader_modules(self):
+        return {keyboard: {}}
+
     # 'get_sys' function tests: 1
 
     def test_get_sys(self):
@@ -35,8 +35,9 @@ class KeyboardTestCase(TestCase):
         Test if it get current system keyboard setting
         '''
         mock = MagicMock(return_value='X11 Layout=us')
-        with patch.dict(keyboard.__salt__, {'cmd.run': mock}):
-            self.assertEqual(keyboard.get_sys(), 'us')
+        with patch.dict(keyboard.__grains__, {'os_family': 'RedHat'}):
+            with patch.dict(keyboard.__salt__, {'cmd.run': mock}):
+                self.assertEqual(keyboard.get_sys(), 'us')
 
     # 'set_sys' function tests: 1
 
@@ -45,8 +46,10 @@ class KeyboardTestCase(TestCase):
         Test if it set current system keyboard setting
         '''
         mock = MagicMock(return_value='us')
-        with patch.dict(keyboard.__salt__, {'cmd.run': mock}):
-            self.assertEqual(keyboard.set_sys('us'), 'us')
+        with patch.dict(keyboard.__grains__, {'os_family': 'RedHat'}):
+            with patch.dict(keyboard.__salt__, {'cmd.run': mock}):
+                with patch.dict(keyboard.__salt__, {'file.sed': MagicMock()}):
+                    self.assertEqual(keyboard.set_sys('us'), 'us')
 
     # 'get_x' function tests: 1
 

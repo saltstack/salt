@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -14,17 +15,17 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
-from salt.states import mongodb_user
-
-mongodb_user.__salt__ = {}
-mongodb_user.__opts__ = {'test': True}
+import salt.states.mongodb_user as mongodb_user
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MongodbUserTestCase(TestCase):
+class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.mongodb_user
     '''
+    def setup_loader_modules(self):
+        return {mongodb_user: {'__opts__': {'test': True}}}
+
     # 'present' function tests: 1
 
     def test_present(self):

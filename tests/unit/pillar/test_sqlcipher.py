@@ -8,7 +8,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
-from salt.pillar import sqlcipher
+import salt.pillar.sqlcipher as sqlcipher
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

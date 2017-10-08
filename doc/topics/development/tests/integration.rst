@@ -371,6 +371,7 @@ on a minion event bus.
 .. code-block:: python
 
     import tests.integration as integration
+    import salt.utils.event
 
     class TestEvent(integration.SaltEventAssertsMixin):
         '''
@@ -438,21 +439,23 @@ to test states:
     import shutil
 
     # Import Salt Testing libs
-    import tests.integration as integration
+    from tests.support.case import ModuleCase
+    from tests.support.paths import FILES, TMP
+    from tests.support.mixins import SaltReturnAssertsMixin
 
     # Import salt libs
-    import salt.utils
+    import salt.utils.files
 
-    HFILE = os.path.join(integration.TMP, 'hosts')
+    HFILE = os.path.join(TMP, 'hosts')
 
 
-    class HostTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+    class HostTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Validate the host state
         '''
 
         def setUp(self):
-            shutil.copyfile(os.path.join(integration.FILES, 'hosts'), HFILE)
+            shutil.copyfile(os.path.join(FILES, 'hosts'), HFILE)
             super(HostTest, self).setUp()
 
         def tearDown(self):
@@ -468,16 +471,16 @@ to test states:
             ip = '10.10.10.10'
             ret = self.run_state('host.present', name=name, ip=ip)
             self.assertSaltTrueReturn(ret)
-            with salt.utils.fopen(HFILE) as fp_:
+            with salt.utils.files.fopen(HFILE) as fp_:
                 output = fp_.read()
                 self.assertIn('{0}\t\t{1}'.format(ip, name), output)
 
-To access the integration files, a variable named ``integration.FILES``
-points to the ``tests/integration/files`` directory. This is where the referenced
+To access the integration files, a variable named ``FILES`` points to the 
+``tests/integration/files`` directory. This is where the referenced
 ``host.present`` sls file resides.
 
 In addition to the static files in the integration state tree, the location
-``integration.TMP`` can also be used to store temporary files that the test system
+``TMP`` can also be used to store temporary files that the test system
 will clean up when the execution finishes.
 
 
@@ -505,7 +508,7 @@ the test method:
 .. code-block:: python
 
     import tests.integration as integration
-    from tests.support.helpers import destructiveTest
+    from tests.support.helpers import destructiveTest, skip_if_not_root
 
     class DestructiveExampleModuleTest(integration.ModuleCase):
         '''
@@ -513,7 +516,7 @@ the test method:
         '''
 
         @destructiveTest
-        @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+        @skip_if_not_root
         def test_user_not_present(self):
             '''
             This is a DESTRUCTIVE TEST it creates a new user on the minion.
@@ -538,7 +541,7 @@ provider configuration file in the integration test file directory located at
 ``tests/integration/files/conf/cloud.*.d/``.
 
 The following is an example of the default profile configuration file for Digital
-Ocean, located at: ``tests/integration/files/conf/cloud.profiles.d/digital_ocean.conf``:
+Ocean, located at: ``tests/integration/files/conf/cloud.profiles.d/digitalocean.conf``:
 
 .. code-block:: yaml
 
@@ -554,12 +557,12 @@ be provided by the user by editing the provider configuration file before runnin
 tests.
 
 The following is an example of the default provider configuration file for Digital
-Ocean, located at: ``tests/integration/files/conf/cloud.providers.d/digital_ocean.conf``:
+Ocean, located at: ``tests/integration/files/conf/cloud.providers.d/digitalocean.conf``:
 
 .. code-block:: yaml
 
     digitalocean-config:
-      driver: digital_ocean
+      driver: digitalocean
       client_key: ''
       api_key: ''
       location: New York 1
@@ -570,7 +573,10 @@ contain valid information are also required in the test class's ``setUp`` functi
 
 .. code-block:: python
 
-    class LinodeTest(integration.ShellCase):
+    from tests.support.case import ShellCase
+    from tests.support.paths import FILES
+
+    class LinodeTest(ShellCase):
     '''
     Integration tests for the Linode cloud provider in Salt-Cloud
     '''
@@ -593,7 +599,7 @@ contain valid information are also required in the test class's ``setUp`` functi
             )
 
         # check if apikey and password are present
-        path = os.path.join(integration.FILES,
+        path = os.path.join(FILES,
                             'conf',
                             'cloud.providers.d',
                             provider + '.conf')

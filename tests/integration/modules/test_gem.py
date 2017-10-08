@@ -7,18 +7,21 @@ Integration tests for Ruby Gem module
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
 # Import salt libs
-import salt.utils
-import salt.utils.http
+import salt.utils.path
+
+# Import 3rd-party libs
+from tornado.httpclient import HTTPClient
 
 GEM = 'tidy'
 GEM_VER = '1.1.2'
-OLD_GEM = 'thor'
-OLD_VERSION = '0.17.0'
+OLD_GEM = 'brass'
+OLD_VERSION = '1.0.0'
+NEW_VERSION = '1.2.1'
 GEM_LIST = [GEM, OLD_GEM]
 
 
@@ -27,19 +30,21 @@ def check_status():
     Check the status of the rubygems source
     '''
     try:
-        ret = salt.utils.http.query('https://rubygems.org', status=True)
-    except Exception:
+        return HTTPClient().fetch('https://rubygems.org').code == 200
+    except Exception:  # pylint: disable=broad-except
         return False
-    return ret['status'] == 200
 
 
 @destructiveTest
-@skipIf(not salt.utils.which('gem'), 'Gem is not available')
-@skipIf(not check_status(), 'External source \'https://rubygems.org\' is not available')
-class GemModuleTest(integration.ModuleCase):
+@skipIf(not salt.utils.path.which('gem'), 'Gem is not available')
+class GemModuleTest(ModuleCase):
     '''
     Validate gem module
     '''
+
+    def setUp(self):
+        if check_status() is False:
+            self.skipTest('External resource \'https://rubygems.org\' is not available')
 
     def test_install_uninstall(self):
         '''
@@ -125,18 +130,18 @@ class GemModuleTest(integration.ModuleCase):
 
         self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
         gem_list = self.run_function('gem.list', [OLD_GEM])
-        self.assertEqual({'thor': ['0.17.0']}, gem_list)
+        self.assertEqual({OLD_GEM: [OLD_VERSION]}, gem_list)
 
         self.run_function('gem.update', [OLD_GEM])
         gem_list = self.run_function('gem.list', [OLD_GEM])
-        self.assertEqual({'thor': ['0.19.4', '0.17.0']}, gem_list)
+        self.assertEqual({OLD_GEM: [NEW_VERSION, OLD_VERSION]}, gem_list)
 
         self.run_function('gem.uninstall', [OLD_GEM])
         self.assertFalse(self.run_function('gem.list', [OLD_GEM]))
 
-    def test_udpate_system(self):
+    def test_update_system(self):
         '''
-        gem.udpate_system
+        gem.update_system
         '''
         ret = self.run_function('gem.update_system')
         self.assertTrue(ret)

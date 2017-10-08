@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import win_dns_client
-
-# Globals
-win_dns_client.__salt__ = {}
-win_dns_client.__opts__ = {}
+import salt.states.win_dns_client as win_dns_client
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinDnsClientTestCase(TestCase):
+class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the win_dns_client state
     '''
+    def setup_loader_modules(self):
+        return {win_dns_client: {}}
+
     def test_dns_exists(self):
         '''
             Test to configure the DNS server list in the specified interface
@@ -119,14 +119,14 @@ class WinDnsClientTestCase(TestCase):
         self.assertDictEqual(win_dns_client.primary_suffix('salt', updates='a'
                                                            ), ret)
 
-        mock = MagicMock(side_effect=['a', False, 'b', False])
-        with patch.dict(win_dns_client.__salt__, {'reg.read_key': mock}):
+        mock = MagicMock(side_effect=[{'vdata': 'a'}, {'vdata': False}, {'vdata': 'b'}, {'vdata': False}])
+        with patch.dict(win_dns_client.__salt__, {'reg.read_value': mock}):
             ret.update({'comment': 'No changes needed', 'result': True})
             self.assertDictEqual(win_dns_client.primary_suffix('salt', 'a'),
                                  ret)
 
             mock = MagicMock(return_value=True)
-            with patch.dict(win_dns_client.__salt__, {'reg.set_key': mock}):
+            with patch.dict(win_dns_client.__salt__, {'reg.set_value': mock}):
                 ret.update({'changes': {'new': {'suffix': 'a'},
                                         'old': {'suffix': 'b'}},
                             'comment': 'Updated primary DNS suffix (a)'})

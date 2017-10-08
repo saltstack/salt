@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,19 +17,18 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import ret
+import salt.modules.ret as ret
 import salt.loader
-
-# Globals
-ret.__opts__ = {}
-ret.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class RetTestCase(TestCase):
+class RetTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.ret
     '''
+    def setup_loader_modules(self):
+        return {ret: {}}
+
     # 'get_jid' function tests: 1
 
     def test_get_jid(self):

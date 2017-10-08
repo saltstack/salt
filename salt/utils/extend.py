@@ -29,7 +29,7 @@ from jinja2 import Template
 from salt.serializers.yaml import deserialize
 from salt.ext.six.moves import zip
 from salt.utils.odict import OrderedDict
-import salt.utils
+import salt.utils.files
 import salt.version
 
 log = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ def _get_template(path, option_key):
     :returns: Details about the template
     :rtype: ``tuple``
     '''
-    with salt.utils.fopen(path, "r") as template_f:
+    with salt.utils.files.fopen(path, 'r') as template_f:
         template = deserialize(template_f)
         info = (option_key, template.get('description', ''), template)
     return info
@@ -138,10 +138,10 @@ def _mergetreejinja(src, dst, context):
             if item != TEMPLATE_FILE_NAME:
                 d = Template(d).render(context)
                 log.info("Copying file {0} to {1}".format(s, d))
-                with salt.utils.fopen(s, 'r') as source_file:
+                with salt.utils.files.fopen(s, 'r') as source_file:
                     src_contents = source_file.read()
                     dest_contents = Template(src_contents).render(context)
-                with salt.utils.fopen(d, 'w') as dest_file:
+                with salt.utils.files.fopen(d, 'w') as dest_file:
                     dest_file.write(dest_contents)
 
 
@@ -227,7 +227,7 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     :param salt_dir: The targeted Salt source directory
     :type  salt_dir: ``str``
 
-    :param merge: Merge with salt directory, `False` to keep seperate, `True` to merge trees.
+    :param merge: Merge with salt directory, `False` to keep separate, `True` to merge trees.
     :type  merge: ``bool``
 
     :param temp_dir: The directory for generated code, if omitted, system temp will be used

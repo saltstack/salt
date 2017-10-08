@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +17,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.states import vbox_guest
-
-# Globals
-vbox_guest.__salt__ = {}
-vbox_guest.__opts__ = {}
+import salt.states.vbox_guest as vbox_guest
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class VboxGuestTestCase(TestCase):
+class VboxGuestTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the vbox_guest state
     '''
+    def setup_loader_modules(self):
+        return {vbox_guest: {}}
+
     def test_additions_installed(self):
         '''
             Test to ensure that the VirtualBox Guest Additions are installed

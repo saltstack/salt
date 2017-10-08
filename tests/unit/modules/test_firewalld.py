@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -15,21 +16,17 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import firewalld
-
-
-# Globals
-firewalld.__grains__ = {}
-firewalld.__salt__ = {}
-firewalld.__context__ = {}
-firewalld.__opts__ = {}
+import salt.modules.firewalld as firewalld
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class FirewalldTestCase(TestCase):
+class FirewalldTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.firewalld
     '''
+    def setup_loader_modules(self):
+        return {firewalld: {}}
+
     def test_version(self):
         '''
         Test for Return version from firewall-cmd

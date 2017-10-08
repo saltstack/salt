@@ -15,6 +15,7 @@ except ImportError:
 
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
@@ -25,46 +26,46 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import ddns
-
-# Globals
-ddns.__grains__ = {}
-ddns.__salt__ = {}
+import salt.modules.ddns as ddns
 
 
 @skipIf(HAS_DNS is False, 'dnspython libs not installed')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DDNSTestCase(TestCase):
+class DDNSTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.ddns module
     '''
-    @patch('salt.modules.ddns.update')
-    def test_add_host(self, ddns_update):
+
+    def setup_loader_modules(self):
+        return {ddns: {}}
+
+    def test_add_host(self):
         '''
         Test cases for Add, replace, or update the A
         and PTR (reverse) records for a host.
         '''
-        ddns_update.return_value = False
-        self.assertFalse(ddns.add_host(zone='A',
-                                       name='B',
-                                       ttl=1,
-                                       ip='172.27.0.0'))
+        with patch('salt.modules.ddns.update') as ddns_update:
+            ddns_update.return_value = False
+            self.assertFalse(ddns.add_host(zone='A',
+                                           name='B',
+                                           ttl=1,
+                                           ip='172.27.0.0'))
 
-        ddns_update.return_value = True
-        self.assertTrue(ddns.add_host(zone='A',
-                                      name='B',
-                                      ttl=1,
-                                      ip='172.27.0.0'))
+            ddns_update.return_value = True
+            self.assertTrue(ddns.add_host(zone='A',
+                                          name='B',
+                                          ttl=1,
+                                          ip='172.27.0.0'))
 
-    @patch('salt.modules.ddns.delete')
-    def test_delete_host(self, ddns_delete):
+    def test_delete_host(self):
         '''
         Tests for delete the forward and reverse records for a host.
         '''
-        ddns_delete.return_value = False
-        with patch.object(dns.query, 'udp') as mock:
-            mock.answer = [{'address': 'localhost'}]
-            self.assertFalse(ddns.delete_host(zone='A', name='B'))
+        with patch('salt.modules.ddns.delete') as ddns_delete:
+            ddns_delete.return_value = False
+            with patch.object(dns.query, 'udp') as mock:
+                mock.answer = [{'address': 'localhost'}]
+                self.assertFalse(ddns.delete_host(zone='A', name='B'))
 
     def test_update(self):
         '''
@@ -121,7 +122,7 @@ class DDNSTestCase(TestCase):
             return MockAnswer
 
         with patch.object(dns.query, 'udp', mock_udp_query()):
-            with patch('salt.utils.fopen', mock_open(read_data=file_data), create=True):
+            with patch('salt.utils.files.fopen', mock_open(read_data=file_data), create=True):
                 with patch.object(dns.tsigkeyring, 'from_text', return_value=True):
                     with patch.object(ddns, '_get_keyring', return_value=None):
                         with patch.object(ddns, '_config', return_value=None):

@@ -119,7 +119,7 @@ import yaml
 from yaml.nodes import MappingNode
 from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
-import salt.ext.six as six
+from salt.ext import six
 
 __all__ = ['deserialize', 'serialize', 'available']
 

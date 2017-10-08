@@ -74,7 +74,9 @@ class Roster(object):
             self.backends = backends
         if not backends:
             self.backends = ['flat']
-        self.rosters = salt.loader.roster(opts, runner=salt.loader.runner(self.opts))
+        utils = salt.loader.utils(self.opts)
+        runner = salt.loader.runner(self.opts, utils=utils)
+        self.rosters = salt.loader.roster(self.opts, runner=runner)
 
     def _gen_back(self):
         '''

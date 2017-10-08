@@ -5,15 +5,15 @@
 
 # Import python libs
 from __future__ import absolute_import
+import multiprocessing
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
+from tests.support.mixins import SaltClientTestCaseMixin
 
 # Import Salt libs
-import tests.integration as integration
-import multiprocessing
-from salt.cli import daemons
+import salt.cli.daemons as daemons
 
 
 class LoggerMock(object):
@@ -69,7 +69,7 @@ class LoggerMock(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
+class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
     '''
     Unit test for the daemons starter classes.
     '''

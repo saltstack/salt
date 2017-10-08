@@ -5,7 +5,7 @@
 The minionswarm script will start a group of salt minions with different ids
 on a single system to test scale capabilities
 '''
-
+# pylint: disable=resource-leakage
 # Import Python Libs
 from __future__ import absolute_import, print_function
 import os
@@ -26,7 +26,7 @@ import salt
 
 # Import third party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 

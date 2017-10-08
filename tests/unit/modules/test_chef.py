@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -15,35 +16,34 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import chef
-
-# Globals
-chef.__grains__ = {}
-chef.__salt__ = {}
-chef.__context__ = {}
+import salt.modules.chef as chef
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ChefTestCase(TestCase):
+class ChefTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.chef
     '''
+    def setup_loader_modules(self):
+        patcher = patch('salt.utils.path.which', MagicMock(return_value=True))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return {chef: {'_exec_cmd': MagicMock(return_value={})}}
+
     # 'client' function tests: 1
 
-    @patch('salt.modules.chef._exec_cmd', MagicMock(return_value={}))
-    @patch('salt.utils.which', MagicMock(return_value=True))
     def test_client(self):
         '''
         Test if it execute a chef client run and return a dict
         '''
-        self.assertDictEqual(chef.client(), {})
+        with patch.dict(chef.__opts__, {'cachedir': r'c:\salt\var\cache\salt\minion'}):
+            self.assertDictEqual(chef.client(), {})
 
     # 'solo' function tests: 1
 
-    @patch('salt.modules.chef._exec_cmd', MagicMock(return_value={}))
-    @patch('salt.utils.which', MagicMock(return_value=True))
     def test_solo(self):
         '''
         Test if it execute a chef solo run and return a dict
         '''
-        self.assertDictEqual(chef.solo('/dev/sda1'), {})
+        with patch.dict(chef.__opts__, {'cachedir': r'c:\salt\var\cache\salt\minion'}):
+            self.assertDictEqual(chef.solo('/dev/sda1'), {})

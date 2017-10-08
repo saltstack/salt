@@ -8,16 +8,21 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, requires_network
+from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
-import salt.utils
+import salt.modules.cmdmod as cmd
+import salt.utils.path
+from salt.utils.versions import LooseVersion
+
+MAX_NPM_VERSION = '5.0.0'
 
 
-@skipIf(salt.utils.which('npm') is None, 'npm not installed')
-class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
+@skipIf(salt.utils.path.which('npm') is None, 'npm not installed')
+class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_network()
     @destructiveTest
@@ -37,7 +42,7 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         Determine if URL-referenced NPM module can be successfully installed.
         '''
-        ret = self.run_state('npm.installed', name='git://github.com/request/request')
+        ret = self.run_state('npm.installed', name='request/request#v2.81.1')
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('npm.removed', name='git://github.com/request/request')
         self.assertSaltTrueReturn(ret)
@@ -49,13 +54,15 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         Basic test to determine if NPM module successfully installs multiple
         packages.
         '''
-        ret = self.run_state('npm.installed', name=None, pkgs=['pm2', 'grunt'])
+        ret = self.run_state('npm.installed', name='unused', pkgs=['pm2', 'grunt'])
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(salt.utils.path.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),
+            'Skip with npm >= 5.0.0 until #41770 is fixed')
     @destructiveTest
     def test_npm_cache_clean(self):
         '''
         Basic test to determine if NPM successfully cleans its cached packages.
         '''
-        ret = self.run_state('npm.cache_cleaned', name=None)
+        ret = self.run_state('npm.cache_cleaned', name='unused', force=True)
         self.assertSaltTrueReturn(ret)

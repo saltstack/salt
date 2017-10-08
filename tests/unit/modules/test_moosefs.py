@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,18 +17,19 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-from salt.modules import moosefs
-
-# Globals
-moosefs.__salt__ = {}
+import salt.modules.moosefs as moosefs
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class MoosefsTestCase(TestCase):
+class MoosefsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.moosefs
     '''
-    # 'dirinfo' function tests: 1
+
+    def setup_loader_modules(self):
+        return {moosefs: {}}
+
+    # 'dirinfo' function tests: 1i
 
     def test_dirinfo(self):
         '''

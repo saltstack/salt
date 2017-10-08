@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -16,19 +17,20 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils
-from salt.modules import launchctl
-
-# Globals
-launchctl.__salt__ = {}
+import salt.utils.stringutils
+import salt.modules.launchctl as launchctl
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class LaunchctlTestCase(TestCase):
+class LaunchctlTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.launchctl
     '''
+    def setup_loader_modules(self):
+        return {launchctl: {}}
+
     def test_get_all(self):
         '''
         Test for Return all installed services
@@ -87,7 +89,7 @@ class LaunchctlTestCase(TestCase):
                           return_value={'plist':
                                         {'Label': 'A'}}):
             if six.PY3:
-                launchctl_data = salt.utils.to_bytes(launchctl_data)
+                launchctl_data = salt.utils.stringutils.to_bytes(launchctl_data)
             with patch.object(launchctl, '_get_launchctl_data',
                               return_value=launchctl_data):
                 self.assertTrue(launchctl.status('job_label'))

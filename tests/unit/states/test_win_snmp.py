@@ -3,17 +3,18 @@
     :synopsis: Unit Tests for Windows SNMP Module 'state.win_snmp'
     :platform: Windows
     :maturity: develop
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 '''
 
 # Import Python Libs
 from __future__ import absolute_import
 
 # Import Salt Libs
-from salt.states import win_snmp
-import salt.ext.six as six
+import salt.states.win_snmp as win_snmp
+from salt.ext import six
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -22,16 +23,14 @@ from tests.support.mock import (
     NO_MOCK_REASON,
 )
 
-# Globals
-win_snmp.__salt__ = {}
-win_snmp.__opts__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinSnmpTestCase(TestCase):
+class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_snmp
     '''
+    def setup_loader_modules(self):
+        return {win_snmp: {}}
 
     def test_agent_settings(self):
         '''

@@ -7,33 +7,19 @@
 # Import Python Libs
 from __future__ import absolute_import
 import os
-import random
-import string
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
 
 # Import Salt Testing Libs
-import tests.integration as integration
-from tests.support.helpers import expensiveTest
-
-# Import Third-Party Libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from tests.support.case import ShellCase
+from tests.support.paths import FILES
+from tests.support.helpers import expensiveTest, generate_random_name
 
 TIMEOUT = 500
 
 
-def _random_name(size=6):
-    '''
-    Generates a radom cloud instance name
-    '''
-    return 'cloud-test-' + ''.join(
-        random.choice(string.ascii_lowercase + string.digits)
-        for x in range(size)
-    )
-
-
-class GCETest(integration.ShellCase):
+class GCETest(ShellCase):
     '''
     Integration tests for the GCE cloud provider in Salt-Cloud
     '''
@@ -50,7 +36,7 @@ class GCETest(integration.ShellCase):
         provider = 'gce'
         providers = self.run_cloud('--list-providers')
         # Create the cloud instance name to be used throughout the tests
-        self.INSTANCE_NAME = _random_name()
+        self.INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 
         if profile_str not in providers:
             self.skipTest(
@@ -61,7 +47,7 @@ class GCETest(integration.ShellCase):
 
         # check if project, service_account_email_address, service_account_private_key
         # and provider are present
-        path = os.path.join(integration.FILES,
+        path = os.path.join(FILES,
                             'conf',
                             'cloud.providers.d',
                             provider + '.conf')

@@ -8,15 +8,13 @@ from __future__ import absolute_import
 from textwrap import dedent
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
-import salt
-from salt.modules import syslog_ng
-
-syslog_ng.__salt__ = {}
-syslog_ng.__opts__ = {}
+import salt.utils.path
+import salt.modules.syslog_ng as syslog_ng
 
 _VERSION = "3.6.0alpha0"
 _MODULES = ("syslogformat,json-plugin,basicfuncs,afstomp,afsocket,cryptofuncs,"
@@ -58,7 +56,10 @@ _SYSLOG_NG_CTL_NOT_INSTALLED_RETURN_VALUE = {
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SyslogNGTestCase(TestCase):
+class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {syslog_ng: {}}
 
     def test_statement_without_options(self):
         s = syslog_ng.Statement("source", "s_local", options=[])
@@ -260,7 +261,7 @@ class SyslogNGTestCase(TestCase):
             function_args = {}
 
         installed = True
-        if not salt.utils.which("syslog-ng"):
+        if not salt.utils.path.which("syslog-ng"):
             installed = False
             if "syslog-ng-ctl" in mock_function_args:
                 expected_output = _SYSLOG_NG_CTL_NOT_INSTALLED_RETURN_VALUE
@@ -277,4 +278,4 @@ class SyslogNGTestCase(TestCase):
                 self.assertTrue(mock_function.called)
                 self.assertEqual(len(mock_function.call_args), 2)
                 mock_param = mock_function.call_args
-                self.assertTrue(mock_param[0][0].endswith(mock_function_args))
+                self.assertEqual(mock_param[0][0], mock_function_args.split())

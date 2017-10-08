@@ -5,18 +5,21 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-from salt.modules import pip
+import salt.utils.platform
+import salt.modules.pip as pip
 from salt.exceptions import CommandExecutionError
-
-pip.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class PipTestCase(TestCase):
+class PipTestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {pip: {'__salt__': {'cmd.which_bin': lambda _: 'pip'}}}
 
     def test_fix4361(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
@@ -122,56 +125,56 @@ class PipTestCase(TestCase):
                 python_shell=False,
             )
 
-    @patch.object(pip, 'version', MagicMock(return_value='1.4'))
     def test_issue5940_install_multiple_pip_mirrors(self):
         '''
         test multiple pip mirrors.  This test only works with pip < 7.0.0
         '''
-        mirrors = [
-            'http://g.pypi.python.org',
-            'http://c.pypi.python.org',
-            'http://pypi.crate.io'
-        ]
+        with patch.object(pip, 'version', MagicMock(return_value='1.4')):
+            mirrors = [
+                'http://g.pypi.python.org',
+                'http://c.pypi.python.org',
+                'http://pypi.crate.io'
+            ]
 
-        expected = ['pip', 'install', '--use-mirrors']
-        for item in mirrors:
-            expected.extend(['--mirrors', item])
+            expected = ['pip', 'install', '--use-mirrors']
+            for item in mirrors:
+                expected.extend(['--mirrors', item])
 
-        # Passing mirrors as a list
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(mirrors=mirrors)
-            mock.assert_called_once_with(
-                expected,
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            # Passing mirrors as a list
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.install(mirrors=mirrors)
+                mock.assert_called_once_with(
+                    expected,
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
-        # Passing mirrors as a comma separated list
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(mirrors=','.join(mirrors))
-            mock.assert_called_once_with(
-                expected,
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            # Passing mirrors as a comma separated list
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.install(mirrors=','.join(mirrors))
+                mock.assert_called_once_with(
+                    expected,
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
-        # As single string (just use the first element from mirrors)
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(mirrors=mirrors[0])
-            mock.assert_called_once_with(
-                ['pip', 'install', '--use-mirrors', '--mirrors', mirrors[0]],
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            # As single string (just use the first element from mirrors)
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.install(mirrors=mirrors[0])
+                mock.assert_called_once_with(
+                    ['pip', 'install', '--use-mirrors', '--mirrors', mirrors[0]],
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
     def test_install_with_multiple_find_links(self):
         find_links = [
@@ -259,80 +262,86 @@ class PipTestCase(TestCase):
                 pip.install, no_index=True, extra_index_url='http://foo.tld'
             )
 
-    @patch('salt.modules.pip._get_cached_requirements')
-    def test_install_failed_cached_requirements(self, get_cached_requirements):
-        get_cached_requirements.return_value = False
-        ret = pip.install(requirements='salt://my_test_reqs')
-        self.assertEqual(False, ret['result'])
-        self.assertIn('my_test_reqs', ret['comment'])
+    def test_install_failed_cached_requirements(self):
+        with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
+            get_cached_requirements.return_value = False
+            ret = pip.install(requirements='salt://my_test_reqs')
+            self.assertEqual(False, ret['result'])
+            self.assertIn('my_test_reqs', ret['comment'])
 
-    @patch('salt.modules.pip._get_cached_requirements')
-    def test_install_cached_requirements_used(self, get_cached_requirements):
-        get_cached_requirements.return_value = 'my_cached_reqs'
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(requirements='salt://requirements.txt')
-            expected = ['pip', 'install', '--requirement', 'my_cached_reqs']
-            mock.assert_called_once_with(
-                expected,
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+    def test_install_cached_requirements_used(self):
+        with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
+            get_cached_requirements.return_value = 'my_cached_reqs'
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.install(requirements='salt://requirements.txt')
+                expected = ['pip', 'install', '--requirement', 'my_cached_reqs']
+                mock.assert_called_once_with(
+                    expected,
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
-    @patch('os.path')
-    def test_install_venv(self, mock_path):
-        mock_path.is_file.return_value = True
-        mock_path.isdir.return_value = True
+    def test_install_venv(self):
+        with patch('os.path') as mock_path:
+            mock_path.is_file.return_value = True
+            mock_path.isdir.return_value = True
 
-        pkg = 'mock'
-        venv_path = '/test_env'
+            pkg = 'mock'
 
-        def join(*args):
-            return '/'.join(args)
-        mock_path.join = join
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(pkg, bin_env=venv_path)
-            mock.assert_called_once_with(
-                [os.path.join(venv_path, 'bin', 'pip'), 'install', pkg],
-                env={'VIRTUAL_ENV': '/test_env'},
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            def join(*args):
+                return os.sep.join(args)
 
-    @patch('os.access')
-    def test_install_log_argument_in_resulting_command(self, mock_path):
-        pkg = 'pep8'
-        log_path = '/tmp/pip-install.log'
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(pkg, log=log_path)
-            mock.assert_called_once_with(
-                ['pip', 'install', '--log', log_path, pkg],
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            mock_path.join = join
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                if salt.utils.platform.is_windows():
+                    venv_path = 'c:\\test_env'
+                    bin_path = os.path.join(venv_path, 'Scripts', 'pip.exe').encode('string-escape')
+                else:
+                    venv_path = '/test_env'
+                    bin_path = os.path.join(venv_path, 'bin', 'pip')
+                pip.install(pkg, bin_env=venv_path)
+                mock.assert_called_once_with(
+                    [bin_path, 'install', pkg],
+                    env={'VIRTUAL_ENV': venv_path},
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
-    @patch('os.path')
-    def test_non_writeable_log(self, mock_path):
-        # Let's fake a non-writable log file
-        pkg = 'pep8'
-        log_path = '/tmp/pip-install.log'
-        mock_path.exists.side_effect = IOError('Fooo!')
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                IOError,
-                pip.install,
-                pkg,
-                log=log_path
-            )
+    def test_install_log_argument_in_resulting_command(self):
+        with patch('os.access') as mock_path:
+            pkg = 'pep8'
+            log_path = '/tmp/pip-install.log'
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.install(pkg, log=log_path)
+                mock.assert_called_once_with(
+                    ['pip', 'install', '--log', log_path, pkg],
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
+
+    def test_non_writeable_log(self):
+        with patch('os.path') as mock_path:
+            # Let's fake a non-writable log file
+            pkg = 'pep8'
+            log_path = '/tmp/pip-install.log'
+            mock_path.exists.side_effect = IOError('Fooo!')
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                self.assertRaises(
+                    IOError,
+                    pip.install,
+                    pkg,
+                    log=log_path
+                )
 
     def test_install_timeout_argument_in_resulting_command(self):
         # Passing an int
@@ -467,19 +476,38 @@ class PipTestCase(TestCase):
                 python_shell=False,
             )
 
-    def test_install_download_cache_argument_in_resulting_command(self):
+    def test_install_download_cache_dir_arguments_in_resulting_command(self):
         pkg = 'pep8'
+        cache_dir_arg_mapping = {
+            '1.5.6': '--download-cache',
+            '6.0': '--cache-dir',
+        }
         download_cache = '/tmp/foo'
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(pkg, download_cache='/tmp/foo')
-            mock.assert_called_once_with(
-                ['pip', 'install', '--download-cache', download_cache, pkg],
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            for pip_version, cmd_arg in cache_dir_arg_mapping.items():
+                with patch('salt.modules.pip.version',
+                           MagicMock(return_value=pip_version)):
+                    # test `download_cache` kwarg
+                    pip.install(pkg, download_cache='/tmp/foo')
+                    mock.assert_called_with(
+                        ['pip', 'install', cmd_arg, download_cache, pkg],
+                        saltenv='base',
+                        runas=None,
+                        use_vt=False,
+                        python_shell=False,
+                    )
+
+                    # test `cache_dir` kwarg
+                    pip.install(pkg, cache_dir='/tmp/foo')
+                    mock.assert_called_with(
+                        ['pip', 'install', cmd_arg, download_cache, pkg],
+                        saltenv='base',
+                        runas=None,
+                        use_vt=False,
+                        python_shell=False,
+                    )
 
     def test_install_source_argument_in_resulting_command(self):
         pkg = 'pep8'
@@ -695,112 +723,112 @@ class PipTestCase(TestCase):
                 python_shell=False,
             )
 
-    @patch('salt.modules.pip._get_cached_requirements')
-    def test_install_multiple_requirements_arguments_in_resulting_command(self, get_cached_requirements):
-        cached_reqs = [
-            'my_cached_reqs-1', 'my_cached_reqs-2'
-        ]
-        get_cached_requirements.side_effect = cached_reqs
-        requirements = [
-            'salt://requirements-1.txt', 'salt://requirements-2.txt'
-        ]
+    def test_install_multiple_requirements_arguments_in_resulting_command(self):
+        with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
+            cached_reqs = [
+                'my_cached_reqs-1', 'my_cached_reqs-2'
+            ]
+            get_cached_requirements.side_effect = cached_reqs
+            requirements = [
+                'salt://requirements-1.txt', 'salt://requirements-2.txt'
+            ]
 
-        expected = ['pip', 'install']
-        for item in cached_reqs:
-            expected.extend(['--requirement', item])
+            expected = ['pip', 'install']
+            for item in cached_reqs:
+                expected.extend(['--requirement', item])
 
-        # Passing option as a list
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(requirements=requirements)
-            mock.assert_called_once_with(
-                expected,
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            # Passing option as a list
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.install(requirements=requirements)
+                mock.assert_called_once_with(
+                    expected,
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
-        # Passing option as a comma separated list
-        get_cached_requirements.side_effect = cached_reqs
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(requirements=','.join(requirements))
-            mock.assert_called_once_with(
-                expected,
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            # Passing option as a comma separated list
+            get_cached_requirements.side_effect = cached_reqs
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.install(requirements=','.join(requirements))
+                mock.assert_called_once_with(
+                    expected,
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
-        # Passing option as a single string entry
-        get_cached_requirements.side_effect = [cached_reqs[0]]
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(requirements=requirements[0])
-            mock.assert_called_once_with(
-                ['pip', 'install', '--requirement', cached_reqs[0]],
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            # Passing option as a single string entry
+            get_cached_requirements.side_effect = [cached_reqs[0]]
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.install(requirements=requirements[0])
+                mock.assert_called_once_with(
+                    ['pip', 'install', '--requirement', cached_reqs[0]],
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
-    @patch('salt.modules.pip._get_cached_requirements')
-    def test_uninstall_multiple_requirements_arguments_in_resulting_command(self, get_cached_requirements):
-        cached_reqs = [
-            'my_cached_reqs-1', 'my_cached_reqs-2'
-        ]
-        get_cached_requirements.side_effect = cached_reqs
-        requirements = [
-            'salt://requirements-1.txt', 'salt://requirements-2.txt'
-        ]
+    def test_uninstall_multiple_requirements_arguments_in_resulting_command(self):
+        with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
+            cached_reqs = [
+                'my_cached_reqs-1', 'my_cached_reqs-2'
+            ]
+            get_cached_requirements.side_effect = cached_reqs
+            requirements = [
+                'salt://requirements-1.txt', 'salt://requirements-2.txt'
+            ]
 
-        expected = ['pip', 'uninstall', '-y']
-        for item in cached_reqs:
-            expected.extend(['--requirement', item])
+            expected = ['pip', 'uninstall', '-y']
+            for item in cached_reqs:
+                expected.extend(['--requirement', item])
 
-        # Passing option as a list
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.uninstall(requirements=requirements)
-            mock.assert_called_once_with(
-                expected,
-                cwd=None,
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            # Passing option as a list
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.uninstall(requirements=requirements)
+                mock.assert_called_once_with(
+                    expected,
+                    cwd=None,
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
-        # Passing option as a comma separated list
-        get_cached_requirements.side_effect = cached_reqs
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.uninstall(requirements=','.join(requirements))
-            mock.assert_called_once_with(
-                expected,
-                cwd=None,
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            # Passing option as a comma separated list
+            get_cached_requirements.side_effect = cached_reqs
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.uninstall(requirements=','.join(requirements))
+                mock.assert_called_once_with(
+                    expected,
+                    cwd=None,
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
-        # Passing option as a single string entry
-        get_cached_requirements.side_effect = [cached_reqs[0]]
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.uninstall(requirements=requirements[0])
-            mock.assert_called_once_with(
-                ['pip', 'uninstall', '-y', '--requirement', cached_reqs[0]],
-                cwd=None,
-                saltenv='base',
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            # Passing option as a single string entry
+            get_cached_requirements.side_effect = [cached_reqs[0]]
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.uninstall(requirements=requirements[0])
+                mock.assert_called_once_with(
+                    ['pip', 'uninstall', '-y', '--requirement', cached_reqs[0]],
+                    cwd=None,
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
     def test_uninstall_proxy_argument_in_resulting_command(self):
         pkg = 'pep8'
@@ -817,32 +845,32 @@ class PipTestCase(TestCase):
                 python_shell=False,
             )
 
-    @patch('os.path')
-    def test_uninstall_log_argument_in_resulting_command(self, mock_path):
-        pkg = 'pep8'
-        log_path = '/tmp/pip-install.log'
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.uninstall(pkg, log=log_path)
-            mock.assert_called_once_with(
-                ['pip', 'uninstall', '-y', '--log', log_path, pkg],
-                saltenv='base',
-                cwd=None,
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+    def test_uninstall_log_argument_in_resulting_command(self):
+        with patch('os.path') as mock_path:
+            pkg = 'pep8'
+            log_path = '/tmp/pip-install.log'
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                pip.uninstall(pkg, log=log_path)
+                mock.assert_called_once_with(
+                    ['pip', 'uninstall', '-y', '--log', log_path, pkg],
+                    saltenv='base',
+                    cwd=None,
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
-        # Let's fake a non-writable log file
-        mock_path.exists.side_effect = IOError('Fooo!')
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                IOError,
-                pip.uninstall,
-                pkg,
-                log=log_path
-            )
+            # Let's fake a non-writable log file
+            mock_path.exists.side_effect = IOError('Fooo!')
+            mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+                self.assertRaises(
+                    IOError,
+                    pip.uninstall,
+                    pkg,
+                    log=log_path
+                )
 
     def test_uninstall_timeout_argument_in_resulting_command(self):
         pkg = 'pep8'
@@ -1103,7 +1131,7 @@ class PipTestCase(TestCase):
 
         mock_run = MagicMock(return_value='pip 1.4.1 /path/to/site-packages/pip')
         mock_run_all = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run': mock_run,
+        with patch.dict(pip.__salt__, {'cmd.run_stdout': mock_run,
                                        'cmd.run_all': mock_run_all}):
             with patch('salt.modules.pip._get_pip_bin',
                        MagicMock(return_value='pip')):

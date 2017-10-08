@@ -1,21 +1,32 @@
 # -*- coding: utf-8 -*-
 
+# Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
+from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.helpers import (
     destructiveTest,
     requires_network,
     requires_salt_modules,
 )
+from tests.support.unit import skipIf
+
+# Import Salt libs
+import salt.utils.pkg
+import salt.utils.platform
 
 
-class PkgModuleTest(integration.ModuleCase,
-                    integration.SaltReturnAssertsMixIn):
+class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the pkg module
     '''
+    def setUp(self):
+        if salt.utils.platform.is_windows():
+            self.run_function('pkg.refresh_db')
+
     def test_list(self):
         '''
         verify that packages are installed
@@ -23,6 +34,7 @@ class PkgModuleTest(integration.ModuleCase,
         ret = self.run_function('pkg.list_pkgs')
         self.assertNotEqual(len(ret.keys()), 0)
 
+    @requires_salt_modules('pkg.version_cmp')
     def test_version_cmp(self):
         '''
         test package version comparison on supported platforms
@@ -48,6 +60,7 @@ class PkgModuleTest(integration.ModuleCase,
         else:
             self.skipTest('{0} is unavailable on {1}'.format(func, os_family))
 
+    @requires_salt_modules('pkg.mod_repo', 'pkg.del_repo')
     @requires_network()
     @destructiveTest
     def test_mod_del_repo(self):
@@ -99,6 +112,7 @@ class PkgModuleTest(integration.ModuleCase,
             if repo is not None:
                 self.run_function('pkg.del_repo', [repo])
 
+    @requires_salt_modules('pkg.owner')
     def test_owner(self):
         '''
         test finding the package owning a file
@@ -119,10 +133,14 @@ class PkgModuleTest(integration.ModuleCase,
         '''
         successfully install and uninstall a package
         '''
-        pkg = 'htop'
-        version = self.run_function('pkg.version', [pkg])
         os_grain = self.run_function('grains.item', ['os'])['os']
         os_release = self.run_function('grains.item', ['osrelease'])['osrelease']
+
+        pkg = 'htop'
+        if os_grain == 'Windows':
+            pkg = 'putty'
+
+        version = self.run_function('pkg.version', [pkg])
 
         if os_grain == 'Ubuntu':
             if os_release.startswith('12.'):
@@ -137,6 +155,9 @@ class PkgModuleTest(integration.ModuleCase,
             remove_ret = self.run_function('pkg.remove', [pkg])
             self.assertIn(pkg, remove_ret)
 
+        if version and isinstance(version, dict):
+            version = version[pkg]
+
         if version:
             test_remove()
             test_install()
@@ -144,7 +165,7 @@ class PkgModuleTest(integration.ModuleCase,
             test_install()
             test_remove()
 
-    @requires_salt_modules('pkg.hold')
+    @requires_salt_modules('pkg.hold', 'pkg.unhold')
     @requires_network()
     @destructiveTest
     def test_hold_unhold(self):
@@ -192,6 +213,10 @@ class PkgModuleTest(integration.ModuleCase,
         func = 'pkg.refresh_db'
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
 
+        rtag = salt.utils.pkg.rtag(self.minion_opts)
+        salt.utils.pkg.write_rtag(self.minion_opts)
+        self.assertTrue(os.path.isfile(rtag))
+
         if os_family == 'RedHat':
             ret = self.run_function(func)
             self.assertIn(ret, (True, None))
@@ -213,6 +238,8 @@ class PkgModuleTest(integration.ModuleCase,
             os_grain = self.run_function('grains.item', ['os'])['os']
             self.skipTest('{0} is unavailable on {1}'.format(func, os_grain))
 
+        self.assertFalse(os.path.isfile(rtag))
+
     @requires_salt_modules('pkg.info_installed')
     def test_pkg_info(self):
         '''
@@ -231,7 +258,7 @@ class PkgModuleTest(integration.ModuleCase,
             keys = ret.keys()
             self.assertIn('rpm', keys)
             self.assertIn('yum', keys)
-        elif os_family == 'SUSE':
+        elif os_family == 'Suse':
             ret = self.run_function(func, ['less', 'zypper'])
             keys = ret.keys()
             self.assertIn('less', keys)
@@ -239,6 +266,7 @@ class PkgModuleTest(integration.ModuleCase,
 
     @requires_network()
     @destructiveTest
+    @skipIf(salt.utils.platform.is_windows(), 'pkg.upgrade not available on Windows')
     def test_pkg_upgrade_has_pending_upgrades(self):
         '''
         Test running a system upgrade when there are packages that need upgrading
