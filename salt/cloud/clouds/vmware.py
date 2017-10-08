@@ -3628,7 +3628,7 @@ def remove_snapshot(name, kwargs=None, call=None):
     .. code-block:: bash
 
         salt-cloud -a remove_snapshot vmname snapshot_name="mySnapshot"
-        salt-cloud -a remove_snapshot vmname snapshot_name="mySnapshot" [remove_children=True]
+        salt-cloud -a remove_snapshot vmname snapshot_name="mySnapshot" [remove_children="True"]
     '''
 
     if call != 'action':
@@ -3641,8 +3641,7 @@ def remove_snapshot(name, kwargs=None, call=None):
         kwargs = {}
 
     snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
-    #remove_children = kwargs.get('remove_children') if kwargs and 'remove_children' in kwargs else False
-    remove_children = _str_to_bool(kwargs.get('remove_children', True))
+    remove_children = _str_to_bool(kwargs.get('remove_children', False))
 
     if not snapshot_name:
         raise SaltCloudSystemExit(
@@ -3663,7 +3662,7 @@ def remove_snapshot(name, kwargs=None, call=None):
 
     except Exception as exc:
         log.error(
-            'Error while creating snapshot of {0}: {1}'.format(
+            'Error while removing snapshot of {0}: {1}'.format(
                 name,
                 exc
             ),
@@ -3672,8 +3671,11 @@ def remove_snapshot(name, kwargs=None, call=None):
         )
         return 'failed to remove snapshot'
 
-    return {'Snapshot removed successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList,
+    if vm_ref.snapshot:
+        return {'Snapshot removed successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList,
                                                             vm_ref.snapshot.currentSnapshot)}
+    else:
+        return 'Snapshots removed successfully'
 
 
 def remove_all_snapshots(name, kwargs=None, call=None):
