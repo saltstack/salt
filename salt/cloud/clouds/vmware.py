@@ -3689,9 +3689,11 @@ def remove_snapshot(name, kwargs=None, call=None):
             )
             return 'failed to remove snapshot'
 
-    return {'Snapshot removed successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList,
+    if not all_vms:
+        return {'Snapshot removed successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList,
                                                             vm_ref.snapshot.currentSnapshot)}
-
+    else:
+        return 'Snapshot removed successfully'
 
 def remove_all_snapshots(name, kwargs=None, call=None):
     '''
