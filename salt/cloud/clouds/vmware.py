@@ -3631,8 +3631,6 @@ def remove_snapshot(name, kwargs=None, call=None):
         salt-cloud -a remove_snapshot vmname snapshot_name="mySnapshot" [remove_children=True]
     '''
 
-    # TODO: add logic for all_vms
-
     if call != 'action':
         raise SaltCloudSystemExit(
             'The create_snapshot action must be called with '
@@ -3643,57 +3641,40 @@ def remove_snapshot(name, kwargs=None, call=None):
         kwargs = {}
 
     snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
-    remove_children = kwargs.get('remove_children') if kwargs and 'remove_children' in kwargs else False
-    all_vms = kwargs.get('all_vms') if kwargs and 'all_vms' in kwargs else None
+    #remove_children = kwargs.get('remove_children') if kwargs and 'remove_children' in kwargs else False
+    remove_children = _str_to_bool(kwargs.get('remove_children', True))
 
     if not snapshot_name:
         raise SaltCloudSystemExit(
             'You must specify snapshot name for the snapshot to be deleted.'
         )
 
-    if all_vms and name:
+    vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
+
+    if not _get_snapshot_ref_by_name(vm_ref, snapshot_name):
         raise SaltCloudSystemExit(
-            'Only one argument allow, select VM name or all_vms'
+            'Сould not find the snapshot with the specified name.'
         )
 
-    if all_vms:
-        vms_with_snapshot = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, ["snapshot", ])
-    else:
-        vms_with_snapshot = []
+    try:
+        snap_obj = _get_snapshot_ref_by_name(vm_ref, snapshot_name).snapshot
+        task = snap_obj.RemoveSnapshot_Task(remove_children)
+        salt.utils.vmware.wait_for_task(task, name, 'remove snapshot', 5, 'info')
 
-    if name:
-        vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
-        if vm_ref:
-            if not _get_snapshot_ref_by_name(vm_ref, snapshot_name):
-                raise SaltCloudSystemExit(
-                    'Сould not find the snapshot with the specified name.'
-                )
-        vm_ref = [vm_ref]
-    else:
-        vm_ref = []
+    except Exception as exc:
+        log.error(
+            'Error while creating snapshot of {0}: {1}'.format(
+                name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return 'failed to remove snapshot'
 
-    for vm in (vms_with_snapshot + vm_ref):
-        try:
-            snap_obj = _get_snapshot_ref_by_name(vm, snapshot_name).snapshot
-            task = snap_obj.RemoveSnapshot_Task(remove_children)
-            salt.utils.vmware.wait_for_task(task, name, 'remove snapshot', 5, 'info')
-
-        except Exception as exc:
-            log.error(
-                'Error while removing snapshot of {0}: {1}'.format(
-                    name,
-                    exc
-                ),
-                # Show the traceback if the debug logging level is enabled
-                exc_info_on_loglevel=logging.DEBUG
-            )
-            return 'failed to remove snapshot'
-
-    if not all_vms:
-        return {'Snapshot removed successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList,
+    return {'Snapshot removed successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList,
                                                             vm_ref.snapshot.currentSnapshot)}
-    else:
-        return 'Snapshot removed successfully'
+
 
 def remove_all_snapshots(name, kwargs=None, call=None):
     '''
