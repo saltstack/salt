@@ -2870,7 +2870,6 @@ def _findOptionValueInSeceditFile(option):
                 _secdata = _reader.readlines()
             while not _reader.closed:
                 _reader.close()
-                _reader.
             if __salt__['file.file_exists'](_tfile):
                 _ret = __salt__['file.remove'](_tfile)
             for _line in _secdata:
