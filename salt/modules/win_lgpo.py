@@ -34,7 +34,6 @@ Current known limitations
   - pywin32 Python module
   - lxml
   - uuid
-  - codecs
   - struct
   - salt.modules.reg
 '''
@@ -93,7 +92,6 @@ try:
     import win32net
     import win32security
     import uuid
-    import codecs
     import lxml
     import struct
     from lxml import etree
@@ -2872,6 +2870,7 @@ def _findOptionValueInSeceditFile(option):
                 _secdata = _reader.readlines()
             while not _reader.closed:
                 _reader.close()
+                _reader.
             if __salt__['file.file_exists'](_tfile):
                 _ret = __salt__['file.remove'](_tfile)
             for _line in _secdata:
