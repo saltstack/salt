@@ -128,7 +128,8 @@ try:
     # Not available in win32api, so we have to use ctypes
     # Default to `en-US` (1033)
     windll = ctypes.windll.kernel32
-    INSTALL_LANGUAGE = locale.windows_locale.get(windll.GetSystemDefaultUILanguage(), 1033)
+    INSTALL_LANGUAGE = locale.windows_locale.get(
+        windll.GetSystemDefaultUILanguage(), 1033).replace('_', '-')
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
@@ -2799,7 +2800,7 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                            'language code will be tried.')
                     log.info(msg.format(display_language, t_admfile))
 
-                    adml_file = os.path.join(root, display_language[:2],
+                    adml_file = os.path.join(root, display_language.split('-')[0],
                             os.path.splitext(t_admfile)[0] + '.adml')
                     if not __salt__['file.file_exists'](adml_file):
                         msg = ('An ADML file in the specified ADML language code "{0}" '
@@ -2815,7 +2816,7 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
                                    'fallback language code will be tried.')
                             log.info(msg.format(display_language_fallback, t_admfile))
 
-                            adml_file = os.path.join(root, display_language_fallback[:2],
+                            adml_file = os.path.join(root, display_language_fallback.split('-')[0],
                                     os.path.splitext(t_admfile)[0] + '.adml')
                             if not __salt__['file.file_exists'](adml_file):
                                 msg = ('An ADML file in the specified ADML language '
