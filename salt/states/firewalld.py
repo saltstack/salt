@@ -586,7 +586,8 @@ def _present(name,
     # if prune_services == None, set to True and log a deprecation warning
     if prune_services is None:
         prune_services = True
-        log.warning('prune_services currently defaults to True, but the default will be changed to False in a future release.')
+        salt.utils.warn_until('Neon',
+                'The \'prune_services\' argument default is currently True, but will be changed to True in future releases.')
 
     if prune_services:
         old_services = set(_current_services) - set(services)
