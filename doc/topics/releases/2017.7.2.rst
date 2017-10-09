@@ -7,6 +7,13 @@ Version 2017.7.2 is a bugfix release for :ref:`2017.7.0 <release-2017-7-0>`.
 Changes for v2017.7.1..v2017.7.2
 --------------------------------
 
+Security Fix
+============
+
+CVE-2017-14695 Directory traversal vulnerability in minion id validation in SaltStack. Allows remote minions with incorrect credentials to authenticate to a master via a crafted minion ID. Credit for discovering the security flaw goes to: Julian Brost (julian@0x4a42.net)
+
+CVE-2017-14696 Remote Denial of Service with a specially crafted authentication request. Credit for discovering the security flaw goes to: Julian Brost (julian@0x4a42.net)
+
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
 *Generated at: 2017-09-26T21:06:19Z*
