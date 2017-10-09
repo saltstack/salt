@@ -162,8 +162,9 @@ def present(name,
             port_fwd=None,
             prune_port_fwd=False,
             services=None,
-            prune_services=None,
+            # TODO: prune_services=False in future release
             # prune_services=False,
+            prune_services=None,
             interfaces=None,
             prune_interfaces=False,
             sources=None,
@@ -226,6 +227,12 @@ def present(name,
     prune_rich_rules : False
         If ``True``, remove all but the specified rich rules from the zone.
     '''
+
+    # if prune_services == None, set to True and log a deprecation warning
+    if prune_services is None:
+        prune_services = True
+        salt.utils.warn_until('Neon',
+                'The \'prune_services\' argument default is currently True, but will be changed to True in future releases.')
 
     ret = _present(name, block_icmp, prune_block_icmp, default, masquerade, ports, prune_ports,
             port_fwd, prune_port_fwd, services, prune_services, interfaces, prune_interfaces,
@@ -347,8 +354,9 @@ def _present(name,
             port_fwd=None,
             prune_port_fwd=False,
             services=None,
-            prune_services=None,
+            # TODO: prune_services=False in future release
             # prune_services=False,
+            prune_services=None,
             interfaces=None,
             prune_interfaces=False,
             sources=None,
@@ -497,7 +505,8 @@ def _present(name,
     for port in new_ports:
         if not __opts__['test']:
             try:
-                __salt__['firewalld.add_port'](name, port, permanent=True)
+                # TODO: force_masquerade to be removed in future release
+                __salt__['firewalld.add_port'](name, port, permanent=True, force_masquerade=False)
             except CommandExecutionError as err:
                 ret['comment'] = 'Error: {0}'.format(err)
                 return ret
@@ -540,8 +549,10 @@ def _present(name,
     for fwd in new_port_fwd:
         if not __opts__['test']:
             try:
+                # TODO: force_masquerade to be removed in future release
                 __salt__['firewalld.add_port_fwd'](name, fwd.srcport,
-                    fwd.destport, fwd.protocol, fwd.destaddr, permanent=True)
+                    fwd.destport, fwd.protocol, fwd.destaddr, permanent=True,
+                    force_masquerade=False)
             except CommandExecutionError as err:
                 ret['comment'] = 'Error: {0}'.format(err)
                 return ret
@@ -582,12 +593,6 @@ def _present(name,
             except CommandExecutionError as err:
                 ret['comment'] = 'Error: {0}'.format(err)
                 return ret
-
-    # if prune_services == None, set to True and log a deprecation warning
-    if prune_services is None:
-        prune_services = True
-        salt.utils.warn_until('Neon',
-                'The \'prune_services\' argument default is currently True, but will be changed to True in future releases.')
 
     if prune_services:
         old_services = set(_current_services) - set(services)
