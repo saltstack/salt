@@ -162,7 +162,8 @@ def present(name,
             port_fwd=None,
             prune_port_fwd=False,
             services=None,
-            prune_services=False,
+            prune_services=None,
+            # prune_services=False,
             interfaces=None,
             prune_interfaces=False,
             sources=None,
@@ -203,8 +204,9 @@ def present(name,
     services : None
         List of services to add to the zone.
 
-    prune_services : False
+    prune_services : True
         If ``True``, remove all but the specified services from the zone.
+        .. note:: Currently defaults to True for compatibility, but will be changed to False in a future release.
 
     interfaces : None
         List of interfaces to add to the zone.
@@ -345,7 +347,8 @@ def _present(name,
             port_fwd=None,
             prune_port_fwd=False,
             services=None,
-            prune_services=False,
+            prune_services=None,
+            # prune_services=False,
             interfaces=None,
             prune_interfaces=False,
             sources=None,
@@ -580,6 +583,11 @@ def _present(name,
                 ret['comment'] = 'Error: {0}'.format(err)
                 return ret
 
+    # if prune_services == None, set to True and log a deprecation warning
+    if prune_services is None:
+        prune_services = True
+        log.warning('prune_services currently defaults to True, but the default will be changed to False in a future release.')
+
     if prune_services:
         old_services = set(_current_services) - set(services)
         for old_service in old_services:
@@ -717,8 +725,6 @@ def _present(name,
         comment = []
         comment.append('Configuration for \'{0}\' will change:'.format(name))
         comment.append(nested.output(ret['changes']).rstrip())
-        #for change in ret['changes']:
-        #    comment.append(nested.output(change).rstrip())
         ret['comment'] = '\n'.join(comment)
         ret['changes'] = {}
         return ret
