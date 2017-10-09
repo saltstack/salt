@@ -4,6 +4,11 @@ Salt 2016.11.8 Release Notes
 
 Version 2016.11.8 is a bugfix release for :ref:`2016.11.0 <release-2016-11-0>`.]
 
+Anonymous Binds and LDAP/Active Directory
+-----------------------------------------
+
+When auth.ldap.anonymous is set to False, the bind password can no longer be empty.
+
 Changes for v2016.11.7..v2016.11.8
 ----------------------------------
 
