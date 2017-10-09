@@ -79,12 +79,14 @@ import salt.utils
 import salt.utils.event
 import salt.utils.http
 import salt.utils.slack
+import salt.output.highstate
+from salt.output import nested 
+from salt.utils.odict import OrderedDict
 
 def __virtual__():
     return HAS_SLACKCLIENT
 
 log = logging.getLogger(__name__)
-
 
 def _get_users(token):
     '''
@@ -102,7 +104,6 @@ def _get_users(token):
                     users[item['name']] = item['id']
                     users[item['id']] = item['name']
     return users
-
 
 def start(token,
           aliases=None,
@@ -247,7 +248,7 @@ def start(token,
                                     tgt_type = kwargs['tgt_type']
                                     del kwargs['tgt_type']
 
-                                # Check for pillar string representation of dict and convert it to dict
+                                # Check for pillar dict
                                 if 'pillar' in kwargs:
                                     kwargs.update(pillar=ast.literal_eval(kwargs['pillar']))
 
@@ -263,14 +264,10 @@ def start(token,
                                     ret = local.cmd('{0}'.format(target), cmd, arg=args, kwarg=kwargs, tgt_type='{0}'.format(tgt_type))
 
                                 if ret:
-                                    ret_keys=[k for k in ret.viewkeys()]
-                                    for key in ret_keys:
-                                        ud=ret[key]
-                                        try:
-                                           ret[key]=collections.OrderedDict([(k,ud[k]) for k in sorted(ud,key=lambda k: ud[k].get('__run_num__', 0))])
-                                        except:
-                                            log.debug('Key "__run_num__" not found, return the dict as is')
-                                    return_text = json.dumps(ret, sort_keys=False, indent=1)
+                                    salt.output.highstate.__opts__= __opts__
+                                    if 'color' not in salt.output.highstate.__opts__:
+                                        salt.output.highstate.__opts__.update({"color":""})
+                                    return_text = salt.output.highstate.output(ret)
                                     ts = time.time()
                                     st = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S%f')
                                     filename = 'salt-results-{0}.yaml'.format(st)
