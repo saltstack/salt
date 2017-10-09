@@ -6,8 +6,8 @@ Module for controlling the LED matrix or reading environment data on the SenseHa
 :maturity:      new
 :depends:       sense_hat Python module
 
-You can specify the rotation of the Pi in a pillar.
-This is useful if it is used upside down or sideways to correct the orientation of the image being shown.
+The rotation of the Pi can be specified in a pillar.
+This is useful if the Pi is used upside down or sideways to correct the orientation of the image being shown.
 
 Example:
 
@@ -52,7 +52,7 @@ def set_pixels(pixels):
     Sets the entire LED matrix based on a list of 64 pixel values
 
     pixels
-        A list of 64 color values [R, G, B].
+        A list of 64 `[R, G, B]` color values.
     '''
     _sensehat.set_pixels(pixels)
     return {'pixels': pixels}
@@ -81,12 +81,12 @@ def get_pixels():
 
 def set_pixel(x, y, color):
     '''
-    Sets the a single pixel on the LED matrix to a specified color.
+    Sets a single pixel on the LED matrix to a specified color.
 
     x
-        The x coodrinate of th pixel. Ranges from 0 on the left to 7 on the right.
+        The x coordinate of the pixel. Ranges from 0 on the left to 7 on the right.
     y
-        The y coodrinate of th pixel. Ranges from 0 at the top to 7 at the bottom.
+        The y coordinate of the pixel. Ranges from 0 at the top to 7 at the bottom.
     color
         The new color of the pixel as a list of `[R, G, B]` values.
 
@@ -105,9 +105,9 @@ def get_pixel(x, y):
     Returns the color of a single pixel on the LED matrix.
 
     x
-        The x coodrinate of th pixel. Ranges from 0 on the left to 7 on the right.
+        The x coordinate of the pixel. Ranges from 0 on the left to 7 on the right.
     y
-        The y coodrinate of th pixel. Ranges from 0 at the top to 7 at the bottom.
+        The y coordinate of the pixel. Ranges from 0 at the top to 7 at the bottom.
 
     .. note::
         Please read the note for `get_pixels`
@@ -131,7 +131,7 @@ def low_light(low_light=True):
 
 
 def show_message(message, msg_type=None,
-        text_color=None, back_color=None, scroll_speed=None):
+        text_color=None, back_color=None, scroll_speed=0.1):
     '''
     Displays a message on the LED matrix.
 
@@ -167,7 +167,6 @@ def show_message(message, msg_type=None,
     '''
     text_color = text_color or [255, 255, 255]
     back_color = back_color or [0, 0, 0]
-    scroll_speed = scroll_speed or 0.1
 
     color_by_type = {
         'error': [255, 0, 0],
@@ -211,7 +210,7 @@ def show_letter(letter, text_color=None, back_color=None):
 
 def show_image(image):
     '''
-    Displays a 8 x 8 image on the LED matrix.
+    Displays an 8 x 8 image on the LED matrix.
 
     image
         The path to the image to display. The image must be 8 x 8 pixels in size.
@@ -262,7 +261,7 @@ def get_temperature():
     Gets the temperature in degrees Celsius from the humidity sensor.
     Equivalent to calling `get_temperature_from_humidity`.
 
-    If you get strange results try using 'get_temperature_from_pressure'.
+    If you get strange results try using `get_temperature_from_pressure`.
     '''
     return _sensehat.get_temperature()
 
