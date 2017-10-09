@@ -17,7 +17,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 import salt.modules.grains as grainsmod
 import salt.states.grains as grains
 
@@ -62,7 +62,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             grains_file = os.path.join(
                 os.path.dirname(grains.__opts__['conf_file']),
                 'grains')
-        with salt.utils.fopen(grains_file, "r") as grf:
+        with salt.utils.files.fopen(grains_file, "r") as grf:
             grains_data = grf.read()
         self.assertMultiLineEqual(grains_string, grains_data)
 
@@ -78,7 +78,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                     grains_file = os.path.join(
                         os.path.dirname(grains.__opts__['conf_file']), 'grains')
                 cstr = yaml.safe_dump(grains_data, default_flow_style=False)
-                with salt.utils.fopen(grains_file, "w+") as grf:
+                with salt.utils.files.fopen(grains_file, "w+") as grf:
                     grf.write(cstr)
                 yield
 
@@ -500,23 +500,23 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                                       + "- correct\n"
             )
 
-    @patch('salt.modules.grains.setval')
-    def test_present_unknown_failure(self, mocked_setval):
-        mocked_setval.return_value = 'Failed to set grain foo'
-        with self.setGrains({'a': 'aval', 'foo': 'bar'}):
-            # Unknown reason failure
-            ret = grains.present(
-                name='foo',
-                value='baz')
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'Failed to set grain foo')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': 'bar'})
-            self.assertGrainFileContent("a: aval\n"
-                                      + "foo: bar\n"
-            )
+    def test_present_unknown_failure(self):
+        with patch('salt.modules.grains.setval') as mocked_setval:
+            mocked_setval.return_value = 'Failed to set grain foo'
+            with self.setGrains({'a': 'aval', 'foo': 'bar'}):
+                # Unknown reason failure
+                ret = grains.present(
+                    name='foo',
+                    value='baz')
+                self.assertEqual(ret['result'], False)
+                self.assertEqual(ret['comment'], 'Failed to set grain foo')
+                self.assertEqual(ret['changes'], {})
+                self.assertEqual(
+                    grains.__grains__,
+                    {'a': 'aval', 'foo': 'bar'})
+                self.assertGrainFileContent("a: aval\n"
+                                          + "foo: bar\n"
+                )
 
     # 'absent' function tests: 6
 
@@ -838,6 +838,21 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(
                 grains.__grains__,
                 {'a': 'aval'})
+
+    def test_append_convert_to_list_empty(self):
+        # Append to an existing list
+        with self.setGrains({'foo': None}):
+            ret = grains.append(name='foo',
+                                value='baz',
+                                convert=True)
+            self.assertEqual(ret['result'], True)
+            self.assertEqual(ret['comment'], 'Value baz was added to grain foo')
+            self.assertEqual(ret['changes'], {'added': 'baz'})
+            self.assertEqual(
+                grains.__grains__,
+                {'foo': ['baz']})
+            self.assertGrainFileContent("foo:\n"
+                                      + "- baz\n")
 
     # 'list_present' function tests: 7
 

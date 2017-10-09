@@ -24,7 +24,7 @@ import logging
 import yaml
 
 # Import salt libs
-from salt.utils.yamldumper import OrderedDumper
+from salt.utils.yamldumper import SafeOrderedDumper
 
 # Define the module's virtual name
 __virtualname__ = 'yaml'
@@ -41,7 +41,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     Print out YAML using the block mode
     '''
 
-    params = dict(Dumper=OrderedDumper)
+    params = dict(Dumper=SafeOrderedDumper)
     if 'output_indent' not in __opts__:
         # default indentation
         params.update(default_flow_style=False)

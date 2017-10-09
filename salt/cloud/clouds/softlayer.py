@@ -35,6 +35,9 @@ import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 
+# Import 3rd-party libs
+from salt.ext import six
+
 # Attempt to import softlayer lib
 try:
     import SoftLayer
@@ -297,7 +300,7 @@ def create(vm_):
 
         if isinstance(disks, int):
             disks = [str(disks)]
-        elif isinstance(disks, str):
+        elif isinstance(disks, six.string_types):
             disks = [size.strip() for size in disks.split(',')]
 
         count = 0
@@ -373,7 +376,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(name),
         args={
-            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, kwargs.keys()),
+            'kwargs': __utils__['cloud.filter_event']('requesting', kwargs, list(kwargs)),
         },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
@@ -400,7 +403,7 @@ def create(vm_):
     private_wds = config.get_cloud_config_value(
         'private_windows', vm_, __opts__, default=False
     )
-    if private_ssh or private_wds or public_vlan is None or public_vlan is False:
+    if private_ssh or private_wds or public_vlan is None:
         ip_type = 'primaryBackendIpAddress'
 
     def wait_for_ip():
@@ -508,7 +511,7 @@ def list_nodes_full(mask='mask[id]', call=None):
     conn = get_conn(service='SoftLayer_Account')
     response = conn.getVirtualGuests()
     for node_id in response:
-        hostname = node_id['hostname'].split('.')[0]
+        hostname = node_id['hostname']
         ret[hostname] = node_id
     __utils__['cloud.cache_node_list'](ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
@@ -593,9 +596,6 @@ def destroy(name, call=None):
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-
-    # If the VM was created with use_fqdn, the short hostname will be used instead.
-    name = name.split('.')[0]
 
     node = show_instance(name, call='action')
     conn = get_conn()

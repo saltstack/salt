@@ -3,7 +3,7 @@
 Execution module for Amazon Elasticache using boto3
 ===================================================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :configuration: This module accepts explicit elasticache credentials but can
     also utilize IAM roles assigned to the instance through Instance Profiles.
@@ -535,8 +535,7 @@ def create_cache_subnet_group(name, subnets=None, region=None, key=None, keyid=N
 
     .. code-block:: bash
 
-        salt myminion boto3_elasticache.create_cache_subnet_group \
-                                              name=my-subnet-group \
+        salt myminion boto3_elasticache.create_cache_subnet_group name=my-subnet-group \
                                               CacheSubnetGroupDescription="description" \
                                               subnets='[myVPCSubnet1,myVPCSubnet2]'
     '''
@@ -546,19 +545,19 @@ def create_cache_subnet_group(name, subnets=None, region=None, key=None, keyid=N
         if not isinstance(subnets, list):
             subnets = [subnets]
         for subnet in subnets:
-            sn = __salt__['boto_vpc.describe_subnets'](subnet_names=subnet,
-                                                       region=region, key=key, keyid=keyid,
-                                                       profile=profile).get('subnets')
+            if subnet.startswith('subnet-'):
+                # Moderately safe assumption... :)  Will be caught further down if incorrect.
+                args['SubnetIds'] += [subnet]
+                continue
+            sn = __salt__['boto_vpc.describe_subnets'](subnet_names=subnet, region=region, key=key,
+                                                       keyid=keyid, profile=profile).get('subnets')
+            if not sn:
+                raise SaltInvocationError('Could not resolve Subnet Name {0} to an '
+                                          'ID.'.format(subnet))
             if len(sn) == 1:
                 args['SubnetIds'] += [sn[0]['id']]
             elif len(sn) > 1:
                 raise CommandExecutionError('Subnet Name {0} returned more than one '
-                                          'ID.'.format(subnet))
-            elif subnet.startswith('subnet-'):
-                # Moderately safe assumption... :)  Will be caught later if incorrect.
-                args['SubnetIds'] += [subnet]
-            else:
-                raise SaltInvocationError('Could not resolve Subnet Name {0} to an '
                                           'ID.'.format(subnet))
     args = dict([(k, v) for k, v in args.items() if not k.startswith('_')])
     return _create_resource(name, name_param='CacheSubnetGroupName', desc='cache subnet group',

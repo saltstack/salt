@@ -7,7 +7,7 @@ Management of Solaris Zones
 :depends:       salt.modules.zoneadm, salt.modules.zonecfg
 :platform:      solaris
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 
 Bellow are some examples of how to use this state.
 Lets start with creating a zone and installing it.
@@ -116,6 +116,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.args
 import salt.utils.files
 import salt.utils.atomicfile
 from salt.modules.zonecfg import _parse_value, _zonecfg_resource_default_selectors
@@ -284,7 +285,7 @@ def resource_present(name, resource_type, resource_selector_property, resource_s
            'comment': ''}
 
     # sanitize input
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     resource_selector_value = _parse_value(resource_selector_value)
     for k, v in kwargs.items():
         kwargs[k] = _parse_value(kwargs[k])

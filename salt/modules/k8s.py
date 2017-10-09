@@ -21,12 +21,12 @@ import re
 import json
 import logging as logger
 import base64
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 
 # TODO Remove requests dependency
 
-import salt.utils
+import salt.utils.files
 import salt.utils.http as http
 
 __virtualname__ = 'k8s'
@@ -55,7 +55,7 @@ def _guess_apiserver(apiserver_url=None):
         config = __salt__['config.get']('k8s:config', default_config)
         kubeapi_regex = re.compile("""KUBE_MASTER=['"]--master=(.*)['"]""",
                                    re.MULTILINE)
-        with salt.utils.fopen(config) as fh_k8s:
+        with salt.utils.files.fopen(config) as fh_k8s:
             for line in fh_k8s.readlines():
                 match_line = kubeapi_regex.match(line)
             if match_line:
@@ -541,7 +541,7 @@ def _is_valid_secret_file(filename):
 
 def _file_encode(filename):
     log.trace("Encoding secret file: {0}".format(filename))
-    with open(filename, "rb") as f:
+    with salt.utils.files.fopen(filename, "rb") as f:
         data = f.read()
         return base64.b64encode(data)
 

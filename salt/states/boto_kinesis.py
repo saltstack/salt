@@ -3,7 +3,7 @@
 Manage Kinesis Streams
 ======================
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Create and destroy Kinesis streams. Be aware that this interacts with Amazon's
 services, and so may incur charges.
@@ -63,13 +63,16 @@ import logging
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'boto_kinesis'
+
 
 def __virtual__():
     '''
     Only load if boto_kinesis is available.
     '''
-    ret = 'boto_kinesis' if 'boto_kinesis.exists' in __salt__ else False
-    return ret
+    if 'boto_kinesis.exists' in __salt__:
+        return __virtualname__
+    return False, 'The boto_kinesis module could not be loaded: boto libraries not found.'
 
 
 def present(name,

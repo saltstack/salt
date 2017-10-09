@@ -51,6 +51,9 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
+# Import 3rd-party libs
+from salt.ext import six
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -258,7 +261,7 @@ def create_node(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         args={
-            'kwargs': __utils__['cloud.filter_event']('requesting', data, data.keys()),
+            'kwargs': __utils__['cloud.filter_event']('requesting', data, list(data)),
         },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
@@ -397,7 +400,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         args = {}
 
     kwargs = {'data': data}
-    if isinstance(data, str) and '<?xml' in data:
+    if isinstance(data, six.string_types) and '<?xml' in data:
         kwargs['headers'] = {
             'Content-type': 'application/xml',
         }

@@ -105,14 +105,19 @@ def describe(name, region=None, key=None, keyid=None, profile=None):
         if r:
             stack = r[0]
             log.debug('Found VPC: {0}'.format(stack.stack_id))
-            keys = ('stack_id', 'description', 'stack_status', 'stack_status_reason')
+            keys = ('stack_id', 'description', 'stack_status', 'stack_status_reason', 'tags')
 
             ret = dict([(k, getattr(stack, k)) for k in keys if hasattr(stack, k)])
             o = getattr(stack, 'outputs')
+            p = getattr(stack, 'parameters')
             outputs = {}
+            parameters = {}
             for i in o:
                 outputs[i.key] = i.value
             ret['outputs'] = outputs
+            for j in p:
+                parameters[j.key] = j.value
+            ret['parameters'] = parameters
 
             return {'stack': ret}
 

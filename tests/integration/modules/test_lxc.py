@@ -8,7 +8,7 @@ Test the lxc module
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.helpers import (
     skip_if_not_root,
     skip_if_binaries_missing
@@ -16,7 +16,7 @@ from tests.support.helpers import (
 from tests.support.unit import skipIf
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 @skipIf(True,
@@ -24,7 +24,7 @@ import salt.ext.six as six
         'function destroys ALL containers on the box, which is BAD.')
 @skip_if_not_root
 @skip_if_binaries_missing('lxc-start', message='LXC is not installed or minimal version not met')
-class LXCModuleTest(integration.ModuleCase):
+class LXCModuleTest(ModuleCase):
     '''
     Test the lxc module
     '''

@@ -13,12 +13,13 @@ import os
 import salt.client
 import salt.payload
 import salt.utils
+import salt.utils.files
 import salt.utils.jid
 import salt.minion
 import salt.returners
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltClientError
 
 try:
@@ -577,12 +578,14 @@ def _walk_through(job_dir, display_progress=False):
 
         for final in os.listdir(t_path):
             load_path = os.path.join(t_path, final, '.load.p')
-            job = serial.load(salt.utils.fopen(load_path, 'rb'))
+            with salt.utils.files.fopen(load_path, 'rb') as rfh:
+                job = serial.load(rfh)
 
             if not os.path.isfile(load_path):
                 continue
 
-            job = serial.load(salt.utils.fopen(load_path, 'rb'))
+            with salt.utils.files.fopen(load_path, 'rb') as rfh:
+                job = serial.load(rfh)
             jid = job['jid']
             if display_progress:
                 __jid_event__.fire_event(

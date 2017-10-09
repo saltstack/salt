@@ -9,7 +9,7 @@ import os
 import traceback
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 from tests.support.mixins import RUNTIME_VARS
 
 # Import Salt libs
@@ -17,7 +17,7 @@ import salt.config
 from salt.output import display_output
 
 
-class OutputReturnTest(integration.ShellCase):
+class OutputReturnTest(ShellCase):
     '''
     Integration tests to ensure outputters return their expected format.
     Tests against situations where the loader might not be returning the
@@ -87,8 +87,7 @@ class OutputReturnTest(integration.ShellCase):
         '''
         opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         opts['output_file'] = os.path.join(
-            integration.SYS_TMP_DIR,
-            'salt-tests-tmpdir',
+            RUNTIME_VARS.TMP,
             'outputtest'
         )
         data = {'foo': {'result': False,

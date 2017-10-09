@@ -10,11 +10,10 @@ import stat
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
+from tests.support.paths import TMP
 
 # Import salt libs
-import tests.integration as integration
-import salt.ext.six as six
-import salt.utils
+import salt.utils.files
 import salt.utils.find
 
 # Import 3rd-party libs
@@ -121,19 +120,11 @@ class TestFind(TestCase):
 
         min_size, max_size = salt.utils.find._parse_size('+1m')
         self.assertEqual(min_size, 1048576)
-        # sys.maxint has been removed in Python3. Use maxsize instead.
-        if six.PY3:
-            self.assertEqual(max_size, sys.maxsize)
-        else:
-            self.assertEqual(max_size, sys.maxint)
+        self.assertEqual(max_size, sys.maxsize)
 
         min_size, max_size = salt.utils.find._parse_size('+1M')
         self.assertEqual(min_size, 1048576)
-        # sys.maxint has been removed in Python3. Use maxsize instead.
-        if six.PY3:
-            self.assertEqual(max_size, sys.maxsize)
-        else:
-            self.assertEqual(max_size, sys.maxint)
+        self.assertEqual(max_size, sys.maxsize)
 
     def test_option_requires(self):
         option = salt.utils.find.Option()
@@ -217,7 +208,7 @@ class TestFind(TestCase):
         option = salt.utils.find.TypeOption('type', 's')
         self.assertEqual(option.match('', '', [stat.S_IFSOCK]), True)
 
-    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
+    @skipIf(sys.platform.startswith('win'), 'pwd not available on Windows')
     def test_owner_option_requires(self):
         self.assertRaises(
             ValueError, salt.utils.find.OwnerOption, 'owner', 'notexist'
@@ -226,7 +217,7 @@ class TestFind(TestCase):
         option = salt.utils.find.OwnerOption('owner', 'root')
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
-    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
+    @skipIf(sys.platform.startswith('win'), 'pwd not available on Windows')
     def test_owner_option_match(self):
         option = salt.utils.find.OwnerOption('owner', 'root')
         self.assertEqual(option.match('', '', [0] * 5), True)
@@ -234,7 +225,7 @@ class TestFind(TestCase):
         option = salt.utils.find.OwnerOption('owner', '500')
         self.assertEqual(option.match('', '', [500] * 5), True)
 
-    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
+    @skipIf(sys.platform.startswith('win'), 'grp not available on Windows')
     def test_group_option_requires(self):
         self.assertRaises(
             ValueError, salt.utils.find.GroupOption, 'group', 'notexist'
@@ -247,7 +238,7 @@ class TestFind(TestCase):
         option = salt.utils.find.GroupOption('group', group_name)
         self.assertEqual(option.requires(), salt.utils.find._REQUIRES_STAT)
 
-    @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
+    @skipIf(sys.platform.startswith('win'), 'grp not available on Windows')
     def test_group_option_match(self):
         if sys.platform.startswith(('darwin', 'freebsd', 'openbsd')):
             group_name = 'wheel'
@@ -294,7 +285,7 @@ class TestGrepOption(TestCase):
 
     def setUp(self):
         super(TestGrepOption, self).setUp()
-        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        self.tmpdir = tempfile.mkdtemp(dir=TMP)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -313,7 +304,7 @@ class TestGrepOption(TestCase):
 
     def test_grep_option_match_regular_file(self):
         hello_file = os.path.join(self.tmpdir, 'hello.txt')
-        with salt.utils.fopen(hello_file, 'w') as fp_:
+        with salt.utils.files.fopen(hello_file, 'w') as fp_:
             fp_.write('foo')
         option = salt.utils.find.GrepOption('grep', 'foo')
         self.assertEqual(
@@ -339,7 +330,7 @@ class TestPrintOption(TestCase):
 
     def setUp(self):
         super(TestPrintOption, self).setUp()
-        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        self.tmpdir = tempfile.mkdtemp(dir=TMP)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -372,7 +363,7 @@ class TestPrintOption(TestCase):
 
     def test_print_option_execute(self):
         hello_file = os.path.join(self.tmpdir, 'hello.txt')
-        with salt.utils.fopen(hello_file, 'w') as fp_:
+        with salt.utils.files.fopen(hello_file, 'w') as fp_:
             fp_.write('foo')
 
         option = salt.utils.find.PrintOption('print', '')
@@ -412,7 +403,7 @@ class TestPrintOption(TestCase):
             option.execute('test_name', [0] * 9), [0, 'test_name']
         )
 
-    @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
+    @skipIf(sys.platform.startswith('win'), "pwd not available on Windows")
     def test_print_user(self):
         option = salt.utils.find.PrintOption('print', 'user')
         self.assertEqual(option.execute('', [0] * 10), 'root')
@@ -420,7 +411,7 @@ class TestPrintOption(TestCase):
         option = salt.utils.find.PrintOption('print', 'user')
         self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
 
-    @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
+    @skipIf(sys.platform.startswith('win'), "grp not available on Windows")
     def test_print_group(self):
         option = salt.utils.find.PrintOption('print', 'group')
         if sys.platform.startswith(('darwin', 'freebsd', 'openbsd')):
@@ -433,7 +424,7 @@ class TestPrintOption(TestCase):
         #option = salt.utils.find.PrintOption('print', 'group')
         #self.assertEqual(option.execute('', [2 ** 31] * 10), 2 ** 31)
 
-    @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
+    @skipIf(sys.platform.startswith('win'), "no /dev/null on windows")
     def test_print_md5(self):
         option = salt.utils.find.PrintOption('print', 'md5')
         self.assertEqual(option.execute('/dev/null', os.stat('/dev/null')), '')
@@ -443,7 +434,7 @@ class TestFinder(TestCase):
 
     def setUp(self):
         super(TestFinder, self).setUp()
-        self.tmpdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        self.tmpdir = tempfile.mkdtemp(dir=TMP)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -561,7 +552,7 @@ class TestFinder(TestCase):
 
     def test_find(self):
         hello_file = os.path.join(self.tmpdir, 'hello.txt')
-        with salt.utils.fopen(hello_file, 'w') as fp_:
+        with salt.utils.files.fopen(hello_file, 'w') as fp_:
             fp_.write('foo')
 
         finder = salt.utils.find.Finder({})
