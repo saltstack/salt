@@ -74,6 +74,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 # Import Python Libs
 from __future__ import absolute_import
 import json
+import uuid
 
 # Import Salt Libs
 from salt.utils import SaltInvocationError, exactly_one
@@ -359,8 +360,8 @@ def absent(
     return ret
 
 
-def hosted_zone_present(name, domain_name=None, private_zone=False, comment='',
-                        vpc_id=None, vpc_name=None, vpc_region=None,
+def hosted_zone_present(name, domain_name=None, private_zone=False, caller_ref=None,
+                        comment='', vpc_id=None, vpc_name=None, vpc_region=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
     Ensure a hosted zone exists with the given attributes.  Note that most
@@ -374,8 +375,7 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, comment='',
         - vpc_region (again, supported in boto3 but not boto2).
 
     name
-        The name of the state definition.  This will be used as the 'caller_ref'
-        param if/when creating the hosted zone.
+        The name of the state definition.
 
     domain_name
         The name of the domain. This should be a fully-specified domain, and
@@ -384,11 +384,20 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, comment='',
         registrar to the Amazon Route 53 delegation servers returned in response
         to this request.  Defaults to the value of name if not provided.
 
-    comment
-        Any comments you want to include about the hosted zone.
-
     private_zone
         Set True if creating a private hosted zone.
+
+    caller_ref
+        A unique string that identifies the request and that allows create_hosted_zone() calls to be
+        retried without the risk of executing the operation twice.  This helps ensure idempotency
+        across state calls, but can cause issues if a zone is deleted and then an attempt is made
+        to recreate it with the same caller_ref.  If not provided, a unique UUID will be generated
+        at each state run, which can potentially lead to duplicate zones being created if the state
+        is run again while the previous zone creation is still in PENDING status (which can
+        occasionally take several minutes to clear).  Maximum length of 128.
+
+    comment
+        Any comments you want to include about the hosted zone.
 
     vpc_id
         When creating a private hosted zone, either the VPC ID or VPC Name to
@@ -475,13 +484,15 @@ def hosted_zone_present(name, domain_name=None, private_zone=False, comment='',
                      'This may fail...'.format(domain_name))
 
     if create:
+        if caller_ref is None:
+            caller_ref = str(uuid.uuid4())
         if __opts__['test']:
             ret['comment'] = 'Route53 Hosted Zone {0} set to be added.'.format(
                     domain_name)
             ret['result'] = None
             return ret
         res = __salt__['boto_route53.create_hosted_zone'](domain_name=domain_name,
-                caller_ref=name, comment=comment, private_zone=private_zone,
+                caller_ref=caller_ref, comment=comment, private_zone=private_zone,
                 vpc_id=vpc_id, vpc_region=vpc_region, region=region, key=key,
                 keyid=keyid, profile=profile)
         if res:
