@@ -48,13 +48,15 @@ class MockRunnerClient(object):
             return []
 
 
-@patch('salt.states.winrepo.salt.runner', MockRunnerClient)
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate the winrepo state
     '''
     def setup_loader_modules(self):
+        patcher = patch('salt.states.winrepo.salt.runner', MockRunnerClient)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {winrepo: {}}
 
     def test_genrepo(self):
@@ -65,9 +67,8 @@ class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {},
                'result': False,
                'comment': ''}
-        ret.update({'comment':
-                    '{file_roots}/win/repo is '
-                    'missing'.format(file_roots=BASE_FILE_ROOTS_DIR)})
+        ret.update({'comment': '{0} is missing'.format(
+            os.sep.join([BASE_FILE_ROOTS_DIR, 'win', 'repo']))})
         self.assertDictEqual(winrepo.genrepo('salt'), ret)
 
         mock = MagicMock(return_value={'winrepo_dir': 'salt',

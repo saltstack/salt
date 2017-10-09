@@ -4,16 +4,16 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
-from tests.support.unit import skipIf
+from tests.support.unit import TestCase, skipIf
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt libs
 import salt.auth
 import salt.wheel
-import salt.utils
+import salt.utils.platform
 
 
-class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixIn):
+class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
     eauth_creds = {
         'username': 'saltdev_auto',
@@ -81,7 +81,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
 
     # Remove this skipIf when Issue #39616 is resolved
     # https://github.com/saltstack/salt/issues/39616
-    @skipIf(salt.utils.is_windows(),
+    @skipIf(salt.utils.platform.is_windows(),
             'Causes pickling error on Windows: Issue #39616')
     def test_cmd_async(self):
         low = {

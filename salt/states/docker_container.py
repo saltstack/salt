@@ -2,7 +2,7 @@
 '''
 Management of Docker containers
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 :depends: docker_ Python module
 
@@ -28,9 +28,9 @@ Management of Docker containers
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 
 These states were moved from the :mod:`docker <salt.states.docker>` state
-module (formerly called **dockerng**) in the Nitrogen release. When running the
+module (formerly called **dockerng**) in the 2017.7.0 release. When running the
 :py:func:`docker_container.running <salt.states.docker_container.running>`
-state for the first time after upgrading to Nitrogen, your container(s) may be
+state for the first time after upgrading to 2017.7.0, your container(s) may be
 replaced. The changes may show diffs for certain parameters which say that the
 old value was an empty string, and the new value is ``None``. This is due to
 the fact that in prior releases Salt was passing empty strings for these values
@@ -52,14 +52,16 @@ import logging
 from salt.exceptions import CommandExecutionError
 import copy
 import salt.utils
+import salt.utils.args
 import salt.utils.docker
-import salt.ext.six as six
+from salt.ext import six
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # Define the module's virtual name
 __virtualname__ = 'docker_container'
+__virtual_aliases__ = ('moby_container',)
 
 
 def __virtual__():
@@ -137,14 +139,14 @@ def running(name,
             the image needs to be built from a Dockerfile or loaded from a
             saved image, or if you would like to use requisites to trigger a
             replacement of the container when the image is updated, then the
-            :py:func:`docker.image_present
-            <salt.modules.docker.image_present>` should be used to manage the
-            image.
+            :py:func:`docker_image.present
+            <salt.states.dockermod.image_present>` state should be used to
+            manage the image.
 
     .. _docker-container-running-skip-translate:
 
     skip_translate
-        This function translates Salt CLI input into the format which
+        This function translates Salt CLI or SLS input into the format which
         docker-py_ expects. However, in the event that Salt's translation logic
         fails (due to potential changes in the Docker Remote API, or to bugs in
         the translation code), this argument can be used to exert granular
@@ -248,12 +250,12 @@ def running(name,
 
     shutdown_timeout : 10
         If the container needs to be replaced, the container will be stopped
-        using :py:func:`docker.stop <salt.modules.docker.stop>`. The value
+        using :py:func:`docker.stop <salt.modules.dockermod.stop>`. The value
         of this parameter will be passed to :py:func:`docker.stop
-        <salt.modules.docker.stop>` as the ``timeout`` value, telling Docker
+        <salt.modules.dockermod.stop>` as the ``timeout`` value, telling Docker
         how long to wait for a graceful shutdown before killing the container.
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             This option was renamed from ``stop_timeout`` to
             ``shutdown_timeout`` to acommodate the ``stop_timeout`` container
             configuration setting.
@@ -282,10 +284,35 @@ def running(name,
 
     binds
         Files/directories to bind mount. Each bind mount should be passed in
-        the format ``<host_path>:<container_path>:<read_only>``, where
-        ``<read_only>`` is one of ``rw`` (for read-write access) or ``ro`` (for
-        read-only access). Can be expressed as a comma-separated list or a YAML
-        list. The below two examples are equivalent:
+        one of the following formats:
+
+        - ``<host_path>:<container_path>`` - ``host_path`` is mounted within
+          the container as ``container_path`` with read-write access.
+        - ``<host_path>:<container_path>:<selinux_context>`` - ``host_path`` is
+          mounted within the container as ``container_path`` with read-write
+          access. Additionally, the specified selinux context will be set
+          within the container.
+        - ``<host_path>:<container_path>:<read_only>`` - ``host_path`` is
+          mounted within the container as ``container_path``, with the
+          read-only or read-write setting explicitly defined.
+        - ``<host_path>:<container_path>:<read_only>,<selinux_context>`` -
+          ``host_path`` is mounted within the container as ``container_path``,
+          with the read-only or read-write setting explicitly defined.
+          Additionally, the specified selinux context will be set within the
+          container.
+
+        ``<read_only>`` can be either ``ro`` for read-write access, or ``ro``
+        for read-only access. When omitted, it is assumed to be read-write.
+
+        ``<selinux_context>`` can be ``z`` if the volume is shared between
+        multiple containers, or ``Z`` if the volume should be private.
+
+        .. note::
+            When both ``<read_only>`` and ``<selinux_context>`` are specified,
+            there must be a comma before ``<selinux_context>``.
+
+        Binds can be expressed as a comma-separated list or a YAML list. The
+        below two examples are equivalent:
 
         .. code-block:: yaml
 
@@ -303,9 +330,8 @@ def running(name,
                   - /srv/www:/var/www:ro
                   - /home/myuser/conf/foo.conf:/etc/foo.conf:rw
 
-        Optionally, the read-only information can be left off the end and the
-        bind mount will be assumed to be read-write. The example below is
-        equivalent to the one above:
+        However, in cases where both ro/rw and an selinux context are combined,
+        the only option is to use a YAML list, like so:
 
         .. code-block:: yaml
 
@@ -313,8 +339,20 @@ def running(name,
               docker_container.running:
                 - image: bar/baz:latest
                 - binds:
-                  - /srv/www:/var/www:ro
-                  - /home/myuser/conf/foo.conf:/etc/foo.conf
+                  - /srv/www:/var/www:ro,Z
+                  - /home/myuser/conf/foo.conf:/etc/foo.conf:rw,Z
+
+        Since the second bind in the previous example is mounted read-write,
+        the ``rw`` and comma can be dropped. For example:
+
+        .. code-block:: yaml
+
+            foo:
+              docker_container.running:
+                - image: bar/baz:latest
+                - binds:
+                  - /srv/www:/var/www:ro,Z
+                  - /home/myuser/conf/foo.conf:/etc/foo.conf:Z
 
     blkio_weight
         Block IO weight (relative weight), accepts a weight value between 10
@@ -640,24 +678,14 @@ def running(name,
                   - foo2.domain.tld
 
     domainname
-        Set custom DNS search domains. Can be expressed as a comma-separated
-        list or a YAML list. The below two examples are equivalent:
+        The domain name to use for the container
 
         .. code-block:: yaml
 
             foo:
               docker_container.running:
                 - image: bar/baz:latest
-                - dommainname: domain.tld,domain2.tld
-
-        .. code-block:: yaml
-
-            foo:
-              docker_container.running:
-                - image: bar/baz:latest
-                - dommainname:
-                  - domain.tld
-                  - domain2.tld
+                - dommainname: domain.tld
 
     entrypoint
         Entrypoint for the container
@@ -1321,7 +1349,7 @@ def running(name,
                 - stop_timeout: 5
 
         .. note::
-            In releases prior to Nitrogen, this option was not set in the
+            In releases prior to 2017.7.0, this option was not set in the
             container configuration, but rather this timeout was enforced only
             when shutting down an existing container to replace it. To remove
             the ambiguity, and to allow for the container to have a stop
@@ -1677,7 +1705,7 @@ def running(name,
         return result
 
     # If we're not skipping the comparison, then the assumption is that
-    # temp_container will be discared, unless the comparison reveals
+    # temp_container will be discarded, unless the comparison reveals
     # differences, in which case we'll set cleanup_temp = False to prevent it
     # from being cleaned.
     cleanup_temp = not skip_comparison
@@ -1773,6 +1801,10 @@ def running(name,
     #     were detected, so the the temp container was discarded
     if not cleanup_temp and (not exists or (exists and start)) \
             or (start and cleanup_temp and pre_state != 'running'):
+        if __opts__['test']:
+            ret['result'] = None
+            comments.append('Container would be started')
+            return _format_comments(ret, comments)
         try:
             post_state = __salt__['docker.start'](name)['state']['new']
         except Exception as exc:
@@ -2027,7 +2059,7 @@ def mod_watch(name, sfun=None, **kwargs):
         return running(name, **watch_kwargs)
 
     if sfun == 'stopped':
-        return stopped(name, **salt.utils.clean_kwargs(**kwargs))
+        return stopped(name, **salt.utils.args.clean_kwargs(**kwargs))
 
     return {'name': name,
             'changes': {},

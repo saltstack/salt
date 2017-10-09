@@ -27,8 +27,10 @@ fake_pillar_name = 'fake_pillar_name'
 
 def side_effect(group_sel, t):
     if group_sel.find(fake_minion_id) != -1:
-        return [fake_minion_id, ]
-    return ['another_minion_id', ]
+        return {'minions': [fake_minion_id, ],
+                'missing': []}
+    return {'minions': ['another_minion_id', ],
+            'missing': []}
 
 
 class NodegroupsPillarTestCase(TestCase, LoaderModuleMockMixin):
@@ -38,12 +40,12 @@ class NodegroupsPillarTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {nodegroups: {'__opts__': fake_opts}}
 
-    @patch('salt.utils.minions.CkMinions.check_minions',
-           MagicMock(side_effect=side_effect))
     def _runner(self, expected_ret, pillar_name=None):
-        pillar_name = pillar_name or fake_pillar_name
-        actual_ret = nodegroups.ext_pillar(fake_minion_id, fake_pillar, pillar_name=pillar_name)
-        self.assertDictEqual(actual_ret, expected_ret)
+        with patch('salt.utils.minions.CkMinions.check_minions',
+                MagicMock(side_effect=side_effect)):
+            pillar_name = pillar_name or fake_pillar_name
+            actual_ret = nodegroups.ext_pillar(fake_minion_id, fake_pillar, pillar_name=pillar_name)
+            self.assertDictEqual(actual_ret, expected_ret)
 
     def test_succeeds(self):
         ret = {fake_pillar_name: ['groupA', ]}

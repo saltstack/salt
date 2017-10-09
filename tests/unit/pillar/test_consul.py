@@ -11,6 +11,9 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 # Import Salt Libs
 import salt.pillar.consul_pillar as consul_pillar
 
+# Import 3rd-party libs
+from salt.ext import six
+
 OPTS = {'consul_config': {'consul.port': 8500, 'consul.host': '172.17.0.15'}}
 
 PILLAR_DATA = [
@@ -41,41 +44,37 @@ class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.pillar.consul_pillar
     '''
     def setup_loader_modules(self):
-        return {consul_pillar: {'__opts__': OPTS}}
-
-    def get_pillar(self):
-        consul_pillar.get_conn = MagicMock(return_value='consul_connection')
-        pillar = consul_pillar
-        return pillar
+        return {
+            consul_pillar: {
+                '__opts__': OPTS,
+                'get_conn': MagicMock(return_value='consul_connection')
+            }
+        }
 
     def test_connection(self):
-        pillar = self.get_pillar()
         with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
             with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
-                pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
-                pillar.get_conn.assert_called_once_with(OPTS, 'consul_config')
+                consul_pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
+                consul_pillar.get_conn.assert_called_once_with(OPTS, 'consul_config')
 
     def test_pillar_data(self):
-        pillar = self.get_pillar()
         with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
             with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
-                pillar_data = pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
-                pillar.consul_fetch.assert_called_once_with('consul_connection', 'test-shared/')
+                pillar_data = consul_pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
+                consul_pillar.consul_fetch.assert_called_once_with('consul_connection', 'test-shared/')
                 assert list(pillar_data) == [u'user', u'sites']
                 self.assertNotIn('blankvalue', pillar_data[u'user'])
 
     def test_value_parsing(self):
-        pillar = self.get_pillar()
         with patch.dict(consul_pillar.__salt__, {'grains.get': MagicMock(return_value=({}))}):
             with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
-                pillar_data = pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
-                assert isinstance(pillar_data[u'user'][u'dontsplit'], str)
+                pillar_data = consul_pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
+                assert isinstance(pillar_data[u'user'][u'dontsplit'], six.string_types)
 
     def test_dict_merge(self):
-        pillar = self.get_pillar()
         test_dict = {}
         with patch.dict(test_dict, SIMPLE_DICT):
-            self.assertDictEqual(pillar.dict_merge(test_dict, SIMPLE_DICT), SIMPLE_DICT)
+            self.assertDictEqual(consul_pillar.dict_merge(test_dict, SIMPLE_DICT), SIMPLE_DICT)
         with patch.dict(test_dict, {'key1': {'key3': {'key4': 'value'}}}):
-            self.assertDictEqual(pillar.dict_merge(test_dict, SIMPLE_DICT),
+            self.assertDictEqual(consul_pillar.dict_merge(test_dict, SIMPLE_DICT),
                                  {'key1': {'key2': 'val1', 'key3': {'key4': 'value'}}})

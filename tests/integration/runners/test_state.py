@@ -16,15 +16,18 @@ import threading
 from salt.ext.six.moves import queue
 
 # Import Salt Testing Libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 from tests.support.unit import skipIf
+from tests.support.paths import TMP
 
 # Import Salt Libs
 import salt.utils
+import salt.utils.platform
 import salt.utils.event
+import salt.utils.files
 
 
-class StateRunnerTest(integration.ShellCase):
+class StateRunnerTest(ShellCase):
     '''
     Test the state runner.
     '''
@@ -100,8 +103,8 @@ class StateRunnerTest(integration.ShellCase):
         server_thread.join()
 
 
-@skipIf(salt.utils.is_windows(), '*NIX-only test')
-class OrchEventTest(integration.ShellCase):
+@skipIf(salt.utils.platform.is_windows(), '*NIX-only test')
+class OrchEventTest(ShellCase):
     '''
     Tests for orchestration events
     '''
@@ -120,14 +123,14 @@ class OrchEventTest(integration.ShellCase):
             dir=self.master_d_dir,
             delete=True,
         )
-        self.base_env = tempfile.mkdtemp(dir=integration.TMP)
-
-    def tearDown(self):
-        shutil.rmtree(self.base_env)
-        self.conf.close()
+        self.base_env = tempfile.mkdtemp(dir=TMP)
+        self.addCleanup(shutil.rmtree, self.base_env)
+        self.addCleanup(self.conf.close)
+        for attr in ('timeout', 'master_d_dir', 'conf', 'base_env'):
+            self.addCleanup(delattr, self, attr)
         # Force a reload of the configuration now that our temp config file has
         # been removed.
-        self.run_run_plus('test.arg', __reload_config=True)
+        self.addCleanup(self.run_run_plus, 'test.arg', __reload_config=True)
 
     def alarm_handler(self, signal, frame):
         raise Exception('Timeout of {0} seconds reached'.format(self.timeout))
@@ -152,14 +155,14 @@ class OrchEventTest(integration.ShellCase):
         })
 
         state_sls = os.path.join(self.base_env, 'test_state.sls')
-        with salt.utils.fopen(state_sls, 'w') as fp_:
+        with salt.utils.files.fopen(state_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 date:
                   cmd.run
             '''))
 
         orch_sls = os.path.join(self.base_env, 'test_orch.sls')
-        with salt.utils.fopen(orch_sls, 'w') as fp_:
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 date_cmd:
                   salt.state:
@@ -208,4 +211,5 @@ class OrchEventTest(integration.ShellCase):
                         self.assertTrue('__jid__' in ret[job])
                     break
         finally:
+            del listener
             signal.alarm(0)

@@ -2,7 +2,7 @@
 '''
 Tests for the file state
 '''
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import errno
 import os
@@ -10,16 +10,18 @@ import textwrap
 import tempfile
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ModuleCase
 from tests.support.paths import TMP_STATE_TREE
-# Import salt libs
-import salt.utils
+from tests.support.mixins import SaltReturnAssertsMixin
 
-IS_WINDOWS = salt.utils.is_windows()
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
+
+IS_WINDOWS = salt.utils.platform.is_windows()
 
 
-class CMDTest(integration.ModuleCase,
-              integration.SaltReturnAssertsMixIn):
+class CMDTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state
     '''
@@ -40,8 +42,7 @@ class CMDTest(integration.ModuleCase,
         self.assertSaltNoneReturn(ret)
 
 
-class CMDRunRedirectTest(integration.ModuleCase,
-                         integration.SaltReturnAssertsMixIn):
+class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state of run_redirect
     '''
@@ -84,7 +85,7 @@ class CMDRunRedirectTest(integration.ModuleCase,
         test cmd.run unless
         '''
         state_key = 'cmd_|-{0}_|-{0}_|-run'.format(self.test_tmp_path)
-        with salt.utils.fopen(self.state_file, 'w') as fb_:
+        with salt.utils.files.fopen(self.state_file, 'w') as fb_:
             fb_.write(textwrap.dedent('''
                 {0}:
                   cmd.run:
@@ -115,7 +116,7 @@ class CMDRunRedirectTest(integration.ModuleCase,
         test cmd.run creates already there
         '''
         state_key = 'cmd_|-echo >> {0}_|-echo >> {0}_|-run'.format(self.test_file)
-        with salt.utils.fopen(self.state_file, 'w') as fb_:
+        with salt.utils.files.fopen(self.state_file, 'w') as fb_:
             fb_.write(textwrap.dedent('''
                 echo >> {0}:
                   cmd.run:
@@ -132,7 +133,7 @@ class CMDRunRedirectTest(integration.ModuleCase,
         '''
         os.remove(self.test_file)
         state_key = 'cmd_|-echo >> {0}_|-echo >> {0}_|-run'.format(self.test_file)
-        with salt.utils.fopen(self.state_file, 'w') as fb_:
+        with salt.utils.files.fopen(self.state_file, 'w') as fb_:
             fb_.write(textwrap.dedent('''
                 echo >> {0}:
                   cmd.run:
@@ -148,7 +149,7 @@ class CMDRunRedirectTest(integration.ModuleCase,
         test cmd.run with shell redirect
         '''
         state_key = 'cmd_|-echo test > {0}_|-echo test > {0}_|-run'.format(self.test_file)
-        with salt.utils.fopen(self.state_file, 'w') as fb_:
+        with salt.utils.files.fopen(self.state_file, 'w') as fb_:
             fb_.write(textwrap.dedent('''
                 echo test > {0}:
                   cmd.run
@@ -158,8 +159,7 @@ class CMDRunRedirectTest(integration.ModuleCase,
         self.assertTrue(ret[state_key]['result'])
 
 
-class CMDRunWatchTest(integration.ModuleCase,
-                      integration.SaltReturnAssertsMixIn):
+class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state of run_watch
     '''
@@ -180,7 +180,7 @@ class CMDRunWatchTest(integration.ModuleCase,
         saltines_key = 'cmd_|-saltines_|-echo changed=true_|-run'
         biscuits_key = 'cmd_|-biscuits_|-echo biscuits_|-wait'
 
-        with salt.utils.fopen(self.state_file, 'w') as fb_:
+        with salt.utils.files.fopen(self.state_file, 'w') as fb_:
             fb_.write(textwrap.dedent('''
                 saltines:
                   cmd.run:

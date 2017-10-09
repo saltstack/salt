@@ -3,7 +3,7 @@
 Management of Docker Containers
 
 .. versionadded:: 2015.8.0
-.. versionchanged:: Nitrogen
+.. versionchanged:: 2017.7.0
     This module has replaced the legacy docker execution module.
 
 :depends: docker_ Python module
@@ -34,86 +34,66 @@ Management of Docker Containers
 Authentication
 --------------
 
-To push or pull images, credentials must be configured. By default this module
-will try to get the credentials from the default docker auth file, located
-under the home directory of the user running the salt-minion
-(HOME/.docker/config.json). Because a password must be used, it is recommended
-to place this configuration in :ref:`Pillar <pillar>` data. If pillar data
-specifies a registry already present in the default docker auth file, it will
-override.
-
-The configuration schema is as follows:
+If you have previously performed a ``docker login`` from the minion, then the
+credentials saved in ``~/.docker/config.json`` will be used for any actions
+which require authentication. If not, then credentials can be configured in
+Pillar data. The configuration schema is as follows:
 
 .. code-block:: yaml
 
     docker-registries:
       <registry_url>:
-        email: <email_address>
-        password: <password>
         username: <username>
-        reauth: <boolean>
+        password: <password>
 
 For example:
 
 .. code-block:: yaml
 
     docker-registries:
-      https://index.docker.io/v1/:
-        email: foo@foo.com
-        password: s3cr3t
+      hub:
         username: foo
+        password: s3cr3t
 
-Reauth is an optional parameter that forces the docker login to reauthorize using
-the credentials passed in the pillar data. Defaults to false.
+.. note::
+    As of the 2016.3.7, 2016.11.4, and 2017.7.0 releases of Salt, credentials
+    for the Docker Hub can be configured simply by specifying ``hub`` in place
+    of the registry URL. In earlier releases, it is necessary to specify the
+    actual registry URL for the Docker Hub (i.e.
+    ``https://index.docker.io/v1/``).
 
-.. versionadded:: 2016.3.5,2016.11.1
-
-For example:
+More than one registry can be configured. Salt will look for Docker credentials
+in the ``docker-registries`` Pillar key, as well as any key ending in
+``-docker-registries``. For example:
 
 .. code-block:: yaml
 
     docker-registries:
-      https://index.docker.io/v1/:
-        email: foo@foo.com
-        password: s3cr3t
+      'https://mydomain.tld/registry:5000':
         username: foo
-        reauth: True
-
-Mulitiple registries can be configured. This can be done in one of two ways.
-The first way is to configure each registry under the ``docker-registries``
-pillar key.
-
-.. code-block:: yaml
-
-    docker-registries:
-      https://index.foo.io/v1/:
-        email: foo@foo.com
         password: s3cr3t
-        username: foo
-      https://index.bar.io/v1/:
-        email: foo@foo.com
-        password: s3cr3t
-        username: foo
-
-The second way is to use separate pillar variables ending in
-``-docker-registries``:
-
-.. code-block:: yaml
 
     foo-docker-registries:
       https://index.foo.io/v1/:
-        email: foo@foo.com
-        password: s3cr3t
         username: foo
+        password: s3cr3t
 
     bar-docker-registries:
       https://index.bar.io/v1/:
-        email: foo@foo.com
-        password: s3cr3t
         username: foo
+        password: s3cr3t
 
-Both methods can be combined; any registry configured under
-``docker-registries`` or ``*-docker-registries`` will be detected.
+To login to the configured registries, use the :py:func:`docker.login
+<salt.modules.dockermod.login>` function. This only needs to be done once for a
+given registry, and it will store/update the credentials in
+``~/.docker/config.json``.
+
+.. note::
+    For Salt releases before 2016.3.7 and 2016.11.4, :py:func:`docker.login
+    <salt.modules.dockermod.login>` is not available. Instead, Salt will try to
+    authenticate using each of your configured registries for each push/pull,
+    behavior which is not correct and has been resolved in newer releases.
+
 
 Configuration Options
 ---------------------
@@ -122,7 +102,8 @@ The following configuration options can be set to fine-tune how Salt uses
 Docker:
 
 - ``docker.url``: URL to the docker service (default: local socket).
-- ``docker.version``: API version to use
+- ``docker.version``: API version to use (should not need to be set manually in
+  the vast majority of cases)
 - ``docker.exec_driver``: Execution driver to use, one of ``nsenter``,
   ``lxc-attach``, or ``docker-exec``. See the :ref:`Executing Commands Within a
   Running Container <docker-execution-driver>` section for more details on how
@@ -131,73 +112,6 @@ Docker:
 These configuration options are retrieved using :py:mod:`config.get
 <salt.modules.config.get>` (click the link for further information).
 
-Functions
----------
-
-- Information Gathering
-    - :py:func:`docker.depends <salt.modules.docker.depends>`
-    - :py:func:`docker.diff <salt.modules.docker.diff>`
-    - :py:func:`docker.exists <salt.modules.docker.exists>`
-    - :py:func:`docker.history <salt.modules.docker.history>`
-    - :py:func:`docker.images <salt.modules.docker.images>`
-    - :py:func:`docker.info <salt.modules.docker.info>`
-    - :py:func:`docker.inspect <salt.modules.docker.inspect>`
-    - :py:func:`docker.inspect_container
-      <salt.modules.docker.inspect_container>`
-    - :py:func:`docker.inspect_image <salt.modules.docker.inspect_image>`
-    - :py:func:`docker.list_containers
-      <salt.modules.docker.list_containers>`
-    - :py:func:`docker.list_tags <salt.modules.docker.list_tags>`
-    - :py:func:`docker.logs <salt.modules.docker.logs>`
-    - :py:func:`docker.pid <salt.modules.docker.pid>`
-    - :py:func:`docker.port <salt.modules.docker.port>`
-    - :py:func:`docker.ps <salt.modules.docker.ps>`
-    - :py:func:`docker.state <salt.modules.docker.state>`
-    - :py:func:`docker.search <salt.modules.docker.search>`
-    - :py:func:`docker.top <salt.modules.docker.top>`
-    - :py:func:`docker.version <salt.modules.docker.version>`
-- Container Management
-    - :py:func:`docker.create <salt.modules.docker.create>`
-    - :py:func:`docker.copy_from <salt.modules.docker.copy_from>`
-    - :py:func:`docker.copy_to <salt.modules.docker.copy_to>`
-    - :py:func:`docker.export <salt.modules.docker.export>`
-    - :py:func:`docker.rm <salt.modules.docker.rm>`
-- Management of Container State
-    - :py:func:`docker.kill <salt.modules.docker.kill>`
-    - :py:func:`docker.pause <salt.modules.docker.pause>`
-    - :py:func:`docker.restart <salt.modules.docker.restart>`
-    - :py:func:`docker.start <salt.modules.docker.start>`
-    - :py:func:`docker.stop <salt.modules.docker.stop>`
-    - :py:func:`docker.unpause <salt.modules.docker.unpause>`
-    - :py:func:`docker.wait <salt.modules.docker.wait>`
-- Image Management
-    - :py:func:`docker.build <salt.modules.docker.build>`
-    - :py:func:`docker.commit <salt.modules.docker.commit>`
-    - :py:func:`docker.dangling <salt.modules.docker.dangling>`
-    - :py:func:`docker.import <salt.modules.docker.import>`
-    - :py:func:`docker.load <salt.modules.docker.load>`
-    - :py:func:`docker.pull <salt.modules.docker.pull>`
-    - :py:func:`docker.push <salt.modules.docker.push>`
-    - :py:func:`docker.rmi <salt.modules.docker.rmi>`
-    - :py:func:`docker.save <salt.modules.docker.save>`
-    - :py:func:`docker.tag <salt.modules.docker.tag>`
-- Network Management
-    - :py:func:`docker.networks <salt.modules.docker.networks>`
-    - :py:func:`docker.create_network <salt.modules.docker.create_network>`
-    - :py:func:`docker.remove_network <salt.modules.docker.remove_network>`
-    - :py:func:`docker.inspect_network
-      <salt.modules.docker.inspect_network>`
-    - :py:func:`docker.connect_container_to_network
-      <salt.modules.docker.connect_container_to_network>`
-    - :py:func:`docker.disconnect_container_from_network
-      <salt.modules.docker.disconnect_container_from_network>`
-
-- Salt Functions and States Execution
-    - :py:func:`docker.call <salt.modules.docker.call>`
-    - :py:func:`docker.sls <salt.modules.docker.sls>`
-    - :py:func:`docker.sls_build <salt.modules.docker.sls_build>`
-
-
 .. _docker-execution-driver:
 
 Executing Commands Within a Running Container
@@ -205,7 +119,7 @@ Executing Commands Within a Running Container
 
 .. note::
     With the release of Docker 1.13.1, the Execution Driver has been removed.
-    Starting in versions 2016.3.6, 2016.11.4, and Nitrogen, Salt defaults to
+    Starting in versions 2016.3.6, 2016.11.4, and 2017.7.0, Salt defaults to
     using ``docker exec`` to run commands in containers, however for older Salt
     releases it will be necessary to set the ``docker.exec_driver`` config
     option to either ``docker-exec`` or ``nsenter`` for Docker versions 1.13.1
@@ -245,13 +159,13 @@ a little work.
 This execution module provides functions that shadow those from the :mod:`cmd
 <salt.modules.cmdmod>` module. They are as follows:
 
-- :py:func:`docker.retcode <salt.modules.docker.retcode>`
-- :py:func:`docker.run <salt.modules.docker.run>`
-- :py:func:`docker.run_all <salt.modules.docker.run_all>`
-- :py:func:`docker.run_stderr <salt.modules.docker.run_stderr>`
-- :py:func:`docker.run_stdout <salt.modules.docker.run_stdout>`
-- :py:func:`docker.script <salt.modules.docker.script>`
-- :py:func:`docker.script_retcode <salt.modules.docker.script_retcode>`
+- :py:func:`docker.retcode <salt.modules.dockermod.retcode>`
+- :py:func:`docker.run <salt.modules.dockermod.run>`
+- :py:func:`docker.run_all <salt.modules.dockermod.run_all>`
+- :py:func:`docker.run_stderr <salt.modules.dockermod.run_stderr>`
+- :py:func:`docker.run_stdout <salt.modules.dockermod.run_stdout>`
+- :py:func:`docker.script <salt.modules.dockermod.script>`
+- :py:func:`docker.script_retcode <salt.modules.dockermod.script_retcode>`
 
 
 Detailed Function Documentation
@@ -271,7 +185,6 @@ import copy
 import fnmatch
 import functools
 import gzip
-import io
 import json
 import logging
 import os
@@ -282,23 +195,23 @@ import shutil
 import string
 import time
 import uuid
-import base64
-import errno
 import subprocess
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 import salt.utils
+import salt.utils.args
 import salt.utils.decorators
 import salt.utils.docker
 import salt.utils.files
+import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.thin
 import salt.pillar
 import salt.exceptions
 import salt.fileclient
-from salt.utils.versions import StrictVersion as _StrictVersion
 
 from salt.state import HighState
 import salt.client.ssh.state
@@ -320,7 +233,8 @@ except ImportError:
     HAS_LZMA = False
 # pylint: enable=import-error
 
-HAS_NSENTER = bool(salt.utils.which('nsenter'))
+HAS_NSENTER = bool(salt.utils.path.which('nsenter'))
+HUB_PREFIX = 'docker.io/'
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -344,7 +258,7 @@ NOTSET = object()
 
 # Define the module's virtual name and alias
 __virtualname__ = 'docker'
-__virtual_aliases__ = ('dockerng',)
+__virtual_aliases__ = ('dockerng', 'moby')
 
 
 def __virtual__():
@@ -406,60 +320,69 @@ def _get_docker_py_versioninfo():
         pass
 
 
+def _get_client(timeout=NOTSET, **kwargs):
+    client_kwargs = {}
+    if timeout is not NOTSET:
+        client_kwargs['timeout'] = timeout
+    for key, val in (('base_url', 'docker.url'),
+                     ('version', 'docker.version')):
+        param = __salt__['config.get'](val, NOTSET)
+        if param is not NOTSET:
+            client_kwargs[key] = param
+
+    if 'base_url' not in client_kwargs and 'DOCKER_HOST' in os.environ:
+        # Check if the DOCKER_HOST environment variable has been set
+        client_kwargs['base_url'] = os.environ.get('DOCKER_HOST')
+
+    if 'version' not in client_kwargs:
+        # Let docker-py auto detect docker version incase
+        # it's not defined by user.
+        client_kwargs['version'] = 'auto'
+
+    docker_machine = __salt__['config.get']('docker.machine', NOTSET)
+
+    if docker_machine is not NOTSET:
+        docker_machine_json = __salt__['cmd.run'](
+            ['docker-machine', 'inspect', docker_machine],
+            python_shell=False)
+        try:
+            docker_machine_json = \
+                json.loads(salt.utils.stringutils.to_str(docker_machine_json))
+            docker_machine_tls = \
+                docker_machine_json['HostOptions']['AuthOptions']
+            docker_machine_ip = docker_machine_json['Driver']['IPAddress']
+            client_kwargs['base_url'] = \
+                'https://' + docker_machine_ip + ':2376'
+            client_kwargs['tls'] = docker.tls.TLSConfig(
+                client_cert=(docker_machine_tls['ClientCertPath'],
+                             docker_machine_tls['ClientKeyPath']),
+                ca_cert=docker_machine_tls['CaCertPath'],
+                assert_hostname=False,
+                verify=True)
+        except Exception as exc:
+            raise CommandExecutionError(
+                'Docker machine {0} failed: {1}'.format(docker_machine, exc))
+    try:
+        # docker-py 2.0 renamed this client attribute
+        return docker.APIClient(**client_kwargs)
+    except AttributeError:
+        return docker.Client(**client_kwargs)
+
+
+def _get_state(inspect_results):
+    '''
+    Helper for deriving the current state of the container from the inspect
+    results.
+    '''
+    if inspect_results.get('State', {}).get('Paused', False):
+        return 'paused'
+    elif inspect_results.get('State', {}).get('Running', False):
+        return 'running'
+    else:
+        return 'stopped'
+
+
 # Decorators
-class _api_version(object):
-    '''
-    Enforce a specific Docker Remote API version
-    '''
-    def __init__(self, api_version):
-        self.api_version = api_version
-
-    def __call__(self, func):
-        def wrapper(*args, **kwargs):
-            '''
-            Get the current client version and check it against the one passed
-            '''
-            _get_client()
-            current_api_version = __context__['docker.client'].api_version
-            if float(current_api_version) < self.api_version:
-                raise CommandExecutionError(
-                    'This function requires a Docker API version of at least '
-                    '{0}. API version in use is {1}.'
-                    .format(self.api_version, current_api_version)
-                )
-            return func(*args, **salt.utils.clean_kwargs(**kwargs))
-        return salt.utils.decorators.identical_signature_wrapper(func, wrapper)
-
-
-class _client_version(object):
-    '''
-    Enforce a specific Docker client version
-    '''
-    def __init__(self, version):
-        self.version = _StrictVersion(version)
-
-    def __call__(self, func):
-        def wrapper(*args, **kwargs):
-            '''
-            Get the current client version and check it against the one passed
-            '''
-            _get_client()
-            current_version = '.'.join(map(str, _get_docker_py_versioninfo()))
-            if _StrictVersion(current_version) < self.version:
-                error_message = (
-                    'This function requires a Docker Client version of at least '
-                    '{0}. Version in use is {1}.'
-                    .format(self.version, current_version))
-                minion_conf = __salt__['config.get']('docker.version', NOTSET)
-                if minion_conf is not NOTSET:
-                    error_message += (
-                        ' Hint: Your minion configuration specified'
-                        ' `docker.version` = "{0}"'.format(minion_conf))
-                raise CommandExecutionError(error_message)
-            return func(*args, **salt.utils.clean_kwargs(**kwargs))
-        return salt.utils.decorators.identical_signature_wrapper(func, wrapper)
-
-
 def _docker_client(wrapped):
     '''
     Decorator to run a function that requires the use of a docker.Client()
@@ -470,10 +393,22 @@ def _docker_client(wrapped):
         '''
         Ensure that the client is present
         '''
-        client_timeout = __context__.get('docker.timeout',
-                                         salt.utils.docker.CLIENT_TIMEOUT)
-        _get_client(timeout=client_timeout)
-        return wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
+        kwargs = salt.utils.args.clean_kwargs(**kwargs)
+        timeout = kwargs.pop('client_timeout', NOTSET)
+        if 'docker.client' not in __context__ \
+                or not hasattr(__context__['docker.client'], 'timeout'):
+            __context__['docker.client'] = _get_client(timeout=timeout, **kwargs)
+        orig_timeout = None
+        if timeout is not NOTSET \
+                and hasattr(__context__['docker.client'], 'timeout') \
+                and __context__['docker.client'].timeout != timeout:
+            # Temporarily override timeout
+            orig_timeout = __context__['docker.client'].timeout
+            __context__['docker.client'].timeout = timeout
+        ret = wrapped(*args, **kwargs)
+        if orig_timeout is not None:
+            __context__['docker.client'].timeout = orig_timeout
+        return ret
     return wrapper
 
 
@@ -490,7 +425,7 @@ def _ensure_exists(wrapped):
             raise CommandExecutionError(
                 'Container \'{0}\' does not exist'.format(name)
             )
-        return wrapped(name, *args, **salt.utils.clean_kwargs(**kwargs))
+        return wrapped(name, *args, **salt.utils.args.clean_kwargs(**kwargs))
     return wrapper
 
 
@@ -503,7 +438,7 @@ def _refresh_mine_cache(wrapped):
         '''
         refresh salt mine on exit.
         '''
-        returned = wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
+        returned = wrapped(*args, **salt.utils.args.clean_kwargs(**kwargs))
         __salt__['mine.send']('docker.ps', verbose=True, all=True, host=True)
         return returned
     return wrapper
@@ -549,68 +484,6 @@ def _clear_context():
                 __context__.pop(key)
         except AttributeError:
             pass
-
-
-def _get_client(timeout=None):
-    '''
-    Obtains a connection to a docker API (socket or URL) based on config.get
-    mechanism (pillar -> grains)
-
-    By default it will use the base docker-py defaults which
-    at the time of writing are using the local socket and
-    the 1.4 API
-
-    Set those keys in your configuration tree somehow:
-
-        - docker.url: URL to the docker service
-        - docker.version: API version to use (default: "auto")
-    '''
-    # In some edge cases, the client instance is missing attributes. Don't use
-    # the cached client in those cases.
-    if 'docker.client' not in __context__ \
-            or not hasattr(__context__['docker.client'], 'timeout'):
-        client_kwargs = {}
-        if timeout is not None:
-            client_kwargs['timeout'] = timeout
-        for key, val in (('base_url', 'docker.url'),
-                         ('version', 'docker.version')):
-            param = __salt__['config.get'](val, NOTSET)
-            if param is not NOTSET:
-                client_kwargs[key] = param
-
-        if 'base_url' not in client_kwargs and 'DOCKER_HOST' in os.environ:
-            # Check if the DOCKER_HOST environment variable has been set
-            client_kwargs['base_url'] = os.environ.get('DOCKER_HOST')
-
-        if 'version' not in client_kwargs:
-            # Let docker-py auto detect docker version incase
-            # it's not defined by user.
-            client_kwargs['version'] = 'auto'
-
-        docker_machine = __salt__['config.get']('docker.machine', NOTSET)
-
-        if docker_machine is not NOTSET:
-            docker_machine_json = __salt__['cmd.run']('docker-machine inspect ' + docker_machine)
-            try:
-                docker_machine_json = json.loads(docker_machine_json)
-                docker_machine_tls = docker_machine_json['HostOptions']['AuthOptions']
-                docker_machine_ip = docker_machine_json['Driver']['IPAddress']
-                client_kwargs['base_url'] = 'https://' + docker_machine_ip + ':2376'
-                client_kwargs['tls'] = docker.tls.TLSConfig(
-                    client_cert=(docker_machine_tls['ClientCertPath'],
-                                 docker_machine_tls['ClientKeyPath']),
-                    ca_cert=docker_machine_tls['CaCertPath'],
-                    assert_hostname=False,
-                    verify=True)
-            except Exception as exc:
-                raise CommandExecutionError(
-                    'Docker machine {0} failed: {1}'.format(docker_machine, exc))
-
-        try:
-            # docker-py 2.0 renamed this client attribute
-            __context__['docker.client'] = docker.APIClient(**client_kwargs)
-        except AttributeError:
-            __context__['docker.client'] = docker.Client(**client_kwargs)
 
 
 def _get_md5(name, path):
@@ -690,6 +563,21 @@ def _prep_pull():
     __context__['docker._pull_status'] = [x[:12] for x in images(all=True)]
 
 
+def _scrub_links(links, name):
+    '''
+    Remove container name from HostConfig:Links values to enable comparing
+    container configurations correctly.
+    '''
+    if isinstance(links, list):
+        ret = []
+        for l in links:
+            ret.append(l.replace('/{0}/'.format(name), '/', 1))
+    else:
+        ret = links
+
+    return ret
+
+
 def _size_fmt(num):
     '''
     Format bytes as human-readable file sizes
@@ -711,17 +599,25 @@ def _size_fmt(num):
 @_docker_client
 def _client_wrapper(attr, *args, **kwargs):
     '''
-    Common functionality for getting information from a container
+    Common functionality for running low-level API calls
     '''
     catch_api_errors = kwargs.pop('catch_api_errors', True)
-    if 'docker.client' not in __context__:
-        raise CommandExecutionError('Docker service not running or not installed?')
-    func = getattr(__context__['docker.client'], attr)
-    if func is None:
+    func = getattr(__context__['docker.client'], attr, None)
+    if func is None or not hasattr(func, '__call__'):
         raise SaltInvocationError('Invalid client action \'{0}\''.format(attr))
+    if attr in ('push', 'pull'):
+        try:
+            # Refresh auth config from config.json
+            __context__['docker.client'].reload_config()
+        except AttributeError:
+            pass
     err = ''
     try:
-        return func(*args, **kwargs)
+        log.debug(
+            'Attempting to run docker-py\'s "%s" function '
+            'with args=%s and kwargs=%s', attr, args, kwargs
+        )
+        ret = func(*args, **kwargs)
     except docker.errors.APIError as exc:
         if catch_api_errors:
             # Generic handling of Docker API errors
@@ -732,108 +628,32 @@ def _client_wrapper(attr, *args, **kwargs):
         else:
             # Allow API errors to be caught further up the stack
             raise
+    except docker.errors.DockerException as exc:
+        # More general docker exception (catches InvalidVersion, etc.)
+        raise CommandExecutionError(exc.__str__())
     except Exception as exc:
-        err = '{0}'.format(exc)
+        err = exc.__str__()
+    else:
+        if kwargs.get('stream', False):
+            api_events = []
+            try:
+                for event in ret:
+                    api_events.append(json.loads(salt.utils.stringutils.to_str(event)))
+            except Exception as exc:
+                raise CommandExecutionError(
+                    'Unable to interpret API event: \'{0}\''.format(event),
+                    info={'Error': exc.__str__()}
+                )
+            return api_events
+        else:
+            return ret
+
+    # If we're here, it's because an exception was caught earlier, and the
+    # API command failed.
     msg = 'Unable to perform {0}'.format(attr)
     if err:
         msg += ': {0}'.format(err)
     raise CommandExecutionError(msg)
-
-
-@_docker_client
-def _image_wrapper(attr, *args, **kwargs):
-    '''
-    Wrapper to run a docker-py function and return a list of dictionaries
-    '''
-    catch_api_errors = kwargs.pop('catch_api_errors', True)
-
-    if kwargs.pop('client_auth', False):
-        # Get credential from the home directory of the user running
-        # salt-minion, default auth file for docker (~/.docker/config.json)
-        registry_auth_config = {}
-        try:
-            home = os.path.expanduser("~")
-            docker_auth_file = os.path.join(home, '.docker', 'config.json')
-            with salt.utils.fopen(docker_auth_file) as fp:
-                try:
-                    docker_auth = json.load(fp)
-                    fp.close()
-                except (OSError, IOError) as exc:
-                    if exc.errno != errno.ENOENT:
-                        log.error('Failed to read docker auth file %s: %s', docker_auth_file, exc)
-                        docker_auth = {}
-                if isinstance(docker_auth, dict):
-                    if 'auths' in docker_auth and isinstance(docker_auth['auths'], dict):
-                        for key, data in six.iteritems(docker_auth['auths']):
-                            if isinstance(data, dict):
-                                email = str(data.get('email', ''))
-                                b64_auth = base64.b64decode(data.get('auth', ''))
-                                username, password = b64_auth.split(':')
-                                registry = 'https://{registry}'.format(registry=key)
-                                registry_auth_config.update({registry: {
-                                    'username': username,
-                                    'password': password,
-                                    'email': email
-                                }})
-        except Exception as exc:
-            log.debug(
-                'Salt was unable to load credentials from ~/.docker/config.json. '
-                'Attempting to load credentials from Pillar data. Error '
-                'message: %s', exc
-            )
-        # Set credentials from pillar - Overwrite auth from config.json
-        registry_auth_config.update(__pillar__.get('docker-registries', {}))
-        for key, data in six.iteritems(__pillar__):
-            if key.endswith('-docker-registries'):
-                registry_auth_config.update(data)
-
-        err = (
-            '{0} Docker credentials{1}. Please see the docker remote '
-            'execution module documentation for information on how to '
-            'configure authentication.'
-        )
-        try:
-            for registry, creds in six.iteritems(registry_auth_config):
-                __context__['docker.client'].login(
-                    creds['username'],
-                    password=creds['password'],
-                    email=creds.get('email'),
-                    registry=registry,
-                    reauth=creds.get('reauth', False))
-        except KeyError:
-            raise SaltInvocationError(
-                err.format('Incomplete', ' for registry {0}'.format(registry))
-            )
-        client_timeout = kwargs.pop('client_timeout', None)
-        if client_timeout is not None:
-            __context__['docker.client'].timeout = client_timeout
-
-    func = getattr(__context__['docker.client'], attr)
-    if func is None:
-        raise SaltInvocationError('Invalid client action \'{0}\''.format(attr))
-    ret = []
-    try:
-        output = func(*args, **kwargs)
-        if not kwargs.get('stream', False):
-            output = output.splitlines()
-        for line in output:
-            ret.append(json.loads(line))
-    except docker.errors.APIError as exc:
-        if catch_api_errors:
-            # Generic handling of Docker API errors
-            raise CommandExecutionError(
-                'Error {0}: {1}'.format(exc.response.status_code,
-                                        exc.explanation)
-            )
-        else:
-            # Allow API errors to be caught further up the stack
-            raise
-    except Exception as exc:
-        raise CommandExecutionError(
-            'Error occurred performing docker {0}: {1}'.format(attr, exc)
-        )
-
-    return ret
 
 
 def _build_status(data, item):
@@ -966,8 +786,8 @@ def _error_detail(data, item):
 # Functions to handle docker-py client args
 def get_client_args():
     '''
-    .. versionadded:: 2016.3.6,2016.11.4,Nitrogen
-    .. versionchanged:: Nitrogen
+    .. versionadded:: 2016.3.6,2016.11.4,2017.7.0
+    .. versionchanged:: 2017.7.0
         Replaced the container config args with the ones from the API's
         ``create_container`` function.
 
@@ -982,7 +802,7 @@ def get_client_args():
 
         salt myminion docker.get_client_args
     '''
-    return salt.utils.docker.get_client_args()
+    return __utils__['docker.get_client_args']()
 
 
 def _get_create_kwargs(image,
@@ -1051,7 +871,7 @@ def _get_create_kwargs(image,
 
 def compare_container(first, second, ignore=None):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Compare two containers' Config and and HostConfig and return any
     differences between the two.
@@ -1083,8 +903,20 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict][item]
             val2 = result2[conf_dict].get(item)
-            if val1 != val2:
-                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            if item in ('OomKillDisable',) or (val1 is None or val2 is None):
+                if bool(val1) != bool(val2):
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            elif item == 'Image':
+                image1 = inspect_image(val1)['Id']
+                image2 = inspect_image(val2)['Id']
+                if image1 != image2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
+            else:
+                if item == 'Links':
+                    val1 = _scrub_links(val1, first)
+                    val2 = _scrub_links(val2, second)
+                if val1 != val2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
         # and not the first.
         for item in result2[conf_dict]:
@@ -1094,8 +926,116 @@ def compare_container(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict].get(item)
             val2 = result2[conf_dict][item]
-            if val1 != val2:
-                ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            if item in ('OomKillDisable',) or (val1 is None or val2 is None):
+                if bool(val1) != bool(val2):
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+            elif item == 'Image':
+                image1 = inspect_image(val1)['Id']
+                image2 = inspect_image(val2)['Id']
+                if image1 != image2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
+            else:
+                if item == 'Links':
+                    val1 = _scrub_links(val1, first)
+                    val2 = _scrub_links(val2, second)
+                if val1 != val2:
+                    ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
+    return ret
+
+
+def login(*registries):
+    '''
+    .. versionadded:: 2016.3.7,2016.11.4,2017.7.0
+
+    Performs a ``docker login`` to authenticate to one or more configured
+    repositories. See the documentation at the top of this page to configure
+    authentication credentials.
+
+    Multiple registry URLs (matching those configured in Pillar) can be passed,
+    and Salt will attempt to login to *just* those registries. If no registry
+    URLs are provided, Salt will attempt to login to *all* configured
+    registries.
+
+    **RETURN DATA**
+
+    A dictionary containing the following keys:
+
+    - ``Results`` - A dictionary mapping registry URLs to the authentication
+      result. ``True`` means a successful login, ``False`` means a failed
+      login.
+    - ``Errors`` - A list of errors encountered during the course of this
+      function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion docker.login
+        salt myminion docker.login hub
+        salt myminion docker.login hub https://mydomain.tld/registry/
+    '''
+    # NOTE: This function uses the "docker login" CLI command so that login
+    # information is added to the config.json, since docker-py isn't designed
+    # to do so.
+    registry_auth = __pillar__.get('docker-registries', {})
+    ret = {}
+    errors = ret.setdefault('Errors', [])
+    if not isinstance(registry_auth, dict):
+        errors.append('\'docker-registries\' Pillar value must be a dictionary')
+        registry_auth = {}
+    for key, data in six.iteritems(__pillar__):
+        try:
+            if key.endswith('-docker-registries'):
+                try:
+                    registry_auth.update(data)
+                except TypeError:
+                    errors.append(
+                        '\'{0}\' Pillar value must be a dictionary'.format(key)
+                    )
+        except AttributeError:
+            pass
+
+    # If no registries passed, we will auth to all of them
+    if not registries:
+        registries = list(registry_auth)
+
+    results = ret.setdefault('Results', {})
+    for registry in registries:
+        if registry not in registry_auth:
+            errors.append(
+                'No match found for registry \'{0}\''.format(registry)
+            )
+            continue
+        try:
+            username = registry_auth[registry]['username']
+            password = registry_auth[registry]['password']
+        except TypeError:
+            errors.append(
+                'Invalid configuration for registry \'{0}\''.format(registry)
+            )
+        except KeyError as exc:
+            errors.append(
+                'Missing {0} for registry \'{1}\''.format(exc, registry)
+            )
+        else:
+            cmd = ['docker', 'login', '-u', username, '-p', password]
+            if registry.lower() != 'hub':
+                cmd.append(registry)
+            log.debug(
+                'Attempting to login to docker registry \'%s\' as user \'%s\'',
+                registry, username
+            )
+            login_cmd = __salt__['cmd.run_all'](
+                cmd,
+                python_shell=False,
+                output_loglevel='quiet',
+            )
+            results[registry] = login_cmd['retcode'] == 0
+            if not results[registry]:
+                if login_cmd['stderr']:
+                    errors.append(login_cmd['stderr'])
+                elif login_cmd['stdout']:
+                    errors.append(login_cmd['stdout'])
     return ret
 
 
@@ -1206,7 +1146,9 @@ def exists(name):
     if contextkey in __context__:
         return __context__[contextkey]
     try:
-        _client_wrapper('inspect_container', name, catch_api_errors=False)
+        c_info = _client_wrapper('inspect_container',
+                                 name,
+                                 catch_api_errors=False)
     except docker.errors.APIError:
         __context__[contextkey] = False
     else:
@@ -1372,7 +1314,6 @@ def images(verbose=False, **kwargs):
     return ret
 
 
-@_docker_client
 def info():
     '''
     Returns a dictionary of system-wide information. Equivalent to running
@@ -1389,7 +1330,7 @@ def info():
 
 def inspect(name):
     '''
-    .. versionchanged:: Nitrogen
+    .. versionchanged:: 2017.7.0
         Volumes and networks are now checked, in addition to containers and
         images.
 
@@ -1397,10 +1338,10 @@ def inspect(name):
     will run the following functions in order:
 
     - :py:func:`docker.inspect_container
-      <salt.modules.docker.inspect_container>`
-    - :py:func:`docker.inspect_image <salt.modules.docker.inspect_image>`
-    - :py:func:`docker.inspect_volume <salt.modules.docker.inspect_volume>`
-    - :py:func:`docker.inspect_network <salt.modules.docker.inspect_network>`
+      <salt.modules.dockermod.inspect_container>`
+    - :py:func:`docker.inspect_image <salt.modules.dockermod.inspect_image>`
+    - :py:func:`docker.inspect_volume <salt.modules.dockermod.inspect_volume>`
+    - :py:func:`docker.inspect_network <salt.modules.dockermod.inspect_network>`
 
     The first of these to find a match will be returned.
 
@@ -1508,8 +1449,8 @@ def inspect_image(name):
 def list_containers(**kwargs):
     '''
     Returns a list of containers by name. This is different from
-    :py:func:`docker.ps <salt.modules.docker.ps_>` in that
-    :py:func:`docker.ps <salt.modules.docker.ps_>` returns its results
+    :py:func:`docker.ps <salt.modules.dockermod.ps_>` in that
+    :py:func:`docker.ps <salt.modules.dockermod.ps_>` returns its results
     organized by container ID.
 
     all : False
@@ -1547,6 +1488,43 @@ def list_tags():
             continue
         ret.update(set(item['RepoTags']))
     return sorted(ret)
+
+
+def resolve_tag(name, tags=None):
+    '''
+    .. versionadded:: 2017.7.2,Oxygen
+
+    Given an image tag, check the locally-pulled tags (using
+    :py:func:`docker.list_tags <salt.modules.dockermod.list_tags>`) and return
+    the matching tag. This helps disambiguate differences on some platforms
+    where images from the Docker Hub are prefixed with ``docker.io/``. If an
+    image name with no tag is passed, a tag of ``latest`` is assumed.
+
+    If the specified image is not pulled locally, this function will return
+    ``False``.
+
+    tags
+        An optional Python list of tags to check against. If passed, then
+        :py:func:`docker.list_tags <salt.modules.dockermod.list_tags>` will not
+        be run to get a list of tags. This is useful when resolving a number of
+        tags at the same time.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion docker.resolve_tag busybox
+        salt myminion docker.resolve_tag busybox:latest
+    '''
+    tag_name = ':'.join(salt.utils.docker.get_repo_tag(name))
+    if tags is None:
+        tags = list_tags()
+    if tag_name in tags:
+        return tag_name
+    full_name = HUB_PREFIX + tag_name
+    if not name.startswith(HUB_PREFIX) and full_name in tags:
+        return full_name
+    return False
 
 
 def logs(name):
@@ -1618,8 +1596,7 @@ def port(name, private_port=None):
     # docker.client.Client.port() doesn't do what we need, so just inspect the
     # container and get the information from there. It's what they're already
     # doing (poorly) anyway.
-    mappings = inspect_container(name).get('NetworkSettings', {}).get(
-        'Ports', {})
+    mappings = inspect_container(name).get('NetworkSettings', {}).get('Ports', {})
     if not mappings:
         return {}
 
@@ -1747,13 +1724,7 @@ def state(name):
     contextkey = 'docker.state.{0}'.format(name)
     if contextkey in __context__:
         return __context__[contextkey]
-    c_info = inspect_container(name)
-    if c_info.get('State', {}).get('Paused', False):
-        __context__[contextkey] = 'paused'
-    elif c_info.get('State', {}).get('Running', False):
-        __context__[contextkey] = 'running'
-    else:
-        __context__[contextkey] = 'stopped'
+    __context__[contextkey] = _get_state(inspect_container(name))
     return __context__[contextkey]
 
 
@@ -1916,7 +1887,7 @@ def create(image,
         generate one for you (it will be included in the return data).
 
     skip_translate
-        This function translates Salt CLI input into the format which
+        This function translates Salt CLI or SLS input into the format which
         docker-py_ expects. However, in the event that Salt's translation logic
         fails (due to potential changes in the Docker Remote API, or to bugs in
         the translation code), this argument can be used to exert granular
@@ -1980,19 +1951,49 @@ def create(image,
 
     binds
         Files/directories to bind mount. Each bind mount should be passed in
-        the format ``<host_path>:<container_path>:<read_only>``, where
-        ``<read_only>`` is one of ``rw`` (for read-write access) or ``ro`` (for
-        read-only access).  Optionally, the read-only information can be left
-        off the end and the bind mount will be assumed to be read-write.
+        one of the following formats:
+
+        - ``<host_path>:<container_path>`` - ``host_path`` is mounted within
+          the container as ``container_path`` with read-write access.
+        - ``<host_path>:<container_path>:<selinux_context>`` - ``host_path`` is
+          mounted within the container as ``container_path`` with read-write
+          access. Additionally, the specified selinux context will be set
+          within the container.
+        - ``<host_path>:<container_path>:<read_only>`` - ``host_path`` is
+          mounted within the container as ``container_path``, with the
+          read-only or read-write setting explicitly defined.
+        - ``<host_path>:<container_path>:<read_only>,<selinux_context>`` -
+          ``host_path`` is mounted within the container as ``container_path``,
+          with the read-only or read-write setting explicitly defined.
+          Additionally, the specified selinux context will be set within the
+          container.
+
+        ``<read_only>`` can be either ``ro`` for read-write access, or ``ro``
+        for read-only access. When omitted, it is assumed to be read-write.
+
+        ``<selinux_context>`` can be ``z`` if the volume is shared between
+        multiple containers, or ``Z`` if the volume should be private.
+
+        .. note::
+            When both ``<read_only>`` and ``<selinux_context>`` are specified,
+            there must be a comma before ``<selinux_context>``.
+
+        Binds can be expressed as a comma-separated list or a Python list,
+        however in cases where both ro/rw and an selinux context are specified,
+        the binds *must* be specified as a Python list.
 
         Examples:
 
         - ``binds=/srv/www:/var/www:ro``
         - ``binds=/srv/www:/var/www:rw``
         - ``binds=/srv/www:/var/www``
+        - ``binds="['/srv/www:/var/www:ro,Z']"``
+        - ``binds="['/srv/www:/var/www:rw,Z']"``
+        - ``binds=/srv/www:/var/www:Z``
 
         .. note::
-            The second and third examples above are equivalent.
+            The second and third examples above are equivalent to each other,
+            as are the last two examples.
 
     blkio_weight
         Block IO weight (relative weight), accepts a weight value between 10
@@ -2011,15 +2012,20 @@ def create(image,
         comma-separated list or a Python list. Requires Docker 1.2.0 or
         newer.
 
-        Example: ``cap_add=SYS_ADMIN,MKNOD``, ``cap_add="[SYS_ADMIN, MKNOD]"``
+        Examples:
+
+        - ``cap_add=SYS_ADMIN,MKNOD``
+        - ``cap_add="[SYS_ADMIN, MKNOD]"``
 
     cap_drop
         List of capabilities to drop within the container. Can be passed as a
         comma-separated string or a Python list. Requires Docker 1.2.0 or
         newer.
 
-        Example: ``cap_drop=SYS_ADMIN,MKNOD``,
-        ``cap_drop="[SYS_ADMIN, MKNOD]"``
+        Examples:
+
+        - ``cap_drop=SYS_ADMIN,MKNOD``,
+        - ``cap_drop="[SYS_ADMIN, MKNOD]"``
 
     command (or *cmd*)
         Command to run in the container
@@ -2143,13 +2149,15 @@ def create(image,
         List of DNS search domains. Can be passed as a comma-separated list
         or a Python list.
 
-        Example: ``dns_search=foo1.domain.tld,foo2.domain.tld`` or
-        ``dns_search="[foo1.domain.tld, foo2.domain.tld]"``
+        Examples:
+
+        - ``dns_search=foo1.domain.tld,foo2.domain.tld``
+        - ``dns_search="[foo1.domain.tld, foo2.domain.tld]"``
 
     domainname
-        Set custom DNS search domains
+        The domain name to use for the container
 
-        Example: ``domainname=domain.tld,domain2.tld``
+        Example: ``domainname=domain.tld``
 
     entrypoint
         Entrypoint for the container. Either a string (e.g. ``"mycmd --arg1
@@ -2388,7 +2396,7 @@ def create(image,
 
     port_bindings (or *publish*)
         Bind exposed ports which were exposed using the ``ports`` argument to
-        :py:func:`docker.create <salt.modules.docker.create>`. These
+        :py:func:`docker.create <salt.modules.dockermod.create>`. These
         should be passed in the same way as the ``--publish`` argument to the
         ``docker run`` CLI command:
 
@@ -2594,9 +2602,6 @@ def create(image,
     except Exception:
         pull(image, client_timeout=client_timeout)
 
-    if name is not None and kwargs.get('hostname') is None:
-        kwargs['hostname'] = name
-
     kwargs, unused_kwargs = _get_create_kwargs(
         image=image,
         skip_translate=skip_translate,
@@ -2788,6 +2793,8 @@ def copy_to(name,
 
         salt myminion docker.copy_to mycontainer /tmp/foo /root/foo
     '''
+    if exec_driver is None:
+        exec_driver = _get_exec_driver()
     return __salt__['container_resource.copy_to'](
         name,
         __salt__['container_resource.cache_file'](source),
@@ -2939,7 +2946,7 @@ def export(name,
             # open the filehandle. If not using gzip, we need to open the
             # filehandle here. We make sure to close it in the "finally" block
             # below.
-            out = salt.utils.fopen(path, 'wb')
+            out = salt.utils.files.fopen(path, 'wb')  # pylint: disable=resource-leakage
         response = _client_wrapper('export', name)
         buf = None
         while buf != '':
@@ -3001,7 +3008,7 @@ def rm_(name, force=False, volumes=False, **kwargs):
         option is set to ``False`` by default to prevent accidental removal of
         a running container.
 
-        .. versionadded:: Nitrogen
+        .. versionadded:: 2017.7.0
 
     volumes : False
         Also remove volumes associated with container
@@ -3019,10 +3026,10 @@ def rm_(name, force=False, volumes=False, **kwargs):
         salt myminion docker.rm mycontainer
         salt myminion docker.rm mycontainer force=True
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     stop_ = kwargs.pop('stop', False)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
 
     if state(name) == 'running' and not (force or stop_):
         raise CommandExecutionError(
@@ -3039,7 +3046,7 @@ def rm_(name, force=False, volumes=False, **kwargs):
 
 def rename(name, new_name):
     '''
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
 
     Renames a container. Returns ``True`` if successful, and raises an error if
     the API returns one. If unsuccessful and the API returns no error (should
@@ -3170,7 +3177,9 @@ def build(path=None,
 
     stream_data = []
     for line in response:
-        stream_data.extend(json.loads(line, cls=DockerJSONDecoder))
+        stream_data.extend(
+            json.loads(salt.utils.stringutils.to_str(line), cls=DockerJSONDecoder)
+        )
     errors = []
     # Iterate through API response and collect information
     for item in stream_data:
@@ -3286,7 +3295,7 @@ def dangling(prune=False, force=False):
       which were superseded by committing a new copy of an existing tagged
       image.
     - Images which were loaded using :py:func:`docker.load
-      <salt.modules.docker.load>` (or the ``docker load`` Docker CLI
+      <salt.modules.dockermod.load>` (or the ``docker load`` Docker CLI
       command), but not tagged.
 
     prune : False
@@ -3378,10 +3387,10 @@ def import_(source,
     path = __salt__['container_resource.cache_file'](source)
 
     time_started = time.time()
-    response = _image_wrapper('import_image',
-                              path,
-                              repository=repo_name,
-                              tag=repo_tag)
+    response = _client_wrapper('import_image',
+                               path,
+                               repository=repo_name,
+                               tag=repo_tag)
     ret = {'Time_Elapsed': time.time() - time_started}
     _clear_context()
 
@@ -3421,7 +3430,7 @@ def import_(source,
 def load(path, image=None):
     '''
     Load a tar archive that was created using :py:func:`docker.save
-    <salt.modules.docker.save>` (or via the Docker CLI using ``docker save``).
+    <salt.modules.dockermod.save>` (or via the Docker CLI using ``docker save``).
 
     path
         Path to docker tar archive. Path can be a file on the Minion, or the
@@ -3433,7 +3442,7 @@ def load(path, image=None):
     image : None
         If specified, the topmost layer of the newly-loaded image will be
         tagged with the specified repo and tag using :py:func:`docker.tag
-        <salt.modules.docker.tag_>`. The image name should be specified in
+        <salt.modules.dockermod.tag_>`. The image name should be specified in
         ``repo:tag`` notation. If just the repository name is passed, a tag
         name of ``latest`` will be assumed.
 
@@ -3537,8 +3546,7 @@ def pull(image,
          api_response=False,
          client_timeout=salt.utils.docker.CLIENT_TIMEOUT):
     '''
-    Pulls an image from a Docker registry. See the documentation at the top of
-    this page to configure authenticated access.
+    Pulls an image from a Docker registry
 
     image
         Image to be pulled, in ``repo:tag`` notation. If just the repository
@@ -3587,13 +3595,12 @@ def pull(image,
     repo_name, repo_tag = salt.utils.docker.get_repo_tag(image)
     kwargs = {'tag': repo_tag,
               'stream': True,
-              'client_auth': True,
               'client_timeout': client_timeout}
     if insecure_registry:
         kwargs['insecure_registry'] = insecure_registry
 
     time_started = time.time()
-    response = _image_wrapper('pull', repo_name, **kwargs)
+    response = _client_wrapper('pull', repo_name, **kwargs)
     ret = {'Time_Elapsed': time.time() - time_started}
     _clear_context()
 
@@ -3641,7 +3648,7 @@ def push(image,
         This is due to changes in the Docker Remote API.
 
     Pushes an image to a Docker registry. See the documentation at top of this
-    page to configure authenticated access.
+    page to configure authentication credentials.
 
     image
         Image to be pushed, in ``repo:tag`` notation.
@@ -3691,13 +3698,12 @@ def push(image,
 
     kwargs = {'tag': repo_tag,
               'stream': True,
-              'client_auth': True,
               'client_timeout': client_timeout}
     if insecure_registry:
         kwargs['insecure_registry'] = insecure_registry
 
     time_started = time.time()
-    response = _image_wrapper('push', repo_name, **kwargs)
+    response = _client_wrapper('push', repo_name, **kwargs)
     ret = {'Time_Elapsed': time.time() - time_started}
     _clear_context()
 
@@ -3721,6 +3727,8 @@ def push(image,
         elif item_type == 'errorDetail':
             _error_detail(errors, item)
 
+    if errors:
+        ret['Errors'] = errors
     return ret
 
 
@@ -3773,18 +3781,19 @@ def rmi(*names, **kwargs):
                             catch_api_errors=False)
         except docker.errors.APIError as exc:
             if exc.response.status_code == 409:
-                err = ('Unable to remove image \'{0}\' because it is in '
-                       'use by '.format(name))
+                errors.append(exc.explanation)
                 deps = depends(name)
-                if deps['Containers']:
-                    err += 'container(s): {0}'.format(
-                        ', '.join(deps['Containers'])
-                    )
-                if deps['Images']:
+                if deps['Containers'] or deps['Images']:
+                    err = 'Image is in use by '
                     if deps['Containers']:
-                        err += ' and '
-                    err += 'image(s): {0}'.format(', '.join(deps['Images']))
-                errors.append(err)
+                        err += 'container(s): {0}'.format(
+                            ', '.join(deps['Containers'])
+                        )
+                    if deps['Images']:
+                        if deps['Containers']:
+                            err += ' and '
+                        err += 'image(s): {0}'.format(', '.join(deps['Images']))
+                    errors.append(err)
             else:
                 errors.append('Error {0}: {1}'.format(exc.response.status_code,
                                                       exc.explanation))
@@ -3839,7 +3848,7 @@ def save(name,
         .. note::
             Since the Docker API does not support ``docker save``, compression
             will be a bit slower with this function than with
-            :py:func:`docker.export <salt.modules.docker.export>` since the
+            :py:func:`docker.export <salt.modules.dockermod.export>` since the
             image(s) will first be saved and then the compression done
             afterwards.
 
@@ -3887,7 +3896,6 @@ def save(name,
     if os.path.exists(path) and not overwrite:
         raise CommandExecutionError('{0} already exists'.format(path))
 
-    compression = kwargs.get('compression')
     if compression is None:
         if path.endswith('.tar.gz') or path.endswith('.tgz'):
             compression = 'gzip'
@@ -3925,8 +3933,9 @@ def save(name,
         saved_path = salt.utils.files.mkstemp()
     else:
         saved_path = path
-
-    cmd = ['docker', 'save', '-o', saved_path, inspect_image(name)['Id']]
+    # use the image name if its valid if not use the image id
+    image_to_save = name if name in inspect_image(name)['RepoTags'] else inspect_image(name)['Id']
+    cmd = ['docker', 'save', '-o', saved_path, image_to_save]
     time_started = time.time()
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     if result['retcode'] != 0:
@@ -3949,12 +3958,12 @@ def save(name,
             compressor = lzma.LZMACompressor()
 
         try:
-            with salt.utils.fopen(saved_path, 'rb') as uncompressed:
+            with salt.utils.files.fopen(saved_path, 'rb') as uncompressed:
                 if compression != 'gzip':
                     # gzip doesn't use a Compressor object, it uses a .open()
                     # method to open the filehandle. If not using gzip, we need
                     # to open the filehandle here.
-                    out = salt.utils.fopen(path, 'wb')
+                    out = salt.utils.files.fopen(path, 'wb')
                 buf = None
                 while buf != '':
                     buf = uncompressed.read(4096)
@@ -3993,7 +4002,7 @@ def save(name,
     ret['Size_Human'] = _size_fmt(ret['Size'])
 
     # Process push
-    if kwargs.get(push, False):
+    if kwargs.get('push', False):
         ret['Push'] = __salt__['cp.push'](path)
 
     return ret
@@ -4032,13 +4041,14 @@ def tag_(name, image, force=False):
     # Only non-error return case is a True return, so just return the response
     return response
 
+
 # Network Management
-
-
-@_api_version(1.21)
-@_client_version('1.5.0')
 def networks(names=None, ids=None):
     '''
+    .. versionchanged:: 2017.7.0
+        The ``names`` and ``ids`` can be passed as a comma-separated list now,
+        as well as a Python list.
+
     List existing networks
 
     names
@@ -4051,21 +4061,31 @@ def networks(names=None, ids=None):
 
     .. code-block:: bash
 
-        salt myminion docker.networks names="['network-web']"
-        salt myminion docker.networks ids="['1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc']"
+        salt myminion docker.networks names=network-web
+        salt myminion docker.networks ids=1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc
     '''
-    response = _client_wrapper('networks',
-                               names=names,
-                               ids=ids,
-                               )
-    _clear_context()
+    if names is not None and not isinstance(names, list):
+        try:
+            names = names.split(',')
+        except AttributeError:
+            names = str(names).split(',')
+    if ids is not None and not isinstance(ids, list):
+        try:
+            ids = ids.split(',')
+        except AttributeError:
+            ids = str(ids).split(',')
+
+    response = _client_wrapper('networks', names=names, ids=ids)
     # Only non-error return case is a True return, so just return the response
     return response
 
 
-@_api_version(1.21)
-@_client_version('1.5.0')
-def create_network(name, driver=None):
+def create_network(name,
+                   driver=None,
+                   driver_opts=None,
+                   gateway=None,
+                   ip_range=None,
+                   subnet=None):
     '''
     Create a new network
 
@@ -4075,20 +4095,56 @@ def create_network(name, driver=None):
     driver
         Driver of the network
 
+    driver_opts
+        Options for the network driver.
+
+    gateway
+        IPv4 or IPv6 gateway for the master subnet
+
+    ip_range
+        Allocate container IP from a sub-range within the subnet
+
+    subnet:
+        Subnet in CIDR format that represents a network segment
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion docker.create_network web_network driver=bridge
+        salt myminion docker.create_network macvlan_network \
+            driver=macvlan \
+            driver_opts="{'parent':'eth0'}" \
+            gateway=172.20.0.1 \
+            subnet=172.20.0.0/24
     '''
-    response = _client_wrapper('create_network', name, driver=driver)
+    # If any settings which need to be set via the IPAM config are specified, create the IPAM config data structure
+    # with these values set.
+    if gateway or ip_range or subnet:
+        ipam = {
+            'Config': [{
+                'Gateway': gateway,
+                'IPRange': ip_range,
+                'Subnet': subnet
+            }],
+            'Driver': 'default',
+            'Options': {}
+        }
+    else:
+        ipam = None
+
+    response = _client_wrapper('create_network',
+                               name,
+                               driver=driver,
+                               options=driver_opts,
+                               ipam=ipam,
+                               check_duplicate=True)
+
     _clear_context()
     # Only non-error return case is a True return, so just return the response
     return response
 
 
-@_api_version(1.21)
-@_client_version('1.5.0')
 def remove_network(network_id):
     '''
     Remove a network
@@ -4108,8 +4164,6 @@ def remove_network(network_id):
     return response
 
 
-@_api_version(1.21)
-@_client_version('1.5.0')
 def inspect_network(network_id):
     '''
     Inspect Network
@@ -4129,8 +4183,6 @@ def inspect_network(network_id):
     return response
 
 
-@_api_version(1.21)
-@_client_version('1.5.0')
 def connect_container_to_network(container, network_id, ipv4_address=None):
     '''
     Connect container to network.
@@ -4143,6 +4195,8 @@ def connect_container_to_network(container, network_id, ipv4_address=None):
 
     ipv4_address
         The IPv4 address to connect to the container
+
+        .. versionadded:: 2017.7.0
 
     CLI Example:
 
@@ -4159,8 +4213,6 @@ def connect_container_to_network(container, network_id, ipv4_address=None):
     return response
 
 
-@_api_version(1.21)
-@_client_version('1.5.0')
 def disconnect_container_from_network(container, network_id):
     '''
     Disconnect container from network.
@@ -4184,11 +4236,8 @@ def disconnect_container_from_network(container, network_id):
     # Only non-error return case is a True return, so just return the response
     return response
 
+
 # Volume Management
-
-
-@_api_version(1.21)
-@_client_version('1.5.0')
 def volumes(filters=None):
     '''
     List existing volumes
@@ -4205,13 +4254,10 @@ def volumes(filters=None):
         salt myminion docker.volumes filters="{'dangling': True}"
     '''
     response = _client_wrapper('volumes', filters=filters)
-    _clear_context()
     # Only non-error return case is a True return, so just return the response
     return response
 
 
-@_api_version(1.21)
-@_client_version('1.5.0')
 def create_volume(name, driver=None, driver_opts=None):
     '''
     Create a new volume
@@ -4240,8 +4286,6 @@ def create_volume(name, driver=None, driver_opts=None):
     return response
 
 
-@_api_version(1.21)
-@_client_version('1.5.0')
 def remove_volume(name):
     '''
     Remove a volume
@@ -4263,8 +4307,6 @@ def remove_volume(name):
     return response
 
 
-@_api_version(1.21)
-@_client_version('1.5.0')
 def inspect_volume(name):
     '''
     Inspect Volume
@@ -4317,7 +4359,6 @@ def kill(name):
 
 
 @_refresh_mine_cache
-@_api_version(1.12)
 @_ensure_exists
 def pause(name):
     '''
@@ -4472,7 +4513,7 @@ def stop(name, timeout=None, **kwargs):
         Timeout in seconds after which the container will be killed (if it has
         not yet gracefully shut down)
 
-        .. versionchanged:: Nitrogen
+        .. versionchanged:: 2017.7.0
             If this argument is not passed, then the container's configuration
             will be checked. If the container was created using the
             ``stop_timeout`` argument, then the configured timeout will be
@@ -4525,7 +4566,6 @@ def stop(name, timeout=None, **kwargs):
 
 
 @_refresh_mine_cache
-@_api_version(1.12)
 @_ensure_exists
 def unpause(name):
     '''
@@ -5249,7 +5289,7 @@ def _gather_pillar(pillarenv, pillar_override, **grains):
         # Not sure if these two are correct
         __opts__['id'],
         __opts__['environment'],
-        pillar=pillar_override,
+        pillar_override=pillar_override,
         pillarenv=pillarenv
     )
     ret = pillar.compile_pillar()
@@ -5285,7 +5325,7 @@ def call(name, function, *args, **kwargs):
     thin_dest_path = _generate_tmp_path()
     mkdirp_thin_argv = ['mkdir', '-p', thin_dest_path]
 
-    # put_archive reqires the path to exist
+    # make thin_dest_path in the container
     ret = run_all(name, subprocess.list2cmdline(mkdirp_thin_argv))
     if ret['retcode'] != 0:
         return {'result': False, 'comment': ret['stderr']}
@@ -5297,14 +5337,25 @@ def call(name, function, *args, **kwargs):
     thin_path = salt.utils.thin.gen_thin(__opts__['cachedir'],
                                          extra_mods=__salt__['config.option']("thin_extra_mods", ''),
                                          so_mods=__salt__['config.option']("thin_so_mods", ''))
-    with io.open(thin_path, 'rb') as file:
-        _client_wrapper('put_archive', name, thin_dest_path, file)
+    ret = copy_to(name, thin_path, os.path.join(thin_dest_path, os.path.basename(thin_path)))
+
+    # untar archive
+    untar_cmd = ["python", "-c", (
+                     "import tarfile; "
+                     "tarfile.open(\"{0}/{1}\").extractall(path=\"{0}\")"
+                 ).format(thin_dest_path, os.path.basename(thin_path))]
+    ret = run_all(name, subprocess.list2cmdline(untar_cmd))
+    if ret['retcode'] != 0:
+        return {'result': False, 'comment': ret['stderr']}
+
     try:
         salt_argv = [
             'python',
             os.path.join(thin_dest_path, 'salt-call'),
             '--metadata',
             '--local',
+            '--log-file', os.path.join(thin_dest_path, 'log'),
+            '--cachedir', os.path.join(thin_dest_path, 'cache'),
             '--out', 'json',
             '-l', 'quiet',
             '--',
@@ -5384,7 +5435,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
         copy_to(name,
                 trans_tar,
                 os.path.join(trans_dest_path, 'salt_state.tgz'),
-                exec_driver='nsenter',
+                exec_driver=_get_exec_driver(),
                 overwrite=True)
 
         # Now execute the state into the container
@@ -5407,7 +5458,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
             )
     if not isinstance(ret, dict):
         __context__['retcode'] = 1
-    elif not salt.utils.check_state_result(ret):
+    elif not __utils__['state.check_result'](ret):
         __context__['retcode'] = 2
     else:
         __context__['retcode'] = 0
@@ -5462,7 +5513,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         salt myminion docker.sls_build imgname base=mybase mods=rails,web
 
     '''
-    create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    create_kwargs = salt.utils.args.clean_kwargs(**copy.deepcopy(kwargs))
     for key in ('image', 'name', 'cmd', 'interactive', 'tty'):
         try:
             del create_kwargs[key]
@@ -5481,7 +5532,7 @@ def sls_build(name, base='opensuse/python', mods=None, saltenv='base',
         # Now execute the state into the container
         ret = sls(id_, mods, saltenv, **kwargs)
         # fail if the state was not successful
-        if not dryrun and not salt.utils.check_state_result(ret):
+        if not dryrun and not __utils__['state.check_result'](ret):
             raise CommandExecutionError(ret)
         if dryrun is False:
             ret = commit(id_, name)

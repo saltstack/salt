@@ -50,14 +50,14 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'set_output_volume' function tests: 2
 
-    @patch('salt.modules.mac_desktop.get_output_volume',
-           MagicMock(return_value='25'))
     def test_set_output_volume(self):
         '''
         Test if it set the volume of sound (range 0 to 100)
         '''
         mock = MagicMock(return_value={'retcode': 0})
-        with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}), \
+                patch('salt.modules.mac_desktop.get_output_volume',
+                      MagicMock(return_value='25')):
             self.assertTrue(mac_desktop.set_output_volume('25'))
 
     def test_set_output_volume_error(self):

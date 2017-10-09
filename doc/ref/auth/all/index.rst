@@ -19,5 +19,4 @@ auth modules
     pki
     rest
     sharedsecret
-    stormpath
     yubico

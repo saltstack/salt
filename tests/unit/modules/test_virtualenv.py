@@ -23,28 +23,28 @@ from salt.exceptions import CommandExecutionError
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.utils.which', lambda bin_name: bin_name)
 class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         base_virtualenv_mock = MagicMock()
         base_virtualenv_mock.__version__ = '1.9.1'
-        sys_modules_patcher = patch.dict('sys.modules', {'virtualenv': base_virtualenv_mock})
-        sys_modules_patcher.start()
-        self.addCleanup(sys_modules_patcher.stop)
-        return {virtualenv_mod: {'__opts__': {'venv_bin': 'virtualenv'}}}
+        patcher = patch('salt.utils.path.which', lambda exe: exe)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return {
+            virtualenv_mod: {
+                '__opts__': {'venv_bin': 'virtualenv'},
+                '_install_script': MagicMock(return_value={'retcode': 0,
+                                                           'stdout': 'Installed script!',
+                                                           'stderr': ''}),
+                'sys.modules': {'virtualenv': base_virtualenv_mock}
+            }
+        }
 
     def test_issue_6029_deprecated_distribute(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
 
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            virtualenv_mod._install_script = MagicMock(
-                return_value={
-                    'retcode': 0,
-                    'stdout': 'Installed script!',
-                    'stderr': ''
-                }
-            )
             virtualenv_mod.create(
                 '/tmp/foo', system_site_packages=True, distribute=True
             )
@@ -60,8 +60,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             virtualenv_mock.__version__ = '1.10rc1'
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-                with patch.dict('sys.modules',
-                                {'virtualenv': virtualenv_mock}):
+                with patch.dict('sys.modules', {'virtualenv': virtualenv_mock}):
                     virtualenv_mod.create(
                         '/tmp/foo', system_site_packages=True, distribute=True
                     )
@@ -110,10 +109,9 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
 
                 # Are we logging the deprecation information?
                 self.assertIn(
-                    'INFO:The virtualenv \'--never-download\' option has been '
-                    'deprecated in virtualenv(>=1.10), as such, the '
-                    '\'never_download\' option to `virtualenv.create()` has '
-                    'also been deprecated and it\'s not necessary anymore.',
+                    'INFO:--never-download was deprecated in 1.10.0, '
+                    'but reimplemented in 14.0.0. If this feature is needed, '
+                    'please install a supported virtualenv version.',
                     handler.messages
                 )
 
@@ -180,11 +178,9 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
         # <---- Virtualenv using pyvenv options ------------------------------
 
         # ----- pyvenv using virtualenv options ----------------------------->
-        virtualenv_mod.__salt__ = {'cmd.which_bin': lambda _: 'pyvenv'}
-
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-
-        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock,
+                                                  'cmd.which_bin': lambda _: 'pyvenv'}):
             self.assertRaises(
                 CommandExecutionError,
                 virtualenv_mod.create,

@@ -28,6 +28,15 @@ nodegroups. Here's an example nodegroup configuration within
     group2 is matching specific grains. See the :ref:`compound matchers
     <targeting-compound>` documentation for more details.
 
+    As of the 2017.7.0 release of Salt, group names can also be prepended with
+    a dash. This brings the usage in line with many other areas of Salt. For
+    example:
+
+    .. code-block:: yaml
+
+        nodegroups:
+          - group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
+
 .. versionadded:: 2015.8.0
 
 .. note::
@@ -82,14 +91,14 @@ A simple list of minion IDs would traditionally be defined like this:
 .. code-block:: yaml
 
     nodegroups:
-      - group1: L@host1,host2,host3
+      group1: L@host1,host2,host3
 
 They can now also be defined as a YAML list, like this:
 
 .. code-block:: yaml
 
     nodegroups:
-      - group1:
+      group1:
         - host1
         - host2
         - host3

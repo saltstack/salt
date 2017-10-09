@@ -1,1 +1,14 @@
-../salt-api.service
+[Unit]
+Description=The Salt API
+Documentation=man:salt-api(1) file:///usr/share/doc/salt/html/contents.html https://docs.saltstack.com/en/latest/contents.html
+After=network.target
+
+[Service]
+User=salt
+Type=simple
+LimitNOFILE=8192
+ExecStart=/usr/bin/salt-api
+TimeoutStopSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -8,10 +8,10 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def find(path, saltenv='base'):
@@ -26,8 +26,8 @@ def find(path, saltenv='base'):
         full = os.path.join(root, path)
         if os.path.isfile(full):
             # Add it to the dict
-            with salt.utils.fopen(full, 'rb') as fp_:
-                if salt.utils.istextfile(fp_):
+            with salt.utils.files.fopen(full, 'rb') as fp_:
+                if salt.utils.files.is_text_file(fp_):
                     ret.append({full: 'txt'})
                 else:
                     ret.append({full: 'bin'})
@@ -86,7 +86,7 @@ def read(path, saltenv='base'):
         full = next(six.iterkeys(fn_))
         form = fn_[full]
         if form == 'txt':
-            with salt.utils.fopen(full, 'rb') as fp_:
+            with salt.utils.files.fopen(full, 'rb') as fp_:
                 ret.append({full: fp_.read()})
     return ret
 
@@ -108,6 +108,6 @@ def write(data, path, saltenv='base', index=0):
     dest_dir = os.path.dirname(dest)
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)
-    with salt.utils.fopen(dest, 'w+') as fp_:
+    with salt.utils.files.fopen(dest, 'w+') as fp_:
         fp_.write(data)
     return 'Wrote data to file {0}'.format(dest)

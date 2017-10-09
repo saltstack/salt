@@ -8,7 +8,7 @@ import tornado.testing
 import tornado.gen
 from tornado.testing import AsyncTestCase
 
-from salt.utils import async
+import salt.utils.async as async
 
 
 class HelperA(object):

@@ -26,10 +26,10 @@ import sys
 import os.path
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():
@@ -84,7 +84,7 @@ def run_file(name,
     overwrite:
         The file or grain will be overwritten if it already exists (default)
 
-    .. versionadded:: Nitrogen
+    .. versionadded:: 2017.7.0
     '''
     ret = {'name': name,
            'changes': {},
@@ -189,7 +189,7 @@ def run_file(name,
                                     + grain + ":" + key
     elif output is not None:
         ret['changes']['query'] = "Executed. Output into " + output
-        with salt.utils.fopen(output, 'w') as output_file:
+        with salt.utils.files.fopen(output, 'w') as output_file:
             if 'results' in query_result:
                 for res in query_result['results']:
                     for col, val in six.iteritems(res):
@@ -329,7 +329,7 @@ def run(name,
                                     + grain + ":" + key
     elif output is not None:
         ret['changes']['query'] = "Executed. Output into " + output
-        with salt.utils.fopen(output, 'w') as output_file:
+        with salt.utils.files.fopen(output, 'w') as output_file:
             if 'results' in query_result:
                 for res in query_result['results']:
                     for col, val in six.iteritems(res):

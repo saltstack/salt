@@ -89,7 +89,7 @@ if Defined x (
 if %Python%==2 (
     Set "PyDir=C:\Python27"
 ) else (
-    Set "PyDir=C:\Program Files\Python35"
+    Set "PyDir=C:\Python35"
 )
 Set "PATH=%PATH%;%PyDir%;%PyDir%\Scripts"
 
@@ -108,6 +108,13 @@ if not %errorLevel%==0 (
     echo "%CurDir%build_env_%Python%.ps1" returned errorlevel %errorLevel%. Aborting %0
     goto eof
 )
+@echo.
+
+:: Remove build and dist directories
+@echo %0 :: Remove build and dist directories...
+@echo ---------------------------------------------------------------------
+rd /s /q "%SrcDir%\build"
+rd /s /q "%SrcDir%\dist"
 @echo.
 
 :: Install Current Version of salt

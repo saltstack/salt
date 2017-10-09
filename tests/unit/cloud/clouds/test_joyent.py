@@ -40,6 +40,9 @@ class JoyentTestCase(TestCase, LoaderModuleMockMixin):
     Unit TestCase for the salt.cloud.clouds.joyent module
     '''
     def setup_loader_modules(self):
+        patcher = patch('salt.utils.cloud.wait_for_ip', fake_wait_for_ip)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {
             joyent: {
                 '__utils__': {
@@ -69,7 +72,6 @@ class JoyentTestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         del self.vm_
 
-    @patch('salt.utils.cloud.wait_for_ip', fake_wait_for_ip)
     def test_query_instance_init(self):
         '''
         Initial provisioning, no IP assigned
@@ -81,7 +83,6 @@ class JoyentTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(joyent.__utils__['cloud.fire_event'].called_once())
         self.assertEqual(result, None)
 
-    @patch('salt.utils.cloud.wait_for_ip', fake_wait_for_ip)
     def test_query_instance_has_ip(self):
         '''
         IP address assigned but not yet ready
@@ -92,7 +93,6 @@ class JoyentTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(joyent.__utils__['cloud.fire_event'].called_once())
         self.assertEqual(result, None)
 
-    @patch('salt.utils.cloud.wait_for_ip', fake_wait_for_ip)
     def test_query_instance_ready(self):
         '''
         IP address assigned, and VM is ready

@@ -22,6 +22,8 @@ import salt.pillar
 import salt.utils
 import salt.utils.atomicfile
 import salt.utils.minions
+import salt.utils.verify
+import salt.utils.versions
 import salt.payload
 from salt.exceptions import SaltException
 import salt.config
@@ -29,7 +31,7 @@ from salt.utils.cache import CacheCli as cache_cli
 from salt.utils.process import MultiprocessingProcess
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import zmq
     HAS_ZMQ = True
@@ -78,7 +80,7 @@ class MasterPillarUtil(object):
         # remember to remove the expr_form argument from this function when
         # performing the cleanup on this deprecation.
         if expr_form is not None:
-            salt.utils.warn_until(
+            salt.utils.versions.warn_until(
                 'Fluorine',
                 'the target type should be passed using the \'tgt_type\' '
                 'argument instead of \'expr_form\'. Support for using '
@@ -103,7 +105,7 @@ class MasterPillarUtil(object):
         self.use_cached_pillar = use_cached_pillar
         self.grains_fallback = grains_fallback
         self.pillar_fallback = pillar_fallback
-        self.cache = salt.cache.Cache(opts)
+        self.cache = salt.cache.factory(opts)
         log.debug(
             'Init settings: tgt: \'{0}\', tgt_type: \'{1}\', saltenv: \'{2}\', '
             'use_cached_grains: {3}, use_cached_pillar: {4}, '
@@ -246,7 +248,8 @@ class MasterPillarUtil(object):
         # Return a list of minion ids that match the target and tgt_type
         minion_ids = []
         ckminions = salt.utils.minions.CkMinions(self.opts)
-        minion_ids = ckminions.check_minions(self.tgt, self.tgt_type)
+        _res = ckminions.check_minions(self.tgt, self.tgt_type)
+        minion_ids = _res['minions']
         if len(minion_ids) == 0:
             log.debug('No minions matched for tgt="{0}" and tgt_type="{1}"'.format(self.tgt, self.tgt_type))
             return {}
@@ -610,7 +613,7 @@ class ConnectedCache(MultiprocessingProcess):
                 log.debug('ConCache Received request: {0}'.format(msg))
 
                 # requests to the minion list are send as str's
-                if isinstance(msg, str):
+                if isinstance(msg, six.string_types):
                     if msg == 'minions':
                         # Send reply back to client
                         reply = serial.dumps(self.minions)
@@ -642,7 +645,7 @@ class ConnectedCache(MultiprocessingProcess):
 
                     data = new_c_data[0]
 
-                    if isinstance(data, str):
+                    if isinstance(data, six.string_types):
                         if data not in self.minions:
                             log.debug('ConCache Adding minion {0} to cache'.format(new_c_data[0]))
                             self.minions.append(data)

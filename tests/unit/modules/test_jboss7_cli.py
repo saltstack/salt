@@ -5,20 +5,12 @@ from __future__ import absolute_import
 import re
 
 # Import salt testing libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
 # Import salt libs
 import salt.modules.jboss7_cli as jboss7_cli
 from salt.exceptions import CommandExecutionError
-
-
-try:
-    # will pass if executed along with other tests
-    __salt__
-except NameError:
-    # if executed separately we need to export __salt__ dictionary ourselves
-    from salt.ext.six.moves import builtins as __builtin__
-    __builtin__.__salt__ = {}
 
 
 class CmdMock(object):
@@ -69,8 +61,7 @@ class CmdMock(object):
         self.cli_commands = []
 
 
-class JBoss7CliTestCase(TestCase):
-    org_cmd_run_all = None
+class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
     cmd = CmdMock()
     jboss_config = {
         'cli_path': '/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh',
@@ -81,15 +72,16 @@ class JBoss7CliTestCase(TestCase):
         'status_url': 'http://sampleapp.example.com:8080/'
     }
 
-    def setUp(self):
-        self.cmd.clear()
-        if 'cmd.run_all' in __salt__:
-            self.org_cmd_run_all = __salt__['cmd.run_all']
-        __salt__['cmd.run_all'] = self.cmd.run_all
-
-    def tearDown(self):
-        if self.org_cmd_run_all is not None:
-            __salt__['cmd.run_all'] = self.org_cmd_run_all
+    def setup_loader_modules(self):
+        self.cmd = CmdMock()
+        self.addCleanup(delattr, self, 'cmd')
+        return {
+            jboss7_cli: {
+                '__salt__': {
+                    'cmd.run_all': self.cmd.run_all
+                }
+            }
+        }
 
     def test_controller_authentication(self):
         jboss7_cli.run_operation(self.jboss_config, 'some cli operation')

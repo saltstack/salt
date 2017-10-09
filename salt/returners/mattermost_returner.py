@@ -2,7 +2,7 @@
 '''
 Return salt data via mattermost
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 The following fields can be set in the minion conf file::
 .. code-block:: yaml
@@ -36,7 +36,7 @@ import logging
 import json
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module,redefined-builtin

@@ -26,7 +26,6 @@ VM_NAME = 'my-vm'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.cloud.clouds.opennebula.__virtual__', MagicMock(return_value='opennebula'))
 class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.opennebula module.
@@ -34,6 +33,7 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             opennebula: {
+                '__virtual__': MagicMock(return_value='opennebula'),
                 '__utils__': {
                     'cloud.cache_node': MagicMock()
                 },
@@ -170,27 +170,27 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                           None,
                           call='foo')
 
-    @patch('salt.cloud.clouds.opennebula.list_clusters',
-           MagicMock(return_value={'foo': {'id': 'bar'}}))
     def test_get_cluster_id_not_found(self):
         '''
         Tests that a SaltCloudSystemExit is raised when no name is provided.
         '''
-        self.assertRaises(SaltCloudSystemExit,
-                          opennebula.get_cluster_id,
-                          kwargs={'name': 'test'},
-                          call='function')
+        with patch('salt.cloud.clouds.opennebula.list_clusters',
+                   MagicMock(return_value={'foo': {'id': 'bar'}})):
+            self.assertRaises(SaltCloudSystemExit,
+                              opennebula.get_cluster_id,
+                              kwargs={'name': 'test'},
+                              call='function')
 
-    @patch('salt.cloud.clouds.opennebula.list_clusters',
-           MagicMock(return_value={'test-cluster': {'id': '100'}}))
     def test_get_cluster_id_success(self):
         '''
         Tests that the function returns successfully.
         '''
-        mock_id = '100'
-        mock_kwargs = {'name': 'test-cluster'}
-        self.assertEqual(opennebula.get_cluster_id(mock_kwargs, 'foo'),
-                         mock_id)
+        with patch('salt.cloud.clouds.opennebula.list_clusters',
+                   MagicMock(return_value={'test-cluster': {'id': '100'}})):
+            mock_id = '100'
+            mock_kwargs = {'name': 'test-cluster'}
+            self.assertEqual(opennebula.get_cluster_id(mock_kwargs, 'foo'),
+                             mock_id)
 
     def test_get_datastore_id_action(self):
         '''
@@ -210,27 +210,27 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                           None,
                           call='foo')
 
-    @patch('salt.cloud.clouds.opennebula.list_datastores',
-           MagicMock(return_value={'test-datastore': {'id': '100'}}))
     def test_get_datastore_id_not_found(self):
         '''
         Tests that a SaltCloudSystemExit is raised when no name is provided.
         '''
-        self.assertRaises(SaltCloudSystemExit,
-                          opennebula.get_datastore_id,
-                          kwargs={'name': 'test'},
-                          call='function')
+        with patch('salt.cloud.clouds.opennebula.list_datastores',
+                   MagicMock(return_value={'test-datastore': {'id': '100'}})):
+            self.assertRaises(SaltCloudSystemExit,
+                              opennebula.get_datastore_id,
+                              kwargs={'name': 'test'},
+                              call='function')
 
-    @patch('salt.cloud.clouds.opennebula.list_datastores',
-           MagicMock(return_value={'test-datastore': {'id': '100'}}))
     def test_get_datastore_id_success(self):
         '''
         Tests that the function returns successfully.
         '''
-        mock_id = '100'
-        mock_kwargs = {'name': 'test-datastore'}
-        self.assertEqual(opennebula.get_datastore_id(mock_kwargs, 'foo'),
-                         mock_id)
+        with patch('salt.cloud.clouds.opennebula.list_datastores',
+                   MagicMock(return_value={'test-datastore': {'id': '100'}})):
+            mock_id = '100'
+            mock_kwargs = {'name': 'test-datastore'}
+            self.assertEqual(opennebula.get_datastore_id(mock_kwargs, 'foo'),
+                             mock_id)
 
     def test_get_host_id_action(self):
         '''
@@ -250,44 +250,44 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                           None,
                           call='foo')
 
-    @patch('salt.cloud.clouds.opennebula.avail_locations',
-           MagicMock(return_value={'test-host': {'id': '100'}}))
     def test_get_host_id_not_found(self):
         '''
         Tests that a SaltCloudSystemExit is raised when no name is provided.
         '''
-        self.assertRaises(SaltCloudSystemExit,
-                          opennebula.get_host_id,
-                          kwargs={'name': 'test'},
-                          call='function')
+        with patch('salt.cloud.clouds.opennebula.avail_locations',
+                   MagicMock(return_value={'test-host': {'id': '100'}})):
+            self.assertRaises(SaltCloudSystemExit,
+                              opennebula.get_host_id,
+                              kwargs={'name': 'test'},
+                              call='function')
 
-    @patch('salt.cloud.clouds.opennebula.avail_locations',
-           MagicMock(return_value={'test-host': {'id': '100'}}))
     def test_get_host_id_success(self):
         '''
         Tests that the function returns successfully.
         '''
-        mock_id = '100'
-        mock_kwargs = {'name': 'test-host'}
-        self.assertEqual(opennebula.get_host_id(mock_kwargs, 'foo'),
-                         mock_id)
+        with patch('salt.cloud.clouds.opennebula.avail_locations',
+                   MagicMock(return_value={'test-host': {'id': '100'}})):
+            mock_id = '100'
+            mock_kwargs = {'name': 'test-host'}
+            self.assertEqual(opennebula.get_host_id(mock_kwargs, 'foo'),
+                             mock_id)
 
-    @patch('salt.cloud.clouds.opennebula.avail_images', MagicMock(return_value={}))
-    @patch('salt.config.get_cloud_config_value', MagicMock(return_value='foo'))
     def test_get_image_not_found(self):
         '''
         Tests that a SaltCloudNotFound is raised when the image doesn't exist.
         '''
-        self.assertRaises(SaltCloudNotFound, opennebula.get_image, 'my-vm')
+        with patch('salt.cloud.clouds.opennebula.avail_images', MagicMock(return_value={})):
+            with patch('salt.config.get_cloud_config_value', MagicMock(return_value='foo')):
+                self.assertRaises(SaltCloudNotFound, opennebula.get_image, 'my-vm')
 
-    @patch('salt.cloud.clouds.opennebula.avail_images',
-           MagicMock(return_value={'my-vm': {'name': 'my-vm', 'id': 0}}))
-    @patch('salt.config.get_cloud_config_value', MagicMock(return_value='my-vm'))
     def test_get_image_success(self):
         '''
         Tests that the image is returned successfully.
         '''
-        self.assertEqual(opennebula.get_image('my-vm'), 0)
+        with patch('salt.cloud.clouds.opennebula.avail_images',
+                   MagicMock(return_value={'my-vm': {'name': 'my-vm', 'id': 0}})):
+            with patch('salt.config.get_cloud_config_value', MagicMock(return_value='my-vm')):
+                self.assertEqual(opennebula.get_image('my-vm'), 0)
 
     def test_get_image_id_action(self):
         '''
@@ -307,44 +307,44 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                           None,
                           call='foo')
 
-    @patch('salt.cloud.clouds.opennebula.avail_images',
-           MagicMock(return_value={'test-image': {'id': '100'}}))
     def test_get_image_id_not_found(self):
         '''
         Tests that a SaltCloudSystemExit is raised when no name is provided.
         '''
-        self.assertRaises(SaltCloudSystemExit,
-                          opennebula.get_image_id,
-                          kwargs={'name': 'test'},
-                          call='function')
+        with patch('salt.cloud.clouds.opennebula.avail_images',
+                   MagicMock(return_value={'test-image': {'id': '100'}})):
+            self.assertRaises(SaltCloudSystemExit,
+                              opennebula.get_image_id,
+                              kwargs={'name': 'test'},
+                              call='function')
 
-    @patch('salt.cloud.clouds.opennebula.avail_images',
-           MagicMock(return_value={'test-image': {'id': '100'}}))
     def test_get_image_id_success(self):
         '''
         Tests that the function returns successfully.
         '''
-        mock_id = '100'
-        mock_kwargs = {'name': 'test-image'}
-        self.assertEqual(opennebula.get_image_id(mock_kwargs, 'foo'),
-                         mock_id)
+        with patch('salt.cloud.clouds.opennebula.avail_images',
+                   MagicMock(return_value={'test-image': {'id': '100'}})):
+            mock_id = '100'
+            mock_kwargs = {'name': 'test-image'}
+            self.assertEqual(opennebula.get_image_id(mock_kwargs, 'foo'),
+                             mock_id)
 
-    @patch('salt.cloud.clouds.opennebula.avail_locations', MagicMock(return_value={}))
-    @patch('salt.config.get_cloud_config_value', MagicMock(return_value='foo'))
     def test_get_location_not_found(self):
         '''
         Tests that a SaltCloudNotFound is raised when the location doesn't exist.
         '''
-        self.assertRaises(SaltCloudNotFound, opennebula.get_location, 'my-vm')
+        with patch('salt.cloud.clouds.opennebula.avail_locations', MagicMock(return_value={})):
+            with patch('salt.config.get_cloud_config_value', MagicMock(return_value='foo')):
+                self.assertRaises(SaltCloudNotFound, opennebula.get_location, 'my-vm')
 
-    @patch('salt.cloud.clouds.opennebula.avail_locations',
-           MagicMock(return_value={'my-host': {'name': 'my-host', 'id': 0}}))
-    @patch('salt.config.get_cloud_config_value', MagicMock(return_value='my-host'))
     def test_get_location_success(self):
         '''
         Tests that the image is returned successfully.
         '''
-        self.assertEqual(opennebula.get_location('my-host'), 0)
+        with patch('salt.cloud.clouds.opennebula.avail_locations',
+                   MagicMock(return_value={'my-host': {'name': 'my-host', 'id': 0}})):
+            with patch('salt.config.get_cloud_config_value', MagicMock(return_value='my-host')):
+                self.assertEqual(opennebula.get_location('my-host'), 0)
 
     def test_get_secgroup_id_action(self):
         '''
@@ -364,27 +364,27 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                           None,
                           call='foo')
 
-    @patch('salt.cloud.clouds.opennebula.list_security_groups',
-           MagicMock(return_value={'test-security-group': {'id': '100'}}))
     def test_get_secgroup_id_not_found(self):
         '''
         Tests that a SaltCloudSystemExit is raised when no name is provided.
         '''
-        self.assertRaises(SaltCloudSystemExit,
-                          opennebula.get_secgroup_id,
-                          kwargs={'name': 'test'},
-                          call='function')
+        with patch('salt.cloud.clouds.opennebula.list_security_groups',
+                   MagicMock(return_value={'test-security-group': {'id': '100'}})):
+            self.assertRaises(SaltCloudSystemExit,
+                              opennebula.get_secgroup_id,
+                              kwargs={'name': 'test'},
+                              call='function')
 
-    @patch('salt.cloud.clouds.opennebula.list_security_groups',
-           MagicMock(return_value={'test-secgroup': {'id': '100'}}))
     def test_get_secgroup_id_success(self):
         '''
         Tests that the function returns successfully.
         '''
-        mock_id = '100'
-        mock_kwargs = {'name': 'test-secgroup'}
-        self.assertEqual(opennebula.get_secgroup_id(mock_kwargs, 'foo'),
-                         mock_id)
+        with patch('salt.cloud.clouds.opennebula.list_security_groups',
+                   MagicMock(return_value={'test-secgroup': {'id': '100'}})):
+            mock_id = '100'
+            mock_kwargs = {'name': 'test-secgroup'}
+            self.assertEqual(opennebula.get_secgroup_id(mock_kwargs, 'foo'),
+                             mock_id)
 
     def test_get_template_id_action(self):
         '''
@@ -404,27 +404,27 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                           None,
                           call='foo')
 
-    @patch('salt.cloud.clouds.opennebula.list_templates',
-           MagicMock(return_value={'test-template': {'id': '100'}}))
     def test_get_template_id_not_found(self):
         '''
         Tests that a SaltCloudSystemExit is raised when no name is provided.
         '''
-        self.assertRaises(SaltCloudSystemExit,
-                          opennebula.get_template_id,
-                          kwargs={'name': 'test'},
-                          call='function')
+        with patch('salt.cloud.clouds.opennebula.list_templates',
+                   MagicMock(return_value={'test-template': {'id': '100'}})):
+            self.assertRaises(SaltCloudSystemExit,
+                              opennebula.get_template_id,
+                              kwargs={'name': 'test'},
+                              call='function')
 
-    @patch('salt.cloud.clouds.opennebula.list_templates',
-           MagicMock(return_value={'test-template': {'id': '100'}}))
     def test_get_template_id_success(self):
         '''
         Tests that the function returns successfully.
         '''
-        mock_id = '100'
-        mock_kwargs = {'name': 'test-template'}
-        self.assertEqual(opennebula.get_template_id(mock_kwargs, 'foo'),
-                         mock_id)
+        with patch('salt.cloud.clouds.opennebula.list_templates',
+                   MagicMock(return_value={'test-template': {'id': '100'}})):
+            mock_id = '100'
+            mock_kwargs = {'name': 'test-template'}
+            self.assertEqual(opennebula.get_template_id(mock_kwargs, 'foo'),
+                             mock_id)
 
     def test_get_vm_id_action(self):
         '''
@@ -444,27 +444,27 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                           None,
                           call='foo')
 
-    @patch('salt.cloud.clouds.opennebula.list_nodes',
-           MagicMock(return_value={'test-vm': {'id': '100'}}))
     def test_get_vm_id_not_found(self):
         '''
         Tests that a SaltCloudSystemExit is raised when no name is provided.
         '''
-        self.assertRaises(SaltCloudSystemExit,
-                          opennebula.get_vm_id,
-                          kwargs={'name': 'test'},
-                          call='function')
+        with patch('salt.cloud.clouds.opennebula.list_nodes',
+                   MagicMock(return_value={'test-vm': {'id': '100'}})):
+            self.assertRaises(SaltCloudSystemExit,
+                              opennebula.get_vm_id,
+                              kwargs={'name': 'test'},
+                              call='function')
 
-    @patch('salt.cloud.clouds.opennebula.list_nodes',
-           MagicMock(return_value={'test-vm': {'id': '100'}}))
     def test_get_vm_id_success(self):
         '''
         Tests that the function returns successfully.
         '''
-        mock_id = '100'
-        mock_kwargs = {'name': 'test-vm'}
-        self.assertEqual(opennebula.get_vm_id(mock_kwargs, 'foo'),
-                         mock_id)
+        with patch('salt.cloud.clouds.opennebula.list_nodes',
+                   MagicMock(return_value={'test-vm': {'id': '100'}})):
+            mock_id = '100'
+            mock_kwargs = {'name': 'test-vm'}
+            self.assertEqual(opennebula.get_vm_id(mock_kwargs, 'foo'),
+                             mock_id)
 
     def test_get_vn_id_action(self):
         '''
@@ -484,27 +484,27 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                           None,
                           call='foo')
 
-    @patch('salt.cloud.clouds.opennebula.list_vns',
-           MagicMock(return_value={'test-vn': {'id': '100'}}))
     def test_get_vn_id_not_found(self):
         '''
         Tests that a SaltCloudSystemExit is raised when no name is provided.
         '''
-        self.assertRaises(SaltCloudSystemExit,
-                          opennebula.get_vn_id,
-                          kwargs={'name': 'test'},
-                          call='function')
+        with patch('salt.cloud.clouds.opennebula.list_vns',
+                   MagicMock(return_value={'test-vn': {'id': '100'}})):
+            self.assertRaises(SaltCloudSystemExit,
+                              opennebula.get_vn_id,
+                              kwargs={'name': 'test'},
+                              call='function')
 
-    @patch('salt.cloud.clouds.opennebula.list_vns',
-           MagicMock(return_value={'test-vn': {'id': '100'}}))
     def test_get_vn_id_success(self):
         '''
         Tests that the function returns successfully.
         '''
-        mock_id = '100'
-        mock_kwargs = {'name': 'test-vn'}
-        self.assertEqual(opennebula.get_vn_id(mock_kwargs, 'foo'),
-                         mock_id)
+        with patch('salt.cloud.clouds.opennebula.list_vns',
+                   MagicMock(return_value={'test-vn': {'id': '100'}})):
+            mock_id = '100'
+            mock_kwargs = {'name': 'test-vn'}
+            self.assertEqual(opennebula.get_vn_id(mock_kwargs, 'foo'),
+                             mock_id)
 
     # TODO: Write tests for create function
 
@@ -562,21 +562,21 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                           kwargs={'name': 'test'})
 
     @skipIf(True, 'Need to figure out how to mock calls to the O.N. API first.')
-    @patch('image.clone', MagicMock(return_value=[True, 11, 0]))
     def test_image_clone_success(self):
         '''
         Tests that image_clone returns successfully
         '''
-        name = 'test-image'
-        expected = {
-            'action': 'image.clone',
-            'cloned': 'True',
-            'cloned_image_id': '11',
-            'cloned_image_name': name,
-            'error_code': '0',
-        }
-        ret = opennebula.image_clone('function', kwargs={'name': name, 'image_id': 1})
-        self.assertEqual(expected, ret)
+        with patch('image.clone', MagicMock(return_value=[True, 11, 0])):
+            name = 'test-image'
+            expected = {
+                'action': 'image.clone',
+                'cloned': 'True',
+                'cloned_image_id': '11',
+                'cloned_image_name': name,
+                'error_code': '0',
+            }
+            ret = opennebula.image_clone('function', kwargs={'name': name, 'image_id': 1})
+            self.assertEqual(expected, ret)
 
     def test_image_delete_function_error(self):
         '''
@@ -770,14 +770,14 @@ class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
                           VM_NAME,
                           call='foo')
 
-    @patch('salt.cloud.clouds.opennebula._get_node',
-           MagicMock(return_value={'my-vm': {'name': 'my-vm', 'id': 0}}))
     def test_show_instance_success(self):
         '''
         Tests that the node was found successfully.
         '''
-        ret = {'my-vm': {'name': 'my-vm', 'id': 0}}
-        self.assertEqual(opennebula.show_instance('my-vm', call='action'), ret)
+        with patch('salt.cloud.clouds.opennebula._get_node',
+                   MagicMock(return_value={'my-vm': {'name': 'my-vm', 'id': 0}})):
+            ret = {'my-vm': {'name': 'my-vm', 'id': 0}}
+            self.assertEqual(opennebula.show_instance('my-vm', call='action'), ret)
 
     def test_secgroup_allocate_function_error(self):
         '''

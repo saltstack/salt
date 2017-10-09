@@ -19,7 +19,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.paths import TMP, CODE_DIR
 
 # Import salt libs
-from salt.utils import cloud
+import salt.utils.cloud as cloud
 
 GPG_KEYDIR = os.path.join(TMP, 'gpg-keydir')
 

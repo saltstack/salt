@@ -5,17 +5,12 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import os
 import random
 import string
 
 # Import Salt Testing Libs
-import tests.integration as integration
-from tests.support.unit import skipIf
-from tests.support.helpers import (
-    destructiveTest,
-    requires_system_grains
-)
+from tests.support.case import ModuleCase
+from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -41,7 +36,9 @@ ADD_USER = __random_string()
 REP_USER_GROUP = __random_string()
 
 
-class MacGroupModuleTest(integration.ModuleCase):
+@destructiveTest
+@skip_if_not_root
+class MacGroupModuleTest(ModuleCase):
     '''
     Integration tests for the mac_group module
     '''
@@ -58,10 +55,7 @@ class MacGroupModuleTest(integration.ModuleCase):
                 )
             )
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_mac_group_add(self, grains=None):
+    def test_mac_group_add(self):
         '''
         Tests the add group function
         '''
@@ -73,10 +67,7 @@ class MacGroupModuleTest(integration.ModuleCase):
             self.run_function('group.delete', [ADD_GROUP])
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_mac_group_delete(self, grains=None):
+    def test_mac_group_delete(self):
         '''
         Tests the delete group function
         '''
@@ -92,10 +83,7 @@ class MacGroupModuleTest(integration.ModuleCase):
         except CommandExecutionError:
             raise
 
-    @destructiveTest
-    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_mac_group_chgid(self, grains=None):
+    def test_mac_group_chgid(self):
         '''
         Tests changing the group id
         '''
@@ -112,10 +100,7 @@ class MacGroupModuleTest(integration.ModuleCase):
             self.run_function('group.delete', [CHANGE_GROUP])
             raise
 
-    @destructiveTest
-    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_mac_adduser(self, grains=None):
+    def test_mac_adduser(self):
         '''
         Tests adding user to the group
         '''
@@ -132,10 +117,7 @@ class MacGroupModuleTest(integration.ModuleCase):
             self.run_function('group.delete', [ADD_GROUP])
             raise
 
-    @destructiveTest
-    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_mac_deluser(self, grains=None):
+    def test_mac_deluser(self):
         '''
         Test deleting user from a group
         '''
@@ -151,10 +133,7 @@ class MacGroupModuleTest(integration.ModuleCase):
         group_info = self.run_function('group.info', [ADD_GROUP])
         self.assertNotIn(ADD_USER, ''.join(group_info['members']))
 
-    @destructiveTest
-    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_mac_members(self, grains=None):
+    def test_mac_members(self):
         '''
         Test replacing members of a group
         '''
@@ -174,10 +153,7 @@ class MacGroupModuleTest(integration.ModuleCase):
         self.assertIn(REP_USER_GROUP, str(group_info['members']))
         self.assertNotIn(ADD_USER, str(group_info['members']))
 
-    @destructiveTest
-    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_mac_getent(self, grains=None):
+    def test_mac_getent(self):
         '''
         Test returning info on all groups
         '''
@@ -193,10 +169,7 @@ class MacGroupModuleTest(integration.ModuleCase):
         self.assertIn(ADD_GROUP, str(getinfo))
         self.assertIn(ADD_USER, str(getinfo))
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def tearDown(self, grains=None):
+    def tearDown(self):
         '''
         Clean up after tests
         '''

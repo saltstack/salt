@@ -14,19 +14,23 @@ import os
 import sys
 import re
 import shutil
-import yaml
 from datetime import datetime
 import logging
 
+# Import 3rd-party libs
+import yaml
+
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 from tests.support.unit import skipIf
+from tests.support.paths import FILES, TMP
+from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import destructiveTest
 from tests.integration.utils import testprogram
 
 # Import salt libs
-import salt.utils
-import salt.ext.six as six
+import salt.utils.files
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +44,7 @@ _PKG_TARGETS = {
 _PKGS_INSTALLED = set()
 
 
-class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixin):
+class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-call'
 
@@ -71,7 +75,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
         self.assertIn('"local": true', ''.join(out))
 
     def test_local_sls_call(self):
-        fileroot = os.path.join(integration.FILES, 'file', 'base')
+        fileroot = os.path.join(FILES, 'file', 'base')
         out = self.run_call('--file-root {0} --local state.sls saltcalllocal'.format(fileroot))
         self.assertIn('Name: test.echo', ''.join(out))
         self.assertIn('Result: True', ''.join(out))
@@ -121,8 +125,8 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
         for this minion, salt-call should exit non-zero if invoked with
         option --retcode-passthrough
         '''
-        src = os.path.join(integration.FILES, 'file/base/top.sls')
-        dst = os.path.join(integration.FILES, 'file/base/top.sls.bak')
+        src = os.path.join(FILES, 'file/base/top.sls')
+        dst = os.path.join(FILES, 'file/base/top.sls.bak')
         shutil.move(src, dst)
         expected_comment = 'No states found for this minion'
         try:
@@ -136,7 +140,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
         self.assertNotEqual(0, retcode)
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_return(self):
         self.run_call('cmd.run "echo returnTOmaster"')
         jobs = [a for a in self.run_run('jobs.list_jobs')]
@@ -162,7 +166,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_issue_2731_masterless(self):
-        root_dir = os.path.join(integration.TMP, 'issue-2731')
+        root_dir = os.path.join(TMP, 'issue-2731')
         config_dir = os.path.join(root_dir, 'conf')
         minion_config_file = os.path.join(config_dir, 'minion')
         logfile = os.path.join(root_dir, 'minion_test_issue_2731')
@@ -170,7 +174,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
-        with salt.utils.fopen(self.get_config_file_path('master')) as fhr:
+        with salt.utils.files.fopen(self.get_config_file_path('master')) as fhr:
             master_config = yaml.load(fhr.read())
 
         master_root_dir = master_config['root_dir']
@@ -200,7 +204,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
             start = datetime.now()
             # Let's first test with a master running
 
-            with salt.utils.fopen(minion_config_file, 'w') as fh_:
+            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
                 fh_.write(
                     yaml.dump(minion_config, default_flow_style=False)
                 )
@@ -230,7 +234,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
             # Now let's remove the master configuration
             minion_config.pop('master')
             minion_config.pop('master_port')
-            with salt.utils.fopen(minion_config_file, 'w') as fh_:
+            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
                 fh_.write(
                     yaml.dump(minion_config, default_flow_style=False)
                 )
@@ -278,7 +282,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
 
             # Should work with local file client
             minion_config['file_client'] = 'local'
-            with salt.utils.fopen(minion_config_file, 'w') as fh_:
+            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
                 fh_.write(
                     yaml.dump(minion_config, default_flow_style=False)
                 )
@@ -299,16 +303,16 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
         os.chdir(config_dir)
 
-        with salt.utils.fopen(self.get_config_file_path('minion'), 'r') as fh_:
+        with salt.utils.files.fopen(self.get_config_file_path('minion'), 'r') as fh_:
             minion_config = yaml.load(fh_.read())
             minion_config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
+            with salt.utils.files.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
                 fh_.write(
                     yaml.dump(minion_config, default_flow_style=False)
                 )
@@ -336,7 +340,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
                 shutil.rmtree(config_dir)
 
     def test_issue_15074_output_file_append(self):
-        output_file_append = os.path.join(integration.TMP, 'issue-15074')
+        output_file_append = os.path.join(TMP, 'issue-15074')
         try:
             # Let's create an initial output file with some data
             _ = self.run_script(
@@ -349,7 +353,7 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
                 with_retcode=True
             )
 
-            with salt.utils.fopen(output_file_append) as ofa:
+            with salt.utils.files.fopen(output_file_append) as ofa:
                 output = ofa.read()
 
             self.run_script(
@@ -361,14 +365,14 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
                 catch_stderr=True,
                 with_retcode=True
             )
-            with salt.utils.fopen(output_file_append) as ofa:
+            with salt.utils.files.fopen(output_file_append) as ofa:
                 self.assertEqual(ofa.read(), output + output)
         finally:
             if os.path.exists(output_file_append):
                 os.unlink(output_file_append)
 
     def test_issue_14979_output_file_permissions(self):
-        output_file = os.path.join(integration.TMP, 'issue-14979')
+        output_file = os.path.join(TMP, 'issue-14979')
         current_umask = os.umask(0o077)
         try:
             # Let's create an initial output file with some data
@@ -421,6 +425,21 @@ class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.S
                 os.unlink(output_file)
             # Restore umask
             os.umask(current_umask)
+
+    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    def test_42116_cli_pillar_override(self):
+        ret = self.run_call(
+            'state.apply issue-42116-cli-pillar-override '
+            'pillar=\'{"myhost": "localhost"}\''
+        )
+        for line in ret:
+            line = line.lstrip()
+            if line == 'Comment: Command "ping -c 2 localhost" run':
+                # Successful test
+                break
+        else:
+            log.debug('salt-call output:\n\n%s', '\n'.join(ret))
+            self.fail('CLI pillar override not found in pillar data')
 
     def tearDown(self):
         '''

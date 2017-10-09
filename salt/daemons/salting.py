@@ -21,7 +21,7 @@ from raet.keeping import Keep
 
 from salt.key import RaetKey
 
-from salt.utils import kinds
+import salt.utils.kinds as kinds
 
 
 class SaltKeep(Keep):

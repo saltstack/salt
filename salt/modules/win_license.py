@@ -13,7 +13,7 @@ import re
 import logging
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'license'
@@ -23,7 +23,7 @@ def __virtual__():
     '''
     Only work on Windows
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return __virtualname__
     return False
 

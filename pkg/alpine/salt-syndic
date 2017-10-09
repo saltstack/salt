@@ -1,0 +1,11 @@
+#!/sbin/openrc-run
+command="/usr/bin/salt-syndic"
+command_args="--daemon"
+pidfile="/var/run/salt-syndic.pid"
+name="Salt Syndic"
+
+depend() {
+	need localmount
+	use net
+	after bootmisc
+}

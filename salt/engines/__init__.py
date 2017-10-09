@@ -11,7 +11,7 @@ import logging
 # Import salt libs
 import salt
 import salt.loader
-import salt.utils
+import salt.utils.platform
 from salt.utils.process import SignalHandlingMultiprocessingProcess
 
 log = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ def start_engines(opts, proc_mgr, proxy=None):
     # Function references are not picklable. Windows needs to pickle when
     # spawning processes. On Windows, these will need to be recalculated
     # in the spawned child process.
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         runners = None
         utils = None
         funcs = None
@@ -110,7 +110,7 @@ class Engine(SignalHandlingMultiprocessingProcess):
         Run the master service!
         '''
         self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # Calculate function references since they can't be pickled.
             if self.opts['__role'] == 'master':
                 self.runners = salt.loader.runner(self.opts, utils=self.utils)

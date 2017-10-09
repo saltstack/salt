@@ -31,9 +31,10 @@ import salt.modules.boto_lambda as boto_lambda
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion
 import salt.utils
+import salt.utils.stringutils
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -155,7 +156,7 @@ class TempZipFile(object):
                 suffix='.zip', prefix='salt_test_', delete=False) as tmp:
             to_write = '###\n'
             if six.PY3:
-                to_write = salt.utils.to_bytes(to_write)
+                to_write = salt.utils.stringutils.to_bytes(to_write)
             tmp.write(to_write)
             self.zipfile = tmp.name
         return self.zipfile
@@ -244,8 +245,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegexp(SaltInvocationError,
-                                         'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
+            with self.assertRaisesRegex(SaltInvocationError,
+                                        'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
                 lambda_creation_result = boto_lambda.create_function(
                     FunctionName='testfunction',
                     Runtime='python2.7',
@@ -258,8 +259,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegexp(SaltInvocationError,
-                                         'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
+            with self.assertRaisesRegex(SaltInvocationError,
+                                        'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
                 with TempZipFile() as zipfile:
                     lambda_creation_result = boto_lambda.create_function(
                         FunctionName='testfunction',
@@ -400,7 +401,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                 SaltInvocationError,
                 ('Either ZipFile must be specified, or S3Bucket '
                  'and S3Key must be provided.')):
@@ -713,7 +714,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         '''
         tests Deleting a mapping without identifier
         '''
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             SaltInvocationError,
             ('Either UUID must be specified, or EventSourceArn '
              'and FunctionName must be provided.')):

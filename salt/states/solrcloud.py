@@ -2,7 +2,7 @@
 '''
 States for solrcloud alias and collection configuration
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 '''
 
@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import json
 
 # Import 3rd party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def alias(name, collections, **kwargs):

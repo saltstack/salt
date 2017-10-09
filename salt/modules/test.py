@@ -5,6 +5,7 @@ Module for running arbitrary tests
 from __future__ import absolute_import
 
 # Import Python libs
+import logging
 import os
 import sys
 import time
@@ -14,9 +15,12 @@ import random
 # Import Salt libs
 import salt
 import salt.utils
+import salt.utils.args
+import salt.utils.hashutils
+import salt.utils.platform
 import salt.version
 import salt.loader
-import salt.ext.six as six
+from salt.ext import six
 from salt.utils.decorators import depends
 
 __proxyenabled__ = ['*']
@@ -24,8 +28,11 @@ __proxyenabled__ = ['*']
 # Don't shadow built-in's.
 __func_alias__ = {
     'true_': 'true',
-    'false_': 'false'
+    'false_': 'false',
+    'try_': 'try',
 }
+
+log = logging.getLogger(__name__)
 
 
 @depends('non_existantmodulename')
@@ -111,7 +118,8 @@ def ping():
         salt '*' test.ping
     '''
 
-    if not salt.utils.is_proxy():
+    if not salt.utils.platform.is_proxy():
+        log.debug('test.ping received for minion \'%s\'', __opts__.get('id'))
         return True
     else:
         ping_cmd = __opts__['proxy']['proxytype'] + '.ping'
@@ -307,6 +315,18 @@ def arg_repr(*args, **kwargs):
     return {"args": repr(args), "kwargs": repr(kwargs)}
 
 
+def arg_clean(*args, **kwargs):
+    '''
+    Like test.arg but cleans kwargs of the __pub* items
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.arg_clean 1 "two" 3.1 txt="hello" wow='{a: 1, b: "hello"}'
+    '''
+    return dict(args=args, kwargs=salt.utils.args.clean_kwargs(**kwargs))
+
+
 def fib(num):
     '''
     Return the num-th Fibonacci number, and the time it took to compute in
@@ -326,16 +346,15 @@ def fib(num):
     start = time.time()
     if num < 2:
         return num, time.time() - start
-    return _fib(num-1) + _fib(num-2), time.time() - start
 
+    prev = 0
+    curr = 1
+    i = 1
+    while i < num:
+        prev, curr = curr, prev + curr
+        i += 1
 
-def _fib(num):
-    '''
-    Helper method for test.fib, doesn't calculate the time.
-    '''
-    if num < 2:
-        return num
-    return _fib(num-1) + _fib(num-2)
+    return curr, time.time() - start
 
 
 def collatz(start):
@@ -476,25 +495,34 @@ def opts_pkg():
 
 
 def rand_str(size=9999999999, hash_type=None):
+    salt.utils.warn_until(
+        'Neon',
+        'test.rand_str has been renamed to test.random_hash'
+    )
+    return random_hash(size=size, hash_type=hash_type)
+
+
+def random_hash(size=9999999999, hash_type=None):
     '''
-    Return a random string
+    .. versionadded:: 2015.5.2
+    .. versionchanged:: Oxygen
+        Function has been renamed from ``test.rand_str`` to
+        ``test.random_hash``
 
-        size
-            size of the string to generate
-        hash_type
-            hash type to use
-
-            .. versionadded:: 2015.5.2
+    Generates a random number between 1 and ``size``, then returns a hash of
+    that number. If no ``hash_type`` is passed, the hash_type specified by the
+    minion's :conf_minion:`hash_type` config option is used.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' test.rand_str
+        salt '*' test.random_hash
+        salt '*' test.random_hash hash_type=sha512
     '''
     if not hash_type:
         hash_type = __opts__.get('hash_type', 'md5')
-    return salt.utils.rand_str(hash_type=hash_type, size=size)
+    return salt.utils.hashutils.random_hash(size=size, hash_type=hash_type)
 
 
 def exception(message='Test Exception'):

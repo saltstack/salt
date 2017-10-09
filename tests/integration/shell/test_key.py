@@ -1,24 +1,29 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import os
-import yaml
 import shutil
 import tempfile
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.paths import TMP
+from tests.support.mixins import ShellCaseCommonTestsMixin
 
-# Import salt libs
-import salt.utils
+# Import 3rd-party libs
+import yaml
+
+# Import Salt libs
+import salt.utils.files
+import salt.utils.platform
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
 HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
 
 
-class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
+class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
     '''
     Test salt-key script
     '''
@@ -32,7 +37,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
         try:
             add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
             add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
-                                    USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD))
+                                    USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD))
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_call('user.list_users')
@@ -207,7 +212,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
         self.assertEqual(data, expect)
 
     def test_keys_generation(self):
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
         self.run_key(arg_str)
         try:
@@ -222,7 +227,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
             shutil.rmtree(tempdir)
 
     def test_keys_generation_keysize_minmax(self):
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        tempdir = tempfile.mkdtemp(dir=TMP)
         arg_str = '--gen-keys minion --gen-keys-dir {0}'.format(tempdir)
         try:
             data, error = self.run_key(
@@ -244,17 +249,17 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
             config = yaml.load(fhr.read())
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
                 fhw.write(
                     yaml.dump(config, default_flow_style=False)
                 )

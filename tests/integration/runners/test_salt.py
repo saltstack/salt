@@ -8,10 +8,10 @@ Tests for the salt runner
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
 
 
-class SaltRunnerTest(integration.ShellCase):
+class SaltRunnerTest(ShellCase):
     '''
     Test the salt runner
     '''

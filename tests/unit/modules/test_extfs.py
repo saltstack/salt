@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
@@ -15,11 +16,12 @@ import salt.modules.extfs as extfs
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ExtfsTestCase(TestCase):
+class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.extfs
     '''
-    extfs.__salt__ = {}
+    def setup_loader_modules(self):
+        return {extfs: {}}
 
     # 'mkfs' function tests: 1
 
@@ -33,13 +35,13 @@ class ExtfsTestCase(TestCase):
 
     # 'tune' function tests: 1
 
-    @patch('salt.modules.extfs.tune', MagicMock(return_value=''))
     def test_tune(self):
         '''
         Tests if specified group was added
         '''
         mock = MagicMock()
-        with patch.dict(extfs.__salt__, {'cmd.run': mock}):
+        with patch.dict(extfs.__salt__, {'cmd.run': mock}), \
+                patch('salt.modules.extfs.tune', MagicMock(return_value='')):
             self.assertEqual('', extfs.tune('/dev/sda1'))
 
     # 'dump' function tests: 1
@@ -55,20 +57,20 @@ class ExtfsTestCase(TestCase):
 
     # 'attributes' function tests: 1
 
-    @patch('salt.modules.extfs.dump',
-           MagicMock(return_value={'attributes': {}, 'blocks': {}}))
     def test_attributes(self):
         '''
         Tests if specified group was added
         '''
-        self.assertEqual({}, extfs.attributes('/dev/sda1'))
+        with patch('salt.modules.extfs.dump',
+                    MagicMock(return_value={'attributes': {}, 'blocks': {}})):
+            self.assertEqual({}, extfs.attributes('/dev/sda1'))
 
     # 'blocks' function tests: 1
 
-    @patch('salt.modules.extfs.dump',
-           MagicMock(return_value={'attributes': {}, 'blocks': {}}))
     def test_blocks(self):
         '''
         Tests if specified group was added
         '''
-        self.assertEqual({}, extfs.blocks('/dev/sda1'))
+        with patch('salt.modules.extfs.dump',
+                   MagicMock(return_value={'attributes': {}, 'blocks': {}})):
+            self.assertEqual({}, extfs.blocks('/dev/sda1'))

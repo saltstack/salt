@@ -3,22 +3,26 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import yaml
 import shutil
 import time
 
+# Import 3rd-party libs
+import yaml
+
 # Import Salt Testing libs
-import tests.integration as integration
+from tests.support.case import ShellCase
+from tests.support.paths import TMP
+from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 
 def minion_in_returns(minion, lines):
     return bool([True for line in lines if line == '{0}:'.format(minion)])
 
 
-class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
+class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     '''
     Test salt matchers
     '''
@@ -310,6 +314,11 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
         '''
         Test to see if we're not auto-adding '*' and 'sys.doc' to the call
         '''
+        os_family = self.run_call('--local grains.get os_family')[1].strip()
+        if os_family == 'Arch':
+            self.skipTest('This test is failing in Arch due to a bug in salt-testing. '
+                          'Skipping until salt-testing can be upgraded. For more information, '
+                          'see https://github.com/saltstack/salt-jenkins/issues/324.')
         data = self.run_salt('-d -t 20')
         if data:
             self.assertIn('user.add:', data)
@@ -332,19 +341,19 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixin):
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(integration.TMP, 'issue-7754')
+        config_dir = os.path.join(TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
             config = yaml.load(
                 fhr.read()
             )
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
                 fhw.write(
                     yaml.dump(config, default_flow_style=False)
             )

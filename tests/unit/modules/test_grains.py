@@ -19,7 +19,7 @@ from tests.support.mock import (
 # Import Salt libs
 from salt.exceptions import SaltException
 import salt.modules.grains as grainsmod
-from salt.utils import dictupdate
+import salt.utils.dictupdate as dictupdate
 
 # Import 3rd-party libs
 from salt.utils.odict import OrderedDict
@@ -229,10 +229,10 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(grainsmod.__grains__, {'b': 'bval'})
 
             # Failing append to an existing dict
-            grainsmod.__grains__ = {'b': {'b1': 'bval1'}}
-            res = grainsmod.append('b', 'd')
-            self.assertEqual(res, 'The key b is not a valid list')
-            self.assertEqual(grainsmod.__grains__, {'b': {'b1': 'bval1'}})
+            with patch.dict(grainsmod.__grains__, {'b': {'b1': 'bval1'}}):
+                res = grainsmod.append('b', 'd')
+                self.assertEqual(res, 'The key b is not a valid list')
+                self.assertEqual(grainsmod.__grains__, {'b': {'b1': 'bval1'}})
 
     def test_append_already_in_list(self):
         # Append an existing value

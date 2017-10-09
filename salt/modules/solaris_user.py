@@ -22,8 +22,9 @@ import copy
 import logging
 
 # Import salt libs
-import salt.utils
-import salt.ext.six as six
+import salt.utils  # Can be removed once is_true is moved
+import salt.utils.user
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -431,7 +432,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    return salt.utils.get_group_list(name)
+    return salt.utils.user.get_group_list(name)
 
 
 def list_users():

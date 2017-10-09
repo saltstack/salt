@@ -2,7 +2,7 @@
 '''
 IRC Bot engine
 
-.. versionadded:: Nitrogen
+.. versionadded:: 2017.7.0
 
 Example Configuration
 
@@ -42,12 +42,12 @@ Example of usage
 
 .. code:: txt
 
-    08:33:57 @gtmanfred » !ping
-    08:33:57   gtmanbot » gtmanfred: pong
-    08:34:02 @gtmanfred » !echo ping
-    08:34:02   gtmanbot » ping
-    08:34:17 @gtmanfred » !event test/tag/ircbot irc is usefull
-    08:34:17   gtmanbot » gtmanfred: TaDa!
+    08:33:57 @gtmanfred > !ping
+    08:33:57   gtmanbot > gtmanfred: pong
+    08:34:02 @gtmanfred > !echo ping
+    08:34:02   gtmanbot > ping
+    08:34:17 @gtmanfred > !event test/tag/ircbot irc is usefull
+    08:34:17   gtmanbot > gtmanfred: TaDa!
 
 .. code:: txt
 
@@ -72,6 +72,9 @@ log = logging.getLogger(__name__)
 
 # Import salt libraries
 import salt.utils.event
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # Nothing listening here
 Event = namedtuple("Event", "source code line")
@@ -212,7 +215,7 @@ class IRCClient(object):
         logging.info("on_closed")
 
     def send_message(self, line):
-        if isinstance(line, str):
+        if isinstance(line, six.string_types):
             line = line.encode('utf-8')
         log.debug("Sending:  %s", line)
         self._stream.write(line + b'\r\n')

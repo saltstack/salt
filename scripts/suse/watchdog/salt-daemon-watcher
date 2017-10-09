@@ -1,0 +1,26 @@
+#!/bin/bash
+#
+# Author: Bo Maryniuk <bo@suse.de>
+# Requires: yum install propcps
+#
+# Runs every minute from crontab,
+# checks salt-minion every 10 seconds.
+#
+# Use this with a following crontab:
+# * * * * * /path/to/this/script
+
+if [ "$1" != "--with-init" ]; then
+    echo "This command is not used directly."
+    exit 1;
+fi
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+for iter in {1..5}; do
+    if [[ $(pgrep salt-minion) == "" ]]; then
+        service salt-minion restart
+    fi
+    sleep 10;
+done
+true

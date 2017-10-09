@@ -47,9 +47,9 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         ret = envstate.setenv('test', 'other')
         self.assertEqual(ret['changes'], {})
 
-    @patch('salt.utils.is_windows', MagicMock(return_value=True))
     def test_setenv_permanent(self):
-        with patch.dict(envmodule.__salt__, {'reg.set_value': MagicMock(), 'reg.delete_value': MagicMock()}):
+        with patch.dict(envmodule.__salt__, {'reg.set_value': MagicMock(), 'reg.delete_value': MagicMock()}), \
+                patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
             ret = envstate.setenv('test', 'value', permanent=True)
             self.assertEqual(ret['changes'], {'test': 'value'})
             envmodule.__salt__['reg.set_value'].assert_called_with("HKCU", "Environment", 'test', 'value')
@@ -96,18 +96,21 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         ret = envstate.setenv('notimportant', {'foo': 'bar'})
         self.assertEqual(ret['changes'], {'foo': 'bar'})
 
-        ret = envstate.setenv('notimportant', {'test': False, 'foo': 'baz'}, false_unsets=True)
+        with patch.dict(envstate.__salt__, {'reg.read_value': MagicMock()}):
+            ret = envstate.setenv(
+                'notimportant', {'test': False, 'foo': 'baz'}, false_unsets=True)
         self.assertEqual(ret['changes'], {'test': None, 'foo': 'baz'})
         self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'foo': 'baz'})
 
-        ret = envstate.setenv('notimportant', {'test': False, 'foo': 'bax'})
+        with patch.dict(envstate.__salt__, {'reg.read_value': MagicMock()}):
+            ret = envstate.setenv('notimportant', {'test': False, 'foo': 'bax'})
         self.assertEqual(ret['changes'], {'test': '', 'foo': 'bax'})
         self.assertEqual(envstate.os.environ, {'INITIAL': 'initial', 'foo': 'bax', 'test': ''})
 
     def test_setenv_test_mode(self):
         '''test that imitating action returns good values'''
-        envstate.__opts__ = {'test': True}
-        ret = envstate.setenv('test', 'value')
-        self.assertEqual(ret['changes'], {'test': 'value'})
-        ret = envstate.setenv('INITIAL', 'initial')
-        self.assertEqual(ret['changes'], {})
+        with patch.dict(envstate.__opts__, {'test': True}):
+            ret = envstate.setenv('test', 'value')
+            self.assertEqual(ret['changes'], {'test': 'value'})
+            ret = envstate.setenv('INITIAL', 'initial')
+            self.assertEqual(ret['changes'], {})

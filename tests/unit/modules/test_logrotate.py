@@ -41,53 +41,50 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'show_conf' function tests: 1
 
-    @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value=True))
     def test_show_conf(self):
         '''
         Test if it show parsed configuration
         '''
-        self.assertTrue(logrotate.show_conf())
+        with patch('salt.modules.logrotate._parse_conf',
+                   MagicMock(return_value=True)):
+            self.assertTrue(logrotate.show_conf())
 
     # 'set_' function tests: 4
 
-    @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value=PARSE_CONF))
     def test_set(self):
         '''
         Test if it set a new value for a specific configuration line
         '''
-        with patch.dict(logrotate.__salt__,
-                        {'file.replace': MagicMock(return_value=True)}):
+        with patch('salt.modules.logrotate._parse_conf',
+                   MagicMock(return_value=PARSE_CONF)), \
+                patch.dict(logrotate.__salt__,
+                           {'file.replace': MagicMock(return_value=True)}):
             self.assertTrue(logrotate.set_('rotate', '2'))
 
-    @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value=PARSE_CONF))
     def test_set_failed(self):
         '''
         Test if it fails to set a new value for a specific configuration line
         '''
-        kwargs = {'key': '/var/log/wtmp',
-                  'value': 2}
-        self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
+        with patch('salt.modules.logrotate._parse_conf', MagicMock(return_value=PARSE_CONF)):
+            kwargs = {'key': '/var/log/wtmp', 'value': 2}
+            self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
 
-    @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value=PARSE_CONF))
     def test_set_setting(self):
         '''
         Test if it set a new value for a specific configuration line
         '''
         with patch.dict(logrotate.__salt__,
-                        {'file.replace': MagicMock(return_value=True)}):
+                        {'file.replace': MagicMock(return_value=True)}), \
+                patch('salt.modules.logrotate._parse_conf',
+                      MagicMock(return_value=PARSE_CONF)):
             self.assertTrue(logrotate.set_('/var/log/wtmp', 'rotate', '2'))
 
-    @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value=PARSE_CONF))
     def test_set_setting_failed(self):
         '''
         Test if it fails to set a new value for a specific configuration line
         '''
-        kwargs = {'key': 'rotate',
-                  'value': '/var/log/wtmp',
-                  'setting': '2'}
-        self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
+        with patch('salt.modules.logrotate._parse_conf', MagicMock(return_value=PARSE_CONF)):
+            kwargs = {'key': 'rotate',
+                      'value': '/var/log/wtmp',
+                      'setting': '2'}
+            self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)

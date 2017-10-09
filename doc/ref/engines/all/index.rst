@@ -17,6 +17,7 @@ engine modules
     junos_syslog
     logentries
     logstash
+    napalm_syslog
     reactor
     redis_sentinel
     slack

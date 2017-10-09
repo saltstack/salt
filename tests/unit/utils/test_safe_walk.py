@@ -9,9 +9,9 @@ from tempfile import mkdtemp
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
+from tests.support.paths import TMP
 
 # Import salt libs
-import tests.integration as integration
 import salt.utils
 import salt.utils.find
 
@@ -19,7 +19,7 @@ import salt.utils.find
 class TestUtils(TestCase):
 
     def test_safe_walk_symlink_recursion(self):
-        tmp = mkdtemp(dir=integration.SYS_TMP_DIR)
+        tmp = mkdtemp(dir=TMP)
         try:
             if os.stat(tmp).st_ino == 0:
                 self.skipTest('inodes not supported in {0}'.format(tmp))

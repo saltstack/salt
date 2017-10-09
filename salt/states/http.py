@@ -62,7 +62,7 @@ def query(name, match=None, match_type='string', status=None, wait_for=None, **k
         query_example:
           http.query:
             - name: 'http://example.com/'
-            - status: '200'
+            - status: 200
 
     '''
     # Monitoring state, but changes may be made over HTTP

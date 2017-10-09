@@ -1,6 +1,6 @@
 [Unit]
 Description=The Salt Minion daemon
-After=network.target
+After=network.target salt-master.service
 
 [Service]
 Type=notify

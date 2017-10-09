@@ -80,22 +80,22 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'get_dns_servers' function tests: 1
 
-    @patch('salt.utils', Mockwinapi)
     def test_get_dns_servers(self):
         '''
         Test if it return a list of the configured DNS servers
         of the specified interface.
         '''
-        with patch('salt.utils.winapi.Com', MagicMock()):
-            with patch.object(self.WMI, 'Win32_NetworkAdapter',
-                              return_value=[Mockwmi()]):
-                with patch.object(self.WMI, 'Win32_NetworkAdapterConfiguration',
-                                  return_value=[Mockwmi()]):
-                    self.assertListEqual(win_dns_client.get_dns_servers
-                                         ('Local Area Connection'),
-                                         ['10.1.1.10'])
+        with patch('salt.utils', Mockwinapi), \
+                patch('salt.utils.winapi.Com', MagicMock()), \
+                patch.object(self.WMI, 'Win32_NetworkAdapter',
+                             return_value=[Mockwmi()]), \
+                patch.object(self.WMI, 'Win32_NetworkAdapterConfiguration',
+                             return_value=[Mockwmi()]):
+            self.assertListEqual(win_dns_client.get_dns_servers
+                                 ('Local Area Connection'),
+                                 ['10.1.1.10'])
 
-                    self.assertFalse(win_dns_client.get_dns_servers('Ethernet'))
+            self.assertFalse(win_dns_client.get_dns_servers('Ethernet'))
 
     # 'rm_dns' function tests: 1
 
