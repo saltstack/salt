@@ -3680,6 +3680,13 @@ def convert_to_template(name, kwargs=None, call=None):
 
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
+    if vm_ref.config.template:
+        raise SaltCloudSystemExit(
+            '{0} already a template'.format(
+                name
+            )
+        )
+
     try:
         vm_ref.MarkAsTemplate()
     except Exception as exc:
