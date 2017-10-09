@@ -7,5 +7,7 @@ languages:
 engines:
   radon:
     enabled: true
+    exclude_paths:
+      - "templates/"
     config:
       threshold: "D"
