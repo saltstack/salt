@@ -65,7 +65,7 @@ def format_job_instance(job):
            'Arguments': list(job.get('arg', [])),
            # unlikely but safeguard from invalid returns
            'Target': job.get('tgt', 'unknown-target'),
-           'Target-type': job.get('tgt_type', []),
+           'Target-type': job.get('tgt_type', 'list'),
            'User': job.get('user', 'root')}
 
     if 'metadata' in job:
