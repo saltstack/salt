@@ -70,8 +70,8 @@ import json
 
 # Import Salt Libs
 from salt.ext import six
+import salt.utils.data
 import salt.utils.dictupdate as dictupdate
-import salt.utils
 import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
@@ -463,7 +463,7 @@ def _function_permissions_present(FunctionName, Permissions,
     if curr_permissions is None:
         curr_permissions = {}
     need_update = False
-    diffs = salt.utils.compare_dicts(curr_permissions, Permissions or {})
+    diffs = salt.utils.data.compare_dicts(curr_permissions, Permissions or {})
     if bool(diffs):
         ret['comment'] = os.linesep.join(
             [ret['comment'], 'Function permissions to be modified'])

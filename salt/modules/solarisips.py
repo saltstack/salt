@@ -43,7 +43,8 @@ import logging
 
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once alias_function, is_true are moved
+import salt.utils.data
 import salt.utils.path
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
@@ -230,7 +231,7 @@ def upgrade(refresh=False, **kwargs):
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -509,7 +510,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
     # Get a list of the packages again, including newly installed ones.
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if out['retcode'] != 0:
         raise CommandExecutionError(
@@ -577,7 +578,7 @@ def remove(name=None, pkgs=None, **kwargs):
     # Get a list of the packages after the uninstall
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if out['retcode'] != 0:
         raise CommandExecutionError(

@@ -40,6 +40,7 @@ import salt.syspaths
 from salt.modules.cmdmod import _parse_env
 import salt.utils
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
 import salt.utils.itertools
 import salt.utils.path
@@ -819,7 +820,7 @@ def install(name=None,
 
         __context__.pop('pkg.list_pkgs', None)
         new = list_pkgs()
-        ret = salt.utils.compare_dicts(old, new)
+        ret = salt.utils.data.compare_dicts(old, new)
 
         for pkgname in to_reinstall:
             if pkgname not in ret or pkgname in old:
@@ -878,10 +879,10 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     new = list_pkgs()
     new_removed = list_pkgs(removed=True)
 
-    changes = salt.utils.compare_dicts(old, new)
+    changes = salt.utils.data.compare_dicts(old, new)
     if action == 'purge':
         ret = {
-            'removed': salt.utils.compare_dicts(old_removed, new_removed),
+            'removed': salt.utils.data.compare_dicts(old_removed, new_removed),
             'installed': changes
         }
     else:
@@ -951,7 +952,7 @@ def autoremove(list_only=False, purge=False):
         __salt__['cmd.run'](cmd, python_shell=False)
         __context__.pop('pkg.list_pkgs', None)
         new = list_pkgs()
-        return salt.utils.compare_dicts(old, new)
+        return salt.utils.data.compare_dicts(old, new)
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -1130,7 +1131,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
                                      env=DPKG_ENV_VARS.copy())
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(

@@ -14,7 +14,8 @@ from __future__ import absolute_import
 import copy
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once alias_function, is_true are moved
+import salt.utils.data
 import salt.utils.pkg
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
@@ -124,7 +125,7 @@ def upgrade(refresh=True):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -302,7 +303,7 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -346,7 +347,7 @@ def remove(name=None, pkgs=None, **kwargs):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def purge(name=None, pkgs=None, **kwargs):

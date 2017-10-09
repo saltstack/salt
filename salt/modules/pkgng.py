@@ -44,7 +44,8 @@ import logging
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once alias_function, is_true are moved
+import salt.utils.data
 import salt.utils.files
 import salt.utils.itertools
 import salt.utils.pkg
@@ -875,7 +876,7 @@ def install(name=None,
     __context__.pop(_contextkey(jail, chroot, root), None)
     __context__.pop(_contextkey(jail, chroot, root, prefix='pkg.origin'), None)
     new = list_pkgs(jail=jail, chroot=chroot, root=root)
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -1050,7 +1051,7 @@ def remove(name=None,
     __context__.pop(_contextkey(jail, chroot, root), None)
     __context__.pop(_contextkey(jail, chroot, root, prefix='pkg.origin'), None)
     new = list_pkgs(jail=jail, chroot=chroot, root=root, with_origin=True)
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -1171,7 +1172,7 @@ def upgrade(*names, **kwargs):
     __context__.pop(_contextkey(jail, chroot, root), None)
     __context__.pop(_contextkey(jail, chroot, root, prefix='pkg.origin'), None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
