@@ -3670,7 +3670,7 @@ def convert_to_template(name, kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a convert_to_template  vmname
+        salt-cloud -a convert_to_template vmname
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -3681,8 +3681,7 @@ def convert_to_template(name, kwargs=None, call=None):
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
     try:
-        task = vm_ref.MarkAsTemplate()
-        salt.utils.vmware.wait_for_task(task, name, 'convert to template', 5)
+        vm_ref.MarkAsTemplate()
     except Exception as exc:
         log.error(
             'Error while converting VM to template {0}: {1}'.format(
