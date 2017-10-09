@@ -3670,7 +3670,7 @@ def convert_to_template(name, kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a convert_to_template vmname
+        salt-cloud -a convert_to_template  vmname
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
