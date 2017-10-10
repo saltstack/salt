@@ -1388,9 +1388,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
             Values passed this way will override Pillar values set via
             ``pillar_roots`` or an external Pillar source.
 
-        .. versionchanged:: Oxygen
-            GPG-encrypted CLI Pillar data is now supported via the GPG
-            renderer. See :ref:`here <encrypted-cli-pillar-data>` for details.
+        .. versionadded:: Oxygen
 
     CLI Example:
 
