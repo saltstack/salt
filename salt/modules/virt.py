@@ -9,6 +9,7 @@ Work with virtual machines managed by libvirt
 
 # Import python libs
 from __future__ import absolute_import
+import copy
 import os
 import re
 import sys
@@ -553,7 +554,8 @@ def _disk_profile(profile, hypervisor, **kwargs):
     else:
         overlay = {}
 
-    disklist = __salt__['config.get']('virt:disk', {}).get(profile, default)
+    disklist = copy.deepcopy(
+        __salt__['config.get']('virt:disk', {}).get(profile, default))
     for key, val in six.iteritems(overlay):
         for i, disks in enumerate(disklist):
             for disk in disks:
