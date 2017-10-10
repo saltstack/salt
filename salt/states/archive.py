@@ -778,7 +778,8 @@ def extracted(name,
         # Get rid of "file://" from start of source_match
         source_match = os.path.realpath(os.path.expanduser(urlparsed_source.path))
         if not os.path.isfile(source_match):
-            ret['comment'] = 'Source file \'{0}\' does not exist'.format(source_match)
+            ret['comment'] = 'Source file \'{0}\' does not exist'.format(
+                                salt.utils.url.redact_http_basic_auth(source_match))
             return ret
 
     valid_archive_formats = ('tar', 'rar', 'zip')
@@ -929,7 +930,7 @@ def extracted(name,
             # file states would be unavailable.
             ret['comment'] = (
                 'Unable to cache {0}, file.cached state not available'.format(
-                    source_match
+                    salt.utils.url.redact_http_basic_auth(source_match)
                 )
             )
             return ret
@@ -941,7 +942,9 @@ def extracted(name,
                                                skip_verify=skip_verify,
                                                saltenv=__env__)
         except Exception as exc:
-            msg = 'Failed to cache {0}: {1}'.format(source_match, exc.__str__())
+            msg = 'Failed to cache {0}: {1}'.format(
+                    salt.utils.url.redact_http_basic_auth(source_match),
+                    exc.__str__())
             log.exception(msg)
             ret['comment'] = msg
             return ret
@@ -1172,7 +1175,8 @@ def extracted(name,
             if not ret['result']:
                 ret['comment'] = \
                     '{0} does not match the desired source_hash {1}'.format(
-                        source_match, source_sum['hsum']
+                        salt.utils.url.redact_http_basic_auth(source_match),
+                        source_sum['hsum']
                     )
                 return ret
 
