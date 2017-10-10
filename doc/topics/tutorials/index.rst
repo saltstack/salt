@@ -33,3 +33,5 @@ Tutorials Index
 * :ref:`The macOS (Maverick) Developer Step By Step Guide To Salt Installation <tutorial-macos-walk-through>`
 * :ref:`SaltStack Walk-through <tutorial-salt-walk-through>`
 * :ref:`Writing Salt Tests <tutorial-salt-testing>`
+* :ref:`Running Salt States and Commands in Docker Containers <docker-sls>`
+* :ref:`Preseed Minion with Accepted Key <tutorial-preseed-key>`
