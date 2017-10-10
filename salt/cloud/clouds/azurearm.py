@@ -10,6 +10,7 @@ The Azure cloud module is used to control access to Microsoft Azure
 :depends:
     * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc5
     * `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32
+    * `Microsoft Azure CLI <https://pypi.python.org/pypi/azure-cli>` >= 2.0.12
 :configuration:
     Required provider parameters:
 
@@ -146,7 +147,13 @@ def __virtual__():
         return False
 
     if get_dependencies() is False:
-        return False
+        return (
+            False,
+            'The following dependencies are required to use the AzureARM driver: '
+            'Microsoft Azure SDK for Python >= 2.0rc5, '
+            'Microsoft Azure Storage SDK for Python >= 0.32, '
+            'Microsoft Azure CLI >= 2.0.12'
+        )
 
     global cache  # pylint: disable=global-statement,invalid-name
     cache = salt.cache.Cache(__opts__)
@@ -401,8 +408,9 @@ def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
         pass
 
     for node in nodes:
-        if not nodes[node]['resource_group'] == active_resource_group:
-            continue
+        if active_resource_group is not None:
+            if nodes[node]['resource_group'] != active_resource_group:
+                continue
         ret[node] = {'name': node}
         for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
             ret[node][prop] = nodes[node].get(prop)
@@ -659,11 +667,12 @@ def list_subnets(call=None, kwargs=None):  # pylint: disable=unused-argument
     for subnet in subnets:
         ret[subnet.name] = make_safe(subnet)
         ret[subnet.name]['ip_configurations'] = {}
-        for ip_ in subnet.ip_configurations:
-            comps = ip_.id.split('/')
-            name = comps[-1]
-            ret[subnet.name]['ip_configurations'][name] = make_safe(ip_)
-            ret[subnet.name]['ip_configurations'][name]['subnet'] = subnet.name
+        if subnet.ip_configurations:
+            for ip_ in subnet.ip_configurations:
+                comps = ip_.id.split('/')
+                name = comps[-1]
+                ret[subnet.name]['ip_configurations'][name] = make_safe(ip_)
+                ret[subnet.name]['ip_configurations'][name]['subnet'] = subnet.name
         ret[subnet.name]['resource_group'] = kwargs['resource_group']
     return ret
 

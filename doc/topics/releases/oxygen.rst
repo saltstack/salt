@@ -109,6 +109,13 @@ environments (i.e. ``saltenvs``) have been added:
    ignore all tags and use branches only, and also to keep SHAs from being made
    available as saltenvs.
 
+Additional output modes
+------------------
+
+The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``terse_id``.
+Just like ``mixed_id``, these use the state ID as name in the highstate output.
+For more information on these output modes, see the docs for the :mod:`Highstate Outputter <salt.output.highstate>`.
+
 Salt Cloud Features
 -------------------
 

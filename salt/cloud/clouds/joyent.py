@@ -749,12 +749,13 @@ def list_nodes(full=False, call=None):
                 log.error('Invalid response when listing Joyent nodes: {0}'.format(result[1]))
 
     else:
-        result = query(command='my/machines', location=DEFAULT_LOCATION,
+        location = get_location()
+        result = query(command='my/machines', location=location,
                        method='GET')
         nodes = result[1]
         for node in nodes:
             if 'name' in node:
-                node['location'] = DEFAULT_LOCATION
+                node['location'] = location
                 ret[node['name']] = reformat_node(item=node, full=full)
     return ret
 
