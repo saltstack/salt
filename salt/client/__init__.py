@@ -32,12 +32,13 @@ import salt.cache
 import salt.payload
 import salt.transport
 import salt.loader
-import salt.utils
+import salt.utils  # Can be removed once ip_bracket is moved
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
 import salt.utils.minions
 import salt.utils.platform
+import salt.utils.user
 import salt.utils.verify
 import salt.utils.versions
 import salt.utils.jid
@@ -157,7 +158,7 @@ class LocalClient(object):
                 )
             self.opts = salt.config.client_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
-        self.salt_user = salt.utils.get_specific_user()
+        self.salt_user = salt.utils.user.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
         self.auto_reconnect = auto_reconnect

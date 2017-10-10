@@ -15,6 +15,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.path
+import salt.utils.user
 import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -156,7 +157,7 @@ def install(pkg=None,
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -235,7 +236,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -294,7 +295,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -357,7 +358,7 @@ def cache_clean(path=None, runas=None, env=None, force=False):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -404,7 +405,7 @@ def cache_list(path=None, runas=None, env=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
@@ -444,7 +445,7 @@ def cache_path(runas=None, env=None):
     env = env or {}
 
     if runas:
-        uid = salt.utils.get_uid(runas)
+        uid = salt.utils.user.get_uid(runas)
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
