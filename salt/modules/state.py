@@ -1377,6 +1377,21 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         :conf_minion:`pillarenv` minion config option nor this CLI argument is
         used, all Pillar environments will be merged together.
 
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. code-block:: bash
+
+            salt '*' state.sls_id my_state my_module pillar='{"foo": "bar"}'
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
+
+        .. versionchanged:: Oxygen
+            GPG-encrypted CLI Pillar data is now supported via the GPG
+            renderer. See :ref:`here <encrypted-cli-pillar-data>` for details.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1397,12 +1412,26 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     if opts['environment'] is None:
         opts['environment'] = 'base'
 
+    pillar_override = kwargs.get('pillar')
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
+        )
+
     try:
         st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
                                    proxy=__proxy__,
                                    initial_pillar=_get_initial_pillar(opts))
     except NameError:
         st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
                                    initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
