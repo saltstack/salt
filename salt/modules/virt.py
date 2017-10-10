@@ -37,6 +37,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.files
+import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
@@ -664,7 +665,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
                 msg = 'Malformed MAC address: {0}'.format(dmac)
                 raise CommandExecutionError(msg)
         else:
-            attributes['mac'] = salt.utils.gen_mac()
+            attributes['mac'] = salt.utils.network.gen_mac()
 
     for interface in interfaces:
         _normalize_net_types(interface)

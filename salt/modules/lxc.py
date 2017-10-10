@@ -483,7 +483,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
                 ethx['mac'] = iopts[i]
                 break
         if 'mac' not in ethx:
-            ethx['mac'] = salt.utils.gen_mac()
+            ethx['mac'] = salt.utils.network.gen_mac()
     # last round checking for unique gateway and such
     gw = None
     for ethx in [a for a in nic_opts]:
@@ -786,7 +786,7 @@ def _network_conf(conf_tuples=None, **kwargs):
                 'test': not mac,
                 'value': mac,
                 'old': old_if.get('lxc.network.hwaddr'),
-                'default': salt.utils.gen_mac()}),
+                'default': salt.utils.network.gen_mac()}),
             ('lxc.network.ipv4', {
                 'test': not ipv4,
                 'value': ipv4,
