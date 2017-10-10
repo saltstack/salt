@@ -2252,6 +2252,25 @@ minion's pki directory.
 
     master_sign_key_name: <filename_without_suffix>
 
+.. conf_minion:: autosign_grains
+
+``autosign_grains``
+------------------------
+
+Default: ``not defined``
+
+The grains that should be sent to the master on authentication to decide if
+the minion's key should be accepted automatically.
+
+Please see the :ref:`Autoaccept Minions from Grains <tutorial-autoaccept-grains>`
+documentation for more infomation.
+
+.. code-block:: yaml
+
+    autosign_grains:
+      - uuid
+      - server_id
+
 .. conf_minion:: always_verify_signature
 
 ``always_verify_signature``

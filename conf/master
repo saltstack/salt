@@ -345,6 +345,11 @@
 # the autosign_file and the auto_accept setting.
 #autoreject_file: /etc/salt/autoreject.conf
 
+# If the autosign_grains_dir is specified, incoming keys from minons with grain
+# values matching those defined in files in this directory will be accepted
+# automatically. This is insecure. Minions need to be configured to send the grains.
+#autosign_grains_dir: /etc/salt/autosign_grains
+
 # Enable permissive access to the salt keys. This allows you to run the
 # master or minion as root, but have a non-root group be given access to
 # your pki_dir. To make the access explicit, root must belong to the group
@@ -1274,4 +1279,3 @@
 # use OS defaults, typically 75 seconds on Linux, see
 # /proc/sys/net/ipv4/tcp_keepalive_intvl.
 #tcp_keepalive_intvl: -1
-
