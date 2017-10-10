@@ -55,7 +55,7 @@ def __virtual__():
     run Vagrant commands if possible
     '''
     # noinspection PyUnresolvedReferences
-    if __utils__['path.which']('vagrant') is None:
+    if salt.utils.path.which('vagrant') is None:
         return False, 'The vagrant module could not be loaded: vagrant command not found'
     return __virtualname__
 
