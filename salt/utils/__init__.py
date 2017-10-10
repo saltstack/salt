@@ -24,7 +24,6 @@ import random
 import re
 import shlex
 import shutil
-import socket
 import sys
 import pstats
 import time
@@ -67,15 +66,6 @@ try:
     HAS_WIN32API = True
 except ImportError:
     HAS_WIN32API = False
-
-try:
-    import ctypes
-    import ctypes.util
-    libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("c"))
-    res_init = libc.__res_init
-    HAS_RESINIT = True
-except (ImportError, OSError, AttributeError, TypeError):
-    HAS_RESINIT = False
 
 # Import salt libs
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -259,143 +249,6 @@ def list_files(directory):
             ret.add(os.path.join(root, name))
 
     return list(ret)
-
-
-@jinja_filter('gen_mac')
-def gen_mac(prefix='AC:DE:48'):
-    '''
-    Generates a MAC address with the defined OUI prefix.
-
-    Common prefixes:
-
-     - ``00:16:3E`` -- Xen
-     - ``00:18:51`` -- OpenVZ
-     - ``00:50:56`` -- VMware (manually generated)
-     - ``52:54:00`` -- QEMU/KVM
-     - ``AC:DE:48`` -- PRIVATE
-
-    References:
-
-     - http://standards.ieee.org/develop/regauth/oui/oui.txt
-     - https://www.wireshark.org/tools/oui-lookup.html
-     - https://en.wikipedia.org/wiki/MAC_address
-    '''
-    return '{0}:{1:02X}:{2:02X}:{3:02X}'.format(prefix,
-                                                random.randint(0, 0xff),
-                                                random.randint(0, 0xff),
-                                                random.randint(0, 0xff))
-
-
-@jinja_filter('mac_str_to_bytes')
-def mac_str_to_bytes(mac_str):
-    '''
-    Convert a MAC address string into bytes. Works with or without separators:
-
-    b1 = mac_str_to_bytes('08:00:27:13:69:77')
-    b2 = mac_str_to_bytes('080027136977')
-    assert b1 == b2
-    assert isinstance(b1, bytes)
-    '''
-    if len(mac_str) == 12:
-        pass
-    elif len(mac_str) == 17:
-        sep = mac_str[2]
-        mac_str = mac_str.replace(sep, '')
-    else:
-        raise ValueError('Invalid MAC address')
-    if six.PY3:
-        mac_bytes = bytes(int(mac_str[s:s+2], 16) for s in range(0, 12, 2))
-    else:
-        mac_bytes = ''.join(chr(int(mac_str[s:s+2], 16)) for s in range(0, 12, 2))
-    return mac_bytes
-
-
-def ip_bracket(addr):
-    '''
-    Convert IP address representation to ZMQ (URL) format. ZMQ expects
-    brackets around IPv6 literals, since they are used in URLs.
-    '''
-    if addr and ':' in addr and not addr.startswith('['):
-        return '[{0}]'.format(addr)
-    return addr
-
-
-def refresh_dns():
-    '''
-    issue #21397: force glibc to re-read resolv.conf
-    '''
-    if HAS_RESINIT:
-        res_init()
-
-
-@jinja_filter('dns_check')
-def dns_check(addr, port, safe=False, ipv6=None):
-    '''
-    Return the ip resolved by dns, but do not exit on failure, only raise an
-    exception. Obeys system preference for IPv4/6 address resolution.
-    Tries to connect to the address before considering it useful. If no address
-    can be reached, the first one resolved is used as a fallback.
-    '''
-    error = False
-    lookup = addr
-    seen_ipv6 = False
-    try:
-        refresh_dns()
-        hostnames = socket.getaddrinfo(
-            addr, None, socket.AF_UNSPEC, socket.SOCK_STREAM
-        )
-        if not hostnames:
-            error = True
-        else:
-            resolved = False
-            candidates = []
-            for h in hostnames:
-                # It's an IP address, just return it
-                if h[4][0] == addr:
-                    resolved = addr
-                    break
-
-                if h[0] == socket.AF_INET and ipv6 is True:
-                    continue
-                if h[0] == socket.AF_INET6 and ipv6 is False:
-                    continue
-
-                candidate_addr = ip_bracket(h[4][0])
-
-                if h[0] != socket.AF_INET6 or ipv6 is not None:
-                    candidates.append(candidate_addr)
-
-                try:
-                    s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.connect((candidate_addr.strip('[]'), port))
-                    s.close()
-
-                    resolved = candidate_addr
-                    break
-                except socket.error:
-                    pass
-            if not resolved:
-                if len(candidates) > 0:
-                    resolved = candidates[0]
-                else:
-                    error = True
-    except TypeError:
-        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
-        raise SaltSystemExit(code=42, msg=err)
-    except socket.error:
-        error = True
-
-    if error:
-        err = ('DNS lookup or connection check of \'{0}\' failed.').format(addr)
-        if safe:
-            if salt.log.is_console_configured():
-                # If logging is not configured it also means that either
-                # the master or minion instance calling this hasn't even
-                # started running
-                log.error(err)
-            raise SaltClientError()
-        raise SaltSystemExit(code=42, msg=err)
-    return resolved
 
 
 def required_module_list(docstring=None):
@@ -2473,3 +2326,68 @@ def exactly_one(l):
         'Salt Oxygen. This warning will be removed in Salt Neon.'
     )
     return salt.utils.data.exactly_one(l)
+
+
+def ip_bracket(addr):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.zeromq
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.ip_bracket\' detected. This function '
+        'has been moved to \'salt.utils.zeromq.ip_bracket\' as of '
+        'Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.zeromq.ip_bracket(addr)
+
+
+def gen_mac(prefix='AC:DE:48'):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.network
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.gen_mac\' detected. This function '
+        'has been moved to \'salt.utils.network.gen_mac\' as of '
+        'Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.network.gen_mac(prefix)
+
+
+def mac_str_to_bytes(mac_str):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.network
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.mac_str_to_bytes\' detected. This function '
+        'has been moved to \'salt.utils.network.mac_str_to_bytes\' as of '
+        'Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.network.mac_str_to_bytes(mac_str)
+
+
+def refresh_dns():
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.network
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.refresh_dns\' detected. This function '
+        'has been moved to \'salt.utils.network.refresh_dns\' as of '
+        'Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.network.refresh_dns()
+
+
+def dns_check(addr, port, safe=False, ipv6=None):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.network
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.dns_check\' detected. This function '
+        'has been moved to \'salt.utils.network.dns_check\' as of '
+        'Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.network.dns_check(addr, port, safe, ipv6)
