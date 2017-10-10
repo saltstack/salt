@@ -36,7 +36,7 @@
 
 # The root directory prepended to these options: pki_dir, cachedir,
 # sock_dir, log_file, autosign_file, autoreject_file, extension_modules,
-# key_logfile, pidfile:
+# key_logfile, pidfile, autosign_grains_dir:
 #root_dir: /
 
 # The path to the master's configuration file.

@@ -140,7 +140,8 @@ an alternative root.
     This directory is prepended to the following options:
     :conf_master:`pki_dir`, :conf_master:`cachedir`, :conf_master:`sock_dir`,
     :conf_master:`log_file`, :conf_master:`autosign_file`,
-    :conf_master:`autoreject_file`, :conf_master:`pidfile`.
+    :conf_master:`autoreject_file`, :conf_master:`pidfile`,
+    :conf_master:`autosign_grains_dir`.
 
 .. conf_master:: conf_file
 
