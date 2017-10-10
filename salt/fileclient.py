@@ -622,14 +622,10 @@ class Client(object):
             def on_header(hdr):
                 if write_body[1] is not False and write_body[2] is None:
                     if not hdr.strip() and 'Content-Type' not in write_body[1]:
-                        if write_body[0] is True:
-                            # We are not following a redirect (initial response
-                            # was a 200 OK). So there is no need to reset
-                            # write_body[0], but we do need to set the encoding
-                            # since no Content-Type was present in the headers
-                            # to tell us which to use.
-                            write_body[2] = 'utf-8'
-                        else:
+                        # If write_body[0] is True, then we are not following a
+                        # redirect (initial response was a 200 OK). So there is
+                        # no need to reset write_body[0].
+                        if write_body[0] is not True:
                             # We are following a redirect, so we need to reset
                             # write_body[0] so that we properly follow it.
                             write_body[0] = None
