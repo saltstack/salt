@@ -52,7 +52,7 @@ def set_pixels(pixels):
     Sets the entire LED matrix based on a list of 64 pixel values
 
     pixels
-        A list of 64 `[R, G, B]` color values.
+        A list of 64 ``[R, G, B]`` color values.
     '''
     _sensehat.set_pixels(pixels)
     return {'pixels': pixels}
@@ -60,12 +60,12 @@ def set_pixels(pixels):
 
 def get_pixels():
     '''
-    Returns a list of 64 smaller lists of `[R, G, B]` pixels representing the
+    Returns a list of 64 smaller lists of ``[R, G, B]`` pixels representing the
     the currently displayed image on the LED matrix.
 
     .. note::
-        When using `set_pixels` the pixel values can sometimes change when
-        you read them again using `get_pixels`. This is because we specify each
+        When using ``set_pixels`` the pixel values can sometimes change when
+        you read them again using ``get_pixels``. This is because we specify each
         pixel element as 8 bit numbers (0 to 255) but when they're passed into the
         Linux frame buffer for the LED matrix the numbers are bit shifted down
         to fit into RGB 565. 5 bits for red, 6 bits for green and 5 bits for blue.
@@ -73,8 +73,8 @@ def get_pixels():
         (3 bits lost for red, 2 for green and 3 for blue) accounts for the
         discrepancies you see.
 
-        The `get_pixels` method provides an accurate representation of how the
-        pixels end up in frame buffer memory after you have called `set_pixels`.
+        The ``get_pixels`` method provides an accurate representation of how the
+        pixels end up in frame buffer memory after you have called ``set_pixels``.
     '''
     return _sensehat.get_pixels()
 
@@ -88,7 +88,7 @@ def set_pixel(x, y, color):
     y
         The y coordinate of the pixel. Ranges from 0 at the top to 7 at the bottom.
     color
-        The new color of the pixel as a list of `[R, G, B]` values.
+        The new color of the pixel as a list of ``[R, G, B]`` values.
 
     CLI Example:
 
@@ -110,7 +110,7 @@ def get_pixel(x, y):
         The y coordinate of the pixel. Ranges from 0 at the top to 7 at the bottom.
 
     .. note::
-        Please read the note for `get_pixels`
+        Please read the note for ``get_pixels``
     '''
     return _sensehat.get_pixel(x, y)
 
@@ -259,9 +259,9 @@ def get_pressure():
 def get_temperature():
     '''
     Gets the temperature in degrees Celsius from the humidity sensor.
-    Equivalent to calling `get_temperature_from_humidity`.
+    Equivalent to calling ``get_temperature_from_humidity``.
 
-    If you get strange results try using `get_temperature_from_pressure`.
+    If you get strange results try using ``get_temperature_from_pressure``.
     '''
     return _sensehat.get_temperature()
 
