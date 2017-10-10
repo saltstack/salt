@@ -1518,12 +1518,6 @@ def fnmatch_multiple(candidates, pattern):
 #
 # These are deprecated and will be removed in Neon.
 def to_bytes(s, encoding=None):
-    '''
-    Given bytes, bytearray, str, or unicode (python 2), return bytes (str for
-    python 2)
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.stringutils
@@ -1537,11 +1531,6 @@ def to_bytes(s, encoding=None):
 
 
 def to_str(s, encoding=None):
-    '''
-    Given str, bytes, bytearray, or unicode (py2), return str
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.stringutils
@@ -1555,11 +1544,6 @@ def to_str(s, encoding=None):
 
 
 def to_unicode(s, encoding=None):
-    '''
-    Given str or unicode, return unicode (str for python 3)
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.stringutils
@@ -1573,14 +1557,6 @@ def to_unicode(s, encoding=None):
 
 
 def str_to_num(text):
-    '''
-    Convert a string to a number.
-    Returns an integer if the string represents an integer, a floating
-    point number if the string is a real number, or the string unchanged
-    otherwise.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.stringutils
@@ -1594,12 +1570,6 @@ def str_to_num(text):
 
 
 def is_quoted(value):
-    '''
-    Return a single or double quote, if a string is wrapped in extra quotes.
-    Otherwise return an empty string.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.stringutils
@@ -1613,11 +1583,6 @@ def is_quoted(value):
 
 
 def dequote(value):
-    '''
-    Remove extra quotes around a string.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.stringutils
@@ -1631,11 +1596,6 @@ def dequote(value):
 
 
 def is_hex(value):
-    '''
-    Returns True if value is a hexidecimal string, otherwise returns False
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.stringutils
@@ -1649,11 +1609,6 @@ def is_hex(value):
 
 
 def is_bin_str(data):
-    '''
-    Detects if the passed string of data is binary or text
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.stringutils
@@ -1667,9 +1622,6 @@ def is_bin_str(data):
 
 
 def rand_string(size=32):
-    '''
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.stringutils
@@ -1683,11 +1635,6 @@ def rand_string(size=32):
 
 
 def contains_whitespace(text):
-    '''
-    Returns True if there are any whitespace characters in the string
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.stringutils
@@ -1701,15 +1648,6 @@ def contains_whitespace(text):
 
 
 def clean_kwargs(**kwargs):
-    '''
-    Return a dict without any of the __pub* keys (or any other keys starting
-    with a dunder) from the kwargs dict passed into the execution module
-    functions. These keys are useful for tracking what was used to invoke
-    the function call, but they may not be desirable to have if passing the
-    kwargs forward wholesale.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.args
@@ -1723,11 +1661,6 @@ def clean_kwargs(**kwargs):
 
 
 def invalid_kwargs(invalid_kwargs, raise_exc=True):
-    '''
-    Raise a SaltInvocationError if invalid_kwargs is non-empty
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.args
@@ -1741,11 +1674,6 @@ def invalid_kwargs(invalid_kwargs, raise_exc=True):
 
 
 def shlex_split(s, **kwargs):
-    '''
-    Only split if variable is a string
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.args
@@ -1759,12 +1687,6 @@ def shlex_split(s, **kwargs):
 
 
 def arg_lookup(fun, aspec=None):
-    '''
-    Return a dict containing the arguments and default arguments to the
-    function.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.args
@@ -1778,12 +1700,6 @@ def arg_lookup(fun, aspec=None):
 
 
 def argspec_report(functions, module=''):
-    '''
-    Pass in a functions dict as it is returned from the loader and return the
-    argspec function signatures
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.args
@@ -1797,11 +1713,6 @@ def argspec_report(functions, module=''):
 
 
 def which(exe=None):
-    '''
-    Python clone of /usr/bin/which
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.path
@@ -1815,11 +1726,6 @@ def which(exe=None):
 
 
 def which_bin(exes):
-    '''
-    Scan over some possible executables and return the first one that is found
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.path
@@ -1833,18 +1739,6 @@ def which_bin(exes):
 
 
 def path_join(*parts, **kwargs):
-    '''
-    This functions tries to solve some issues when joining multiple absolute
-    paths on both *nix and windows platforms.
-
-    See tests/unit/utils/test_path.py for some examples on what's being
-    talked about here.
-
-    The "use_posixpath" kwarg can be be used to force joining using poxixpath,
-    which is useful for Salt fileserver paths on Windows masters.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.path
@@ -1858,11 +1752,6 @@ def path_join(*parts, **kwargs):
 
 
 def rand_str(size=9999999999, hash_type=None):
-    '''
-    Return a hash of a randomized data from random.SystemRandom()
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.hashutils
@@ -1876,11 +1765,6 @@ def rand_str(size=9999999999, hash_type=None):
 
 
 def is_windows():
-    '''
-    Simple function to return if a host is Windows or not
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.platform
@@ -1894,15 +1778,6 @@ def is_windows():
 
 
 def is_proxy():
-    '''
-    Return True if this minion is a proxy minion.
-    Leverages the fact that is_linux() and is_windows
-    both return False for proxies.
-    TODO: Need to extend this for proxies that might run on
-    other Unices
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.platform
@@ -1916,12 +1791,6 @@ def is_proxy():
 
 
 def is_linux():
-    '''
-    Simple function to return if a host is Linux or not.
-    Note for a proxy minion, we need to return something else
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.platform
@@ -1935,11 +1804,6 @@ def is_linux():
 
 
 def is_darwin():
-    '''
-    Simple function to return if a host is Darwin (macOS) or not
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.platform
@@ -1953,11 +1817,6 @@ def is_darwin():
 
 
 def is_sunos():
-    '''
-    Simple function to return if host is SunOS or not
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.platform
@@ -1971,11 +1830,6 @@ def is_sunos():
 
 
 def is_smartos():
-    '''
-    Simple function to return if host is SmartOS (Illumos) or not
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.platform
@@ -1989,11 +1843,6 @@ def is_smartos():
 
 
 def is_smartos_globalzone():
-    '''
-    Function to return if host is SmartOS (Illumos) global zone or not
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.platform
@@ -2007,11 +1856,6 @@ def is_smartos_globalzone():
 
 
 def is_smartos_zone():
-    '''
-    Function to return if host is SmartOS (Illumos) and not the gz
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.platform
@@ -2025,11 +1869,6 @@ def is_smartos_zone():
 
 
 def is_freebsd():
-    '''
-    Simple function to return if host is FreeBSD or not
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.platform
@@ -2043,11 +1882,6 @@ def is_freebsd():
 
 
 def is_netbsd():
-    '''
-    Simple function to return if host is NetBSD or not
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.platform
@@ -2061,11 +1895,6 @@ def is_netbsd():
 
 
 def is_openbsd():
-    '''
-    Simple function to return if host is OpenBSD or not
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.platform
@@ -2079,11 +1908,6 @@ def is_openbsd():
 
 
 def is_aix():
-    '''
-    Simple function to return if host is AIX or not
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.platform
@@ -2097,11 +1921,6 @@ def is_aix():
 
 
 def safe_rm(tgt):
-    '''
-    Safely remove a file
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.files
@@ -2116,11 +1935,6 @@ def safe_rm(tgt):
 
 @jinja_filter('is_empty')
 def is_empty(filename):
-    '''
-    Is a file empty?
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.files
@@ -2134,19 +1948,6 @@ def is_empty(filename):
 
 
 def fopen(*args, **kwargs):
-    '''
-    Wrapper around open() built-in to set CLOEXEC on the fd.
-
-    This flag specifies that the file descriptor should be closed when an exec
-    function is invoked;
-    When a file descriptor is allocated (as with open or dup), this bit is
-    initially cleared on the new file descriptor, meaning that descriptor will
-    survive into the new program after exec.
-
-    NB! We still have small race condition between open and fcntl.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.files
@@ -2161,11 +1962,6 @@ def fopen(*args, **kwargs):
 
 @contextlib.contextmanager
 def flopen(*args, **kwargs):
-    '''
-    Shortcut for fopen with lock and context manager
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.files
@@ -2180,25 +1976,6 @@ def flopen(*args, **kwargs):
 
 @contextlib.contextmanager
 def fpopen(*args, **kwargs):
-    '''
-    Shortcut for fopen with extra uid, gid and mode options.
-
-    Supported optional Keyword Arguments:
-
-      mode: explicit mode to set. Mode is anything os.chmod
-            would accept as input for mode. Works only on unix/unix
-            like systems.
-
-      uid: the uid to set, if not set, or it is None or -1 no changes are
-           made. Same applies if the path is already owned by this
-           uid. Must be int. Works only on unix/unix like systems.
-
-      gid: the gid to set, if not set, or it is None or -1 no changes are
-           made. Same applies if the path is already owned by this
-           gid. Must be int. Works only on unix/unix like systems.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.files
@@ -2212,12 +1989,6 @@ def fpopen(*args, **kwargs):
 
 
 def rm_rf(path):
-    '''
-    Platform-independent recursive delete. Includes code from
-    http://stackoverflow.com/a/2656405
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.files
@@ -2231,14 +2002,6 @@ def rm_rf(path):
 
 
 def mkstemp(*args, **kwargs):
-    '''
-    Helper function which does exactly what `tempfile.mkstemp()` does but
-    accepts another argument, `close_fd`, which, by default, is true and closes
-    the fd before returning the file path. Something commonly done throughout
-    Salt's code.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.files
@@ -2253,14 +2016,6 @@ def mkstemp(*args, **kwargs):
 
 @jinja_filter('is_text_file')
 def istextfile(fp_, blocksize=512):
-    '''
-    Uses heuristics to guess whether the given file is text or binary,
-    by reading a single block of bytes from the file.
-    If more than 30% of the chars in the block are non-text, or there
-    are NUL ('\x00') bytes in the block, assume this is a binary file.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.files
 
@@ -2274,19 +2029,6 @@ def istextfile(fp_, blocksize=512):
 
 
 def str_version_to_evr(verstring):
-    '''
-    Split the package version string into epoch, version and release.
-    Return this as tuple.
-
-    The epoch is always not empty. The version and the release can be an empty
-    string if such a component could not be found in the version string.
-
-    "2:1.0-1.2" => ('2', '1.0', '1.2)
-    "1.0" => ('0', '1.0', '')
-    "" => ('0', '', '')
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.pkg.rpm
@@ -2300,20 +2042,6 @@ def str_version_to_evr(verstring):
 
 
 def parse_docstring(docstring):
-    '''
-    Parse a docstring into its parts.
-
-    Currently only parses dependencies, can be extended to parse whatever is
-    needed.
-
-    Parses into a dictionary:
-        {
-            'full': full docstring,
-            'deps': list of dependencies (empty list if none)
-        }
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.doc
@@ -2327,12 +2055,6 @@ def parse_docstring(docstring):
 
 
 def compare_versions(ver1='', oper='==', ver2='', cmp_func=None, ignore_epoch=False):
-    '''
-    Compares two version numbers. Accepts a custom function to perform the
-    cmp-style version comparison, otherwise uses version_cmp().
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     salt.utils.versions.warn_until(
@@ -2349,15 +2071,6 @@ def compare_versions(ver1='', oper='==', ver2='', cmp_func=None, ignore_epoch=Fa
 
 
 def version_cmp(pkg1, pkg2, ignore_epoch=False):
-    '''
-    Compares two version strings using salt.utils.versions.LooseVersion. This
-    is a fallback for providers which don't have a version comparison utility
-    built into them.  Return -1 if version1 < version2, 0 if version1 ==
-    version2, and 1 if version1 > version2. Return None if there was a problem
-    making the comparison.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     salt.utils.versions.warn_until(
@@ -2377,14 +2090,6 @@ def warn_until(version,
                stacklevel=None,
                _version_info_=None,
                _dont_call_warnings=False):
-    '''
-    Helper function to raise a warning, by default, a ``DeprecationWarning``,
-    until the provided ``version``, after which, a ``RuntimeError`` will
-    be raised to remind the developers to remove the warning because the
-    target version has been reached.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     salt.utils.versions.warn_until(
@@ -2407,20 +2112,6 @@ def kwargs_warn_until(kwargs,
                       stacklevel=None,
                       _version_info_=None,
                       _dont_call_warnings=False):
-    '''
-    Helper function to raise a warning (by default, a ``DeprecationWarning``)
-    when unhandled keyword arguments are passed to function, until the
-    provided ``version_info``, after which, a ``RuntimeError`` will be raised
-    to remind the developers to remove the ``**kwargs`` because the target
-    version has been reached.
-    This function is used to help deprecate unused legacy ``**kwargs`` that
-    were added to function parameters lists to preserve backwards compatibility
-    when removing a parameter. See
-    :ref:`the deprecation development docs <deprecations>`
-    for the modern strategy for deprecating a function parameter.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     salt.utils.versions.warn_until(
@@ -2439,11 +2130,6 @@ def kwargs_warn_until(kwargs,
 
 
 def get_color_theme(theme):
-    '''
-    Return the color theme to use
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.color
     import salt.utils.versions
@@ -2458,19 +2144,6 @@ def get_color_theme(theme):
 
 
 def get_colors(use=True, theme=None):
-    '''
-    Return the colors as an easy to use dict.  Pass `False` to deactivate all
-    colors by setting them to empty strings.  Pass a string containing only the
-    name of a single color to be used in place of all colors.  Examples:
-
-    .. code-block:: python
-
-        colors = get_colors()  # enable all colors
-        no_colors = get_colors(False)  # disable all colors
-        red_colors = get_colors('RED')  # set all colors to red
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.color
     import salt.utils.versions
@@ -2485,11 +2158,6 @@ def get_colors(use=True, theme=None):
 
 
 def gen_state_tag(low):
-    '''
-    Generate the running dict tag string from the low data structure
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.state
@@ -2503,11 +2171,6 @@ def gen_state_tag(low):
 
 
 def search_onfail_requisites(sid, highstate):
-    '''
-    For a particular low chunk, search relevant onfail related states
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.state
@@ -2521,20 +2184,6 @@ def search_onfail_requisites(sid, highstate):
 
 
 def check_onfail_requisites(state_id, state_result, running, highstate):
-    '''
-    When a state fail and is part of a highstate, check
-    if there is onfail requisites.
-    When we find onfail requisites, we will consider the state failed
-    only if at least one of those onfail requisites also failed
-
-    Returns:
-
-        True: if onfail handlers suceeded
-        False: if one on those handler failed
-        None: if the state does not have onfail requisites
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.state
@@ -2550,12 +2199,6 @@ def check_onfail_requisites(state_id, state_result, running, highstate):
 
 
 def check_state_result(running, recurse=False, highstate=None):
-    '''
-    Check the total return value of the run and determine if the running
-    dict has any issues
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.state
@@ -2571,11 +2214,6 @@ def check_state_result(running, recurse=False, highstate=None):
 
 
 def get_user():
-    '''
-    Returns the current user
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.user
@@ -2589,13 +2227,6 @@ def get_user():
 
 
 def get_uid(user=None):
-    '''
-    Get the uid for a given user name. If no user given, the current euid will
-    be returned. If the user does not exist, None will be returned. On systems
-    which do not support pwd or os.geteuid, None will be returned.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.user
@@ -2609,12 +2240,6 @@ def get_uid(user=None):
 
 
 def get_specific_user():
-    '''
-    Get a user name for publishing. If you find the user is "root" attempt to be
-    more specific by checking if Salt is being run as root via sudo.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.user
@@ -2628,12 +2253,6 @@ def get_specific_user():
 
 
 def chugid(runas):
-    '''
-    Change the current process to belong to the specified user (and the groups
-    to which it belongs)
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.user
@@ -2647,12 +2266,6 @@ def chugid(runas):
 
 
 def chugid_and_umask(runas, umask):
-    '''
-    Helper method for for subprocess.Popen to initialise uid/gid and umask
-    for the new process.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.user
@@ -2666,12 +2279,6 @@ def chugid_and_umask(runas, umask):
 
 
 def get_default_group(user):
-    '''
-    Returns the specified user's default group. If the user doesn't exist, a
-    KeyError will be raised.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.user
@@ -2685,12 +2292,6 @@ def get_default_group(user):
 
 
 def get_group_list(user, include_default=True):
-    '''
-    Returns a list of all of the system group names of which the user
-    is a member.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.user
@@ -2704,13 +2305,6 @@ def get_group_list(user, include_default=True):
 
 
 def get_group_dict(user=None, include_default=True):
-    '''
-    Returns a dict of all of the system groups as keys, and group ids
-    as values, of which the user is a member.
-    E.g.: {'staff': 501, 'sudo': 27}
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.user
@@ -2724,12 +2318,6 @@ def get_group_dict(user=None, include_default=True):
 
 
 def get_gid_list(user, include_default=True):
-    '''
-    Returns a list of all of the system group IDs of which the user
-    is a member.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.user
@@ -2743,13 +2331,6 @@ def get_gid_list(user, include_default=True):
 
 
 def get_gid(group=None):
-    '''
-    Get the gid for a given group name. If no group given, the current egid
-    will be returned. If the group does not exist, None will be returned. On
-    systems which do not support grp or os.getegid it will return None.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.user
@@ -2763,14 +2344,6 @@ def get_gid(group=None):
 
 
 def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
-    '''
-    Traverse a dict using a colon-delimited (or otherwise delimited, using the
-    'delimiter' param) target string. The target 'foo:bar:baz' will return
-    data['foo']['bar']['baz'] if this value exists, and will otherwise return
-    the dict in the default argument.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.data
@@ -2784,18 +2357,6 @@ def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
 
 
 def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
-    '''
-    Traverse a dict or list using a colon-delimited (or otherwise delimited,
-    using the 'delimiter' param) target string. The target 'foo:bar:0' will
-    return data['foo']['bar'][0] if this value exists, and will otherwise
-    return the dict in the default argument.
-    Function will automatically determine the target type.
-    The target 'foo:bar:0' will return data['foo']['bar'][0] if data like
-    {'foo':{'bar':['baz']}} , if data like {'foo':{'bar':{'0':'baz'}}}
-    then return data['foo']['bar']['0']
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.data
@@ -2814,11 +2375,6 @@ def filter_by(lookup_dict,
               merge=None,
               default='default',
               base=None):
-    '''
-    Common code to filter data structures like grains and pillar
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.data
@@ -2837,15 +2393,6 @@ def subdict_match(data,
                   delimiter=DEFAULT_TARGET_DELIM,
                   regex_match=False,
                   exact_match=False):
-    '''
-    Check for a match in a dictionary using a delimiter character to denote
-    levels of subdicts, and also allowing the delimiter character to be
-    matched. Thus, 'foo:bar:baz' will match data['foo'] == 'bar:baz' and
-    data['foo']['bar'] == 'baz'. The former would take priority over the
-    latter.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.data
@@ -2860,12 +2407,6 @@ def subdict_match(data,
 
 
 def substr_in_list(string_to_search_for, list_to_search):
-    '''
-    Return a boolean value that indicates whether or not a given
-    string is present in any of the strings which comprise a list
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.data
@@ -2879,12 +2420,6 @@ def substr_in_list(string_to_search_for, list_to_search):
 
 
 def is_dictlist(data):
-    '''
-    Returns True if data is a list of one-element dicts (as found in many SLS
-    schemas), otherwise returns False
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.data
@@ -2902,12 +2437,6 @@ def repack_dictlist(data,
                     recurse=False,
                     key_cb=None,
                     val_cb=None):
-    '''
-    Takes a list of one-element dicts (as found in many SLS schemas) and
-    repacks into a single dictionary.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.data
@@ -2921,12 +2450,6 @@ def repack_dictlist(data,
 
 
 def compare_dicts(old=None, new=None):
-    '''
-    Compare before and after results from various salt functions, returning a
-    dict describing the changes that were made.
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.data
@@ -2940,12 +2463,6 @@ def compare_dicts(old=None, new=None):
 
 
 def compare_lists(old=None, new=None):
-    '''
-    Compare before and after results from various salt functions, returning a
-    dict describing the changes that were made
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.data
@@ -2959,11 +2476,6 @@ def compare_lists(old=None, new=None):
 
 
 def decode_dict(data):
-    '''
-    JSON decodes as unicode, Jinja needs bytes...
-
-    .. deprecated:: Oxygen
-    '''
 
     # Late import to avoid circular import.
     import salt.utils.versions
@@ -2978,11 +2490,6 @@ def decode_dict(data):
 
 
 def decode_list(data):
-    '''
-    JSON decodes as unicode, Jinja needs bytes...
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.data
@@ -2996,12 +2503,6 @@ def decode_list(data):
 
 
 def exactly_n(l, n=1):
-    '''
-    Tests that exactly N items in an iterable are "truthy" (neither None,
-    False, nor 0).
-
-    .. deprecated:: Oxygen
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.data
@@ -3015,9 +2516,6 @@ def exactly_n(l, n=1):
 
 
 def exactly_one(l):
-    '''
-    Check if only one item is not None, False, or 0 in an iterable.
-    '''
     # Late import to avoid circular import.
     import salt.utils.versions
     import salt.utils.data
