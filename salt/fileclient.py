@@ -622,12 +622,19 @@ class Client(object):
             def on_header(hdr):
                 if write_body[1] is not False and write_body[2] is None:
                     if not hdr.strip() and 'Content-Type' not in write_body[1]:
-                        # We've reached the end of the headers and not yet
-                        # found the Content-Type. Reset write_body[0] so that
-                        # we properly follow the redirect. Note that slicing is
-                        # used below to ensure that we re-use the same list
-                        # rather than creating a new one.
-                        write_body[0:2] = (None, False)
+                        if write_body[0] is True:
+                            # We are not following a redirect (initial response
+                            # was a 200 OK). So there is no need to reset
+                            # write_body[0], but we do need to set the encoding
+                            # since no Content-Type was present in the headers
+                            # to tell us which to use.
+                            write_body[2] = 'utf-8'
+                        else:
+                            # We are following a redirect, so we need to reset
+                            # write_body[0] so that we properly follow it.
+                            write_body[0] = None
+                        # We don't need the HTTPHeaders object anymore
+                        write_body[1] = False
                         return
                     # Try to find out what content type encoding is used if
                     # this is a text file
