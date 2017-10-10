@@ -2580,7 +2580,10 @@ def create(vm_=None, call=None):
     ssh_user, ssh_key = __get_ssh_credentials(vm_)
     vm_['ssh_host'] = __get_host(node_data, vm_)
     vm_['key_filename'] = ssh_key
-    __utils__['cloud.bootstrap'](vm_, __opts__)
+
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
+
+    ret.update(node_dict)
 
     log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.trace(
@@ -2598,7 +2601,7 @@ def create(vm_=None, call=None):
         transport=__opts__['transport']
     )
 
-    return node_dict
+    return ret
 
 
 def update_pricing(kwargs=None, call=None):
