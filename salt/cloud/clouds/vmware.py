@@ -273,7 +273,7 @@ def _edit_existing_hard_disk_helper(disk, size_kb=None, size_gb=None, mode=None)
     return disk_spec
 
 
-def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1000, thin_provision=False, datastore=None, vm_name=None):
+def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1000, thin_provision=False, eagerly_scrub=False, datastore=None, vm_name=None):
     random_key = randint(-2099, -2000)
     size_kb = int(size_gb * 1024.0 * 1024.0)
 
@@ -289,6 +289,7 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1
 
     disk_spec.device.backing = vim.vm.device.VirtualDisk.FlatVer2BackingInfo()
     disk_spec.device.backing.thinProvisioned = thin_provision
+    disk_spec.device.backing.eagerlyScrub = eagerly_scrub
     disk_spec.device.backing.diskMode = 'persistent'
 
     if datastore:
@@ -797,8 +798,9 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
             # create the disk
             size_gb = float(devices['disk'][disk_label]['size'])
             thin_provision = bool(devices['disk'][disk_label]['thin_provision']) if 'thin_provision' in devices['disk'][disk_label] else False
+            eagerly_scrub = bool(devices['disk'][disk_label]['eagerly_scrub']) if 'eagerly_scrub' in devices['disk'][disk_label] else False
             datastore = devices['disk'][disk_label].get('datastore', None)
-            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number, thin_provision=thin_provision, datastore=datastore, vm_name=new_vm_name)
+            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number, thin_provision=thin_provision, eagerly_scrub=eagerly_scrub, datastore=datastore, vm_name=new_vm_name)
 
             # when creating both SCSI controller and Hard disk at the same time we need the randomly
             # assigned (temporary) key of the newly created SCSI controller
