@@ -432,6 +432,7 @@ execution modules
     uptime
     useradd
     uwsgi
+    vagrant
     varnish
     vault
     vbox_guest
