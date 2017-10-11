@@ -265,9 +265,12 @@ def get_load(jid):
     except couchbase.exceptions.NotFoundError:
         return {}
 
-    ret = jid_doc.value['load']
-    if 'minions' in jid_doc.value:
+    ret = {}
+    try:
+        ret = jid_doc.value['load']
         ret['Minions'] = jid_doc.value['minions']
+    except KeyError as e:
+        log.error(e)
 
     return ret
 
@@ -310,7 +313,7 @@ def _format_job_instance(job):
            'Arguments': list(job.get('arg', [])),
            # unlikely but safeguard from invalid returns
            'Target': job.get('tgt', 'unknown-target'),
-           'Target-type': job.get('tgt_type', []),
+           'Target-type': job.get('tgt_type', 'list'),
            'User': job.get('user', 'root')}
 
     if 'metadata' in job:

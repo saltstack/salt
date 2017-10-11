@@ -33,6 +33,7 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.minions
 import salt.utils.versions
+import salt.utils.user
 import salt.payload
 
 log = logging.getLogger(__name__)
@@ -333,7 +334,7 @@ class LoadAuth(object):
                     log.warning(error_msg)
                     return False
         else:
-            if auth_key != key[salt.utils.get_user()]:
+            if auth_key != key[salt.utils.user.get_user()]:
                 log.warning(error_msg)
                 return False
         return True
@@ -695,7 +696,7 @@ class Resolver(object):
 
         # Use current user if empty
         if 'username' in ret and not ret['username']:
-            ret['username'] = salt.utils.get_user()
+            ret['username'] = salt.utils.user.get_user()
 
         return ret
 
@@ -766,7 +767,7 @@ class AuthUser(object):
         Returns True if the user is the same user as the one running
         this process and False if not.
         '''
-        return self.user == salt.utils.get_user()
+        return self.user == salt.utils.user.get_user()
 
     def sudo_name(self):
         '''

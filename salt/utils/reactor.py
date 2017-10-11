@@ -12,6 +12,7 @@ import salt.runner
 import salt.state
 import salt.utils
 import salt.utils.cache
+import salt.utils.data
 import salt.utils.event
 import salt.utils.files
 import salt.utils.process
@@ -364,7 +365,7 @@ class ReactWrap(object):
                         )
                 if low['state'] == 'caller' \
                         and isinstance(reactor_args, list) \
-                        and not salt.utils.is_dictlist(reactor_args):
+                        and not salt.utils.data.is_dictlist(reactor_args):
                     # Legacy 'caller' reactors were already using the 'args'
                     # param, but only supported a list of positional arguments.
                     # If low['args'] is a list but is *not* a dictlist, then
@@ -377,7 +378,7 @@ class ReactWrap(object):
                     kwargs['arg'] = ()
                     kwargs['kwarg'] = reactor_args
                 if not isinstance(kwargs['kwarg'], dict):
-                    kwargs['kwarg'] = salt.utils.repack_dictlist(kwargs['kwarg'])
+                    kwargs['kwarg'] = salt.utils.data.repack_dictlist(kwargs['kwarg'])
                     if not kwargs['kwarg']:
                         log.error(
                             'Reactor \'%s\' failed to execute %s \'%s\': '

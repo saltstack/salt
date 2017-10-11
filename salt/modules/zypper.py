@@ -32,7 +32,8 @@ from xml.dom import minidom as dom
 from xml.parsers.expat import ExpatError
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once alias_function, is_true are moved
+import salt.utils.data
 import salt.utils.event
 import salt.utils.files
 import salt.utils.path
@@ -1203,7 +1204,7 @@ def install(name=None,
         if isinstance(pkg_data, six.string_types):
             new[pkg_name] = pkg_data.split(',')[-1]
 
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -1317,7 +1318,7 @@ def upgrade(refresh=True,
     # (affects only kernel packages at this point)
     for pkg in new:
         new[pkg] = new[pkg].split(',')[-1]
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
         result = {
@@ -1360,7 +1361,7 @@ def _uninstall(name=None, pkgs=None):
         targets = targets[500:]
 
     __context__.pop('pkg.list_pkgs', None)
-    ret = salt.utils.compare_dicts(old, list_pkgs())
+    ret = salt.utils.data.compare_dicts(old, list_pkgs())
 
     if errors:
         raise CommandExecutionError(

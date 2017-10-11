@@ -50,8 +50,9 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.exceptions import (CommandExecutionError,
                              SaltInvocationError,
                              SaltRenderError)
-import salt.utils  # Can be removed once is_true, get_hash, compare_dicts are moved
+import salt.utils  # Can be removed once is_true, get_hash are moved
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
 import salt.utils.pkg
 import salt.utils.platform
@@ -1388,7 +1389,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 ret[pkg_name] = {'current': new[pkg_name]}
 
     # Check for changes in the registry
-    difference = salt.utils.compare_dicts(old, new)
+    difference = salt.utils.data.compare_dicts(old, new)
 
     # Compare the software list before and after
     # Add the difference to ret
@@ -1671,11 +1672,11 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
     # preparation for the comparison below.
     __salt__['pkg_resource.stringify'](old)
 
-    difference = salt.utils.compare_dicts(old, new)
+    difference = salt.utils.data.compare_dicts(old, new)
     tries = 0
     while not all(name in difference for name in changed) and tries <= 1000:
         new = list_pkgs(saltenv=saltenv)
-        difference = salt.utils.compare_dicts(old, new)
+        difference = salt.utils.data.compare_dicts(old, new)
         tries += 1
         if tries == 1000:
             ret['_comment'] = 'Registry not updated.'

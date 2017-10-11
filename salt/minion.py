@@ -89,6 +89,7 @@ import salt.syspaths
 import salt.utils
 import salt.utils.args
 import salt.utils.context
+import salt.utils.data
 import salt.utils.error
 import salt.utils.event
 import salt.utils.files
@@ -98,6 +99,7 @@ import salt.utils.minions
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.schedule
+import salt.utils.user
 import salt.utils.zeromq
 import salt.defaults.exitcodes
 import salt.cli.daemons
@@ -998,7 +1000,7 @@ class Minion(MinionBase):
         # Flag meaning minion has finished initialization including first connect to the master.
         # True means the Minion is fully functional and ready to handle events.
         self.ready = False
-        self.jid_queue = jid_queue
+        self.jid_queue = jid_queue or []
 
         if io_loop is None:
             if HAS_ZMQ:
@@ -1140,7 +1142,7 @@ class Minion(MinionBase):
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
         self.beacons = salt.beacons.Beacon(self.opts, self.functions)
-        uid = salt.utils.get_uid(user=self.opts.get(u'user', None))
+        uid = salt.utils.user.get_uid(user=self.opts.get(u'user', None))
         self.proc_dir = get_proc_dir(self.opts[u'cachedir'], uid=uid)
 
         self.schedule = salt.utils.schedule.Schedule(
@@ -1445,7 +1447,7 @@ class Minion(MinionBase):
             if not hasattr(minion_instance, u'serial'):
                 minion_instance.serial = salt.payload.Serial(opts)
             if not hasattr(minion_instance, u'proc_dir'):
-                uid = salt.utils.get_uid(user=opts.get(u'user', None))
+                uid = salt.utils.user.get_uid(user=opts.get(u'user', None))
                 minion_instance.proc_dir = (
                     get_proc_dir(opts[u'cachedir'], uid=uid)
                     )
@@ -2108,7 +2110,7 @@ class Minion(MinionBase):
         try:
             log.info(
                 u'%s is starting as user \'%s\'',
-                self.__class__.__name__, salt.utils.get_user()
+                self.__class__.__name__, salt.utils.user.get_user()
             )
         except Exception as err:
             # Only windows is allowed to fail here. See #3189. Log as debug in
@@ -3043,7 +3045,7 @@ class Matcher(object):
             log.error(u'Got insufficient arguments for grains match '
                       u'statement from master')
             return False
-        return salt.utils.subdict_match(
+        return salt.utils.data.subdict_match(
             self.opts[u'grains'], tgt, delimiter=delimiter
         )
 
@@ -3056,8 +3058,8 @@ class Matcher(object):
             log.error(u'Got insufficient arguments for grains pcre match '
                       u'statement from master')
             return False
-        return salt.utils.subdict_match(self.opts[u'grains'], tgt,
-                                        delimiter=delimiter, regex_match=True)
+        return salt.utils.data.subdict_match(
+            self.opts[u'grains'], tgt, delimiter=delimiter, regex_match=True)
 
     def data_match(self, tgt):
         '''
@@ -3097,7 +3099,7 @@ class Matcher(object):
             log.error(u'Got insufficient arguments for pillar match '
                       u'statement from master')
             return False
-        return salt.utils.subdict_match(
+        return salt.utils.data.subdict_match(
             self.opts[u'pillar'], tgt, delimiter=delimiter
         )
 
@@ -3110,7 +3112,7 @@ class Matcher(object):
             log.error(u'Got insufficient arguments for pillar PCRE match '
                       u'statement from master')
             return False
-        return salt.utils.subdict_match(
+        return salt.utils.data.subdict_match(
             self.opts[u'pillar'], tgt, delimiter=delimiter, regex_match=True
         )
 
@@ -3123,7 +3125,7 @@ class Matcher(object):
             log.error(u'Got insufficient arguments for pillar match '
                       u'statement from master')
             return False
-        return salt.utils.subdict_match(self.opts[u'pillar'],
+        return salt.utils.data.subdict_match(self.opts[u'pillar'],
                                         tgt,
                                         delimiter=delimiter,
                                         exact_match=True)
@@ -3402,7 +3404,7 @@ class ProxyMinion(Minion):
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
         self.beacons = salt.beacons.Beacon(self.opts, self.functions)
-        uid = salt.utils.get_uid(user=self.opts.get(u'user', None))
+        uid = salt.utils.user.get_uid(user=self.opts.get(u'user', None))
         self.proc_dir = get_proc_dir(self.opts[u'cachedir'], uid=uid)
 
         if self.connected and self.opts[u'pillar']:
@@ -3548,7 +3550,7 @@ class ProxyMinion(Minion):
             if not hasattr(minion_instance, u'serial'):
                 minion_instance.serial = salt.payload.Serial(opts)
             if not hasattr(minion_instance, u'proc_dir'):
-                uid = salt.utils.get_uid(user=opts.get(u'user', None))
+                uid = salt.utils.user.get_uid(user=opts.get(u'user', None))
                 minion_instance.proc_dir = (
                     get_proc_dir(opts[u'cachedir'], uid=uid)
                     )

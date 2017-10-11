@@ -259,6 +259,16 @@ def managed(name, ppa=None, **kwargs):
 
            Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
 
+    key_text
+        The string representation of the GPG key to install.
+
+        .. versionadded:: Oxygen
+
+       .. note::
+
+           Use either ``keyid``/``keyserver``, ``key_url``, or ``key_text`` but
+           not more than one method.
+
     consolidate : False
        If set to ``True``, this will consolidate all sources definitions to the
        sources.list file, cleanup the now unused files, consolidate components
@@ -312,6 +322,16 @@ def managed(name, ppa=None, **kwargs):
         ret['result'] = False
         ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
                          '"key_url" argument.'
+
+    if 'key_text' in kwargs and ('keyid' in kwargs or 'keyserver' in kwargs):
+        ret['result'] = False
+        ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
+                         '"key_text" argument.'
+    if 'key_text' in kwargs and ('key_url' in kwargs):
+        ret['result'] = False
+        ret['comment'] = 'You may not use both "key_url" and ' \
+                         '"key_text" argument.'
+
     if 'repo' in kwargs:
         ret['result'] = False
         ret['comment'] = ('\'repo\' is not a supported argument for this '

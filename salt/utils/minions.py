@@ -14,6 +14,7 @@ import logging
 # Import salt libs
 import salt.payload
 import salt.utils
+import salt.utils.data
 import salt.utils.files
 import salt.utils.network
 import salt.utils.versions
@@ -289,11 +290,11 @@ class CkMinions(object):
                         minions.remove(id_)
                     continue
                 search_results = mdata.get(search_type)
-                if not salt.utils.subdict_match(search_results,
-                                                expr,
-                                                delimiter=delimiter,
-                                                regex_match=regex_match,
-                                                exact_match=exact_match):
+                if not salt.utils.data.subdict_match(search_results,
+                                                     expr,
+                                                     delimiter=delimiter,
+                                                     regex_match=regex_match,
+                                                     exact_match=exact_match):
                     minions.remove(id_)
             minions = list(minions)
         return {'minions': minions,

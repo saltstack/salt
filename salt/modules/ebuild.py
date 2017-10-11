@@ -23,6 +23,7 @@ import re
 # Import salt libs
 import salt.utils
 import salt.utils.args
+import salt.utils.data
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.systemd
@@ -711,7 +712,7 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    changes.update(salt.utils.compare_dicts(old, new))
+    changes.update(salt.utils.data.compare_dicts(old, new))
 
     if needed_changes:
         raise CommandExecutionError(
@@ -804,7 +805,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if needed_changes:
         raise CommandExecutionError(
@@ -894,7 +895,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -993,7 +994,7 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -1106,7 +1107,7 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
                             python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def version_cmp(pkg1, pkg2, **kwargs):

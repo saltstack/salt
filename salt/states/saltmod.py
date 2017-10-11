@@ -34,7 +34,7 @@ import time
 import salt.syspaths
 import salt.exceptions
 import salt.output
-import salt.utils
+import salt.utils.data
 import salt.utils.event
 import salt.utils.versions
 from salt.ext import six
@@ -881,7 +881,7 @@ def parallel_runners(name, runners):
         if runner_config is None:
             runner_config = {}
         else:
-            runner_config = salt.utils.repack_dictlist(runner_config)
+            runner_config = salt.utils.data.repack_dictlist(runner_config)
         if 'name' not in runner_config:
             runner_config['name'] = runner_id
         runners[runner_id] = runner_config

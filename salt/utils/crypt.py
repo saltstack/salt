@@ -11,6 +11,12 @@ log = logging.getLogger(__name__)
 import salt.loader
 from salt.exceptions import SaltInvocationError
 
+try:
+    import Crypto.Random
+    HAS_CRYPTO = True
+except ImportError:
+    HAS_CRYPTO = False
+
 
 def decrypt(data,
             rend,
@@ -86,3 +92,17 @@ def decrypt(data,
         )
 
     return rend_func(data, translate_newlines=translate_newlines)
+
+
+def reinit_crypto():
+    '''
+    When a fork arises, pycrypto needs to reinit
+    From its doc::
+
+        Caveat: For the random number generator to work correctly,
+        you must call Random.atfork() in both the parent and
+        child processes after using os.fork()
+
+    '''
+    if HAS_CRYPTO:
+        Crypto.Random.atfork()
