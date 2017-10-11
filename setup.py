@@ -190,8 +190,9 @@ class WriteSaltVersion(Command):
                 exit(1)
 
             if not self.distribution.with_salt_version:
-                salt_version = __saltstack_version__
+                salt_version = __saltstack_version__  # pylint: disable=undefined-variable
             else:
+                from salt.version import SaltStackVersion
                 salt_version = SaltStackVersion.parse(self.distribution.with_salt_version)
 
             # pylint: disable=E0602
