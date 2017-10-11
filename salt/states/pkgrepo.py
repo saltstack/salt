@@ -262,6 +262,8 @@ def managed(name, ppa=None, **kwargs):
     key_text
         The string representation of the GPG key to install.
 
+        .. versionadded:: Oxygen
+
        .. note::
 
            Use either ``keyid``/``keyserver``, ``key_url``, or ``key_text`` but

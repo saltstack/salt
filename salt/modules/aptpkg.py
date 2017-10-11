@@ -2155,6 +2155,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
     key_text
         GPG key in string form to add to the APT GPG keyring
 
+        .. versionadded:: Oxygen
+
     consolidate : False
         If ``True``, will attempt to de-duplicate and consolidate sources
 
