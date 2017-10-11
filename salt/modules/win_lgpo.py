@@ -46,6 +46,7 @@ import logging
 import re
 import locale
 import ctypes
+import time
 
 # Import salt libs
 import salt.utils
@@ -2868,10 +2869,17 @@ def _findOptionValueInSeceditFile(option):
         if _ret:
             with io.open(_tfile, encoding='utf-16') as _reader:
                 _secdata = _reader.readlines()
-            while not _reader.closed:
-                _reader.close()
             if __salt__['file.file_exists'](_tfile):
-                _ret = __salt__['file.remove'](_tfile)
+                for _ in range(5):
+                    try:
+                        __salt__['file.remove'](_tfile)
+                    except WindowsError:
+                        time.sleep(.1)
+                        continue
+                    else:
+                        break
+                else:
+                    log.error('error occured removing {0}'.format(_tfile))
             for _line in _secdata:
                 if _line.startswith(option):
                     return True, _line.split('=')[1].strip()
