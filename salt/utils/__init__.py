@@ -2482,8 +2482,8 @@ def decode_dict(data):
     import salt.utils.data
     salt.utils.versions.warn_until(
         'Neon',
-        'Use of \'salt.utils.compare_dicts\' detected. This function '
-        'has been moved to \'salt.utils.data.compare_dicts\' as of '
+        'Use of \'salt.utils.decode_dict\' detected. This function '
+        'has been moved to \'salt.utils.data.decode_dict\' as of '
         'Salt Oxygen. This warning will be removed in Salt Neon.'
     )
     return salt.utils.data.decode_dict(data)
