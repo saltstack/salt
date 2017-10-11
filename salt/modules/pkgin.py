@@ -17,7 +17,8 @@ import os
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed when alias_function, is_true are moved
+import salt.utils.data
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.decorators as decorators
@@ -397,7 +398,7 @@ def install(name=None, refresh=False, fromrepo=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -440,7 +441,7 @@ def upgrade():
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -521,7 +522,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
