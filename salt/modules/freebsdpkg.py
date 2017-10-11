@@ -81,6 +81,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.data
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext import six
@@ -412,7 +413,7 @@ def install(name=None,
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     _rehash()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -474,7 +475,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
