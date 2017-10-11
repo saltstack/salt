@@ -17,6 +17,7 @@ from tests.support.mock import (
 # Import Salt libs
 import salt.utils
 import salt.utils.jid
+import salt.utils.path
 import salt.utils.yamlencoding
 import salt.utils.zeromq
 from salt.exceptions import SaltSystemExit, CommandNotFoundError
@@ -97,7 +98,7 @@ class UtilsTestCase(TestCase):
         with patch('salt.utils.is_windows', return_value=False) as is_windows_mock:
             self.assertFalse(is_windows_mock.return_value)
             expected_path = os.path.join(os.sep + 'a', 'b', 'c', 'd')
-            ret = utils.path_join('/a/b/c', 'd')
+            ret = salt.utils.path.join('/a/b/c', 'd')
             self.assertEqual(ret, expected_path)
 
     def test_build_whitespace_split_regex(self):
