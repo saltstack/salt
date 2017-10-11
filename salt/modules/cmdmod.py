@@ -542,7 +542,7 @@ def _run(cmd,
     if python_shell is not True \
             and not salt.utils.platform.is_windows() \
             and not isinstance(cmd, list):
-        cmd = salt.utils.args.shlex_split(cmd, posix=posix)
+        cmd = salt.utils.args.shlex_split(cmd)
 
     if not use_vt:
         # This is where the magic happens
