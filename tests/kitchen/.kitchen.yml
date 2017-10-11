@@ -1,0 +1,75 @@
+driver:
+  name: docker
+  use_sudo: false
+  privileged: true
+<% if File.exists?('driver.yml') %>
+<% File.read('driver.yml').split(/\n/).each do |line| %>
+  <%= line %>
+<% end %>
+<% end %>
+
+provisioner:
+  name: salt_solo
+  salt_install: pip
+  pip_pkg: <%= ENV['SALT_SDIST_PATH'] || 'salt' %>
+  require_chef: false
+  formula: states
+<% if File.exists?('dependencies.yml') %>
+<% File.read('dependencies.yml').split(/\n/).each do |line| %>
+  <%= line %>
+<% end %>
+<% end %>
+<% if File.exists?('state_top.yml') %>
+<% File.read('state_top.yml').split(/\n/).each do |line| %>
+  <%= line %>
+<% end %>
+<% else %>
+  state_top:
+    base:
+      '*':
+        - states
+<% end %>
+<% if File.exists?('pillars.yml') %>
+<% File.read('pillars.yml').split(/\n/).each do |line| %>
+  <%= line %>
+<% end %>
+<% end %>
+
+<% if File.exists?('platforms.yml') %>
+<%= File.read('platforms.yml') %>
+<% else %>
+platforms:
+  - name: centos
+    driver_config:
+      run_command: /usr/lib/systemd/systemd
+      provision_command:
+        - yum install -y epel-release
+        - yum install -y python-pip python-devel gcc git gcc-c++
+  - name: opensuse
+    driver_config:
+      run_command: /usr/lib/systemd/systemd
+      provision_command:
+        - systemctl enable sshd.service
+  - name: ubuntu
+    driver_config:
+      run_command: /lib/systemd/systemd
+  - name: debian
+    driver_config:
+      run_command: /lib/systemd/systemd
+<% end %>
+
+<% if File.exists?('suites.yml') %>
+<%= File.read('suites.yml') %>
+<% else %>
+suites:
+  - name: salt
+<% end %>
+
+<% if File.exists?('verifier.yml') %>
+<%= File.read('verifier.yml') %>
+<% else %>
+verifier:
+  name: shell
+  remote_exec: false
+  command: pytest --junitxml= -v tests/integration/$KITCHEN_SUITE
+<% end %>
