@@ -1416,7 +1416,7 @@ class Cloud(object):
             if name in vms:
                 prov = vms[name]['provider']
                 driv = vms[name]['driver']
-                msg = six.u('{0} already exists under {1}:{2}').format(
+                msg = u'{0} already exists under {1}:{2}'.format(
                     name, prov, driv
                 )
                 log.error(msg)
