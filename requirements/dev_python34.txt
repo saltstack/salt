@@ -13,3 +13,4 @@ httpretty
 SaltPyLint>=v2017.2.29
 pytest
 git+https://github.com/saltstack/pytest-salt.git@master#egg=pytest-salt
+testinfra>=1.7.0
