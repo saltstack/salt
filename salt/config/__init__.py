@@ -3389,6 +3389,17 @@ def _cache_id(minion_id, cache_file):
     '''
     Helper function, writes minion id to a cache file.
     '''
+    path = os.path.dirname(cache_file)
+    try:
+        if not os.path.isdir(path):
+            os.makedirs(path)
+    except OSError as exc:
+        # Handle race condition where dir is created after os.path.isdir check
+        if os.path.isdir(path):
+            pass
+        else:
+            log.error('Failed to create dirs to minion_id file: {0}'.format(exc))
+
     try:
         with salt.utils.files.fopen(cache_file, 'w') as idf:
             idf.write(minion_id)
