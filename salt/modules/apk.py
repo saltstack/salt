@@ -19,6 +19,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.data
 import salt.utils.itertools
 
 from salt.exceptions import CommandExecutionError
@@ -338,7 +339,7 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -414,7 +415,7 @@ def remove(name=None, pkgs=None, purge=False, **kwargs):  # pylint: disable=unus
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -480,7 +481,7 @@ def upgrade(name=None, pkgs=None, refresh=True):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret['changes'] = salt.utils.data.compare_dicts(old, new)
 
     return ret
 

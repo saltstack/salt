@@ -89,6 +89,7 @@ import salt.syspaths
 import salt.utils
 import salt.utils.args
 import salt.utils.context
+import salt.utils.data
 import salt.utils.error
 import salt.utils.event
 import salt.utils.files
@@ -2963,7 +2964,7 @@ class Matcher(object):
             log.error(u'Got insufficient arguments for grains match '
                       u'statement from master')
             return False
-        return salt.utils.subdict_match(
+        return salt.utils.data.subdict_match(
             self.opts[u'grains'], tgt, delimiter=delimiter
         )
 
@@ -2976,8 +2977,8 @@ class Matcher(object):
             log.error(u'Got insufficient arguments for grains pcre match '
                       u'statement from master')
             return False
-        return salt.utils.subdict_match(self.opts[u'grains'], tgt,
-                                        delimiter=delimiter, regex_match=True)
+        return salt.utils.data.subdict_match(
+            self.opts[u'grains'], tgt, delimiter=delimiter, regex_match=True)
 
     def data_match(self, tgt):
         '''
@@ -3017,7 +3018,7 @@ class Matcher(object):
             log.error(u'Got insufficient arguments for pillar match '
                       u'statement from master')
             return False
-        return salt.utils.subdict_match(
+        return salt.utils.data.subdict_match(
             self.opts[u'pillar'], tgt, delimiter=delimiter
         )
 
@@ -3030,7 +3031,7 @@ class Matcher(object):
             log.error(u'Got insufficient arguments for pillar PCRE match '
                       u'statement from master')
             return False
-        return salt.utils.subdict_match(
+        return salt.utils.data.subdict_match(
             self.opts[u'pillar'], tgt, delimiter=delimiter, regex_match=True
         )
 
@@ -3043,7 +3044,7 @@ class Matcher(object):
             log.error(u'Got insufficient arguments for pillar match '
                       u'statement from master')
             return False
-        return salt.utils.subdict_match(self.opts[u'pillar'],
+        return salt.utils.data.subdict_match(self.opts[u'pillar'],
                                         tgt,
                                         delimiter=delimiter,
                                         exact_match=True)

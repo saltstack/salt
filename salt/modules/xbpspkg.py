@@ -16,7 +16,8 @@ import logging
 import glob
 
 # Import salt libs
-import salt.utils  # Can be removed when is_true and compare_dicts are moved
+import salt.utils  # Can be removed when is_true is moved
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.pkg
@@ -329,7 +330,7 @@ def upgrade(refresh=True):
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -424,7 +425,7 @@ def install(name=None, refresh=False, fromrepo=None,
     new = list_pkgs()
 
     _rehash()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def remove(name=None, pkgs=None, recursive=True, **kwargs):
@@ -478,7 +479,7 @@ def remove(name=None, pkgs=None, recursive=True, **kwargs):
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
 
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def list_repos():

@@ -25,6 +25,7 @@ from salt.ext.six.moves.urllib.parse import urlparse
 
 # Import salt libs
 import salt.utils  # Can be removed once is_dictlist, ip_bracket are moved
+import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.network
@@ -3696,8 +3697,8 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
     # out or not present.
     if opts.get('nodegroups') is None:
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
-    if salt.utils.is_dictlist(opts['nodegroups']):
-        opts['nodegroups'] = salt.utils.repack_dictlist(opts['nodegroups'])
+    if salt.utils.data.is_dictlist(opts['nodegroups']):
+        opts['nodegroups'] = salt.utils.data.repack_dictlist(opts['nodegroups'])
     if opts.get('transport') == 'raet' and 'aes' in opts:
         opts.pop('aes')
     apply_sdb(opts)

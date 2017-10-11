@@ -9,7 +9,8 @@ import re
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once normalize_mode is moved
+import salt.utils.data
 import salt.syspaths as syspaths
 
 # Import 3rd-party libs
@@ -215,16 +216,16 @@ def get(key, default=u''):
 
         salt '*' config.get pkg:apache
     '''
-    ret = salt.utils.traverse_dict_and_list(__opts__, key, u'_|-')
+    ret = salt.utils.data.traverse_dict_and_list(__opts__, key, u'_|-')
     if ret != u'_|-':
         return ret
-    ret = salt.utils.traverse_dict_and_list(__grains__, key, u'_|-')
+    ret = salt.utils.data.traverse_dict_and_list(__grains__, key, u'_|-')
     if ret != u'_|-':
         return ret
-    ret = salt.utils.traverse_dict_and_list(__pillar__, key, u'_|-')
+    ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, u'_|-')
     if ret != u'_|-':
         return ret
-    ret = salt.utils.traverse_dict_and_list(__pillar__.get(u'master', {}), key, u'_|-')
+    ret = salt.utils.data.traverse_dict_and_list(__pillar__.get(u'master', {}), key, u'_|-')
     if ret != u'_|-':
         return ret
     return default
