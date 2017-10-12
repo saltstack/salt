@@ -157,8 +157,11 @@ def resolve_dns(opts, fallback=True):
         try:
             if opts[u'master'] == u'':
                 raise SaltSystemExit
-            ret[u'master_ip'] = \
-                    salt.utils.dns_check(opts[u'master'], int(opts[u'master_port']), True, opts[u'ipv6'])
+            ret[u'master_ip'] = salt.utils.network.dns_check(
+                opts[u'master'],
+                int(opts[u'master_port']),
+                True,
+                opts[u'ipv6'])
         except SaltClientError:
             if opts[u'retry_dns']:
                 while True:
@@ -171,9 +174,11 @@ def resolve_dns(opts, fallback=True):
                         print(u'WARNING: {0}'.format(msg))
                     time.sleep(opts[u'retry_dns'])
                     try:
-                        ret[u'master_ip'] = salt.utils.dns_check(
-                            opts[u'master'], int(opts[u'master_port']), True, opts[u'ipv6']
-                        )
+                        ret[u'master_ip'] = salt.utils.network.dns_check(
+                            opts[u'master'],
+                            int(opts[u'master_port']),
+                            True,
+                            opts[u'ipv6'])
                         break
                     except SaltClientError:
                         pass
