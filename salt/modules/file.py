@@ -59,6 +59,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
+import salt.utils.user
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
 from salt.utils.files import HASHES, HASHES_REVMAP
 
@@ -289,7 +290,7 @@ def user_to_uid(user):
         salt '*' file.user_to_uid root
     '''
     if user is None:
-        user = salt.utils.get_user()
+        user = salt.utils.user.get_user()
     try:
         if isinstance(user, int):
             return user
@@ -4358,7 +4359,7 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
     is_dir = os.path.isdir(name)
     if not salt.utils.platform.is_windows() and not is_dir and lsattr_cmd:
         # List attributes on file
-        perms['lattrs'] = ''.join(lsattr(name)[name])
+        perms['lattrs'] = ''.join(lsattr(name).get('name', ''))
         # Remove attributes on file so changes can be enforced.
         if perms['lattrs']:
             chattr(name, operator='remove', attributes=perms['lattrs'])

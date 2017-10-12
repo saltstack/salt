@@ -50,13 +50,15 @@ import salt.defaults.exitcodes
 import salt.payload
 import salt.transport.client
 import salt.transport.frame
-import salt.utils
+import salt.utils  # Can be removed when pem_finger is moved
+import salt.utils.crypt
 import salt.utils.decorators
 import salt.utils.event
 import salt.utils.files
 import salt.utils.rsax931
 import salt.utils.sdb
 import salt.utils.stringutils
+import salt.utils.user
 import salt.utils.verify
 import salt.version
 from salt.exceptions import (
@@ -112,7 +114,7 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     priv = u'{0}.pem'.format(base)
     pub = u'{0}.pub'.format(base)
 
-    salt.utils.reinit_crypto()
+    salt.utils.crypt.reinit_crypto()
     gen = RSA.generate(bits=keysize, e=65537)
     if os.path.isfile(priv):
         # Between first checking and the generation another process has made
@@ -445,7 +447,7 @@ class AsyncAuth(object):
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
-        salt.utils.reinit_crypto()
+        salt.utils.crypt.reinit_crypto()
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:
@@ -858,7 +860,7 @@ class AsyncAuth(object):
                     self.opts[u'master']
                 )
                 m_pub_fn = os.path.join(self.opts[u'pki_dir'], self.mpub)
-                uid = salt.utils.get_uid(self.opts.get(u'user', None))
+                uid = salt.utils.user.get_uid(self.opts.get(u'user', None))
                 with salt.utils.files.fpopen(m_pub_fn, u'wb+', uid=uid) as wfh:
                     wfh.write(salt.utils.stringutils.to_bytes(payload[u'pub_key']))
                 return True

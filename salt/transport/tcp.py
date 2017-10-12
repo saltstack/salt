@@ -23,6 +23,7 @@ import salt.utils
 import salt.utils.async
 import salt.utils.event
 import salt.utils.platform
+import salt.utils.process
 import salt.utils.verify
 import salt.payload
 import salt.exceptions
@@ -1314,7 +1315,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         '''
         Bind to the interface specified in the configuration file
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
 
         if log_queue is not None:
             salt.log.setup.set_multiprocessing_logging_queue(log_queue)

@@ -20,14 +20,17 @@ import time
 from datetime import datetime
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once check_whitelist_blacklist, get_hash, is_bin_file, repack_dictlist are moved
 import salt.utils.configparser
+import salt.utils.data
 import salt.utils.files
+import salt.utils.gzip_util
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.url
+import salt.utils.user
 import salt.utils.versions
 import salt.fileserver
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
@@ -181,7 +184,7 @@ class GitProvider(object):
                  override_params, cache_root, role='gitfs'):
         self.opts = opts
         self.role = role
-        self.global_saltenv = salt.utils.repack_dictlist(
+        self.global_saltenv = salt.utils.data.repack_dictlist(
             self.opts.get('{0}_saltenv'.format(self.role), []),
             strict=True,
             recurse=True,
@@ -218,7 +221,7 @@ class GitProvider(object):
             self.id = next(iter(remote))
             self.get_url()
 
-            per_remote_conf = salt.utils.repack_dictlist(
+            per_remote_conf = salt.utils.data.repack_dictlist(
                 remote[self.id],
                 strict=True,
                 recurse=True,
@@ -1494,7 +1497,7 @@ class Pygit2(GitProvider):
                     # https://github.com/libgit2/libgit2/issues/2122
                     if "Error stat'ing config file" not in str(exc):
                         raise
-                    home = pwd.getpwnam(salt.utils.get_user()).pw_dir
+                    home = pwd.getpwnam(salt.utils.user.get_user()).pw_dir
                     pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
                     self.repo = pygit2.Repository(self.cachedir)
             except KeyError:

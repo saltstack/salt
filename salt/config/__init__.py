@@ -24,13 +24,15 @@ from salt.ext.six.moves.urllib.parse import urlparse
 # pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once is_dictlist, ip_bracket are moved
+import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yamlloader as yamlloader
@@ -69,7 +71,7 @@ if salt.utils.platform.is_windows():
 else:
     _DFLT_IPC_MODE = 'ipc'
     _MASTER_TRIES = 1
-    _MASTER_USER = salt.utils.get_user()
+    _MASTER_USER = salt.utils.user.get_user()
 
 
 def _gather_buffer_space():
@@ -1145,7 +1147,7 @@ DEFAULT_MINION_OPTS = {
     'always_verify_signature': False,
     'master_sign_key_name': 'master_sign',
     'syndic_finger': '',
-    'user': salt.utils.get_user(),
+    'user': salt.utils.user.get_user(),
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': '',
@@ -3387,6 +3389,17 @@ def _cache_id(minion_id, cache_file):
     '''
     Helper function, writes minion id to a cache file.
     '''
+    path = os.path.dirname(cache_file)
+    try:
+        if not os.path.isdir(path):
+            os.makedirs(path)
+    except OSError as exc:
+        # Handle race condition where dir is created after os.path.isdir check
+        if os.path.isdir(path):
+            pass
+        else:
+            log.error('Failed to create dirs to minion_id file: {0}'.format(exc))
+
     try:
         with salt.utils.files.fopen(cache_file, 'w') as idf:
             idf.write(minion_id)
@@ -3695,8 +3708,8 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
     # out or not present.
     if opts.get('nodegroups') is None:
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
-    if salt.utils.is_dictlist(opts['nodegroups']):
-        opts['nodegroups'] = salt.utils.repack_dictlist(opts['nodegroups'])
+    if salt.utils.data.is_dictlist(opts['nodegroups']):
+        opts['nodegroups'] = salt.utils.data.repack_dictlist(opts['nodegroups'])
     if opts.get('transport') == 'raet' and 'aes' in opts:
         opts.pop('aes')
     apply_sdb(opts)

@@ -16,7 +16,7 @@ import copy as pycopy
 # Import Salt libs
 import salt.exceptions
 import salt.minion
-import salt.utils  # Can be removed once daemonize, get_specific_user, format_call are moved
+import salt.utils  # Can be removed once format_call is moved
 import salt.utils.args
 import salt.utils.doc
 import salt.utils.error
@@ -27,6 +27,7 @@ import salt.utils.lazy
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.state
+import salt.utils.user
 import salt.utils.versions
 import salt.transport
 import salt.log.setup
@@ -96,7 +97,7 @@ class ClientFuncsDict(collections.MutableMapping):
 
             async_pub = self.client._gen_async_pub(pub_data.get(u'__pub_jid'))
 
-            user = salt.utils.get_specific_user()
+            user = salt.utils.user.get_specific_user()
             return self.client._proc_function(
                 key,
                 low,
@@ -468,7 +469,7 @@ class AsyncClientMixin(object):
             # Shutdown the multiprocessing before daemonizing
             salt.log.setup.shutdown_multiprocessing_logging()
 
-            salt.utils.daemonize()
+            salt.utils.process.daemonize()
 
             # Reconfigure multiprocessing logging after daemonizing
             salt.log.setup.setup_multiprocessing_logging()

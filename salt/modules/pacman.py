@@ -20,6 +20,7 @@ import os.path
 # Import salt libs
 import salt.utils
 import salt.utils.args
+import salt.utils.data
 import salt.utils.pkg
 import salt.utils.itertools
 import salt.utils.systemd
@@ -614,7 +615,7 @@ def install(name=None,
 
         __context__.pop('pkg.list_pkgs', None)
         new = list_pkgs()
-        ret = salt.utils.compare_dicts(old, new)
+        ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         try:
@@ -688,7 +689,7 @@ def upgrade(refresh=False, root=None, **kwargs):
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -739,7 +740,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
