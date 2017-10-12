@@ -16,7 +16,7 @@ import copy as pycopy
 # Import Salt libs
 import salt.exceptions
 import salt.minion
-import salt.utils  # Can be removed once daemonize, format_call are moved
+import salt.utils  # Can be removed once format_call is moved
 import salt.utils.args
 import salt.utils.doc
 import salt.utils.error
@@ -469,7 +469,7 @@ class AsyncClientMixin(object):
             # Shutdown the multiprocessing before daemonizing
             salt.log.setup.shutdown_multiprocessing_logging()
 
-            salt.utils.daemonize()
+            salt.utils.process.daemonize()
 
             # Reconfigure multiprocessing logging after daemonizing
             salt.log.setup.setup_multiprocessing_logging()

@@ -232,7 +232,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         '''
         Enter into the server loop
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
 
         # instantiate some classes inside our new process
         self.event = salt.utils.event.get_event(
