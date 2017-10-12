@@ -12,7 +12,7 @@ import os
 
 # Import Salt libs
 import salt.version
-import salt.utils  # Can be removed once alias_function is moved
+import salt.utils  # TODO: Remove this once alias_function is moved
 import salt.utils.platform
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError

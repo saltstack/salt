@@ -31,7 +31,7 @@ from tests.support.paths import CODE_DIR
 
 # Import salt libs
 import salt.config
-import salt.utils  # Can be removed once namespaced_function is moved
+import salt.utils  # TODO: Remove this once namespaced_function is moved
 import salt.utils.event
 import salt.utils.files
 import salt.utils.path
