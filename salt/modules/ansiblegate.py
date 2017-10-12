@@ -15,6 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+'''
+Ansible Support
+===============
+
+This module can have an optional minion-level
+configuration in /etc/salt/minion.d/ as follows:
+
+  ansible_timeout: 1200
+
+The timeout is how many seconds Salt should wait for
+any Ansible module to respond.
+'''
+
 from __future__ import absolute_import
 import os
 import sys
