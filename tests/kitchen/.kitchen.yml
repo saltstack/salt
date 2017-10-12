@@ -17,7 +17,6 @@ provisioner:
     - https://pypi.python.org/simple
   require_chef: false
   formula: states
-  log_level: debug
 <% if File.exists?('provisioner.yml') %>
 <% File.read('provisioner.yml').split(/\n/).each do |line| %>
   <%= line %>
