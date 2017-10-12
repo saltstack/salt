@@ -21,7 +21,7 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils  # Can be removed once alias_function is moved
+import salt.utils  # TODO: Remove this once alias_function is moved
 import salt.utils.args
 import salt.utils.data
 import salt.utils.path

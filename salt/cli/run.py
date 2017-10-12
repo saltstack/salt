@@ -2,7 +2,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
-import salt.utils  # Can be removed once activate_profile and output_profile are moved
+import salt.utils  # TODO: Remove this once activate_profile and output_profile are moved
 import salt.utils.parsers
 from salt.utils.verify import check_user, verify_log
 from salt.exceptions import SaltClientError

@@ -20,7 +20,7 @@ import time
 from datetime import datetime
 
 # Import salt libs
-import salt.utils  # Can be removed once check_whitelist_blacklist is moved
+import salt.utils  # TODO: Remove this once check_whitelist_blacklist is moved
 import salt.utils.configparser
 import salt.utils.data
 import salt.utils.files

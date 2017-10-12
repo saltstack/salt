@@ -28,7 +28,7 @@ import time
 import salt.config
 import salt.payload
 import salt.state
-import salt.utils  # Can be removed once namespaced_function is moved
+import salt.utils  # TODO: Remove this once namespaced_function is moved
 import salt.utils.args
 import salt.utils.data
 import salt.utils.event

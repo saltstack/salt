@@ -13,7 +13,7 @@ import logging
 
 # Import salt libs
 import salt.payload
-import salt.utils  # Can be removed once expr_match is moved
+import salt.utils  # TODO: Remove this once expr_match is moved
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network

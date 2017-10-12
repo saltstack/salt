@@ -16,7 +16,7 @@ import time
 import urllib
 
 # Import Salt libs
-import salt.utils  # Can be removed when backup_minion is moved
+import salt.utils  # TODO: Remove this when backup_minion is moved
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils

@@ -22,7 +22,7 @@ import salt.crypt
 import salt.daemons.masterapi
 import salt.exceptions
 import salt.minion
-import salt.utils  # Can be removed once get_master_key is moved
+import salt.utils  # TODO: Remove this once get_master_key is moved
 import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data

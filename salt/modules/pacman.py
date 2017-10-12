@@ -18,7 +18,7 @@ import logging
 import os.path
 
 # Import salt libs
-import salt.utils  # Can be removed once alias_function, fnmatch_multiple are moved
+import salt.utils  # TODO: Remove this once alias_function, fnmatch_multiple are moved
 import salt.utils.args
 import salt.utils.data
 import salt.utils.pkg

@@ -38,7 +38,7 @@ from salt.ext.six.moves.urllib.request import Request as _Request, urlopen as _u
 import salt.config
 import salt.syspaths
 from salt.modules.cmdmod import _parse_env
-import salt.utils  # Can be removed when alias_function is moved
+import salt.utils  # TODO: Remove this when alias_function is moved
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
