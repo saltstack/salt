@@ -4,8 +4,20 @@ Salt 2016.11.8 Release Notes
 
 Version 2016.11.8 is a bugfix release for :ref:`2016.11.0 <release-2016-11-0>`.]
 
+Anonymous Binds and LDAP/Active Directory
+-----------------------------------------
+
+When auth.ldap.anonymous is set to False, the bind password can no longer be empty.
+
 Changes for v2016.11.7..v2016.11.8
 ----------------------------------
+
+Security Fix
+============
+
+CVE-2017-14695 Directory traversal vulnerability in minion id validation in SaltStack. Allows remote minions with incorrect credentials to authenticate to a master via a crafted minion ID. Credit for discovering the security flaw goes to: Julian Brost (julian@0x4a42.net)
+
+CVE-2017-14696 Remote Denial of Service with a specially crafted authentication request. Credit for discovering the security flaw goes to: Julian Brost (julian@0x4a42.net)
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
