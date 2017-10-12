@@ -154,6 +154,6 @@ def get_sam_name(username):
     i.e. salt.utils.fix_local_user('Administrator') would return 'computername\administrator'
     '''
     if '\\' not in username:
-        username = '{0}\\{1}'.format(platform.node(), username)
+        username = '{0}\\{1}'.format(platform.node()[:15], username)
 
     return username.lower()
