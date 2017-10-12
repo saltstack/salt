@@ -504,6 +504,26 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    def test_check_file_meta_no_lsattr(self):
+        '''
+        Ensure that we skip attribute comparison if lsattr(1) is not found
+        '''
+        source = "salt:///README.md"
+        name = "/home/git/proj/a/README.md"
+        source_sum = {}
+        stats_result = {'size': 22, 'group': 'wheel', 'uid': 0, 'type': 'file',
+                        'mode': '0600', 'gid': 0, 'target': name, 'user':
+                        'root', 'mtime': 1508356390, 'atime': 1508356390,
+                        'inode': 447, 'ctime': 1508356390}
+        with patch('salt.modules.file.stats') as m_stats:
+            m_stats.return_value = stats_result
+            with patch('salt.utils.path.which') as m_which:
+                m_which.return_value = None
+                result = filemod.check_file_meta(name, name, source, source_sum,
+                                                 'root', 'root', '755', None,
+                                                 'base')
+        self.assertTrue(result, None)
+
     @skipIf(salt.utils.platform.is_windows(), 'SED is not available on Windows')
     def test_sed_limit_escaped(self):
         with tempfile.NamedTemporaryFile(mode='w+') as tfile:

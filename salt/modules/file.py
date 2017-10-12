@@ -4700,6 +4700,7 @@ def check_file_meta(
     contents
         File contents
     '''
+    lsattr_cmd = salt.utils.path.which('lsattr')
     changes = {}
     if not source_sum:
         source_sum = {}
@@ -4764,13 +4765,14 @@ def check_file_meta(
         if mode is not None and mode != smode:
             changes['mode'] = mode
 
-        diff_attrs = _cmp_attrs(name, attrs)
-        if (
-            attrs is not None and
-            diff_attrs[0] is not None or
-            diff_attrs[1] is not None
-        ):
-            changes['attrs'] = attrs
+        if lsattr_cmd:
+            diff_attrs = _cmp_attrs(name, attrs)
+            if (
+                attrs is not None and
+                diff_attrs[0] is not None or
+                diff_attrs[1] is not None
+            ):
+                changes['attrs'] = attrs
 
     return changes
 
