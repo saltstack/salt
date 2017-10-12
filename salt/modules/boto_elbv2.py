@@ -55,6 +55,8 @@ try:
     # pylint: enable=unused-import
 
     # TODO Version check using salt.utils.versions
+    import boto3
+    import botocore
     from botocore.exceptions import ClientError
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
