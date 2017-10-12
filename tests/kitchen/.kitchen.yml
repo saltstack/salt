@@ -80,8 +80,8 @@ verifier:
   name: shell
   remote_exec: false
 <% if ENV['TESTS_JUNIT_XML_PATH'].nil? %>
-  command: pytest -v tests/integration/$KITCHEN_SUITE
+  command: pytest -v tests/$KITCHEN_SUITE
 <% else %>
-  command: pytest --junit-xml <%= ENV['TESTS_JUNIT_XML_PATH'] %> -v tests/integration/$KITCHEN_SUITE
+  command: pytest --junit-xml <%= ENV['TESTS_JUNIT_XML_PATH'] %> -v tests/$KITCHEN_SUITE
 <% end %>
 <% end %>
