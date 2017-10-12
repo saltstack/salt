@@ -219,10 +219,9 @@ def create(vm_):
     ret = local.cmd(host, 'vagrant.init', [name], kwarg={'vm': vm_, 'start': True})
     log.info('response ==> %s', ret[host])
 
-    network_mask =  config.get_cloud_config_value(
+    network_mask = config.get_cloud_config_value(
         'network_mask', vm_, __opts__, default='')
     if 'ssh_host' not in vm_:
-        local = salt.client.LocalClient()
         ret = local.cmd(host,
                         'vagrant.get_ssh_config',
                         [name],
