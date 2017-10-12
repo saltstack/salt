@@ -26,6 +26,8 @@ import subprocess
 import json
 
 from salt.exceptions import LoaderError, CommandExecutionError
+from salt.utils import timed_subprocess
+
 try:
     import ansible
     import ansible.constants
@@ -132,18 +134,20 @@ class AnsibleModuleCaller(object):
         if args:
             kwargs['_raw_params'] = ' '.join(args)
         js_args = '{{"ANSIBLE_MODULE_ARGS": {args}}}'.format(args=json.dumps(kwargs))
-        js_out = subprocess.Popen(["echo", "{0}".format(js_args)], stdout=subprocess.PIPE)
-        md_exc = subprocess.Popen(['python', module.__file__],
-                                  stdin=js_out.stdout, stdout=subprocess.PIPE)
-        js_out.stdout.close()
-        js_out, js_err = md_exc.communicate()
+
+        proc_out = timed_subprocess.TimedProc(["echo", "{0}".format(js_args)],
+                                              stdout=subprocess.PIPE)
+        proc_out.run()
+        proc_exc = timed_subprocess.TimedProc(['python', module.__file__],
+                                              stdin=proc_out.stdout, stdout=subprocess.PIPE)
+        proc_exc.run()
 
         try:
-            out = json.loads(js_out)
+            out = json.loads(proc_exc.stdout)
         except ValueError as ex:
-            out = {'Error': (js_err and (js_err + '.') or str(ex))}
-            if js_out:
-                out['Given JSON output'] = js_out
+            out = {'Error': (proc_exc.stderr and (proc_exc.stderr + '.') or str(ex))}
+            if proc_exc.stdout:
+                out['Given JSON output'] = proc_exc.stdout
             return out
 
         if 'invocation' in out:
