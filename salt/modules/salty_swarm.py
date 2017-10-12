@@ -7,12 +7,13 @@ __grains__ = salt.loader.grains(__opts__)
 client = docker.from_env()
 server_name = __grains__['id']
 
-
+'''
 Dependencies
 ============
 
 - docker installed on host
 - docker sdk pip install -U docker
+'''
 
 def swarm_tokens():
     client = docker.APIClient(base_url='unix://var/run/docker.sock')
