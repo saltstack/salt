@@ -16,7 +16,8 @@ import yaml
 from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once is_true is moved
+import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
@@ -36,7 +37,7 @@ def _repack_pkgs(pkgs, normalize=True):
     return dict(
         [
             (_normalize_name(str(x)), str(y) if y is not None else y)
-            for x, y in six.iteritems(salt.utils.repack_dictlist(pkgs))
+            for x, y in six.iteritems(salt.utils.data.repack_dictlist(pkgs))
         ]
     )
 

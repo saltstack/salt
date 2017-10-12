@@ -60,6 +60,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.url
@@ -203,7 +204,7 @@ def init():
             repo_url = next(iter(remote))
             per_remote_conf = dict(
                 [(key, six.text_type(val)) for key, val in
-                 six.iteritems(salt.utils.repack_dictlist(remote[repo_url]))]
+                 six.iteritems(salt.utils.data.repack_dictlist(remote[repo_url]))]
             )
             if not per_remote_conf:
                 log.error(

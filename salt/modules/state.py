@@ -29,6 +29,7 @@ import salt.config
 import salt.payload
 import salt.state
 import salt.utils
+import salt.utils.data
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
@@ -1789,7 +1790,7 @@ def pkg(pkg_path,
     s_pkg.close()
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.files.fopen(lowstate_json, 'r') as fp_:
-        lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
+        lowstate = json.load(fp_, object_hook=salt.utils.data.decode_dict)
     # Check for errors in the lowstate
     for chunk in lowstate:
         if not isinstance(chunk, dict):
@@ -1804,7 +1805,7 @@ def pkg(pkg_path,
     roster_grains_json = os.path.join(root, 'roster_grains.json')
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
-            roster_grains = json.load(fp_, object_hook=salt.utils.decode_dict)
+            roster_grains = json.load(fp_, object_hook=salt.utils.data.decode_dict)
 
     popts = _get_opts(**kwargs)
     if os.path.isfile(roster_grains_json):

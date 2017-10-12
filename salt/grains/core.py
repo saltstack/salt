@@ -848,6 +848,8 @@ def _virtual(osdata):
     elif osdata['kernel'] == 'OpenBSD':
         if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
             grains['virtual'] = 'kvm'
+        if osdata['manufacturer'] == 'OpenBSD':
+            grains['virtual'] = 'vmm'
     elif osdata['kernel'] == 'SunOS':
         if grains['virtual'] == 'LDOM':
             roles = []

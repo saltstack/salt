@@ -37,7 +37,8 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed when alias_function, is_true are removed
+import salt.utils.data
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
@@ -228,7 +229,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if err_message:
         raise CommandExecutionError(
@@ -338,7 +339,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if err_message:
         raise CommandExecutionError(
@@ -431,7 +432,7 @@ def upgrade(refresh=True):  # pylint: disable=W0613
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
