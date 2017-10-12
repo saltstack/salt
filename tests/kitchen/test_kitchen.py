@@ -49,7 +49,7 @@ def func_builder(testdir):
     def func(self):
         self.testdir = testdir
         if 'TESTS_XML_OUTPUT_DIR' in os.environ:
-            env['TEST_JUNIT_XML_PREFIX'] = '--junit-xml {0}/kitchen.tests.{1}.%s.%s.xml'.format(
+            self.env['TEST_JUNIT_XML_PREFIX'] = '--junit-xml {0}/kitchen.tests.{1}.%s.%s.xml'.format(
                 os.environ.get('TESTS_XML_OUTPUT_DIR'),
                 self.testdir,
             )
@@ -57,7 +57,7 @@ def func_builder(testdir):
             cmd.retcode(
                 'bundle exec kitchen converge -c 999 all',
                 cwd=os.path.join(CURRENT_DIR, 'tests', self.testdir),
-                env=env,
+                env=self.env,
                 use_vt=self.use_vt,
             ),
             0
@@ -66,7 +66,7 @@ def func_builder(testdir):
             cmd.retcode(
                 'bundle exec kitchen verify all',
                 cwd=os.path.join(CURRENT_DIR, 'tests', self.testdir),
-                env=env,
+                env=self.env,
                 use_vt=self.use_vt,
             ),
             0
