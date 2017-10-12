@@ -2879,7 +2879,7 @@ def _findOptionValueInSeceditFile(option):
                     else:
                         break
                 else:
-                    log.error('error occured removing {0}'.format(_tfile))
+                    log.error('error occurred removing {0}'.format(_tfile))
             for _line in _secdata:
                 if _line.startswith(option):
                     return True, _line.split('=')[1].strip()
