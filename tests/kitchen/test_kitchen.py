@@ -1,5 +1,9 @@
+# -*- coding: utf-8 -*-
+'''
+Test wrapper for running all KitchenSalt tests
+'''
+from __future__ import absolute_import
 import os
-import logging
 
 from tests.support.unit import TestCase, skipIf
 import setup
@@ -8,7 +12,6 @@ import salt.utils.path
 from salt.modules import cmdmod as cmd
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
-log = logging.getLogger(__name__)
 
 
 @skipIf(not salt.utils.path.which('bundle'), 'Bundler is not installed')
