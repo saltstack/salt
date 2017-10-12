@@ -49,7 +49,7 @@ def func_builder(testdir):
     def func(self):
         self.testdir = testdir
         if 'TESTS_XML_OUTPUT_DIR' in os.environ:
-            self.env['TEST_JUNIT_XML_PATH'] = '{0}/kitchen.tests.{1}.%s.%s.xml'.format(
+            self.env['TESTS_JUNIT_XML_PATH'] = '{0}/kitchen.tests.{1}.$KITCHEN_SUITE.$KITCHEN_PLATFORM.xml'.format(
                 os.environ.get('TESTS_XML_OUTPUT_DIR'),
                 self.testdir,
             )
