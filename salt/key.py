@@ -501,7 +501,13 @@ class Key(object):
             if os.path.isdir(m_cache):
                 for minion in os.listdir(m_cache):
                     if minion not in minions and minion not in preserve_minions:
-                        shutil.rmtree(os.path.join(m_cache, minion))
+                        try:
+                            shutil.rmtree(os.path.join(m_cache, minion))
+                        except (OSError, IOError) as ex:
+                            log.warning('Key: Delete cache for %s got OSError/IOError: %s \n',
+                                        minion,
+                                        ex)
+                            continue
             cache = salt.cache.factory(self.opts)
             clist = cache.list(self.ACC)
             if clist:
@@ -979,7 +985,13 @@ class RaetKey(Key):
             if os.path.isdir(m_cache):
                 for minion in os.listdir(m_cache):
                     if minion not in minions and minion not in preserve_minions:
-                        shutil.rmtree(os.path.join(m_cache, minion))
+                        try:
+                            shutil.rmtree(os.path.join(m_cache, minion))
+                        except (OSError, IOError) as ex:
+                            log.warning('RaetKey: Delete cache for %s got OSError/IOError: %s \n',
+                                        minion,
+                                        ex)
+                            continue
                 cache = salt.cache.factory(self.opts)
                 clist = cache.list(self.ACC)
                 if clist:
