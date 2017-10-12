@@ -152,6 +152,8 @@ def get_sam_name(username):
     Everything is returned lower case
 
     i.e. salt.utils.fix_local_user('Administrator') would return 'computername\administrator'
+
+    .. note:: Long computer names are truncated to 15 characters
     '''
     if '\\' not in username:
         username = '{0}\\{1}'.format(platform.node()[:15], username)
