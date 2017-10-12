@@ -244,9 +244,7 @@ def present(name,
                 return ret
 
         # Group is not present, make it.
-        if __salt__['group.add'](name,
-                                 gid,
-                                 system=system):
+        if __salt__['group.add'](name, gid=gid, system=system):
             # if members to be added
             grp_members = None
             if members:
