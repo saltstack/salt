@@ -380,12 +380,9 @@ def create(vm_):
             raise SaltCloudConfigError("'ipv6' should be a boolean value.")
         kwargs['ipv6'] = ipv6
 
-    tag_string = config.get_cloud_config_value(
+    kwargs['tags'] = config.get_cloud_config_value(
         'tags', vm_, __opts__, search_global=False, default=False
     )
-    if tag_string:
-        for tag in tag_string.split(','):
-            kwargs['tags'].append(tag)
 
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False, default=None
