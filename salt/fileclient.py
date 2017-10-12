@@ -27,6 +27,7 @@ import salt.fileserver
 import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.http
 import salt.utils.path
 import salt.utils.platform
@@ -530,7 +531,7 @@ class Client(object):
                 try:
                     source_hash = source_hash.split('=')[-1]
                     form = salt.utils.files.HASHES_REVMAP[len(source_hash)]
-                    if salt.utils.get_hash(dest, form) == source_hash:
+                    if salt.utils.hashutils.get_hash(dest, form) == source_hash:
                         log.debug(
                             'Cached copy of %s (%s) matches source_hash %s, '
                             'skipping download', url, dest, source_hash
@@ -968,7 +969,7 @@ class LocalClient(Client):
             fnd_path = fnd
 
         hash_type = self.opts.get(u'hash_type', u'md5')
-        ret[u'hsum'] = salt.utils.get_hash(fnd_path, form=hash_type)
+        ret[u'hsum'] = salt.utils.hashutils.get_hash(fnd_path, form=hash_type)
         ret[u'hash_type'] = hash_type
         return ret
 
@@ -999,7 +1000,7 @@ class LocalClient(Client):
                 fnd_stat = None
 
         hash_type = self.opts.get(u'hash_type', u'md5')
-        ret[u'hsum'] = salt.utils.get_hash(fnd_path, form=hash_type)
+        ret[u'hsum'] = salt.utils.hashutils.get_hash(fnd_path, form=hash_type)
         ret[u'hash_type'] = hash_type
         return ret, fnd_stat
 
@@ -1194,7 +1195,7 @@ class RemoteClient(Client):
                         # Master has prompted a file verification, if the
                         # verification fails, re-download the file. Try 3 times
                         d_tries += 1
-                        hsum = salt.utils.get_hash(dest, salt.utils.stringutils.to_str(data.get(u'hash_type', b'md5')))  # future lint: disable=non-unicode-string
+                        hsum = salt.utils.hashutils.get_hash(dest, salt.utils.stringutils.to_str(data.get(u'hash_type', b'md5')))  # future lint: disable=non-unicode-string
                         if hsum != data[u'hsum']:
                             log.warning(
                                 u'Bad download of file %s, attempt %d of 3',
@@ -1308,7 +1309,7 @@ class RemoteClient(Client):
             else:
                 ret = {}
                 hash_type = self.opts.get(u'hash_type', u'md5')
-                ret[u'hsum'] = salt.utils.get_hash(path, form=hash_type)
+                ret[u'hsum'] = salt.utils.hashutils.get_hash(path, form=hash_type)
                 ret[u'hash_type'] = hash_type
                 return ret
         load = {u'path': path,

@@ -152,7 +152,7 @@ def wrap_tmpl_func(render_str):
                         ValueError,
                         OSError,
                         IOError) as exc:
-                    if salt.utils.is_bin_file(tmplsrc):
+                    if salt.utils.files.is_binary(tmplsrc):
                         # Template is a bin file, return the raw file
                         return dict(result=True, data=tmplsrc)
                     log.error(

@@ -20,11 +20,12 @@ import time
 from datetime import datetime
 
 # Import salt libs
-import salt.utils  # Can be removed once check_whitelist_blacklist, get_hash, is_bin_file, repack_dictlist are moved
+import salt.utils  # Can be removed once check_whitelist_blacklist is moved
 import salt.utils.configparser
 import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
@@ -2649,7 +2650,7 @@ class GitFS(GitBase):
         if not os.path.isfile(hashdest):
             if not os.path.exists(os.path.dirname(hashdest)):
                 os.makedirs(os.path.dirname(hashdest))
-            ret['hsum'] = salt.utils.get_hash(path, self.opts['hash_type'])
+            ret['hsum'] = salt.utils.hashutils.get_hash(path, self.opts['hash_type'])
             with salt.utils.files.fopen(hashdest, 'w+') as fp_:
                 fp_.write(ret['hsum'])
             return ret

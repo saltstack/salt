@@ -206,6 +206,7 @@ import salt.utils.args
 import salt.utils.decorators
 import salt.utils.docker
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.thin
@@ -5431,7 +5432,7 @@ def sls(name, mods=None, saltenv='base', **kwargs):
 
     ret = None
     try:
-        trans_tar_sha256 = salt.utils.get_hash(trans_tar, 'sha256')
+        trans_tar_sha256 = salt.utils.hashutils.get_hash(trans_tar, 'sha256')
         copy_to(name,
                 trans_tar,
                 os.path.join(trans_dest_path, 'salt_state.tgz'),

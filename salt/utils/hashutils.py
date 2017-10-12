@@ -12,6 +12,7 @@ import random
 
 # Import Salt libs
 from salt.ext import six
+import salt.utils.files
 import salt.utils.stringutils
 
 from salt.utils.decorators.jinja import jinja_filter
@@ -139,3 +140,26 @@ def random_hash(size=9999999999, hash_type=None):
         hash_type = 'md5'
     hasher = getattr(hashlib, hash_type)
     return hasher(salt.utils.stringutils.to_bytes(str(random.SystemRandom().randint(0, size)))).hexdigest()
+
+
+@jinja_filter('file_hashsum')
+def get_hash(path, form='sha256', chunk_size=65536):
+    '''
+    Get the hash sum of a file
+
+    This is better than ``get_sum`` for the following reasons:
+        - It does not read the entire file into memory.
+        - It does not return a string on error. The returned value of
+            ``get_sum`` cannot really be trusted since it is vulnerable to
+            collisions: ``get_sum(..., 'xyz') == 'Hash xyz not supported'``
+    '''
+    hash_type = hasattr(hashlib, form) and getattr(hashlib, form) or None
+    if hash_type is None:
+        raise ValueError('Invalid hash type: {0}'.format(form))
+
+    with salt.utils.files.fopen(path, 'rb') as ifile:
+        hash_obj = hash_type()
+        # read the file in in chunks, not the entire file
+        for chunk in iter(lambda: ifile.read(chunk_size), b''):
+            hash_obj.update(chunk)
+        return hash_obj.hexdigest()

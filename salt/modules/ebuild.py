@@ -21,7 +21,7 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once alias_function is moved
 import salt.utils.args
 import salt.utils.data
 import salt.utils.path
@@ -237,7 +237,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
     if len(names) == 0:
         return ''
@@ -334,7 +334,7 @@ def list_upgrades(refresh=True, backtrack=3, **kwargs):  # pylint: disable=W0613
 
         salt '*' pkg.list_upgrades
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
     return _get_upgradable(backtrack)
 
@@ -394,9 +394,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -597,7 +597,7 @@ def install(name=None,
             'binhost': binhost,
         }
     ))
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     try:
@@ -764,7 +764,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
 
         salt '*' pkg.update <package name>
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     full_atom = pkg
@@ -864,7 +864,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
            'result': True,
            'comment': ''}
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     if binhost == 'try':

@@ -24,7 +24,6 @@ import re
 import tempfile
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
@@ -34,6 +33,7 @@ import salt.utils.powershell
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.timed_subprocess
+import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
 import salt.grains.extra
@@ -188,7 +188,7 @@ def _check_loglevel(level='info', quiet=False):
         )
         return LOG_LEVELS['info']
 
-    if salt.utils.is_true(quiet) or str(level).lower() == 'quiet':
+    if salt.utils.data.is_true(quiet) or str(level).lower() == 'quiet':
         return None
 
     try:
@@ -525,7 +525,7 @@ def _run(cmd,
 
     if runas or umask:
         kwargs['preexec_fn'] = functools.partial(
-            salt.utils.chugid_and_umask,
+            salt.utils.user.chugid_and_umask,
             runas,
             _umask)
 
