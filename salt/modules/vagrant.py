@@ -479,26 +479,24 @@ def pause(name):
     return ret == 0
 
 
-def reboot(name, **kwargs):
+def reboot(name, provision=False):
     '''
     Reboot a VM. (vagrant reload)
-
-    keyword argument:
-
-    - provision: (False) also re-run the Vagrant provisioning scripts.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt <host> vagrant.reboot <salt_id> provision=True
+
+    :param name: The salt_id name you will use to control this VM
+    :param provision: (False) also re-run the Vagrant provisioning scripts.
     '''
     vm_ = get_vm_info(name)
     machine = vm_['machine']
-    prov =  kwargs.get('provision', False)
-    provision = '--provision' if prov else ''
+    prov = '--provision' if provision else ''
 
-    cmd = 'vagrant reload {} {}'.format(machine, provision)
+    cmd = 'vagrant reload {} {}'.format(machine, prov)
     ret = __salt__['cmd.retcode'](cmd,
                                   runas=vm_.get('runas'),
                                   cwd=vm_.get('cwd'))

@@ -76,7 +76,7 @@ def __virtual__():
     return False
 
 
-def _vagrant_call(node, function, section, comment, status_when_done=None,**kwargs):
+def _vagrant_call(node, function, section, comment, status_when_done=None, **kwargs):
     '''
     Helper to call the vagrant functions. Wildcards supported.
 
@@ -94,7 +94,7 @@ def _vagrant_call(node, function, section, comment, status_when_done=None,**kwar
         try:  # use shortcut if a single node name
             if __salt__['vagrant.get_vm_info'](node):
                 targeted_nodes = [node]
-        except (SaltInvocationError):
+        except SaltInvocationError:
             pass
 
     if not targeted_nodes:  # the shortcut failed, do this the hard way
@@ -281,12 +281,13 @@ def initialized(name, **kwargs):
 
     return ret
 
+
 def stopped(name):
     '''
     Stops a VM (or VMs) by shutting it (them) down nicely. (Runs ``vagrant halt``)
-    
+
     :param name: May be a Salt_id node, or a POSIX-style wildcard string.
-    
+
     .. code-block:: yaml
 
         node_name:

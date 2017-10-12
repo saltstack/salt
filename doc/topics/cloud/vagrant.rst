@@ -36,7 +36,7 @@ Salt-cloud will push the commands to install and provision a salt minion on
 the virtual machine, so you need not (perhaps **should** not) provision salt
 in your Vagrantfile, in most cases.
 
-If, however, your cloud master cannot open an ssh connection to the child VM,
+If, however, your cloud master cannot open an SSH connection to the child VM,
 you may **need** to let Vagrant provision the VM with Salt, and use some other
 method (such as passing a pillar dictionary to the VM) to pass the master's
 IP address to the VM. The VM can then attempt to reach the salt master in the
@@ -71,9 +71,9 @@ definitions for `multiple machines`_ then you need a ``machine`` parameter,
 
 .. _`multiple machines`: https://www.vagrantup.com/docs/multi-machine/
 
-Salt-cloud uses ssh to provision the minion. There must be a routable path
+Salt-cloud uses SSH to provision the minion. There must be a routable path
 from the cloud master to the VM. Usually, you will want to use
-a bridged network adapter for ssh. The address may not be known until
+a bridged network adapter for SSH. The address may not be known until
 DHCP assigns it. If ``ssh_host`` is not defined, and ``target_network``
 is defined, the driver will attempt to read the address from the output
 of an ``ifconfig`` command. Lacking either setting,
@@ -98,7 +98,7 @@ Profile configuration example:
       vagrant_runas: my-username  # the username who defined the Vagrantbox on the host
       # vagrant_up_timeout: 300 # (seconds) timeout for cmd.run of the "vagrant up" command
       # vagrant_provider: '' # option for "vagrant up" like: "--provider vmware_fusion"
-      # ssh_host: None  # "None" means try to find the routable ip address from "ifconfig"
+      # ssh_host: None  # "None" means try to find the routable IP address from "ifconfig"
       # target_network: None  # Expected CIDR address of your bridged network
       # force_minion_config: false  # Set "true" to re-purpose an existing VM
 
@@ -233,9 +233,9 @@ Create and use your new Salt minion
 
     sudo salt-cloud -p q1 v1
     sudo salt v1 network.ip_addrs
-      [ you get a list of ip addresses, including the bridged one ]
+      [ you get a list of IP addresses, including the bridged one ]
 
-- logged in to your laptop (or some other computer known to github)...
+- logged in to your laptop (or some other computer known to GitHub)...
 
     \[NOTE:\] if you are using MacOS, you need to type ``ssh-add -K`` after each boot,
     unless you use one of the methods in `this gist`_.
