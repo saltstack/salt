@@ -18,6 +18,7 @@ from tests.support.mock import (
 import salt.utils
 import salt.utils.data
 import salt.utils.jid
+import salt.utils.process
 import salt.utils.yamlencoding
 import salt.utils.zeromq
 from salt.exceptions import SaltSystemExit, CommandNotFoundError
@@ -65,28 +66,6 @@ class UtilsTestCase(TestCase):
         # Test incorrect lengths
         incorrect_jid_length = 2012
         self.assertEqual(salt.utils.jid.jid_to_time(incorrect_jid_length), '')
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_gen_mac(self):
-        with patch('random.randint', return_value=1) as random_mock:
-            self.assertEqual(random_mock.return_value, 1)
-            ret = salt.utils.gen_mac('00:16:3E')
-            expected_mac = '00:16:3E:01:01:01'
-            self.assertEqual(ret, expected_mac)
-
-    def test_mac_str_to_bytes(self):
-        self.assertRaises(ValueError, salt.utils.mac_str_to_bytes, '31337')
-        self.assertRaises(ValueError, salt.utils.mac_str_to_bytes, '0001020304056')
-        self.assertRaises(ValueError, salt.utils.mac_str_to_bytes, '00:01:02:03:04:056')
-        self.assertRaises(ValueError, salt.utils.mac_str_to_bytes, 'a0:b0:c0:d0:e0:fg')
-        self.assertEqual(b'\x10\x08\x06\x04\x02\x00', salt.utils.mac_str_to_bytes('100806040200'))
-        self.assertEqual(b'\xf8\xe7\xd6\xc5\xb4\xa3', salt.utils.mac_str_to_bytes('f8e7d6c5b4a3'))
-
-    def test_ip_bracket(self):
-        test_ipv4 = '127.0.0.1'
-        test_ipv6 = '::1'
-        self.assertEqual(test_ipv4, salt.utils.ip_bracket(test_ipv4))
-        self.assertEqual('[{0}]'.format(test_ipv6), salt.utils.ip_bracket(test_ipv6))
 
     def test_is_jid(self):
         self.assertTrue(salt.utils.jid.is_jid('20131219110700123489'))  # Valid JID
@@ -431,25 +410,6 @@ class UtilsTestCase(TestCase):
         # Make sure we handle non-yaml junk data
         ret = salt.utils.data.repack_dictlist(LOREM_IPSUM)
         self.assertDictEqual(ret, {})
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_daemonize_if(self):
-        # pylint: disable=assignment-from-none
-        with patch('sys.argv', ['salt-call']):
-            ret = salt.utils.daemonize_if({})
-            self.assertEqual(None, ret)
-
-        ret = salt.utils.daemonize_if({'multiprocessing': False})
-        self.assertEqual(None, ret)
-
-        with patch('sys.platform', 'win'):
-            ret = salt.utils.daemonize_if({})
-            self.assertEqual(None, ret)
-
-        with patch('salt.utils.daemonize'):
-            salt.utils.daemonize_if({})
-            self.assertTrue(salt.utils.daemonize.called)
-        # pylint: enable=assignment-from-none
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_gen_jid(self):

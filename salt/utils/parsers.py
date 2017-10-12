@@ -36,6 +36,7 @@ import salt.utils.files
 import salt.utils.jid
 import salt.utils.kinds as kinds
 import salt.utils.platform
+import salt.utils.process
 import salt.utils.user
 import salt.utils.xdg
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -1004,7 +1005,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                 log.shutdown_multiprocessing_logging_listener(daemonizing=True)
 
             # Late import so logging works correctly
-            salt.utils.daemonize()
+            salt.utils.process.daemonize()
 
         # Setup the multiprocessing log queue listener if enabled
         self._setup_mp_logging_listener()
