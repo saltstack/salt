@@ -59,12 +59,12 @@ platforms:
     driver_config:
       run_command: /lib/systemd/systemd
       provision_command:
-        - DEBIAN_FRONTEND=noninteractive apt-get install -y python-pip python-dev gcc git
+        - DEBIAN_FRONTEND=noninteractive apt-get install -y python-pip python-dev gcc git locales console-data
   - name: debian
     driver_config:
       run_command: /lib/systemd/systemd
       provision_command:
-        - DEBIAN_FRONTEND=noninteractive apt-get install -y python-pip python-dev gcc git
+        - DEBIAN_FRONTEND=noninteractive apt-get install -y python-pip python-dev gcc git locales console-data
 <% end %>
 
 <% if File.exists?('suites.yml') %>

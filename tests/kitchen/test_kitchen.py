@@ -25,27 +25,38 @@ class KitchenTestCase(TestCase):
         cls.use_vt = int(os.environ.get('TESTS_LOG_LEVEL')) >= 3
         cmd.run('python setup.py sdist', cwd=cls.topdir)
         cmd.run('bundle install', cwd=CURRENT_DIR)
+        cls.env = {
+            'KITCHEN_YAML': os.path.join(CURRENT_DIR, '.kitchen.yml'),
+            'SALT_SDIST_PATH': os.path.join(cls.topdir, 'dist', 'salt-{0}.tar.gz'.format(setup.__version__)),
+        }
 
     @classmethod
     def tearDownClass(cls):
         del cls.topdir
+        del cls.env
+
+    def tearDown(self):
+        cmd.run(
+            'bundle exec kitchen destroy all',
+            cwd=os.path.join(CURRENT_DIR, 'tests', self.testdir),
+            env=self.env,
+            use_vt=self.use_vt,
+        )
+        del self.testdir
 
 
 def func_builder(testdir):
     def func(self):
-        env = {
-            'KITCHEN_YAML': os.path.join(CURRENT_DIR, '.kitchen.yml'),
-            'SALT_SDIST_PATH': os.path.join(self.topdir, 'dist', 'salt-{0}.tar.gz'.format(setup.__version__)),
-        }
+        self.testdir = testdir
         if 'TESTS_XML_OUTPUT_DIR' in os.environ:
             env['TEST_JUNIT_XML_PREFIX'] = '--junit-xml {0}/kitchen.tests.{1}.%s.%s.xml'.format(
                 os.environ.get('TESTS_XML_OUTPUT_DIR'),
-                testdir,
+                self.testdir,
             )
         self.assertEqual(
             cmd.retcode(
-                'bundle exec kitchen create -c 4 all',
-                cwd=os.path.join(CURRENT_DIR, 'tests', testdir),
+                'bundle exec kitchen converge -c 999 all',
+                cwd=os.path.join(CURRENT_DIR, 'tests', self.testdir),
                 env=env,
                 use_vt=self.use_vt,
             ),
@@ -54,16 +65,7 @@ def func_builder(testdir):
         self.assertEqual(
             cmd.retcode(
                 'bundle exec kitchen verify all',
-                cwd=os.path.join(CURRENT_DIR, 'tests', testdir),
-                env=env,
-                use_vt=self.use_vt,
-            ),
-            0
-        )
-        self.assertEqual(
-            cmd.retcode(
-                'bundle exec kitchen destroy all',
-                cwd=os.path.join(CURRENT_DIR, 'tests', testdir),
+                cwd=os.path.join(CURRENT_DIR, 'tests', self.testdir),
                 env=env,
                 use_vt=self.use_vt,
             ),
