@@ -735,6 +735,39 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             status.append(results)
         return status
 
+    def run_kitchen_tests(self):
+        '''
+        Execute the kitchen tests
+        '''
+        named_kitchen_test = []
+        if self.options.name:
+            for test in self.options.name:
+                if not test.startswith(('tests.kitchen.', 'kitchen.')):
+                    continue
+                named_kitchen_test.append(test)
+
+        if not self.options.kitchen and not named_kitchen_test:
+            # We are not explicitly running the unit tests and none of the
+            # names passed to --name is a unit test.
+            return [True]
+
+        status = []
+        if self.options.kitchen:
+            results = self.run_suite(
+                os.path.join(TEST_DIR, 'kitchen'), 'Kitchen', suffix='test_*.py'
+            )
+            status.append(results)
+            # We executed ALL unittests, we can skip running unittests by name
+            # below
+            return status
+
+        for name in named_kitchen_test:
+            results = self.run_suite(
+                os.path.join(TEST_DIR, 'kitchen'), name, suffix='test_*.py', load_from_name=True
+            )
+            status.append(results)
+        return status
+
 
 def main():
     '''
@@ -754,6 +787,8 @@ def main():
         status = parser.run_integration_tests()
         overall_status.extend(status)
         status = parser.run_unit_tests()
+        overall_status.extend(status)
+        status = parser.run_kitchen_tests()
         overall_status.extend(status)
         false_count = overall_status.count(False)
 
