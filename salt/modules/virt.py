@@ -656,7 +656,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
             if key not in attributes or not attributes[key]:
                 attributes[key] = value
 
-    def _assign_mac(attributes):
+    def _assign_mac(attributes, hypervisor):
         dmac = kwargs.get('dmac', None)
         if dmac is not None:
             log.debug('DMAC address is {0}'.format(dmac))
@@ -666,11 +666,15 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
                 msg = 'Malformed MAC address: {0}'.format(dmac)
                 raise CommandExecutionError(msg)
         else:
-            attributes['mac'] = salt.utils.network.gen_mac()
+            if hypervisor in ['qemu', 'kvm']:
+                attributes['mac'] = salt.utils.network.gen_mac(
+                    prefix='52:54:00')
+            else:
+                attributes['mac'] = salt.utils.network.gen_mac()
 
     for interface in interfaces:
         _normalize_net_types(interface)
-        _assign_mac(interface)
+        _assign_mac(interface, hypervisor)
         if hypervisor in overlays:
             _apply_default_overlay(interface)
 
