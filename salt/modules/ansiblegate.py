@@ -44,7 +44,7 @@ class AnsibleModuleResolver(object):
     This class is to resolve all available modules in Ansible.
     '''
     def __init__(self, opts):
-        self._opts = opts
+        self.opts = opts
         self._modules_map = {}
 
     def _get_modules_map(self, path=None):
@@ -114,8 +114,12 @@ class AnsibleModuleResolver(object):
 
 
 class AnsibleModuleCaller(object):
+    DEFAULT_TIMEOUT = 1200  # seconds (20 minutes)
+    OPT_TIMEOUT_KEY = 'ansible_timeout'
+
     def __init__(self, resolver):
         self._resolver = resolver
+        self.timeout = self._resolver.opts.get(self.OPT_TIMEOUT_KEY, self.DEFAULT_TIMEOUT)
 
     def call(self, module, *args, **kwargs):
         '''
@@ -136,10 +140,10 @@ class AnsibleModuleCaller(object):
         js_args = '{{"ANSIBLE_MODULE_ARGS": {args}}}'.format(args=json.dumps(kwargs))
 
         proc_out = timed_subprocess.TimedProc(["echo", "{0}".format(js_args)],
-                                              stdout=subprocess.PIPE)
+                                              stdout=subprocess.PIPE, timeout=self.timeout)
         proc_out.run()
         proc_exc = timed_subprocess.TimedProc(['python', module.__file__],
-                                              stdin=proc_out.stdout, stdout=subprocess.PIPE)
+                                              stdin=proc_out.stdout, stdout=subprocess.PIPE, timeout=self.timeout)
         proc_exc.run()
 
         try:
@@ -152,6 +156,8 @@ class AnsibleModuleCaller(object):
 
         if 'invocation' in out:
             del out['invocation']
+
+        out['timeout'] = self.timeout
 
         return out
 
