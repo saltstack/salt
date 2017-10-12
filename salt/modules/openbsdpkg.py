@@ -29,7 +29,8 @@ import re
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils  # Can be removed when is_true is moved
+import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 
@@ -209,7 +210,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -268,7 +269,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(

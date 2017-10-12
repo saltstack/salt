@@ -77,7 +77,7 @@ import os
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
-import salt.utils
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 
@@ -464,7 +464,7 @@ def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
     '''
-    if not salt.utils.exactly_one((subnet_ids, subnet_names)):
+    if not salt.utils.data.exactly_one((subnet_ids, subnet_names)):
         raise SaltInvocationError('One (but not both) of subnet_ids or '
                                   'subnet_names must be provided.')
 

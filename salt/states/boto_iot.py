@@ -81,7 +81,7 @@ import time
 import json
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.data
 from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
@@ -371,7 +371,7 @@ def policy_present(name, policyName, policyDocument,
     if isinstance(policyDocument, string_types):
         policyDocument = json.loads(policyDocument)
 
-    r = salt.utils.compare_dicts(describeDict, policyDocument)
+    r = salt.utils.data.compare_dicts(describeDict, policyDocument)
     if bool(r):
         if __opts__['test']:
             msg = 'Policy {0} set to be modified.'.format(policyName)

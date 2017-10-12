@@ -11,7 +11,8 @@ import math
 import json
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed once is_true is moved
+import salt.utils.data
 import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
@@ -75,10 +76,11 @@ def get(key, default=u'', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
         grains = __grains__
     else:
         grains = json.loads(json.dumps(__grains__))
-    return salt.utils.traverse_dict_and_list(__grains__,
-                                             key,
-                                             default,
-                                             delimiter)
+    return salt.utils.data.traverse_dict_and_list(
+        __grains__,
+        key,
+        default,
+        delimiter)
 
 
 def has_value(key):
@@ -99,7 +101,9 @@ def has_value(key):
 
         salt '*' grains.has_value pkg:apache
     '''
-    return True if salt.utils.traverse_dict_and_list(__grains__, key, False) else False
+    return True \
+        if salt.utils.data.traverse_dict_and_list(__grains__, key, False) \
+        else False
 
 
 def items(sanitize=False):

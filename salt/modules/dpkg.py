@@ -11,8 +11,8 @@ import re
 import datetime
 
 # Import salt libs
-import salt.utils  # Can be removed once compare_dicts is moved
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -131,7 +131,7 @@ def unpurge(*packages):
     )
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs'](purge_desired=True)
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def list_pkgs(*packages):

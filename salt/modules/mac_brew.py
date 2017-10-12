@@ -17,7 +17,8 @@ import json
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils  # Can be removed when alias_function, is_true are moved
+import salt.utils.data
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.versions
@@ -240,7 +241,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -393,7 +394,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -480,7 +481,7 @@ def upgrade(refresh=True):
     result = _call_brew('brew upgrade', failhard=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
