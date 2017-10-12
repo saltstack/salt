@@ -38,7 +38,7 @@ def func_builder(testdir):
             'SALT_SDIST_PATH': os.path.join(self.topdir, 'dist', 'salt-{0}.tar.gz'.format(setup.__version__)),
         }
         if 'TESTS_XML_OUTPUT_DIR' in os.environ:
-            env['PYTEST_ADDOPTS'] = '--junit-xml {0}/kitchen.tests.{1}.xml'.format(
+            env['TEST_JUNIT_XML_PREFIX'] = '--junit-xml {0}/kitchen.tests.{1}.%s.%s.xml'.format(
                 os.environ.get('TESTS_XML_OUTPUT_DIR'),
                 testdir,
             )

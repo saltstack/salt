@@ -80,5 +80,5 @@ suites:
 verifier:
   name: shell
   remote_exec: false
-  command: pytest -v tests/integration/$KITCHEN_SUITE
+  command: pytest --junit-xml <%= ENV['TEST_JUNIT_XML_PREFIX'] % [ENV['KITCHEN_SUITE'], ENV['KITCHEN_PLATFORM']] %> -v tests/integration/$KITCHEN_SUITE
 <% end %>
