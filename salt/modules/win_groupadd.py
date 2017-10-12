@@ -36,7 +36,7 @@ def __virtual__():
     return (False, "Module win_groupadd: module only works on Windows systems")
 
 
-def add(name, **kwargs):
+def add(name, *args, **kwargs):
     '''
     Add the specified group
 
