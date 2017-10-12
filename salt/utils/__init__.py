@@ -51,12 +51,6 @@ except ImportError:
     HAS_CPROFILE = False
 
 try:
-    import Crypto.Random
-    HAS_CRYPTO = True
-except ImportError:
-    HAS_CRYPTO = False
-
-try:
     import timelib
     HAS_TIMELIB = True
 except ImportError:
@@ -73,12 +67,6 @@ try:
     HAS_WIN32API = True
 except ImportError:
     HAS_WIN32API = False
-
-try:
-    import setproctitle
-    HAS_SETPROCTITLE = True
-except ImportError:
-    HAS_SETPROCTITLE = False
 
 try:
     import ctypes
@@ -171,91 +159,6 @@ def get_master_key(key_user, opts, skip_perm_errors=False):
     except (OSError, IOError):
         # Fall back to eauth
         return ''
-
-
-def reinit_crypto():
-    '''
-    When a fork arises, pycrypto needs to reinit
-    From its doc::
-
-        Caveat: For the random number generator to work correctly,
-        you must call Random.atfork() in both the parent and
-        child processes after using os.fork()
-
-    '''
-    if HAS_CRYPTO:
-        Crypto.Random.atfork()
-
-
-def daemonize(redirect_out=True):
-    '''
-    Daemonize a process
-    '''
-    # Late import to avoid circular import.
-    import salt.utils.files
-
-    try:
-        pid = os.fork()
-        if pid > 0:
-            # exit first parent
-            reinit_crypto()
-            sys.exit(salt.defaults.exitcodes.EX_OK)
-    except OSError as exc:
-        log.error(
-            'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
-        )
-        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-
-    # decouple from parent environment
-    os.chdir('/')
-    # noinspection PyArgumentList
-    os.setsid()
-    os.umask(18)
-
-    # do second fork
-    try:
-        pid = os.fork()
-        if pid > 0:
-            reinit_crypto()
-            sys.exit(salt.defaults.exitcodes.EX_OK)
-    except OSError as exc:
-        log.error(
-            'fork #2 failed: {0} ({1})'.format(
-                exc.errno, exc.strerror
-            )
-        )
-        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-
-    reinit_crypto()
-
-    # A normal daemonization redirects the process output to /dev/null.
-    # Unfortunately when a python multiprocess is called the output is
-    # not cleanly redirected and the parent process dies when the
-    # multiprocessing process attempts to access stdout or err.
-    if redirect_out:
-        with salt.utils.files.fopen('/dev/null', 'r+') as dev_null:
-            # Redirect python stdin/out/err
-            # and the os stdin/out/err which can be different
-            os.dup2(dev_null.fileno(), sys.stdin.fileno())
-            os.dup2(dev_null.fileno(), sys.stdout.fileno())
-            os.dup2(dev_null.fileno(), sys.stderr.fileno())
-            os.dup2(dev_null.fileno(), 0)
-            os.dup2(dev_null.fileno(), 1)
-            os.dup2(dev_null.fileno(), 2)
-
-
-def daemonize_if(opts):
-    '''
-    Daemonize a module function process if multiprocessing is True and the
-    process is not being called by salt-call
-    '''
-    if 'salt-call' in sys.argv[0]:
-        return
-    if not opts.get('multiprocessing', True):
-        return
-    if sys.platform.startswith('win'):
-        return
-    daemonize(False)
 
 
 def profile_func(filename=None):
@@ -1385,14 +1288,6 @@ def import_json():
             continue
 
 
-def appendproctitle(name):
-    '''
-    Append "name" to the current process title
-    '''
-    if HAS_SETPROCTITLE:
-        setproctitle.setproctitle(setproctitle.getproctitle() + ' ' + name)
-
-
 def human_size_to_bytes(human_size):
     '''
     Convert human-readable units to bytes
@@ -1517,6 +1412,58 @@ def fnmatch_multiple(candidates, pattern):
 # MOVED FUNCTIONS
 #
 # These are deprecated and will be removed in Neon.
+def appendproctitle(name):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.process
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.appendproctitle\' detected. This function has been '
+        'moved to \'salt.utils.process.appendproctitle\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.process.appendproctitle(name)
+
+
+def daemonize(redirect_out=True):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.process
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.daemonize\' detected. This function has been '
+        'moved to \'salt.utils.process.daemonize\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.process.daemonize(redirect_out)
+
+
+def daemonize_if(opts):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.process
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.daemonize_if\' detected. This function has been '
+        'moved to \'salt.utils.process.daemonize_if\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.process.daemonize_if(opts)
+
+
+def reinit_crypto():
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.crypt
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.reinit_crypto\' detected. This function has been '
+        'moved to \'salt.utils.crypt.reinit_crypto\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.crypt.reinit_crypto()
+
+
 def to_bytes(s, encoding=None):
     # Late import to avoid circular import.
     import salt.utils.versions

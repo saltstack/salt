@@ -98,6 +98,7 @@ import salt.utils.minion
 import salt.utils.minions
 import salt.utils.network
 import salt.utils.platform
+import salt.utils.process
 import salt.utils.schedule
 import salt.utils.user
 import salt.utils.zeromq
@@ -1470,12 +1471,12 @@ class Minion(MinionBase):
             # Shutdown the multiprocessing before daemonizing
             salt.log.setup.shutdown_multiprocessing_logging()
 
-            salt.utils.daemonize_if(opts)
+            salt.utils.process.daemonize_if(opts)
 
             # Reconfigure multiprocessing logging after daemonizing
             salt.log.setup.setup_multiprocessing_logging()
 
-        salt.utils.appendproctitle(u'{0}._thread_return {1}'.format(cls.__name__, data[u'jid']))
+        salt.utils.process.appendproctitle(u'{0}._thread_return {1}'.format(cls.__name__, data[u'jid']))
 
         sdata = {u'pid': os.getpid()}
         sdata.update(data)
@@ -1654,7 +1655,7 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
-        salt.utils.appendproctitle(u'{0}._thread_multi_return {1}'.format(cls.__name__, data[u'jid']))
+        salt.utils.process.appendproctitle(u'{0}._thread_multi_return {1}'.format(cls.__name__, data[u'jid']))
         multifunc_ordered = opts.get(u'multifunc_ordered', False)
         num_funcs = len(data[u'fun'])
         if multifunc_ordered:

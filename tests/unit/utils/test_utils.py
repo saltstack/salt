@@ -18,6 +18,7 @@ from tests.support.mock import (
 import salt.utils
 import salt.utils.data
 import salt.utils.jid
+import salt.utils.process
 import salt.utils.yamlencoding
 import salt.utils.zeromq
 from salt.exceptions import SaltSystemExit, CommandNotFoundError
@@ -431,25 +432,6 @@ class UtilsTestCase(TestCase):
         # Make sure we handle non-yaml junk data
         ret = salt.utils.data.repack_dictlist(LOREM_IPSUM)
         self.assertDictEqual(ret, {})
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_daemonize_if(self):
-        # pylint: disable=assignment-from-none
-        with patch('sys.argv', ['salt-call']):
-            ret = salt.utils.daemonize_if({})
-            self.assertEqual(None, ret)
-
-        ret = salt.utils.daemonize_if({'multiprocessing': False})
-        self.assertEqual(None, ret)
-
-        with patch('sys.platform', 'win'):
-            ret = salt.utils.daemonize_if({})
-            self.assertEqual(None, ret)
-
-        with patch('salt.utils.daemonize'):
-            salt.utils.daemonize_if({})
-            self.assertTrue(salt.utils.daemonize.called)
-        # pylint: enable=assignment-from-none
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_gen_jid(self):
