@@ -474,11 +474,14 @@ logger = logging.getLogger(__name__)
 import cherrypy
 try:
     from cherrypy.lib import cpstats
-except ImportError:
+except AttributeError:
     cpstats = None
     logger.warn('Import of cherrypy.cpstats failed. '
         'Possible upstream bug: '
         'https://github.com/cherrypy/cherrypy/issues/1444')
+except ImportError:
+    cpstats = None
+    logger.warn('Import of cherrypy.cpstats failed.')
 
 import yaml
 import salt.ext.six as six
