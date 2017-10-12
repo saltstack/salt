@@ -22,7 +22,7 @@ class KitchenTestCase(TestCase):
         setup kitchen tests
         '''
         cls.topdir = '/' + os.path.join(*CURRENT_DIR.split('/')[:-2])
-        cls.use_vt = int(os.environ.get('TESTS_LOG_LEVEL')) >= 3
+        cls.use_vt = int(os.environ.get('TESTS_LOG_LEVEL')) >= 5
         cmd.run('python setup.py sdist', cwd=cls.topdir)
         cmd.run('bundle install', cwd=CURRENT_DIR)
         cls.env = {
