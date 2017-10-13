@@ -395,63 +395,116 @@ def _sunos_cpudata():
     return grains
 
 
+def _linux_memdata():
+    '''
+    Return the memory information for Linux-like systems
+    '''
+    grains = {'mem_total': 0, 'swap_total': 0}
+
+    meminfo = '/proc/meminfo'
+    if os.path.isfile(meminfo):
+        with salt.utils.files.fopen(meminfo, 'r') as ifile:
+            for line in ifile:
+                comps = line.rstrip('\n').split(':')
+                if not len(comps) > 1:
+                    continue
+                if comps[0].strip() == 'MemTotal':
+                    # Use floor division to force output to be an integer
+                    grains['mem_total'] = int(comps[1].split()[0]) // 1024
+                if comps[0].strip() == 'SwapTotal':
+                    # Use floor division to force output to be an integer
+                    grains['swap_total'] = int(comps[1].split()[0]) // 1024
+    return grains
+
+
+def _osx_memdata():
+    '''
+    Return the memory information for BSD-like systems
+    '''
+    grains = {'mem_total': 0, 'swap_total': 0}
+
+    sysctl = salt.utils.path.which('sysctl')
+    if sysctl:
+        mem = __salt__['cmd.run']('{0} -n hw.memsize'.format(sysctl))
+        swap_total = __salt__['cmd.run']('{0} -n vm.swapusage').split()[2]
+        if swap_total.endswith('K'):
+            _power = 2**10
+        elif swap_total.endswith('M'):
+            _power = 2**20
+        elif swap_total.endswith('G'):
+            _power = 2**30
+        swap_total = swap_total[:-1] * _power
+
+        grains['mem_total'] = int(mem) // 1024 // 1024
+        grains['swap_total'] = int(swap_total) // 1024 // 1024
+    return grains
+
+
+def _bsd_memdata(osdata):
+    '''
+    Return the memory information for BSD-like systems
+    '''
+    grains = {'mem_total': 0, 'swap_total': 0}
+
+    sysctl = salt.utils.path.which('sysctl')
+    if sysctl:
+        mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
+        swap_total = __salt__['cmd.run']('{0} -n vm.swap_total')
+        if osdata['kernel'] == 'NetBSD' and mem.startswith('-'):
+            mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
+        grains['mem_total'] = int(mem) // 1024 // 1024
+        grains['swap_total'] = int(swap_total) // 1024 // 1024
+    return grains
+
+
+def _sunos_memdata():
+    '''
+    Return the memory information for SunOS-like systems
+    '''
+    grains = {'mem_total': 0, 'swap_total': 0}
+
+    prtconf = '/usr/sbin/prtconf 2>/dev/null'
+    for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
+        comps = line.split(' ')
+        if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
+            grains['mem_total'] = int(comps[2].strip())
+
+    swap_cmd = salt.utils.path.which('swap')
+    swap_total = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()[1]
+    grains['swap_total'] = int(swap_total) // 1024
+    return grains
+
+
+def _windows_memdata():
+    '''
+    Return the memory information for Windows systems
+    '''
+    grains = {'mem_total': 0}
+    # get the Total Physical memory as reported by msinfo32
+    tot_bytes = win32api.GlobalMemoryStatusEx()['TotalPhys']
+    # return memory info in gigabytes
+    grains['mem_total'] = int(tot_bytes / (1024 ** 2))
+    return grains
+
+
 def _memdata(osdata):
     '''
     Gather information about the system memory
     '''
     # Provides:
     #   mem_total
+    #   swap_total, for supported systems.
     grains = {'mem_total': 0}
     if osdata['kernel'] == 'Linux':
-        meminfo = '/proc/meminfo'
-
-        if os.path.isfile(meminfo):
-            with salt.utils.files.fopen(meminfo, 'r') as ifile:
-                for line in ifile:
-                    comps = line.rstrip('\n').split(':')
-                    if not len(comps) > 1:
-                        continue
-                    if comps[0].strip() == 'MemTotal':
-                        # Use floor division to force output to be an integer
-                        grains['mem_total'] = int(comps[1].split()[0]) // 1024
-                    if comps[0].strip() == 'SwapTotal':
-                        # Use floor division to force output to be an integer
-                        grains['swap_total'] = int(comps[1].split()[0]) // 1024
-    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Darwin'):
-        sysctl = salt.utils.path.which('sysctl')
-        if sysctl:
-            if osdata['kernel'] == 'Darwin':
-                mem = __salt__['cmd.run']('{0} -n hw.memsize'.format(sysctl))
-                swap_total = __salt__['cmd.run']('{0} -n vm.swapusage').split()[2]
-                if swap_total.endswith('K'):
-                    _power = 2**10
-                elif swap_total.endswith('M'):
-                    _power = 2**20
-                elif swap_total.endswith('G'):
-                    _power = 2**30
-                swap_total = swap_total[:-1] * _power
-            else:
-                mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
-                swap_total = __salt__['cmd.run']('{0} -n vm.swap_total')
-            if osdata['kernel'] == 'NetBSD' and mem.startswith('-'):
-                mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
-            grains['mem_total'] = int(mem) // 1024 // 1024
-            grains['swap_total'] = int(swap_total) // 1024 // 1024
+        grains.update(_linux_memdata())
+    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+        grains.update(_bsd_memdata(osdata))
+    elif osdata['kernel'] == 'Darwin':
+        grains.update(_osx_memdata())
     elif osdata['kernel'] == 'SunOS':
-        prtconf = '/usr/sbin/prtconf 2>/dev/null'
-        for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
-            comps = line.split(' ')
-            if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
-                grains['mem_total'] = int(comps[2].strip())
-
-        swap_cmd = salt.utils.path.which('swap')
-        swap_total = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()[1]
-        grains['swap_total'] = int(swap_total) // 1024
+        grains.update(_sunos_memdata())
     elif osdata['kernel'] == 'Windows' and HAS_WMI:
-        # get the Total Physical memory as reported by msinfo32
-        tot_bytes = win32api.GlobalMemoryStatusEx()['TotalPhys']
-        # return memory info in gigabytes
-        grains['mem_total'] = int(tot_bytes / (1024 ** 2))
+        grains.update(_windows_memdata())
     return grains
 
 
