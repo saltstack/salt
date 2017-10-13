@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import docker
 import salt.config
 import salt.loader
@@ -15,6 +16,7 @@ Dependencies
 - docker sdk pip install -U docker
 '''
 
+
 def swarm_tokens():
     client = docker.APIClient(base_url='unix://var/run/docker.sock')
     service = client.inspect_swarm()
@@ -24,16 +26,18 @@ def swarm_tokens():
 def swarm_init(advertise_addr=str,
                listen_addr=int,
                force_new_cluster=bool):
-    d = {}               
+    d = {}            
     try:
+        
         '''
         Initalize Docker on Minion as a Swarm Manager
         salt <Target> advertise_addr='ens4' listen_addr='0.0.0.0:5000' force_new_cluster=False
         '''
+        
         client.swarm.init(advertise_addr,
                           listen_addr,
                           force_new_cluster)
-        output =  'Docker swarm has been Initalized on '+   server_name  + ' and the worker/manager Join token is below'
+        output = 'Docker swarm has been Initalized on '+   server_name  + ' and the worker/manager Join token is below'
         d.update({'Comment': output,
                   'Tokens': swarm_tokens()})
         return d
@@ -62,8 +66,8 @@ def joinswarm(remote_addr=int,
     except:
         d.update({'Error': 'Please make sure this minion is not part of a swarm and your passing remote_addr, listen_addr and token correctly.'})
         return d
-        
-    
+
+
 def leave_swarm(force=bool):
     '''
     Will force the minion to leave the swarm
@@ -85,7 +89,7 @@ def service_create(image=str,
     d = {}               
     try:
         replica_mode = docker.types.ServiceMode('replicated', replicas=replicas)
-        ports = docker.types.EndpointSpec(ports={ target_port: published_port })
+        ports = docker.types.EndpointSpec(ports={target_port: published_port})
         client.services.create(name=name,
                                image=image,
                                command=command,
@@ -122,7 +126,7 @@ def swarm_service_info(service_name=str):
         create_date = dump['CreatedAt']
         update_date = dump['UpdatedAt']
         labels = dump['Spec']['Labels']
-        replicas =  dump['Spec']['Mode']['Replicated']['Replicas']
+        replicas = dump['Spec']['Mode']['Replicated']['Replicas']
         network = dump['Endpoint']['VirtualIPs']
         image = dump['Spec']['TaskTemplate']['ContainerSpec']['Image']
         for items in ports:
@@ -155,8 +159,7 @@ def remove_service(service=str):
     try:
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         service = client.remove_service(service)
-        d.update({'Service Deleted':service,
-                  'Minion ID': server_name })
+        d.update({'Service Deleted':service, 'Minion ID':server_name})
         return d
     except:
         d.update({'Error': 'service arg is missing?'})
@@ -167,7 +170,7 @@ def node_ls(server=str):
     d = {}
     try:
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
-        service = client.nodes(filters=({'name': server }))
+        service = client.nodes(filters=({'name':server}))
         getdata = json.dumps(service)
         dump = json.loads(getdata)
         for items in dump:
@@ -176,8 +179,8 @@ def node_ls(server=str):
             hostnames = items['Description']['Hostname']
             ids = items['ID']
             role = items['Spec']['Role']
-            availability = items['Spec']['Availability'] 
-            status =  items['Status']
+            availability = items['Spec']['Availability']
+            status = items['Status']
             Version = items['Version']['Index']
             d.update({'Docker Version': docker_version,
                       'Platform': platform,
@@ -198,10 +201,10 @@ def remove_node(node_id=str, force=bool):
     d = {}
     try:
         if force == 'True':
-            service = client.remove_node(node_id,force=True) 
+            service = client.remove_node(node_id, force=True) 
             return service
         else:
-            service = client.remove_node(node_id,force=False)
+            service = client.remove_node(node_id, force=False)
             return service
     except:
         d.update({'Error': 'Is the node_id and/or force=True/False missing?'})
@@ -218,7 +221,7 @@ def update_node(availability=str,
         node_spec = {'Availability': availability,
                      'Name': node_name,
                      'Role': role}
-        client.update_node(node_id=node_id, 
+        client.update_node(node_id=node_id,
                            version=version,
                            node_spec=node_spec)
         d.update({'Node Information': node_spec,})
