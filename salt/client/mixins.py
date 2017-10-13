@@ -16,7 +16,7 @@ import copy as pycopy
 # Import Salt libs
 import salt.exceptions
 import salt.minion
-import salt.utils  # Can be removed once format_call is moved
+import salt.utils  # TODO: Remove this once format_call is moved
 import salt.utils.args
 import salt.utils.doc
 import salt.utils.error

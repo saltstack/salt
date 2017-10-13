@@ -78,11 +78,6 @@ class UtilsTestCase(TestCase):
         ret = salt.utils.build_whitespace_split_regex(' '.join(LOREM_IPSUM.split()[:5]))
         self.assertEqual(ret, expected_regex)
 
-    def test_isorted(self):
-        test_list = ['foo', 'Foo', 'bar', 'Bar']
-        expected_list = ['bar', 'Bar', 'foo', 'Foo']
-        self.assertEqual(salt.utils.isorted(test_list), expected_list)
-
     def test_mysql_to_dict(self):
         test_mysql_output = ['+----+------+-----------+------+---------+------+-------+------------------+',
                              '| Id | User | Host      | db   | Command | Time | State | Info             |',
@@ -247,11 +242,6 @@ class UtilsTestCase(TestCase):
         with patch('zmq.IPC_PATH_MAX_LEN', 1):
             self.assertRaises(SaltSystemExit, salt.utils.zeromq.check_ipc_path_max_len, '1' * 1024)
 
-    def test_test_mode(self):
-        self.assertTrue(salt.utils.test_mode(test=True))
-        self.assertTrue(salt.utils.test_mode(Test=True))
-        self.assertTrue(salt.utils.test_mode(tEsT=True))
-
     def test_option(self):
         test_two_level_dict = {'foo': {'bar': 'baz'}}
 
@@ -259,9 +249,6 @@ class UtilsTestCase(TestCase):
         self.assertEqual('baz', salt.utils.option('foo:bar', {'not_found': 'nope'}, opts=test_two_level_dict))
         self.assertEqual('baz', salt.utils.option('foo:bar', {'not_found': 'nope'}, pillar={'master': test_two_level_dict}))
         self.assertEqual('baz', salt.utils.option('foo:bar', {'not_found': 'nope'}, pillar=test_two_level_dict))
-
-    def test_get_hash_exception(self):
-        self.assertRaises(ValueError, salt.utils.get_hash, '/tmp/foo/', form='INVALID')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_date_cast(self):

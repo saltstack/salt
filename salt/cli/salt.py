@@ -7,7 +7,7 @@ sys.modules['pkg_resources'] = None
 import os
 
 # Import Salt libs
-import salt.utils  # Can be removed once print_cli is moved
+import salt.utils  # TODO: Remove this once print_cli is moved
 import salt.utils.parsers
 from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log

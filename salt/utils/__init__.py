@@ -235,22 +235,6 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
     return pr
 
 
-@jinja_filter('list_files')
-def list_files(directory):
-    '''
-    Return a list of all files found under directory
-    '''
-    ret = set()
-    ret.add(directory)
-    for root, dirs, files in safe_walk(directory):
-        for name in files:
-            ret.add(os.path.join(root, name))
-        for name in dirs:
-            ret.add(os.path.join(root, name))
-
-    return list(ret)
-
-
 def required_module_list(docstring=None):
     '''
     Return a list of python modules required by a salt module that aren't
@@ -344,35 +328,6 @@ def backup_minion(path, bkroot):
     if not salt.utils.platform.is_windows():
         os.chown(bkpath, fstat.st_uid, fstat.st_gid)
         os.chmod(bkpath, fstat.st_mode)
-
-
-def pem_finger(path=None, key=None, sum_type='sha256'):
-    '''
-    Pass in either a raw pem string, or the path on disk to the location of a
-    pem file, and the type of cryptographic hash to use. The default is SHA256.
-    The fingerprint of the pem will be returned.
-
-    If neither a key nor a path are passed in, a blank string will be returned.
-    '''
-    # Late import to avoid circular import.
-    import salt.utils.files
-
-    if not key:
-        if not os.path.isfile(path):
-            return ''
-
-        with salt.utils.files.fopen(path, 'rb') as fp_:
-            key = b''.join([x for x in fp_.readlines() if x.strip()][1:-1])
-
-    pre = getattr(hashlib, sum_type)(key).hexdigest()
-    finger = ''
-    for ind in range(len(pre)):
-        if ind % 2:
-            # Is odd
-            finger += '{0}:'.format(pre[ind])
-        else:
-            finger += pre[ind]
-    return finger.rstrip(':')
 
 
 def build_whitespace_split_regex(text):
@@ -565,21 +520,6 @@ def format_call(fun,
     return ret
 
 
-@jinja_filter('sorted_ignorecase')
-def isorted(to_sort):
-    '''
-    Sort a list of strings ignoring case.
-
-    >>> L = ['foo', 'Foo', 'bar', 'Bar']
-    >>> sorted(L)
-    ['Bar', 'Foo', 'bar', 'foo']
-    >>> sorted(L, key=lambda x: x.lower())
-    ['bar', 'Bar', 'foo', 'Foo']
-    >>>
-    '''
-    return sorted(to_sort, key=lambda x: x.lower())
-
-
 @jinja_filter('mysql_to_dict')
 def mysql_to_dict(data, key):
     '''
@@ -752,79 +692,6 @@ def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
     return ret
 
 
-def st_mode_to_octal(mode):
-    '''
-    Convert the st_mode value from a stat(2) call (as returned from os.stat())
-    to an octal mode.
-    '''
-    try:
-        return oct(mode)[-4:]
-    except (TypeError, IndexError):
-        return ''
-
-
-def normalize_mode(mode):
-    '''
-    Return a mode value, normalized to a string and containing a leading zero
-    if it does not have one.
-
-    Allow "keep" as a valid mode (used by file state/module to preserve mode
-    from the Salt fileserver in file states).
-    '''
-    if mode is None:
-        return None
-    if not isinstance(mode, six.string_types):
-        mode = str(mode)
-    if six.PY3:
-        mode = mode.replace('0o', '0')
-    # Strip any quotes any initial zeroes, then though zero-pad it up to 4.
-    # This ensures that somethign like '00644' is normalized to '0644'
-    return mode.strip('"').strip('\'').lstrip('0').zfill(4)
-
-
-def test_mode(**kwargs):
-    '''
-    Examines the kwargs passed and returns True if any kwarg which matching
-    "Test" in any variation on capitalization (i.e. "TEST", "Test", "TeSt",
-    etc) contains a True value (as determined by salt.utils.is_true).
-    '''
-    for arg, value in six.iteritems(kwargs):
-        try:
-            if arg.lower() == 'test' and is_true(value):
-                return True
-        except AttributeError:
-            continue
-    return False
-
-
-def is_true(value=None):
-    '''
-    Returns a boolean value representing the "truth" of the value passed. The
-    rules for what is a "True" value are:
-
-        1. Integer/float values greater than 0
-        2. The string values "True" and "true"
-        3. Any object for which bool(obj) returns True
-    '''
-    # First, try int/float conversion
-    try:
-        value = int(value)
-    except (ValueError, TypeError):
-        pass
-    try:
-        value = float(value)
-    except (ValueError, TypeError):
-        pass
-
-    # Now check for truthiness
-    if isinstance(value, (six.integer_types, float)):
-        return value > 0
-    elif isinstance(value, six.string_types):
-        return str(value).lower() == 'true'
-    else:
-        return bool(value)
-
-
 def option(value, default='', opts=None, pillar=None):
     '''
     Pass in a generic option and receive the value that will be assigned
@@ -870,83 +737,6 @@ def print_cli(msg, retries=10, step=0.01):
                 else:
                     raise
         break
-
-
-def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
-    '''
-    A clone of the python os.walk function with some checks for recursive
-    symlinks. Unlike os.walk this follows symlinks by default.
-    '''
-    islink, join, isdir = os.path.islink, os.path.join, os.path.isdir
-    if _seen is None:
-        _seen = set()
-
-    # We may not have read permission for top, in which case we can't
-    # get a list of the files the directory contains.  os.path.walk
-    # always suppressed the exception then, rather than blow up for a
-    # minor reason when (say) a thousand readable directories are still
-    # left to visit.  That logic is copied here.
-    try:
-        # Note that listdir and error are globals in this module due
-        # to earlier import-*.
-        names = os.listdir(top)
-    except os.error as err:
-        if onerror is not None:
-            onerror(err)
-        return
-
-    if followlinks:
-        status = os.stat(top)
-        # st_ino is always 0 on some filesystems (FAT, NTFS); ignore them
-        if status.st_ino != 0:
-            node = (status.st_dev, status.st_ino)
-            if node in _seen:
-                return
-            _seen.add(node)
-
-    dirs, nondirs = [], []
-    for name in names:
-        full_path = join(top, name)
-        if isdir(full_path):
-            dirs.append(name)
-        else:
-            nondirs.append(name)
-
-    if topdown:
-        yield top, dirs, nondirs
-    for name in dirs:
-        new_path = join(top, name)
-        if followlinks or not islink(new_path):
-            for x in safe_walk(new_path, topdown, onerror, followlinks, _seen):
-                yield x
-    if not topdown:
-        yield top, dirs, nondirs
-
-
-@jinja_filter('file_hashsum')
-def get_hash(path, form='sha256', chunk_size=65536):
-    '''
-    Get the hash sum of a file
-
-    This is better than ``get_sum`` for the following reasons:
-        - It does not read the entire file into memory.
-        - It does not return a string on error. The returned value of
-            ``get_sum`` cannot really be trusted since it is vulnerable to
-            collisions: ``get_sum(..., 'xyz') == 'Hash xyz not supported'``
-    '''
-    # Late import to avoid circular import.
-    import salt.utils.files
-
-    hash_type = hasattr(hashlib, form) and getattr(hashlib, form) or None
-    if hash_type is None:
-        raise ValueError('Invalid hash type: {0}'.format(form))
-
-    with salt.utils.files.fopen(path, 'rb') as ifile:
-        hash_obj = hash_type()
-        # read the file in in chunks, not the entire file
-        for chunk in iter(lambda: ifile.read(chunk_size), b''):
-            hash_obj.update(chunk)
-        return hash_obj.hexdigest()
 
 
 def namespaced_function(function, global_dict, defaults=None, preserve_context=False):
@@ -1094,31 +884,6 @@ def find_json(raw):
         raise ValueError
 
 
-@jinja_filter('is_bin_file')
-def is_bin_file(path):
-    '''
-    Detects if the file is a binary, returns bool. Returns True if the file is
-    a bin, False if the file is not and None if the file is not available.
-    '''
-    # Late import to avoid circular import.
-    import salt.utils.files
-    import salt.utils.stringutils
-
-    if not os.path.isfile(path):
-        return False
-    try:
-        with salt.utils.files.fopen(path, 'rb') as fp_:
-            try:
-                data = fp_.read(2048)
-                if six.PY3:
-                    data = data.decode(__salt_system_encoding__)
-                return salt.utils.stringutils.is_binary(data)
-            except UnicodeDecodeError:
-                return True
-    except os.error:
-        return False
-
-
 def total_seconds(td):
     '''
     Takes a timedelta and returns the total number of seconds
@@ -1139,67 +904,6 @@ def import_json():
             return mod
         except ImportError:
             continue
-
-
-def human_size_to_bytes(human_size):
-    '''
-    Convert human-readable units to bytes
-    '''
-    size_exp_map = {'K': 1, 'M': 2, 'G': 3, 'T': 4, 'P': 5}
-    human_size_str = str(human_size)
-    match = re.match(r'^(\d+)([KMGTP])?$', human_size_str)
-    if not match:
-        raise ValueError(
-            'Size must be all digits, with an optional unit type '
-            '(K, M, G, T, or P)'
-        )
-    size_num = int(match.group(1))
-    unit_multiplier = 1024 ** size_exp_map.get(match.group(2), 0)
-    return size_num * unit_multiplier
-
-
-@jinja_filter('is_list')
-def is_list(value):
-    '''
-    Check if a variable is a list.
-    '''
-    return isinstance(value, list)
-
-
-@jinja_filter('is_iter')
-def is_iter(y, ignore=six.string_types):
-    '''
-    Test if an object is iterable, but not a string type.
-
-    Test if an object is an iterator or is iterable itself. By default this
-    does not return True for string objects.
-
-    The `ignore` argument defaults to a list of string types that are not
-    considered iterable. This can be used to also exclude things like
-    dictionaries or named tuples.
-
-    Based on https://bitbucket.org/petershinners/yter
-    '''
-
-    if ignore and isinstance(y, ignore):
-        return False
-    try:
-        iter(y)
-        return True
-    except TypeError:
-        return False
-
-
-def split_input(val):
-    '''
-    Take an input value and split it into a list, returning the resulting list
-    '''
-    if isinstance(val, list):
-        return val
-    try:
-        return [x.strip() for x in val.split(',')]
-    except AttributeError:
-        return [x.strip() for x in str(val).split(',')]
 
 
 def simple_types_filter(data):
@@ -1315,6 +1019,19 @@ def reinit_crypto():
         'This warning will be removed in Salt Neon.'
     )
     return salt.utils.crypt.reinit_crypto()
+
+
+def pem_finger(path=None, key=None, sum_type='sha256'):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.crypt
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.pem_finger\' detected. This function has been '
+        'moved to \'salt.utils.crypt.pem_finger\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.crypt.pem_finger(path, key, sum_type)
 
 
 def to_bytes(s, encoding=None):
@@ -1512,6 +1229,32 @@ def argspec_report(functions, module=''):
     return salt.utils.args.argspec_report(functions, module=module)
 
 
+def split_input(val):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.args
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.split_input\' detected. This function has been '
+        'moved to \'salt.utils.args.split_input\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
+    return salt.utils.args.split_input(val)
+
+
+def test_mode(**kwargs):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.args
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.test_mode\' detected. This function has been '
+        'moved to \'salt.utils.args.test_mode\' as of Salt Oxygen. This '
+        'warning will be removed in Salt Neon.'
+    )
+    return salt.utils.args.test_mode(**kwargs)
+
+
 def which(exe=None):
     # Late import to avoid circular import.
     import salt.utils.versions
@@ -1562,6 +1305,19 @@ def rand_str(size=9999999999, hash_type=None):
         'This warning will be removed in Salt Neon.'
     )
     return salt.utils.hashutils.random_hash(size, hash_type)
+
+
+def get_hash(path, form='sha256', chunk_size=65536):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.hashutils
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.get_hash\' detected. This function has been '
+        'moved to \'salt.utils.hashutils.get_hash\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.hashutils.get_hash(path, form, chunk_size)
 
 
 def is_windows():
@@ -1814,9 +1570,9 @@ def mkstemp(*args, **kwargs):
     return salt.utils.files.mkstemp(*args, **kwargs)
 
 
-@jinja_filter('is_text_file')
 def istextfile(fp_, blocksize=512):
     # Late import to avoid circular import.
+    import salt.utils.versions
     import salt.utils.files
 
     salt.utils.versions.warn_until(
@@ -1826,6 +1582,90 @@ def istextfile(fp_, blocksize=512):
         'be removed in Salt Neon.'
     )
     return salt.utils.files.is_text_file(fp_, blocksize=blocksize)
+
+
+def is_bin_file(path):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_bin_file\' detected. This function has been moved '
+        'to \'salt.utils.files.is_binary\' as of Salt Oxygen. This warning will '
+        'be removed in Salt Neon.'
+    )
+    return salt.utils.files.is_binary(path)
+
+
+def list_files(directory):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.list_files\' detected. This function has been moved '
+        'to \'salt.utils.files.list_files\' as of Salt Oxygen. This warning will '
+        'be removed in Salt Neon.'
+    )
+    return salt.utils.files.list_files(directory)
+
+
+def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.safe_walk\' detected. This function has been moved '
+        'to \'salt.utils.files.safe_walk\' as of Salt Oxygen. This warning will '
+        'be removed in Salt Neon.'
+    )
+    return salt.utils.files.safe_walk(top, topdown, onerror, followlinks, _seen)
+
+
+def st_mode_to_octal(mode):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.st_mode_to_octal\' detected. This function has '
+        'been moved to \'salt.utils.files.st_mode_to_octal\' as of Salt '
+        'Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.files.st_mode_to_octal(mode)
+
+
+def normalize_mode(mode):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.normalize_mode\' detected. This function has '
+        'been moved to \'salt.utils.files.normalize_mode\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.files.normalize_mode(mode)
+
+
+def human_size_to_bytes(human_size):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.files
+
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.human_size_to_bytes\' detected. This function has '
+        'been moved to \'salt.utils.files.human_size_to_bytes\' as of Salt '
+        'Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.files.human_size_to_bytes(human_size)
 
 
 def str_version_to_evr(verstring):
@@ -1931,8 +1771,8 @@ def kwargs_warn_until(kwargs,
 
 def get_color_theme(theme):
     # Late import to avoid circular import.
-    import salt.utils.color
     import salt.utils.versions
+    import salt.utils.color
 
     salt.utils.versions.warn_until(
         'Neon',
@@ -1945,8 +1785,8 @@ def get_color_theme(theme):
 
 def get_colors(use=True, theme=None):
     # Late import to avoid circular import.
-    import salt.utils.color
     import salt.utils.versions
+    import salt.utils.color
 
     salt.utils.versions.warn_until(
         'Neon',
@@ -2326,6 +2166,58 @@ def exactly_one(l):
         'Salt Oxygen. This warning will be removed in Salt Neon.'
     )
     return salt.utils.data.exactly_one(l)
+
+
+def is_list(value):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.data
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_list\' detected. This function '
+        'has been moved to \'salt.utils.data.is_list\' as of '
+        'Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.data.is_list(value)
+
+
+def is_iter(y, ignore=six.string_types):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.data
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_iter\' detected. This function '
+        'has been moved to \'salt.utils.data.is_iter\' as of '
+        'Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.data.is_iter(y, ignore)
+
+
+def isorted(to_sort):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.data
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.isorted\' detected. This function '
+        'has been moved to \'salt.utils.data.sorted_ignorecase\' as of '
+        'Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.data.sorted_ignorecase(to_sort)
+
+
+def is_true(value=None):
+    # Late import to avoid circular import.
+    import salt.utils.versions
+    import salt.utils.data
+    salt.utils.versions.warn_until(
+        'Neon',
+        'Use of \'salt.utils.is_true\' detected. This function '
+        'has been moved to \'salt.utils.data.is_true\' as of '
+        'Salt Oxygen. This warning will be removed in Salt Neon.'
+    )
+    return salt.utils.data.is_true(value)
 
 
 def ip_bracket(addr):

@@ -420,3 +420,78 @@ def repack_dictlist(data,
             else:
                 ret[key_cb(key)] = val_cb(key, val)
     return ret
+
+
+@jinja_filter('is_list')
+def is_list(value):
+    '''
+    Check if a variable is a list.
+    '''
+    return isinstance(value, list)
+
+
+@jinja_filter('is_iter')
+def is_iter(y, ignore=six.string_types):
+    '''
+    Test if an object is iterable, but not a string type.
+
+    Test if an object is an iterator or is iterable itself. By default this
+    does not return True for string objects.
+
+    The `ignore` argument defaults to a list of string types that are not
+    considered iterable. This can be used to also exclude things like
+    dictionaries or named tuples.
+
+    Based on https://bitbucket.org/petershinners/yter
+    '''
+
+    if ignore and isinstance(y, ignore):
+        return False
+    try:
+        iter(y)
+        return True
+    except TypeError:
+        return False
+
+
+@jinja_filter('sorted_ignorecase')
+def sorted_ignorecase(to_sort):
+    '''
+    Sort a list of strings ignoring case.
+
+    >>> L = ['foo', 'Foo', 'bar', 'Bar']
+    >>> sorted(L)
+    ['Bar', 'Foo', 'bar', 'foo']
+    >>> sorted(L, key=lambda x: x.lower())
+    ['bar', 'Bar', 'foo', 'Foo']
+    >>>
+    '''
+    return sorted(to_sort, key=lambda x: x.lower())
+
+
+def is_true(value=None):
+    '''
+    Returns a boolean value representing the "truth" of the value passed. The
+    rules for what is a "True" value are:
+
+        1. Integer/float values greater than 0
+        2. The string values "True" and "true"
+        3. Any object for which bool(obj) returns True
+    '''
+    # First, try int/float conversion
+    try:
+        value = int(value)
+    except (ValueError, TypeError):
+        pass
+    try:
+        value = float(value)
+    except (ValueError, TypeError):
+        pass
+
+    # Now check for truthiness
+    if isinstance(value, (six.integer_types, float)):
+        return value > 0
+    elif isinstance(value, six.string_types):
+        return str(value).lower() == 'true'
+    else:
+        return bool(value)

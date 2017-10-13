@@ -41,6 +41,7 @@ import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
@@ -1507,7 +1508,7 @@ def mod_data(fsclient):
                         if not os.path.isfile(mod_path):
                             continue
                         mods_data[os.path.basename(fn_)] = mod_path
-                        chunk = salt.utils.get_hash(mod_path)
+                        chunk = salt.utils.hashutils.get_hash(mod_path)
                         ver_base += chunk
             if mods_data:
                 if ref in ret:

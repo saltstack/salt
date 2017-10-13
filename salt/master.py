@@ -47,7 +47,7 @@ import tornado.gen  # pylint: disable=F0401
 
 # Import salt libs
 import salt.crypt
-import salt.utils  # Can be removed once get_values_of_matching_keys is moved
+import salt.utils  # TODO: Remove this once get_values_of_matching_keys is moved
 import salt.client
 import salt.payload
 import salt.pillar
