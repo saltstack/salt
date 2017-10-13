@@ -2063,7 +2063,7 @@ class Minion(MinionBase):
         func = data.get(u'func', None)
         name = data.get(u'name', None)
         beacon_data = data.get(u'beacon_data', None)
-        include_pillar = data.get(u'include_pillar', None)
+        where = data.get(u'where', None)
 
         if func == u'add':
             self.beacons.add_beacon(name, beacon_data)
@@ -2080,7 +2080,7 @@ class Minion(MinionBase):
         elif func == u'disable_beacon':
             self.beacons.disable_beacon(name)
         elif func == u'list':
-            self.beacons.list_beacons(include_pillar)
+            self.beacons.list_beacons(where)
         elif func == u'list_available':
             self.beacons.list_available_beacons()
         elif func == u'validate_beacon':
