@@ -20,10 +20,12 @@ import time
 from datetime import datetime
 
 # Import salt libs
-import salt.utils  # Can be removed once check_whitelist_blacklist, get_hash, is_bin_file, repack_dictlist are moved
+import salt.utils  # TODO: Remove this once check_whitelist_blacklist is moved
 import salt.utils.configparser
+import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
@@ -183,7 +185,7 @@ class GitProvider(object):
                  override_params, cache_root, role='gitfs'):
         self.opts = opts
         self.role = role
-        self.global_saltenv = salt.utils.repack_dictlist(
+        self.global_saltenv = salt.utils.data.repack_dictlist(
             self.opts.get('{0}_saltenv'.format(self.role), []),
             strict=True,
             recurse=True,
@@ -220,7 +222,7 @@ class GitProvider(object):
             self.id = next(iter(remote))
             self.get_url()
 
-            per_remote_conf = salt.utils.repack_dictlist(
+            per_remote_conf = salt.utils.data.repack_dictlist(
                 remote[self.id],
                 strict=True,
                 recurse=True,
@@ -2648,7 +2650,7 @@ class GitFS(GitBase):
         if not os.path.isfile(hashdest):
             if not os.path.exists(os.path.dirname(hashdest)):
                 os.makedirs(os.path.dirname(hashdest))
-            ret['hsum'] = salt.utils.get_hash(path, self.opts['hash_type'])
+            ret['hsum'] = salt.utils.hashutils.get_hash(path, self.opts['hash_type'])
             with salt.utils.files.fopen(hashdest, 'w+') as fp_:
                 fp_.write(ret['hsum'])
             return ret

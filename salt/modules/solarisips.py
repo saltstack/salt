@@ -43,7 +43,8 @@ import logging
 
 
 # Import salt libs
-import salt.utils
+import salt.utils  # TODO: Remove this once alias_function is moved
+import salt.utils.data
 import salt.utils.path
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
@@ -181,7 +182,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
         salt '*' pkg.list_upgrades
         salt '*' pkg.list_upgrades refresh=False
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db(full=True)
     upgrades = {}
     # awk is in core-os package so we can use it without checking
@@ -215,7 +216,7 @@ def upgrade(refresh=False, **kwargs):
 
         salt '*' pkg.upgrade
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     # Get a list of the packages before install so we can diff after to see
@@ -230,7 +231,7 @@ def upgrade(refresh=False, **kwargs):
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -256,7 +257,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
         for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -509,7 +510,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
     # Get a list of the packages again, including newly installed ones.
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if out['retcode'] != 0:
         raise CommandExecutionError(
@@ -577,7 +578,7 @@ def remove(name=None, pkgs=None, **kwargs):
     # Get a list of the packages after the uninstall
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if out['retcode'] != 0:
         raise CommandExecutionError(

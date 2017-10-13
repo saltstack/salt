@@ -12,7 +12,9 @@ import logging
 
 # Import salt libs
 import salt.config
-import salt.utils
+import salt.utils.data
+import salt.utils.dictupdate
+import salt.utils.files
 import salt.utils.platform
 try:
     # Gated for salt-ssh (salt.utils.cloud imports msgpack)
@@ -107,7 +109,7 @@ def manage_mode(mode):
     # config.manage_mode should no longer be invoked from the __salt__ dunder
     # in Salt code, this function is only being left here for backwards
     # compatibility.
-    return salt.utils.normalize_mode(mode)
+    return salt.utils.files.normalize_mode(mode)
 
 
 def valid_fileproto(uri):
@@ -352,31 +354,35 @@ def get(key, default='', delimiter=':', merge=None):
         salt '*' config.get lxc.container_profile:centos merge=recurse
     '''
     if merge is None:
-        ret = salt.utils.traverse_dict_and_list(__opts__,
-                                                key,
-                                                '_|-',
-                                                delimiter=delimiter)
+        ret = salt.utils.data.traverse_dict_and_list(
+            __opts__,
+            key,
+            '_|-',
+            delimiter=delimiter)
         if ret != '_|-':
             return sdb.sdb_get(ret, __opts__)
 
-        ret = salt.utils.traverse_dict_and_list(__grains__,
-                                                key,
-                                                '_|-',
-                                                delimiter)
+        ret = salt.utils.data.traverse_dict_and_list(
+            __grains__,
+            key,
+            '_|-',
+            delimiter)
         if ret != '_|-':
             return sdb.sdb_get(ret, __opts__)
 
-        ret = salt.utils.traverse_dict_and_list(__pillar__,
-                                                key,
-                                                '_|-',
-                                                delimiter=delimiter)
+        ret = salt.utils.data.traverse_dict_and_list(
+            __pillar__,
+            key,
+            '_|-',
+            delimiter=delimiter)
         if ret != '_|-':
             return sdb.sdb_get(ret, __opts__)
 
-        ret = salt.utils.traverse_dict_and_list(__pillar__.get('master', {}),
-                                                key,
-                                                '_|-',
-                                                delimiter=delimiter)
+        ret = salt.utils.data.traverse_dict_and_list(
+            __pillar__.get('master', {}),
+            key,
+            '_|-',
+            delimiter=delimiter)
         if ret != '_|-':
             return sdb.sdb_get(ret, __opts__)
     else:
@@ -391,10 +397,11 @@ def get(key, default='', delimiter=':', merge=None):
         data = salt.utils.dictupdate.merge(data, __pillar__, strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __grains__, strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __opts__, strategy=merge, merge_lists=merge_lists)
-        ret = salt.utils.traverse_dict_and_list(data,
-                                                key,
-                                                '_|-',
-                                                delimiter=delimiter)
+        ret = salt.utils.data.traverse_dict_and_list(
+            data,
+            key,
+            '_|-',
+            delimiter=delimiter)
         if ret != '_|-':
             return sdb.sdb_get(ret, __opts__)
 

@@ -32,7 +32,8 @@ from xml.dom import minidom as dom
 from xml.parsers.expat import ExpatError
 
 # Import salt libs
-import salt.utils
+import salt.utils  # TODO: Remove this once alias_function is moved
+import salt.utils.data
 import salt.utils.event
 import salt.utils.files
 import salt.utils.path
@@ -686,9 +687,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs attr='["version", "arch"]'
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -1203,7 +1204,7 @@ def install(name=None,
         if isinstance(pkg_data, six.string_types):
             new[pkg_name] = pkg_data.split(',')[-1]
 
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -1317,7 +1318,7 @@ def upgrade(refresh=True,
     # (affects only kernel packages at this point)
     for pkg in new:
         new[pkg] = new[pkg].split(',')[-1]
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
         result = {
@@ -1360,7 +1361,7 @@ def _uninstall(name=None, pkgs=None):
         targets = targets[500:]
 
     __context__.pop('pkg.list_pkgs', None)
-    ret = salt.utils.compare_dicts(old, list_pkgs())
+    ret = salt.utils.data.compare_dicts(old, list_pkgs())
 
     if errors:
         raise CommandExecutionError(

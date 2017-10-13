@@ -15,7 +15,7 @@ import stat
 
 # Import salt libs
 import salt.crypt
-import salt.utils  # Can be removed once check_whitelist_blacklist, expr_match, get_values_of_matching_keys are moved
+import salt.utils  # TODO: Remove this once check_whitelist_blacklist, expr_match, get_values_of_matching_keys are moved
 import salt.cache
 import salt.client
 import salt.payload

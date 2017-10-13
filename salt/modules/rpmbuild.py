@@ -24,7 +24,7 @@ import functools
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
-import salt.utils  # Can be removed when chugid_and_umask is moved
+import salt.utils  # TODO: Remove this when chugid_and_umask is moved
 import salt.utils.files
 import salt.utils.path
 import salt.utils.vt

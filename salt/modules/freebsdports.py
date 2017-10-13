@@ -23,7 +23,7 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.files
 from salt.ext.six import string_types
 from salt.exceptions import SaltInvocationError, CommandExecutionError
@@ -185,7 +185,7 @@ def install(name, clean=True):
         __context__['ports.install_error'] = result['stderr']
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs']()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
     if not ret and result['retcode'] == 0:
         # No change in package list, but the make install was successful.
         # Assume that the installation was a recompile with new options, and
@@ -215,7 +215,7 @@ def deinstall(name):
     )
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs']()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def rmconfig(name):

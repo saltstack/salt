@@ -38,7 +38,6 @@ GARBAGE = logging.GARBAGE = 1
 QUIET = logging.QUIET = 1000
 
 # Import salt libs
-import salt.utils  # Can be removed once appendproctitle is moved
 from salt.textformat import TextFormat
 from salt.log.handlers import (TemporaryLoggingHandler,
                                StreamHandler,
@@ -998,7 +997,9 @@ def patch_python_logging_handlers():
 
 
 def __process_multiprocessing_logging_queue(opts, queue):
-    salt.utils.appendproctitle('MultiprocessingLoggingQueue')
+    # Avoid circular import
+    import salt.utils.process
+    salt.utils.process.appendproctitle('MultiprocessingLoggingQueue')
 
     # Assign UID/GID of user to proc if set
     from salt.utils.verify import check_user

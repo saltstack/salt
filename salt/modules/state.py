@@ -28,9 +28,12 @@ import time
 import salt.config
 import salt.payload
 import salt.state
-import salt.utils
+import salt.utils  # TODO: Remove this once namespaced_function is moved
+import salt.utils.args
+import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.jid
 import salt.utils.platform
 import salt.utils.url
@@ -326,7 +329,7 @@ def _get_test_value(test=None, **kwargs):
     '''
     ret = True
     if test is None:
-        if salt.utils.test_mode(test=test, **kwargs):
+        if salt.utils.args.test_mode(test=test, **kwargs):
             ret = True
         else:
             ret = __opts__.get('test', None)
@@ -1774,7 +1777,7 @@ def pkg(pkg_path,
     # TODO - Add ability to download from salt master or other source
     if not os.path.isfile(pkg_path):
         return {}
-    if not salt.utils.get_hash(pkg_path, hash_type) == pkg_sum:
+    if not salt.utils.hashutils.get_hash(pkg_path, hash_type) == pkg_sum:
         return {}
     root = tempfile.mkdtemp()
     s_pkg = tarfile.open(pkg_path, 'r:gz')
@@ -1789,7 +1792,7 @@ def pkg(pkg_path,
     s_pkg.close()
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.files.fopen(lowstate_json, 'r') as fp_:
-        lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
+        lowstate = json.load(fp_, object_hook=salt.utils.data.decode_dict)
     # Check for errors in the lowstate
     for chunk in lowstate:
         if not isinstance(chunk, dict):
@@ -1804,7 +1807,7 @@ def pkg(pkg_path,
     roster_grains_json = os.path.join(root, 'roster_grains.json')
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
-            roster_grains = json.load(fp_, object_hook=salt.utils.decode_dict)
+            roster_grains = json.load(fp_, object_hook=salt.utils.data.decode_dict)
 
     popts = _get_opts(**kwargs)
     if os.path.isfile(roster_grains_json):

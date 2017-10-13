@@ -33,6 +33,7 @@ import salt.utils
 import salt.utils.args
 import salt.utils.cloud
 import salt.utils.context
+import salt.utils.crypt
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.syspaths
@@ -2098,7 +2099,7 @@ class Map(Cloud):
             master_temp_pub = salt.utils.files.mkstemp()
             with salt.utils.files.fopen(master_temp_pub, 'w') as mtp:
                 mtp.write(pub)
-            master_finger = salt.utils.pem_finger(master_temp_pub, sum_type=self.opts['hash_type'])
+            master_finger = salt.utils.crypt.pem_finger(master_temp_pub, sum_type=self.opts['hash_type'])
             os.unlink(master_temp_pub)
 
             if master_profile.get('make_minion', True) is True:
@@ -2183,7 +2184,7 @@ class Map(Cloud):
             # mitigate man-in-the-middle attacks
             master_pub = os.path.join(self.opts['pki_dir'], 'master.pub')
             if os.path.isfile(master_pub):
-                master_finger = salt.utils.pem_finger(master_pub, sum_type=self.opts['hash_type'])
+                master_finger = salt.utils.crypt.pem_finger(master_pub, sum_type=self.opts['hash_type'])
 
         opts = self.opts.copy()
         if self.opts['parallel']:
@@ -2300,7 +2301,7 @@ def create_multiprocessing(parallel_data, queue=None):
     This function will be called from another process when running a map in
     parallel mode. The result from the create is always a json object.
     '''
-    salt.utils.reinit_crypto()
+    salt.utils.crypt.reinit_crypto()
 
     parallel_data['opts']['output'] = 'json'
     cloud = Cloud(parallel_data['opts'])
@@ -2332,7 +2333,7 @@ def destroy_multiprocessing(parallel_data, queue=None):
     This function will be called from another process when running a map in
     parallel mode. The result from the destroy is always a json object.
     '''
-    salt.utils.reinit_crypto()
+    salt.utils.crypt.reinit_crypto()
 
     parallel_data['opts']['output'] = 'json'
     clouds = salt.loader.clouds(parallel_data['opts'])
@@ -2368,7 +2369,7 @@ def run_parallel_map_providers_query(data, queue=None):
     This function will be called from another process when building the
     providers map.
     '''
-    salt.utils.reinit_crypto()
+    salt.utils.crypt.reinit_crypto()
 
     cloud = Cloud(data['opts'])
     try:

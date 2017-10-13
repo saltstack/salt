@@ -1182,7 +1182,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     ret.update({'name': name})
                     with patch.object(salt.utils.files, 'fopen',
                                       MagicMock(mock_open(read_data=''))):
-                        with patch.dict(filestate.__utils__, {'files.is_text_file': mock_f}):
+                        with patch.dict(filestate.__utils__, {'files.is_text': mock_f}):
                             with patch.dict(filestate.__opts__, {'test': True}):
                                 change = {'diff': 'Replace binary file'}
                                 comt = ('File {0} is set to be updated'
