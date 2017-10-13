@@ -1,4 +1,27 @@
 # -*- coding: utf-8 -*-
+'''
+Docker Swarm Module using Docker's Python SDK
+=============================================
+
+:codeauthor: Tyler Jones <jonestyler806@gmail.com>
+
+.. versionadded:: 2017.7.2
+
+The Docker Swarm Module is used to manage and create Docker Swarms. 
+
+Dependencies
+============
+
+- Docker installed on the host
+- Docker python sdk >= 2.5.1
+
+Docker Python SDK
+=================
+pip install -U docker
+
+More information: https://docker-py.readthedocs.io/en/stable/
+'''
+
 import docker
 import salt.config
 import salt.loader
@@ -7,14 +30,6 @@ __opts__ = salt.config.minion_config('/etc/salt/minion')
 __grains__ = salt.loader.grains(__opts__)
 client = docker.from_env()
 server_name = __grains__['id']
-
-'''
-Dependencies
-============
-
-- docker installed on host
-- docker sdk pip install -U docker
-'''
 
 
 def swarm_tokens():
@@ -25,11 +40,10 @@ def swarm_tokens():
 
 def swarm_init(advertise_addr=str,
                listen_addr=int,
-               force_new_cluster=bool):
-    d = {}            
+               force_new_cluster=bool):         
     try:
-        
-        '''
+        d = {}
+         '''
         Initalize Docker on Minion as a Swarm Manager
         salt <Target> advertise_addr='ens4' listen_addr='0.0.0.0:5000' force_new_cluster=False
         '''
@@ -37,11 +51,12 @@ def swarm_init(advertise_addr=str,
         client.swarm.init(advertise_addr,
                           listen_addr,
                           force_new_cluster)
-        output = 'Docker swarm has been Initalized on '+   server_name  + ' and the worker/manager Join token is below'
+        output = 'Docker swarm has been Initalized on '+ server_name + ' and the worker/manager Join token is below'
         d.update({'Comment': output,
                   'Tokens': swarm_tokens()})
         return d
     except:
+        d = {}
         d.update({'Error': 'Please make sure your passing advertise_addr, listen_addr and force_new_cluster correctly.'})
         return d
 
@@ -49,8 +64,8 @@ def swarm_init(advertise_addr=str,
 def joinswarm(remote_addr=int,
               listen_addr=int,
               token=str):
-    d = {}          
     try:
+        d = {}
         '''
         Join a Swarm Worker to the cluster
         *NOTE this can be use for worker or manager join
@@ -60,10 +75,10 @@ def joinswarm(remote_addr=int,
                           listen_addr=listen_addr,
                           join_token=token )
         output =  server_name + ' has joined the Swarm'
-        d.update({'Comment': output,
-                  'Manager_Addr': remote_addr })
+        d.update({'Comment': output, 'Manager_Addr': remote_addr })
         return d
     except:
+        d = {}
         d.update({'Error': 'Please make sure this minion is not part of a swarm and your passing remote_addr, listen_addr and token correctly.'})
         return d
 
@@ -85,9 +100,9 @@ def service_create(image=str,
                    hostname=str,
                    replicas=int,
                    target_port=int,
-                   published_port=int):
-    d = {}               
+                   published_port=int):               
     try:
+        d = {}
         replica_mode = docker.types.ServiceMode('replicated', replicas=replicas)
         ports = docker.types.EndpointSpec(ports={target_port: published_port})
         client.services.create(name=name,
@@ -107,13 +122,14 @@ def service_create(image=str,
                   'Published_Port': published_port})
         return d
     except:
+        d = {}
         d.update({'Error': 'Please make sure your passing arguments correctly [image, name, command, hostname, replicas, target_port and published_port]'})
         return d
 
 
 def swarm_service_info(service_name=str):
-    d = {}
     try:
+        d = {}
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         service = client.inspect_service(service=service_name)
         getdata = json.dumps(service)
@@ -150,25 +166,27 @@ def swarm_service_info(service_name=str):
                       'Version': version})
         return d
     except:
+        d = {}
         d.update({'Error': 'service_name arg is missing?'})
         return d
 
 
 def remove_service(service=str):
-    d = {}
     try:
+        d = {}
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         service = client.remove_service(service)
         d.update({'Service Deleted':service, 'Minion ID':server_name})
         return d
     except:
+        d = {}
         d.update({'Error': 'service arg is missing?'})
         return d
 
 
 def node_ls(server=str):
-    d = {}
     try:
+        d = {}
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         service = client.nodes(filters=({'name':server}))
         getdata = json.dumps(service)
@@ -192,13 +210,13 @@ def node_ls(server=str):
                       'Version': Version})
             return d
     except:
+        d = {}
         d.update({'Error': 'The server arg is missing or you not targeting a Manager node?'})
         return d
 
 
 def remove_node(node_id=str, force=bool):
     client = docker.APIClient(base_url='unix://var/run/docker.sock')
-    d = {}
     try:
         if force == 'True':
             service = client.remove_node(node_id, force=True) 
@@ -207,6 +225,7 @@ def remove_node(node_id=str, force=bool):
             service = client.remove_node(node_id, force=False)
             return service
     except:
+        d = {}
         d.update({'Error': 'Is the node_id and/or force=True/False missing?'})
 
 
@@ -216,16 +235,17 @@ def update_node(availability=str,
                 node_id=str,
                 version=int):
     client = docker.APIClient(base_url='unix://var/run/docker.sock')
-    d = {}
     try:
+        d = {}
         node_spec = {'Availability': availability,
                      'Name': node_name,
                      'Role': role}
         client.update_node(node_id=node_id,
                            version=version,
                            node_spec=node_spec)
-        d.update({'Node Information': node_spec,})
+        d.update({'Node Information': node_spec})
         return d
     except:
+        d = {}
         d.update({'Error': 'Make sure all args are passed [availability, node_name, role, node_id, version]'})
         return d
