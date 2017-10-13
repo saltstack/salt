@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Docker Swarm Module using Docker's Python SDK
 =============================================
 
@@ -20,7 +20,7 @@ Docker Python SDK
 pip install -U docker
 
 More information: https://docker-py.readthedocs.io/en/stable/
-'''
+"""
 import docker
 import salt.config
 import salt.loader
@@ -42,10 +42,10 @@ def swarm_init(advertise_addr=str,
                force_new_cluster=bool):
     try:
         d = {}
-        '''
+        """
         Initalize Docker on Minion as a Swarm Manager
         salt <Target> advertise_addr='ens4' listen_addr='0.0.0.0:5000' force_new_cluster=False
-        '''
+        """
         client.swarm.init(advertise_addr,
                           listen_addr,
                           force_new_cluster)
@@ -53,7 +53,7 @@ def swarm_init(advertise_addr=str,
         d.update({'Comment': output,
                   'Tokens': swarm_tokens()})
         return d
-    except:
+    except TypeError:
         d = {}
         d.update({'Error': 'Please make sure your passing advertise_addr, listen_addr and force_new_cluster correctly.'})
         return d
@@ -64,27 +64,27 @@ def joinswarm(remote_addr=int,
               token=str):
     try:
         d = {}
-        '''
+        """
         Join a Swarm Worker to the cluster
         *NOTE this can be use for worker or manager join
         salt <target> remote_addr='10.1.0.1' listen_addr='0.0.0.0' token='token'
-        '''
+        """
         client.swarm.join(remote_addrs=[remote_addr],
                           listen_addr=listen_addr,
                           join_token=token)
         output = server_name + ' has joined the Swarm'
         d.update({'Comment': output, 'Manager_Addr': remote_addr})
         return d
-    except:
+    except TypeError:
         d = {}
         d.update({'Error': 'Please make sure this minion is not part of a swarm and your passing remote_addr, listen_addr and token correctly.'})
         return d
 
 
 def leave_swarm(force=bool):
-    '''
+    """
     Will force the minion to leave the swarm
-    '''
+    """
     d = {}
     client.swarm.leave(force=force)
     output = server_name + ' has left the swarm'
@@ -119,7 +119,7 @@ def service_create(image=str,
                   'Target_Port': target_port,
                   'Published_Port': published_port})
         return d
-    except:
+    except TypeError:
         d = {}
         d.update({'Error': 'Please make sure your passing arguments correctly [image, name, command, hostname, replicas, target_port and published_port]'})
         return d
@@ -163,7 +163,7 @@ def swarm_service_info(service_name=str):
                       'Minion Id': server_name,
                       'Version': version})
         return d
-    except:
+    except TypeError:
         d = {}
         d.update({'Error': 'service_name arg is missing?'})
         return d
@@ -174,10 +174,10 @@ def remove_service(service=str):
         d = {}
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         service = client.remove_service(service)
-        d.update({'Service Deleted':service,
+        d.update({'Service Deleted':service, 
                   'Minion ID':server_name})
         return d
-    except:
+    except TypeError:
         d = {}
         d.update({'Error': 'service arg is missing?'})
         return d
@@ -208,7 +208,7 @@ def node_ls(server=str):
                       'Status': status,
                       'Version': Version})
             return d
-    except:
+    except TypeError:
         d = {}
         d.update({'Error': 'The server arg is missing or you not targeting a Manager node?'})
         return d
@@ -218,12 +218,12 @@ def remove_node(node_id=str, force=bool):
     client = docker.APIClient(base_url='unix://var/run/docker.sock')
     try:
         if force == 'True':
-            service = client.remove_node(node_id, force=True) 
+            service = client.remove_node(node_id, force=True)
             return service
         else:
             service = client.remove_node(node_id, force=False)
             return service
-    except:
+    except TypeError:
         d = {}
         d.update({'Error': 'Is the node_id and/or force=True/False missing?'})
 
@@ -244,7 +244,7 @@ def update_node(availability=str,
                            node_spec=node_spec)
         d.update({'Node Information': node_spec})
         return d
-    except:
+    except TypeError:
         d = {}
         d.update({'Error': 'Make sure all args are passed [availability, node_name, role, node_id, version]'})
         return d
