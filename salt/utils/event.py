@@ -72,7 +72,6 @@ import tornado.iostream
 # Import salt libs
 import salt.config
 import salt.payload
-import salt.utils
 import salt.utils.async
 import salt.utils.cache
 import salt.utils.dicttrim
@@ -1078,7 +1077,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Bind the pub and pull sockets for events
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
         self.io_loop = tornado.ioloop.IOLoop()
         with salt.utils.async.current_ioloop(self.io_loop):
             if self.opts['ipc_mode'] == 'tcp':
@@ -1243,7 +1242,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Spin up the multiprocess event returner
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
         self.event = get_event('master', opts=self.opts, listen=True)
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, 'salt/event_listen/start')
