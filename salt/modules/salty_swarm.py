@@ -7,7 +7,7 @@ Docker Swarm Module using Docker's Python SDK
 
 .. versionadded:: 2017.7.2
 
-The Docker Swarm Module is used to manage and create Docker Swarms. 
+The Docker Swarm Module is used to manage and create Docker Swarms.
 
 Dependencies
 ============
@@ -21,7 +21,6 @@ pip install -U docker
 
 More information: https://docker-py.readthedocs.io/en/stable/
 '''
-
 import docker
 import salt.config
 import salt.loader
@@ -40,14 +39,13 @@ def swarm_tokens():
 
 def swarm_init(advertise_addr=str,
                listen_addr=int,
-               force_new_cluster=bool):         
+               force_new_cluster=bool):
     try:
         d = {}
         '''
         Initalize Docker on Minion as a Swarm Manager
         salt <Target> advertise_addr='ens4' listen_addr='0.0.0.0:5000' force_new_cluster=False
         '''
-        
         client.swarm.init(advertise_addr,
                           listen_addr,
                           force_new_cluster)
@@ -73,9 +71,9 @@ def joinswarm(remote_addr=int,
         '''
         client.swarm.join(remote_addrs=[remote_addr],
                           listen_addr=listen_addr,
-                          join_token=token )
-        output =  server_name + ' has joined the Swarm'
-        d.update({'Comment': output, 'Manager_Addr': remote_addr })
+                          join_token=token)
+        output = server_name + ' has joined the Swarm'
+        d.update({'Comment': output, 'Manager_Addr': remote_addr})
         return d
     except:
         d = {}
@@ -100,7 +98,7 @@ def service_create(image=str,
                    hostname=str,
                    replicas=int,
                    target_port=int,
-                   published_port=int):               
+                   published_port=int):
     try:
         d = {}
         replica_mode = docker.types.ServiceMode('replicated', replicas=replicas)
@@ -176,7 +174,8 @@ def remove_service(service=str):
         d = {}
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         service = client.remove_service(service)
-        d.update({'Service Deleted':service, 'Minion ID':server_name})
+        d.update({'Service Deleted':service,
+                  'Minion ID':server_name})
         return d
     except:
         d = {}
