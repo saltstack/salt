@@ -260,7 +260,7 @@ def sig4(method, endpoint, params, prov_dict,
     # Create payload hash (hash of the request body content). For GET
     # requests, the payload is an empty string ('').
     if not payload_hash:
-        payload_hash = hashlib.sha256(data).hexdigest()
+        payload_hash = hashlib.sha256(data.encode('utf-8')).hexdigest()
 
     # Combine elements to create create canonical request
     canonical_request = '\n'.join((
