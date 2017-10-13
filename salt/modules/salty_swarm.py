@@ -43,7 +43,7 @@ def swarm_init(advertise_addr=str,
                force_new_cluster=bool):         
     try:
         d = {}
-         '''
+        '''
         Initalize Docker on Minion as a Swarm Manager
         salt <Target> advertise_addr='ens4' listen_addr='0.0.0.0:5000' force_new_cluster=False
         '''
