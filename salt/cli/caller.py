@@ -20,7 +20,7 @@ import salt.minion
 import salt.output
 import salt.payload
 import salt.transport
-import salt.utils  # Can be removed once print_cli, activate_profile, and output_profile are moved
+import salt.utils  # TODO: Remove this once print_cli, activate_profile, and output_profile are moved
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid

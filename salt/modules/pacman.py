@@ -18,7 +18,7 @@ import logging
 import os.path
 
 # Import salt libs
-import salt.utils
+import salt.utils  # TODO: Remove this once alias_function, fnmatch_multiple are moved
 import salt.utils.args
 import salt.utils.data
 import salt.utils.pkg
@@ -68,7 +68,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', False))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', False))
 
     if len(names) == 0:
         return ''
@@ -201,9 +201,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -517,8 +517,8 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    refresh = salt.utils.is_true(refresh)
-    sysupgrade = salt.utils.is_true(sysupgrade)
+    refresh = salt.utils.data.is_true(refresh)
+    sysupgrade = salt.utils.data.is_true(sysupgrade)
 
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
@@ -678,7 +678,7 @@ def upgrade(refresh=False, root=None, **kwargs):
             and __salt__['config.get']('systemd.scope', True):
         cmd.extend(['systemd-run', '--scope'])
     cmd.extend(['pacman', '-Su', '--noprogressbar', '--noconfirm'])
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         cmd.append('-y')
 
     if root is not None:

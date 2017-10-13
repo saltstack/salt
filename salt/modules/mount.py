@@ -10,7 +10,7 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils  # Can be removed once test_mode is moved
+import salt.utils.args
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -625,7 +625,7 @@ def set_fstab(
         ret = 'new'
 
     if ret != 'present':  # ret in ['new', 'change']:
-        if not salt.utils.test_mode(test=test, **kwargs):
+        if not salt.utils.args.test_mode(test=test, **kwargs):
             try:
                 with salt.utils.files.fopen(config, 'w+') as ofile:
                     # The line was changed, commit it!
@@ -753,7 +753,7 @@ def set_vfstab(
         ret = 'new'
 
     if ret != 'present':  # ret in ['new', 'change']:
-        if not salt.utils.test_mode(test=test, **kwargs):
+        if not salt.utils.args.test_mode(test=test, **kwargs):
             try:
                 with salt.utils.files.fopen(config, 'w+') as ofile:
                     # The line was changed, commit it!
@@ -908,7 +908,7 @@ def set_automaster(
         raise CommandExecutionError(msg.format(config, str(exc)))
 
     if change:
-        if not salt.utils.test_mode(test=test, **kwargs):
+        if not salt.utils.args.test_mode(test=test, **kwargs):
             try:
                 with salt.utils.files.fopen(config, 'w+') as ofile:
                     # The line was changed, commit it!
@@ -924,7 +924,7 @@ def set_automaster(
             # The right entry is already here
             return 'present'
         else:
-            if not salt.utils.test_mode(test=test, **kwargs):
+            if not salt.utils.args.test_mode(test=test, **kwargs):
                 # The entry is new, add it to the end of the fstab
                 newline = (
                     '{0}\t{1}\t{2}\n'.format(

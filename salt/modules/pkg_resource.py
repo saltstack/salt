@@ -16,7 +16,6 @@ import yaml
 from salt.ext import six
 
 # Import salt libs
-import salt.utils  # Can be removed once is_true is moved
 import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
@@ -192,7 +191,7 @@ def version(*names, **kwargs):
     '''
     ret = {}
     versions_as_list = \
-        salt.utils.is_true(kwargs.pop('versions_as_list', False))
+        salt.utils.data.is_true(kwargs.pop('versions_as_list', False))
     pkg_glob = False
     if len(names) != 0:
         pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)

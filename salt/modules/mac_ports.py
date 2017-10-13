@@ -37,7 +37,7 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils  # Can be removed when alias_function, is_true are removed
+import salt.utils  # TODO: Remove this when alias_function is removed
 import salt.utils.data
 import salt.utils.path
 import salt.utils.pkg
@@ -96,9 +96,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # 'removed', 'purge_desired' not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -163,7 +163,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3>
     '''
 
-    if salt.utils.is_true(kwargs.get('refresh', True)):
+    if salt.utils.data.is_true(kwargs.get('refresh', True)):
         refresh_db()
 
     available = _list(' '.join(names)) or {}
@@ -299,11 +299,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         salt '*' pkg.install 'package package package'
     '''
     pkg_params, pkg_type = \
-        __salt__['pkg_resource.parse_targets'](name,
-                                               pkgs,
-                                               {})
+        __salt__['pkg_resource.parse_targets'](name, pkgs, {})
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     # Handle version kwarg for a single package target

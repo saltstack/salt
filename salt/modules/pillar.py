@@ -17,7 +17,7 @@ from salt.ext import six
 
 # Import salt libs
 import salt.pillar
-import salt.utils  # Can be removed once alias_function is moved
+import salt.utils  # TODO: Remove this once alias_function is moved
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
