@@ -180,7 +180,7 @@ def remove_service(service=str):
         d = {}
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         service = client.remove_service(service)
-        d.update({'Service Deleted': service, 
+        d.update({'Service Deleted': service,
                   'Minion ID': server_name})
         return d
     except TypeError:
@@ -191,7 +191,7 @@ def remove_service(service=str):
 
 def node_ls(server=str):
     '''
-    Displays Information about Swarm Nodes with passing in the server 
+    Displays Information about Swarm Nodes with passing in the server
     '''
     try:
         d = {}
@@ -262,4 +262,4 @@ def update_node(availability=str,
     except TypeError:
         d = {}
         d.update({'Error': 'Make sure all args are passed [availability, node_name, role, node_id, version]'})
-        return d 
+        return d
