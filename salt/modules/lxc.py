@@ -30,6 +30,7 @@ import salt.utils.args
 import salt.utils.cloud
 import salt.utils.dictupdate
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.network
 import salt.utils.odict
 import salt.utils.path
@@ -1094,7 +1095,7 @@ def _get_base(**kwargs):
         proto = _urlparse(image).scheme
         img_tar = __salt__['cp.cache_file'](image)
         img_name = os.path.basename(img_tar)
-        hash_ = salt.utils.get_hash(
+        hash_ = salt.utils.hashutils.get_hash(
                 img_tar,
                 __salt__['config.get']('hash_type'))
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
