@@ -78,7 +78,8 @@ class LogSetupMock(object):
         '''
         Mock
         '''
-        return None
+        import multiprocessing
+        return multiprocessing.Queue()
 
     def setup_multiprocessing_logging_listener(self, opts, *args):  # pylint: disable=invalid-name,unused-argument
         '''
