@@ -40,12 +40,11 @@ def swarm_tokens():
 def swarm_init(advertise_addr=str,
                listen_addr=int,
                force_new_cluster=bool):
+    '''
+    Initalize Docker on Minion as a Swarm Manager
+    '''
     try:
         d = {}
-        """
-        Initalize Docker on Minion as a Swarm Manager
-        salt <Target> advertise_addr='ens4' listen_addr='0.0.0.0:5000' force_new_cluster=False
-        """
         client.swarm.init(advertise_addr,
                           listen_addr,
                           force_new_cluster)
@@ -62,13 +61,11 @@ def swarm_init(advertise_addr=str,
 def joinswarm(remote_addr=int,
               listen_addr=int,
               token=str):
+    '''
+    Join a Swarm Worker to the cluster
+    '''
     try:
         d = {}
-        """
-        Join a Swarm Worker to the cluster
-        *NOTE this can be use for worker or manager join
-        salt <target> remote_addr='10.1.0.1' listen_addr='0.0.0.0' token='token'
-        """
         client.swarm.join(remote_addrs=[remote_addr],
                           listen_addr=listen_addr,
                           join_token=token)
@@ -82,9 +79,9 @@ def joinswarm(remote_addr=int,
 
 
 def leave_swarm(force=bool):
-    """
+    '''
     Will force the minion to leave the swarm
-    """
+    '''
     d = {}
     client.swarm.leave(force=force)
     output = server_name + ' has left the swarm'
@@ -99,6 +96,9 @@ def service_create(image=str,
                    replicas=int,
                    target_port=int,
                    published_port=int):
+    '''
+    Create Docker Swarm Service Create
+    '''
     try:
         d = {}
         replica_mode = docker.types.ServiceMode('replicated', replicas=replicas)
@@ -126,6 +126,9 @@ def service_create(image=str,
 
 
 def swarm_service_info(service_name=str):
+    '''
+    Swarm Service Information
+    '''
     try:
         d = {}
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
@@ -170,12 +173,15 @@ def swarm_service_info(service_name=str):
 
 
 def remove_service(service=str):
+    '''
+    Remove Swarm Service
+    '''
     try:
         d = {}
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         service = client.remove_service(service)
-        d.update({'Service Deleted':service, 
-                  'Minion ID':server_name})
+        d.update({'Service Deleted': service, 
+                  'Minion ID': server_name})
         return d
     except TypeError:
         d = {}
@@ -184,10 +190,13 @@ def remove_service(service=str):
 
 
 def node_ls(server=str):
+    '''
+    Displays Information about Swarm Nodes with passing in the server 
+    '''
     try:
         d = {}
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
-        service = client.nodes(filters=({'name':server}))
+        service = client.nodes(filters=({'name': server}))
         getdata = json.dumps(service)
         dump = json.loads(getdata)
         for items in dump:
@@ -215,6 +224,9 @@ def node_ls(server=str):
 
 
 def remove_node(node_id=str, force=bool):
+    '''
+    Remove a node from a swarm
+    '''
     client = docker.APIClient(base_url='unix://var/run/docker.sock')
     try:
         if force == 'True':
@@ -233,6 +245,9 @@ def update_node(availability=str,
                 role=str,
                 node_id=str,
                 version=int):
+    '''
+    Updates docker swarm nodes
+    '''
     client = docker.APIClient(base_url='unix://var/run/docker.sock')
     try:
         d = {}
@@ -247,4 +262,4 @@ def update_node(availability=str,
     except TypeError:
         d = {}
         d.update({'Error': 'Make sure all args are passed [availability, node_name, role, node_id, version]'})
-        return d
+        return d 
