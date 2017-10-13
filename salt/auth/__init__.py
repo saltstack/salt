@@ -34,6 +34,7 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.versions
 import salt.utils.user
+import salt.utils.zeromq
 import salt.payload
 
 log = logging.getLogger(__name__)
@@ -653,7 +654,7 @@ class Resolver(object):
 
     def _send_token_request(self, load):
         if self.opts['transport'] in ('zeromq', 'tcp'):
-            master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
+            master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
                          ':' + str(self.opts['ret_port'])
             channel = salt.transport.client.ReqChannel.factory(self.opts,
                                                                 crypt='clear',
