@@ -83,6 +83,13 @@ import salt.log.setup
 import salt.defaults.exitcodes
 import salt.transport.ipc
 
+try:
+    import jsonschema
+    HAS_JSONSCHEMA = True
+except ImportError:
+    HAS_JSONSCHEMA = False
+
+
 log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
@@ -209,6 +216,7 @@ class SaltEvent(object):
     RAET compatible
     The base class used to manage salt events
     '''
+
     def __init__(
             self, node, sock_dir=None,
             opts=None, listen=True, io_loop=None,
@@ -236,6 +244,7 @@ class SaltEvent(object):
         self.subscriber = None
         self.pusher = None
         self.raise_errors = raise_errors
+        self.schemas = []
 
         if opts is None:
             opts = {}
@@ -249,6 +258,10 @@ class SaltEvent(object):
             sock_dir = self.opts['sock_dir']
         else:
             self.opts['sock_dir'] = sock_dir
+
+        if self.opts['validate_event_schema']:
+            for schema_mods in salt.loader.schemas(self.opts):
+                self.schemas = self.schemas + salt.loader.schemas(self.opts)[schema_mods]()
 
         if salt.utils.platform.is_windows() and 'ipc_mode' not in opts:
             self.opts['ipc_mode'] = 'tcp'
@@ -643,6 +656,7 @@ class SaltEvent(object):
         if ret is None or full:
             return ret
         else:
+            self._verify_event_schema(ret['tag'], ret['data'])
             return ret['data']
 
     def get_event_noblock(self):
@@ -709,6 +723,8 @@ class SaltEvent(object):
                 return False
 
         data['_stamp'] = datetime.datetime.utcnow().isoformat()
+
+        self._verify_event_schema(tag, data)
 
         tagend = TAGEND
         if six.PY2:
@@ -871,6 +887,32 @@ class SaltEvent(object):
             self.destroy()
         except:  # pylint: disable=W0702
             pass
+
+    def _verify_event_schema(self, tag, event):
+
+        if not self.opts['validate_event_schema']:
+            return True
+
+        if not HAS_JSONSCHEMA:
+            raise salt.exceptions.SaltException("Jsonschema not found, schema validation should be turned off")
+
+        schema = self._find_schema_by_tag(tag)
+        try:
+            jsonschema.validate(event, schema.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            if self.opts['raise_on_invalid_schema']:
+                raise salt.exceptions.InvalidSchema(exc)
+            else:
+                log.error("Unable to validate schema for tag {0}".format(tag))
+
+    def _find_schema_by_tag(self, tag):
+        schemas = list([schema for schema in self.schemas if schema.match(tag)])
+        if len(schemas) == 0:
+            raise salt.exceptions.SchemaNotFound
+        elif len(schemas) > 1:
+            raise salt.exceptions.MultipleSchemas
+        else:
+            return schemas[0]
 
 
 class MasterEvent(SaltEvent):

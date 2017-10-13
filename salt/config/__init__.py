@@ -327,6 +327,8 @@ VALID_OPTS = {
     # to populate __utils__)
     'utils_dirs': list,
 
+    'schemas_dirs': list,
+
     # salt cloud providers
     'providers': dict,
 
@@ -1128,6 +1130,12 @@ VALID_OPTS = {
     # part of the extra_minion_data param
     # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
     'pass_to_ext_pillars': (six.string_types, list),
+
+    # Requires that all event schema on salt event bus be validated
+    'validate_event_schema': bool,
+
+    # Raise errors in case validation is enabled and the event fails validation
+    'raise_on_invalid_schema': bool,
 }
 
 # default configurations
@@ -1258,6 +1266,7 @@ DEFAULT_MINION_OPTS = {
     'states_dirs': [],
     'render_dirs': [],
     'outputter_dirs': [],
+    'schemas_dirs': [],
     'utils_dirs': [],
     'publisher_acl': {},
     'publisher_acl_blacklist': {},
@@ -1402,6 +1411,8 @@ DEFAULT_MINION_OPTS = {
     'extmod_whitelist': {},
     'extmod_blacklist': {},
     'minion_sign_messages': False,
+    'validate_event_schema': False,
+    'raise_on_invalid_schema': False,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1529,6 +1540,7 @@ DEFAULT_MASTER_OPTS = {
     'outputter_dirs': [],
     'runner_dirs': [],
     'utils_dirs': [],
+    'schemas_dirs': [],
     'client_acl_verify': True,
     'publisher_acl': {},
     'publisher_acl_blacklist': {},
@@ -1714,6 +1726,8 @@ DEFAULT_MASTER_OPTS = {
     'salt_cp_chunk_size': 98304,
     'require_minion_sign_messages': False,
     'drop_messages_signature_fail': False,
+    'validate_event_schema': False,
+    'raise_on_invalid_schema': False,
 }
 
 

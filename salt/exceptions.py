@@ -464,3 +464,22 @@ class VMwareSystemError(VMwareSaltError):
     '''
     Used when representing a generic VMware system error
     '''
+
+
+# Schema related exceptions
+class InvalidSchema(SaltException):
+    '''
+    Thrown when the event isn't validated by schema
+    '''
+
+
+class SchemaNotFound(SaltException):
+    '''
+    Thrown when the event tag doesn't have any matching schema
+    '''
+
+
+class MultipleSchemas(SaltException):
+    '''
+    Thrown when the event tag matches multiple schemas
+    '''

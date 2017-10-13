@@ -444,6 +444,15 @@ def auth(opts, whitelist=None):
     )
 
 
+def schemas(opts, whitelist=None):
+    return LazyLoader(
+        _module_dirs(opts, u'schemas', ext_type_dirs=u'schemas_dirs'),
+        opts,
+        tag=u'schemas',
+        whitelist=whitelist
+    )
+
+
 def fileserver(opts, backends):
     '''
     Returns the file server modules

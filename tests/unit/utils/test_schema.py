@@ -11,6 +11,7 @@ import yaml
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
+from tests.unit.schemas.test_schema import TestEventSchema
 
 # Import Salt Libs
 import salt.utils.schema as schema
@@ -2319,3 +2320,10 @@ class ComplexSchemaTestCase(TestCase):
                 serialized)
         self.assertIn('\'hungry\' is a required property',
                       excinfo.exception.message)
+
+
+class EventSchemaTestCase(TestCase):
+
+    def test_event_schema_matches_using_regex(self):
+        assert TestEventSchema.match("evt1")
+        assert not TestEventSchema.match("foo")
