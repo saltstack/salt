@@ -29,11 +29,11 @@ def __validate__(config):
     '''
     Validate the beacon configuration
     '''
-    # Configuration for glxinfo beacon should be a dictionary
+    # Configuration for aix_account beacon should be a dictionary
     if not isinstance(config, dict):
         return False, ('Configuration for aix_account beacon must be a dict.')
     if 'user' not in config:
-        return False, ('Configuration for glxinfo beacon must '
+        return False, ('Configuration for aix_account beacon must '
                        'include a user or ALL for all users.')
     return True, 'Valid beacon configuration'
 
