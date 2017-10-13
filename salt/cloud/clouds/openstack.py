@@ -185,7 +185,7 @@ except Exception:
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 
 # Import salt libs
-import salt.utils  # Can be removed once namespaced_function has been moved
+import salt.utils  # TODO: Remove this once namespaced_function has been moved
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.pycrypto
