@@ -863,7 +863,7 @@ def highstate(test=None, queue=False, **kwargs):
     finally:
         st_.pop_active()
 
-    if isinstance(ret, dict) and (__salt__['config.option']('state_data', '') == 'terse' or \
+    if isinstance(ret, dict) and (__salt__['config.option']('state_data', '') == 'terse' or
             kwargs.get('terse')):
         ret = _filter_running(ret)
 
