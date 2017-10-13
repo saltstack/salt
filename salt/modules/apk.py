@@ -18,7 +18,6 @@ import copy
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.data
 import salt.utils.itertools
 
@@ -131,9 +130,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -177,7 +176,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
     if len(names) == 0:
         return ''
@@ -290,7 +289,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    refreshdb = salt.utils.is_true(refresh)
+    refreshdb = salt.utils.data.is_true(refresh)
     pkg_to_install = []
 
     old = list_pkgs()
@@ -447,7 +446,7 @@ def upgrade(name=None, pkgs=None, refresh=True):
            'comment': '',
            }
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     old = list_pkgs()
@@ -497,7 +496,7 @@ def list_upgrades(refresh=True):
         salt '*' pkg.list_upgrades
     '''
     ret = {}
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     cmd = ['apk', 'upgrade', '-s']

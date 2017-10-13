@@ -105,8 +105,8 @@ from salt.ext.six.moves.urllib.parse import quote as _quote
 
 # Import salt libs
 from salt.pillar import Pillar
-import salt.utils
 import salt.utils.files
+import salt.utils.hashutils
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -403,7 +403,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         file_md5 = "".join(list(filter(str.isalnum, file_meta['ETag']))) \
             if file_meta else None
 
-        cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
+        cached_md5 = salt.utils.hashutils.get_hash(cached_file_path, 'md5')
 
         log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
 

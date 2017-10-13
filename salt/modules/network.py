@@ -13,7 +13,7 @@ import os
 import socket
 
 # Import salt libs
-import salt.utils  # Can be removed when alias_function mac_str_to_bytes are moved
+import salt.utils  # TODO: Remove this when alias_function mac_str_to_bytes are moved
 import salt.utils.decorators.path
 import salt.utils.files
 import salt.utils.network

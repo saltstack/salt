@@ -46,8 +46,8 @@ import salt.client
 import salt.config
 import salt.loader
 import salt.template
-import salt.utils  # Can be removed when pem_finger is moved
 import salt.utils.compat
+import salt.utils.crypt
 import salt.utils.event
 import salt.utils.files
 import salt.utils.platform
@@ -2675,7 +2675,7 @@ def request_minion_cachedir(
         base = __opts__['cachedir']
 
     if not fingerprint and pubkey is not None:
-        fingerprint = salt.utils.pem_finger(key=pubkey, sum_type=(opts and opts.get('hash_type') or 'sha256'))
+        fingerprint = salt.utils.crypt.pem_finger(key=pubkey, sum_type=(opts and opts.get('hash_type') or 'sha256'))
 
     init_cachedir(base)
 
