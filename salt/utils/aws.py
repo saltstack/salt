@@ -278,7 +278,7 @@ def sig4(method, endpoint, params, prov_dict,
         algorithm,
         amzdate,
         credential_scope,
-        hashlib.sha256(canonical_request).hexdigest()
+        hashlib.sha256(canonical_request.encode(__salt_system_encoding__)).hexdigest()
     ))
 
     # Create the signing key using the function defined above.
