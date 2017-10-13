@@ -2873,7 +2873,7 @@ def _findOptionValueInSeceditFile(option):
                 for _ in range(5):
                     try:
                         __salt__['file.remove'](_tfile)
-                    except WindowsError:  # pylint: disable=E0602
+                    except CommandExecutionError:
                         time.sleep(.1)
                         continue
                     else:
