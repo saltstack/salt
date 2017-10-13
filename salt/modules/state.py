@@ -921,8 +921,9 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
             salt '*' state.apply test pillar='{"foo": "bar"}'
 
         .. note::
-            Values passed this way will override Pillar values set via
-            ``pillar_roots`` or an external Pillar source.
+            Values passed this way will override existing Pillar values set via
+            ``pillar_roots`` or an external Pillar source.  Pillar values that
+            are not included in the kwarg will not be overwritten.
 
         .. versionchanged:: 2016.3.0
             GPG-encrypted CLI Pillar data is now supported via the GPG
@@ -1385,8 +1386,9 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
             salt '*' state.sls_id my_state my_module pillar='{"foo": "bar"}'
 
         .. note::
-            Values passed this way will override Pillar values set via
-            ``pillar_roots`` or an external Pillar source.
+            Values passed this way will override existing Pillar values set via
+            ``pillar_roots`` or an external Pillar source.  Pillar values that
+            are not included in the kwarg will not be overwritten.
 
         .. versionadded:: Oxygen
 
