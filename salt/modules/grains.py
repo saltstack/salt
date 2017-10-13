@@ -118,7 +118,7 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
 
 def has_value(key):
     '''
-    Determine whether a named value exists in the grains dictionary.
+    Determine whether a key exists in the grains dictionary.
 
     Given a grains dictionary that contains the following structure::
 
@@ -134,7 +134,10 @@ def has_value(key):
 
         salt '*' grains.has_value pkg:apache
     '''
-    return True if salt.utils.traverse_dict_and_list(__grains__, key, False) else False
+    return salt.utils.traverse_dict_and_list(
+        __grains__,
+        key,
+        KeyError) is not KeyError
 
 
 def items(sanitize=False):
