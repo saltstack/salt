@@ -21,6 +21,7 @@ import salt.crypt
 import salt.utils
 import salt.utils.verify
 import salt.utils.event
+import salt.utils.process
 import salt.utils.stringutils
 import salt.payload
 import salt.transport.client
@@ -449,7 +450,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         Multiprocessing target for the zmq queue device
         '''
         self.__setup_signals()
-        salt.utils.appendproctitle('MWorkerQueue')
+        salt.utils.process.appendproctitle('MWorkerQueue')
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
@@ -694,7 +695,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         '''
         Bind to the interface specified in the configuration file
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
         # Set up the context
         context = zmq.Context(1)
         # Prepare minion publish socket
