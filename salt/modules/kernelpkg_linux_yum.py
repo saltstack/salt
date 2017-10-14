@@ -12,6 +12,7 @@ try:
     from salt.utils.versions import LooseVersion as _LooseVersion
     from salt.exceptions import CommandExecutionError
     import salt.utils.data
+    import salt.utils.functools
     import salt.utils.systemd
     import salt.modules.yumpkg
     __IMPORT_ERROR = None
@@ -24,7 +25,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'kernelpkg'
 
 # Import functions from yumpkg
-_yum = salt.utils.namespaced_function(salt.modules.yumpkg._yum, globals())  # pylint: disable=invalid-name, protected-access
+_yum = salt.utils.functools.namespaced_function(salt.modules.yumpkg._yum, globals())  # pylint: disable=invalid-name, protected-access
 
 
 def __virtual__():

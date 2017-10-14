@@ -1281,10 +1281,10 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             arguments = ['/i', cached_pkg]
             if pkginfo[version_num].get('allusers', True):
                 arguments.append('ALLUSERS="1"')
-            arguments.extend(salt.utils.shlex_split(install_flags, posix=False))
+            arguments.extend(salt.utils.args.shlex_split(install_flags, posix=False))
         else:
             cmd = cached_pkg
-            arguments = salt.utils.shlex_split(install_flags, posix=False)
+            arguments = salt.utils.args.shlex_split(install_flags, posix=False)
 
         # Install the software
         # Check Use Scheduler Option
@@ -1620,10 +1620,10 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             if use_msiexec:
                 cmd = msiexec
                 arguments = ['/x']
-                arguments.extend(salt.utils.shlex_split(uninstall_flags, posix=False))
+                arguments.extend(salt.utils.args.shlex_split(uninstall_flags, posix=False))
             else:
                 cmd = expanded_cached_pkg
-                arguments = salt.utils.shlex_split(uninstall_flags, posix=False)
+                arguments = salt.utils.args.shlex_split(uninstall_flags, posix=False)
 
             # Uninstall the software
             # Check Use Scheduler Option
