@@ -25,11 +25,11 @@ import re
 import random
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
 import salt.utils.cloud
 import salt.utils.dictupdate
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.network
 import salt.utils.odict
@@ -2598,7 +2598,7 @@ def destroy(name, stop=False, path=None):
     return _change_state('lxc-destroy', name, None, path=path)
 
 # Compatibility between LXC and nspawn
-remove = salt.utils.alias_function(destroy, 'remove')
+remove = salt.utils.functools.alias_function(destroy, 'remove')
 
 
 def exists(name, path=None):
@@ -2941,7 +2941,7 @@ def set_password(name, users, password, encrypted=True, path=None):
         )
     return True
 
-set_pass = salt.utils.alias_function(set_password, 'set_pass')
+set_pass = salt.utils.functools.alias_function(set_password, 'set_pass')
 
 
 def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
@@ -4206,7 +4206,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False, path=None):
         overwrite=overwrite,
         makedirs=makedirs)
 
-cp = salt.utils.alias_function(copy_to, 'cp')
+cp = salt.utils.functools.alias_function(copy_to, 'cp')
 
 
 def read_conf(conf_file, out_format='simple'):

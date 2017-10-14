@@ -27,7 +27,6 @@ import os
 
 # Import Salt Libs
 import salt.pillar
-import salt.utils
 import salt.utils.stringutils
 
 # Import Third Party Libs

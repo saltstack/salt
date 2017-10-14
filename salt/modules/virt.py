@@ -36,7 +36,6 @@ except ImportError:
     HAS_LIBVIRT = False
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path

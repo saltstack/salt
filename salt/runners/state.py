@@ -8,8 +8,8 @@ import logging
 
 # Import salt libs
 import salt.loader
-import salt.utils
 import salt.utils.event
+import salt.utils.functools
 from salt.exceptions import SaltInvocationError
 
 LOGGER = logging.getLogger(__name__)
@@ -89,8 +89,8 @@ def orchestrate(mods,
     return ret
 
 # Aliases for orchestrate runner
-orch = salt.utils.alias_function(orchestrate, 'orch')
-sls = salt.utils.alias_function(orchestrate, 'sls')
+orch = salt.utils.functools.alias_function(orchestrate, 'orch')
+sls = salt.utils.functools.alias_function(orchestrate, 'sls')
 
 
 def orchestrate_single(fun, name, test=None, queue=False, pillar=None, **kwargs):
@@ -197,7 +197,7 @@ def orchestrate_show_sls(mods,
     ret = {minion.opts['id']: running}
     return ret
 
-orch_show_sls = salt.utils.alias_function(orchestrate_show_sls, 'orch_show_sls')
+orch_show_sls = salt.utils.functools.alias_function(orchestrate_show_sls, 'orch_show_sls')
 
 
 def event(tagmatch='*',
