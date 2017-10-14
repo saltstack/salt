@@ -75,7 +75,7 @@ from salt.exceptions import (
 import salt.utils.cloud
 
 from salt.cloud.libcloudfuncs import get_size, get_image, script, show_instance
-from salt.utils import namespaced_function
+from salt.utils.functools import namespaced_function
 
 get_size = namespaced_function(get_size, globals())
 get_image = namespaced_function(get_image, globals())

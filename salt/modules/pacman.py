@@ -18,11 +18,11 @@ import logging
 import os.path
 
 # Import salt libs
-import salt.utils  # TODO: Remove this once alias_function, fnmatch_multiple are moved
 import salt.utils.args
 import salt.utils.data
-import salt.utils.pkg
+import salt.utils.functools
 import salt.utils.itertools
+import salt.utils.pkg
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -107,7 +107,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name):
@@ -576,7 +576,7 @@ def install(name=None,
             _available = list_repo_pkgs(*[x[0] for x in wildcards], refresh=refresh)
             for pkgname, verstr in wildcards:
                 candidates = _available.get(pkgname, [])
-                match = salt.utils.fnmatch_multiple(candidates, verstr)
+                match = salt.utils.itertools.fnmatch_multiple(candidates, verstr)
                 if match is not None:
                     targets.append('='.join((pkgname, match)))
                 else:

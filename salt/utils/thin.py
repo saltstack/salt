@@ -70,10 +70,10 @@ except ImportError:
 
 # Import salt libs
 import salt
-import salt.utils
 import salt.utils.files
 import salt.utils.hashutils
 import salt.exceptions
+import salt.version
 
 SALTCALL = '''
 import os

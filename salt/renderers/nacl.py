@@ -58,7 +58,6 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.stringio
 import salt.syspaths
 

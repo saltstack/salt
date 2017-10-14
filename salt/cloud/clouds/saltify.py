@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.cloud
 import salt.config as config
 import salt.netapi
 import salt.ext.six as six

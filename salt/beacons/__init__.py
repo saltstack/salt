@@ -10,7 +10,7 @@ import re
 
 # Import Salt libs
 import salt.loader
-import salt.utils
+import salt.utils.event
 import salt.utils.minion
 from salt.ext.six.moves import map
 from salt.exceptions import CommandExecutionError

@@ -22,7 +22,7 @@ import salt.utils.event
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.utils.network import host_to_ips as _host_to_ips
-from salt.utils import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function as _namespaced_function
 
 # These imports needed for namespaced functions
 # pylint: disable=W0611

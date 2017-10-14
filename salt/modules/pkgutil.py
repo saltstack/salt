@@ -14,8 +14,8 @@ from __future__ import absolute_import
 import copy
 
 # Import salt libs
-import salt.utils  # TODO: Remove this once alias_function is moved
 import salt.utils.data
+import salt.utils.functools
 import salt.utils.pkg
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
@@ -241,7 +241,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):

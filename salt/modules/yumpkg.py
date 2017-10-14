@@ -41,11 +41,11 @@ from salt.ext.six.moves import configparser
 # pylint: enable=import-error,redefined-builtin
 
 # Import Salt libs
-import salt.utils  # TODO: Remove this once alias_function, fnmatch_multiple are moved
 import salt.utils.args
 import salt.utils.data
 import salt.utils.decorators.path
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.lazy
 import salt.utils.pkg
@@ -544,7 +544,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name):
@@ -966,7 +966,7 @@ def list_upgrades(refresh=True, **kwargs):
     return dict([(x.name, x.version) for x in _yum_pkginfo(out['stdout'])])
 
 # Preserve expected CLI usage (yum list updates)
-list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
+list_updates = salt.utils.functools.alias_function(list_upgrades, 'list_updates')
 
 
 def list_downloaded():
@@ -1483,7 +1483,7 @@ def install(name=None,
                 if '*' in version_num:
                     # Resolve wildcard matches
                     candidates = _available.get(pkgname, [])
-                    match = salt.utils.fnmatch_multiple(candidates, version_num)
+                    match = salt.utils.itertools.fnmatch_multiple(candidates, version_num)
                     if match is not None:
                         version_num = match
                     else:
@@ -2249,7 +2249,7 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
             ret.append(match)
     return ret
 
-get_locked_packages = salt.utils.alias_function(list_holds, 'get_locked_packages')
+get_locked_packages = salt.utils.functools.alias_function(list_holds, 'get_locked_packages')
 
 
 def verify(*names, **kwargs):
@@ -2556,7 +2556,7 @@ def group_install(name,
 
     return install(pkgs=pkgs, **kwargs)
 
-groupinstall = salt.utils.alias_function(group_install, 'groupinstall')
+groupinstall = salt.utils.functools.alias_function(group_install, 'groupinstall')
 
 
 def list_repos(basedir=None):

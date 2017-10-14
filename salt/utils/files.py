@@ -16,7 +16,6 @@ import time
 import urllib
 
 # Import Salt libs
-import salt.utils  # TODO: Remove this when backup_minion is moved
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -125,7 +124,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         bkroot = os.path.join(cachedir, 'file_backup')
     if backup_mode == 'minion' or backup_mode == 'both' and bkroot:
         if os.path.exists(dest):
-            salt.utils.backup_minion(dest, bkroot)
+            backup_minion(dest, bkroot)
     if backup_mode == 'master' or backup_mode == 'both' and bkroot:
         # TODO, backup to master
         pass
@@ -705,3 +704,32 @@ def human_size_to_bytes(human_size):
     size_num = int(match.group(1))
     unit_multiplier = 1024 ** size_exp_map.get(match.group(2), 0)
     return size_num * unit_multiplier
+
+
+def backup_minion(path, bkroot):
+    '''
+    Backup a file on the minion
+    '''
+    dname, bname = os.path.split(path)
+    if salt.utils.platform.is_windows():
+        src_dir = dname.replace(':', '_')
+    else:
+        src_dir = dname[1:]
+    if not salt.utils.platform.is_windows():
+        fstat = os.stat(path)
+    msecs = str(int(time.time() * 1000000))[-6:]
+    if salt.utils.platform.is_windows():
+        # ':' is an illegal filesystem path character on Windows
+        stamp = time.strftime('%a_%b_%d_%H-%M-%S_%Y')
+    else:
+        stamp = time.strftime('%a_%b_%d_%H:%M:%S_%Y')
+    stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
+    bkpath = os.path.join(bkroot,
+                          src_dir,
+                          '{0}_{1}'.format(bname, stamp))
+    if not os.path.isdir(os.path.dirname(bkpath)):
+        os.makedirs(os.path.dirname(bkpath))
+    shutil.copyfile(path, bkpath)
+    if not salt.utils.platform.is_windows():
+        os.chown(bkpath, fstat.st_uid, fstat.st_gid)
+        os.chmod(bkpath, fstat.st_mode)

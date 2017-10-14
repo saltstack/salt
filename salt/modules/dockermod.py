@@ -201,12 +201,13 @@ import subprocess
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
-import salt.utils
 import salt.utils.args
 import salt.utils.decorators
 import salt.utils.docker
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.hashutils
+import salt.utils.json
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.thin
@@ -2745,7 +2746,7 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
 
 
 # Docker cp gets a file from the container, alias this to copy_from
-cp = salt.utils.alias_function(copy_from, 'cp')
+cp = salt.utils.functools.alias_function(copy_from, 'cp')
 
 
 @_ensure_exists
@@ -4393,7 +4394,7 @@ def pause(name):
                             .format(name))}
     return _change_state(name, 'pause', 'paused')
 
-freeze = salt.utils.alias_function(pause, 'freeze')
+freeze = salt.utils.functools.alias_function(pause, 'freeze')
 
 
 @_ensure_exists
@@ -4600,7 +4601,7 @@ def unpause(name):
                             .format(name))}
     return _change_state(name, 'unpause', 'running')
 
-unfreeze = salt.utils.alias_function(unpause, 'unfreeze')
+unfreeze = salt.utils.functools.alias_function(unpause, 'unfreeze')
 
 
 def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
@@ -5370,7 +5371,7 @@ def call(name, function, *args, **kwargs):
 
         # process "real" result in stdout
         try:
-            data = salt.utils.find_json(ret['stdout'])
+            data = salt.utils.json.find_json(ret['stdout'])
             local = data.get('local', data)
             if isinstance(local, dict):
                 if 'retcode' in local:

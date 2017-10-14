@@ -20,7 +20,6 @@ except ImportError:
     from pipes import quote as _quote_args
 
 # Import Salt libs
-import salt.utils
 import salt.utils.path
 
 log = logging.getLogger(__name__)
