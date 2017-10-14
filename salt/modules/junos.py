@@ -1315,7 +1315,8 @@ def commit_check():
 
     return ret
 
-def get_table(table, file, path=None):
+def get_table(table, file, path=None, target=None, key=None, key_items=None,
+              filters=None):
     """
     Retrieve data from a Junos device using Tables/Views
 
@@ -1335,23 +1336,42 @@ def get_table(table, file, path=None):
         * path:
           Path of location of the YAML file.
           defaults to op directory in jnpr.junos.op
+        * target:
+          if command need to run on FPC, can specify fpc target
+        * key:
+          To overwrite key provided in YAML
+        * key_items:
+          To select only given key items
+        * filters:
+          To select only filter for the dictionary from columns
     """
 
     conn = __proxy__['junos.conn']()
     ret = dict()
     ret['out'] = True
+    ret['hostname'] = conn._hostname
+    ret['tablename'] = table
+    get_kvargs = {}
+    if target is not None:
+        get_kvargs['target'] = target
+    if key is not None:
+        get_kvargs['key'] = key
+    if key_items is not None:
+        get_kvargs['key_items'] = key_items
+    if filters is not None:
+        get_kvargs['filters'] = filters
     table_path = path or os.path.dirname(os.path.abspath(tables_par_dir.__file__))
     try:
         file_loc = glob.glob(os.path.join(table_path, '*/{}'.format(file))) or \
                    glob.glob(os.path.join(table_path, '{}'.format(file)))
-        if len(file_loc)==1:
+        if len(file_loc) == 1:
             file_name = file_loc[0]
         elif len(file_loc)>1:
             ret['message'] = 'Given table file %s is located at multiple location'\
-                      %file
+                      % file
             ret['out'] = False
             return ret
-        elif len(file_loc)==0:
+        elif len(file_loc) == 0:
             ret['message'] = 'Given table file %s cannot be located' % file
             ret['out'] = False
             return ret
@@ -1364,9 +1384,9 @@ def get_table(table, file, path=None):
             return ret
         try:
             data = globals()[table](conn)
-            data.get()
+            data.get(**get_kvargs)
         except KeyError:
-            ret['message'] = 'Unable to find Table %s in provided yaml file %s' \
+            ret['message'] = 'Unable to find Table %s in provided yaml file %s'\
                              %(table, file_name)
             ret['out'] = False
             return ret
@@ -1375,7 +1395,8 @@ def get_table(table, file, path=None):
         else:
             ret['reply'] = dict(data)
     except Exception as err:
-        ret['message'] = 'Uncaught exception - please report: {0}'.format(str(err))
+        ret['message'] = 'Uncaught exception - please report: {0}'.format(
+            str(err))
         ret['out'] = False
         return ret
     return ret

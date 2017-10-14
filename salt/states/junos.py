@@ -519,7 +519,8 @@ def commit_check(name):
     return ret
 
 
-def get_table(name, table, file, path=None):
+def get_table(name, table, file, path=None, target=None, key=None,
+              key_items=None, filters=None):
     '''
     Retrieve data from a Junos device using Tables/Views
 
@@ -544,7 +545,16 @@ def get_table(name, table, file, path=None):
         * path:
           Path of location of the YAML file.
           defaults to op directory in jnpr.junos.op
+        * target:
+          if command need to run on FPC, can specify fpc target
+        * key:
+          To overwrite key provided in YAML
+        * key_items:
+          To select only given key items
+        * filters:
+          To select only filter for the dictionary from columns
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
-    ret['changes'] = __salt__['junos.get_table'](table, file, path)
+    ret['changes'] = __salt__['junos.get_table'](table, file, path, target,
+                                                 key, key_items, filters)
     return ret
