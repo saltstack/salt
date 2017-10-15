@@ -487,11 +487,11 @@ class Master(SMaster):
                     for repo in git_pillars:
                         new_opts[u'ext_pillar'] = [repo]
                         try:
-                            git_pillar = salt.utils.gitfs.GitPillar(new_opts)
-                            git_pillar.init_remotes(
+                            git_pillar = salt.utils.gitfs.GitPillar(
+                                new_opts,
                                 repo[u'git'],
-                                salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                                per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
+                                per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
                         except FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:
