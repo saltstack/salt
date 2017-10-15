@@ -48,7 +48,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'grains': {},
                 },
                 '__grains__': {'kernel': 'Linux'},
-                '__utils__': {'files.is_text_file': MagicMock(return_value=True)},
+                '__utils__': {'files.is_text': MagicMock(return_value=True)},
             }
         }
 
@@ -218,7 +218,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'grains': {},
                 },
                 '__grains__': {'kernel': 'Linux'},
-                '__utils__': {'files.is_text_file': MagicMock(return_value=True)},
+                '__utils__': {'files.is_text': MagicMock(return_value=True)},
             }
         }
 

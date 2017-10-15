@@ -285,6 +285,7 @@ import salt.payload
 import salt.utils
 import salt.utils.dictupdate
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.platform
 import salt.utils.templates
 import salt.utils.url
@@ -902,8 +903,8 @@ def _check_dir_meta(name,
             and group != stats.get('gid')):
         changes['group'] = group
     # Normalize the dir mode
-    smode = salt.utils.normalize_mode(stats['mode'])
-    mode = salt.utils.normalize_mode(mode)
+    smode = salt.utils.files.normalize_mode(stats['mode'])
+    mode = salt.utils.files.normalize_mode(mode)
     if mode is not None and mode != smode:
         changes['mode'] = mode
     return changes
@@ -1256,7 +1257,7 @@ def symlink(
     name = os.path.expanduser(name)
 
     # Make sure that leading zeros stripped by YAML loader are added back
-    mode = salt.utils.normalize_mode(mode)
+    mode = salt.utils.files.normalize_mode(mode)
 
     user = _test_owner(kwargs, user=user)
     ret = {'name': name,
@@ -2121,7 +2122,7 @@ def managed(name,
         keep_mode = False
 
     # Make sure that any leading zeros stripped by YAML loader are added back
-    mode = salt.utils.normalize_mode(mode)
+    mode = salt.utils.files.normalize_mode(mode)
 
     contents_count = len(
         [x for x in (contents, contents_pillar, contents_grains)
@@ -2814,8 +2815,8 @@ def directory(name,
         file_mode = dir_mode
 
     # Make sure that leading zeros stripped by YAML loader are added back
-    dir_mode = salt.utils.normalize_mode(dir_mode)
-    file_mode = salt.utils.normalize_mode(file_mode)
+    dir_mode = salt.utils.files.normalize_mode(dir_mode)
+    file_mode = salt.utils.files.normalize_mode(file_mode)
 
     if salt.utils.platform.is_windows():
         # Verify win_owner is valid on the target system
@@ -3268,7 +3269,7 @@ def recurse(name,
         return _error(ret, 'mode management is not supported on Windows')
 
     # Make sure that leading zeros stripped by YAML loader are added back
-    dir_mode = salt.utils.normalize_mode(dir_mode)
+    dir_mode = salt.utils.files.normalize_mode(dir_mode)
 
     try:
         keep_mode = file_mode.lower() == 'keep'
@@ -3278,7 +3279,7 @@ def recurse(name,
     except AttributeError:
         keep_mode = False
 
-    file_mode = salt.utils.normalize_mode(file_mode)
+    file_mode = salt.utils.files.normalize_mode(file_mode)
 
     u_check = _check_user(user, group)
     if u_check:
@@ -4385,7 +4386,7 @@ def comment(name, regex, char='#', backup='.bak'):
     ret['result'] = __salt__['file.search'](name, unanchor_regex, multiline=True)
 
     if slines != nlines:
-        if not __utils__['files.is_text_file'](name):
+        if not __utils__['files.is_text'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -4497,7 +4498,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     )
 
     if slines != nlines:
-        if not __utils__['files.is_text_file'](name):
+        if not __utils__['files.is_text'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -4740,7 +4741,7 @@ def append(name,
         nlines = list(slines)
         nlines.extend(append_lines)
         if slines != nlines:
-            if not __utils__['files.is_text_file'](name):
+            if not __utils__['files.is_text'](name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
                 # Changes happened, add them
@@ -4765,7 +4766,7 @@ def append(name,
         nlines = nlines.splitlines()
 
     if slines != nlines:
-        if not __utils__['files.is_text_file'](name):
+        if not __utils__['files.is_text'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -4933,7 +4934,7 @@ def prepend(name,
     if __opts__['test']:
         nlines = test_lines + slines
         if slines != nlines:
-            if not __utils__['files.is_text_file'](name):
+            if not __utils__['files.is_text'](name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
                 # Changes happened, add them
@@ -4976,7 +4977,7 @@ def prepend(name,
         nlines = nlines.splitlines(True)
 
     if slines != nlines:
-        if not __utils__['files.is_text_file'](name):
+        if not __utils__['files.is_text'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -5314,8 +5315,8 @@ def copy(
     if os.path.lexists(source) and os.path.lexists(name):
         # if this is a file which did not change, do not update
         if force and os.path.isfile(name):
-            hash1 = salt.utils.get_hash(name)
-            hash2 = salt.utils.get_hash(source)
+            hash1 = salt.utils.hashutils.get_hash(name)
+            hash2 = salt.utils.hashutils.get_hash(source)
             if hash1 == hash2:
                 changed = True
                 ret['comment'] = ' '.join([ret['comment'], '- files are identical but force flag is set'])
@@ -5789,7 +5790,7 @@ def serialize(name,
     contents += '\n'
 
     # Make sure that any leading zeros stripped by YAML loader are added back
-    mode = salt.utils.normalize_mode(mode)
+    mode = salt.utils.files.normalize_mode(mode)
 
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
@@ -6653,7 +6654,7 @@ def cached(name,
             # it cause any trouble, and just return True.
             return True
         try:
-            return salt.utils.get_hash(path, form=form) != checksum
+            return salt.utils.hashutils.get_hash(path, form=form) != checksum
         except (IOError, OSError, ValueError):
             # Again, shouldn't happen, but don't let invalid input/permissions
             # in the call to get_hash blow this up.

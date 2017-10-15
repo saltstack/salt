@@ -11,7 +11,7 @@ import copy
 from datetime import datetime, timedelta
 
 # Import salt libs
-import salt.utils  # Can be removed once print_cli is moved
+import salt.utils  # TODO: Remove this once print_cli is moved
 import salt.client
 import salt.output
 import salt.exceptions

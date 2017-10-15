@@ -12,8 +12,9 @@ import logging
 
 # Import salt libs
 import salt.config
-import salt.utils
 import salt.utils.data
+import salt.utils.dictupdate
+import salt.utils.files
 import salt.utils.platform
 try:
     # Gated for salt-ssh (salt.utils.cloud imports msgpack)
@@ -108,7 +109,7 @@ def manage_mode(mode):
     # config.manage_mode should no longer be invoked from the __salt__ dunder
     # in Salt code, this function is only being left here for backwards
     # compatibility.
-    return salt.utils.normalize_mode(mode)
+    return salt.utils.files.normalize_mode(mode)
 
 
 def valid_fileproto(uri):

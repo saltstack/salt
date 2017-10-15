@@ -50,7 +50,6 @@ import salt.defaults.exitcodes
 import salt.payload
 import salt.transport.client
 import salt.transport.frame
-import salt.utils  # Can be removed when pem_finger is moved
 import salt.utils.crypt
 import salt.utils.decorators
 import salt.utils.event
@@ -681,11 +680,11 @@ class AsyncAuth(object):
         if self.opts.get(u'syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get(u'syndic_finger', self.opts.get(u'master_finger', False))
             if syndic_finger:
-                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != syndic_finger:
+                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != syndic_finger:
                     self._finger_fail(syndic_finger, m_pub_fn)
         else:
             if self.opts.get(u'master_finger', False):
-                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != self.opts[u'master_finger']:
+                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != self.opts[u'master_finger']:
                     self._finger_fail(self.opts[u'master_finger'], m_pub_fn)
         auth[u'publish_port'] = payload[u'publish_port']
         raise tornado.gen.Return(auth)
@@ -1030,7 +1029,7 @@ class AsyncAuth(object):
             u'matches the fingerprint of the correct master and that '
             u'this minion is not subject to a man-in-the-middle attack.',
             finger,
-            salt.utils.pem_finger(master_key, sum_type=self.opts[u'hash_type'])
+            salt.utils.crypt.pem_finger(master_key, sum_type=self.opts[u'hash_type'])
         )
         sys.exit(42)
 
@@ -1237,11 +1236,11 @@ class SAuth(AsyncAuth):
         if self.opts.get(u'syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get(u'syndic_finger', self.opts.get(u'master_finger', False))
             if syndic_finger:
-                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != syndic_finger:
+                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != syndic_finger:
                     self._finger_fail(syndic_finger, m_pub_fn)
         else:
             if self.opts.get(u'master_finger', False):
-                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != self.opts[u'master_finger']:
+                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != self.opts[u'master_finger']:
                     self._finger_fail(self.opts[u'master_finger'], m_pub_fn)
         auth[u'publish_port'] = payload[u'publish_port']
         return auth

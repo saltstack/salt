@@ -10,7 +10,7 @@ import os
 import re
 
 # Import Salt libs
-import salt.utils  # Can be removed once is_true is moved
+import salt.utils.data
 import salt.utils.files
 import salt.utils.versions
 
@@ -62,7 +62,7 @@ def check_refresh(opts, refresh=None):
     - A boolean if refresh is not False and the rtag file exists
     '''
     return bool(
-        salt.utils.is_true(refresh) or
+        salt.utils.data.is_true(refresh) or
         (os.path.isfile(rtag(opts)) and refresh is not False)
     )
 

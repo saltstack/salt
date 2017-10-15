@@ -29,7 +29,7 @@ import os
 import logging
 
 # Import Salt libs
-import salt.utils  # Can be removed once date_format is moved
+import salt.utils  # TODO: Remove this once date_format is moved
 import salt.utils.platform
 import salt.utils.user
 from salt.utils.locales import sdecode, sdecode_if_string
