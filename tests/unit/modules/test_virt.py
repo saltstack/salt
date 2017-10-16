@@ -15,7 +15,6 @@ import salt.modules.virt as virt
 import salt.modules.config as config
 from salt._compat import ElementTree as ET
 import salt.config
-import salt.utils
 
 # Import third party libs
 import yaml

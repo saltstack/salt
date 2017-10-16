@@ -85,7 +85,7 @@ import salt.utils.pkg
 import salt.utils.platform
 import salt.utils.versions
 from salt.output import nested
-from salt.utils import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError

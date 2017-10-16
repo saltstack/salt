@@ -41,7 +41,6 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
 from salt.exceptions import SaltInvocationError
 

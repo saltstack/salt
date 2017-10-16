@@ -24,7 +24,6 @@ import salt.loader
 import salt.payload
 import salt.transport
 import salt.fileserver
-import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils
@@ -240,7 +239,7 @@ class Client(object):
         for fn_ in self.file_list(saltenv):
             fn_ = sdecode(fn_)
             if fn_.strip() and fn_.startswith(path):
-                if salt.utils.check_include_exclude(
+                if salt.utils.stringutils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
                     fn_ = self.cache_file(
                         salt.utils.url.create(fn_), saltenv, cachedir=cachedir)
@@ -490,7 +489,7 @@ class Client(object):
                 strpath = u'index.html'
 
             if salt.utils.platform.is_windows():
-                strpath = salt.utils.sanitize_win_path_string(strpath)
+                strpath = salt.utils.path.sanitize_win_path(strpath)
 
             dest = os.path.join(dest, strpath)
 
@@ -805,7 +804,7 @@ class Client(object):
         '''
         url_data = urlparse(url)
         if salt.utils.platform.is_windows():
-            netloc = salt.utils.sanitize_win_path_string(url_data.netloc)
+            netloc = salt.utils.path.sanitize_win_path(url_data.netloc)
         else:
             netloc = url_data.netloc
 

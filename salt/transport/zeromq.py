@@ -18,11 +18,12 @@ from random import randint
 # Import Salt Libs
 import salt.auth
 import salt.crypt
-import salt.utils
-import salt.utils.verify
 import salt.utils.event
+import salt.utils.minions
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.verify
+import salt.utils.zeromq
 import salt.payload
 import salt.transport.client
 import salt.transport.server

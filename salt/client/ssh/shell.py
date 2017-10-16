@@ -15,7 +15,6 @@ import subprocess
 
 # Import salt libs
 import salt.defaults.exitcodes
-import salt.utils
 import salt.utils.nb_popen
 import salt.utils.vt
 

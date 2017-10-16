@@ -36,12 +36,12 @@ import salt.minion
 import salt.roster
 import salt.serializers.yaml
 import salt.state
-import salt.utils
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.files
 import salt.utils.hashutils
+import salt.utils.json
 import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
@@ -497,7 +497,7 @@ class SSH(object):
                     **target)
             stdout, stderr, retcode = single.cmd_block()
             try:
-                data = salt.utils.find_json(stdout)
+                data = salt.utils.json.find_json(stdout)
                 return {host: data.get(u'local', data)}
             except Exception:
                 if stderr:
@@ -525,7 +525,7 @@ class SSH(object):
         stdout, stderr, retcode = single.run()
         # This job is done, yield
         try:
-            data = salt.utils.find_json(stdout)
+            data = salt.utils.json.find_json(stdout)
             if len(data) < 2 and u'local' in data:
                 ret[u'ret'] = data[u'local']
             else:

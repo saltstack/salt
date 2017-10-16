@@ -68,7 +68,6 @@ import logging
 # Import salt libs
 import salt.fileserver as fs
 import salt.modules
-import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils

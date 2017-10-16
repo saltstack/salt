@@ -28,11 +28,11 @@ import time
 import salt.config
 import salt.payload
 import salt.state
-import salt.utils  # TODO: Remove this once namespaced_function is moved
 import salt.utils.args
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.jid
 import salt.utils.platform
@@ -76,7 +76,7 @@ def __virtual__():
     '''
     # Update global namespace with functions that are cloned in this module
     global _orchestrate
-    _orchestrate = salt.utils.namespaced_function(_orchestrate, globals())
+    _orchestrate = salt.utils.functools.namespaced_function(_orchestrate, globals())
 
     return __virtualname__
 

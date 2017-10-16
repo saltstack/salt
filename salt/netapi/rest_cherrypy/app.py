@@ -603,7 +603,6 @@ import yaml
 # Import Salt libs
 import salt
 import salt.auth
-import salt.utils
 import salt.utils.event
 import salt.utils.stringutils
 from salt.ext import six

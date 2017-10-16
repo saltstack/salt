@@ -11,7 +11,6 @@ import itertools
 
 # Salt Modules
 import salt.runner
-import salt.utils
 import salt.config
 import salt.syspaths
 
