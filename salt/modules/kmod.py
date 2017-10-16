@@ -128,7 +128,7 @@ def available():
 
     built_in_file = os.path.join(mod_dir, 'modules.builtin')
     if os.path.exists(built_in_file):
-        with salt.utils.fopen(built_in_file, 'r') as f:
+        with salt.utils.files.fopen(built_in_file, 'r') as f:
             for line in f:
                 # Strip .ko from the basename
                 ret.append(os.path.basename(line)[:-4])
