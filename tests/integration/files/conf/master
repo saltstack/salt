@@ -97,3 +97,5 @@ libcloud_dns:
     key: 12345
     secret: mysecret
     shopper_id: 12345
+
+autosign_grains_dir: autosign_grains

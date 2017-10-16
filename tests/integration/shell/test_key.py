@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import os
 import shutil
 import tempfile
+import time
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -277,3 +278,54 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
+
+    def test_autosign_grains_accept(self):
+        self.run_key('-d minion')
+
+        time.sleep(1)
+        try:
+            self.assertEqual(self.run_key('-l acc'), ['Accepted Keys:', 'sub_minion'])
+            self.assertEqual(self.run_key('-l un'), ['Unaccepted Keys:', 'minion'])
+        except:
+            self.run_key('-a minion')
+            raise
+
+        autosign_grains_dir = os.path.join(self.master_opts['autosign_grains_dir'])
+        if not os.path.isdir(autosign_grains_dir):
+            os.makedirs(autosign_grains_dir)
+        with salt.utils.files.fopen(os.path.join(autosign_grains_dir, 'test_grain'), 'w') as f:
+            f.write('#invalid_value\ncheese')
+
+        time.sleep(1)
+        try:
+            self.assertEqual(self.run_key('-l acc'), ['Accepted Keys:', 'minion', 'sub_minion'])
+        finally:
+            self.run_key('-a minion')
+            if os.path.isdir(autosign_grains_dir):
+                shutil.rmtree(autosign_grains_dir)
+
+    def test_autosign_grains_fail(self):
+        self.run_key('-d minion')
+
+        time.sleep(1)
+        try:
+            self.assertEqual(self.run_key('-l acc'), ['Accepted Keys:', 'sub_minion'])
+            self.assertEqual(self.run_key('-l un'), ['Unaccepted Keys:', 'minion'])
+        except:
+            self.run_key('-a minion')
+            raise
+
+        autosign_grains_dir = os.path.join(self.master_opts['autosign_grains_dir'])
+        if not os.path.isdir(autosign_grains_dir):
+            os.makedirs(autosign_grains_dir)
+        with salt.utils.files.fopen(os.path.join(autosign_grains_dir, 'test_grain'), 'w') as f:
+            f.write('#cheese\ninvalid_value')
+
+        time.sleep(1)
+        try:
+            self.assertEqual(self.run_key('-l acc'), ['Accepted Keys:', 'sub_minion'])
+            self.assertEqual(self.run_key('-l un'), ['Unaccepted Keys:', 'minion'])
+        finally:
+            self.run_key('-a minion')
+            if os.path.isdir(autosign_grains_dir):
+                shutil.rmtree(autosign_grains_dir)
