@@ -2,19 +2,107 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import io
 
 # Import Salt libs
 import salt.config
 import salt.daemons.masterapi as masterapi
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
     MagicMock,
+    NO_MOCK,
+    NO_MOCK_REASON,
 )
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class AutoKeyTestCase(TestCase):
+    '''
+    TestCase for salt.daemons.masterapi.AutoKey class
+    '''
 
+    def setUp(self):
+        opts = salt.config.master_config(None)
+        self.auto_key = masterapi.AutoKey(opts)
+
+    def _test_check_autosign_grains(self,
+                                    test_func,
+                                    file_content='test_value',
+                                    file_name='test_grain',
+                                    opts={}):
+        '''
+        Helper function for testing autosign_grains().
+
+        Patches ``os.walk`` to return only ``file_name``, ``salt.utils.fopen`` to open a mock file
+        with ``file_content`` as content and ``AutoKey.check_permissions`` to always return
+        ``True``. Optionally sets ``opts`` values. Then executes test_func. The ``os.walk`` and
+        ``salt.utils.fopen`` mock objects are passed as arguments.
+        '''
+        for key in opts:
+            self.opts[key] = opts[key]
+        mock_file = io.StringIO(file_content)
+        mock_dirs = (None, None, file_name)
+
+        with patch('os.walk', MagicMock(return_value=mock_dirs)) as mock_walk, \
+             patch('salt.utils.fopen', MagicMock(return_value=mock_file)) as mock_open,
+             patch('salt.deamons.masterapi.AutoKey.check_permissions', MagicMock(return_value=True)):
+            test_func(mock_walk, mock_open)
+
+    def test_check_autosign_grains_no_grains(self):
+        '''
+        Asserts that autosigning from grains fails when no grain values are passed.
+        '''
+        def test_func(mock_walk, mock_open):
+            self.assertFalse(self.auto_key.check_autosign_grains(None))
+            self.assertEqual(mock_walk.call_count, 0)
+            self.assertEqual(mock_open.call_count, 0)
+
+            self.assertFalse(self.auto_key.check_autosign_grains({}))
+            self.assertEqual(mock_walk.call_count, 0)
+            self.assertEqual(mock_open.call_count, 0)
+
+        self._test_check_autosign_grains(test_func, opts={'autosign_grains_dir': 'test_dir'})
+
+    def test_check_autosign_grains_no_autosign_grains_dir(self):
+        '''
+        Asserts that autosigning from grains fails when the \'autosign_grains_dir\' config option
+        is undefined.
+        '''
+        def test_func(mock_walk, mock_open):
+            self.assertFalse(self.auto_key.check_autosign_grains({'test_grain': 'test_value'}))
+            self.assertEqual(mock_walk.call_count, 0)
+            self.assertEqual(mock_open.call_count, 0)
+
+        self._test_check_autosign_grains(test_func)
+
+    def test_check_autosign_grains_accept(self):
+        '''
+        Asserts that autosigning from grains passes when a matching grain value is in an
+        autosign_grain file.
+        '''
+        def test_func(mock_walk, mock_open):
+            self.assertTrue(self.auto_key.check_autosign_grains({'test_grain': 'test_value'}))
+
+        file_content = '#test_ignore\ntest_value'
+        opts = {'autosign_grains_dir': 'test_dir'}
+        self._test_check_autosign_grains(test_func, file_content=file_content, opts=opts)
+
+    def test_check_autosign_grains_accept_not(self):
+        '''
+        Asserts that autosigning from grains fails when the grain value is not in the
+        autosign_grain files.
+        '''
+        def test_func(mock_walk, mock_open):
+            self.assertFalse(self.auto_key.check_autosign_grains({'test_grain': 'test_invalid'}))
+
+        file_content = '#test_invalid\ntest_value'
+        opts = {'autosign_grains_dir': 'test_dir'}
+        self._test_check_autosign_grains(test_func, file_content=file_content, opts=opts)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalFuncsTestCase(TestCase):
     '''
     TestCase for salt.daemons.masterapi.LocalFuncs class
