@@ -92,7 +92,6 @@ import sys
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 import salt.utils
 import salt.utils.pkg.deb
@@ -104,18 +103,6 @@ def __virtual__():
     Only load if modifying repos is available for this package type
     '''
     return 'pkg.mod_repo' in __salt__
-
-
-def _strip_uri(repo):
-    '''
-    Remove the trailing slash from the URI in a repo definition
-    '''
-    splits = repo.split()
-    for idx in range(len(splits)):
-        if any(splits[idx].startswith(x)
-               for x in ('http://', 'https://', 'ftp://')):
-            splits[idx] = splits[idx].rstrip('/')
-    return ' '.join(splits)
 
 
 def managed(name, ppa=None, **kwargs):
@@ -381,7 +368,7 @@ def managed(name, ppa=None, **kwargs):
         sanitizedkwargs = kwargs
 
     if os_family == 'debian':
-        repo = _strip_uri(repo)
+        repo = salt.utils.pkg.deb.strip_uri(repo)
 
     if pre:
         for kwarg in sanitizedkwargs:
