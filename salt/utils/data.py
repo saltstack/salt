@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for manipulating, inspecting, or otherwise working with data types
+and data structures.
+'''
 
 from __future__ import absolute_import
 

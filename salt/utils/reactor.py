@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+Functions which implement running reactor jobs
+'''
+
 
 # Import python libs
 from __future__ import absolute_import

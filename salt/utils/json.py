@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions to work with JSON
+'''
 
 from __future__ import absolute_import
 

@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Convenience functions for dealing with datetime classes
+'''
 
 from __future__ import absolute_import, division
 

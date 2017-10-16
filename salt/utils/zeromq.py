@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-
+'''
+ZMQ-specific functions
+'''
 # Import Python libs
 from __future__ import absolute_import
 

@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Decorator and functions to profile Salt using cProfile
+'''
 
 from __future__ import absolute_import
 

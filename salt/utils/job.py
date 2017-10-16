@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for interacting with the job cache
+'''
 
 # Import Python libs
 from __future__ import absolute_import

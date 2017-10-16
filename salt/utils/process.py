@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for daemonizing and otherwise modifying running processes
+'''
 
 # Import python libs
 from __future__ import absolute_import, with_statement

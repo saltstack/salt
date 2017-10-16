@@ -22,6 +22,7 @@ from salt.ext import six
 # DEPRECATED FUNCTIONS
 #
 # These are not referenced anywhere in the codebase and are slated for removal.
+#
 def option(value, default='', opts=None, pillar=None):
     '''
     Pass in a generic option and receive the value that will be assigned
@@ -110,7 +111,10 @@ def required_modules_error(name, docstring):
 #
 # MOVED FUNCTIONS
 #
-# These are deprecated and will be removed in Neon.
+# These functions have been moved to new locations. The functions below are
+# convenience functions which will allow the old function locations to continue
+# to work. The convenience functions will be removed in the Neon release.
+#
 def get_accumulator_dir(cachedir):
     # Late import to avoid circular import.
     import salt.utils.versions
@@ -118,7 +122,7 @@ def get_accumulator_dir(cachedir):
     salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.get_accumulator_dir\' detected. This function '
-        'has been moved to \'salt.state.accumulator_dir\' as of '
+        'has been moved to \'salt.state.get_accumulator_dir\' as of '
         'Salt Oxygen. This warning will be removed in Salt Neon.'
     )
     return salt.state.get_accumulator_dir(cachedir)
@@ -1648,8 +1652,9 @@ def get_values_of_matching_keys(pattern_dict, user_name):
     salt.utils.versions.warn_until(
         'Neon',
         'Use of \'salt.utils.get_values_of_matching_keys\' detected. '
-        'This function has been moved to \'salt.utils.master.get_master_key\' '
-        'as of Salt Oxygen. This warning will be removed in Salt Neon.'
+        'This function has been moved to '
+        '\'salt.utils.master.get_values_of_matching_keys\' as of Salt Oxygen. '
+        'This warning will be removed in Salt Neon.'
     )
     return salt.utils.master.get_values_of_matching_keys(pattern_dict, user_name)
 
