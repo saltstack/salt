@@ -67,7 +67,7 @@ def _check_xenapi():
 def __virtual__():
     if _check_xenapi() is not False:
         return __virtualname__
-    return False
+    return (False, "Module xapi: xenapi check failed")
 
 
 @contextlib.contextmanager
@@ -174,7 +174,7 @@ def _get_val(record, keys):
     return data
 
 
-def list_vms():
+def list_domains():
     '''
     Return a list of virtual machine names on the minion
 
@@ -182,7 +182,7 @@ def list_vms():
 
     .. code-block:: bash
 
-        salt '*' virt.list_vms
+        salt '*' virt.list_domains
     '''
     with _get_xapi_session() as xapi:
         hosts = xapi.VM.get_all()
@@ -231,7 +231,7 @@ def vm_info(vm_=None):
             if ret is not None:
                 info[vm_] = ret
         else:
-            for vm_ in list_vms():
+            for vm_ in list_domains():
                 ret = _info(vm_)
                 if ret is not None:
                     info[vm_] = _info(vm_)
@@ -258,7 +258,7 @@ def vm_state(vm_=None):
             info[vm_] = _get_record_by_label(xapi, 'VM', vm_)['power_state']
             return info
 
-        for vm_ in list_vms():
+        for vm_ in list_domains():
             info[vm_] = _get_record_by_label(xapi, 'VM', vm_)['power_state']
         return info
 
@@ -634,12 +634,7 @@ def resume(vm_):
             return False
 
 
-# FIXME / TODO
-# This function does NOT use the XenAPI. Instead, it use good old xm / xl.
-# On Xen Source, creating a virtual machine using XenAPI is really painful.
-# XCP / XS make it really easy using xapi.Async.VM.start, but I don't use
-# those on any of my networks.
-def create(config_):
+def start(config_):
     '''
     Start a defined domain
 
@@ -647,22 +642,13 @@ def create(config_):
 
     .. code-block:: bash
 
-        salt '*' virt.create <path to Xen cfg file>
-    '''
-    return __salt__['cmd.run']('{0} create {1}'.format(_get_xtool(), config_), python_shell=False)
-
-
-def start(config_):
-    '''
-    Alias for the obscurely named 'create' function
-
-    CLI Example:
-
-    .. code-block:: bash
-
         salt '*' virt.start <path to Xen cfg file>
     '''
-    return create(config_)
+    # FIXME / TODO
+    # This function does NOT use the XenAPI. Instead, it use good old xm / xl.
+    # On Xen Source, creating a virtual machine using XenAPI is really painful.
+    # XCP / XS make it really easy using xapi.Async.VM.start instead. Anyone?
+    return __salt__['cmd.run']('{0} create {1}'.format(_get_xtool(), config_), python_shell=False)
 
 
 def reboot(vm_):
@@ -748,7 +734,7 @@ def migrate(vm_, target,
             return False
 
 
-def destroy(vm_):
+def stop(vm_):
     '''
     Hard power down the virtual machine, this is equivalent to pulling the
     power
@@ -757,7 +743,7 @@ def destroy(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.destroy <vm name>
+        salt '*' virt.stop <vm name>
     '''
     with _get_xapi_session() as xapi:
         vm_uuid = _get_label_uuid(xapi, 'VM', vm_)
@@ -787,9 +773,10 @@ def is_hyper():
         # virtual_subtype isn't set everywhere.
         return False
     try:
-        if 'xen_' not in salt.utils.fopen('/proc/modules').read():
-            return False
-    except IOError:
+        with salt.utils.fopen('/proc/modules') as fp_:
+            if 'xen_' not in fp_.read():
+                return False
+    except (OSError, IOError):
         return False
     # there must be a smarter way...
     return 'xenstore' in __salt__['cmd.run'](__grains__['ps'])
@@ -839,7 +826,7 @@ def vm_cputime(vm_=None):
             info[vm_] = _info(vm_)
             return info
 
-        for vm_ in list_vms():
+        for vm_ in list_domains():
             info[vm_] = _info(vm_)
 
         return info
@@ -889,7 +876,7 @@ def vm_netstats(vm_=None):
         if vm_:
             info[vm_] = _info(vm_)
         else:
-            for vm_ in list_vms():
+            for vm_ in list_domains():
                 info[vm_] = _info(vm_)
         return info
 
@@ -936,6 +923,58 @@ def vm_diskstats(vm_=None):
         if vm_:
             info[vm_] = _info(vm_)
         else:
-            for vm_ in list_vms():
+            for vm_ in list_domains():
                 info[vm_] = _info(vm_)
         return info
+
+
+# Deprecated aliases
+def create(domain):
+    '''
+    .. deprecated:: 2016.3.0
+       Use :py:func:`~salt.modules.virt.start` instead.
+
+    Start a defined domain
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.create <domain>
+    '''
+    salt.utils.warn_until('Nitrogen', 'Use "virt.start" instead.')
+    return start(domain)
+
+
+def destroy(domain):
+    '''
+    .. deprecated:: 2016.3.0
+       Use :py:func:`~salt.modules.virt.stop` instead.
+
+    Power off a defined domain
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.destroy <domain>
+    '''
+    salt.utils.warn_until('Nitrogen', 'Use "virt.stop" instead.')
+    return stop(domain)
+
+
+def list_vms():
+    '''
+    .. deprecated:: 2016.3.0
+       Use :py:func:`~salt.modules.virt.list_domains` instead.
+
+    List all virtual machines.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.list_vms <domain>
+    '''
+    salt.utils.warn_until('Nitrogen', 'Use "virt.list_domains" instead.')
+    return list_domains()

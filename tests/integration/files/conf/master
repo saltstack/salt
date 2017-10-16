@@ -1,24 +1,34 @@
+# Master Settings
+# Connects to syndic_master via syndic
+id: master
+interface: 127.0.0.1
 publish_port: 64505
 ret_port: 64506
 worker_threads: 3
-root_dir: /tmp/salttest
-pidfile: masterpid
-pki_dir: pki
-cachedir: cache
+pidfile: master.pid
+sock_dir: master_sock
 timeout: 3
-sock_dir: .salt-unix
 open_mode: True
-syndic_master: localhost
 fileserver_list_cache_time: 0
+file_buffer_size: 8192
+file_recv: True
 pillar_opts: True
+log_file: master.log
+log_fmt: '[%(asctime)s.%(msecs)s] %(colorlevel)s%(colorname)s%(colorprocess)s %(funcName)s() L%(lineno)s %(processName)s %(message)s'
+log_level_logfile: debug
+key_logfile: key.log
+token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
+
+# These settings needed for tests on Windows which defaults
+# to ipc_mode: tcp
+tcp_master_pub_port: 64512
+tcp_master_pull_port: 64513
+tcp_master_publish_pull: 64514
+tcp_master_workers: 64515
+
 peer:
   '.*':
     - 'test.*'
-log_file: master
-key_logfile: key
-token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
-
-file_buffer_size: 8192
 
 ext_pillar:
   - git: master https://github.com/saltstack/pillar1.git
@@ -63,6 +73,17 @@ nodegroups:
   min: minion
   sub_min: sub_minion
   mins: N@min or N@sub_min
+  multiline_nodegroup:
+    - 'minion'
+    - 'or'
+    - 'sub_minion'
   redundant_minions: N@min or N@mins
   nodegroup_loop_a: N@nodegroup_loop_b
   nodegroup_loop_b: N@nodegroup_loop_a
+
+
+mysql.host: localhost
+mysql.user: 'salt'
+mysql.pass: 'salt'
+mysql.db: 'salt'
+mysql.port: 3306

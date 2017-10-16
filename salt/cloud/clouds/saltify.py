@@ -2,6 +2,7 @@
 '''
 Saltify Module
 ==============
+
 The Saltify module is designed to install Salt on a remote machine, virtual or
 bare metal, using SSH. This module is useful for provisioning machines which
 are already installed, but not Salted.
@@ -16,10 +17,6 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
-
-# Import salt cloud libs
-import salt.utils.cloud
 import salt.config as config
 
 # Get logging started
@@ -63,7 +60,7 @@ def create(vm_):
     '''
     log.info('Provisioning existing machine {0}'.format(vm_['name']))
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     return ret
 

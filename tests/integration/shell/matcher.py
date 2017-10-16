@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import yaml
 import shutil
@@ -13,6 +14,10 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+
+
+def minion_in_returns(minion, lines):
+    return bool([True for line in lines if line == '{0}:'.format(minion)])
 
 
 class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -39,61 +44,81 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         test salt compound matcher
         '''
         data = self.run_salt('-C "min* and G@test_grain:cheese" test.ping')
-        data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertNotIn('sub_minion', data)
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
         time.sleep(2)
         data = self.run_salt('-C "min* and not G@test_grain:foo" test.ping')
-        data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertNotIn('sub_minion', data)
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
         time.sleep(2)
         data = self.run_salt('-C "min* not G@test_grain:foo" test.ping')
-        data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertNotIn('sub_minion', data)
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
         time.sleep(2)
         match = 'P@test_grain:^cheese$ and * and G@test_grain:cheese'
         data = self.run_salt('-t 1 -C \'{0}\' test.ping'.format(match))
-        data = '\n'.join(data)
-        self.assertIn('minion', data)
-        self.assertNotIn('sub_minion', data)
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
         time.sleep(2)
         match = 'L@sub_minion and E@.*'
         data = self.run_salt('-t 1 -C "{0}" test.ping'.format(match))
-        data = '\n'.join(data)
-        self.assertIn('sub_minion', data)
-        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+        self.assertFalse(minion_in_returns('minion', data))
+        time.sleep(2)
+        data = self.run_salt("-C 'not sub_minion' test.ping")
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt("-C '* and ( not G@test_grain:cheese )' test.ping")
+        self.assertFalse(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt("-C 'G%@planets%merc*' test.ping")
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt("-C 'P%@planets%^(mercury|saturn)$' test.ping")
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt("-C 'I%@companions%three%sarah*' test.ping")
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt("-C 'J%@knights%^(Lancelot|Galahad)$' test.ping")
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
 
     def test_nodegroup(self):
         '''
         test salt nodegroup matcher
         '''
-        def minion_in_target(minion, lines):
-            return sum([line == '{0}:'.format(minion) for line in lines])
-
         data = self.run_salt('-N min test.ping')
-        self.assertTrue(minion_in_target('minion', data))
-        self.assertFalse(minion_in_target('sub_minion', data))
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
         time.sleep(2)
         data = self.run_salt('-N sub_min test.ping')
-        self.assertFalse(minion_in_target('minion', data))
-        self.assertTrue(minion_in_target('sub_minion', data))
+        self.assertFalse(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
         time.sleep(2)
         data = self.run_salt('-N mins test.ping')
-        self.assertTrue(minion_in_target('minion', data))
-        self.assertTrue(minion_in_target('sub_minion', data))
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
         time.sleep(2)
         data = self.run_salt('-N unknown_nodegroup test.ping')
-        self.assertFalse(minion_in_target('minion', data))
-        self.assertFalse(minion_in_target('sub_minion', data))
+        self.assertFalse(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
         time.sleep(2)
         data = self.run_salt('-N redundant_minions test.ping')
-        self.assertTrue(minion_in_target('minion', data))
-        self.assertTrue(minion_in_target('sub_minion', data))
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
         time.sleep(2)
         data = '\n'.join(self.run_salt('-N nodegroup_loop_a test.ping'))
         self.assertIn('No minions matched', data)
+        time.sleep(2)
+        data = self.run_salt("-N multiline_nodegroup test.ping")
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
 
     def test_glob(self):
         '''
@@ -125,6 +150,8 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         test salt grain matcher
         '''
+        # Sync grains
+        self.run_salt('-t1 "*" saltutil.sync_grains')
         # First-level grain (string value)
         data = self.run_salt('-t 1 -G "test_grain:cheese" test.ping')
         data = '\n'.join(data)
@@ -134,6 +161,11 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        # Custom grain
+        data = self.run_salt('-t 1 -G "match:maker" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertIn('sub_minion', data)
         # First-level grain (list member)
         data = self.run_salt('-t 1 -G "planets:earth" test.ping')
         data = '\n'.join(data)
@@ -145,7 +177,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
         data = self.run_salt('-G "planets:pluto" test.ping')
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = (
                 'No minions matched the target. '
                 'No command was sent, no jid was '
@@ -175,6 +207,21 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        # Test for issue: https://github.com/saltstack/salt/issues/19651
+        data = self.run_salt('-G "companions:*:susan" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion:', data)
+        self.assertNotIn('sub_minion', data)
+        # Test to ensure wildcard at end works correctly
+        data = self.run_salt('-G "companions:one:*" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion:', data)
+        self.assertNotIn('sub_minion', data)
+        # Test to ensure multiple wildcards works correctly
+        data = self.run_salt('-G "companions:*:*" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion:', data)
+        self.assertIn('sub_minion', data)
 
     def test_regrain(self):
         '''
@@ -259,22 +306,29 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         Test to see if we're supporting --doc
         '''
         data = self.run_salt('-d "*" user')
-        self.assertIn("'user.add:'", data)
+        self.assertIn('user.add:', data)
 
     def test_salt_documentation_arguments_not_assumed(self):
         '''
         Test to see if we're not auto-adding '*' and 'sys.doc' to the call
         '''
+        os_family = self.run_call('--local grains.get os_family')[1].strip()
+        if os_family == 'Arch':
+            self.skipTest('This test is failing in Arch due to a bug in salt-testing. '
+                          'Skipping until salt-testing can be upgraded. For more information, '
+                          'see https://github.com/saltstack/salt-jenkins/issues/324.')
         data = self.run_salt('-d -t 20')
-        self.assertIn("'user.add:'", data)
+        if data:
+            self.assertIn('user.add:', data)
         data = self.run_salt('"*" -d -t 20')
-        self.assertIn("'user.add:'", data)
+        if data:
+            self.assertIn('user.add:', data)
         data = self.run_salt('"*" -d user -t 20')
-        self.assertIn("'user.add:'", data)
+        self.assertIn('user.add:', data)
         data = self.run_salt('"*" sys.doc -d user -t 20')
-        self.assertIn("'user.add:'", data)
+        self.assertIn('user.add:', data)
         data = self.run_salt('"*" sys.doc user -t 20')
-        self.assertIn("'user.add:'", data)
+        self.assertIn('user.add:', data)
 
     def test_salt_documentation_too_many_arguments(self):
         '''
@@ -306,7 +360,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             '--config-dir {0} minion test.ping'.format(
                 config_dir
             ),
-            timeout=15,
+            timeout=60,
             catch_stderr=True,
             with_retcode=True
         )
@@ -320,7 +374,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
             self.assertEqual(ret[2], 2)
         finally:
-            os.chdir(old_cwd)
+            self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 

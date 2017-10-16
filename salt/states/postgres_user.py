@@ -21,7 +21,6 @@ import logging
 from salt.modules import postgres
 import salt.ext.six as six
 
-
 log = logging.getLogger(__name__)
 
 
@@ -29,7 +28,9 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres.user_exists' in __salt__
+    if 'postgres.user_exists' not in __salt__:
+        return (False, 'Unable to load postgres module.  Make sure `postgres.bins_dir` is set.')
+    return True
 
 
 def present(name,
@@ -42,6 +43,7 @@ def present(name,
             inherit=None,
             login=None,
             password=None,
+            default_password=None,
             refresh_password=None,
             groups=None,
             user=None,
@@ -57,7 +59,7 @@ def present(name,
     and groups the others.
 
     name
-        The name of the user to manage
+        The name of the system user to manage.
 
     createdb
         Is the user allowed to create databases?
@@ -84,8 +86,8 @@ def present(name,
         Should the new user be allowed to initiate streaming replication
 
     password
-        The user's password
-        It can be either a plain string or a md5 postgresql hashed password::
+        The system user's password. It can be either a plain string or a
+        md5 postgresql hashed password::
 
             'md5{MD5OF({password}{role}}'
 
@@ -93,13 +95,18 @@ def present(name,
         encrypted to the previous
         format if it is not already done.
 
+    default_passwoord
+        The password used only when creating the user, unless password is set.
+
+        .. versionadded:: 2016.3.0
+
     refresh_password
         Password refresh flag
 
         Boolean attribute to specify whether to password comparison check
         should be performed.
 
-        If refresh_password is None or False, the password will be automatically
+        If refresh_password is ``True``, the password will be automatically
         updated without extra password change check.
 
         This behaviour makes it possible to execute in environments without
@@ -114,16 +121,16 @@ def present(name,
         .. versionadded:: 0.17.0
 
     db_user
-        database username if different from config or default
+        Postres database username, if different from config or default.
 
     db_password
-        user password if any password for a specified user
+        Postgres user's password, if any password, for a specified db_user.
 
     db_host
-        Database host if different from config or default
+        Postgres database host, if different from config or default.
 
     db_port
-        Database port if different from config or default
+        Postgres database port, if different from config or default.
     '''
     ret = {'name': name,
            'changes': {},
@@ -139,6 +146,11 @@ def present(name,
     password = postgres._maybe_encrypt_password(name,
                                                 password,
                                                 encrypted=encrypted)
+
+    if default_password is not None:
+        default_password = postgres._maybe_encrypt_password(name,
+                                                            default_password,
+                                                            encrypted=encrypted)
 
     db_args = {
         'maintenance_db': maintenance_db,
@@ -195,6 +207,9 @@ def present(name,
                 missing_groups = [a for a in lgroups if a not in user_groups]
                 if missing_groups:
                     update['groups'] = missing_groups
+
+    if mode == 'create' and password is None:
+        password = default_password
 
     if mode == 'create' or (mode == 'update' and update):
         if __opts__['test']:

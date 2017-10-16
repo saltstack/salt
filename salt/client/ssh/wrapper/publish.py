@@ -10,6 +10,7 @@ salt-ssh calls and return the data from them.
 No access control is needed because calls cannot originate from the minions.
 '''
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 
@@ -71,7 +72,9 @@ def _publish(tgt,
         arg = []
 
     # Set up opts for the SSH object
-    opts = copy.deepcopy(__opts__)
+    opts = copy.deepcopy(__context__['master_opts'])
+    minopts = copy.deepcopy(__opts__)
+    opts.update(minopts)
     if roster:
         opts['roster'] = roster
     if timeout:

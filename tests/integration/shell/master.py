@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import yaml
 import signal
@@ -19,10 +20,12 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import integration.utils
+from integration.utils import testprogram
 import salt.utils
 
 
-class MasterTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
+class MasterTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
 
     _call_binary_ = 'salt-master'
 
@@ -68,16 +71,91 @@ class MasterTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                     pass
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-            self.assertIn(
-                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
-            )
-            self.assertEqual(ret[2], 2)
         finally:
-            os.chdir(old_cwd)
+            self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
+    def test_exit_status_unknown_user(self):
+        '''
+        Ensure correct exit status when the master is configured to run as an unknown user.
+        '''
+
+        master = testprogram.TestDaemonSaltMaster(
+            name='unknown_user',
+            configs={'master': {'map': {'user': 'some_unknown_user_xyz'}}},
+            parent_dir=self._test_dir,
+        )
+        # Call setup here to ensure config and script exist
+        master.setup()
+        stdout, stderr, status = master.run(
+            args=['-d'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_NOUSER',
+            message='unknown user not on system',
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
+        )
+        # Although the start-up should fail, call shutdown() to set the internal
+        # _shutdown flag and avoid the registered atexit calls to cause timeout
+        # exeptions and respective traceback
+        master.shutdown()
+
+    # pylint: disable=invalid-name
+    def test_exit_status_unknown_argument(self):
+        '''
+        Ensure correct exit status when an unknown argument is passed to salt-master.
+        '''
+
+        master = testprogram.TestDaemonSaltMaster(
+            name='unknown_argument',
+            parent_dir=self._test_dir,
+        )
+        # Call setup here to ensure config and script exist
+        master.setup()
+        stdout, stderr, status = master.run(
+            args=['-d', '--unknown-argument'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_USAGE',
+            message='unknown argument',
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
+        )
+        # Although the start-up should fail, call shutdown() to set the internal
+        # _shutdown flag and avoid the registered atexit calls to cause timeout
+        # exeptions and respective traceback
+        master.shutdown()
+
+    def test_exit_status_correct_usage(self):
+        '''
+        Ensure correct exit status when salt-master starts correctly.
+        '''
+
+        master = testprogram.TestDaemonSaltMaster(
+            name='correct_usage',
+            parent_dir=self._test_dir,
+        )
+        # Call setup here to ensure config and script exist
+        master.setup()
+        stdout, stderr, status = master.run(
+            args=['-d'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_OK',
+            message='correct usage',
+            stdout=stdout,
+            stderr=integration.utils.decode_byte_list(stderr)
+        )
+        master.shutdown()
+
 
 if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MasterTest)
+    integration.run_tests(MasterTest)

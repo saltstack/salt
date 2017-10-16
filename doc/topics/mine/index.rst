@@ -22,7 +22,7 @@ refreshed on a very limited basis and are largely static data. Mines are
 designed to replace slow peer publishing calls when Minions need data from
 other Minions. Rather than having a Minion reach out to all the other Minions
 for a piece of data, the Salt Mine, running on the Master, can collect it from
-all the Minions every :ref:`mine-interval`, resulting in
+all the Minions every :ref:`mine_interval`, resulting in
 almost fresh data at any given time, with much less overhead.
 
 Mine Functions
@@ -45,8 +45,10 @@ passed, an empty list must be added:
 Mine Functions Aliases
 ----------------------
 
-Function aliases can be used to provide usage intentions or to allow multiple
-calls of the same function with different arguments.
+Function aliases can be used to provide friendly names, usage intentions or to
+allow multiple calls of the same function with different arguments. There is a
+different syntax for passing positional and key-value arguments. Mixing
+positional and key-value arguments is not supported.
 
 .. versionadded:: 2014.7.0
 
@@ -58,9 +60,10 @@ calls of the same function with different arguments.
       internal_ip_addrs:
         mine_function: network.ip_addrs
         cidr: 192.168.0.0/16
-      loopback_ip_addrs:
-        mine_function: network.ip_addrs
-        lo: True
+      ip_list:
+        - mine_function: grains.get
+        - ip_interfaces
+
 
 .. _mine_interval:
 
@@ -112,6 +115,20 @@ stored in a different location. Here is an example of a flat roster containing
     of the Minion in question. This results in a non-trivial delay in
     retrieving the requested data.
 
+Minions Targeting with Mine
+===========================
+
+The ``mine.get`` function supports various methods of :ref:`Minions targeting
+<targeting>` to fetch Mine data from particular hosts, such as glob or regular
+expression matching on Minion id (name), grains, pillars and :ref:`compound
+matches <targeting-compound>`. See the :py:mod:`salt.modules.mine` module
+documentation for the reference.
+
+.. note::
+
+    Pillar data needs to be cached on Master for pillar targeting to work with
+    Mine. Read the note in :ref:`relevant section <targeting-pillar>`.
+
 Example
 =======
 
@@ -157,8 +174,12 @@ to add them to the pool of load balanced servers.
 
     <...file contents snipped...>
 
-    {% for server, addrs in salt['mine.get']('roles:web', 'network.ip_addrs', expr_form='pillar').items() %}
+    {% for server, addrs in salt['mine.get']('roles:web', 'network.ip_addrs', expr_form='grain') | dictsort() %}
     server {{ server }} {{ addrs[0] }}:80 check
     {% endfor %}
 
     <...file contents snipped...>
+
+.. note::
+    The expr_form argument will be renamed to ``tgt_type`` in the Nitrogen
+    release of Salt.

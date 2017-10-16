@@ -10,25 +10,13 @@ Virtual Machines Are Created, But Do Not Respond
 
 Are TCP ports 4505 and 4506 open on the master? This is easy to overlook on new
 masters. Information on how to open firewall ports on various platforms can be
-found :doc:`here </topics/tutorials/firewall>`.
+found :ref:`here <firewall>`.
 
 
 Generic Troubleshooting Steps
 =============================
 This section describes a set of instructions that are useful to a large number
 of situations, and are likely to solve most issues that arise.
-
-.. admonition:: Version Compatibility
-
-    One of the most common issues that Salt Cloud users run into is import
-    errors. These are often caused by version compatibility issues with Salt.
-
-    Salt 0.16.x works with Salt Cloud 0.8.9 or greater.
-
-    Salt 0.17.x requires Salt Cloud 0.8.11.
-
-    Releases after 0.17.x (0.18 or greater) should not encounter issues as Salt
-    Cloud has been merged into Salt itself.
 
 Debug Mode
 ----------
@@ -83,7 +71,7 @@ By default, Salt Cloud will create a directory on the target instance called
 ``/tmp/.saltcloud/``. This directory should be owned by the user that is to
 execute the deploy script, and should have permissions of ``0700``.
 
-Most cloud providers are configured to use ``root`` as the default initial user
+Most cloud hosts are configured to use ``root`` as the default initial user
 for deployment, and as such, this directory and all files in it should be owned
 by the ``root`` user.
 
@@ -101,14 +89,14 @@ The ``/tmp/.saltcloud/`` directory should the following files:
 
 Unprivileged Primary Users
 --------------------------
-Some providers, most notably EC2, are configured with a different primary user.
+Some cloud hosts, most notably EC2, are configured with a different primary user.
 Some common examples are ``ec2-user``, ``ubuntu``, ``fedora``, and ``bitnami``.
 In these cases, the ``/tmp/.saltcloud/`` directory and all files in it should
 be owned by this user.
 
-Some providers, such as EC2, are configured to not require these users to
+Some cloud hosts, such as EC2, are configured to not require these users to
 provide a password when using the ``sudo`` command. Because it is more secure
-to require ``sudo`` users to provide a password, other providers are configured
+to require ``sudo`` users to provide a password, other hosts are configured
 that way.
 
 If this instance is required to provide a password, it needs to be configured
@@ -123,7 +111,7 @@ configuration or the profile configuration:
 ``/tmp/`` is Mounted as ``noexec``
 ----------------------------------
 It is more secure to mount the ``/tmp/`` directory with a ``noexec`` option.
-This is uncommon on most cloud providers, but very common in private
+This is uncommon on most cloud hosts, but very common in private
 environments. To see if the ``/tmp/`` directory is mounted this way, run the
 following command:
 

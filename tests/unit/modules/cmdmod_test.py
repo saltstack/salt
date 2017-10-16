@@ -3,10 +3,14 @@
     :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Libs
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.log import LOG_LEVELS
+import salt.utils
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -135,7 +139,6 @@ class CMDMODTestCase(TestCase):
                               'foo', 'bar', runas='baz')
 
     @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
-    @patch('salt.utils.is_windows', MagicMock(return_value=False))
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.access', MagicMock(return_value=True))
     def test_run_user_not_available(self):
@@ -207,6 +210,7 @@ class CMDMODTestCase(TestCase):
         '''
         self.assertRaises(CommandExecutionError, cmdmod._run, 'foo')
 
+    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
     @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
     @patch('salt.utils.is_windows', MagicMock(return_value=False))
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -225,6 +229,7 @@ class CMDMODTestCase(TestCase):
         '''
         self.assertTrue(cmdmod._is_valid_shell('foo'))
 
+    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
     @patch('os.path.exists', MagicMock(return_value=False))
     def test_is_valid_shell_none(self):
         '''
@@ -240,6 +245,7 @@ class CMDMODTestCase(TestCase):
         with patch('salt.utils.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
             self.assertTrue(cmdmod._is_valid_shell('/bin/bash'))
 
+    @skipIf(salt.utils.is_windows(), 'Do not run on Windows')
     @patch('os.path.exists', MagicMock(return_value=True))
     def test_is_valid_shell_unavailable(self):
         '''

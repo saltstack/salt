@@ -172,20 +172,22 @@ Here's a list of features enabled by this renderer.
       include:
         - .apache
         - .db.mysql
+        - ..app.django
 
       exclude:
         - sls: .users
 
   If the above is written in a salt file at `salt://some/where.sls` then
-  it will include `salt://some/apache.sls` and `salt://some/db/mysql.sls`,
-  and exclude `salt://some/users.ssl`. Actually, it does that by rewriting
-  the above ``include`` and ``exclude`` into:
+  it will include `salt://some/apache.sls`, `salt://some/db/mysql.sls` and
+  `salt://app/django.sls`, and exclude `salt://some/users.ssl`. Actually,
+  it does that by rewriting the above ``include`` and ``exclude`` into:
 
   .. code-block:: yaml
 
       include:
         - some.apache
         - some.db.mysql
+        - app.django
 
       exclude:
         - sls: some.users

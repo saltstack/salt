@@ -1,3 +1,5 @@
+.. _troubleshooting-salt-master:
+
 ===============================
 Troubleshooting the Salt Master
 ===============================
@@ -27,8 +29,8 @@ What Ports does the Master Need Open?
 For the master, TCP ports 4505 and 4506 need to be open. If you've put both
 your Salt master and minion in debug mode and don't see an acknowledgment
 that your minion has connected, it could very well be a firewall interfering
-with the connection. See our :doc:`firewall configuration
-</topics/tutorials/firewall>` page for help opening the firewall on various
+with the connection. See our :ref:`firewall configuration
+<firewall>` page for help opening the firewall on various
 platforms.
 
 If you've opened the correct TCP ports and still aren't seeing connections,
@@ -185,15 +187,13 @@ sometimes encounter times where a :py:func:`state.apply
 <salt.modules.state.apply_>`, or other long running commands do not return
 output.
 
-.. note::
-    A number of timing issues were resolved in the 2014.1 release of Salt.
-    Upgrading to at least this version is strongly recommended if timeouts
-    persist.
-
 By default the timeout is set to 5 seconds. The timeout value can easily be
 increased by modifying the ``timeout`` line within your ``/etc/salt/master``
 configuration file.
 
+Having keys accepted for Salt minions that no longer exist or are not reachable
+also increases the possibility of timeouts, since the Salt master waits for
+those systems to return command results.
 
 Passing the -c Option to Salt Returns a Permissions Error
 =========================================================
@@ -224,7 +224,7 @@ Salt Master Auth Flooding
 
 In large installations, care must be taken not to overwhealm the master with
 authentication requests. Several options can be set on the master which
-mitigate the chances of an authentication flood from causing an interuption in
+mitigate the chances of an authentication flood from causing an interruption in
 service.
 
 .. note::
@@ -248,6 +248,33 @@ service.
     auth_timeout:
         The total time to wait for the authentication process to complete, regardless
         of the number of attempts.
+
+
+=====================
+Running state locally
+=====================
+
+To debug the states, you can use call locally.
+
+.. code-block:: bash
+
+    salt-call -l trace --local state.highstate
+
+
+The top.sls file is used to map what SLS modules get loaded onto what minions via the state system.
+
+It is located in the file defined in the ``file_roots`` variable of the salt master
+configuration file which is defined by found in ``CONFIG_DIR/master``, normally ``/etc/salt/master``
+
+The default configuration for the ``file_roots`` is:
+
+.. code-block:: yaml
+
+   file_roots:
+     base:
+       - /srv/salt
+
+So the top file is defaulted to the location ``/srv/salt/top.sls``
 
 
 Salt Master Umask

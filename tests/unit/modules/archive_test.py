@@ -7,10 +7,14 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from salt.ext.six.moves import zip
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -44,7 +48,7 @@ class ArchiveTestCase(TestCase):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
             ret = archive.tar(
-                'zcvf', 'foo.tar',
+                '-zcvf', 'foo.tar',
                 ['/tmp/something-to-compress-1',
                  '/tmp/something-to-compress-2'],
                 template=None
@@ -59,7 +63,7 @@ class ArchiveTestCase(TestCase):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
             ret = archive.tar(
-                'zcvf', 'foo.tar',
+                '-zcvf', 'foo.tar',
                 '/tmp/something-to-compress-1,/tmp/something-to-compress-2',
                 template=None
             )
@@ -182,8 +186,19 @@ class ArchiveTestCase(TestCase):
 
     @patch('salt.utils.which', lambda exe: exe)
     def test_cmd_unzip(self):
-        mock = MagicMock(return_value='salt')
-        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+        def _get_mock():
+            '''
+            Create a new MagicMock for each scenario in this test, so that
+            assert_called_once_with doesn't complain that the same mock object
+            is called more than once.
+            '''
+            return MagicMock(return_value={'stdout': 'salt',
+                                           'stderr': '',
+                                           'pid': 12345,
+                                           'retcode': 0})
+
+        mock = _get_mock()
+        with patch.dict(archive.__salt__, {'cmd.run_all': mock}):
             ret = archive.cmd_unzip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
@@ -194,11 +209,15 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 ['unzip', '/tmp/salt.{{grains.id}}.zip', '-d', '/tmp/dest',
                  '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                runas=None, python_shell=False, template='jinja'
+                output_loglevel='debug',
+                python_shell=False,
+                redirect_stderr=True,
+                runas=None,
+                template='jinja'
             )
 
-        mock = MagicMock(return_value='salt')
-        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+        mock = _get_mock()
+        with patch.dict(archive.__salt__, {'cmd.run_all': mock}):
             ret = archive.cmd_unzip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
@@ -209,39 +228,72 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 ['unzip', '/tmp/salt.{{grains.id}}.zip', '-d', '/tmp/dest',
                  '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                runas=None, python_shell=False, template='jinja'
+                output_loglevel='debug',
+                python_shell=False,
+                redirect_stderr=True,
+                runas=None,
+                template='jinja'
             )
 
-        mock = MagicMock(return_value='salt')
-        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+        mock = _get_mock()
+        with patch.dict(archive.__salt__, {'cmd.run_all': mock}):
             ret = archive.cmd_unzip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
                 excludes='/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
                 template='jinja',
-                options='fo'
+                options='-fo'
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
                 ['unzip', '-fo', '/tmp/salt.{{grains.id}}.zip', '-d',
                  '/tmp/dest', '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                runas=None, python_shell=False, template='jinja'
+                output_loglevel='debug',
+                python_shell=False,
+                redirect_stderr=True,
+                runas=None,
+                template='jinja'
             )
 
-        mock = MagicMock(return_value='salt')
-        with patch.dict(archive.__salt__, {'cmd.run': mock}):
+        mock = _get_mock()
+        with patch.dict(archive.__salt__, {'cmd.run_all': mock}):
             ret = archive.cmd_unzip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
                 excludes=['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
                 template='jinja',
-                options='fo'
+                options='-fo'
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
                 ['unzip', '-fo', '/tmp/salt.{{grains.id}}.zip', '-d',
                  '/tmp/dest', '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                runas=None, python_shell=False, template='jinja'
+                output_loglevel='debug',
+                python_shell=False,
+                redirect_stderr=True,
+                runas=None,
+                template='jinja'
+            )
+
+        mock = _get_mock()
+        with patch.dict(archive.__salt__, {'cmd.run_all': mock}):
+            ret = archive.cmd_unzip(
+                '/tmp/salt.{{grains.id}}.zip',
+                '/tmp/dest',
+                excludes=['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
+                template='jinja',
+                options='-fo',
+                password='asdf',
+            )
+            self.assertEqual(['salt'], ret)
+            mock.assert_called_once_with(
+                ['unzip', '-P', 'asdf', '-fo', '/tmp/salt.{{grains.id}}.zip',
+                 '-d', '/tmp/dest', '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
+                output_loglevel='quiet',
+                python_shell=False,
+                redirect_stderr=True,
+                runas=None,
+                template='jinja'
             )
 
     def test_unzip(self):
@@ -251,7 +303,8 @@ class ArchiveTestCase(TestCase):
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
                 excludes='/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
-                template='jinja'
+                template='jinja',
+                extract_perms=False
             )
             self.assertEqual(['salt'], ret)
 
@@ -352,6 +405,39 @@ class ArchiveTestCase(TestCase):
                 '/home/strongbad/',
             )
             self.assertFalse(mock.called)
+
+    @patch('salt.utils.which_bin', lambda exe: exe)
+    def test_trim_files(self):
+        source = 'file.tar.gz'
+        tmp_dir = 'temp'
+        files = [
+            '\n'.join(['file1'] * 200),
+            '\n'.join(['file2'] * 200),
+            'this\nthat\nother',
+            'this\nthat\nother',
+            'this\nthat\nother'
+        ]
+        trim_opt = [
+            True,
+            False,
+            3,
+            1,
+            0
+        ]
+        trim_100 = (['file1'] * 100)
+        trim_100.append("List trimmed after 100 files.")
+        expected = [
+            trim_100,
+            ['file2'] * 200,
+            ['this', 'that', 'other'],
+            ['this', 'List trimmed after 1 files.'],
+            ['List trimmed after 0 files.'],
+        ]
+
+        for test_files, test_trim_opts, test_expected in zip(files, trim_opt, expected):
+            with patch.dict(archive.__salt__, {'cmd.run': MagicMock(return_value=test_files)}):
+                ret = archive.unrar(source, tmp_dir, trim_output=test_trim_opts)
+                self.assertEqual(ret, test_expected)
 
 
 if __name__ == '__main__':

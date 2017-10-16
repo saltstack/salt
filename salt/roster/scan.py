@@ -2,13 +2,20 @@
 '''
 Scan a netmask or ipaddr for open ssh ports
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import socket
+import logging
 
 # Import salt libs
-import salt.ext.ipaddr
+import salt.utils.network
+from salt._compat import ipaddress
+
+# Import 3rd-party libs
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
+
+log = logging.getLogger(__name__)
 
 
 def targets(tgt, tgt_type='glob', **kwargs):
@@ -40,18 +47,19 @@ class RosterMatcher(object):
             # Comma-separate list of integers
             ports = list(map(int, str(ports).split(',')))
         try:
-            salt.ext.ipaddr.IPAddress(self.tgt)
-            addrs = [self.tgt]
+            addrs = [ipaddress.ip_address(self.tgt)]
         except ValueError:
             try:
-                addrs = salt.ext.ipaddr.IPNetwork(self.tgt).iterhosts()
+                addrs = ipaddress.ip_network(self.tgt).hosts()
             except ValueError:
                 pass
         for addr in addrs:
             addr = str(addr)
+            log.trace('Scanning host: {0}'.format(addr))
             for port in ports:
+                log.trace('Scanning port: {0}'.format(port))
                 try:
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock = salt.utils.network.get_socket(addr, socket.SOCK_STREAM)
                     sock.settimeout(float(__opts__['ssh_scan_timeout']))
                     sock.connect((addr, port))
                     sock.shutdown(socket.SHUT_RDWR)

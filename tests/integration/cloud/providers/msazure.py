@@ -4,9 +4,11 @@
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 import os
 import random
 import string
+from distutils.version import LooseVersion
 
 # Import Salt Testing Libs
 from salttesting import skipIf
@@ -19,11 +21,18 @@ import integration
 from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
+from salt.ext.six.moves import range
+
+TIMEOUT = 500
+
 try:
-    import azure  # pylint: disable=W0611
+    import azure  # pylint: disable=unused-import
     HAS_AZURE = True
 except ImportError:
     HAS_AZURE = False
+
+if HAS_AZURE and not hasattr(azure, '__version__'):
+    import azure.common
 
 
 def __random_name(size=6):
@@ -39,9 +48,26 @@ def __random_name(size=6):
 INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'azure'
 PROFILE_NAME = 'azure-test'
+REQUIRED_AZURE = '0.11.1'
 
 
-@skipIf(HAS_AZURE is False, 'These tests require azure to be installed.')
+def __has_required_azure():
+    '''
+    Returns True/False if the required version of the Azure SDK is installed.
+    '''
+    if HAS_AZURE:
+        if hasattr(azure, '__version__'):
+            version = LooseVersion(azure.__version__)
+        else:
+            version = LooseVersion(azure.common.__version__)
+
+        if REQUIRED_AZURE <= version:
+            return True
+    return False
+
+
+@skipIf(HAS_AZURE is False, 'These tests require the Azure Python SDK to be installed.')
+@skipIf(__has_required_azure() is False, 'The Azure Python SDK must be >= 0.11.1.')
 class AzureTest(integration.ShellCase):
     '''
     Integration tests for the Azure cloud provider in Salt-Cloud
@@ -119,11 +145,12 @@ class AzureTest(integration.ShellCase):
                     '-p {0} {1}'.format(
                         PROFILE_NAME,
                         INSTANCE_NAME
-                    )
+                    ), timeout=TIMEOUT
                 )]
             )
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
+                           timeout=TIMEOUT)
             raise
 
         # delete the instance
@@ -133,7 +160,7 @@ class AzureTest(integration.ShellCase):
                 [i.strip() for i in self.run_cloud(
                     '-d {0} --assume-yes'.format(
                         INSTANCE_NAME
-                    )
+                    ), timeout=TIMEOUT
                 )]
             )
         except AssertionError:
@@ -148,9 +175,10 @@ class AzureTest(integration.ShellCase):
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
+                           timeout=TIMEOUT)
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(AzureTest)

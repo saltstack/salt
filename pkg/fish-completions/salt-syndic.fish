@@ -3,4 +3,4 @@
 
 # hack to load functions from salt_common completion
 complete --do-complete='salt_common --' >/dev/null
- 
+

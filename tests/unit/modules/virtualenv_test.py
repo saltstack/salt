@@ -8,6 +8,7 @@
 '''
 
 # Import python libraries
+from __future__ import absolute_import
 import sys
 
 # Import Salt Testing libs
@@ -111,10 +112,9 @@ class VirtualenvTestCase(TestCase):
 
                 # Are we logging the deprecation information?
                 self.assertIn(
-                    'INFO:The virtualenv \'--never-download\' option has been '
-                    'deprecated in virtualenv(>=1.10), as such, the '
-                    '\'never_download\' option to `virtualenv.create()` has '
-                    'also been deprecated and it\'s not necessary anymore.',
+                    'INFO:--never-download was deprecated in 1.10.0, '
+                    'but reimplemented in 14.0.0. If this feature is needed, '
+                    'please install a supported virtualenv version.',
                     handler.messages
                 )
 
@@ -309,7 +309,7 @@ class VirtualenvTestCase(TestCase):
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create('/tmp/foo', prompt='\'PY\' Prompt')
             mock.assert_called_once_with(
-                ['virtualenv', '--prompt="\'PY\' Prompt"', '/tmp/foo'],
+                ['virtualenv', "--prompt=''PY' Prompt'", '/tmp/foo'],
                 runas=None,
                 python_shell=False
             )

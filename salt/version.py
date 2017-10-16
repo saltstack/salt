@@ -7,16 +7,20 @@ Set up the version of Salt
 from __future__ import absolute_import, print_function
 import re
 import sys
+import platform
+
+# pylint: disable=invalid-name,redefined-builtin
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import map
 
 # Don't rely on external packages in this module since it's used at install time
-# pylint: disable=invalid-name,redefined-builtin
 if sys.version_info[0] == 3:
     MAX_SIZE = sys.maxsize
     string_types = (str,)
 else:
     MAX_SIZE = sys.maxint
-    string_types = (basestring,)
-    from itertools import imap as map
+    string_types = (six.string_types,)
 # pylint: enable=invalid-name,redefined-builtin
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
@@ -49,14 +53,14 @@ class SaltStackVersion(object):
     and also supports version comparison.
     '''
 
-    __slots__ = ('name', 'major', 'minor', 'bugfix', 'mbugfix', 'rc', 'noc', 'sha')
+    __slots__ = ('name', 'major', 'minor', 'bugfix', 'mbugfix', 'pre_type', 'pre_num', 'noc', 'sha')
 
     git_describe_regex = re.compile(
         r'(?:[^\d]+)?(?P<major>[\d]{1,4})'
         r'\.(?P<minor>[\d]{1,2})'
         r'(?:\.(?P<bugfix>[\d]{0,2}))?'
         r'(?:\.(?P<mbugfix>[\d]{0,2}))?'
-        r'(?:rc(?P<rc>[\d]{1}))?'
+        r'(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]{1}))?'
         r'(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-(?P<sha>[a-z0-9]{8}))?'
     )
     git_sha_regex = re.compile(r'(?P<sha>[a-z0-9]{7})')
@@ -73,20 +77,21 @@ class SaltStackVersion(object):
         # latest release so we can map deprecation warnings to versions.
 
 
-        # pylint: disable=E8203,E8265
-        # ----- Please refrain from fixing PEP-8 E203 and E265------------------------------------------------------->
-        # The idea is keep this readable
-        # ------------------------------------------------------------------------------------------------------------
+        # pylint: disable=E8203
+        # ----- Please refrain from fixing PEP-8 E203 and E265 ----->
+        # The idea is to keep this readable.
+        # -----------------------------------------------------------
         'Hydrogen'      : (2014, 1),
         'Helium'        : (2014, 7),
         'Lithium'       : (2015, 5),
-        'Beryllium'     : (MAX_SIZE - 105, 0),
-        'Boron'         : (MAX_SIZE - 104, 0),
-        'Carbon'        : (MAX_SIZE - 103, 0),
+        'Beryllium'     : (2015, 8),
+        'Boron'         : (2016, 3),
+        'Carbon'        : (2016, 11),
         'Nitrogen'      : (MAX_SIZE - 102, 0),
-        #'Oxygen'       : (MAX_SIZE - 101, 0),
-        #'Fluorine'     : (MAX_SIZE - 100, 0),
-        #'Neon'         : (MAX_SIZE - 99 , 0),
+        'Oxygen'        : (MAX_SIZE - 101, 0),
+        'Fluorine'      : (MAX_SIZE - 100, 0),
+        'Neon'          : (MAX_SIZE - 99, 0),
+        # pylint: disable=E8265
         #'Sodium'       : (MAX_SIZE - 98 , 0),
         #'Magnesium'    : (MAX_SIZE - 97 , 0),
         #'Aluminium'    : (MAX_SIZE - 96 , 0),
@@ -186,7 +191,7 @@ class SaltStackVersion(object):
         #'Bohrium'      : (MAX_SIZE - 2  , 0),
         #'Hassium'      : (MAX_SIZE - 1  , 0),
         #'Meitnerium'   : (MAX_SIZE - 0  , 0),
-        # <---- Please refrain from fixing PEP-8 E203 and E265 -------------------------------------------------------
+        # <---- Please refrain from fixing PEP-8 E203 and E265 ------
         # pylint: enable=E8203,E8265
     }
 
@@ -199,7 +204,8 @@ class SaltStackVersion(object):
                  minor,
                  bugfix=0,
                  mbugfix=0,
-                 rc=0,              # pylint: disable=C0103
+                 pre_type=None,
+                 pre_num=None,
                  noc=0,
                  sha=None):
 
@@ -219,10 +225,12 @@ class SaltStackVersion(object):
         elif isinstance(mbugfix, string_types):
             mbugfix = int(mbugfix)
 
-        if rc is None:
-            rc = 0
-        elif isinstance(rc, string_types):
-            rc = int(rc)
+        if pre_type is None:
+            pre_type = ''
+        if pre_num is None:
+            pre_num = 0
+        elif isinstance(pre_num, string_types):
+            pre_num = int(pre_num)
 
         if noc is None:
             noc = 0
@@ -235,7 +243,8 @@ class SaltStackVersion(object):
         self.minor = minor
         self.bugfix = bugfix
         self.mbugfix = mbugfix
-        self.rc = rc  # pylint: disable=C0103
+        self.pre_type = pre_type
+        self.pre_num = pre_num
         self.name = self.VNAMES.get((major, minor), None)
         self.noc = noc
         self.sha = sha
@@ -244,10 +253,11 @@ class SaltStackVersion(object):
     def parse(cls, version_string):
         if version_string.lower() in cls.LNAMES:
             return cls.from_name(version_string)
-        match = cls.git_describe_regex.match(version_string.decode())
+        vstr = version_string.decode() if isinstance(version_string, bytes) else version_string
+        match = cls.git_describe_regex.match(vstr)
         if not match:
             raise ValueError(
-                'Unable to parse version string: {0!r}'.format(version_string)
+                'Unable to parse version string: \'{0}\''.format(version_string)
             )
         return cls(*match.groups())
 
@@ -255,7 +265,7 @@ class SaltStackVersion(object):
     def from_name(cls, name):
         if name.lower() not in cls.LNAMES:
             raise ValueError(
-                'Named version {0!r} is not known'.format(name)
+                'Named version \'{0}\' is not known'.format(name)
             )
         return cls(*cls.LNAMES[name.lower()])
 
@@ -266,6 +276,16 @@ class SaltStackVersion(object):
                 max([version_info for version_info in
                      cls.VNAMES if
                      version_info[0] < (MAX_SIZE - 200)])
+            ]
+        )
+
+    @classmethod
+    def next_release(cls):
+        return cls.from_name(
+            cls.VNAMES[
+                min([version_info for version_info in
+                     cls.VNAMES if
+                     version_info > cls.from_last_named_version().info])
             ]
         )
 
@@ -285,12 +305,23 @@ class SaltStackVersion(object):
 
     @property
     def rc_info(self):
+        import salt.utils
+        salt.utils.warn_until(
+            'Oxygen',
+            'Please stop using the \'rc_info\' attribute and instead use '
+            '\'pre_info\'. \'rc_info\' will be supported until Salt {version}.'
+        )
+        return self.pre_info
+
+    @property
+    def pre_info(self):
         return (
             self.major,
             self.minor,
             self.bugfix,
             self.mbugfix,
-            self.rc
+            self.pre_type,
+            self.pre_num
         )
 
     @property
@@ -300,7 +331,8 @@ class SaltStackVersion(object):
             self.minor,
             self.bugfix,
             self.mbugfix,
-            self.rc,
+            self.pre_type,
+            self.pre_num,
             self.noc
         )
 
@@ -311,7 +343,8 @@ class SaltStackVersion(object):
             self.minor,
             self.bugfix,
             self.mbugfix,
-            self.rc,
+            self.pre_type,
+            self.pre_num,
             self.noc,
             self.sha
         )
@@ -325,8 +358,8 @@ class SaltStackVersion(object):
         )
         if self.mbugfix:
             version_string += '.{0}'.format(self.mbugfix)
-        if self.rc:
-            version_string += 'rc{0}'.format(self.rc)
+        if self.pre_type:
+            version_string += '{0}{1}'.format(self.pre_type, self.pre_num)
         if self.noc and self.sha:
             noc = self.noc
             if noc < 0:
@@ -360,25 +393,26 @@ class SaltStackVersion(object):
                 other = SaltStackVersion(*other)
             else:
                 raise ValueError(
-                    'Cannot instantiate Version from type {0!r}'.format(
+                    'Cannot instantiate Version from type \'{0}\''.format(
                         type(other)
                     )
                 )
 
-        if (self.rc and other.rc) or (not self.rc and not other.rc):
-            # Both have rc information, regular compare is ok
+        if (self.pre_type and other.pre_type) or (not self.pre_type and not other.pre_type):
+            # Both either have or don't have pre-release information, regular compare is ok
             return method(self.noc_info, other.noc_info)
 
-        # RC's are always lower versions than non RC's
-        if self.rc > 0 and other.rc <= 0:
-            noc_info = list(self.noc_info)
-            noc_info[3] = -1
-            return method(tuple(noc_info), other.noc_info)
-
-        if self.rc <= 0 and other.rc > 0:
+        if self.pre_type and not other.pre_type:
+            # We have pre-release information, the other side doesn't
             other_noc_info = list(other.noc_info)
-            other_noc_info[3] = -1
+            other_noc_info[4] = 'zzzzz'
             return method(self.noc_info, tuple(other_noc_info))
+
+        if not self.pre_type and other.pre_type:
+            # The other side has pre-release informatio, we don't
+            noc_info = list(self.noc_info)
+            noc_info[4] = 'zzzzz'
+            return method(tuple(noc_info), other.noc_info)
 
     def __lt__(self, other):
         return self.__compare__(other, lambda _self, _other: _self < _other)
@@ -401,7 +435,7 @@ class SaltStackVersion(object):
     def __repr__(self):
         parts = []
         if self.name:
-            parts.append('name={0!r}'.format(self.name))
+            parts.append('name=\'{0}\''.format(self.name))
         parts.extend([
             'major={0}'.format(self.major),
             'minor={0}'.format(self.minor),
@@ -409,8 +443,8 @@ class SaltStackVersion(object):
         ])
         if self.mbugfix:
             parts.append('minor-bugfix={0}'.format(self.mbugfix))
-        if self.rc:
-            parts.append('rc={0}'.format(self.rc))
+        if self.pre_type:
+            parts.append('{0}={1}'.format(self.pre_type, self.pre_num))
         noc = self.noc
         if noc == -1:
             noc = 'n/a'
@@ -522,19 +556,25 @@ __version__ = __saltstack_version__.string
 # <---- Common version related attributes - NO NEED TO CHANGE --------------------------------------------------------
 
 
-def versions_information(include_salt_cloud=False):
+def salt_information():
     '''
-    Report on all of the versions for dependent software
+    Report version of salt.
     '''
+    yield 'Salt', __version__
 
+
+def dependency_information(include_salt_cloud=False):
+    '''
+    Report versions of library dependencies.
+    '''
     libs = [
-        ('Salt', None, __version__),
         ('Python', None, sys.version.rsplit('\n')[0].strip()),
         ('Jinja2', 'jinja2', '__version__'),
         ('M2Crypto', 'M2Crypto', 'version'),
         ('msgpack-python', 'msgpack', 'version'),
         ('msgpack-pure', 'msgpack_pure', 'version'),
         ('pycrypto', 'Crypto', '__version__'),
+        ('pycryptodome', 'Cryptodome', 'version_info'),
         ('libnacl', 'libnacl', '__version__'),
         ('PyYAML', 'yaml', '__version__'),
         ('ioflo', 'ioflo', '__version__'),
@@ -545,6 +585,17 @@ def versions_information(include_salt_cloud=False):
         ('Tornado', 'tornado', 'version'),
         ('timelib', 'timelib', 'version'),
         ('dateutil', 'dateutil', '__version__'),
+        ('pygit2', 'pygit2', '__version__'),
+        ('libgit2', 'pygit2', 'LIBGIT2_VERSION'),
+        ('smmap', 'smmap', '__version__'),
+        ('cffi', 'cffi', '__version__'),
+        ('pycparser', 'pycparser', '__version__'),
+        ('gitdb', 'gitdb', '__version__'),
+        ('gitpython', 'git', '__version__'),
+        ('python-gnupg', 'gnupg', '__version__'),
+        ('mysql-python', 'MySQLdb', '__version__'),
+        ('cherrypy', 'cherrypy', '__version__'),
+        ('docker-py', 'docker', '__version__'),
     ]
 
     if include_salt_cloud:
@@ -564,23 +615,128 @@ def versions_information(include_salt_cloud=False):
             if isinstance(version, (tuple, list)):
                 version = '.'.join(map(str, version))
             yield name, version
-        except ImportError:
+        except Exception:
             yield name, None
+
+
+def system_information():
+    '''
+    Report system versions.
+    '''
+    def system_version():
+        '''
+        Return host system version.
+        '''
+        lin_ver = platform.linux_distribution()
+        mac_ver = platform.mac_ver()
+        win_ver = platform.win32_ver()
+
+        if lin_ver[0]:
+            return ' '.join(lin_ver)
+        elif mac_ver[0]:
+            if isinstance(mac_ver[1], (tuple, list)) and ''.join(mac_ver[1]):
+                return ' '.join([mac_ver[0], '.'.join(mac_ver[1]), mac_ver[2]])
+            else:
+                return ' '.join([mac_ver[0], mac_ver[2]])
+        elif win_ver[0]:
+            return ' '.join(win_ver)
+        else:
+            return ''
+
+    version = system_version()
+    release = platform.release()
+    if platform.win32_ver()[0]:
+        import win32api
+        server = {'Vista': '2008Server',
+                  '7': '2008ServerR2',
+                  '8': '2012Server',
+                  '8.1': '2012ServerR2',
+                  '10': '2016Server'}
+        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
+        # started reporting the Desktop version instead of the Server version on
+        # Server versions of Windows, so we need to look those up
+        # So, if you find a Server Platform that's a key in the server
+        # dictionary, then lookup the actual Server Release.
+        # If this is a Server Platform then `GetVersionEx` will return a number
+        # greater than 1.
+        if win32api.GetVersionEx(1)[8] > 1 and release in server:
+            release = server[release]
+        _, ver, sp, extra = platform.win32_ver()
+        version = ' '.join([release, ver, sp, extra])
+
+    system = [
+        ('system', platform.system()),
+        ('dist', ' '.join(platform.dist())),
+        ('release', release),
+        ('machine', platform.machine()),
+        ('version', version),
+    ]
+
+    for name, attr in system:
+        yield name, attr
+        continue
+
+
+def versions_information(include_salt_cloud=False):
+    '''
+    Report the versions of dependent software.
+    '''
+    salt_info = list(salt_information())
+    lib_info = list(dependency_information(include_salt_cloud))
+    sys_info = list(system_information())
+
+    return {'Salt Version': dict(salt_info),
+            'Dependency Versions': dict(lib_info),
+            'System Versions': dict(sys_info)}
 
 
 def versions_report(include_salt_cloud=False):
     '''
-    Yield each library properly formatted for a console clean output.
+    Yield each version properly formatted for console output.
     '''
-    libs = list(versions_information(include_salt_cloud=include_salt_cloud))
+    ver_info = versions_information(include_salt_cloud)
 
-    padding = max(len(lib[0]) for lib in libs) + 1
+    lib_pad = max(len(name) for name in ver_info['Dependency Versions'])
+    sys_pad = max(len(name) for name in ver_info['System Versions'])
+    padding = max(lib_pad, sys_pad) + 1
 
     fmt = '{0:>{pad}}: {1}'
+    info = []
+    for ver_type in ('Salt Version', 'Dependency Versions', 'System Versions'):
+        info.append('{0}:'.format(ver_type))
+        # List dependencies in alphabetical, case insensitive order
+        for name in sorted(ver_info[ver_type], key=lambda x: x.lower()):
+            ver = fmt.format(name,
+                             ver_info[ver_type][name] or 'Not Installed',
+                             pad=padding)
+            info.append(ver)
+        info.append(' ')
 
-    for name, version in libs:
-        yield fmt.format(name, version or 'Not Installed', pad=padding)
+    for line in info:
+        yield line
 
+
+def msi_conformant_version():
+    '''
+    A msi conformant version consists of up to 4 numbers, each smaller than 256,
+    except the 4th. Therefore, the year must be represented as 'short year'.
+
+    Examples (depend on git checkout):
+      develop                2016.11.0-742-g5ca4d20     16.11.0.742
+      2016.11 (branch)       2016.11.2-78-gce1f01f      16.11.2.78
+      v2016.11.2 (tag)       2016.11.2                  16.11.2.0
+
+    Note that the commit count for tags is 0(zero)
+    '''
+    year2 = int(str(__saltstack_version__.major)[2:])
+    month = __saltstack_version__.minor
+    minor = __saltstack_version__.bugfix
+    commi = __saltstack_version__.noc
+    return '{0}.{1}.{2}.{3}'.format(year2, month, minor, commi)
 
 if __name__ == '__main__':
-    print(__version__)
+    if len(sys.argv) == 2 and sys.argv[1] == 'msi':
+        # Building the msi requires an msi-conformant version
+        print(msi_conformant_version())
+    else:
+        print(__version__)

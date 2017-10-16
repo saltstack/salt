@@ -8,7 +8,15 @@ Beacon to monitor statistics from ethernet adapters
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import psutil
+
+# Import third party libs
+# pylint: disable=import-error
+try:
+    import salt.utils.psutil_compat as psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
+# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +40,35 @@ def _to_list(obj):
 
 
 def __virtual__():
+    if not HAS_PSUTIL:
+        return (False, 'cannot load network_info beacon: psutil not available')
     return __virtualname__
+
+
+def __validate__(config):
+    '''
+    Validate the beacon configuration
+    '''
+
+    VALID_ITEMS = [
+        'type', 'bytes_sent', 'bytes_recv', 'packets_sent',
+        'packets_recv', 'errin', 'errout', 'dropin',
+        'dropout'
+    ]
+
+    # Configuration for load beacon should be a list of dicts
+    if not isinstance(config, dict):
+        return False, ('Configuration for load beacon must be a dictionary.')
+    else:
+        for item in config:
+            if not isinstance(config[item], dict):
+                return False, ('Configuration for load beacon must '
+                               'be a dictionary of dictionaries.')
+            else:
+                if not any(j in VALID_ITEMS for j in config[item]):
+                    return False, ('Invalid configuration item in '
+                                   'Beacon configuration.')
+    return True, 'Valid beacon configuration'
 
 
 def beacon(config):
@@ -43,10 +79,10 @@ def beacon(config):
     and only emit a beacon if any of them are
     exceeded.
 
-    code_block:: yaml
-
     Emit beacon when any values are equal to
     configured values.
+
+    .. code-block:: yaml
 
         beacons:
           network_info:
@@ -62,7 +98,9 @@ def beacon(config):
                 - dropout: 100
 
     Emit beacon when any values are greater
-    than to configured values.
+    than configured values.
+
+    .. code-block:: yaml
 
         beacons:
           network_info:

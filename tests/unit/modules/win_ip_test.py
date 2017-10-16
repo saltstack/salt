@@ -65,12 +65,12 @@ class WinShadowTestCase(TestCase):
         Test if it return configs for all interfaces.
         '''
         ret = {'Ethernet': {'DHCP enabled': 'Yes',
-                            'DNS servers configured through DHCP': '1.2.3.4',
+                            'DNS servers configured through DHCP': ['1.2.3.4'],
                             'Default Gateway': '1.2.3.1',
                             'Gateway Metric': '0',
                             'InterfaceMetric': '20',
                             'Register with which suffix': 'Primary only',
-                            'WINS servers configured through DHCP': 'None',
+                            'WINS servers configured through DHCP': ['None'],
                             'ip_addrs': [{'IP Address': '1.2.3.74',
                                           'Netmask': '255.255.255.0',
                                           'Subnet': '1.2.3.0/24'}]}}
@@ -86,11 +86,11 @@ class WinShadowTestCase(TestCase):
         Test if it return the configuration of a network interface.
         '''
         ret = {'DHCP enabled': 'Yes',
-               'DNS servers configured through DHCP': '1.2.3.4',
+               'DNS servers configured through DHCP': ['1.2.3.4'],
                'Default Gateway': '1.2.3.1', 'Gateway Metric': '0',
                'InterfaceMetric': '20',
                'Register with which suffix': 'Primary only',
-               'WINS servers configured through DHCP': 'None',
+               'WINS servers configured through DHCP': ['None'],
                'ip_addrs': [{'IP Address': '1.2.3.74',
                              'Netmask': '255.255.255.0',
                              'Subnet': '1.2.3.0/24'}]}

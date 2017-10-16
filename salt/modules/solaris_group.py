@@ -33,7 +33,10 @@ def __virtual__():
     '''
     Set the group module if the kernel is SunOS
     '''
-    return __virtualname__ if __grains__['kernel'] == 'SunOS' else False
+    if __grains__['kernel'] == 'SunOS':
+        return __virtualname__
+    return (False, 'The solaris_group execution module failed to load: '
+            'only available on Solaris systems.')
 
 
 def add(name, gid=None, **kwargs):

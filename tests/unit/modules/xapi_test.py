@@ -78,7 +78,7 @@ class XapiTestCase(TestCase):
             Test to return a list of virtual machine names on the minion
         '''
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
-            self.assertListEqual(xapi.list_vms(), [])
+            self.assertListEqual(xapi.list_domains(), [])
 
     def test_vm_info(self):
         '''
@@ -99,46 +99,6 @@ class XapiTestCase(TestCase):
                 self.assertDictEqual(xapi.vm_state("salt"), {'salt': '1'})
 
                 self.assertDictEqual(xapi.vm_state(), {})
-
-    def test_node_info(self):
-        '''
-            Test to return a dict with information about this node
-        '''
-        ret = {'cc_compile_by': 'stack',
-               'cc_compile_date': 'stack',
-               'cc_compile_domain': 'stack',
-               'cc_compiler': 'stack',
-               'cores_per_sockets': 'stack',
-               'cpuarch': 'stack',
-               'cpucores': 'stack',
-               'cpufeatures': 'salt',
-               'cpumhz': 5,
-               'cputhreads': 'stack',
-               'free_cpus': 0,
-               'free_memory': 0,
-               'phymemory': 0,
-               'platform_params': 'stack',
-               'xen_caps': 's t a c k',
-               'xen_changeset': 'stack',
-               'xen_commandline': 'stack',
-               'xen_extra': 'stack',
-               'xen_major': 'stack',
-               'xen_minor': 'stack',
-               'xen_pagesize': 'stack',
-               'xen_scheduler': 'stack',
-               'xend_config_format': 'stack'
-               }
-        with patch.object(xapi, "_get_xapi_session", MagicMock()):
-            mock = MagicMock(return_value={"features": "salt", "speed": 5,
-                                           "host_CPUs": "salt",
-                                           "cpu_pool": "salt"})
-            with patch.object(xapi, "_get_record", mock):
-                mock = MagicMock(return_value={"memory_free": 1024,
-                                               "memory_total": 1024})
-                with patch.object(xapi, "_get_metrics_record", mock):
-                    mock = MagicMock(return_value="stack")
-                    with patch.object(xapi, "_get_val", mock):
-                        self.assertDictEqual(xapi.node_info(), ret)
 
     def test_get_nics(self):
         '''
@@ -320,14 +280,14 @@ class XapiTestCase(TestCase):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(xapi.__salt__, {'cmd.run': mock}):
-            self.assertTrue(xapi.create("salt"))
+            self.assertTrue(xapi.start("salt"))
 
     def test_start(self):
         '''
             Test to reboot a domain via ACPI request
         '''
         mock = MagicMock(return_value=True)
-        with patch.object(xapi, "create", mock):
+        with patch.object(xapi, "start", mock):
             self.assertTrue(xapi.start("salt"))
 
     def test_reboot(self):
@@ -393,16 +353,16 @@ class XapiTestCase(TestCase):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.destroy("salt"))
+                self.assertFalse(xapi.stop("salt"))
 
-                self.assertTrue(xapi.destroy("salt"))
+                self.assertTrue(xapi.stop("salt"))
 
         with patch.object(xapi, "_check_xenapi",
                           MagicMock(return_value=Mockxapi)):
             mock = MagicMock(return_value=True)
             with patch.dict(xapi.__salt__, {'config.option': mock}):
                 with patch.object(xapi, "_get_label_uuid", mock):
-                    self.assertFalse(xapi.destroy("salt"))
+                    self.assertFalse(xapi.stop("salt"))
 
     def test_is_hyper(self):
         '''
@@ -444,7 +404,7 @@ class XapiTestCase(TestCase):
                     self.assertDictEqual(xapi.vm_cputime("1"), ret)
 
             mock = MagicMock(return_value={})
-            with patch.object(xapi, "list_vms", mock):
+            with patch.object(xapi, "list_domains", mock):
                 self.assertDictEqual(xapi.vm_cputime(""), {})
 
     def test_vm_netstats(self):

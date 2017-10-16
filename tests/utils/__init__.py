@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
 
 try:
     import cherrypy
@@ -110,6 +111,8 @@ if HAS_CHERRYPY:
         }
 
         def setUp(self):
+            if not hasattr(self, '_cp_config'):
+                self._cp_config = {}
             Root._cp_config = self._cp_config
             root = Root()
 

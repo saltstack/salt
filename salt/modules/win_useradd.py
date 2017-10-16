@@ -62,65 +62,12 @@ def __virtual__():
     '''
     if HAS_WIN32NET_MODS and salt.utils.is_windows():
         return __virtualname__
-    return False
-
-
-def _get_date_time_format(dt_string):
-    '''
-    Copied from win_system.py (_get_date_time_format)
-
-    Function that detects the date/time format for the string passed.
-
-    :param str dt_string:
-        A date/time string
-
-    :return: The format of the passed dt_string
-    :rtype: str
-    '''
-    valid_formats = [
-        '%Y-%m-%d %I:%M:%S %p',
-        '%m-%d-%y %I:%M:%S %p',
-        '%m-%d-%Y %I:%M:%S %p',
-        '%m/%d/%y %I:%M:%S %p',
-        '%m/%d/%Y %I:%M:%S %p',
-        '%Y/%m/%d %I:%M:%S %p',
-        '%Y-%m-%d %I:%M:%S',
-        '%m-%d-%y %I:%M:%S',
-        '%m-%d-%Y %I:%M:%S',
-        '%m/%d/%y %I:%M:%S',
-        '%m/%d/%Y %I:%M:%S',
-        '%Y/%m/%d %I:%M:%S',
-        '%Y-%m-%d %I:%M %p',
-        '%m-%d-%y %I:%M %p',
-        '%m-%d-%Y %I:%M %p',
-        '%m/%d/%y %I:%M %p',
-        '%m/%d/%Y %I:%M %p',
-        '%Y/%m/%d %I:%M %p',
-        '%Y-%m-%d %I:%M',
-        '%m-%d-%y %I:%M',
-        '%m-%d-%Y %I:%M',
-        '%m/%d/%y %I:%M',
-        '%m/%d/%Y %I:%M',
-        '%Y/%m/%d %I:%M',
-        '%Y-%m-%d',
-        '%m-%d-%y',
-        '%m-%d-%Y',
-        '%m/%d/%y',
-        '%m/%d/%Y',
-        '%Y/%m/%d',
-    ]
-    for dt_format in valid_formats:
-        try:
-            datetime.strptime(dt_string, dt_format)
-            return dt_format
-        except ValueError:
-            continue
-    return False
+    return (False, "Module win_useradd: module has failed dependencies or is not on Windows client")
 
 
 def add(name,
         password=None,
-        fullname=False,
+        fullname=None,
         description=None,
         groups=None,
         home=None,
@@ -247,28 +194,28 @@ def update(name,
         The path to the user's profile directory.
 
     :param date expiration_date: The date and time when the account expires. Can
-    be a valid date/time string. To set to never expire pass the string 'Never'.
+        be a valid date/time string. To set to never expire pass the string 'Never'.
 
     :param bool expired: Pass `True` to expire the account. The user will be
-    prompted to change their password at the next logon. Pass `False` to mark
-    the account as 'not expired'. You can't use this to negate the expiration if
-    the expiration was caused by the account expiring. You'll have to change
-    the `expiration_date` as well.
+        prompted to change their password at the next logon. Pass `False` to mark
+        the account as 'not expired'. You can't use this to negate the expiration if
+        the expiration was caused by the account expiring. You'll have to change
+        the `expiration_date` as well.
 
     :param bool account_disabled: True disables the account. False enables the
-    account.
+        account.
 
     :param bool unlock_account: True unlocks a locked user account. False is
-    ignored.
+        ignored.
 
     :param bool password_never_expires: True sets the password to never expire.
-    False allows the password to expire.
+        False allows the password to expire.
 
     :param bool disallow_change_password: True blocks the user from changing
-    the password. False allows the user to change the password.
+        the password. False allows the user to change the password.
 
-    :return:
-        True if successful. False is unsuccessful.
+    :return: True if successful. False is unsuccessful.
+
     :rtype: bool
 
     CLI Example:
@@ -311,11 +258,10 @@ def update(name,
         if expiration_date == 'Never':
             user_info['acct_expires'] = win32netcon.TIMEQ_FOREVER
         else:
-            date_format = _get_date_time_format(expiration_date)
-            if date_format:
-                dt_obj = datetime.strptime(expiration_date, date_format)
-            else:
-                return 'Invalid start_date'
+            try:
+                dt_obj = salt.utils.date_cast(expiration_date)
+            except (ValueError, RuntimeError):
+                return 'Invalid Date/Time Format: {0}'.format(expiration_date)
             user_info['acct_expires'] = time.mktime(dt_obj.timetuple())
     if expired is not None:
         if expired:
@@ -326,20 +272,20 @@ def update(name,
         if account_disabled:
             user_info['flags'] |= win32netcon.UF_ACCOUNTDISABLE
         else:
-            user_info['flags'] ^= win32netcon.UF_ACCOUNTDISABLE
+            user_info['flags'] &= ~win32netcon.UF_ACCOUNTDISABLE
     if unlock_account is not None:
         if unlock_account:
-            user_info['flags'] ^= win32netcon.UF_LOCKOUT
+            user_info['flags'] &= ~win32netcon.UF_LOCKOUT
     if password_never_expires is not None:
         if password_never_expires:
             user_info['flags'] |= win32netcon.UF_DONT_EXPIRE_PASSWD
         else:
-            user_info['flags'] ^= win32netcon.UF_DONT_EXPIRE_PASSWD
+            user_info['flags'] &= ~win32netcon.UF_DONT_EXPIRE_PASSWD
     if disallow_change_password is not None:
         if disallow_change_password:
             user_info['flags'] |= win32netcon.UF_PASSWD_CANT_CHANGE
         else:
-            user_info['flags'] ^= win32netcon.UF_PASSWD_CANT_CHANGE
+            user_info['flags'] &= ~win32netcon.UF_PASSWD_CANT_CHANGE
 
     # Apply new settings
     try:
@@ -579,7 +525,7 @@ def removegroup(name, group):
     return ret['retcode'] == 0
 
 
-def chhome(name, home, persist=False):
+def chhome(name, home, **kwargs):
     '''
     Change the home directory of the user, pass True for persist to move files
     to the new home directory if the old home directory exist.
@@ -589,9 +535,6 @@ def chhome(name, home, persist=False):
 
     :param str home:
         new location of the home directory
-
-    :param bool persist:
-        True to move the contents of the existing home directory to the new location
 
     :return:
         True if successful. False is unsuccessful.
@@ -603,6 +546,13 @@ def chhome(name, home, persist=False):
 
         salt '*' user.chhome foo \\\\fileserver\\home\\foo True
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    persist = kwargs.pop('persist', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+    if persist:
+        log.info('Ignoring unsupported \'persist\' argument to user.chhome')
+
     pre_info = info(name)
 
     if not pre_info:
@@ -613,11 +563,6 @@ def chhome(name, home, persist=False):
 
     if not update(name=name, home=home):
         return False
-
-    if persist and home is not None and pre_info['home'] is not None:
-        cmd = 'move /Y {0} {1}'.format(pre_info['home'], home)
-        if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
-            log.debug('Failed to move the contents of the Home Directory')
 
     post_info = info(name)
     if post_info['home'] != pre_info['home']:
@@ -636,8 +581,8 @@ def chprofile(name, profile):
     :param str profile:
         new location of the profile
 
-    :return:
-    True if successful. False is unsuccessful.
+    :return: True if successful. False is unsuccessful.
+
     :rtype: bool
 
     CLI Example:
@@ -720,7 +665,10 @@ def chgroups(name, groups, append=True):
             continue
         group = _cmd_quote(group).lstrip('\'').rstrip('\'')
         cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
-        __salt__['cmd.run_all'](cmd, python_shell=True)
+        out = __salt__['cmd.run_all'](cmd, python_shell=True)
+        if out['retcode'] != 0:
+            log.error(out['stdout'])
+            return False
 
     agrps = set(list_groups(name))
     return len(ugrps - agrps) == 0
@@ -973,12 +921,14 @@ def rename(name, new_name):
     # Load information for the current name
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
 
     # Look for an existing user with the new name
     new_info = info(new_name)
     if new_info:
-        raise CommandExecutionError('User {0!r} already exists'.format(new_name))
+        raise CommandExecutionError(
+            'User \'{0}\' already exists'.format(new_name)
+        )
 
     # Rename the user account
     # Connect to WMI
@@ -989,7 +939,7 @@ def rename(name, new_name):
     try:
         user = c.Win32_UserAccount(Name=name)[0]
     except IndexError:
-        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
 
     # Rename the user
     result = user.Rename(new_name)[0]
@@ -1008,16 +958,12 @@ def rename(name, new_name):
                       8: 'Operation is not allowed on specified special groups: user, admin, local, or guest',
                       9: 'Other API error',
                       10: 'Internal error'}
-        raise CommandExecutionError('There was an error renaming {0!r} to {1!r}. Error: {2}'.format(name, new_name, error_dict[result]))
+        raise CommandExecutionError(
+            'There was an error renaming \'{0}\' to \'{1}\'. Error: {2}'
+            .format(name, new_name, error_dict[result])
+        )
 
-    # Load information for the new name
-    post_info = info(new_name)
-
-    # Verify that the name has changed
-    if post_info['name'] != current_info['name']:
-        return post_info['name'] == new_name
-
-    return False
+    return info(new_name).get('name') == new_name
 
 
 def current(sam=False):

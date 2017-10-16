@@ -7,7 +7,7 @@ LXC Management with Salt
 .. note::
 
     This walkthrough assumes basic knowledge of Salt. To get up to speed, check
-    out the :doc:`Salt Walkthrough </topics/tutorials/walkthrough>`.
+    out the :ref:`Salt Walkthrough <tutorial-salt-walk-through>`.
 
 Dependencies
 ============
@@ -219,13 +219,24 @@ container-by-container basis, for instance using the ``nic_opts`` argument to
 .. warning::
 
     The ``ipv4``, ``ipv6``, ``gateway``, and ``link`` (bridge) settings in
-    network profiles / nic_opts will only work if the container doesnt redefine
+    network profiles / nic_opts will only work if the container doesn't redefine
     the network configuration (for example in
     ``/etc/sysconfig/network-scripts/ifcfg-<interface_name>`` on RHEL/CentOS,
     or ``/etc/network/interfaces`` on Debian/Ubuntu/etc.). Use these with
     caution. The container images installed using the ``download`` template,
     for instance, typically are configured for eth0 to use DHCP, which will
     conflict with static IP addresses set at the container level.
+
+.. note::
+
+    For LXC < 1.0.7 and DHCP support, set ``ipv4.gateway: 'auto'`` is your
+    network profile, ie.::
+
+        lxc.network_profile.nic:
+          debian:
+            eth0:
+              link: lxcbr0
+              ipv4.gateway: 'auto'
 
 
 Old lxc support (<1.0.7)

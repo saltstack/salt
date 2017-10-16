@@ -10,14 +10,17 @@ from __future__ import absolute_import
 # import sys  # Use if sys is commented out below
 import logging
 import gc
+import datetime
 
 # Import salt libs
 import salt.log
-import salt.ext.six as six
-
+import salt.crypt
+import salt.transport.frame
 from salt.exceptions import SaltReqTimeoutError
+from salt.utils import immutabletypes
 
 # Import third party libs
+import salt.ext.six as six
 try:
     import zmq
 except ImportError:
@@ -107,21 +110,45 @@ class Serial(object):
         else:
             self.serial = 'msgpack'
 
-    def loads(self, msg):
+    def loads(self, msg, encoding=None, raw=False):
         '''
         Run the correct loads serialization format
+
+        :param encoding: Useful for Python 3 support. If the msgpack data
+                         was encoded using "use_bin_type=True", this will
+                         differentiate between the 'bytes' type and the
+                         'str' type by decoding contents with 'str' type
+                         to what the encoding was set as. Recommended
+                         encoding is 'utf-8' when using Python 3.
+                         If the msgpack data was not encoded using
+                         "use_bin_type=True", it will try to decode
+                         all 'bytes' and 'str' data (the distinction has
+                         been lost in this case) to what the encoding is
+                         set as. In this case, it will fail if any of
+                         the contents cannot be converted.
         '''
         try:
             gc.disable()  # performance optimization for msgpack
-            return msgpack.loads(msg, use_list=True)
+            if msgpack.version >= (0, 4, 0):
+                # msgpack only supports 'encoding' starting in 0.4.0.
+                # Due to this, if we don't need it, don't pass it at all so
+                # that under Python 2 we can still work with older versions
+                # of msgpack.
+                ret = msgpack.loads(msg, use_list=True, encoding=encoding)
+            else:
+                ret = msgpack.loads(msg, use_list=True)
+            if six.PY3 and encoding is None and not raw:
+                ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:
             log.critical('Could not deserialize msgpack message.'
                          'This often happens when trying to read a file not in binary mode'
                          'To see message payload, enable debug logging and retry. Exception: {0}'.format(exc))
             log.debug('Msgpack deserialization failure on message: {0}'.format(msg))
+            gc.collect()
             raise
         finally:
             gc.enable()
+        return ret
 
     def load(self, fn_):
         '''
@@ -130,14 +157,30 @@ class Serial(object):
         data = fn_.read()
         fn_.close()
         if data:
-            return self.loads(data)
+            if six.PY3:
+                return self.loads(data, encoding='utf-8')
+            else:
+                return self.loads(data)
 
-    def dumps(self, msg):
+    def dumps(self, msg, use_bin_type=False):
         '''
         Run the correct dumps serialization format
+
+        :param use_bin_type: Useful for Python 3 support. Tells msgpack to
+                             differentiate between 'str' and 'bytes' types
+                             by encoding them differently.
+                             Since this changes the wire protocol, this
+                             option should not be used outside of IPC.
         '''
         try:
-            return msgpack.dumps(msg)
+            if msgpack.version >= (0, 4, 0):
+                # msgpack only supports 'use_bin_type' starting in 0.4.0.
+                # Due to this, if we don't need it, don't pass it at all so
+                # that under Python 2 we can still work with older versions
+                # of msgpack.
+                return msgpack.dumps(msg, use_bin_type=use_bin_type)
+            else:
+                return msgpack.dumps(msg)
         except (OverflowError, msgpack.exceptions.PackValueError):
             # msgpack can't handle the very long Python longs for jids
             # Convert any very long longs to strings
@@ -152,12 +195,67 @@ class Serial(object):
                     for idx, entry in enumerate(obj):
                         obj[idx] = verylong_encoder(entry)
                     return obj
-                if isinstance(obj, long) and long > pow(2, 64):
+                # This is a spurious lint failure as we are gating this check
+                # behind a check for six.PY2.
+                if six.PY2 and isinstance(obj, long) and long > pow(2, 64):  # pylint: disable=incompatible-py3-code
+                    return str(obj)
+                elif six.PY3 and isinstance(obj, int) and int > pow(2, 64):
                     return str(obj)
                 else:
                     return obj
-            return msgpack.dumps(verylong_encoder(msg))
-        except TypeError:
+            if msgpack.version >= (0, 4, 0):
+                return msgpack.dumps(verylong_encoder(msg), use_bin_type=use_bin_type)
+            else:
+                return msgpack.dumps(verylong_encoder(msg))
+        except TypeError as e:
+            # msgpack doesn't support datetime.datetime datatype
+            # So here we have converted datetime.datetime to custom datatype
+            # This is msgpack Extended types numbered 78
+            def default(obj):
+                return msgpack.ExtType(78, obj)
+
+            def dt_encode(obj):
+                datetime_str = obj.strftime("%Y%m%dT%H:%M:%S.%f")
+                if msgpack.version >= (0, 4, 0):
+                    return msgpack.packb(datetime_str, default=default, use_bin_type=use_bin_type)
+                else:
+                    return msgpack.packb(datetime_str, default=default)
+
+            def datetime_encoder(obj):
+                if isinstance(obj, dict):
+                    for key, value in six.iteritems(obj.copy()):
+                        obj[key] = datetime_encoder(value)
+                    return dict(obj)
+                elif isinstance(obj, (list, tuple)):
+                    obj = list(obj)
+                    for idx, entry in enumerate(obj):
+                        obj[idx] = datetime_encoder(entry)
+                    return obj
+                if isinstance(obj, datetime.datetime):
+                    return dt_encode(obj)
+                else:
+                    return obj
+
+            def immutable_encoder(obj):
+                log.debug('IMMUTABLE OBJ: {0}'.format(obj))
+                if isinstance(obj, immutabletypes.ImmutableDict):
+                    return dict(obj)
+                if isinstance(obj, immutabletypes.ImmutableList):
+                    return list(obj)
+                if isinstance(obj, immutabletypes.ImmutableSet):
+                    return set(obj)
+
+            if "datetime.datetime" in str(e):
+                if msgpack.version >= (0, 4, 0):
+                    return msgpack.dumps(datetime_encoder(msg), use_bin_type=use_bin_type)
+                else:
+                    return msgpack.dumps(datetime_encoder(msg))
+            elif "Immutable" in str(e):
+                if msgpack.version >= (0, 4, 0):
+                    return msgpack.dumps(msg, default=immutable_encoder, use_bin_type=use_bin_type)
+                else:
+                    return msgpack.dumps(msg, default=immutable_encoder)
+
             if msgpack.version >= (0, 2, 0):
                 # Should support OrderedDict serialization, so, let's
                 # raise the exception
@@ -180,8 +278,11 @@ class Serial(object):
                         obj[idx] = odict_encoder(entry)
                     return obj
                 return obj
-            return msgpack.dumps(odict_encoder(msg))
-        except SystemError as exc:
+            if msgpack.version >= (0, 4, 0):
+                return msgpack.dumps(odict_encoder(msg), use_bin_type=use_bin_type)
+            else:
+                return msgpack.dumps(odict_encoder(msg))
+        except (SystemError, TypeError) as exc:  # pylint: disable=W0705
             log.critical('Unable to serialize message! Consider upgrading msgpack. '
                          'Message which failed was {failed_message} '
                          'with exception {exception_message}').format(msg, exc)
@@ -190,7 +291,13 @@ class Serial(object):
         '''
         Serialize the correct data into the named file object
         '''
-        fn_.write(self.dumps(msg))
+        if six.PY2:
+            fn_.write(self.dumps(msg))
+        else:
+            # When using Python 3, write files in such a way
+            # that the 'bytes' and 'str' types are distinguishable
+            # by using "use_bin_type=True".
+            fn_.write(self.dumps(msg, use_bin_type=True))
         fn_.close()
 
 

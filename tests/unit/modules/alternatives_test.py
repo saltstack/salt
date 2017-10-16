@@ -7,6 +7,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
@@ -34,7 +37,7 @@ class AlternativesTestCase(TestCase):
                     python_shell=False
                 )
 
-        with patch.dict(alternatives.__grains__, {'os_family': 'Ubuntu'}):
+        with patch.dict(alternatives.__grains__, {'os_family': 'Suse'}):
             mock = MagicMock(
                 return_value={'retcode': 0, 'stdout': 'undoubtedly-salt'}
             )
@@ -75,8 +78,7 @@ class AlternativesTestCase(TestCase):
             os_readlink_mock.side_effect = OSError('Hell was not found!!!')
             self.assertFalse(alternatives.show_current('hell'))
             os_readlink_mock.assert_called_with('/etc/alternatives/hell')
-            self.assertIn('ERROR:alternatives: path /etc/alternatives/hell '
-                          'does not exist',
+            self.assertIn('ERROR:alternative: hell does not exist',
                           handler.messages)
 
     @patch('os.readlink')

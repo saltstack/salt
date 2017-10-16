@@ -8,6 +8,8 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
+import getpass
 import os
 import sys
 import re
@@ -19,14 +21,17 @@ import logging
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
-
-# Import salt libs
-import integration
-import salt.utils
 from salttesting.helpers import (
     destructiveTest
 )
+ensure_in_syspath('../../')
+
+import integration
+from integration.utils import testprogram
+
+# Import salt libs
+import salt.utils
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -35,11 +40,12 @@ _PKG_TARGETS = {
     'Debian': ['python-plist', 'apg'],
     'RedHat': ['xz-devel', 'zsh-html'],
     'FreeBSD': ['aalib', 'pth'],
-    'Suse': ['aalib', 'python-pssh']
+    'SUSE': ['aalib', 'python-pssh']
 }
+_PKGS_INSTALLED = set()
 
 
-class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
+class CallTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
 
     _call_binary_ = 'salt-call'
 
@@ -47,18 +53,14 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         out = self.run_call('-l quiet test.fib 3')
 
         expect = ['local:',
-                  '    |_',
-                  '      - 0',
-                  '      - 1',
-                  '      - 1',
-                  '      - 2']
+                  '    - 2']
         self.assertEqual(expect, out[:-1])
 
     def test_text_output(self):
         out = self.run_call('-l quiet --out txt test.fib 3')
 
         expect = [
-            'local: ([0, 1, 1, 2]'
+            'local: (2'
         ]
 
         self.assertEqual(''.join(expect), ''.join(out).rsplit(",", 1)[0])
@@ -87,6 +89,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     @destructiveTest
     @skipIf(True, 'Skipping due to off the wall failures and hangs on most os\'s. Will re-enable when fixed.')
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    @skipIf(getpass.getuser() == 'root', 'Requires root to test pkg.install')
     def test_local_pkg_install(self):
         '''
         Test to ensure correct output when installing package
@@ -101,6 +104,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 self.assertIn('{0}:        ----------'.format(pkg), ''.join(out))
                 self.assertIn('new:', ''.join(out))
                 self.assertIn('old:', ''.join(out))
+                _PKGS_INSTALLED.add(pkg)
             else:
                 log.debug('The pkg: {0} is already installed on the machine'.format(pkg))
 
@@ -140,7 +144,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertNotEqual(0, retcode)
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
-    @skipIf(True, 'to be reenabled when #23623 is merged')
+    @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_return(self):
         self.run_call('cmd.run "echo returnTOmaster"')
         jobs = [a for a in self.run_run('jobs.list_jobs')]
@@ -179,7 +183,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         master_root_dir = master_config['root_dir']
         this_minion_key = os.path.join(
-            master_root_dir, 'pki', 'minions', 'minion_test_issue_2731'
+            master_root_dir, 'pki', 'master', 'minions', 'minion_test_issue_2731'
         )
 
         minion_config = {
@@ -193,105 +197,106 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             'open_mode': True,
             'log_file': logfile,
             'log_level': 'quiet',
-            'log_level_logfile': 'info'
+            'log_level_logfile': 'info',
+            'transport': self.master_opts['transport'],
         }
-
-        # Remove existing logfile
-        if os.path.isfile(logfile):
-            os.unlink(logfile)
-
-        start = datetime.now()
-        # Let's first test with a master running
-        with salt.utils.fopen(minion_config_file, 'w') as fh_:
-            fh_.write(
-                yaml.dump(minion_config, default_flow_style=False)
-            )
-        ret = self.run_script(
-            'salt-call',
-            '--config-dir {0} cmd.run "echo foo"'.format(
-                config_dir
-            )
-        )
         try:
-            self.assertIn('local:', ret)
-        except AssertionError:
-            if os.path.isfile(minion_config_file):
-                os.unlink(minion_config_file)
-            # Let's remove our key from the master
-            if os.path.isfile(this_minion_key):
-                os.unlink(this_minion_key)
+            # Remove existing logfile
+            if os.path.isfile(logfile):
+                os.unlink(logfile)
 
-            raise
+            start = datetime.now()
+            # Let's first test with a master running
 
-        # Calculate the required timeout, since next will fail.
-        # I needed this because after many attempts, I was unable to catch:
-        #   WARNING: Master hostname: salt not found. Retrying in 30 seconds
-        ellapsed = datetime.now() - start
-        timeout = ellapsed.seconds + 3
+            with salt.utils.fopen(minion_config_file, 'w') as fh_:
+                fh_.write(
+                    yaml.dump(minion_config, default_flow_style=False)
+                )
+            ret = self.run_script(
+                'salt-call',
+                '--config-dir {0} cmd.run "echo foo"'.format(
+                    config_dir
+                )
+            )
+            try:
+                self.assertIn('local:', ret)
+            except AssertionError:
+                if os.path.isfile(minion_config_file):
+                    os.unlink(minion_config_file)
+                # Let's remove our key from the master
+                if os.path.isfile(this_minion_key):
+                    os.unlink(this_minion_key)
 
-        # Now let's remove the master configuration
-        minion_config.pop('master')
-        minion_config.pop('master_port')
-        with salt.utils.fopen(minion_config_file, 'w') as fh_:
-            fh_.write(
-                yaml.dump(minion_config, default_flow_style=False)
+                raise
+
+            # Calculate the required timeout, since next will fail.
+            # I needed this because after many attempts, I was unable to catch:
+            #   WARNING: Master hostname: salt not found. Retrying in 30 seconds
+            ellapsed = datetime.now() - start
+            timeout = ellapsed.seconds + 3
+
+            # Now let's remove the master configuration
+            minion_config.pop('master')
+            minion_config.pop('master_port')
+            with salt.utils.fopen(minion_config_file, 'w') as fh_:
+                fh_.write(
+                    yaml.dump(minion_config, default_flow_style=False)
+                )
+
+            out = self.run_script(
+                'salt-call',
+                '--config-dir {0} cmd.run "echo foo"'.format(
+                    config_dir
+                ),
+                timeout=timeout,
             )
 
-        out = self.run_script(
-            'salt-call',
-            '--config-dir {0} cmd.run "echo foo"'.format(
-                config_dir
-            ),
-            timeout=timeout,
-        )
+            try:
+                self.assertIn(
+                    'Process took more than {0} seconds to complete. '
+                    'Process Killed!'.format(timeout),
+                    out
+                )
+            except AssertionError:
+                if os.path.isfile(minion_config_file):
+                    os.unlink(minion_config_file)
+                # Let's remove our key from the master
+                if os.path.isfile(this_minion_key):
+                    os.unlink(this_minion_key)
 
-        try:
-            self.assertIn(
-                'Process took more than {0} seconds to complete. '
-                'Process Killed!'.format(timeout),
-                out
+                raise
+
+            # Should work with --local
+            ret = self.run_script(
+                'salt-call',
+                '--config-dir {0} --local cmd.run "echo foo"'.format(
+                    config_dir
+                ),
+                timeout=60
             )
-        except AssertionError:
-            if os.path.isfile(minion_config_file):
-                os.unlink(minion_config_file)
-            # Let's remove our key from the master
-            if os.path.isfile(this_minion_key):
-                os.unlink(this_minion_key)
+            try:
+                self.assertIn('local:', ret)
+            except AssertionError:
+                if os.path.isfile(minion_config_file):
+                    os.unlink(minion_config_file)
+                # Let's remove our key from the master
+                if os.path.isfile(this_minion_key):
+                    os.unlink(this_minion_key)
+                raise
 
-            raise
-
-        # Should work with --local
-        ret = self.run_script(
-            'salt-call',
-            '--config-dir {0} --local cmd.run "echo foo"'.format(
-                config_dir
-            ),
-            timeout=15
-        )
-        try:
-            self.assertIn('local:', ret)
-        except AssertionError:
-            if os.path.isfile(minion_config_file):
-                os.unlink(minion_config_file)
-            # Let's remove our key from the master
-            if os.path.isfile(this_minion_key):
-                os.unlink(this_minion_key)
-            raise
-
-        # Should work with local file client
-        minion_config['file_client'] = 'local'
-        with salt.utils.fopen(minion_config_file, 'w') as fh_:
-            fh_.write(
-                yaml.dump(minion_config, default_flow_style=False)
+            # Should work with local file client
+            minion_config['file_client'] = 'local'
+            with salt.utils.fopen(minion_config_file, 'w') as fh_:
+                fh_.write(
+                    yaml.dump(minion_config, default_flow_style=False)
+                )
+            ret = self.run_script(
+                'salt-call',
+                '--config-dir {0} cmd.run "echo foo"'.format(
+                    config_dir
+                ),
+                timeout=60
             )
-        ret = self.run_script(
-            'salt-call',
-            '--config-dir {0} cmd.run "echo foo"'.format(
-                config_dir
-            ),
-            timeout=15
-        )
-        try:
             self.assertIn('local:', ret)
         finally:
             if os.path.isfile(minion_config_file):
@@ -320,7 +325,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             '--config-dir {0} cmd.run "echo foo"'.format(
                 config_dir
             ),
-            timeout=15,
+            timeout=60,
             catch_stderr=True,
             with_retcode=True
         )
@@ -334,7 +339,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
             self.assertEqual(ret[2], 2)
         finally:
-            os.chdir(old_cwd)
+            self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
@@ -342,9 +347,9 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         output_file_append = os.path.join(integration.TMP, 'issue-15074')
         try:
             # Let's create an initial output file with some data
-            ret = self.run_script(
+            _ = self.run_script(
                 'salt-call',
-                '-c {0} --output-file={1} -g'.format(
+                '-c {0} --output-file={1} test.versions'.format(
                     self.get_config_dir(),
                     output_file_append
                 ),
@@ -357,7 +362,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
             self.run_script(
                 'salt-call',
-                '-c {0} --output-file={1} --output-file-append -g'.format(
+                '-c {0} --output-file={1} --output-file-append test.versions'.format(
                     self.get_config_dir(),
                     output_file_append
                 ),
@@ -372,7 +377,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     def test_issue_14979_output_file_permissions(self):
         output_file = os.path.join(integration.TMP, 'issue-14979')
-        current_umask = os.umask(0077)
+        current_umask = os.umask(0o077)
         try:
             # Let's create an initial output file with some data
             self.run_script(
@@ -387,7 +392,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             stat1 = os.stat(output_file)
 
             # Let's change umask
-            os.umask(0777)
+            os.umask(0o777)
 
             self.run_script(
                 'salt-call',
@@ -419,26 +424,85 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             stat3 = os.stat(output_file)
             # Mode must have changed since we're creating a new log file
             self.assertNotEqual(stat1.st_mode, stat3.st_mode)
-            # Data was appended to file
-            self.assertEqual(stat1.st_size, stat3.st_size)
         finally:
             if os.path.exists(output_file):
                 os.unlink(output_file)
             # Restore umask
             os.umask(current_umask)
 
+    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    def test_42116_cli_pillar_override(self):
+        ret = self.run_call(
+            'state.apply issue-42116-cli-pillar-override '
+            'pillar=\'{"myhost": "localhost"}\''
+        )
+        for line in ret:
+            line = line.lstrip()
+            if line == 'Comment: Command "ping -c 2 localhost" run':
+                # Successful test
+                break
+        else:
+            log.debug('salt-call output:\n\n%s', '\n'.join(ret))
+            self.fail('CLI pillar override not found in pillar data')
+
     def tearDown(self):
         '''
         Teardown method to remove installed packages
         '''
-        check_pkg = self.run_call('--local pkg.list_pkgs')
-        get_os_family = self.run_call('--local grains.get os_family')
-        pkg_targets = _PKG_TARGETS.get(get_os_family[1].strip(), [])
-        check_pkg = self.run_call('--local pkg.list_pkgs')
-        for pkg in pkg_targets:
-            if pkg in str(check_pkg):
-                out = self.run_call('--local pkg.remove {0}'.format(pkg))
+        user = ''
+        user_info = self.run_call('--local grains.get username')
+        if user_info and isinstance(user_info, (list, tuple)) and isinstance(user_info[-1], six.string_types):
+            user = user_info[-1].strip()
+        if user == 'root':
+            for pkg in _PKGS_INSTALLED:
+                _ = self.run_call('--local pkg.remove {0}'.format(pkg))
+        super(CallTest, self).tearDown()
+
+    # pylint: disable=invalid-name
+    def test_exit_status_unknown_argument(self):
+        '''
+        Ensure correct exit status when an unknown argument is passed to salt-call.
+        '''
+
+        call = testprogram.TestProgramSaltCall(
+            name='unknown_argument',
+            parent_dir=self._test_dir,
+        )
+        # Call setup here to ensure config and script exist
+        call.setup()
+        stdout, stderr, status = call.run(
+            args=['--unknown-argument'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_USAGE',
+            message='unknown argument',
+            stdout=stdout, stderr=stderr
+        )
+
+    def test_exit_status_correct_usage(self):
+        '''
+        Ensure correct exit status when salt-call starts correctly.
+        '''
+
+        call = testprogram.TestProgramSaltCall(
+            name='correct_usage',
+            parent_dir=self._test_dir,
+        )
+        # Call setup here to ensure config and script exist
+        call.setup()
+        stdout, stderr, status = call.run(
+            args=['--local', 'test.true'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_OK',
+            message='correct usage',
+            stdout=stdout, stderr=stderr
+        )
+
 
 if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(CallTest)
+    integration.run_tests(CallTest)

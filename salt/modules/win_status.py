@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
 Module for returning various status data about a minion.
-These data can be useful for compiling into stats later.
+These data can be useful for compiling into stats later,
+or for problem solving if your minion is having problems.
+
+.. versionadded:: 0.12.0
 
 :depends:   - pythoncom
             - wmi
@@ -9,69 +12,208 @@ These data can be useful for compiling into stats later.
 
 # Import Python Libs
 from __future__ import absolute_import
+import datetime
 import logging
+
+log = logging.getLogger(__name__)
 
 # Import Salt Libs
 import salt.utils
 import salt.utils.event
 from salt._compat import subprocess
-from salt.utils.network import host_to_ip as _host_to_ip
+from salt.utils.network import host_to_ips as _host_to_ips
+from salt.utils import namespaced_function as _namespaced_function
 
-log = logging.getLogger(__name__)
+# These imports needed for namespaced functions
+# pylint: disable=W0611
+from salt.modules.status import ping_master, time_
+import copy
+# pylint: enable=W0611
 
-try:
+# Import 3rd Party Libs
+HAS_WMI = False
+if salt.utils.is_windows():
     import wmi
     import salt.utils.winapi
-    has_required_packages = True
-except ImportError:
-    if salt.utils.is_windows():
-        log.exception('pywin32 and wmi python packages are required '
-                      'in order to use the status module.')
-    has_required_packages = False
+    HAS_WMI = True
 
+HAS_PSUTIL = False
+if salt.utils.is_windows():
+    import psutil
+    HAS_PSUTIL = True
 
 __opts__ = {}
-
-# Define the module's virtual name
 __virtualname__ = 'status'
 
 
 def __virtual__():
     '''
-    Only works on Windows systems
+    Only works on Windows systems with WMI and WinAPI
     '''
-    if salt.utils.is_windows() and has_required_packages:
-        return __virtualname__
-    return False
+    if not salt.utils.is_windows():
+        return False, 'win_status.py: Requires Windows'
+
+    if not HAS_WMI:
+        return False, 'win_status.py: Requires WMI and WinAPI'
+
+    if not HAS_PSUTIL:
+        return False, 'win_status.py: Requires psutil'
+
+    # Namespace modules from `status.py`
+    global ping_master, time_
+    ping_master = _namespaced_function(ping_master, globals())
+    time_ = _namespaced_function(time_, globals())
+
+    return __virtualname__
+
+__func_alias__ = {
+    'time_': 'time'
+}
 
 
-def procs():
+def cpuload():
+    '''
+    .. versionadded:: 2015.8.0
+
+    Return the processor load as a percentage
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' status.cpuload
+    '''
+    return psutil.cpu_percent()
+
+
+def diskusage(human_readable=False, path=None):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Return the disk usage for this minion
+
+    human_readable : False
+        If ``True``, usage will be in KB/MB/GB etc.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.diskusage path=c:/salt
+    '''
+    if not path:
+        path = 'c:/'
+
+    disk_stats = psutil.disk_usage(path)
+
+    total_val = disk_stats.total
+    used_val = disk_stats.used
+    free_val = disk_stats.free
+    percent = disk_stats.percent
+
+    if human_readable:
+        total_val = _byte_calc(total_val)
+        used_val = _byte_calc(used_val)
+        free_val = _byte_calc(free_val)
+
+    return {'total': total_val,
+            'used': used_val,
+            'free': free_val,
+            'percent': percent}
+
+
+def procs(count=False):
     '''
     Return the process data
+
+    count : False
+        If ``True``, this function will simply return the number of processes.
+
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' status.procs
+        salt '*' status.procs count
     '''
     with salt.utils.winapi.Com():
         wmi_obj = wmi.WMI()
         processes = wmi_obj.win32_process()
 
-        process_info = {}
-        for proc in processes:
-            process_info[proc.ProcessId] = _get_process_info(proc)
+    #this short circuit's the function to get a short simple proc count.
+    if count:
+        return len(processes)
 
-        return process_info
+    #a propper run of the function, creating a nonsensically long out put.
+    process_info = {}
+    for proc in processes:
+        process_info[proc.ProcessId] = _get_process_info(proc)
+
+    return process_info
+
+
+def saltmem(human_readable=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Returns the amount of memory that salt is using
+
+    human_readable : False
+        return the value in a nicely formatted number
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.saltmem
+        salt '*' status.saltmem human_readable=True
+    '''
+    # psutil.Process defaults to current process (`os.getpid()`)
+    p = psutil.Process()
+
+    # Use oneshot to get a snapshot
+    with p.oneshot():
+        mem = p.memory_info().rss
+
+    if human_readable:
+        return _byte_calc(mem)
+
+    return mem
+
+
+def uptime(human_readable=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Return the system uptime for this machine in seconds
+
+    human_readable : False
+        If ``True``, then return uptime in years, days, and seconds.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' status.uptime
+       salt '*' status.uptime human_readable=True
+    '''
+    # Get startup time
+    startup_time = datetime.datetime.fromtimestamp(psutil.boot_time())
+
+    # Subtract startup time from current time to get the uptime of the system
+    uptime = datetime.datetime.now() - startup_time
+
+    return str(uptime) if human_readable else uptime.total_seconds()
 
 
 def _get_process_info(proc):
     '''
     Return  process information
     '''
-    cmd = (proc.CommandLine or '').encode('utf-8')
-    name = proc.Name.encode('utf-8')
+    cmd = salt.utils.to_str(proc.CommandLine or '')
+    name = salt.utils.to_str(proc.Name)
     info = dict(
         cmd=cmd,
         name=name,
@@ -85,13 +227,13 @@ def _get_process_owner(process):
     domain, error_code, user = None, None, None
     try:
         domain, error_code, user = process.GetOwner()
-        owner['user'] = user.encode('utf-8')
-        owner['user_domain'] = domain.encode('utf-8')
+        owner['user'] = salt.utils.to_str(user)
+        owner['user_domain'] = salt.utils.to_str(domain)
     except Exception as exc:
         pass
     if not error_code and all((user, domain)):
-        owner['user'] = user.encode('utf-8')
-        owner['user_domain'] = domain.encode('utf-8')
+        owner['user'] = salt.utils.to_str(user)
+        owner['user_domain'] = salt.utils.to_str(domain)
     elif process.ProcessId in [0, 4] and error_code == 2:
         # Access Denied for System Idle Process and System
         owner['user'] = 'SYSTEM'
@@ -100,6 +242,20 @@ def _get_process_owner(process):
         log.warning('Error getting owner of process; PID=\'{0}\'; Error: {1}'
                     .format(process.ProcessId, error_code))
     return owner
+
+
+def _byte_calc(val):
+    if val < 1024:
+        tstr = str(val)+'B'
+    elif val < 1038336:
+        tstr = str(val/1024)+'KB'
+    elif val < 1073741824:
+        tstr = str(val/1038336)+'MB'
+    elif val < 1099511627776:
+        tstr = str(val/1073741824)+'GB'
+    else:
+        tstr = str(val/1099511627776)+'TB'
+    return tstr
 
 
 def master(master=None, connected=True):
@@ -144,7 +300,7 @@ def master(master=None, connected=True):
             log.error('Failed netstat')
             raise
 
-        lines = data.split('\n')
+        lines = salt.utils.to_str(data).split('\n')
         for line in lines:
             if 'ESTABLISHED' not in line:
                 continue
@@ -157,7 +313,7 @@ def master(master=None, connected=True):
 
     # the default publishing port
     port = 4505
-    master_ip = None
+    master_ips = None
 
     if __salt__['config.get']('publish_port') != '':
         port = int(__salt__['config.get']('publish_port'))
@@ -166,17 +322,21 @@ def master(master=None, connected=True):
     # address and try resolving it first. _remote_port_tcp
     # only works with IP-addresses.
     if master is not None:
-        tmp_ip = _host_to_ip(master)
-        if tmp_ip is not None:
-            master_ip = tmp_ip
+        master_ips = _host_to_ips(master)
 
-    ips = _win_remotes_on(port)
+    master_connection_status = False
+    if master_ips:
+        ips = _win_remotes_on(port)
+        for master_ip in master_ips:
+            if master_ip in ips:
+                master_connection_status = True
+                break
 
-    if connected:
-        if master_ip not in ips:
-            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-            event.fire_event({'master': master}, '__master_disconnected')
-    else:
-        if master_ip in ips:
-            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-            event.fire_event({'master': master}, '__master_connected')
+    if master_connection_status is not connected:
+        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+        if master_connection_status:
+            event.fire_event({'master': master}, salt.minion.master_event(type='connected'))
+        else:
+            event.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
+
+    return master_connection_status

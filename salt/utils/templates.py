@@ -21,12 +21,11 @@ import jinja2.ext
 # Import salt libs
 import salt.utils
 import salt.utils.yamlencoding
+import salt.utils.locales
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
-from salt.utils.jinja import ensure_sequence_filter, show_full_context
-from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
-from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
+import salt.utils.jinja
 from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
 from salt.ext.six import string_types
@@ -82,6 +81,13 @@ class AliasedLoader(object):
             return AliasedModule(getattr(self.wrapped, name), ALIASES[name])
         else:
             return getattr(self.wrapped, name)
+
+    def __contains__(self, name):
+        if name in ALIASES:
+            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
+            return ALIASES[name] in self.wrapped
+        else:
+            return name in self.wrapped
 
 
 class AliasedModule(object):
@@ -140,7 +146,7 @@ def wrap_tmpl_func(render_str):
                 tpldir = os.path.dirname(template).replace('\\', '/')
                 tpldata = {
                     'tplfile': template,
-                    'tpldir': tpldir,
+                    'tpldir': '.' if tpldir == '' else tpldir,
                     'tpldot': tpldir.replace('/', '.'),
                 }
                 context.update(tpldata)
@@ -182,6 +188,7 @@ def wrap_tmpl_func(render_str):
                 output = os.linesep.join(output.splitlines())
 
         except SaltRenderError as exc:
+            log.error("Rendering exception occurred: {0}".format(exc))
             #return dict(result=False, data=str(exc))
             raise
         except Exception:
@@ -189,7 +196,7 @@ def wrap_tmpl_func(render_str):
         else:
             if to_str:  # then render as string
                 return dict(result=True, data=output)
-            with tempfile.NamedTemporaryFile('wb', delete=False) as outf:
+            with tempfile.NamedTemporaryFile('wb', delete=False, prefix=salt.utils.files.TEMPFILE_PREFIX) as outf:
                 outf.write(SLS_ENCODER(output)[0])
                 # Note: If nothing is replaced or added by the rendering
                 #       function, then the contents of the output file will
@@ -272,14 +279,16 @@ def _get_jinja_error(trace, context=None):
         ):
             add_log = True
             template_path = error[0]
-    # if we add a log, format explicitly the exeception here
+    # if we add a log, format explicitly the exception here
     # by telling to output the macro context after the macro
     # error log place at the beginning
     if add_log:
         if template_path:
             out = '\n{0}\n'.format(msg.splitlines()[0])
+            with salt.utils.fopen(template_path) as fp_:
+                template_contents = fp_.read()
             out += salt.utils.get_context(
-                salt.utils.fopen(template_path).read(),
+                template_contents,
                 line,
                 marker='    <======================')
         else:
@@ -303,16 +312,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     if not saltenv:
         if tmplpath:
-            # i.e., the template is from a file outside the state tree
-            #
-            # XXX: FileSystemLoader is not being properly instantiated here is
-            # it? At least it ain't according to:
-            #
-            #   http://jinja.pocoo.org/docs/api/#jinja2.FileSystemLoader
-            loader = jinja2.FileSystemLoader(
-                context, os.path.dirname(tmplpath))
+            loader = jinja2.FileSystemLoader(os.path.dirname(tmplpath))
     else:
-        loader = JinjaSaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
+        loader = salt.utils.jinja.SaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
 
     env_args = {'extensions': [], 'loader': loader}
 
@@ -322,7 +324,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         env_args['extensions'].append('jinja2.ext.do')
     if hasattr(jinja2.ext, 'loopcontrols'):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
-    env_args['extensions'].append(JinjaSerializerExtension)
+    env_args['extensions'].append(salt.utils.jinja.SerializerExtension)
 
     # Pass through trim_blocks and lstrip_blocks Jinja parameters
     # trim_blocks removes newlines around Jinja blocks
@@ -342,13 +344,15 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                                        **env_args)
 
     jinja_env.filters['strftime'] = salt.utils.date_format
-    jinja_env.filters['sequence'] = ensure_sequence_filter
+    jinja_env.filters['sequence'] = salt.utils.jinja.ensure_sequence_filter
     jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
     jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
     jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
 
     jinja_env.globals['odict'] = OrderedDict
-    jinja_env.globals['show_full_context'] = show_full_context
+    jinja_env.globals['show_full_context'] = salt.utils.jinja.show_full_context
+
+    jinja_env.tests['list'] = salt.utils.is_list
 
     decoded_context = {}
     for key, value in six.iteritems(context):
@@ -356,7 +360,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             decoded_context[key] = value
             continue
 
-        decoded_context[key] = salt.utils.sdecode(value)
+        decoded_context[key] = salt.utils.locales.sdecode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)
@@ -398,6 +402,13 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             tmplstr = ''
         else:
             tmplstr += '\n{0}'.format(tracestr)
+        log.debug("Jinja Error")
+        log.debug("Exception: {0}".format(exc))
+        log.debug("Out: {0}".format(out))
+        log.debug("Line: {0}".format(line))
+        log.debug("TmplStr: {0}".format(tmplstr))
+        log.debug("TraceStr: {0}".format(tracestr))
+
         raise SaltRenderError('Jinja error: {0}{1}'.format(exc, out),
                               line,
                               tmplstr,
@@ -424,7 +435,10 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
             from mako.lookup import TemplateLookup
             lookup = TemplateLookup(directories=[os.path.dirname(tmplpath)])
     else:
-        lookup = SaltMakoTemplateLookup(context['opts'], saltenv)
+        lookup = SaltMakoTemplateLookup(
+                context['opts'],
+                saltenv,
+                pillar_rend=context.get('_pillar_rend', False))
     try:
         return Template(
             tmplstr,

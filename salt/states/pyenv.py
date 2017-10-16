@@ -43,6 +43,10 @@ This is how a state configuration could look like:
         - default: True
         - require:
           - pkg: pyenv-deps
+
+.. note::
+    Git needs to be installed and available via PATH if pyenv is to be
+    installed automatically by the module.
 '''
 from __future__ import absolute_import
 

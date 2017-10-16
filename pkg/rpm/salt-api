@@ -20,7 +20,7 @@
 
 # chkconfig header
 
-# chkconfig: 345 99 99 
+# chkconfig: 345 99 99
 # description:  This is a daemon that controls the Salt API.
 #
 # processname: /usr/bin/salt-api
@@ -40,7 +40,7 @@ DEBIAN_VERSION=/etc/debian_version
 SUSE_RELEASE=/etc/SuSE-release
 # Source function library.
 if [ -f $DEBIAN_VERSION ]; then
-   break   
+   break
 elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
     . /etc/rc.status
 else
@@ -61,17 +61,17 @@ start() {
         rc_status -v
     elif [ -e $DEBIAN_VERSION ]; then
         if [ -f $LOCKFILE ]; then
-            echo -n "already started, lock file found" 
+            echo -n "already started, lock file found"
             RETVAL=1
         elif $PYTHON $SALTAPI; then
             echo -n "OK"
             RETVAL=0
         fi
     else
-        if status $PROCESS &> /dev/null; then 
+        if status $PROCESS &> /dev/null; then
             failure "Already running."
             RETVAL=1
-        else 
+        else
             daemon --pidfile=$PID_FILE --check $SERVICE $SALTAPI $CONFIG_ARGS
             RETVAL=$?
             [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$SERVICE
@@ -125,6 +125,7 @@ case "$1" in
             echo -n "Checking for service salt-api "
             checkproc $SALTAPI
             rc_status -v
+            RETVAL=$?
         elif [ -f $DEBIAN_VERSION ]; then
             if [ -f $LOCKFILE ]; then
                 RETVAL=0
@@ -138,15 +139,15 @@ case "$1" in
             RETVAL=$?
         fi
         ;;
-    condrestart)
+    condrestart|try-restart)
         [ -f $LOCKFILE ] && restart || :
         ;;
     reload)
         echo "can't reload configuration, you have to restart it"
-        RETVAL=$?
+        RETVAL=1
         ;;
     *)
-        echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload}"
         exit 1
         ;;
 esac

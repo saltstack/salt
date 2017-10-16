@@ -4,7 +4,7 @@
 # This is a generic wrapper for the salt-bootstrap script at:
 #
 # https://github.com/saltstack/salt-bootstrap
-# 
+#
 # It has been designed as an example, to be customized for your own needs.
 
 python -c 'import urllib; print urllib.urlopen("https://bootstrap.saltstack.com").read()' | sudo sh -s -- "$@"

@@ -2,6 +2,11 @@
 '''
 Display return data as a progress bar
 '''
+
+# Import Python libs
+from __future__ import absolute_import
+
+# Import 3rd-party libs
 try:
     import progressbar
     HAS_PROGRESSBAR = True
@@ -13,7 +18,7 @@ def __virtual__():
     return True if HAS_PROGRESSBAR else False
 
 
-def output(ret, bar):
+def output(ret, bar, **kwargs):  # pylint: disable=unused-argument
     '''
     Update the progress bar
     '''

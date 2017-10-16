@@ -98,6 +98,7 @@ def set_inactdays(name, inactdays):
     post_info = info(name)
     if post_info['inact'] != pre_info['inact']:
         return post_info['inact'] == inactdays
+    return False
 
 
 def set_maxdays(name, maxdays):
@@ -119,6 +120,7 @@ def set_maxdays(name, maxdays):
     post_info = info(name)
     if post_info['max'] != pre_info['max']:
         return post_info['max'] == maxdays
+    return False
 
 
 def set_mindays(name, mindays):
@@ -174,7 +176,7 @@ def gen_password(password, crypt_salt=None, algorithm='sha512'):
     .. code-block:: bash
 
         salt '*' shadow.gen_password 'I_am_password'
-        salt '*' shadow.gen_password 'I_am_password' crypt_salt'I_am_salt' algorithm=sha256
+        salt '*' shadow.gen_password 'I_am_password' crypt_salt='I_am_salt' algorithm=sha256
     '''
     if not HAS_CRYPT:
         raise CommandExecutionError(
@@ -199,7 +201,59 @@ def del_password(name):
     cmd = 'passwd -d {0}'.format(name)
     __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='quiet')
     uinfo = info(name)
-    return not uinfo['passwd']
+    return not uinfo['passwd'] and uinfo['name'] == name
+
+
+def lock_password(name):
+    '''
+    .. versionadded:: 2016.11.0
+
+    Lock the password from name user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.lock_password username
+    '''
+    pre_info = info(name)
+    if pre_info['name'] == '':
+        return False
+    if pre_info['passwd'][0] == '!':
+        return True
+
+    cmd = 'passwd -l {0}'.format(name)
+    __salt__['cmd.run'](cmd, python_shell=False)
+
+    post_info = info(name)
+
+    return post_info['passwd'][0] == '!'
+
+
+def unlock_password(name):
+    '''
+    .. versionadded:: 2016.11.0
+
+    Unlock the password from name user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.unlock_password username
+    '''
+    pre_info = info(name)
+    if pre_info['name'] == '':
+        return False
+    if pre_info['passwd'][0] != '!':
+        return True
+
+    cmd = 'passwd -u {0}'.format(name)
+    __salt__['cmd.run'](cmd, python_shell=False)
+
+    post_info = info(name)
+
+    return post_info['passwd'][0] != '!'
 
 
 def set_password(name, password, use_usermod=False):
@@ -291,7 +345,7 @@ def set_date(name, date):
         salt '*' shadow.set_date username 0
     '''
     cmd = 'chage -d {0} {1}'.format(date, name)
-    __salt__['cmd.run'](cmd, python_shell=False)
+    return not __salt__['cmd.run'](cmd, python_shell=False)
 
 
 def set_expire(name, expire):
@@ -309,4 +363,4 @@ def set_expire(name, expire):
         salt '*' shadow.set_expire username -1
     '''
     cmd = 'chage -E {0} {1}'.format(expire, name)
-    __salt__['cmd.run'](cmd, python_shell=False)
+    return not __salt__['cmd.run'](cmd, python_shell=False)

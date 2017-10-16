@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
@@ -25,9 +28,9 @@ class TestSyndic(integration.SyndicCase):
         self.assertEqual(
                 self.run_function(
                     'test.fib',
-                    ['40'],
-                    )[0][-1],
-                34
+                    ['20'],
+                    )[0],
+                6765
                 )
 
 

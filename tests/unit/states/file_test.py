@@ -2,19 +2,30 @@
 
 # Import python libs
 from __future__ import absolute_import
+from datetime import datetime
 import json
 import pprint
 import tempfile
 
+try:
+    from dateutil.relativedelta import relativedelta
+    HAS_DATEUTIL = True
+except ImportError:
+    HAS_DATEUTIL = False
+
+NO_DATEUTIL_REASON = 'python-dateutil is not installed'
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import destructiveTest, ensure_in_syspath
 from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
+    call,
     mock_open,
     patch)
+
 ensure_in_syspath('../../')
 
 # Import third party libs
@@ -22,6 +33,9 @@ import yaml
 
 # Import salt libs
 import salt.states.file as filestate
+import salt.serializers.yaml as yamlserializer
+import salt.serializers.json as jsonserializer
+import salt.serializers.python as pythonserializer
 from salt.exceptions import CommandExecutionError
 import salt
 import salt.utils
@@ -30,6 +44,11 @@ import shutil
 
 filestate.__env__ = 'base'
 filestate.__salt__ = {'file.manage_file': False}
+filestate.__serializers__ = {
+    'yaml.serialize': yamlserializer.serialize,
+    'python.serialize': pythonserializer.serialize,
+    'json.serialize': jsonserializer.serialize
+}
 filestate.__opts__ = {'test': False, 'cachedir': ''}
 filestate.__instance_id__ = ''
 filestate.__grains__ = {}
@@ -65,7 +84,7 @@ class TestFileState(TestCase):
         self.assertEqual(json.loads(returner.returned), dataset)
 
         filestate.serialize('/tmp', dataset, formatter="python")
-        self.assertEqual(returner.returned, pprint.pformat(dataset))
+        self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')
 
     def test_contents_and_contents_pillar(self):
         def returner(contents, *args, **kwargs):
@@ -81,13 +100,6 @@ class TestFileState(TestCase):
 
         ret = filestate.managed('/tmp/foo', contents='hi', contents_pillar='foo:bar')
         self.assertEqual(False, ret['result'])
-
-    def test_contents_pillar_adds_newline(self):
-        # make sure the newline
-        pillar_value = 'i am the pillar value'
-        expected = '{0}\n'.format(pillar_value)
-
-        self.run_contents_pillar(pillar_value, expected)
 
     def test_contents_pillar_doesnt_add_more_newlines(self):
         # make sure the newline
@@ -116,14 +128,17 @@ class TestFileState(TestCase):
 
         ret = filestate.managed(path, contents_pillar=pillar_path)
 
-        # make sure the pillar_mock is called with the given path
-        pillar_mock.assert_called_once_with(pillar_path)
-
         # make sure no errors are returned
         self.assertEqual(None, ret)
 
-        # make sure the value is correct
-        self.assertEqual(expected, returner.call_args[0][-3])
+        # Make sure the contents value matches the expected value.
+        # returner.call_args[0] will be an args tuple containing all the args
+        # passed to the mocked returner for file.manage_file. Any changes to
+        # the arguments for file.manage_file may make this assertion fail.
+        # If the test is failing, check the position of the "contents" param
+        # in the manage_file() function in salt/modules/file.py, the fix is
+        # likely as simple as updating the 2nd index below.
+        self.assertEqual(expected, returner.call_args[0][-5])
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -134,6 +149,7 @@ class FileTestCase(TestCase):
     '''
     # 'symlink' function tests: 1
 
+    @destructiveTest
     def test_symlink(self):
         '''
         Test to create a symlink.
@@ -142,6 +158,7 @@ class FileTestCase(TestCase):
         target = tempfile.mkstemp()[1]
         test_dir = '/tmp'
         user = 'salt'
+
         if salt.utils.is_windows():
             group = 'salt'
         else:
@@ -183,7 +200,9 @@ class FileTestCase(TestCase):
                 with patch.object(os.path, 'exists', mock_f):
                     comt = ('Symlink {0} to {1}'
                             ' is set for creation').format(name, target)
-                    ret.update({'comment': comt, 'result': None})
+                    ret.update({'comment': comt,
+                                'result': None,
+                                'pchanges': {'new': name}})
                     self.assertDictEqual(filestate.symlink(name, target,
                                                            user=user,
                                                            group=group), ret)
@@ -194,11 +213,14 @@ class FileTestCase(TestCase):
                                              'file.is_link': mock_f}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_f):
-                    comt = ('Directory {0} for symlink is not present').format(test_dir)
-                    ret.update({'comment': comt, 'result': False})
-                    self.assertDictEqual(filestate.symlink(name, target,
-                                                           user=user,
-                                                           group=group), ret)
+                    with patch.object(os.path, 'exists', mock_f):
+                        comt = ('Directory {0} for symlink is not present').format(test_dir)
+                        ret.update({'comment': comt,
+                                    'result': False,
+                                    'pchanges': {'new': name}})
+                        self.assertDictEqual(filestate.symlink(name, target,
+                                                               user=user,
+                                                               group=group), ret)
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -210,7 +232,9 @@ class FileTestCase(TestCase):
                     with patch.object(salt.states.file, '_check_symlink_ownership', mock_t):
                         comt = ('Symlink {0} is present and owned by '
                                 '{1}:{2}'.format(name, user, group))
-                        ret.update({'comment': comt, 'result': True})
+                        ret.update({'comment': comt,
+                                    'result': True,
+                                    'pchanges': {}})
                         self.assertDictEqual(filestate.symlink(name, target,
                                                                user=user,
                                                                group=group), ret)
@@ -222,14 +246,17 @@ class FileTestCase(TestCase):
                                              'file.readlink': mock_target}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_t):
-                    with patch.object(os.path, 'lexists', mock_t):
-                        comt = ('File exists where the backup target SALT'
-                                ' should go')
-                        ret.update({'comment': comt, 'result': False})
-                        self.assertDictEqual(filestate.symlink
-                                             (name, target, user=user,
-                                              group=group, backupname='SALT'),
-                                             ret)
+                    with patch.object(os.path, 'exists', mock_f):
+                        with patch.object(os.path, 'lexists', mock_t):
+                            comt = ('File exists where the backup target SALT'
+                                    ' should go')
+                            ret.update({'comment': comt,
+                                        'result': False,
+                                        'pchanges': {'new': name}})
+                            self.assertDictEqual(filestate.symlink
+                                                 (name, target, user=user,
+                                                  group=group, backupname='SALT'),
+                                                 ret)
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -238,13 +265,16 @@ class FileTestCase(TestCase):
                                              'file.readlink': mock_target}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_t):
-                    with patch.object(os.path, 'isfile', mock_t):
-                        comt = ('File exists where the symlink {0} should be'
-                                .format(name))
-                        ret.update({'comment': comt, 'result': False})
-                        self.assertDictEqual(filestate.symlink
-                                             (name, target, user=user,
-                                              group=group), ret)
+                    with patch.object(os.path, 'exists', mock_f):
+                        with patch.object(os.path, 'isfile', mock_t):
+                            comt = ('File exists where the symlink {0} should be'
+                                    .format(name))
+                            ret.update({'comment': comt,
+                                        'pchanges': {'new': name},
+                                        'result': False})
+                            self.assertDictEqual(filestate.symlink
+                                                 (name, target, user=user,
+                                                  group=group), ret)
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -354,6 +384,7 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         mock_t = MagicMock(return_value=True)
@@ -383,15 +414,18 @@ class FileTestCase(TestCase):
                     comt = ('File {0} is set for removal'.format(name))
                     ret.update({'comment': comt,
                                 'name': name,
-                                'result': None})
+                                'result': None,
+                                'pchanges': {'removed': '/fake/file.conf'}})
                     self.assertDictEqual(filestate.absent(name), ret)
+                    ret.update({'pchanges': {}})
 
                 with patch.dict(filestate.__opts__, {'test': False}):
                     with patch.dict(filestate.__salt__,
                                     {'file.remove': mock_file}):
                         comt = ('Removed file {0}'.format(name))
                         ret.update({'comment': comt, 'result': True,
-                                    'changes': {'removed': name}})
+                                    'changes': {'removed': name},
+                                    'pchanges': {'removed': name}})
                         self.assertDictEqual(filestate.absent(name), ret)
 
                         comt = ('Removed file {0}'.format(name))
@@ -399,13 +433,16 @@ class FileTestCase(TestCase):
                                     'result': False,
                                     'changes': {}})
                         self.assertDictEqual(filestate.absent(name), ret)
+                        ret.update({'pchanges': {}})
 
             with patch.object(os.path, 'isfile', mock_f):
                 with patch.object(os.path, 'isdir', mock_t):
                     with patch.dict(filestate.__opts__, {'test': True}):
                         comt = \
                             'Directory {0} is set for removal'.format(name)
-                        ret.update({'comment': comt, 'result': None})
+                        ret.update({'comment': comt,
+                                    'pchanges': {'removed': name},
+                                    'result': None})
                         self.assertDictEqual(filestate.absent(name), ret)
 
                     with patch.dict(filestate.__opts__, {'test': False}):
@@ -421,6 +458,7 @@ class FileTestCase(TestCase):
                             ret.update({'comment': comt, 'result': False,
                                         'changes': {}})
                             self.assertDictEqual(filestate.absent(name), ret)
+                            ret.update({'pchanges': {}})
 
                 with patch.object(os.path, 'isdir', mock_f):
                     with patch.dict(filestate.__opts__, {'test': True}):
@@ -439,7 +477,8 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
-               'changes': {}}
+               'changes': {},
+               'pchanges': {}}
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
@@ -475,7 +514,7 @@ class FileTestCase(TestCase):
         mock_f = MagicMock(return_value=False)
 
         comt = ('Must provide name to file.missing')
-        ret.update({'comment': comt, 'name': ''})
+        ret.update({'comment': comt, 'name': '', 'pchanges': {}})
         self.assertDictEqual(filestate.missing(''), ret)
 
         with patch.object(os.path, 'exists', mock_t):
@@ -509,6 +548,7 @@ class FileTestCase(TestCase):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
+        mock_cmd_fail = MagicMock(return_value={'retcode': 1})
         mock_uid = MagicMock(side_effect=['', 'U12', 'U12', 'U12', 'U12', 'U12',
                                           'U12', 'U12', 'U12', 'U12', 'U12',
                                           'U12', 'U12', 'U12', 'U12', 'U12'])
@@ -540,9 +580,9 @@ class FileTestCase(TestCase):
                          'file.source_list': mock_file,
                          'file.copy': mock_cp,
                          'file.manage_file': mock_ex,
-                         'cmd.retcode': mock_t}):
+                         'cmd.run_all': mock_cmd_fail}):
             comt = ('Must provide name to file.exists')
-            ret.update({'comment': comt, 'name': ''})
+            ret.update({'comment': comt, 'name': '', 'pchanges': {}})
             self.assertDictEqual(filestate.managed(''), ret)
 
             with patch.object(os.path, 'isfile', mock_f):
@@ -585,8 +625,8 @@ class FileTestCase(TestCase):
                                                            group=group,
                                                            defaults=True), ret)
 
-                    comt = ('Only one of contents, contents_pillar, '
-                            'and contents_grains is permitted')
+                    comt = ('Only one of \'contents\', \'contents_pillar\', '
+                            'and \'contents_grains\' is permitted')
                     ret.update({'comment': comt})
                     self.assertDictEqual(filestate.managed
                                          (name, user=user, group=group,
@@ -640,14 +680,14 @@ class FileTestCase(TestCase):
                                                   check_cmd='A'), ret)
 
                             comt = ('check_cmd execution failed')
-                            ret.update({'comment': comt, 'result': False,
-                                        'skip_watch': True})
+                            ret.update({'comment': comt, 'result': False, 'skip_watch': True})
+                            ret.pop('pchanges')
                             self.assertDictEqual(filestate.managed
                                                  (name, user=user, group=group,
                                                   check_cmd='A'), ret)
 
                             comt = ('check_cmd execution failed')
-                            ret.update({'comment': True})
+                            ret.update({'comment': True, 'pchanges': {}})
                             ret.pop('skip_watch', None)
                             self.assertDictEqual(filestate.managed
                                                  (name, user=user, group=group),
@@ -675,11 +715,18 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         comt = ('Must provide name to file.directory')
         ret.update({'comment': comt, 'name': ''})
         self.assertDictEqual(filestate.directory(''), ret)
+
+        comt = ('Cannot specify both max_depth and clean')
+        ret.update({'comment': comt, 'name': name})
+        self.assertDictEqual(
+                filestate.directory(name, clean=True, max_depth=2),
+                ret)
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
@@ -692,7 +739,8 @@ class FileTestCase(TestCase):
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
                                              'file.stats': mock_f,
-                                             'file.check_perms': mock_perms}):
+                                             'file.check_perms': mock_perms,
+                                             'file.mkdir': mock_t}):
             if salt.utils.is_windows():
                 comt = ('User salt is not available Group salt'
                         ' is not available')
@@ -744,7 +792,7 @@ class FileTestCase(TestCase):
                     with patch.dict(filestate.__opts__, {'test': True}):
                         comt = ('The following files will be changed:\n{0}:'
                                 ' directory - new\n'.format(name))
-                        ret.update({'comment': comt, 'result': None})
+                        ret.update({'comment': comt, 'result': None, 'pchanges': {'/etc/grub.conf': {'directory': 'new'}}})
                         self.assertDictEqual(filestate.directory(name,
                                                                  user=user,
                                                                  group=group),
@@ -760,7 +808,7 @@ class FileTestCase(TestCase):
                                                  ret)
 
                         with patch.object(os.path, 'isdir',
-                                          MagicMock(side_effect=[True, False])):
+                                          MagicMock(side_effect=[True, False, True, True])):
                             comt = ('Failed to create directory {0}'
                                     .format(name))
                             ret.update({'comment': comt, 'result': False})
@@ -794,6 +842,7 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         comt = ("'mode' is not allowed in 'file.recurse'."
@@ -841,7 +890,7 @@ class FileTestCase(TestCase):
                 ret.update({'comment': comt})
                 self.assertDictEqual(filestate.recurse(name, source), ret)
 
-                comt = ("The directory 'salt://code/flask' does not exist"
+                comt = ("The directory 'code/flask' does not exist"
                         " on the salt fileserver in saltenv 'base'")
                 ret.update({'comment': comt})
                 self.assertDictEqual(filestate.recurse(name, source), ret)
@@ -876,7 +925,7 @@ class FileTestCase(TestCase):
                'changes': {}}
 
         comt = ('Must provide name to file.replace')
-        ret.update({'comment': comt, 'name': ''})
+        ret.update({'comment': comt, 'name': '', 'pchanges': {}})
         self.assertDictEqual(filestate.replace('', pattern, repl), ret)
 
         mock_t = MagicMock(return_value=True)
@@ -910,6 +959,7 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         comt = ('Must provide name to file.blockreplace')
@@ -928,21 +978,25 @@ class FileTestCase(TestCase):
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('Changes would be made')
                     ret.update({'comment': comt, 'result': None,
-                                'changes': {'diff': True}})
+                                'changes': {'diff': True},
+                                'pchanges': {'diff': True}})
                     self.assertDictEqual(filestate.blockreplace(name), ret)
 
     # 'comment' function tests: 1
 
+    @destructiveTest
+    @patch.object(os.path, 'exists', MagicMock(return_value=True))
     def test_comment(self):
         '''
         Test to comment out specified lines in a file.
         '''
-        name = '/etc/fstab'
+        name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
         regex = 'bind 127.0.0.1'
 
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         comt = ('Must provide name to file.comment')
@@ -951,7 +1005,6 @@ class FileTestCase(TestCase):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
-        mock = MagicMock(side_effect=[False, True, False, False])
         with patch.object(os.path, 'isabs', mock_f):
             comt = ('Specified file {0} is not an absolute path'.format(name))
             ret.update({'comment': comt, 'name': name})
@@ -959,7 +1012,7 @@ class FileTestCase(TestCase):
 
         with patch.object(os.path, 'isabs', mock_t):
             with patch.dict(filestate.__salt__,
-                            {'file.search': mock}):
+                            {'file.search': MagicMock(side_effect=[True, True, True, False, False])}):
                 comt = ('Pattern already commented')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.comment(name, regex), ret)
@@ -969,11 +1022,12 @@ class FileTestCase(TestCase):
                 self.assertDictEqual(filestate.comment(name, regex), ret)
 
             with patch.dict(filestate.__salt__,
-                            {'file.search': mock_t,
+                            {'file.search': MagicMock(side_effect=[False, True, False, True, True]),
+                             'file.comment': mock_t,
                              'file.comment_line': mock_t}):
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be updated'.format(name))
-                    ret.update({'comment': comt, 'result': None})
+                    ret.update({'comment': comt, 'result': None, 'pchanges': {name: 'updated'}})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
                 with patch.dict(filestate.__opts__, {'test': False}):
@@ -986,14 +1040,17 @@ class FileTestCase(TestCase):
 
     # 'uncomment' function tests: 1
 
+    @destructiveTest
+    @patch.object(os.path, 'exists', MagicMock(return_value=True))
     def test_uncomment(self):
         '''
         Test to uncomment specified commented lines in a file
         '''
-        name = '/etc/fstab'
+        name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
         regex = 'bind 127.0.0.1'
 
         ret = {'name': name,
+               'pchanges': {},
                'result': False,
                'comment': '',
                'changes': {}}
@@ -1014,6 +1071,7 @@ class FileTestCase(TestCase):
         with patch.object(os.path, 'isabs', mock_t):
             with patch.dict(filestate.__salt__,
                             {'file.search': mock,
+                             'file.uncomment': mock_t,
                              'file.comment_line': mock_t}):
                 comt = ('Pattern already uncommented')
                 ret.update({'comment': comt, 'result': True})
@@ -1025,7 +1083,7 @@ class FileTestCase(TestCase):
 
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be updated'.format(name))
-                    ret.update({'comment': comt, 'result': None})
+                    ret.update({'comment': comt, 'result': None, 'pchanges': {name: 'updated'}, })
                     self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
                 with patch.dict(filestate.__opts__, {'test': False}):
@@ -1034,85 +1092,6 @@ class FileTestCase(TestCase):
                         comt = ('Uncommented lines successfully')
                         ret.update({'comment': comt, 'result': True})
                         self.assertDictEqual(filestate.uncomment(name, regex), ret)
-
-    # 'append' function tests: 1
-
-    def test_append(self):
-        '''
-        Test to ensure that some text appears at the end of a file.
-        '''
-        name = '/etc/motd'
-        source = ['salt://motd/hr-messages.tmpl']
-        sources = ['salt://motd/devops-messages.tmpl']
-        text = ['Trust no one unless you have eaten much salt with him.']
-
-        ret = {'name': name,
-               'result': False,
-               'comment': '',
-               'changes': {}}
-
-        comt = ('Must provide name to file.append')
-        ret.update({'comment': comt, 'name': ''})
-        self.assertDictEqual(filestate.append(''), ret)
-
-        comt = ('source and sources are mutually exclusive')
-        ret.update({'comment': comt, 'name': name})
-        self.assertDictEqual(filestate.append(name, source=source,
-                                              sources=sources), ret)
-
-        mock_t = MagicMock(return_value=True)
-        mock_f = MagicMock(return_value=False)
-        mock_err = MagicMock(side_effect=[TypeError, True, True])
-        with patch.dict(filestate.__salt__,
-                        {'file.directory_exists': mock_f,
-                         'file.makedirs': mock_t,
-                         'file.stats': mock_f,
-                         'cp.get_template': mock_f,
-                         'file.contains_regex_multiline': mock_err}):
-            with patch.object(os.path, 'isdir', mock_t):
-                comt = ('The following files will be changed:\n/etc:'
-                        ' directory - new\n')
-                ret.update({'comment': comt, 'name': name})
-                self.assertDictEqual(filestate.append(name, makedirs=True), ret)
-
-            with patch.object(os.path, 'isabs', mock_f):
-                comt = ('Specified file {0} is not an absolute path'
-                        .format(name))
-                ret.update({'comment': comt})
-                self.assertDictEqual(filestate.append(name), ret)
-
-            with patch.object(os.path, 'isabs', mock_t):
-                with patch.object(os.path, 'exists', mock_t):
-                    comt = ("Failed to load template file {0}".format(source))
-                    ret.update({'comment': comt, 'name': source, 'data': []})
-                    self.assertDictEqual(filestate.append(name, source=source),
-                                         ret)
-
-                    ret.pop('data', None)
-                    ret.update({'name': name})
-                    with patch.object(salt.utils, 'fopen',
-                                      MagicMock(mock_open(read_data=''))):
-                        comt = ('No text found to append. Nothing appended')
-                        ret.update({'comment': comt})
-                        self.assertDictEqual(filestate.append(name, text=text),
-                                             ret)
-
-                        with patch.object(salt.utils, 'istextfile', mock_f):
-                            with patch.dict(filestate.__opts__, {'test': True}):
-                                change = {'diff': 'Replace binary file'}
-                                ret.update({'comment': '', 'result': None,
-                                            'changes': change})
-                                self.assertDictEqual(filestate.append
-                                                     (name, text=text), ret)
-
-                            with patch.dict(filestate.__opts__,
-                                            {'test': False}):
-                                comt = ('File {0} is in correct state'
-                                        .format(name))
-                                ret.update({'comment': comt, 'result': True,
-                                            'changes': {}})
-                                self.assertDictEqual(filestate.append
-                                                     (name, text=text), ret)
 
     # 'prepend' function tests: 1
 
@@ -1128,6 +1107,7 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         comt = ('Must provide name to file.prepend')
@@ -1146,24 +1126,25 @@ class FileTestCase(TestCase):
                          'file.makedirs': mock_t,
                          'file.stats': mock_f,
                          'cp.get_template': mock_f,
-                         'file.contains_regex_multiline': mock_f,
+                         'file.search': mock_f,
                          'file.prepend': mock_t}):
             with patch.object(os.path, 'isdir', mock_t):
                 comt = ('The following files will be changed:\n/etc:'
                         ' directory - new\n')
-                ret.update({'comment': comt, 'name': name})
+                ret.update({'comment': comt, 'name': name, 'pchanges': {'/etc': {'directory': 'new'}}})
                 self.assertDictEqual(filestate.prepend(name, makedirs=True),
                                      ret)
 
             with patch.object(os.path, 'isabs', mock_f):
                 comt = ('Specified file {0} is not an absolute path'
                         .format(name))
-                ret.update({'comment': comt})
+                ret.update({'comment': comt, 'pchanges': {}})
                 self.assertDictEqual(filestate.prepend(name), ret)
 
             with patch.object(os.path, 'isabs', mock_t):
                 with patch.object(os.path, 'exists', mock_t):
                     comt = ("Failed to load template file {0}".format(source))
+                    ret.pop('pchanges')
                     ret.update({'comment': comt, 'name': source, 'data': []})
                     self.assertDictEqual(filestate.prepend(name, source=source),
                                          ret)
@@ -1178,7 +1159,7 @@ class FileTestCase(TestCase):
                                 comt = ('File {0} is set to be updated'
                                         .format(name))
                                 ret.update({'comment': comt, 'result': None,
-                                            'changes': change})
+                                    'changes': change, 'pchanges': {}})
                                 self.assertDictEqual(filestate.prepend
                                                      (name, text=text), ret)
 
@@ -1322,7 +1303,7 @@ class FileTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        comt = ('Must provide name to file.comment')
+        comt = ('Must provide name to file.copy')
         ret.update({'comment': comt, 'name': ''})
         self.assertDictEqual(filestate.copy('', source), ret)
 
@@ -1395,26 +1376,6 @@ class FileTestCase(TestCase):
                                 comt = ('The target directory /tmp is'
                                         ' not present')
                                 ret.update({'comment': comt, 'result': False})
-                                self.assertDictEqual(filestate.copy
-                                                     (name, source,
-                                                      preserve=True), ret)
-
-                    with patch.object(os.path, 'isdir', mock_t):
-                        with patch.dict(filestate.__opts__, {'test': False}):
-                            with patch.object(shutil, 'copy',
-                                              MagicMock(side_effect=[IOError,
-                                                                     True])):
-                                comt = ('Failed to copy "{0}" to "{1}"'
-                                        .format(source, name))
-                                ret.update({'comment': comt, 'result': False})
-                                self.assertDictEqual(filestate.copy
-                                                     (name, source,
-                                                      preserve=True), ret)
-
-                                comt = ('Copied "{0}" to "{1}"'.format(source,
-                                                                       name))
-                                ret.update({'comment': comt, 'result': True,
-                                            'changes': {name: source}})
                                 self.assertDictEqual(filestate.copy
                                                      (name, source,
                                                       preserve=True), ret)
@@ -1694,12 +1655,160 @@ class FileTestCase(TestCase):
         ret = {'comment': 'check_cmd execution failed',
                'result': False, 'skip_watch': True}
 
-        mock = MagicMock(side_effect=[1, 0])
-        with patch.dict(filestate.__salt__, {'cmd.retcode': mock}):
+        mock = MagicMock(side_effect=[{'retcode': 1}, {'retcode': 0}])
+        with patch.dict(filestate.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(filestate.mod_run_check_cmd(cmd, filename),
                                  ret)
 
             self.assertTrue(filestate.mod_run_check_cmd(cmd, filename))
+
+    @skipIf(not HAS_DATEUTIL, NO_DATEUTIL_REASON)
+    def test_retention_schedule(self):
+        '''
+        Test to execute the retention_schedule logic.
+
+        This test takes advantage of knowing which files it is generating,
+        which means it can easily generate list of which files it should keep.
+        '''
+
+        def generate_fake_files(format='example_name_%Y%m%dT%H%M%S.tar.bz2',
+                                starting=datetime(2016, 2, 8, 9),
+                                every=relativedelta(minutes=30),
+                                ending=datetime(2015, 12, 25),
+                                maxfiles=None):
+            '''
+            For starting, make sure that it's over a week from the beginning of the month
+            For every, pick only one of minutes, hours, days, weeks, months or years
+            For ending, the further away it is from starting, the slower the tests run
+            Full coverage requires over a year of separation, but that's painfully slow.
+            '''
+
+            if every.years:
+                ts = datetime(starting.year, 1, 1)
+            elif every.months:
+                ts = datetime(starting.year, starting.month, 1)
+            elif every.days:
+                ts = datetime(starting.year, starting.month, starting.day)
+            elif every.hours:
+                ts = datetime(starting.year, starting.month, starting.day, starting.hour)
+            elif every.minutes:
+                ts = datetime(starting.year, starting.month, starting.day, starting.hour, 0)
+            else:
+                raise NotImplementedError("not sure what you're trying to do here")
+
+            fake_files = []
+            count = 0
+            while ending < ts:
+                fake_files.append(ts.strftime(format=format))
+                count += 1
+                if maxfiles and count >= maxfiles:
+                    break
+                ts -= every
+            return fake_files
+
+        fake_name = '/some/dir/name'
+        fake_retain = {
+            'most_recent': 2,
+            'first_of_hour': 4,
+            'first_of_day': 7,
+            'first_of_week': 6,
+            'first_of_month': 6,
+            'first_of_year': 'all',
+        }
+        fake_strptime_format = 'example_name_%Y%m%dT%H%M%S.tar.bz2'
+        fake_matching_file_list = generate_fake_files()
+        # Add some files which do not match fake_strptime_format
+        fake_no_match_file_list = generate_fake_files(format='no_match_%Y%m%dT%H%M%S.tar.bz2',
+                                                      every=relativedelta(days=1))
+
+        def lstat_side_effect(path):
+            import re
+            from time import mktime
+            x = re.match(r'^[^\d]*(\d{8}T\d{6})\.tar\.bz2$', path).group(1)
+            ts = mktime(datetime.strptime(x, '%Y%m%dT%H%M%S').timetuple())
+            return {'st_atime': 0.0, 'st_ctime': 0.0, 'st_gid': 0,
+                    'st_mode': 33188, 'st_mtime': ts,
+                    'st_nlink': 1, 'st_size': 0, 'st_uid': 0,
+                   }
+
+        mock_t = MagicMock(return_value=True)
+        mock_f = MagicMock(return_value=False)
+        mock_lstat = MagicMock(side_effect=lstat_side_effect)
+        mock_remove = MagicMock()
+
+        def run_checks(isdir=mock_t, strptime_format=None, test=False):
+            expected_ret = {
+                    'name': fake_name,
+                    'changes': {'retained': [], 'deleted': [], 'ignored': []},
+                    'pchanges': {'retained': [], 'deleted': [], 'ignored': []},
+                    'result': True,
+                    'comment': 'Name provided to file.retention must be a directory',
+                }
+            if strptime_format:
+                fake_file_list = sorted(fake_matching_file_list + fake_no_match_file_list)
+            else:
+                fake_file_list = sorted(fake_matching_file_list)
+            mock_readdir = MagicMock(return_value=fake_file_list)
+
+            with patch.dict(filestate.__opts__, {'test': test}):
+                with patch.object(os.path, 'isdir', isdir):
+                    mock_readdir.reset_mock()
+                    with patch.dict(filestate.__salt__, {'file.readdir': mock_readdir}):
+                        with patch.dict(filestate.__salt__, {'file.lstat': mock_lstat}):
+                            mock_remove.reset_mock()
+                            with patch.dict(filestate.__salt__, {'file.remove': mock_remove}):
+                                if strptime_format:
+                                    actual_ret = filestate.retention_schedule(fake_name, fake_retain,
+                                                                              strptime_format=fake_strptime_format)
+                                else:
+                                    actual_ret = filestate.retention_schedule(fake_name, fake_retain)
+
+            if not isdir():
+                mock_readdir.assert_has_calls([])
+                expected_ret['result'] = False
+            else:
+                mock_readdir.assert_called_once_with(fake_name)
+                ignored_files = fake_no_match_file_list if strptime_format else []
+                retained_files = set(generate_fake_files(maxfiles=fake_retain['most_recent']))
+                junk_list = [('first_of_hour', relativedelta(hours=1)),
+                             ('first_of_day', relativedelta(days=1)),
+                             ('first_of_week', relativedelta(weeks=1)),
+                             ('first_of_month', relativedelta(months=1)),
+                             ('first_of_year', relativedelta(years=1))]
+                for retainable, retain_interval in junk_list:
+                    new_retains = set(generate_fake_files(maxfiles=fake_retain[retainable], every=retain_interval))
+                    # if we generate less than the number of files expected,
+                    # then the oldest file will also be retained
+                    # (correctly, since it's the first in it's category)
+                    if len(new_retains) < fake_retain[retainable]:
+                        new_retains.add(fake_file_list[0])
+                    retained_files |= new_retains
+
+                deleted_files = sorted(list(set(fake_file_list) - retained_files - set(ignored_files)), reverse=True)
+                retained_files = sorted(list(retained_files), reverse=True)
+                changes = {'retained': retained_files, 'deleted': deleted_files, 'ignored': ignored_files}
+                expected_ret['pchanges'] = changes
+                if test:
+                    expected_ret['result'] = None
+                    expected_ret['comment'] = ('{0} backups would have been removed from {1}.\n'
+                                               ''.format(len(deleted_files), fake_name))
+                else:
+                    expected_ret['comment'] = ('{0} backups were removed from {1}.\n'
+                                               ''.format(len(deleted_files), fake_name))
+                    expected_ret['changes'] = changes
+                    mock_remove.assert_has_calls(
+                            [call(os.path.join(fake_name, x)) for x in deleted_files],
+                            any_order=True
+                        )
+
+            self.assertDictEqual(actual_ret, expected_ret)
+
+        run_checks(isdir=mock_f)
+        run_checks()
+        run_checks(test=True)
+        run_checks(strptime_format=fake_strptime_format)
+        run_checks(strptime_format=fake_strptime_format, test=True)
+
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -65,7 +65,7 @@ def __virtual__():
     '''
     if HAS_LIBS:
         return __virtualname__
-    return False
+    return (False, 'This module is only loaded if smtplib is available')
 
 
 def send_msg(recipient,
@@ -80,7 +80,9 @@ def send_msg(recipient,
     '''
     Send a message to an SMTP recipient. Designed for use in states.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         smtp.send_msg 'admin@example.com' 'This is a salt module test' \
             profile='my-smtp-account'
@@ -100,6 +102,7 @@ def send_msg(recipient,
     msg['Subject'] = subject
     msg['From'] = sender
     msg['To'] = recipient
+    recipients = [r.strip() for r in recipient.split(',')]
 
     try:
         if use_ssl in ['True', 'true']:
@@ -137,7 +140,7 @@ def send_msg(recipient,
             return False
 
     try:
-        smtpconn.sendmail(sender, [recipient], msg.as_string())
+        smtpconn.sendmail(sender, recipients, msg.as_string())
     except smtplib.SMTPRecipientsRefused:
         log.debug("All recipients were refused.")
         return False

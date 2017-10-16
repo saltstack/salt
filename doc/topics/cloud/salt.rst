@@ -312,3 +312,9 @@ the master or a minion), create a client object and issue a command against it:
     client = salt.cloud.CloudClient('/etc/salt/cloud')
     nodes = client.query()
     pprint.pprint(nodes)
+
+Reactor
+-------
+Examples of using the reactor with Salt Cloud are available in the
+:formula_url:`ec2-autoscale-reactor <ec2-autoscale-reactor>` and
+:formula_url:`salt-cloud-reactor <salt-cloud-reactor>` formulas.

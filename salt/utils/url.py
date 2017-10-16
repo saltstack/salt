@@ -11,6 +11,7 @@ import sys
 # Import salt libs
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils
+from salt.utils.locales import sdecode
 
 
 def parse(url):
@@ -25,11 +26,12 @@ def parse(url):
 
     if '?env=' in resource:
         salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        path, saltenv = resource.split('?env=', 1)
+            'Oxygen',
+            'Parameter \'env\' has been detected in the salt:// URL.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        path, saltenv = resource.split('?env=', 1)[0], None
     elif '?saltenv=' in resource:
         path, saltenv = resource.split('?saltenv=', 1)
     else:
@@ -47,9 +49,10 @@ def create(path, saltenv=None):
     '''
     if salt.utils.is_windows():
         path = salt.utils.sanitize_win_path_string(path)
+    path = sdecode(path)
 
     query = u'saltenv={0}'.format(saltenv) if saltenv else ''
-    url = urlunparse(('file', '', path, '', query, ''))
+    url = sdecode(urlunparse(('file', '', path, '', query, '')))
     return u'salt://{0}'.format(url[len('file:///'):])
 
 

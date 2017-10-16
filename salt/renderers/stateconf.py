@@ -6,8 +6,7 @@ A flexible renderer that takes a templating engine and a data format
 :maturity: new
 :platform: all
 '''
-from __future__ import absolute_import
-# See http://docs.saltstack.com/en/latest/ref/renderers/all/salt.renderers.stateconf.html
+# See http://docs.saltstack.org/en/latest/ref/renderers/all/salt.renderers.stateconf.html
 # for a guide to using this module.
 #
 # FIXME: I really need to review and simplify this renderer, it's getting out of hand!
@@ -28,18 +27,20 @@ from __future__ import absolute_import
 #
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import re
 import getopt
 import copy
 from os import path as ospath
-from cStringIO import StringIO
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltRenderError
+
+# Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six import string_types
+from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 __all__ = ['render']
 
@@ -165,7 +166,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
                 raise SaltRenderError('\n'.join(errors))
             raise SaltRenderError('sls preprocessing/rendering failed!')
         return data
-    #----------------------
+    # ----------------------
     renderers = kws['renderers']
     opts, args = getopt.getopt(argline.split(), 'Gosp')
     argline = ' '.join(args) if args else 'yaml . jinja'
@@ -204,7 +205,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
         except IndexError:
             raise INVALID_USAGE_ERROR
 
-        if isinstance(input, string_types):
+        if isinstance(input, six.string_types):
             with salt.utils.fopen(input, 'r') as ifile:
                 sls_templ = ifile.read()
         else:  # assume file-like
@@ -222,7 +223,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             tmplctx = STATE_CONF.copy()
             if tmplctx:
                 prefix = sls + '::'
-                for k in tmplctx.keys():  # iterate over a copy of keys
+                for k in six.iterkeys(tmplctx):  # iterate over a copy of keys
                     if k.startswith(prefix):
                         tmplctx[k[len(prefix):]] = tmplctx[k]
                         del tmplctx[k]
@@ -258,20 +259,14 @@ def rewrite_single_shorthand_state_decl(data):  # pylint: disable=C0103
       state_id_decl:
         state.func: []
     '''
-    for sid, states in data.items():
-        if isinstance(states, string_types):
+    for sid, states in six.iteritems(data):
+        if isinstance(states, six.string_types):
             data[sid] = {states: []}
-
-
-def _parent_sls(sls):
-    i = sls.rfind('.')
-    return sls[:i] + '.' if i != -1 else ''
 
 
 def rewrite_sls_includes_excludes(data, sls, saltenv):
     # if the path of the included/excluded sls starts with a leading dot(.)
     # then it's taken to be relative to the including/excluding sls.
-    sls = _parent_sls(sls)
     for sid in data:
         if sid == 'include':
             includes = data[sid]
@@ -282,15 +277,33 @@ def rewrite_sls_includes_excludes(data, sls, saltenv):
                     slsenv = saltenv
                     incl = each
                 if incl.startswith('.'):
-                    includes[i] = {slsenv: (sls + incl[1:])}
+                    includes[i] = {slsenv: _relative_to_abs_sls(incl, sls)}
         elif sid == 'exclude':
             for sdata in data[sid]:
                 if 'sls' in sdata and sdata['sls'].startswith('.'):
-                    sdata['sls'] = sls + sdata['sls'][1:]
+                    sdata['sls'] = _relative_to_abs_sls(sdata['sls'], sls)
 
 
 def _local_to_abs_sid(sid, sls):  # id must starts with '.'
-    return _parent_sls(sls) + sid[1:] if '::' in sid else sls + '::' + sid[1:]
+    if '::' in sid:
+        return _relative_to_abs_sls(sid, sls)
+    else:
+        abs_sls = _relative_to_abs_sls(sid, sls + '.')
+        return '::'.join(abs_sls.rsplit('.', 1))
+
+
+def _relative_to_abs_sls(relative, sls):
+    '''
+    Convert ``relative`` sls reference into absolute, relative to ``sls``.
+    '''
+    levels, suffix = re.match(r'^(\.+)(.*)$', relative).groups()
+    level_count = len(levels)
+    p_comps = sls.split('.')
+    if level_count > len(p_comps):
+        raise SaltRenderError(
+            'Attempted relative include goes beyond top level package'
+        )
+    return '.'.join(p_comps[:-level_count] + [suffix])
 
 
 def nvlist(thelist, names=None):
@@ -312,7 +325,7 @@ def nvlist(thelist, names=None):
     for nvitem in thelist:
         if isinstance(nvitem, dict):
             # then nvitem is a name-value item(a dict) of the list.
-            name, value = next(nvitem.iteritems())
+            name, value = next(six.iteritems(nvitem))
             if names is None or name in names:
                 yield nvitem, name, value
 
@@ -350,7 +363,7 @@ def statelist(states_dict, sid_excludes=frozenset(['include', 'exclude'])):
 
 
 REQUISITES = set([
-    'require', 'require_in', 'watch', 'watch_in', 'use', 'use_in'
+    'require', 'require_in', 'watch', 'watch_in', 'use', 'use_in', 'listen', 'listen_in'
 ])
 
 
@@ -392,8 +405,8 @@ def rename_state_ids(data, sls, is_extend=False):
             del data[sid]
 
 
-REQUIRE = set(['require', 'watch'])
-REQUIRE_IN = set(['require_in', 'watch_in'])
+REQUIRE = set(['require', 'watch', 'listen'])
+REQUIRE_IN = set(['require_in', 'watch_in', 'listen_in'])
 EXTENDED_REQUIRE = {}
 EXTENDED_REQUIRE_IN = {}
 
@@ -401,8 +414,8 @@ from itertools import chain
 
 
 # To avoid cycles among states when each state requires the one before it:
-#   explicit require/watch can only contain states before it
-#   explicit require_in/watch_in can only contain states after it
+#   explicit require/watch/listen can only contain states before it
+#   explicit require_in/watch_in/listen_in can only contain states after it
 def add_implicit_requires(data):
 
     def T(sid, state):  # pylint: disable=C0103
@@ -436,7 +449,7 @@ def add_implicit_requires(data):
         for _, rstate, rsid in reqs:
             if T(rsid, rstate) in states_after:
                 raise SaltRenderError(
-                    'State({0}) can\'t require/watch a state({1}) defined '
+                    'State({0}) can\'t require/watch/listen a state({1}) defined '
                     'after it!'.format(tag, T(rsid, rstate))
                 )
 
@@ -446,7 +459,7 @@ def add_implicit_requires(data):
         for _, rstate, rsid in reqs:
             if T(rsid, rstate) in states_before:
                 raise SaltRenderError(
-                    'State({0}) can\'t require_in/watch_in a state({1}) '
+                    'State({0}) can\'t require_in/watch_in/listen_in a state({1}) '
                     'defined before it!'.format(tag, T(rsid, rstate))
                 )
 
@@ -454,7 +467,7 @@ def add_implicit_requires(data):
         # state if there's a state before this one.
         if prev_state[0] is not None:
             try:
-                nvlist(args, ['require']).next()[2].insert(0, dict([prev_state]))
+                next(nvlist(args, ['require']))[2].insert(0, dict([prev_state]))
             except StopIteration:  # i.e., there's no require
                 args.append(dict(require=[dict([prev_state])]))
 
@@ -483,7 +496,7 @@ def add_start_state(data, sls):
             break
     else:
         raise SaltRenderError('Can\'t determine the first state in the sls file!')
-    reqin = {state_name(next(data[sid].iterkeys())): sid}
+    reqin = {state_name(next(six.iterkeys(data[sid]))): sid}
     data[start_sid] = {STATE_FUNC: [{'require_in': [reqin]}]}
 
 
@@ -553,12 +566,12 @@ def extract_state_confs(data, is_extend=False):
         for sdk in state_dict[key]:
             if not isinstance(sdk, dict):
                 continue
-            key, val = next(sdk.iteritems())
+            key, val = next(six.iteritems(sdk))
             conf[key] = val
 
         if not is_extend and state_id in STATE_CONF_EXT:
             extend = STATE_CONF_EXT[state_id]
-            for requisite in 'require', 'watch':
+            for requisite in 'require', 'watch', 'listen':
                 if requisite in extend:
                     extend[requisite] += to_dict[state_id].get(requisite, [])
             to_dict[state_id].update(STATE_CONF_EXT[state_id])

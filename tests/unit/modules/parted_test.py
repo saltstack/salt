@@ -7,6 +7,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -38,25 +41,29 @@ class PartedTestCase(TestCase):
     def test_virtual_bails_on_windows(self):
         '''If running windows, __virtual__ shouldn't register module'''
         ret = parted.__virtual__()
-        self.assertFalse(ret)
+        err = (False, 'The parted execution module failed to load Windows systems are not supported.')
+        self.assertEqual(err, ret)
 
     @patch('salt.utils.which', lambda exe: not exe == "parted")
     def test_virtual_bails_without_parted(self):
         '''If parted not in PATH, __virtual__ shouldn't register module'''
         ret = parted.__virtual__()
-        self.assertFalse(ret)
+        err = (False, 'The parted execution module failed to load parted binary is not in the path.')
+        self.assertEqual(err, ret)
 
     @patch('salt.utils.which', lambda exe: not exe == "lsblk")
     def test_virtual_bails_without_lsblk(self):
         '''If lsblk not in PATH, __virtual__ shouldn't register module'''
         ret = parted.__virtual__()
-        self.assertFalse(ret)
+        err = (False, 'The parted execution module failed to load lsblk binary is not in the path.')
+        self.assertEqual(err, ret)
 
     @patch('salt.utils.which', lambda exe: not exe == "partprobe")
     def test_virtual_bails_without_partprobe(self):
         '''If partprobe not in PATH, __virtual__ shouldn't register module'''
         ret = parted.__virtual__()
-        self.assertFalse(ret)
+        err = (False, 'The parted execution module failed to load partprobe binary is not in the path.')
+        self.assertEqual(err, ret)
 
     @patch('salt.utils.is_windows', lambda: False)
     @patch('salt.utils.which',
@@ -81,57 +88,13 @@ class PartedTestCase(TestCase):
 
     @patch('salt.modules.parted._validate_device', MagicMock())
     def test_probe_w_single_arg(self):
-        parted.probe("/dev/sda")
+        parted.probe('/dev/sda')
         self.cmdrun.assert_called_once_with('partprobe -- /dev/sda')
 
     @patch('salt.modules.parted._validate_device', MagicMock())
     def test_probe_w_multiple_args(self):
         parted.probe('/dev/sda', '/dev/sdb')
         self.cmdrun.assert_called_once_with('partprobe -- /dev/sda /dev/sdb')
-
-    @staticmethod
-    def check_kwargs_warn_until_devices(device_kwargs):
-        def check_args(kwargs, version):
-            assert kwargs == device_kwargs
-            assert version == 'Beryllium'
-        parted.salt.utils.kwargs_warn_until.side_effect = check_args
-
-    @patch('salt.utils.kwargs_warn_until')
-    @patch('salt.modules.parted._validate_device', MagicMock())
-    def test_probe_w_device_kwarg(self, *args, **kwargs):
-        device_kwargs = {'device': '/dev/sda'}
-        parted.probe(**device_kwargs)
-        self.check_kwargs_warn_until_devices(device_kwargs)
-        self.cmdrun.assert_called_once_with('partprobe -- /dev/sda')
-
-    @patch('salt.utils.kwargs_warn_until')
-    @patch('salt.modules.parted._validate_device', MagicMock())
-    def test_probe_w_device_kwarg_and_arg(self, *args, **kwargs):
-        '''device arg is concatenated with positional args'''
-        device_kwargs = {'device': '/dev/sda'}
-        parted.probe("/dev/sdb", **device_kwargs)
-        self.check_kwargs_warn_until_devices(device_kwargs)
-        self.cmdrun.assert_called_once_with('partprobe -- /dev/sda /dev/sdb')
-
-    @patch('salt.utils.kwargs_warn_until')
-    def test_probe_w_extra_kwarg(self, *args, **kwargs):
-        device_kwargs = {'foo': 'bar'}
-        self.assertRaises(TypeError, parted.probe, **device_kwargs)
-        self.check_kwargs_warn_until_devices(device_kwargs)
-        self.assertFalse(self.cmdrun.called)
-
-    # Test part_list function
-
-    @patch('salt.modules.parted.list_')
-    @patch('salt.utils.warn_until')
-    def test_part_list(self, *args, **kwargs):
-        '''Function should call new function and raise deprecation warning'''
-        parted.part_list("foo", "bar")
-        parted.list_.assert_called_once_with("foo", "bar")
-        parted.salt.utils.warn_until.assert_called_once_with(
-            'Beryllium',
-            '''The \'part_list\' function has been deprecated in favor of
-        \'list_\'. Please update your code and configs to reflect this.''')
 
     # Test _list function
 

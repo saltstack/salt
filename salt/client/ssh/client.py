@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
+
+# Import Python libs
+from __future__ import absolute_import
 import os
 import copy
 import logging
 
+# Import Salt libs
 import salt.config
 import salt.syspaths as syspaths
 from salt.exceptions import SaltClientError  # Temporary
@@ -18,7 +22,8 @@ class SSHClient(object):
     '''
     def __init__(self,
                  c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
-                 mopts=None):
+                 mopts=None,
+                 disable_custom_roster=False):
         if mopts:
             self.opts = mopts
         else:
@@ -30,6 +35,9 @@ class SSHClient(object):
                     )
                 )
             self.opts = salt.config.client_config(c_path)
+
+        # Salt API should never offer a custom roster!
+        self.opts['__disable_custom_roster'] = disable_custom_roster
 
     def _prep_ssh(
             self,
@@ -78,7 +86,7 @@ class SSHClient(object):
                 expr_form,
                 kwarg,
                 **kwargs)
-        for ret in ssh.run_iter():
+        for ret in ssh.run_iter(jid=kwargs.get('jid', None)):
             yield ret
 
     def cmd(
@@ -105,7 +113,7 @@ class SSHClient(object):
                 kwarg,
                 **kwargs)
         final = {}
-        for ret in ssh.run_iter():
+        for ret in ssh.run_iter(jid=kwargs.get('jid', None)):
             final.update(ret)
         return final
 
@@ -150,6 +158,7 @@ class SSHClient(object):
         WARNING: Eauth is **NOT** respected
 
         .. code-block:: python
+
             client.cmd_sync({
                 'tgt': 'silver',
                 'fun': 'test.ping',

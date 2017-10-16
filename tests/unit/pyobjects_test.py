@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 
+# Import Pytohn libs
+from __future__ import absolute_import
 import os
 import shutil
 import tempfile
 import uuid
 
+# Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../')
 
+# Import Salt libs
 import integration
 import salt.config
 import salt.state
@@ -50,10 +54,18 @@ include('http')
 
 extend_template = '''#!pyobjects
 include('http')
+
+from salt.utils.pyobjects import StateFactory
+Service = StateFactory('service')
+
 Service.running(extend('apache'), watch=[{'file': '/etc/file'}])
 '''
 
 map_template = '''#!pyobjects
+from salt.utils.pyobjects import StateFactory
+Service = StateFactory('service')
+
+
 class Samba(Map):
     __merge__ = 'samba:lookup'
 
@@ -107,17 +119,25 @@ from   salt://map.sls  import     Samba
 Pkg.removed("samba-imported", names=[Samba.server, Samba.client])
 '''
 
-random_password_template = '''#!pyobjects
-import random, string
-password = ''.join(random.SystemRandom().choice(
-        string.ascii_letters + string.digits) for _ in range(20))
+import_as_template = '''#!pyobjects
+from salt://map.sls import Samba as Other
+Pkg.removed("samba-imported", names=[Other.server, Other.client])
 '''
 
-random_password_import_template = '''#!pyobjecs
+random_password_template = '''#!pyobjects
+import random, string
+password = ''.join([random.SystemRandom().choice(
+        string.ascii_letters + string.digits) for _ in range(20)])
+'''
+
+random_password_import_template = '''#!pyobjects
 from salt://password.sls import password
 '''
 
 requisite_implicit_list_template = '''#!pyobjects
+from salt.utils.pyobjects import StateFactory
+Service = StateFactory('service')
+
 with Pkg.installed("pkg"):
     Service.running("service", watch=File("file"), require=Cmd("cmd"))
 '''
@@ -269,7 +289,9 @@ class RendererMixin(object):
         state = salt.state.State(self.config)
         return compile_template(full_path,
                                 state.rend,
-                                state.opts['renderer'])
+                                state.opts['renderer'],
+                                state.opts['renderer_blacklist'],
+                                state.opts['renderer_whitelist'])
 
 
 class RendererTests(RendererMixin, StateTests):
@@ -333,6 +355,7 @@ class RendererTests(RendererMixin, StateTests):
         self.write_template_file("map.sls", map_template)
         render_and_assert(import_template)
         render_and_assert(from_import_template)
+        render_and_assert(import_as_template)
 
         self.write_template_file("recursive_map.sls", recursive_map_template)
         render_and_assert(recursive_import_template)

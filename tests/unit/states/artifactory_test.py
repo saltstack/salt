@@ -36,7 +36,7 @@ class ArtifactoryTestCase(TestCase):
         given location.
         '''
         name = 'jboss'
-        arti_url = 'http://artifactory.intranet.company.com/artifactory'
+        arti_url = 'http://artifactory.intranet.example.com/artifactory'
         artifact = {'artifactory_url': arti_url, 'artifact_id': 'module',
                     'repository': 'libs-release-local', 'packaging': 'jar',
                     'group_id': 'com.company.module', 'classifier': 'sources',
@@ -55,8 +55,8 @@ class ArtifactoryTestCase(TestCase):
         with patch.object(artifactory, '__fetch_from_artifactory',
                           MagicMock(side_effect=Exception('error'))):
             ret = artifactory.downloaded(name, artifact)
-            self.assertEqual(ret[0], None)
-            self.assertEqual(repr(ret[1]), repr(Exception('error')))
+            self.assertEqual(ret['result'], False)
+            self.assertEqual(ret['comment'], 'error')
 
 
 if __name__ == '__main__':

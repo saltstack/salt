@@ -1,54 +1,109 @@
+:orphan:
+
+.. _release-candidate:
+
 ===========================================
 Installing/Testing a Salt Release Candidate
 ===========================================
 
-It's time for a new feature release of Salt!  Follow the instructions below to
-install the latest release candidate of Salt, and try :doc:`all the shiny new
-features </topics/releases/2015.8.0>`!  Be sure to report any bugs you find on
-`Github <http://www.github.com/saltstack/salt>`_
+It's time for a new feature release of Salt! Follow the instructions below to
+install the latest release candidate of Salt, and try :ref:`all the shiny new
+features <release-2017-7-0>`! Be sure to report any bugs you find on `Github
+<https://github.com/saltstack/salt/issues/new/>`_.
+
+Installing Using Packages
+=========================
+
+Builds for a few platforms are available as part of the RC at https://repo.saltstack.com/salt_rc/.
+
+.. note::
+
+    For RHEL and Ubuntu, Follow the instructions on
+    https://repo.saltstack.com/, but insert ``salt_rc/`` into the URL between
+    the hostname and the remainder of the path.  For example:
+
+    .. code-block:: bash
+
+        baseurl=https://repo.saltstack.com/salt_rc/yum/redhat/$releasever/$basearch/
+
+    .. code-block:: none
+
+        deb http://repo.saltstack.com/salt_rc/apt/ubuntu/14.04/amd64 jessie main
+
+Available builds:
+
+- Ubuntu16
+- Redhat7
+- Windows
+
+.. FreeBSD
 
 Installing Using Bootstrap
 ==========================
 
-The easiest way to install a release candidate of Salt is using
-`Salt Bootstrap`_:
+You can install a release candidate of Salt using `Salt Bootstrap
+<https://github.com/saltstack/salt-bootstrap/>`_:
 
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh git v2015.8.0rc2
+    sudo sh install_salt.sh -P git v2017.7.0rc1
 
-If you want to also install a master using `Salt Bootstrap`_, use the ``-M``
-flag:
-
-.. code-block:: bash
-
-    curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -M git v2015.8.0rc2
-
-If you want to install only a master and not a minion using `Salt Bootstrap`_,
-use the ``-M`` and ``-N`` flags:
+If you want to also install a master using Salt Bootstrap, use the ``-M`` flag:
 
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -M -N git v2015.8.0rc2
+    sudo sh install_salt.sh -P -M git v2017.7.0rc1
 
-
-Installation from Source Tarball
-================================
-
-Installing from the source tarball on PyPI is also fairly straightforward.
-First, install all the dependencies for Salt as documented :ref:`in the
-installation docs <_installation>`.  Then install salt using the following:
+If you want to install only a master and not a minion using Salt Bootstrap, use
+the ``-M`` and ``-N`` flags:
 
 .. code-block:: bash
 
-    curl -O https://pypi.python.org/packages/source/s/salt/salt-2015.8.0rc2.tar.gz
-    tar -xzvf salt-2015.8.0rc2.tar.gz
-    cd salt-2015.8.0rc2
-    sudo python setup.py install
+    curl -o install_salt.sh -L https://bootstrap.saltstack.com
+    sudo sh install_salt.sh -P -M -N git v2017.7.0rc1
 
+Installing Using PyPI
+=====================
 
-.. _`saltstack/salt`: https://github.com/saltstack/salt
-.. _`Salt Bootstrap`: https://github.com/saltstack/salt-bootstrap
+Installing from the `source archive
+<https://pypi.python.org/packages/5c/cf/13c14f8bcd7b5076b9a8c3580f9582c1c4ea8b0458793ac6744ea66c0baf/salt-2017.7.0rc1.tar.gz>`_ on
+`PyPI <https://pypi.python.org/pypi>`_ is fairly straightforward.
+
+.. note::
+
+    On RHEL derivatives you also need to install the ``epel-release`` package
+    first.
+
+    .. code-block:: bash
+
+        sudo yum install epel-release
+
+First install the build dependencies.
+
+- Debian-based systems:
+
+  .. code-block:: bash
+
+      sudo apt-get install python-pip python-dev gcc g++
+
+- RedHat-based systems:
+
+  .. code-block:: bash
+
+      sudo yum install python-pip python-devel gcc gcc-c++
+
+- other systems:
+
+  You will need to install:
+
+  - pip
+  - python header libraries
+  - C and C++ compilers
+
+Then install salt using the following command:
+
+.. code-block:: bash
+
+    sudo pip install salt==2017.7.0rc1

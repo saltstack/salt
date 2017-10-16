@@ -9,8 +9,7 @@ allow passwords to be stored in a secure database, such as one managed by the
 keyring package, rather than as plain-text files. However, as a generic database
 interface, it could conceptually be used for a number of other purposes.
 
-SDB was added to Salt in version 2014.7.0. SDB is currently experimental, and
-should probably not be used in production.
+SDB was added to Salt in version 2014.7.0.
 
 
 SDB Configuration
@@ -65,11 +64,101 @@ And the URI used to reference the password might look like:
     sdb://kevinopenstack/password
 
 
+Getting, Setting and Deleting SDB Values
+========================================
+Once an SDB driver is configured, you can use the ``sdb`` execution module to
+get, set and delete values from it. There are two functions that may appear in
+most SDB modules: ``get``, ``set`` and ``delete``.
+
+Getting a value requires only the SDB URI to be specified. To retrieve a value
+from the ``kevinopenstack`` profile above, you would use:
+
+.. code-block:: bash
+
+    salt-call sdb.get sdb://kevinopenstack/password
+
+Some drivers use slightly more complex URIs. For instance, the ``vault`` driver
+requires the full path to where the key is stored, followed by a question mark,
+followed by the key to be retrieved.  If you were using a profile called
+``myvault``, you would use a URI that looks like:
+
+.. code-block:: bash
+
+    salt-call sdb.get 'sdb://myvault/secret/salt?saltstack'
+
+Setting a value uses the same URI as would be used to retrieve it, followed
+by the value as another argument. For the above ``myvault`` URI, you would set
+a new value using a command like:
+
+.. code-block:: bash
+
+    salt-call sdb.set 'sdb://myvault/secret/salt?saltstack' 'super awesome'
+
+Deleting values (if supported by the driver) is done pretty much the same way as
+getting them. Provided that you have a profile called ``mykvstore`` that uses
+a driver allowing to delete values you would delete a value as shown below:
+
+.. code-block:: bash
+
+    salt-call sdb.delete 'sdb://mykvstore/foobar'
+
+The ``sdb.get``, ``sdb.set`` and ``sdb.delete`` functions are also available in
+the runner system:
+
+.. code-block:: bash
+
+    salt-run sdb.get 'sdb://myvault/secret/salt?saltstack'
+    salt-run sdb.set 'sdb://myvault/secret/salt?saltstack' 'super awesome'
+    salt-run sdb.delete 'sdb://mykvstore/foobar'
+
+
+Using SDB URIs in Files
+=======================
+SDB URIs can be used in both configuration files, and files that are processed
+by the renderer system (jinja, mako, etc.). In a configuration file (such as
+``/etc/salt/master``, ``/etc/salt/minion``, ``/etc/salt/cloud``, etc.), make an
+entry as usual, and set the value to the SDB URI. For instance:
+
+.. code-block:: yaml
+
+    mykey: sdb://myetcd/mykey
+
+To retrieve this value using a module, the module in question must use the
+``config.get`` function to retrieve configuration values. This would look
+something like:
+
+.. code-block:: python
+
+    mykey = __salt__['config.get']('mykey')
+
+Templating renderers use a similar construct. To get the ``mykey`` value from
+above in Jinja, you would use:
+
+.. code-block:: jinja
+
+    {{ salt['config.get']('mykey') }}
+
+When retrieving data from configuration files using ``config.get``, the SDB
+URI need only appear in the configuration file itself.
+
+If you would like to retrieve a key directly from SDB, you would call the
+``sdb.get`` function directly, using the SDB URI. For instance, in Jinja:
+
+.. code-block:: jinja
+
+    {{ salt['sdb.get']('sdb://myetcd/mykey') }}
+
+When writing Salt modules, it is not recommended to call ``sdb.get`` directly,
+as it requires the user to provide values in SDB, using a specific URI. Use
+``config.get`` instead.
+
+
 Writing SDB Modules
 ===================
-There is currently one function that MUST exist in any SDB module (``get()``)
-and one that MAY exist (``set_()``). If using a (``set_()``) function, a
-``__func_alias__`` dictionary MUST be declared in the module as well:
+There is currently one function that MUST exist in any SDB module (``get()``),
+one that SHOULD exist (``set_()``) and one that MAY exist (``delete()``). If
+using a (``set_()``) function, a ``__func_alias__`` dictionary MUST be declared
+in the module as well:
 
 .. code-block:: python
 
@@ -89,6 +178,9 @@ areas of the code which make use of the ``sdb://`` URI. For example, the
 The ``set_()`` function may be provided, but is not required, as some sources
 may be read-only, or may be otherwise unwise to access via a URI (for instance,
 because of SQL injection attacks).
+
+The ``delete()`` function may be provided as well, but is not required, as many
+sources may be read-only or restrict such operations.
 
 A simple example of an SDB module is ``salt/sdb/keyring_db.py``, as it provides
 basic examples of most, if not all, of the types of functionality that are

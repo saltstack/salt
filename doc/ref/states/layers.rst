@@ -78,7 +78,7 @@ the json, yaml, or pprint outputters:
 .. _state-layers-sls:
 
 SLS
-====
+===
 
 Above "High Data", the logical layers are no longer technically required to be
 executed, or to be executed in a hierarchy. This means that how the High data
@@ -124,13 +124,13 @@ To execute the :ref:`highstate <running-highstate>` use :py:func:`state.apply
 
     salt '*' state.apply
 
-.. _state-layers-overstate:
+.. _state-layers-orchestrate:
 
-OverState
-=========
+Orchestrate
+===========
 
-The overstate layer expresses the highest functional layer of Salt's automated
+The orchestrate layer expresses the highest functional layer of Salt's automated
 logic systems. The Overstate allows for stateful and functional orchestration
-of routines from the master. The overstate defines in data execution stages
+of routines from the master. The orchestrate defines in data execution stages
 which minions should execute states, or functions, and in what order using
 requisite logic.

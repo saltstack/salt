@@ -1,3 +1,5 @@
+.. _release-2014-1-0:
+
 ===============================================
 Salt 2014.1.0 Release Notes - Codename Hydrogen
 ===============================================
@@ -6,8 +8,8 @@ Salt 2014.1.0 Release Notes - Codename Hydrogen
 
    Due to a change in master to minion communication, 2014.1.0 minions are not
    compatible with older-version masters.  Please upgrade masters first.
-   More info on backwards-compatibility policy :doc:`here
-   </topics/installation/index>`, under the "Upgrading Salt" subheading.
+   More info on backwards-compatibility policy :ref:`here
+   <installation>`, under the "Upgrading Salt" subheading.
 
 .. note::
 
@@ -35,7 +37,7 @@ testing making roughly double the coverage in the Salt tests, and comes with
 many new features.
 
 2014.1.0 is the first release to follow the new date-based release naming
-system. See the :doc:`version numbers</topics/releases/version_numbers>`
+system. See the :ref:`version numbers<version-numbers>`
 page for more details.
 
 Major Features
@@ -47,8 +49,7 @@ Salt Cloud Merged into Salt
 Salt Cloud is a tool for provisioning salted minions across various cloud
 providers. Prior to this release, Salt Cloud was a separate project but this
 marks its full integration with the Salt distribution. A Getting Started guide
-and additional documentation for Salt Cloud can be found :doc:`here
-</topics/cloud/index>`:
+and additional documentation for Salt Cloud can be found :ref:`here <salt-cloud>`:
 
 
 Google Compute Engine
@@ -60,7 +61,7 @@ they run.
 
 For more information on Salt Stack and GCE, please see `this blog post`_.
 
-Documentation for Salt and GCE can be found :doc:`here </topics/cloud/gce>`.
+Documentation for Salt and GCE can be found :ref:`here <cloud-getting-started-gce>`.
 
 .. _this blog post: http://googlecloudplatform.blogspot.com/2013/12/saltstack-for-google-compute-engine.html
 
@@ -160,7 +161,7 @@ from the salt fileserver. The path for these files takes the following format::
 ``minion-id`` is the id of the "source" minion, the one from which the files
 were pushed to the master. ``/path/to/file`` is the full path of the file.
 
-The :doc:`MinionFS Walkthrough </topics/tutorials/minionfs>` contains a more
+The :ref:`MinionFS Walkthrough <tutorial-minionfs>` contains a more
 thorough example of how to use this backend.
 
 
@@ -247,7 +248,7 @@ Proxy Minions
 -------------
 
 Initial basic support for Proxy Minions is in this release. Documentation can
-be found :doc:`here </topics/topology/proxyminion/index>`.
+be found :ref:`here <proxy-minion>`.
 
 Proxy minions are a developing feature in Salt that enables control of devices
 that cannot run a minion. Examples include network gear like switches and

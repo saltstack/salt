@@ -1,19 +1,24 @@
 # basic config
+# Connects to master
 master: localhost
+interface: 127.0.0.1
 master_port: 64506
-root_dir: /tmp/subsalttest
-pki_dir: pki
-id: sub_minion
-cachedir: cachedir
+tcp_pub_port: 64520
+tcp_pull_port: 64521
 sock_dir: sub_minion_sock
-#acceptance_wait_time: 1
+id: sub_minion
 open_mode: True
-log_file: minion
+log_file: sub_minion.log
+log_level_logfile: debug
+pidfile: sub_minion.pid
+
+# Give the minion extra attempts to find the master
+# This is especially needed for the TCP tests as we
+# wait for the master to come up in 2016.3. See #35489.
+master_tries: 5
 
 # module extension
 test.foo: baz
-hosts.file: /tmp/salt-tests-tmpdir/hosts
-aliases.file: /tmp/salt-tests-tmpdir/aliases
 integration.test: True
 
 # Grains addons
@@ -31,5 +36,29 @@ grains:
     two:
       - jamie
       - zoe
-
-ipc_mode: tcp
+  tokenv2:
+    keystone.endpoint: http://localhost:35357/v2.0
+    keystone.token: administrator
+  tokenv3:
+    keystone.endpoint: http://localhost:35357/v3
+    keystone.token: administrator
+  adminv2:
+    keystone.user: admin
+    keystone.password: adminpass
+    keystone.tenant: admin
+    keystone.auth_url: http://127.0.0.1:5000/v2.0/
+  demov2:
+    keystone.user: demo
+    keystone.password: demopass
+    keystone.tenant: demo
+    keystone.auth_url: http://127.0.0.1:5000/v2.0/
+  adminv3:
+    keystone.user: admin
+    keystone.password: adminpass
+    keystone.tenant: admin
+    keystone.auth_url: http://127.0.0.1:5000/v3/
+  demov3:
+    keystone.user: demo
+    keystone.password: demopass
+    keystone.tenant: demo
+    keystone.auth_url: http://127.0.0.1:5000/v3/

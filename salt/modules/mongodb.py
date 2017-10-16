@@ -19,9 +19,11 @@ from __future__ import absolute_import
 import logging
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 import json
+import re
 
 # Import salt libs
 from salt.ext.six import string_types
+from salt.exceptions import get_error_message as _get_error_message
 
 
 # Import third party libs
@@ -41,10 +43,10 @@ def __virtual__():
     if HAS_MONGODB:
         return 'mongodb'
     else:
-        return False
+        return (False, 'The mongodb execution module cannot be loaded: the pymongo library is not available.')
 
 
-def _connect(user=None, password=None, host=None, port=None, database='admin'):
+def _connect(user=None, password=None, host=None, port=None, database='admin', authdb=None):
     '''
     Returns a tuple of (user, host, port) with config, pillar, or default
     values assigned to missing values.
@@ -57,12 +59,14 @@ def _connect(user=None, password=None, host=None, port=None, database='admin'):
         host = __salt__['config.option']('mongodb.host')
     if not port:
         port = __salt__['config.option']('mongodb.port')
+    if not authdb:
+        authdb = database
 
     try:
         conn = pymongo.MongoClient(host=host, port=port)
         mdb = pymongo.database.Database(conn, database)
         if user and password:
-            mdb.authenticate(user, password)
+            mdb.authenticate(user, password, source=authdb)
     except pymongo.errors.PyMongoError:
         log.error('Error connecting to database {0}'.format(database))
         return False
@@ -70,7 +74,21 @@ def _connect(user=None, password=None, host=None, port=None, database='admin'):
     return conn
 
 
-def db_list(user=None, password=None, host=None, port=None):
+def _to_dict(objects):
+    """
+    Potentially interprets a string as JSON for usage with mongo
+    """
+    try:
+        if isinstance(objects, string_types):
+            objects = json.loads(objects)
+    except ValueError as err:
+        log.error("Could not parse objects: %s", err)
+        raise err
+
+    return objects
+
+
+def db_list(user=None, password=None, host=None, port=None, authdb=None):
     '''
     List all Mongodb databases
 
@@ -80,7 +98,7 @@ def db_list(user=None, password=None, host=None, port=None):
 
         salt '*' mongodb.db_list <user> <password> <host> <port>
     '''
-    conn = _connect(user, password, host, port)
+    conn = _connect(user, password, host, port, authdb=authdb)
     if not conn:
         return 'Failed to connect to mongo database'
 
@@ -92,7 +110,7 @@ def db_list(user=None, password=None, host=None, port=None):
         return str(err)
 
 
-def db_exists(name, user=None, password=None, host=None, port=None):
+def db_exists(name, user=None, password=None, host=None, port=None, authdb=None):
     '''
     Checks if a database exists in Mongodb
 
@@ -102,7 +120,7 @@ def db_exists(name, user=None, password=None, host=None, port=None):
 
         salt '*' mongodb.db_exists <name> <user> <password> <host> <port>
     '''
-    dbs = db_list(user, password, host, port)
+    dbs = db_list(user, password, host, port, authdb=authdb)
 
     if isinstance(dbs, string_types):
         return False
@@ -110,7 +128,7 @@ def db_exists(name, user=None, password=None, host=None, port=None):
     return name in dbs
 
 
-def db_remove(name, user=None, password=None, host=None, port=None):
+def db_remove(name, user=None, password=None, host=None, port=None, authdb=None):
     '''
     Remove a Mongodb database
 
@@ -120,7 +138,7 @@ def db_remove(name, user=None, password=None, host=None, port=None):
 
         salt '*' mongodb.db_remove <name> <user> <password> <host> <port>
     '''
-    conn = _connect(user, password, host, port)
+    conn = _connect(user, password, host, port, authdb=authdb)
     if not conn:
         return 'Failed to connect to mongo database'
 
@@ -138,7 +156,7 @@ def db_remove(name, user=None, password=None, host=None, port=None):
     return True
 
 
-def user_list(user=None, password=None, host=None, port=None, database='admin'):
+def user_list(user=None, password=None, host=None, port=None, database='admin', authdb=None):
     '''
     List users of a Mongodb database
 
@@ -148,7 +166,7 @@ def user_list(user=None, password=None, host=None, port=None, database='admin'):
 
         salt '*' mongodb.user_list <user> <password> <host> <port> <database>
     '''
-    conn = _connect(user, password, host, port)
+    conn = _connect(user, password, host, port, authdb=authdb)
     if not conn:
         return 'Failed to connect to mongo database'
 
@@ -183,7 +201,7 @@ def user_list(user=None, password=None, host=None, port=None, database='admin'):
 
 
 def user_exists(name, user=None, password=None, host=None, port=None,
-                database='admin'):
+                database='admin', authdb=None):
     '''
     Checks if a user exists in Mongodb
 
@@ -193,7 +211,11 @@ def user_exists(name, user=None, password=None, host=None, port=None,
 
         salt '*' mongodb.user_exists <name> <user> <password> <host> <port> <database>
     '''
-    users = user_list(user, password, host, port, database)
+    users = user_list(user, password, host, port, database, authdb)
+
+    if isinstance(users, string_types):
+        return 'Failed to connect to mongo database'
+
     for user in users:
         if name == dict(user).get('user'):
             return True
@@ -202,7 +224,7 @@ def user_exists(name, user=None, password=None, host=None, port=None,
 
 
 def user_create(name, passwd, user=None, password=None, host=None, port=None,
-                database='admin'):
+                database='admin', authdb=None):
     '''
     Create a Mongodb user
 
@@ -212,7 +234,7 @@ def user_create(name, passwd, user=None, password=None, host=None, port=None,
 
         salt '*' mongodb.user_create <name> <user> <password> <host> <port> <database>
     '''
-    conn = _connect(user, password, host, port)
+    conn = _connect(user, password, host, port, authdb=authdb)
     if not conn:
         return 'Failed to connect to mongo database'
 
@@ -231,7 +253,7 @@ def user_create(name, passwd, user=None, password=None, host=None, port=None,
 
 
 def user_remove(name, user=None, password=None, host=None, port=None,
-                database='admin'):
+                database='admin', authdb=None):
     '''
     Remove a Mongodb user
 
@@ -260,22 +282,124 @@ def user_remove(name, user=None, password=None, host=None, port=None,
     return True
 
 
-def _to_dict(objects):
-    """
-    Potentially interprets a string as JSON for usage with mongo
-    """
-    try:
-        if isinstance(objects, string_types):
-            objects = json.loads(objects)
-    except ValueError as err:
-        log.error("Could not parse objects: %s", err)
-        raise err
+def user_roles_exists(name, roles, database, user=None, password=None, host=None,
+                      port=None, authdb=None):
+    '''
+    Checks if a user of a Mongodb database has specified roles
 
-    return objects
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_roles_exists johndoe '["readWrite"]' dbname admin adminpwd localhost 27017
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_roles_exists johndoe '[{"role": "readWrite", "db": "dbname" }, {"role": "read", "db": "otherdb"}]' dbname admin adminpwd localhost 27017
+    '''
+    try:
+        roles = _to_dict(roles)
+    except Exception:
+        return 'Roles provided in wrong format'
+
+    users = user_list(user, password, host, port, database, authdb)
+
+    if isinstance(users, string_types):
+        return 'Failed to connect to mongo database'
+
+    for user in users:
+        if name == dict(user).get('user'):
+            for role in roles:
+                # if the role was provided in the shortened form, we convert it to a long form
+                if not isinstance(role, dict):
+                    role = {'role': role, 'db': database}
+                if role not in dict(user).get('roles', []):
+                    return False
+            return True
+
+    return False
+
+
+def user_grant_roles(name, roles, database, user=None, password=None, host=None,
+                     port=None, authdb=None):
+    '''
+    Grant one or many roles to a Mongodb user
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_grant_roles johndoe '["readWrite"]' dbname admin adminpwd localhost 27017
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_grant_roles janedoe '[{"role": "readWrite", "db": "dbname" }, {"role": "read", "db": "otherdb"}]' dbname admin adminpwd localhost 27017
+    '''
+    conn = _connect(user, password, host, port, authdb=authdb)
+    if not conn:
+        return 'Failed to connect to mongo database'
+
+    try:
+        roles = _to_dict(roles)
+    except Exception:
+        return 'Roles provided in wrong format'
+
+    try:
+        log.info('Granting roles {0} to user {1}'.format(roles, name))
+        mdb = pymongo.database.Database(conn, database)
+        mdb.eval("db.grantRolesToUser('{0}', {1})".format(name, roles))
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Granting roles {0} to user {1} failed with error: {2}'.format(
+                roles, name, str(err)
+            )
+        )
+        return str(err)
+
+    return True
+
+
+def user_revoke_roles(name, roles, database, user=None, password=None, host=None,
+                      port=None, authdb=None):
+    '''
+    Revoke one or many roles to a Mongodb user
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_revoke_roles johndoe '["readWrite"]' dbname admin adminpwd localhost 27017
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_revoke_roles janedoe '[{"role": "readWrite", "db": "dbname" }, {"role": "read", "db": "otherdb"}]' dbname admin adminpwd localhost 27017
+    '''
+    conn = _connect(user, password, host, port, authdb=authdb)
+    if not conn:
+        return 'Failed to connect to mongo database'
+
+    try:
+        roles = _to_dict(roles)
+    except Exception:
+        return 'Roles provided in wrong format'
+
+    try:
+        log.info('Revoking roles {0} from user {1}'.format(roles, name))
+        mdb = pymongo.database.Database(conn, database)
+        mdb.eval("db.revokeRolesFromUser('{0}', {1})".format(name, roles))
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Revoking roles {0} from user {1} failed with error: {2}'.format(
+                roles, name, str(err)
+            )
+        )
+        return str(err)
+
+    return True
 
 
 def insert(objects, collection, user=None, password=None,
-           host=None, port=None, database='admin'):
+           host=None, port=None, database='admin', authdb=None):
     """
     Insert an object or list of objects into a collection
 
@@ -286,13 +410,13 @@ def insert(objects, collection, user=None, password=None,
         salt '*' mongodb.insert '[{"foo": "FOO", "bar": "BAR"}, {"foo": "BAZ", "bar": "BAM"}]' mycollection <user> <password> <host> <port> <database>
 
     """
-    conn = _connect(user, password, host, port, database)
+    conn = _connect(user, password, host, port, database, authdb)
     if not conn:
         return "Failed to connect to mongo database"
 
     try:
         objects = _to_dict(objects)
-    except Exception, err:
+    except Exception as err:
         return err
 
     try:
@@ -306,15 +430,93 @@ def insert(objects, collection, user=None, password=None,
         return err
 
 
+def update_one(objects, collection, user=None, password=None, host=None, port=None, database='admin', authdb=None):
+    '''
+    Update an object into a collection
+    http://api.mongodb.com/python/current/api/pymongo/collection.html#pymongo.collection.Collection.update_one
+
+    .. versionadded:: 2016.11.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.update_one '{"_id": "my_minion"} {"bar": "BAR"}' mycollection <user> <password> <host> <port> <database>
+
+    '''
+    conn = _connect(user, password, host, port, database, authdb)
+    if not conn:
+        return "Failed to connect to mongo database"
+
+    objects = str(objects)
+    objs = re.split(r'}\s+{', objects)
+
+    if len(objs) is not 2:
+        return "Your request does not contain a valid " + \
+        "'{_\"id\": \"my_id\"} {\"my_doc\": \"my_val\"}'"
+
+    objs[0] = objs[0] + '}'
+    objs[1] = '{' + objs[1]
+
+    document = []
+
+    for obj in objs:
+        try:
+            obj = _to_dict(obj)
+            document.append(obj)
+        except Exception as err:
+            return err
+
+    _id_field = document[0]
+    _update_doc = document[1]
+
+    # need a string to perform the test, so using objs[0]
+    test_f = find(collection,
+                  objs[0],
+                  user,
+                  password,
+                  host,
+                  port,
+                  database,
+                  authdb)
+    if not isinstance(test_f, list):
+        return 'The find result is not well formatted. An error appears; cannot update.'
+    elif len(test_f) < 1:
+        return 'Did not find any result. You should try an insert before.'
+    elif len(test_f) > 1:
+        return 'Too many results. Please try to be more specific.'
+    else:
+        try:
+            log.info("Updating %r into %s.%s", _id_field, database, collection)
+            mdb = pymongo.database.Database(conn, database)
+            col = getattr(mdb, collection)
+            ids = col.update_one(_id_field, {'$set': _update_doc})
+            nb_mod = ids.modified_count
+            return "{0} objects updated".format(nb_mod)
+        except pymongo.errors.PyMongoError as err:
+            log.error('Updating object {0} failed with error {1}'.format(objects, err))
+            return err
+
+
 def find(collection, query=None, user=None, password=None,
-         host=None, port=None, database='admin'):
-    conn = _connect(user, password, host, port, database)
+         host=None, port=None, database='admin', authdb=None):
+    """
+    Find an object or list of objects in a collection
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.find mycollection '[{"foo": "FOO", "bar": "BAR"}]' <user> <password> <host> <port> <database>
+
+    """
+    conn = _connect(user, password, host, port, database, authdb)
     if not conn:
         return 'Failed to connect to mongo database'
 
     try:
         query = _to_dict(query)
-    except Exception, err:
+    except Exception as err:
         return err
 
     try:
@@ -324,12 +526,12 @@ def find(collection, query=None, user=None, password=None,
         ret = col.find(query)
         return list(ret)
     except pymongo.errors.PyMongoError as err:
-        log.error("Removing objects failed with error: %s", err)
+        log.error("Searching objects failed with error: %s", err)
         return err
 
 
 def remove(collection, query=None, user=None, password=None,
-           host=None, port=None, database='admin', w=1):
+           host=None, port=None, database='admin', w=1, authdb=None):
     """
     Remove an object or list of objects into a collection
 
@@ -340,14 +542,14 @@ def remove(collection, query=None, user=None, password=None,
         salt '*' mongodb.remove mycollection '[{"foo": "FOO", "bar": "BAR"}, {"foo": "BAZ", "bar": "BAM"}]' <user> <password> <host> <port> <database>
 
     """
-    conn = _connect(user, password, host, port, database)
+    conn = _connect(user, password, host, port, database, authdb)
     if not conn:
         return 'Failed to connect to mongo database'
 
     try:
         query = _to_dict(query)
-    except Exception, err:
-        return err.message
+    except Exception as err:
+        return _get_error_message(err)
 
     try:
         log.info("Removing %r from %s", query, collection)
@@ -356,5 +558,5 @@ def remove(collection, query=None, user=None, password=None,
         ret = col.remove(query, w=w)
         return "{0} objects removed".format(ret['n'])
     except pymongo.errors.PyMongoError as err:
-        log.error("Removing objects failed with error: %s", err.message)
-        return err.message
+        log.error("Removing objects failed with error: %s", _get_error_message(err))
+        return _get_error_message(err)

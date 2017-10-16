@@ -18,10 +18,13 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
         - require:
           - pkg: npm
 '''
-from __future__ import absolute_import
 
 # Import salt libs
+from __future__ import absolute_import
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -90,20 +93,17 @@ def installed(name,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    if pkgs is not None:
-        pkg_list = pkgs
-    else:
-        pkg_list = [name]
+    pkg_list = pkgs if pkgs else [name]
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir, runas=user, env=env)
+        installed_pkgs = __salt__['npm.list'](dir=dir, runas=user, env=env, depth=0)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error looking up {0!r}: {1}'.format(name, err)
+        ret['comment'] = 'Error looking up \'{0}\': {1}'.format(name, err)
         return ret
     else:
         installed_pkgs = dict((p, info)
-                for p, info in installed_pkgs.items())
+                for p, info in six.iteritems(installed_pkgs))
 
     pkgs_satisfied = []
     pkgs_to_install = []
@@ -125,11 +125,18 @@ def installed(name,
         # Check to see if we are trying to install from a URI
         elif '://' in pkg_name:  # TODO Better way?
             for pkg_details in installed_pkgs.values():
-                pkg_from = pkg_details.get('from', '').split('://')[1]
-                if pkg_name.split('://')[1] == pkg_from:
-                    return True
+                try:
+                    pkg_from = pkg_details.get('from', '').split('://')[1]
+                    # Catch condition where we may have specified package as
+                    # git://github.com/foo/bar but packager describes it as
+                    # git://github.com/foo/bar.git in the package
+                    if not pkg_from.endswith('.git') and pkg_name.startswith('git://'):
+                        pkg_from += '.git'
+                    if pkg_name.split('://')[1] == pkg_from:
+                        return True
+                except IndexError:
+                    pass
         return False
-
     for pkg in pkg_list:
         pkg_name, _, pkg_ver = pkg.partition('@')
         pkg_name = pkg_name.strip()
@@ -161,13 +168,13 @@ def installed(name,
 
         comment_msg = []
         if pkgs_to_install:
-            comment_msg.append('NPM package(s) {0!r} are set to be installed'
+            comment_msg.append('NPM package(s) \'{0}\' are set to be installed'
                 .format(', '.join(pkgs_to_install)))
 
             ret['changes'] = {'old': [], 'new': pkgs_to_install}
 
         if pkgs_satisfied:
-            comment_msg.append('Package(s) {0!r} satisfied by {1}'
+            comment_msg.append('Package(s) \'{0}\' satisfied by {1}'
                 .format(', '.join(pkg_list), ', '.join(pkgs_satisfied)))
             ret['result'] = True
 
@@ -176,7 +183,7 @@ def installed(name,
 
     if not pkgs_to_install:
         ret['result'] = True
-        ret['comment'] = ('Package(s) {0!r} satisfied by {1}'
+        ret['comment'] = ('Package(s) \'{0}\' satisfied by {1}'
                 .format(', '.join(pkg_list), ', '.join(pkgs_satisfied)))
         return ret
 
@@ -192,26 +199,24 @@ def installed(name,
         call = __salt__['npm.install'](**cmd_args)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error installing {0!r}: {1}'.format(
+        ret['comment'] = 'Error installing \'{0}\': {1}'.format(
                 ', '.join(pkg_list), err)
         return ret
 
     if call and (isinstance(call, list) or isinstance(call, dict)):
         ret['result'] = True
         ret['changes'] = {'old': [], 'new': pkgs_to_install}
-        ret['comment'] = 'Package(s) {0!r} successfully installed'.format(
+        ret['comment'] = 'Package(s) \'{0}\' successfully installed'.format(
                 ', '.join(pkgs_to_install))
     else:
         ret['result'] = False
-        ret['comment'] = 'Could not install package(s) {0!r}'.format(
+        ret['comment'] = 'Could not install package(s) \'{0}\''.format(
                 ', '.join(pkg_list))
 
     return ret
 
 
-def removed(name,
-            dir=None,
-            user=None):
+def removed(name, dir=None, user=None):
     '''
     Verify that the given package is not installed.
 
@@ -227,35 +232,34 @@ def removed(name,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir)
+        installed_pkgs = __salt__['npm.list'](dir=dir, depth=0)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error uninstalling {0!r}: {1}'.format(name, err)
+        ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
         return ret
 
     if name not in installed_pkgs:
         ret['result'] = True
-        ret['comment'] = 'Package {0!r} is not installed'.format(name)
+        ret['comment'] = 'Package \'{0}\' is not installed'.format(name)
         return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Package {0!r} is set to be removed'.format(name)
+        ret['comment'] = 'Package \'{0}\' is set to be removed'.format(name)
         return ret
 
     if __salt__['npm.uninstall'](pkg=name, dir=dir, runas=user):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
-        ret['comment'] = 'Package {0!r} was successfully removed'.format(name)
+        ret['comment'] = 'Package \'{0}\' was successfully removed'.format(name)
     else:
         ret['result'] = False
-        ret['comment'] = 'Error removing package {0!r}'.format(name)
+        ret['comment'] = 'Error removing package \'{0}\''.format(name)
 
     return ret
 
 
-def bootstrap(name,
-              user=None):
+def bootstrap(name, user=None, silent=True):
     '''
     Bootstraps a node.js application.
 
@@ -268,11 +272,22 @@ def bootstrap(name,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
+    if __opts__['test']:
+        try:
+            call = __salt__['npm.install'](dir=name, runas=user, pkg=None, silent=silent, dry_run=True)
+            ret['result'] = None
+            ret['changes'] = {'old': [], 'new': call}
+            ret['comment'] = '{0} is set to be bootstrapped'.format(name)
+        except (CommandNotFoundError, CommandExecutionError) as err:
+            ret['result'] = False
+            ret['comment'] = 'Error Bootstrapping \'{0}\': {1}'.format(name, err)
+        return ret
+
     try:
-        call = __salt__['npm.install'](dir=name, runas=user, pkg=None)
+        call = __salt__['npm.install'](dir=name, runas=user, pkg=None, silent=silent)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error Bootstrapping {0!r}: {1}'.format(name, err)
+        ret['comment'] = 'Error Bootstrapping \'{0}\': {1}'.format(name, err)
         return ret
 
     if not call:
@@ -283,10 +298,70 @@ def bootstrap(name,
     # npm.install will return a string if it can't parse a JSON result
     if isinstance(call, str):
         ret['result'] = False
+        ret['changes'] = call
         ret['comment'] = 'Could not bootstrap directory'
     else:
         ret['result'] = True
         ret['changes'] = {name: 'Bootstrapped'}
         ret['comment'] = 'Directory was successfully bootstrapped'
+
+    return ret
+
+
+def cache_cleaned(name=None,
+                  user=None,
+                  force=False):
+    '''
+    Ensure that the given package is not cached.
+
+    If no package is specified, this ensures the entire cache is cleared.
+
+    name
+        The name of the package to remove from the cache, or None for all packages
+
+    user
+        The user to run NPM with
+
+    force
+        Force cleaning of cache.  Required for npm@5 and greater
+
+        .. versionadded:: 2016.11.6
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    specific_pkg = None
+
+    try:
+        cached_pkgs = __salt__['npm.cache_list'](path=name, runas=user)
+    except (CommandExecutionError, CommandNotFoundError) as err:
+        ret['result'] = False
+        ret['comment'] = 'Error looking up cached {0}: {1}'.format(
+            name or 'packages', err)
+        return ret
+
+    if name:
+        all_cached_pkgs = __salt__['npm.cache_list'](path=None, runas=user)
+        # The first package is always the cache path
+        cache_root_path = all_cached_pkgs[0]
+        specific_pkg = '{0}/{1}/'.format(cache_root_path, name)
+
+        if specific_pkg not in cached_pkgs:
+            ret['result'] = True
+            ret['comment'] = 'Package {0} is not in the cache'.format(name)
+            return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Cached {0} set to be removed'.format(name or 'packages')
+        return ret
+
+    if __salt__['npm.cache_clean'](path=name, runas=user):
+        ret['result'] = True
+        ret['changes'][name or 'cache'] = 'Removed'
+        ret['comment'] = 'Cached {0} successfully removed'.format(
+            name or 'packages'
+        )
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Error cleaning cached {0}'.format(name or 'packages')
 
     return ret

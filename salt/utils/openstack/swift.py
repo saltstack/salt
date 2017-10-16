@@ -8,7 +8,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-from sys import stdout
+import sys
 from os import makedirs
 from os.path import dirname, isdir
 from errno import EEXIST
@@ -172,7 +172,7 @@ class SaltSwift(object):
             headers, body = self.conn.get_object(cont, obj, resp_chunk_size=65536)
 
             if return_bin is True:
-                fp = stdout
+                fp = sys.stdout
             else:
                 dirpath = dirname(local_file)
                 if dirpath and not isdir(dirpath):

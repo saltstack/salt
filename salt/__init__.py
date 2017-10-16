@@ -2,7 +2,9 @@
 '''
 Salt package
 '''
-# Import Python Libs
+
+# Import Python libs
+from __future__ import absolute_import
 import warnings
 
 # All salt related deprecation warnings should be shown once each!
@@ -33,9 +35,12 @@ def __define_global_system_encoding_variable__():
     # This is the most trustworthy source of the system encoding, though, if
     # salt is being imported after being daemonized, this information is lost
     # and reset to None
-    encoding = sys.stdin.encoding
+    if sys.stdin is not None:
+        encoding = sys.stdin.encoding
+    else:
+        encoding = None
     if not encoding:
-        # If the system is properly codfigured this should return a valid
+        # If the system is properly configured this should return a valid
         # encoding. MS Windows has problems with this and reports the wrong
         # encoding
         import locale
@@ -49,15 +54,16 @@ def __define_global_system_encoding_variable__():
         # This is now garbage collectable
         del locale
         if not encoding:
-            # This is most likely asccii which is not the best but we were
-            # unable to find a better encoding
-            encoding = sys.getdefaultencoding()
+            # This is most likely ascii which is not the best but we were
+            # unable to find a better encoding. If this fails, we fall all
+            # the way back to ascii
+            encoding = sys.getdefaultencoding() or 'ascii'
 
     # We can't use six.moves.builtins because these builtins get deleted sooner
     # than expected. See:
     #    https://github.com/saltstack/salt/issues/21036
     if sys.version_info[0] < 3:
-        import __builtin__ as builtins
+        import __builtin__ as builtins  # pylint: disable=incompatible-py3-code
     else:
         import builtins  # pylint: disable=import-error
 

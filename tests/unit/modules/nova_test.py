@@ -3,6 +3,9 @@
     :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
+
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import (

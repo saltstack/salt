@@ -43,21 +43,12 @@ def _merge_extra_filerefs(*args):
     return ','.join(ret)
 
 
-def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
+def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     '''
     Create the seed file for a state.sls run
     '''
     st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     __pillar__.update(kwargs.get('pillar', {}))
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
@@ -96,11 +87,12 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
             )
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
@@ -111,6 +103,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -153,7 +146,9 @@ def low(data, **kwargs):
             __pillar__,
             __salt__,
             __context__['fileclient'])
-    err = st_.verify_data(data)
+    for chunk in chunks:
+        chunk['__id__'] = chunk['name'] if not chunk.get('__id__') else chunk['__id__']
+    err = st_.state.verify_data(data)
     if err:
         return err
     file_refs = salt.client.ssh.state.lowstate_file_refs(
@@ -165,11 +160,12 @@ def low(data, **kwargs):
             )
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
             __opts__['thin_dir'],
@@ -179,6 +175,7 @@ def low(data, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -221,7 +218,7 @@ def high(data, **kwargs):
             __pillar__,
             __salt__,
             __context__['fileclient'])
-    chunks = st_.state.compile_high_data(high)
+    chunks = st_.state.compile_high_data(data)
     file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
@@ -231,11 +228,12 @@ def high(data, **kwargs):
             )
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
             __opts__['thin_dir'],
@@ -245,6 +243,7 @@ def high(data, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -322,14 +321,16 @@ def highstate(test=None, **kwargs):
     # Check for errors
     for chunk in chunks:
         if not isinstance(chunk, dict):
+            __context__['retcode'] = 1
             return chunks
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
@@ -340,6 +341,7 @@ def highstate(test=None, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -398,11 +400,12 @@ def top(topfn, test=None, **kwargs):
             )
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'])
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__['thin_dir'],
@@ -413,6 +416,7 @@ def top(topfn, test=None, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -474,7 +478,7 @@ def show_lowstate():
     return st_.compile_low_chunks()
 
 
-def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
+def show_sls(mods, saltenv='base', test=None, **kwargs):
     '''
     Display the state data from a specific sls or list of sls files on the
     master
@@ -487,15 +491,6 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
     '''
     __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     opts = copy.copy(__opts__)
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
@@ -521,6 +516,50 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
     if errors:
         return errors
     return high_data
+
+
+def show_low_sls(mods, saltenv='base', test=None, **kwargs):
+    '''
+    Display the low state data from a specific sls or list of sls files on the
+    master.
+
+    .. versionadded:: 2016.3.2
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.show_sls core,edit.vim dev
+    '''
+    __pillar__.update(kwargs.get('pillar', {}))
+    __opts__['grains'] = __grains__
+
+    opts = copy.copy(__opts__)
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    else:
+        opts['test'] = __opts__.get('test', None)
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __context__['fileclient'])
+    if isinstance(mods, string_types):
+        mods = mods.split(',')
+    high_data, errors = st_.render_highstate({saltenv: mods})
+    high_data, ext_errors = st_.state.reconcile_extend(high_data)
+    errors += ext_errors
+    errors += st_.state.verify_high(high_data)
+    if errors:
+        return errors
+    high_data, req_in_errors = st_.state.requisite_in(high_data)
+    errors += req_in_errors
+    high_data = st_.state.apply_exclude(high_data)
+    # Verify that the high data is structurally sound
+    if errors:
+        return errors
+    ret = st_.state.compile_high_data(high_data)
+    return ret
 
 
 def show_top():
@@ -617,11 +656,12 @@ def single(fun, name, test=None, **kwargs):
 
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
+            __opts__,
             __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__,
-            id_=st_kwargs['id_'])
+            st_kwargs['id_'])
 
     # Create a hash so we can verify the tar on the target system
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
@@ -638,6 +678,7 @@ def single(fun, name, test=None, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
 
     # Copy the tar down

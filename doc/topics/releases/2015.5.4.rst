@@ -2,14 +2,13 @@
 Salt 2015.5.4 Release Notes
 ===========================
 
-Version 2015.5.4 is a bugfix release for :doc:`2015.5.0
-</topics/releases/2015.5.0>`.
+Version 2015.5.4 is a bugfix release for :ref:`2015.5.0<release-2015-5-0>`.
 
 Changes:
 
 - The ``cron.present`` state now correctly defaults to state ID as identifier.
 
-- When querying for VMs in ``ditigal_ocean_v2.py``, the number of VMs to include in a page was changed from 20
+- When querying for VMs in ``digital_ocean_v2.py``, the number of VMs to include in a page was changed from 20
   (default) to 200 to reduce the number of API calls to Digital Ocean.
 
 - The ``vmware`` Salt-Cloud driver was back-ported from the develop branch in order for installations of Salt
@@ -51,7 +50,7 @@ Changes:
   - **ISSUE** `#25192`_: (*deuscapturus*) 2015.5.2 boto_cloudwatch_alarm.present not working.
     | refs: `#26290`_
 
-- **PR** `#26288`_: (*bbinet*) allow to delete grains which value is False
+- **PR** `#26288`_: (*bbinet*) allow deleting grains which value is False
   @ *2015-08-13T18:24:36Z*
 
 - **PR** `#26263`_: (*rallytime*) Don't make changes when test=True for openstack present/absent funcs
@@ -547,7 +546,7 @@ Changes:
 - **PR** `#25807`_: (*rallytime*) Provide helpful error when using actions with a mapfile
   @ *2015-07-29T15:30:15Z*
 
-  - **ISSUE** `#22699`_: (*arthurlogilab*) salt-cloud fails on KeyError when given a nonexistant action
+  - **ISSUE** `#22699`_: (*arthurlogilab*) salt-cloud fails on KeyError when given a nonexistent action
     | refs: `#25807`_
 
 - **PR** `#25818`_: (*jfindlay*) fix autoruns list
@@ -1051,7 +1050,7 @@ Changes:
 - **PR** `#25392`_: (*rallytime*) Back-port `#25256`_ to 2015.5
   @ *2015-07-14T03:25:13Z*
 
-  - **PR** `#25256`_: (*yanatan16*) Dont assume source_hash exists
+  - **PR** `#25256`_: (*yanatan16*) Don't assume source_hash exists
     | refs: `#25392`_
 
 - **PR** `#25398`_: (*twangboy*) Fix date
@@ -1112,7 +1111,7 @@ Changes:
 - **PR** `#25326`_: (*rallytime*) Back-port `#20972`_ to 2015.5
   @ *2015-07-10T18:49:44Z*
 
-  - **ISSUE** `#19288`_: (*oba11*) AssociatePublicIpAddress doesnt work with salt-cloud 2014.7.0
+  - **ISSUE** `#19288`_: (*oba11*) AssociatePublicIpAddress doesn't work with salt-cloud 2014.7.0
     | refs: `#20972`_ `#25326`_
   - **PR** `#20972`_: (*JohannesEbke*) Fix interface cleanup when using AssociatePublicIpAddress in `#19288`_
     | refs: `#25326`_
@@ -1304,7 +1303,7 @@ Changes:
   - **ISSUE** `#24979`_: (*mavenAtHouzz*) [Discussion] Support for more than 1 netapi.rest_tornado server process
     | refs: `#25149`_
 
-- **PR** `#25120`_: (*d--j*) add missing continue for exeption case
+- **PR** `#25120`_: (*d--j*) add missing continue for exception case
   @ *2015-07-02T19:38:45Z*
 
 - **PR** `#25117`_: (*basepi*) Fix fileclient.is_cached

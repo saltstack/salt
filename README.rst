@@ -42,13 +42,13 @@ Freenode at #salt. There is no need to introduce yourself, or ask permission to
 join in, just help and be helped! Make sure to wait for an answer, sometimes it
 may take a few moments for someone to reply.
 
-  `<http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83>`_
+`<http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83>`_
 
 **Mailing List** - The SaltStack community users mailing list is hosted by
 Google groups. Anyone can post to ask questions about SaltStack products and
 anyone can help answer. Join the conversation!
 
-  `<https://groups.google.com/forum/#!forum/salt-users>`_
+`<https://groups.google.com/forum/#!forum/salt-users>`_
 
 You may subscribe to the list without a Google account by emailing
 salt-users+subscribe@googlegroups.com and you may post to the list by emailing
@@ -104,6 +104,7 @@ helping people get new code and fixes into SaltStack projects. Log into
 GitHub and get started with one of the largest developer communities in
 the world. The following links should get you started:
 
-* `<https://github.com/saltstack>`_
-* `<https://docs.saltstack.com/en/latest/topics/development/index.html>`_
+`<https://github.com/saltstack>`_
+
+`<https://docs.saltstack.com/en/latest/topics/development/index.html>`_
 

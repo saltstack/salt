@@ -10,6 +10,7 @@
 '''
 
 # Import Python libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
@@ -19,7 +20,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import cloud
-from integration import TMP
+from integration import TMP, CODE_DIR
 
 GPG_KEYDIR = os.path.join(TMP, 'gpg-keydir')
 
@@ -61,6 +62,8 @@ try:
     HAS_KEYRING = True
 except ImportError:
     HAS_KEYRING = False
+
+os.chdir(CODE_DIR)
 
 
 class CloudUtilsTestCase(TestCase):
@@ -114,6 +117,12 @@ class CloudUtilsTestCase(TestCase):
             'salt.cloud.provider.test_case_provider',
             'fake_username')
         self.assertEqual(pw_in_keyring, 'fake_password_c8231')
+
+    def test_sftp_file_with_content_under_python3(self):
+        with self.assertRaises(Exception) as context:
+            cloud.sftp_file("/tmp/test", "ТЕСТ test content")
+        # we successful pass the place with os.write(tmpfd, ...
+        self.assertNotEqual("a bytes-like object is required, not 'str'", str(context.exception))
 
 if __name__ == '__main__':
     from integration import run_tests

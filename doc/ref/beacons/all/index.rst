@@ -1,8 +1,8 @@
 .. _all-salt.beacons:
 
-===================================
-Full list of builtin beacon modules
-===================================
+==============
+beacon modules
+==============
 
 .. currentmodule:: salt.beacons
 
@@ -10,13 +10,25 @@ Full list of builtin beacon modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    adb
+    avahi_announce
+    bonjour_announce
     btmp
     diskusage
+    glxinfo
+    haproxy
     inotify
     journald
     load
+    memusage
     network_info
+    network_settings
+    pkg
+    proxy_example
+    ps
+    salt_proxy
     service
     sh
+    status
     twilio_txt_msg
     wtmp

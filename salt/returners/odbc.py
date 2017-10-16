@@ -113,6 +113,15 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers
   .. code-block:: bash
 
     salt '*' test.ping --return odbc --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return odbc --return_kwargs '{"dsn": "dsn-name"}'
+
 '''
 from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
@@ -140,7 +149,7 @@ __virtualname__ = 'odbc'
 
 def __virtual__():
     if not HAS_ODBC:
-        return False
+        return False, 'Could not import odbc returner; pyodbc is not installed.'
     return True
 
 
@@ -205,7 +214,7 @@ def returner(ret):
     _close_conn(conn)
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid id
     '''
@@ -215,6 +224,13 @@ def save_load(jid, load):
 
     cur.execute(sql, (jid, json.dumps(load)))
     _close_conn(conn)
+
+
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
 
 
 def get_load(jid):
@@ -281,13 +297,13 @@ def get_jids():
     '''
     conn = _get_conn(ret=None)
     cur = conn.cursor()
-    sql = '''SELECT distinct jid FROM jids'''
+    sql = '''SELECT distinct jid, load FROM jids'''
 
     cur.execute(sql)
     data = cur.fetchall()
-    ret = []
-    for jid in data:
-        ret.append(jid[0])
+    ret = {}
+    for jid, load in data:
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     _close_conn(conn)
     return ret
 

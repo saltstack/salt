@@ -14,6 +14,9 @@ import os
 import salt.version
 import salt.utils
 
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
+
+from salt.ext import six
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -45,42 +48,69 @@ def managed(name,
             pip_download=None,
             pip_download_cache=None,
             pip_exists_action=None,
+            pip_ignore_installed=False,
             proxy=None,
             use_vt=False,
-            env_vars=None):
+            env_vars=None,
+            no_use_wheel=False,
+            pip_upgrade=False,
+            pip_pkgs=None,
+            pip_no_cache_dir=False,
+            pip_cache_dir=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
     name
-        Path to the virtualenv
-    requirements
+        Path to the virtualenv.
+
+    requirements: None
         Path to a pip requirements file. If the path begins with ``salt://``
         the file will be transferred from the master file server.
-    cwd
-        Path to the working directory where "pip install" is executed.
-    user
-        The user under which to run virtualenv and pip
+
+    use_wheel: False
+        Prefer wheel archives (requires pip >= 1.4).
+
+    python : None
+        Python executable used to build the virtualenv
+
+    user: None
+        The user under which to run virtualenv and pip.
+
     no_chown: False
-        When user is given, do not attempt to copy and chown
-        a requirements file (needed if the requirements file refers to other
-        files via relative paths, as the copy-and-chown procedure does not
-        account for such files)
-    use_wheel : False
-        Prefer wheel archives (requires pip>=1.4)
+        When user is given, do not attempt to copy and chown a requirements file
+        (needed if the requirements file refers to other files via relative
+        paths, as the copy-and-chown procedure does not account for such files)
+
+    cwd: None
+        Path to the working directory where `pip install` is executed.
+
     no_deps: False
-        Pass `--no-deps` to `pip`.
+        Pass `--no-deps` to `pip install`.
+
     pip_exists_action: None
         Default action of pip when a path already exists: (s)witch, (i)gnore,
-        (w)ipe, (b)ackup
+        (w)ipe, (b)ackup.
+
     proxy: None
-        Proxy address which is passed to "pip install"
-    env_vars
+        Proxy address which is passed to `pip install`.
+
+    env_vars: None
         Set environment variables that some builds will depend on. For example,
         a Python C-module may have a Makefile that needs INCLUDE_PATH set to
         pick up a header file while compiling.
 
+    no_use_wheel: False
+        Force to not use wheel archives (requires pip>=1.4)
 
-    Also accepts any kwargs that the virtualenv module will.
+    pip_upgrade: False
+        Pass `--upgrade` to `pip install`.
+
+    pip_pkgs: None
+        As an alternative to `requirements`, pass a list of pip packages that
+        should be installed.
+
+    Also accepts any kwargs that the virtualenv module will. However, some
+    kwargs, such as the ``pip`` option, require ``- distribute: True``.
 
     .. code-block:: yaml
 
@@ -111,7 +141,7 @@ def managed(name,
                 requirements, __env__
             )
         # Check if the master version has changed.
-        if __salt__['cp.hash_file'](requirements, __env__) != \
+        if cached_requirements and __salt__['cp.hash_file'](requirements, __env__) != \
                 __salt__['cp.hash_file'](cached_requirements, __env__):
             cached_requirements = __salt__['cp.cache_file'](
                 requirements, __env__
@@ -119,7 +149,7 @@ def managed(name,
         if not cached_requirements:
             ret.update({
                 'result': False,
-                'comment': 'pip requirements file {0!r} not found'.format(
+                'comment': 'pip requirements file \'{0}\' not found'.format(
                     requirements
                 )
             })
@@ -148,19 +178,24 @@ def managed(name,
         return ret
 
     if not venv_exists or (venv_exists and clear):
-        _ret = __salt__['virtualenv.create'](
-            name,
-            venv_bin=venv_bin,
-            system_site_packages=system_site_packages,
-            distribute=distribute,
-            clear=clear,
-            python=python,
-            extra_search_dir=extra_search_dir,
-            never_download=never_download,
-            prompt=prompt,
-            user=user,
-            use_vt=use_vt,
-        )
+        try:
+            _ret = __salt__['virtualenv.create'](
+                name,
+                venv_bin=venv_bin,
+                system_site_packages=system_site_packages,
+                distribute=distribute,
+                clear=clear,
+                python=python,
+                extra_search_dir=extra_search_dir,
+                never_download=never_download,
+                prompt=prompt,
+                user=user,
+                use_vt=use_vt,
+            )
+        except CommandNotFoundError as err:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create virtualenv: {0}'.format(err)
+            return ret
 
         if _ret['retcode'] != 0:
             ret['result'] = False
@@ -190,13 +225,47 @@ def managed(name,
                               'was {1}.').format(min_version, cur_version)
             return ret
 
+    if no_use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env=name)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            ret['result'] = False
+            ret['comment'] = ('The \'no_use_wheel\' option is only supported '
+                              'in pip {0} and newer. The version of pip '
+                              'detected was {1}.').format(min_version,
+                                                          cur_version)
+            return ret
+
     # Populate the venv via a requirements file
-    if requirements:
-        before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
+    if requirements or pip_pkgs:
+        try:
+            before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
+            return ret
+
+        if requirements:
+
+            if isinstance(requirements, six.string_types):
+                req_canary = requirements.split(',')[0]
+            elif isinstance(requirements, list):
+                req_canary = requirements[0]
+            else:
+                raise TypeError(
+                    'pip requirements must be either a string or a list'
+                )
+
+            if req_canary != os.path.abspath(req_canary):
+                cwd = os.path.dirname(os.path.abspath(req_canary))
+
         _ret = __salt__['pip.install'](
+            pkgs=pip_pkgs,
             requirements=requirements,
             bin_env=name,
             use_wheel=use_wheel,
+            no_use_wheel=no_use_wheel,
             user=user,
             cwd=cwd,
             index_url=index_url,
@@ -206,10 +275,14 @@ def managed(name,
             no_chown=no_chown,
             pre_releases=pre_releases,
             exists_action=pip_exists_action,
+            ignore_installed=pip_ignore_installed,
+            upgrade=pip_upgrade,
             no_deps=no_deps,
             proxy=proxy,
             use_vt=use_vt,
-            env_vars=env_vars
+            env_vars=env_vars,
+            no_cache_dir=pip_no_cache_dir,
+            cache_dir=pip_cache_dir
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:
@@ -228,4 +301,4 @@ def managed(name,
                 'old': old if old else ''}
     return ret
 
-manage = managed  # pylint: disable=C0103
+manage = salt.utils.alias_function(managed, 'manage')

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import yaml
 import shutil
@@ -8,12 +9,15 @@ import tempfile
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
-from salttesting import skipIf
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 import salt.utils
+
+USERA = 'saltdev'
+USERA_PWD = 'saltdev'
+HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
 
 
 class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -22,6 +26,33 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     '''
 
     _call_binary_ = 'salt-key'
+
+    def _add_user(self):
+        '''
+        helper method to add user
+        '''
+        try:
+            add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
+            add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
+                                    USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD))
+            self.assertTrue(add_user)
+            self.assertTrue(add_pwd)
+            user_list = self.run_call('user.list_users')
+            self.assertIn(USERA, str(user_list))
+        except AssertionError:
+            self.run_call('user.delete {0} remove=True'.format(USERA))
+            self.skipTest(
+                'Could not add user or password, skipping test'
+                )
+
+    def _remove_user(self):
+        '''
+        helper method to remove user
+        '''
+        user_list = self.run_call('user.list_users')
+        for user in user_list:
+            if USERA in user:
+                self.run_call('user.delete {0} remove=True'.format(USERA))
 
     def test_list_accepted_args(self):
         '''
@@ -40,7 +71,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-L')
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = [
                 'Accepted Keys:',
                 'minion',
@@ -52,7 +83,6 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         elif self.master_opts['transport'] == 'raet':
             expect = [
                 'Accepted Keys:',
-                'master',
                 'minion',
                 'sub_minion',
                 'Unaccepted Keys:',
@@ -65,114 +95,118 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         test salt-key -L --json-out
         '''
         data = self.run_key('-L --out json')
+        ret = {}
+        try:
+            import json
+            ret = json.loads('\n'.join(data))
+        except ValueError:
+            pass
+
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
-            expect = [
-                '{',
-                '    "minions_rejected": [], ',
-                '    "minions_denied": [], ',
-                '    "minions_pre": [], ',
-                '    "minions": [',
-                '        "minion", ',
-                '        "sub_minion"',
-                '    ]',
-                '}',
-            ]
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
+            expect = {'minions_rejected': [],
+                      'minions_denied': [],
+                      'minions_pre': [],
+                      'minions': ['minion', 'sub_minion']}
         elif self.master_opts['transport'] == 'raet':
-            expect = [
-                '{',
-                '    "accepted": [',
-                '        "master", ',
-                '        "minion", ',
-                '        "sub_minion"',
-                '    ], ',
-                '    "rejected": [], ',
-                '    "pending": []',
-                '}'
-            ]
-        self.assertEqual(data, expect)
+            expect = {'accepted': ['minion', 'sub_minion'],
+                      'rejected': [],
+                      'pending': []}
+        self.assertEqual(ret, expect)
 
     def test_list_yaml_out(self):
         '''
         test salt-key -L --yaml-out
         '''
         data = self.run_key('-L --out yaml')
+        ret = {}
+        try:
+            import yaml
+            ret = yaml.load('\n'.join(data))
+        except Exception:
+            pass
+
         expect = []
-        if self.master_opts['transport'] == 'zeromq':
-            expect = [
-                'minions:',
-                '- minion',
-                '- sub_minion',
-                'minions_denied: []',
-                'minions_pre: []',
-                'minions_rejected: []',
-            ]
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
+            expect = {'minions_rejected': [],
+                      'minions_denied': [],
+                      'minions_pre': [],
+                      'minions': ['minion', 'sub_minion']}
         elif self.master_opts['transport'] == 'raet':
-            expect = [
-                'accepted:',
-                '- master',
-                '- minion',
-                '- sub_minion',
-                'pending: []',
-                'rejected: []'
-            ]
-        self.assertEqual(data, expect)
+            expect = {'accepted': ['minion', 'sub_minion'],
+                      'rejected': [],
+                      'pending': []}
+        self.assertEqual(ret, expect)
 
     def test_list_raw_out(self):
         '''
         test salt-key -L --raw-out
         '''
         data = self.run_key('-L --out raw')
+        self.assertEqual(len(data), 1)
+
+        ret = {}
+        try:
+            import ast
+            ret = ast.literal_eval(data[0])
+        except ValueError:
+            pass
+
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
-            expect = [
-                "{'minions_rejected': [], 'minions_denied': [], 'minions_pre': [], "
-                "'minions': ['minion', 'sub_minion']}"
-            ]
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
+            expect = {'minions_rejected': [],
+                      'minions_denied': [],
+                      'minions_pre': [],
+                      'minions': ['minion', 'sub_minion']}
         elif self.master_opts['transport'] == 'raet':
-            expected_txt = (
-                '{\'accepted\': '
-                '[\'master\', \'minion\', \'sub_minion\'], '
-                '\'rejected\': [], \'pending\': []}'
-            )
-            expect = [expected_txt]
-        self.assertEqual(data, expect)
+            expect = {'accepted': ['minion', 'sub_minion'],
+                      'rejected': [],
+                      'pending': []}
+        self.assertEqual(ret, expect)
 
     def test_list_acc(self):
         '''
         test salt-key -l
         '''
         data = self.run_key('-l acc')
-        if self.master_opts['transport'] == 'zeromq':
-            self.assertEqual(
-                data,
-                ['Accepted Keys:', 'minion', 'sub_minion']
-            )
-        elif self.master_opts['transport'] == 'raet':
-            self.assertEqual(
-                data,
-                [
-                    'minions:',
-                    '    - master',
-                    '    - minion',
-                    '    - sub_minion'
-                ]
-            )
+        expect = ['Accepted Keys:', 'minion', 'sub_minion']
+        self.assertEqual(data, expect)
+
+    def test_list_acc_eauth(self):
+        '''
+        test salt-key -l with eauth
+        '''
+        self._add_user()
+        data = self.run_key('-l acc --eauth pam --username {0} --password {1}'.format(USERA, USERA_PWD))
+        expect = ['Accepted Keys:', 'minion', 'sub_minion']
+        self.assertEqual(data, expect)
+        self._remove_user()
+
+    def test_list_acc_eauth_bad_creds(self):
+        '''
+        test salt-key -l with eauth and bad creds
+        '''
+        self._add_user()
+        data = self.run_key('-l acc --eauth pam --username {0} --password wrongpassword'.format(USERA))
+        expect = ['Authentication failure of type "eauth" occurred for user {0}.'.format(USERA)]
+        self.assertEqual(data, expect)
+        self._remove_user()
+
+    def test_list_acc_wrong_eauth(self):
+        '''
+        test salt-key -l with wrong eauth
+        '''
+        data = self.run_key('-l acc --eauth wrongeauth --username {0} --password {1}'.format(USERA, USERA_PWD))
+        expect = ['The specified external authentication system "wrongeauth" is not available']
+        self.assertEqual(data, expect)
 
     def test_list_un(self):
         '''
         test salt-key -l
         '''
         data = self.run_key('-l un')
-        expect = None
-        if self.master_opts['transport'] == 'zeromq':
-            expect = ['Unaccepted Keys:']
-        elif self.master_opts['transport'] == 'raet':
-            expect = ['minions_pre:']
-        self.assertEqual(
-            data,
-            expect
-        )
+        expect = ['Unaccepted Keys:']
+        self.assertEqual(data, expect)
 
     def test_keys_generation(self):
         tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
@@ -180,23 +214,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.run_key(arg_str)
         try:
             key_names = None
-            if self.master_opts['transport'] == 'zeromq':
-                key_names = ('minibar.pub', 'minibar.pem')
-            elif self.master_opts['transport'] == 'raet':
-                key_names = ('minibar.key',)
-            for fname in key_names:
-                self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
-        finally:
-            shutil.rmtree(tempdir)
-
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_keys_generation_no_configdir(self):
-        tempdir = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
-        arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
-        self.run_script('salt-key', arg_str)
-        try:
-            key_names = None
-            if self.master_opts['transport'] == 'zeromq':
+            if self.master_opts['transport'] in ('zeromq', 'tcp'):
                 key_names = ('minibar.pub', 'minibar.pem')
             elif self.master_opts['transport'] == 'raet':
                 key_names = ('minibar.key',)
@@ -247,13 +265,13 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             '--config-dir {0} -L'.format(
                 config_dir
             ),
-            timeout=15
+            timeout=60
         )
         try:
             self.assertIn('minion', '\n'.join(ret))
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         finally:
-            os.chdir(old_cwd)
+            self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 

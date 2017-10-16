@@ -1,3 +1,5 @@
+.. _tutorial-salt-at-scale:
+
 ===================
 Using Salt at scale
 ===================
@@ -35,7 +37,7 @@ we must configure the minions to back-off appropriately when the Master is
 under heavy load.
 
 The fourth is caused by masters with little hardware resources in combination
-with a possible bug in ZeroMQ. At least thats what it looks like till today
+with a possible bug in ZeroMQ. At least that's what it looks like till today
 (`Issue 118651 <https://github.com/saltstack/salt/issues/11865>`_,
 `Issue 5948 <https://github.com/saltstack/salt/issues/5948>`_,
 `Mail thread <https://groups.google.com/forum/#!searchin/salt-users/lots$20of$20minions/salt-users/WxothArv2Do/t12MigMQDFAJ>`_)
@@ -110,7 +112,6 @@ the sample configuration file (default values)
     recon_max: 5000
     recon_randomize: True
 
-
 - recon_default: the default value the socket should use, i.e. 1000. This value is in
   milliseconds. (1000ms = 1 second)
 - recon_max: the max value that the socket should use as a delay before trying to reconnect
@@ -174,7 +175,7 @@ once with
 
 .. code-block:: bash
 
-    $ salt * test.ping
+    $ salt * disk.usage
 
 it may cause thousands of minions trying to return their data to the Salt Master
 open port 4506. Also causing a flood of syn-flood if the Master can't handle that many
@@ -184,7 +185,7 @@ This can be easily avoided with Salt's batch mode:
 
 .. code-block:: bash
 
-    $ salt * test.ping -b 50
+    $ salt * disk.usage -b 50
 
 This will only address 50 minions at once while looping through all addressed
 minions.
@@ -216,6 +217,23 @@ influence the key-size can have.
 Downsizing the Salt Master's key is not that important, because the minions
 do not encrypt as many messages as the Master does.
 
+In installations with large or with complex pillar files, it is possible
+for the master to exhibit poor performance as a result of having to render
+many pillar files at once. This exhibit itself in a number of ways, both
+as high load on the master and on minions which block on waiting for their
+pillar to be delivered to them.
+
+To reduce pillar rendering times, it is possible to cache pillars on the
+master. To do this, see the set of master configuration options which
+are prefixed with `pillar_cache`.
+
+.. note::
+
+    Caching pillars on the master may introduce security considerations.
+    Be certain to read caveats outlined in the master configuration file
+    to understand how pillar caching may affect a master's ability to
+    protect sensitive data!
+
 The Master is disk IO bound
 ---------------------------
 
@@ -240,7 +258,7 @@ the retention time defined by
 
 .. code-block:: text
 
-    250 jobs/day * 2000 minions returns = 500.000 files a day
+    250 jobs/day * 2000 minions returns = 500,000 files a day
 
 If no job history is needed, the job cache can be disabled:
 
@@ -255,3 +273,17 @@ If the job cache is necessary there are (currently) 2 options:
   into a returner (not sent through the Master)
 - master_job_cache (New in `2014.7.0`): this will make the Master store the job
   data using a returner (instead of the local job cache on disk).
+
+If a master has many accepted keys, it may take a long time to publish a job
+because the master much first determine the matching minions and deliver
+that information back to the waiting client before the job can be published.
+
+To mitigate this, a key cache may be enabled. This will reduce the load
+on the master to a single file open instead of thousands or tens of thousands.
+
+This cache is updated by the maintanence process, however, which means that
+minions with keys that are accepted may not be targeted by the master
+for up to sixty seconds by default.
+
+To enable the master key cache, set `key_cache: 'sched'` in the master
+configuration file.

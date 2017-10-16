@@ -3,6 +3,10 @@
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+import os
+
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -15,9 +19,6 @@ from salt.fileserver import roots
 from salt import fileclient
 
 roots.__opts__ = {}
-
-# Import Python libs
-import os
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -103,7 +104,13 @@ class RootsTest(integration.ModuleCase):
                 'rel': 'testfile'
             }
             ret = roots.file_hash(load, fnd)
-            self.assertDictEqual(ret, {'hsum': '98aa509006628302ce38ce521a7f805f', 'hash_type': 'md5'})
+            self.assertDictEqual(
+                ret,
+                {
+                    'hsum': 'baba5791276eb99a7cc498fb1acfbc3b4bd96d24cfe984b4ed6b5be2418731df',
+                    'hash_type': 'sha256'
+                }
+            )
 
     def test_file_list_emptydirs(self):
         if integration.TMP_STATE_TREE not in self.master_opts['file_roots']['base']:
@@ -147,11 +154,12 @@ class RootsTest(integration.ModuleCase):
             self.assertIn('empty_dir', ret)
 
     def test_symlink_list(self):
-        with patch.dict(roots.__opts__, {'file_roots': self.master_opts['file_roots'],
-                         'fileserver_ignoresymlinks': False,
-                         'fileserver_followsymlinks': False,
-                         'file_ignore_regex': False,
-                         'file_ignore_glob': False}):
+        with patch.dict(roots.__opts__, {'cachedir': self.master_opts['cachedir'],
+                                         'file_roots': self.master_opts['file_roots'],
+                                         'fileserver_ignoresymlinks': False,
+                                         'fileserver_followsymlinks': False,
+                                         'file_ignore_regex': False,
+                                         'file_ignore_glob': False}):
             ret = roots.symlink_list({'saltenv': 'base'})
             self.assertDictEqual(ret, {'dest_sym': 'source_sym'})
 

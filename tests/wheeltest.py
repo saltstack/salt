@@ -7,6 +7,7 @@ wheel modules
 '''
 
 # Import Python libs
+from __future__ import absolute_import
 import optparse
 import pprint
 

@@ -4,6 +4,7 @@
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 import os
 import random
 import string
@@ -16,6 +17,7 @@ ensure_in_syspath('../../../')
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 
 def __random_name(size=6):
@@ -84,17 +86,17 @@ class JoyentTest(integration.ShellCase):
         try:
             self.assertIn(
                 INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p joyent-test {0}'.format(INSTANCE_NAME))]
+                [i.strip() for i in self.run_cloud('-p joyent-test {0}'.format(INSTANCE_NAME), timeout=500)]
             )
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
             raise
 
         # delete the instance
         try:
             self.assertIn(
                 INSTANCE_NAME + ':',
-                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))]
+                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)]
             )
         except AssertionError:
             raise
@@ -108,7 +110,7 @@ class JoyentTest(integration.ShellCase):
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
 
 
 if __name__ == '__main__':

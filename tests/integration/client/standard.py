@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
@@ -41,10 +42,11 @@ class StdTest(integration.ModuleCase):
         assert num_ret > 0
 
         # ping a minion that doesn't exist, to make sure that it doesn't hang forever
-        # create fake mininion
+        # create fake minion
         key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'footest')
         # touch the file
-        salt.utils.fopen(key_file, 'a').close()
+        with salt.utils.fopen(key_file, 'a'):
+            pass
         # ping that minion and ensure it times out
         try:
             cmd_iter = self.client.cmd_cli(
@@ -83,6 +85,29 @@ class StdTest(integration.ModuleCase):
                 continue
             self.assertTrue(ret['minion'])
 
+    def test_batch(self):
+        '''
+        test cmd_batch
+        '''
+        cmd_batch = self.client.cmd_batch(
+            'minion',
+            'test.ping',
+        )
+        for ret in cmd_batch:
+            self.assertTrue(ret['minion'])
+
+    def test_batch_raw(self):
+        '''
+        test cmd_batch with raw option
+        '''
+        cmd_batch = self.client.cmd_batch(
+            'minion',
+            'test.ping',
+            raw=True,
+        )
+        for ret in cmd_batch:
+            self.assertTrue(ret['data']['success'])
+
     def test_full_returns(self):
         '''
         test cmd_iter
@@ -94,26 +119,37 @@ class StdTest(integration.ModuleCase):
         self.assertIn('minion', ret)
         self.assertEqual({'ret': True, 'success': True}, ret['minion'])
 
-        ret = self.client.cmd_full_return(
-                'minion',
-                'test.pong',
-                )
-        self.assertIn('minion', ret)
+    def test_disconnected_return(self):
+        '''
+        Test return/messaging on a disconnected minion
+        '''
+        test_ret = {'ret': 'Minion did not return. [No response]', 'out': 'no_return'}
 
-        if self.master_opts['transport'] == 'zeromq':
-            self.assertEqual(
-                {
-                    'out': 'nested',
-                    'ret': '\'test.pong\' is not available.',
-                    'success': False
-                },
-                ret['minion']
+        # Create a minion key, but do not start the "fake" minion. This mimics
+        # a disconnected minion.
+        key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'disconnected')
+        with salt.utils.fopen(key_file, 'a'):
+            pass
+
+        # ping disconnected minion and ensure it times out and returns with correct message
+        try:
+            cmd_iter = self.client.cmd_cli(
+                'disconnected',
+                'test.ping',
+                show_timeout=True
             )
-        elif self.master_opts['transport'] == 'raet':
-            self.assertEqual(
-                {'success': False, 'ret': '\'test.pong\' is not available.'},
-                ret['minion']
-            )
+            num_ret = 0
+            for ret in cmd_iter:
+                num_ret += 1
+                self.assertEqual(ret['disconnected']['ret'], test_ret['ret'])
+                self.assertEqual(ret['disconnected']['out'], test_ret['out'])
+
+            # Ensure that we entered the loop above
+            self.assertEqual(num_ret, 1)
+
+        finally:
+            os.unlink(key_file)
+
 
 if __name__ == '__main__':
     from integration import run_tests

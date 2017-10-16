@@ -1,0 +1,652 @@
+============================
+Salt 2015.8.11 Release Notes
+============================
+
+Version 2015.8.11 is a bugfix release for :ref:`2015.8.0<release-2015-8-0>`.
+
+Returner Changes
+================
+
+- Any returner which implements a ``save_load`` function is now required to
+  accept a ``minions`` keyword argument. All returners which ship with Salt
+  have been modified to do so.
+
+New Configuration Parameter: ``rotate_aes_key``
+===============================================
+
+- ``Rotate_aes_key`` causes Salt to generate a new AES key whenever a minion key
+  is deleted.  This eliminates the chance that a deleted minion could continue
+  to eavesdrop on communications with the master if it continues to run after its
+  key is deleted.  See the entry in the documentation for :conf_master:`rotate_aes_key`.
+
+Ubuntu 16.04 Packages
+=====================
+
+SaltStack is now providing official Salt 2015.8 `packages
+<http://repo.saltstack.com/2015.8.html#ubuntu>`_ for Ubuntu 16.04.
+
+Changes for v2015.8.10..v2015.8.11
+----------------------------------
+
+Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
+
+*Generated at: 2016-07-14T21:16:18Z*
+
+Total Merges: **122**
+
+Changes:
+
+- **PR** `#34676`_: (*cachedout*) Revert "Modify lodaer global test to use populated dunders"
+
+- **PR** `#34601`_: (*lorengordon*) Clarifies the proper way to reference states
+
+* bc63f25 Lint 34644 (`#34651`_)
+
+* 5036026 Adjust the mine test a little bit to give it a better chance of success (`#34647`_)
+
+- **PR** `#34642`_: (*jtand*) Check that mysqladmin exists before running mysql integration tests
+
+- **PR** `#34618`_: (*jtand*) Network state integration test test=True
+
+- **PR** `#34617`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+* b90ae40 Add support for edge case when Cmd and Entrypoint can't be blanked (`#34593`_)
+
+* 12b579c When sorting list actual_data, make it a list (`#34590`_)
+
+* 7dd8035 Gate docker unit test to check for docker (`#34591`_)
+
+* ae38c87 Add a bunch of documentation on getting files from other environments (`#34560`_)
+
+- **PR** `#34531`_: (*terminalmage*) Support ignore_epoch argument in version comparisons
+
+- **PR** `#34545`_: (*terminalmage*) Handle cases where Docker Remote API returns an empty ExecutionDriver
+
+- **PR** `#34546`_: (*rallytime*) Rename unit.states.boto_secgroup to unit.states.boto_secgroup_test
+
+- **PR** `#34537`_: (*rallytime*) Rename tests.unit.simple to tests.unit.simple_test
+
+* fbab2f8 [2015.8] Update bootstrap script to latest stable (`#34527`_)
+
+* 6b8c76a Prevent many errors in the test suite in loader tests (`#34521`_)
+
+* c2f296c Fix wrong order of retention_policy_exists (`#34507`_)
+
+- **PR** `#34518`_: (*terminalmage*) Fix pkg.latest integration test for non-LTS ubuntu
+
+- **PR** `#34513`_: (*cachedout*) Lower the log level for modules which cannot be loaded to trace
+
+- **PR** `#34498`_: (*rallytime*) Use -O in the wget example in the bootstrap tutorial for the develop branch
+
+* 3ebba02 Rename some unit test files by adding _test (`#34503`_)
+
+* 8722257 Improve top file merging documentation (`#34505`_)
+
+* 6ce7cb9 Gracefully handle non-XML output in GlusterFS execution module. (`#34492`_)
+
+* 7529945 Use skipTest for network state integration test (`#34489`_)
+
+* 0f3f87f Update dnsmasq.get_config docs to use correct config_file param. (`#34488`_)
+
+- **PR** `#34462`_: (*terminalmage*) Use --always when available to git describe
+
+- **PR** `#34467`_: (*rallytime*) Back-port `#34457`_ to 2015.8
+
+- **PR** `#34432`_: (*twangboy*) Fix file.append
+
+- **PR** `#34429`_: (*terminalmage*) Skip version checking for targeted packages in pkg.latest state
+
+* 0a26459 Forgot reference to inotify (`#34455`_)
+
+- **PR** `#34451`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+- **PR** `#34401`_: (*terminalmage*) Use rpmdev-vercmp as a fallback for version comparison on RHEL5
+
+- **PR** `#34366`_: (*steverweber*) Update service.py
+
+- **PR** `#34426`_: (*cro*) Document that inotify is Linux only
+
+- **PR** `#34392`_: (*cro*) Clarify that salt-cloud doesn't get installed by bootstrap
+
+- **PR** `#34373`_: (*jtand*) Network state integration test
+
+* d6af1de Optimize pkg integration tests and add a couple new tests (`#34377`_)
+
+- **PR** `#34368`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+* 94e0946 Back-port `#34324`_ to 2015.8 (`#34344`_)
+
+* 11dc020 Making salt-ssh pass proper return codes for jinja rendering errors (`#34342`_)
+
+* f6bd1ad Revert py3modernize lint changes (`#34339`_)
+
+- **PR** `#34306`_: (*ghedo*) Fix iptables.flush state: Do not force 'filter' table when flushing
+
+* 0c60fea Doc clarifications to file modules, addition of new `profile` log level to docs, fixed example in dnsmasq (`#34323`_)
+
+* b793426 Remove unnecessarily-disabled sanity check (`#34325`_)
+
+- **PR** `#34335`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+* a6d3cc6 Typo in dockerio doc (`#34319`_)
+
+- **PR** `#34312`_: (*rallytime*) [2015.8] Update to latest bootstrap script v2016.06.27
+
+- **PR** `#34307`_: (*rallytime*) Fix test example in integration testing docs
+
+- **PR** `#34233`_: (*thegoodduke*) ipset: fix the comment containing blank
+
+- **PR** `#34257`_: (*rallytime*) Use 'config_dir' setting instead of CONFIG_DIR in gpg renderer
+
+- **PR** `#34274`_: (*clinta*) Don't escape source before calling managed
+
+- **PR** `#34258`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+- **PR** `#34093`_: (*terminalmage*) Catch CommandExecutionError in pkg states
+
+- **PR** `#34136`_: (*meaksh*) Fixed behavior for SUSE OS grains in 2015.8
+
+* 56c7267 fix regression from `#33681`_ which causes pulling a list of s3 objects via s3.query to fail (`#34208`_)
+
+* 02eb331 Fix a pair of gitfs bugs (`#34218`_)
+
+- **PR** `#34182`_: (*rallytime*) Handle child PIDs differently depending on the availability of psutils
+
+* 5d3ec31 Clarify pkg.list_repo_pkgs docstring for held packages (`#34188`_)
+
+* 5bca5c4 Change target for dockerng assuming default status to Nitrogen release (`#34206`_)
+
+- **PR** `#34184`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+- **PR** `#34176`_: (*rallytime*) Back-port `#34103`_ to 2015.8
+
+- **PR** `#34179`_: (*terminalmage*) Raise the correct exception when gitfs lockfile is empty
+
+- **PR** `#34178`_: (*terminalmage*) Remove unnecesssary comment
+
+* 6387d16 fix salt --summary to count not responding minions correctly (`#34165`_)
+
+* e5949ea doc: add missing dot (`#34175`_)
+
+* 47595d6 Typo fix (`#34174`_)
+
+- **PR** `#34077`_: (*rallytime*) Add some grains targeting tests
+
+- **PR** `#34142`_: (*isbm*) Move log message from INFO to DEBUG.
+
+* 79a719b Update documentation on "refresh" behavior in pkg states (`#34100`_)
+
+* 6d0d52f modules.pkg int tests: skip refresh_db upon error (`#34072`_)
+
+- **PR** `#34069`_: (*rallytime*) Add a test to check for disconnected minion messaging
+
+- **PR** `#34048`_: (*terminalmage*) RFC: proposed fix for multiple fileserver updates in masterless runs
+
+- **PR** `#34011`_: (*rallytime*) Back-port `#33948`_ and `#34009`_ to 2015.8
+
+* bca4371 Fixed a bug in the consul.py module that was preventing services (`#34051`_)
+
+- **PR** `#34045`_: (*jacobhammons*) Updated latest release version
+
+* f9bfcde Always make changes to minion config if set (`#34020`_)
+
+* e25dba4 More YAML indentation fixes in state module examples (`#34030`_)
+
+- **PR** `#34018`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+* 7d940ae states.file: fix indentation in YAML examples (`#34003`_)
+
+* 4c7fac0 Remove loader test for pam module (`#34002`_)
+
+- **PR** `#33990`_: (*jacobhammons*) Adds links to several current Salt-related projects
+
+- **PR** `#33983`_: (*twangboy*) Clarify the `account_exists` parameter
+
+- **PR** `#33951`_: (*jfindlay*) modules.gem int tests: more fixes
+
+- **PR** `#33984`_: (*jfindlay*) Add docs and tests to disk state
+
+- **PR** `#33985`_: (*rallytime*) Write some more simple batch command tests
+
+* 6080846 acl.ClientACL: add unit tests (`#33684`_)
+
+* a74f1b8 ZD 762 (`#33942`_)
+
+- **PR** `#33946`_: (*rallytime*) Back-port `#33698`_ to 2015.8
+
+- **PR** `#33952`_: (*rallytime*) Add base argument to salt-ssh grains wrapper for filter_by func
+
+* 4a80649 Adds a "Generated on <timestamp>" line to the footer of each doc html page in the doc (`#33962`_)
+
+* b3ec39d Correct issue with ping on rotate with minion cache (`#33765`_)
+
+- **PR** `#33888`_: (*jfindlay*) random.org checks
+
+* 2dc1914 Add connecting_settings to boto_elb state attributes list (`#33936`_)
+
+* 91a2184 Wait for up to a minute for sync_after_install (`#33917`_)
+
+- **PR** `#33877`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+- **PR** `#33827`_: (*cachedout*) Fix broken locate.locate function
+
+- **PR** `#33839`_: (*cachedout*) Fix another unit test stacktrace in pkg_resource
+
+- **PR** `#33840`_: (*cachedout*) Remove matcher tests
+
+- **PR** `#33836`_: (*cachedout*) Fixing more stupid unit tests
+
+- **PR** `#33805`_: (*jfindlay*) states.pkg int tests: skip if pkg mgr unavailable
+
+- **PR** `#33808`_: (*jfindlay*) fix some problems with the gem module integration tests
+
+- **PR** `#33770`_: (*jfindlay*) service state integration tests
+
+- **PR** `#33691`_: (*jtand*) Gem integration test
+
+- **PR** `#33777`_: (*sodium-chloride*) Fix minor docstring issue of arg being missing
+
+- **PR** `#33759`_: (*cachedout*) Catch no minions exception in batch mode
+
+- **PR** `#33719`_: (*cachedout*) Catch oserror for race condition
+
+- **PR** `#33712`_: (*meaksh*) Fix for groupadd execution module failures in SLES11 systems
+
+- **PR** `#33718`_: (*rallytime*) Back-port `#33700`_ to 2015.8
+
+- **PR** `#33727`_: (*terminalmage*) Fix git_pillar edge case for remote repos without a master branch
+
+- **PR** `#33728`_: (*jfindlay*) Make `configurable_test_state` configurable in test mode
+
+- **PR** `#33729`_: (*twangboy*) Add exclude option to win_servermanager
+
+- **PR** `#33743`_: (*vutny*) Debian installation docs: drop section about community-maintained repo
+
+* 56c0a42 Create missing jid dir if it doesn't exist (`#33653`_)
+
+- **PR** `#33654`_: (*twangboy*) Fix win servermanager
+
+- **PR** `#33679`_: (*terminalmage*) Only compile the template contents if they evaluate to True
+
+- **PR** `#33685`_: (*jfindlay*) modules.cp.get_url: add test for https://
+
+- **PR** `#33581`_: (*dincamihai*) Call zypper refresh after adding/modifying a repository
+
+- **PR** `#33681`_: (*rallytime*) Back-port `#33599`_ to 2015.8
+
+- **PR** `#33396`_: (*babilen*) Issue 33393
+
+- **PR** `#33652`_: (*terminalmage*) Lower the log level for failed auths
+
+- **PR** `#33615`_: (*danslimmon*) Fix crash on unconnectable MySQL server (resolves `#33582`_)
+
+- **PR** `#33558`_: (*twangboy*) Fix win servermanager
+
+- **PR** `#33555`_: (*cachedout*) Fix crashing Maintenence process
+
+- **PR** `#33501`_: (*meaksh*) unit tests for rpm.checksum() and zypper.download()
+
+- **PR** `#33513`_: (*rallytime*) Add a section to the jinja docs about escaping jinja
+
+- **PR** `#33520`_: (*jacobhammons*) Updated version numbers in the docs for the 2016.3.0 release
+
+- **PR** `#33507`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+- **PR** `#33503`_: (*rallytime*) Add docs about minion config file in standalone minion docs
+
+- **PR** `#33474`_: (*cachedout*) Fix diskusage beacon
+
+- **PR** `#33465`_: (*meaksh*) jobs.exit_success allow one to check if a job has executed and exit successfully
+
+- **PR** `#33487`_: (*jtand*) Add docstring examples to glance.py and nova.py [2015.8]
+
+- **PR** `#33481`_: (*rallytime*) Fix docs about etcd config options and add pillar_opts doc
+
+- **PR** `#33490`_: (*rallytime*) Document the postgres.psql_query function
+
+- **PR** `#33480`_: (*jfindlay*) states.service: minor doc updates
+
+* 4f96cc1 Return full pending computer name (`#33483`_)
+
+* a89be5e Use six.string_types in jobs runner (`#33499`_)
+
+- **PR** `#33491`_: (*BlaineAtAffirm*) fix jobs.list_jobs failing with search_target
+
+- **PR** `#33478`_: (*rallytime*) Back-port `#32484`_ to 2015.8
+
+- **PR** `#33457`_: (*rallytime*) Make doc formatting consistent and use correct versionadded
+
+* 1dfa956 Don't allow a "repo" kwarg for pkgrepo.managed (`#33477`_)
+
+* b4071b0 Allow for config entry to be a list in a dict for beacons (`#33476`_)
+
+- **PR** `#33469`_: (*meaksh*) check the RPM signature of zypper pkg.download packages and report errors
+
+* 00f9090 Add docs about PyYAML's 1024 character limitations for simple keys (`#33459`_)
+
+* 3b12f39 Prevent several minion processes on the same machine (`#33464`_)
+
+* c8b4f33 Make --gpg-auto-import-keys a global param when calling zypper (`#33432`_)
+
+* 0c4e38c Fix the saltutil.wheel function and add integration tests  (`#33414`_)
+
+* e4f00f9 Make sure the path we're removing is present first - avoid an OSError (`#33440`_)
+
+* 93fd00b Avoid a syntax error by using " instead of escaped ' (`#33443`_)
+
+* ec60b9c Fix virtual function (`#33436`_)
+
+- **PR** `#33438`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+* c9d0de4 Documentation update in file.serialize. (`#33421`_)
+
+* f8a90eb Fix LVM parameter devices as a pure list. Comma separated lists are câ¦ (`#33398`_)
+
+* 3989e5b Spelling correction. (`#33406`_)
+
+* 9accb53 Update windows pkg.[install|remove] error logic (`#33321`_)
+
+* 04ac89d Add note about reload_modules functionality for pkg.installed (`#33374`_)
+
+* 637c2af Add note to absolute_imports practice about __future__ import (`#33377`_)
+
+* d35b81d Document how to set the alias file location for alias state (`#33380`_)
+
+- **PR** `#33403`_: (*jacobhammons*) 2015.8.10 release notes
+
+- **PR** `#33381`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+* 946d27e Fix traceback in logging for config validation (`#33386`_)
+
+* 38fbcf8 Add note about name parameter in git_pillar docs (`#33369`_)
+
+* 4925199 Add win_pkg to list of modules that support "version" in pkg.installed (`#33362`_)
+
+* 7a400a9 Add note to docs about api settings for Hipchat API v2 (`#33365`_)
+
+* 37e1930 Add initscripts, SystemD service units and environment files for Debian (`#32857`_)
+
+- **PR** `#33370`_: (*jacobhammons*) Update docs version to 2015.8.9
+
+- **PR** `#33366`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+* f248003 Remove mentions of windows not supporting pkgs param (`#33361`_)
+
+* 4fdb097 Update job_cache and keep_jobs docs to be more specific to their behavior (`#33328`_)
+
+* 2f06918 Properly detect newer Linux Mint distros (`#33359`_)
+
+* d85096c Fix UnboundLocalError in git.latest (`#33340`_)
+
+* e602446 Describes parameters in register_instances function (`#33339`_)
+
+* 5c29c65 Fix some link errors in the test writing tutorial (`#33347`_)
+
+* e532e58 Fix network.managed for windows (`#33312`_)
+
+* 11a2525 Bp 28467 calm mine (`#33327`_)
+
+* b897f2c import ps from psutil_compat in beacons (`#33334`_)
+
+* 089c1a2 remove redundant, incorrect sudo_runas config documentation (`#33318`_)
+
+* 1f7fda2 Disambiguate non-exact matches when checking if sysv service is enabled (`#33324`_)
+
+* 8c1f19a Allow concurrency mode in state runs if using sudo (`#33325`_)
+
+* ed14ef2 Fix master hanging after a request from minion with removed key. (`#33333`_)
+
+* daafa27 Cleanup comments in smbios.get output (fixes `#33266`_) (`#33306`_)
+
+* bfe12d9 Fix iptables --match-set (`#23643`_) (`#33314`_)
+
+- **PR** `#33308`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+.. _`#20226`: https://github.com/saltstack/salt/pull/20226
+.. _`#22480`: https://github.com/saltstack/salt/pull/22480
+.. _`#23643`: https://github.com/saltstack/salt/issues/23643
+.. _`#25089`: https://github.com/saltstack/salt/pull/25089
+.. _`#28325`: https://github.com/saltstack/salt/pull/28325
+.. _`#28467`: https://github.com/saltstack/salt/pull/28467
+.. _`#32484`: https://github.com/saltstack/salt/pull/32484
+.. _`#32857`: https://github.com/saltstack/salt/pull/32857
+.. _`#33266`: https://github.com/saltstack/salt/issues/33266
+.. _`#33282`: https://github.com/saltstack/salt/pull/33282
+.. _`#33286`: https://github.com/saltstack/salt/pull/33286
+.. _`#33287`: https://github.com/saltstack/salt/pull/33287
+.. _`#33290`: https://github.com/saltstack/salt/pull/33290
+.. _`#33292`: https://github.com/saltstack/salt/pull/33292
+.. _`#33301`: https://github.com/saltstack/salt/pull/33301
+.. _`#33302`: https://github.com/saltstack/salt/pull/33302
+.. _`#33306`: https://github.com/saltstack/salt/pull/33306
+.. _`#33308`: https://github.com/saltstack/salt/pull/33308
+.. _`#33312`: https://github.com/saltstack/salt/pull/33312
+.. _`#33314`: https://github.com/saltstack/salt/pull/33314
+.. _`#33318`: https://github.com/saltstack/salt/pull/33318
+.. _`#33321`: https://github.com/saltstack/salt/pull/33321
+.. _`#33324`: https://github.com/saltstack/salt/pull/33324
+.. _`#33325`: https://github.com/saltstack/salt/pull/33325
+.. _`#33327`: https://github.com/saltstack/salt/pull/33327
+.. _`#33328`: https://github.com/saltstack/salt/pull/33328
+.. _`#33333`: https://github.com/saltstack/salt/pull/33333
+.. _`#33334`: https://github.com/saltstack/salt/pull/33334
+.. _`#33339`: https://github.com/saltstack/salt/pull/33339
+.. _`#33340`: https://github.com/saltstack/salt/pull/33340
+.. _`#33341`: https://github.com/saltstack/salt/pull/33341
+.. _`#33347`: https://github.com/saltstack/salt/pull/33347
+.. _`#33359`: https://github.com/saltstack/salt/pull/33359
+.. _`#33361`: https://github.com/saltstack/salt/pull/33361
+.. _`#33362`: https://github.com/saltstack/salt/pull/33362
+.. _`#33365`: https://github.com/saltstack/salt/pull/33365
+.. _`#33366`: https://github.com/saltstack/salt/pull/33366
+.. _`#33369`: https://github.com/saltstack/salt/pull/33369
+.. _`#33370`: https://github.com/saltstack/salt/pull/33370
+.. _`#33372`: https://github.com/saltstack/salt/pull/33372
+.. _`#33374`: https://github.com/saltstack/salt/pull/33374
+.. _`#33375`: https://github.com/saltstack/salt/pull/33375
+.. _`#33377`: https://github.com/saltstack/salt/pull/33377
+.. _`#33379`: https://github.com/saltstack/salt/pull/33379
+.. _`#33380`: https://github.com/saltstack/salt/pull/33380
+.. _`#33381`: https://github.com/saltstack/salt/pull/33381
+.. _`#33383`: https://github.com/saltstack/salt/pull/33383
+.. _`#33386`: https://github.com/saltstack/salt/pull/33386
+.. _`#33387`: https://github.com/saltstack/salt/pull/33387
+.. _`#33396`: https://github.com/saltstack/salt/pull/33396
+.. _`#33398`: https://github.com/saltstack/salt/pull/33398
+.. _`#33403`: https://github.com/saltstack/salt/pull/33403
+.. _`#33405`: https://github.com/saltstack/salt/pull/33405
+.. _`#33406`: https://github.com/saltstack/salt/pull/33406
+.. _`#33412`: https://github.com/saltstack/salt/pull/33412
+.. _`#33414`: https://github.com/saltstack/salt/pull/33414
+.. _`#33421`: https://github.com/saltstack/salt/pull/33421
+.. _`#33432`: https://github.com/saltstack/salt/pull/33432
+.. _`#33436`: https://github.com/saltstack/salt/pull/33436
+.. _`#33438`: https://github.com/saltstack/salt/pull/33438
+.. _`#33440`: https://github.com/saltstack/salt/pull/33440
+.. _`#33443`: https://github.com/saltstack/salt/pull/33443
+.. _`#33454`: https://github.com/saltstack/salt/pull/33454
+.. _`#33457`: https://github.com/saltstack/salt/pull/33457
+.. _`#33459`: https://github.com/saltstack/salt/pull/33459
+.. _`#33464`: https://github.com/saltstack/salt/pull/33464
+.. _`#33465`: https://github.com/saltstack/salt/pull/33465
+.. _`#33469`: https://github.com/saltstack/salt/pull/33469
+.. _`#33473`: https://github.com/saltstack/salt/pull/33473
+.. _`#33474`: https://github.com/saltstack/salt/pull/33474
+.. _`#33476`: https://github.com/saltstack/salt/pull/33476
+.. _`#33477`: https://github.com/saltstack/salt/pull/33477
+.. _`#33478`: https://github.com/saltstack/salt/pull/33478
+.. _`#33480`: https://github.com/saltstack/salt/pull/33480
+.. _`#33481`: https://github.com/saltstack/salt/pull/33481
+.. _`#33482`: https://github.com/saltstack/salt/pull/33482
+.. _`#33483`: https://github.com/saltstack/salt/pull/33483
+.. _`#33486`: https://github.com/saltstack/salt/pull/33486
+.. _`#33487`: https://github.com/saltstack/salt/pull/33487
+.. _`#33488`: https://github.com/saltstack/salt/pull/33488
+.. _`#33490`: https://github.com/saltstack/salt/pull/33490
+.. _`#33491`: https://github.com/saltstack/salt/pull/33491
+.. _`#33499`: https://github.com/saltstack/salt/pull/33499
+.. _`#33501`: https://github.com/saltstack/salt/pull/33501
+.. _`#33503`: https://github.com/saltstack/salt/pull/33503
+.. _`#33507`: https://github.com/saltstack/salt/pull/33507
+.. _`#33513`: https://github.com/saltstack/salt/pull/33513
+.. _`#33520`: https://github.com/saltstack/salt/pull/33520
+.. _`#33555`: https://github.com/saltstack/salt/pull/33555
+.. _`#33558`: https://github.com/saltstack/salt/pull/33558
+.. _`#33581`: https://github.com/saltstack/salt/pull/33581
+.. _`#33582`: https://github.com/saltstack/salt/issues/33582
+.. _`#33599`: https://github.com/saltstack/salt/pull/33599
+.. _`#33611`: https://github.com/saltstack/salt/pull/33611
+.. _`#33615`: https://github.com/saltstack/salt/pull/33615
+.. _`#33652`: https://github.com/saltstack/salt/pull/33652
+.. _`#33653`: https://github.com/saltstack/salt/pull/33653
+.. _`#33654`: https://github.com/saltstack/salt/pull/33654
+.. _`#33679`: https://github.com/saltstack/salt/pull/33679
+.. _`#33681`: https://github.com/saltstack/salt/pull/33681
+.. _`#33684`: https://github.com/saltstack/salt/pull/33684
+.. _`#33685`: https://github.com/saltstack/salt/pull/33685
+.. _`#33691`: https://github.com/saltstack/salt/pull/33691
+.. _`#33698`: https://github.com/saltstack/salt/pull/33698
+.. _`#33700`: https://github.com/saltstack/salt/pull/33700
+.. _`#33712`: https://github.com/saltstack/salt/pull/33712
+.. _`#33718`: https://github.com/saltstack/salt/pull/33718
+.. _`#33719`: https://github.com/saltstack/salt/pull/33719
+.. _`#33726`: https://github.com/saltstack/salt/pull/33726
+.. _`#33727`: https://github.com/saltstack/salt/pull/33727
+.. _`#33728`: https://github.com/saltstack/salt/pull/33728
+.. _`#33729`: https://github.com/saltstack/salt/pull/33729
+.. _`#33743`: https://github.com/saltstack/salt/pull/33743
+.. _`#33759`: https://github.com/saltstack/salt/pull/33759
+.. _`#33765`: https://github.com/saltstack/salt/pull/33765
+.. _`#33770`: https://github.com/saltstack/salt/pull/33770
+.. _`#33777`: https://github.com/saltstack/salt/pull/33777
+.. _`#33778`: https://github.com/saltstack/salt/pull/33778
+.. _`#33805`: https://github.com/saltstack/salt/pull/33805
+.. _`#33806`: https://github.com/saltstack/salt/pull/33806
+.. _`#33808`: https://github.com/saltstack/salt/pull/33808
+.. _`#33814`: https://github.com/saltstack/salt/pull/33814
+.. _`#33827`: https://github.com/saltstack/salt/pull/33827
+.. _`#33829`: https://github.com/saltstack/salt/pull/33829
+.. _`#33833`: https://github.com/saltstack/salt/pull/33833
+.. _`#33836`: https://github.com/saltstack/salt/pull/33836
+.. _`#33839`: https://github.com/saltstack/salt/pull/33839
+.. _`#33840`: https://github.com/saltstack/salt/pull/33840
+.. _`#33851`: https://github.com/saltstack/salt/pull/33851
+.. _`#33877`: https://github.com/saltstack/salt/pull/33877
+.. _`#33880`: https://github.com/saltstack/salt/pull/33880
+.. _`#33888`: https://github.com/saltstack/salt/pull/33888
+.. _`#33903`: https://github.com/saltstack/salt/pull/33903
+.. _`#33904`: https://github.com/saltstack/salt/pull/33904
+.. _`#33917`: https://github.com/saltstack/salt/pull/33917
+.. _`#33936`: https://github.com/saltstack/salt/pull/33936
+.. _`#33942`: https://github.com/saltstack/salt/pull/33942
+.. _`#33946`: https://github.com/saltstack/salt/pull/33946
+.. _`#33948`: https://github.com/saltstack/salt/pull/33948
+.. _`#33951`: https://github.com/saltstack/salt/pull/33951
+.. _`#33952`: https://github.com/saltstack/salt/pull/33952
+.. _`#33953`: https://github.com/saltstack/salt/pull/33953
+.. _`#33962`: https://github.com/saltstack/salt/pull/33962
+.. _`#33983`: https://github.com/saltstack/salt/pull/33983
+.. _`#33984`: https://github.com/saltstack/salt/pull/33984
+.. _`#33985`: https://github.com/saltstack/salt/pull/33985
+.. _`#33990`: https://github.com/saltstack/salt/pull/33990
+.. _`#34000`: https://github.com/saltstack/salt/pull/34000
+.. _`#34002`: https://github.com/saltstack/salt/pull/34002
+.. _`#34003`: https://github.com/saltstack/salt/pull/34003
+.. _`#34005`: https://github.com/saltstack/salt/pull/34005
+.. _`#34009`: https://github.com/saltstack/salt/pull/34009
+.. _`#34011`: https://github.com/saltstack/salt/pull/34011
+.. _`#34018`: https://github.com/saltstack/salt/pull/34018
+.. _`#34020`: https://github.com/saltstack/salt/pull/34020
+.. _`#34030`: https://github.com/saltstack/salt/pull/34030
+.. _`#34045`: https://github.com/saltstack/salt/pull/34045
+.. _`#34048`: https://github.com/saltstack/salt/pull/34048
+.. _`#34051`: https://github.com/saltstack/salt/pull/34051
+.. _`#34066`: https://github.com/saltstack/salt/pull/34066
+.. _`#34069`: https://github.com/saltstack/salt/pull/34069
+.. _`#34072`: https://github.com/saltstack/salt/pull/34072
+.. _`#34077`: https://github.com/saltstack/salt/pull/34077
+.. _`#34093`: https://github.com/saltstack/salt/pull/34093
+.. _`#34100`: https://github.com/saltstack/salt/pull/34100
+.. _`#34103`: https://github.com/saltstack/salt/pull/34103
+.. _`#34128`: https://github.com/saltstack/salt/pull/34128
+.. _`#34134`: https://github.com/saltstack/salt/pull/34134
+.. _`#34136`: https://github.com/saltstack/salt/pull/34136
+.. _`#34141`: https://github.com/saltstack/salt/pull/34141
+.. _`#34142`: https://github.com/saltstack/salt/pull/34142
+.. _`#34165`: https://github.com/saltstack/salt/pull/34165
+.. _`#34174`: https://github.com/saltstack/salt/pull/34174
+.. _`#34175`: https://github.com/saltstack/salt/pull/34175
+.. _`#34176`: https://github.com/saltstack/salt/pull/34176
+.. _`#34178`: https://github.com/saltstack/salt/pull/34178
+.. _`#34179`: https://github.com/saltstack/salt/pull/34179
+.. _`#34182`: https://github.com/saltstack/salt/pull/34182
+.. _`#34184`: https://github.com/saltstack/salt/pull/34184
+.. _`#34188`: https://github.com/saltstack/salt/pull/34188
+.. _`#34206`: https://github.com/saltstack/salt/pull/34206
+.. _`#34208`: https://github.com/saltstack/salt/pull/34208
+.. _`#34218`: https://github.com/saltstack/salt/pull/34218
+.. _`#34225`: https://github.com/saltstack/salt/pull/34225
+.. _`#34232`: https://github.com/saltstack/salt/pull/34232
+.. _`#34233`: https://github.com/saltstack/salt/pull/34233
+.. _`#34244`: https://github.com/saltstack/salt/pull/34244
+.. _`#34252`: https://github.com/saltstack/salt/pull/34252
+.. _`#34257`: https://github.com/saltstack/salt/pull/34257
+.. _`#34258`: https://github.com/saltstack/salt/pull/34258
+.. _`#34274`: https://github.com/saltstack/salt/pull/34274
+.. _`#34306`: https://github.com/saltstack/salt/pull/34306
+.. _`#34307`: https://github.com/saltstack/salt/pull/34307
+.. _`#34312`: https://github.com/saltstack/salt/pull/34312
+.. _`#34313`: https://github.com/saltstack/salt/pull/34313
+.. _`#34316`: https://github.com/saltstack/salt/pull/34316
+.. _`#34319`: https://github.com/saltstack/salt/pull/34319
+.. _`#34323`: https://github.com/saltstack/salt/pull/34323
+.. _`#34324`: https://github.com/saltstack/salt/pull/34324
+.. _`#34325`: https://github.com/saltstack/salt/pull/34325
+.. _`#34335`: https://github.com/saltstack/salt/pull/34335
+.. _`#34339`: https://github.com/saltstack/salt/pull/34339
+.. _`#34342`: https://github.com/saltstack/salt/pull/34342
+.. _`#34344`: https://github.com/saltstack/salt/pull/34344
+.. _`#34366`: https://github.com/saltstack/salt/pull/34366
+.. _`#34368`: https://github.com/saltstack/salt/pull/34368
+.. _`#34373`: https://github.com/saltstack/salt/pull/34373
+.. _`#34377`: https://github.com/saltstack/salt/pull/34377
+.. _`#34392`: https://github.com/saltstack/salt/pull/34392
+.. _`#34401`: https://github.com/saltstack/salt/pull/34401
+.. _`#34426`: https://github.com/saltstack/salt/pull/34426
+.. _`#34429`: https://github.com/saltstack/salt/pull/34429
+.. _`#34432`: https://github.com/saltstack/salt/pull/34432
+.. _`#34435`: https://github.com/saltstack/salt/pull/34435
+.. _`#34451`: https://github.com/saltstack/salt/pull/34451
+.. _`#34455`: https://github.com/saltstack/salt/pull/34455
+.. _`#34457`: https://github.com/saltstack/salt/pull/34457
+.. _`#34462`: https://github.com/saltstack/salt/pull/34462
+.. _`#34467`: https://github.com/saltstack/salt/pull/34467
+.. _`#34488`: https://github.com/saltstack/salt/pull/34488
+.. _`#34489`: https://github.com/saltstack/salt/pull/34489
+.. _`#34492`: https://github.com/saltstack/salt/pull/34492
+.. _`#34498`: https://github.com/saltstack/salt/pull/34498
+.. _`#34503`: https://github.com/saltstack/salt/pull/34503
+.. _`#34505`: https://github.com/saltstack/salt/pull/34505
+.. _`#34507`: https://github.com/saltstack/salt/pull/34507
+.. _`#34513`: https://github.com/saltstack/salt/pull/34513
+.. _`#34518`: https://github.com/saltstack/salt/pull/34518
+.. _`#34521`: https://github.com/saltstack/salt/pull/34521
+.. _`#34527`: https://github.com/saltstack/salt/pull/34527
+.. _`#34531`: https://github.com/saltstack/salt/pull/34531
+.. _`#34537`: https://github.com/saltstack/salt/pull/34537
+.. _`#34545`: https://github.com/saltstack/salt/pull/34545
+.. _`#34546`: https://github.com/saltstack/salt/pull/34546
+.. _`#34560`: https://github.com/saltstack/salt/pull/34560
+.. _`#34584`: https://github.com/saltstack/salt/pull/34584
+.. _`#34590`: https://github.com/saltstack/salt/pull/34590
+.. _`#34591`: https://github.com/saltstack/salt/pull/34591
+.. _`#34592`: https://github.com/saltstack/salt/pull/34592
+.. _`#34593`: https://github.com/saltstack/salt/pull/34593
+.. _`#34601`: https://github.com/saltstack/salt/pull/34601
+.. _`#34617`: https://github.com/saltstack/salt/pull/34617
+.. _`#34618`: https://github.com/saltstack/salt/pull/34618
+.. _`#34642`: https://github.com/saltstack/salt/pull/34642
+.. _`#34644`: https://github.com/saltstack/salt/pull/34644
+.. _`#34647`: https://github.com/saltstack/salt/pull/34647
+.. _`#34651`: https://github.com/saltstack/salt/pull/34651
+.. _`#34676`: https://github.com/saltstack/salt/pull/34676

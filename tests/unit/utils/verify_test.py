@@ -4,6 +4,7 @@ Test the verification routines
 '''
 
 # Import Python libs
+from __future__ import absolute_import
 import getpass
 import os
 import sys
@@ -20,6 +21,12 @@ from salttesting.helpers import (
     requires_network,
     TestsLoggingHandler
 )
+from salttesting.mock import (
+    MagicMock,
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -31,8 +38,13 @@ from salt.utils.verify import (
     verify_socket,
     zmq_version,
     check_max_open_files,
-    valid_id
+    valid_id,
+    log,
+    verify_log,
 )
+
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 class TestVerify(TestCase):
@@ -47,6 +59,16 @@ class TestVerify(TestCase):
         '''
         opts = {'pki_dir': '/tmp/whatever'}
         self.assertFalse(valid_id(opts, None))
+
+    def test_valid_id_pathsep(self):
+        '''
+        Path separators in id should make it invalid
+        '''
+        opts = {'pki_dir': '/tmp/whatever'}
+        # We have to test both path separators because os.path.normpath will
+        # convert forward slashes to backslashes on Windows.
+        for pathsep in ('/', '\\'):
+            self.assertFalse(valid_id(opts, pathsep.join(('..', 'foobar'))))
 
     def test_zmq_verify(self):
         self.assertTrue(zmq_version())
@@ -87,7 +109,6 @@ class TestVerify(TestCase):
         self.assertTrue(os.path.exists(var_dir))
         dir_stat = os.stat(var_dir)
         self.assertEqual(dir_stat.st_uid, os.getuid())
-        self.assertEqual(dir_stat.st_gid, os.getgid())
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
@@ -111,7 +132,6 @@ class TestVerify(TestCase):
 
     @skipIf(True, 'Skipping until we can find why Jenkins is bailing out')
     def test_max_open_files(self):
-
         with TestsLoggingHandler() as handler:
             logmsg_dbg = (
                 'DEBUG:This salt-master instance has accepted {0} minion keys.'
@@ -211,6 +231,28 @@ class TestVerify(TestCase):
             finally:
                 shutil.rmtree(tempdir)
                 resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_verify_log(self):
+        '''
+        Test that verify_log works as expected
+        '''
+        message = 'Insecure logging configuration detected! Sensitive data may be logged.'
+
+        mock_cheese = MagicMock()
+        with patch.object(log, 'warning', mock_cheese):
+            verify_log({'log_level': 'cheeseshop'})
+            mock_cheese.assert_called_once_with(message)
+
+        mock_trace = MagicMock()
+        with patch.object(log, 'warning', mock_trace):
+            verify_log({'log_level': 'trace'})
+            mock_trace.assert_called_once_with(message)
+
+        mock_info = MagicMock()
+        with patch.object(log, 'warning', mock_info):
+            verify_log({'log_level': 'info'})
+            mock_info.assert_not_called()
 
 
 if __name__ == '__main__':

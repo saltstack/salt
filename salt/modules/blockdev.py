@@ -3,131 +3,117 @@
 Module for managing block devices
 
 .. versionadded:: 2014.7.0
+.. deprecated:: 2016.11.0
+   Merged to `disk` module
+
 '''
 from __future__ import absolute_import
 
 # Import python libs
 import logging
-import subprocess
 
 # Import salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'format_': 'format'
+}
+
+__virtualname__ = 'blockdev'
+
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only load this module if the blockdev utility is available
     '''
     if salt.utils.is_windows():
-        return False
-    return True
+        return (False, ('The {0} execution module '
+                        'is not supported on windows'.format(__virtualname__)))
+    elif not salt.utils.which('blockdev'):
+        return (False, ('Cannot load the {0} execution module: '
+                        'blockdev utility not found'.format(__virtualname__)))
+    return __virtualname__
 
 
-def tune(device, **kwargs):
+def format_(device, fs_type='ext4',
+            inode_size=None, lazy_itable_init=None, force=False):
     '''
-    Set attributes for the specified device
+    Format a filesystem onto a block device
+
+    .. versionadded:: 2015.8.2
+
+    .. deprecated:: 2016.11.0
+
+    device
+        The block device in which to create the new filesystem
+
+    fs_type
+        The type of filesystem to create
+
+    inode_size
+        Size of the inodes
+
+        This option is only enabled for ext and xfs filesystems
+
+    lazy_itable_init
+        If enabled and the uninit_bg feature is enabled, the inode table will
+        not be fully initialized by mke2fs.  This speeds up filesystem
+        initialization noticeably, but it requires the kernel to finish
+        initializing the filesystem  in  the  background  when  the filesystem
+        is first mounted.  If the option value is omitted, it defaults to 1 to
+        enable lazy inode table zeroing.
+
+        This option is only enabled for ext filesystems
+
+    force
+        Force mke2fs to create a filesystem, even if the specified device is
+        not a partition on a block special device. This option is only enabled
+        for ext and xfs filesystems
+
+        This option is dangerous, use it with caution.
+
+        .. versionadded:: 2016.11.0
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' blockdev.tune /dev/sda1 read-ahead=1024 read-write=True
-
-    Valid options are: ``read-ahead``, ``filesystem-read-ahead``,
-    ``read-only``, ``read-write``.
-
-    See the ``blockdev(8)`` manpage for a more complete description of these
-    options.
+        salt '*' blockdev.format /dev/sdX1
     '''
-
-    kwarg_map = {'read-ahead': 'setra',
-                 'filesystem-read-ahead': 'setfra',
-                 'read-only': 'setro',
-                 'read-write': 'setrw'}
-    opts = ''
-    args = []
-    for key in kwargs:
-        if key in kwarg_map:
-            switch = kwarg_map[key]
-            if key != 'read-write':
-                args.append(switch.replace('set', 'get'))
-            else:
-                args.append('getro')
-            if kwargs[key] == 'True' or kwargs[key] is True:
-                opts += '--{0} '.format(key)
-            else:
-                opts += '--{0} {1} '.format(switch, kwargs[key])
-    cmd = 'blockdev {0}{1}'.format(opts, device)
-    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    return dump(device, args)
+    salt.utils.warn_until(
+        'Oxygen',
+        'The blockdev module has been merged with the disk module,'
+        'and will disappear in Oxygen. Use the disk.format_ function instead.'
+    )
+    return __salt__['disk.format_'](device,
+                                    fs_type=fs_type,
+                                    inode_size=inode_size,
+                                    lazy_itable_init=lazy_itable_init,
+                                    force=force)
 
 
-def wipe(device):
+def fstype(device):
     '''
-    Remove the filesystem information
+    Return the filesystem name of a block device
+
+    .. versionadded:: 2015.8.2
+
+    .. deprecated:: 2016.11.0
+
+    device
+        The name of the block device
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' blockdev.wipe /dev/sda1
+        salt '*' blockdev.fstype /dev/sdX1
     '''
-
-    cmd = 'wipefs {0}'.format(device)
-    try:
-        out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    except subprocess.CalledProcessError as err:
-        return False
-    if out['retcode'] == 0:
-        return True
-
-
-def dump(device, args=None):
-    '''
-    Return all contents of dumpe2fs for a specified device
-
-    CLI Example:
-    .. code-block:: bash
-
-        salt '*' extfs.dump /dev/sda1
-    '''
-    cmd = 'blockdev --getro --getsz --getss --getpbsz --getiomin --getioopt --getalignoff  --getmaxsect --getsize --getsize64 --getra --getfra {0}'.format(device)
-    ret = {}
-    opts = [c[2:] for c in cmd.split() if c.startswith('--')]
-    out = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if out['retcode'] == 0:
-        lines = [line for line in out['stdout'].splitlines() if line]
-        count = 0
-        for line in lines:
-            ret[opts[count]] = line
-            count = count+1
-        if args:
-            temp_ret = {}
-            for arg in args:
-                temp_ret[arg] = ret[arg]
-            return temp_ret
-        else:
-            return ret
-    else:
-        return False
-
-
-def resize2fs(device):
-    '''
-    Resizes the filesystem.
-
-    CLI Example:
-    .. code-block:: bash
-
-        salt '*' blockdev.resize2fs /dev/sda1
-    '''
-    ret = {}
-    cmd = 'resize2fs {0}'.format(device)
-    try:
-        out = __salt__['cmd.run_all'](cmd)
-    except subprocess.CalledProcessError as err:
-        return False
-    if out['retcode'] == 0:
-        return True
+    salt.utils.warn_until(
+        'Oxygen',
+        'The blockdev module has been merged with the disk module,'
+        'and will disappear in Oxygen. Use the disk.fstype function instead.'
+    )
+    return __salt__['disk.fstype'](device)

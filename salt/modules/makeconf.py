@@ -4,8 +4,9 @@ Support for modifying make.conf under Gentoo
 
 '''
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
+# Import Salt libs
 import salt.utils
 
 
@@ -15,7 +16,7 @@ def __virtual__():
     '''
     if __grains__['os'] == 'Gentoo':
         return 'makeconf'
-    return False
+    return (False, 'The makeconf execution module cannot be loaded: only available on Gentoo systems.')
 
 
 def _get_makeconf():

@@ -30,7 +30,7 @@ Salt always executes states in a finite manner, meaning that they will always
 execute in the same order regardless of the system that is executing them.
 But in Salt 0.17.0, the ``state_auto_order`` option was added. This option
 makes states get evaluated in the order in which they are defined in sls
-files.
+files, including the top.sls file.
 
 The evaluation order makes it easy to know what order the states will be
 executed in, but it is important to note that the requisite system will
@@ -49,8 +49,8 @@ Requisite Statements
 
 .. note::
 
-    This document represents behavior exhibited by Salt requisites as of
-    version 0.9.7 of Salt.
+    The behavior of requisites changed in version 0.9.7 of Salt.  This
+    documentation applies to requisites in version 0.9.7 and later.
 
 Often when setting up states any single action will require or depend on
 another action. Salt allows for the building of relationships between states

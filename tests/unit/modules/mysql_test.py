@@ -7,6 +7,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -85,7 +88,7 @@ class MySQLTestCase(TestCase):
             mysql.user_chpass('testuser', password='BLUECOW')
             calls = (
                 call().cursor().execute(
-                    'UPDATE mysql.user SET password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
+                    'UPDATE mysql.user SET Password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
                     {'password': 'BLUECOW',
                      'user': 'testuser',
                      'host': 'localhost',
@@ -146,9 +149,9 @@ class MySQLTestCase(TestCase):
         self._test_call(
             mysql.db_exists,
             {'sql': 'SHOW DATABASES LIKE %(dbname)s;',
-             'sql_args': {'dbname': r'''test\%\_`'" db'''}
+             'sql_args': {'dbname': r'''test%_`" db'''}
              },
-            'test%_`\'" db'
+            'test%_`" db'
         )
 
     def test_db_create(self):
@@ -157,7 +160,7 @@ class MySQLTestCase(TestCase):
         '''
         self._test_call(
             mysql.db_create,
-            'CREATE DATABASE `test``\'" db`;',
+            'CREATE DATABASE IF NOT EXISTS `test``\'" db`;',
             'test`\'" db'
         )
 
@@ -195,12 +198,44 @@ class MySQLTestCase(TestCase):
                        'testuser'
         )
 
-    @skipIf(True, 'TODO: Mock up user_grants()')
-    def test_grant_exists(self):
+    def test_grant_exists_true(self):
         '''
-        Test to ensure a basic query for grants works in the mysql exec module
+        Test to ensure that we can find a grant that exists
         '''
-        self._test_call(mysql.grant_exists, '', 'SELECT,INSERT,UPDATE', 'database.*', 'frank')
+        mock_grants = [
+            "GRANT USAGE ON *.* TO 'testuser'@'%'",
+            "GRANT SELECT, INSERT, UPDATE ON `testdb`.`testtableone` TO 'testuser'@'%'",
+            "GRANT SELECT ON `testdb`.`testtabletwo` TO 'testuer'@'%'",
+            "GRANT SELECT ON `testdb`.`testtablethree` TO 'testuser'@'%'",
+        ]
+        mock = MagicMock(return_value=mock_grants)
+        with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
+            ret = mysql.grant_exists(
+                'SELECT, INSERT, UPDATE',
+                'testdb.testtableone',
+                'testuser',
+                '%'
+            )
+            self.assertEqual(ret, True)
+
+    def test_grant_exists_false(self):
+        '''
+        Test to ensure that we don't find a grant that doesn't exist
+        '''
+        mock_grants = [
+            "GRANT USAGE ON *.* TO 'testuser'@'%'",
+            "GRANT SELECT, INSERT, UPDATE ON `testdb`.`testtableone` TO 'testuser'@'%'",
+            "GRANT SELECT ON `testdb`.`testtablethree` TO 'testuser'@'%'",
+        ]
+        mock = MagicMock(return_value=mock_grants)
+        with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
+            ret = mysql.grant_exists(
+                'SELECT',
+                'testdb.testtabletwo',
+                'testuser',
+                '%'
+            )
+            self.assertEqual(ret, False)
 
     @skipIf(True, 'TODO: Mock up user_grants()')
     def test_grant_add(self):
@@ -234,6 +269,17 @@ class MySQLTestCase(TestCase):
         '''
         self._test_call(mysql.get_slave_status, 'SHOW SLAVE STATUS')
 
+    def test_get_slave_status_bad_server(self):
+        '''
+        Test get_slave_status in the mysql execution module, simulating a broken server
+        '''
+        connect_mock = MagicMock(return_value=None)
+        mysql._connect = connect_mock
+        with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+            rslt = mysql.get_slave_status()
+            connect_mock.assert_has_calls([call()])
+            self.assertEqual(rslt, [])
+
     @skipIf(True, 'MySQL module claims this function is not ready for production')
     def test_free_slave(self):
         pass
@@ -247,10 +293,10 @@ class MySQLTestCase(TestCase):
         with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
             function(*args, **kwargs)
             if isinstance(expected_sql, dict):
-                calls = (call().cursor().execute('{0}'.format(expected_sql['sql']), expected_sql['sql_args']))
+                calls = call().cursor().execute('{0}'.format(expected_sql['sql']), expected_sql['sql_args'])
             else:
-                calls = (call().cursor().execute('{0}'.format(expected_sql)))
-            connect_mock.assert_has_calls(calls)
+                calls = call().cursor().execute('{0}'.format(expected_sql))
+            connect_mock.assert_has_calls((calls,), True)
 
 
 if __name__ == '__main__':

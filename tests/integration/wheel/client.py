@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 import integration
 
@@ -20,7 +23,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
         '''
         Configure an eauth user to test with
         '''
-        self.wheel = salt.wheel.Wheel(self.get_config('client_config'))
+        self.wheel = salt.wheel.Wheel(dict(self.get_config('client_config')))
 
     def test_master_call(self):
         '''
@@ -32,6 +35,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
         low = {
             'client': 'wheel',
             'fun': 'key.list_all',
+            'print_event': False
         }
         low.update(self.eauth_creds)
 
@@ -44,7 +48,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
         The choice of using key.list_all for this is arbitrary and should be
         changed to some mocked function that is more testing friendly.
         '''
-        auth = salt.auth.LoadAuth(self.get_config('client_config'))
+        auth = salt.auth.LoadAuth(dict(self.get_config('client_config')))
         token = auth.mk_token(self.eauth_creds)
 
         token = auth.mk_token({
@@ -57,12 +61,14 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
             'client': 'wheel',
             'fun': 'key.list_all',
             'token': token['token'],
+            'print_event': False,
         })
 
     def test_cmd_sync(self):
         low = {
             'client': 'wheel',
-            'fun': 'key.list_keys',
+            'fun': 'key.list_all',
+            'print_event': False,
         }
         low.update(self.eauth_creds)
 
@@ -71,7 +77,8 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
     def test_cmd_async(self):
         low = {
             'client': 'wheel_async',
-            'fun': 'key.list_keys',
+            'fun': 'key.list_all',
+            'print_event': False,
         }
         low.update(self.eauth_creds)
 
@@ -81,6 +88,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
         low = {
             'fun': 'key.finger',
             'match': '*',
+            'print_event': False,
         }
         low.update(self.eauth_creds)
 
@@ -93,6 +101,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
             'password': 'willrockyou',
             'eauth': 'auto',
             'fun': 'key.list_all',
+            'print_event': False,
         }
 
         self.wheel.cmd_sync(low)

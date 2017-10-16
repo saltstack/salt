@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT" "1" "January 08, 2016" "2015.5.9" "Salt"
+.TH "SALT" "1" "October 31, 2016" "2016.11.0" "Salt"
 .SH NAME
 salt \- salt
 .
@@ -108,7 +108,7 @@ Override the configured \fBstate_output\fP value for minion output. One of
 .B \-\-subset=SUBSET
 Execute the routine on a random subset of the targeted minions.  The
 minions will be verified that they have the named function before
-executing.
+executing. The SUBSET argument is the count of the minions to target.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -191,6 +191,9 @@ Logfile logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
 \fBwarning\fP\&.
 .UNINDENT
 .SS Target Selection
+.sp
+The default matching that Salt utilizes is shell\-style globbing around the
+minion id. See \fI\%https://docs.python.org/2/library/fnmatch.html#module\-fnmatch\fP\&.
 .INDENT 0.0
 .TP
 .B \-E, \-\-pcre

@@ -26,28 +26,28 @@ Module to provide MySQL compatibility to salt.
         mysql.default_file: '/etc/mysql/debian.cnf'
 
 .. versionchanged:: 2014.1.0
-    charset connection argument added. This is a MySQL charset, not a python one
+    \'charset\' connection argument added. This is a MySQL charset, not a python one.
 .. versionchanged:: 0.16.2
     Connection arguments from the minion config file can be overridden on the
-    CLI by using the arguments defined :doc:`here
-    </ref/states/all/salt.states.mysql_user>`. Additionally, it is now possible
-    to setup a user with no password.
+    CLI by using the arguments defined :mod:`here <salt.states.mysql_user>`.
+    Additionally, it is now possible to setup a user with no password.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import logging
 import re
 import sys
 import shlex
-from salt.ext.six.moves import zip
-from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.utils
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
+from salt.ext.six.moves import range, zip  # pylint: disable=no-name-in-module,redefined-builtin
 try:
     # Try to import MySQLdb
     import MySQLdb
@@ -118,68 +118,76 @@ __ssl_options__ = __ssl_options_parameterized__ + [
     'X509'
 ]
 
-################################################################################
-# DEVELOPER NOTE: ABOUT arguments management, escapes, formats, arguments and
-# security of SQL.
-#
-# A general rule of SQL security is to use queries with _execute call in this
-# code using args parameter to let MySQLdb manage the arguments proper escaping.
-# Another way of escaping values arguments could be '{0!r}'.format(), using
-# __repr__ to ensure things get properly used as strings. But this could lead
-# to two problems:
-#
-#  * In ANSI mode, which is available on MySQL, but not by default, double
-# quotes " should not be used as a string delimiters, in ANSI mode this is an
-# identifier delimiter (like `).
-#
-#  * Some rare exploits with bad multibytes management, either on python or
-# MySQL could defeat this barrier, bindings internal escape functions
-# should manage theses cases.
-#
-# So query with arguments should use a paramstyle defined in PEP249:
-#
-# http://www.python.org/dev/peps/pep-0249/#paramstyle
-# We use pyformat, which means 'SELECT * FROM foo WHERE bar=%(myval)s'
-# used with {'myval': 'some user input'}
-#
-# So far so good. But this cannot be used for identifier escapes. Identifiers
-# are database names, table names and column names. Theses names are not values
-# and do not follow the same escape rules (see quote_identifier function for
-# details on `_ and % escape policies on identifiers). Using value escaping on
-# identifier could fool the SQL engine (badly escaping quotes and not doubling
-# ` characters. So for identifiers a call to quote_identifier should be done and
-# theses identifiers should then be added in strings with format, but without
-# __repr__ filter.
-#
-# Note also that when using query with arguments in _execute all '%' characters
-# used in the query should get escaped to '%%' fo MySQLdb, but should not be
-# escaped if the query runs without arguments. This is managed by _execute() and
-# quote_identifier. This is not the same as escaping '%' to '\%' or '_' to '\%'
-# when using a LIKE query (example in db_exists), as this escape is there to
-# avoid having _ or % characters interpreted in LIKE queries. The string parted
-# of the first query could become (still used with args dictionary for myval):
-# 'SELECT * FROM {0} WHERE bar=%(myval)s'.format(quote_identifier('user input'))
-#
-# Check integration tests if you find a hole in theses strings and escapes rules
-#
-# Finally some examples to sum up.
-#
-# Given a name f_o%o`b'a"r, in python that would be '''f_o%o`b'a"r'''. I'll
-# avoid python syntax for clarity:
-#
-# The MySQL way of writing this name is:
-#
-# value                         : 'f_o%o`b\'a"r' (managed by MySQLdb)
-# identifier                    : `f_o%o``b'a"r`
-# db identifier in general GRANT: `f\_o\%o``b'a"r`
-# db identifier in table GRANT  : `f_o%o``b'a"r`
-# in mySQLdb, query with args   : `f_o%%o``b'a"r` (as identifier)
-# in mySQLdb, query without args: `f_o%o``b'a"r` (as identifier)
-# value in a LIKE query         : 'f\_o\%o`b\'a"r' (quotes managed by MySQLdb)
-#
-# And theses could be mixed, in a like query value with args: 'f\_o\%%o`b\'a"r'
-#
-################################################################################
+r'''
+DEVELOPER NOTE: ABOUT arguments management, escapes, formats, arguments and
+security of SQL.
+
+A general rule of SQL security is to use queries with _execute call in this
+code using args parameter to let MySQLdb manage the arguments proper escaping.
+Another way of escaping values arguments could be '{0!r}'.format(), using
+__repr__ to ensure things get properly used as strings. But this could lead
+to three problems:
+
+ * In ANSI mode, which is available on MySQL, but not by default, double
+quotes " should not be used as a string delimiters, in ANSI mode this is an
+identifier delimiter (like `).
+
+ * Some rare exploits with bad multibytes management, either on python or
+MySQL could defeat this barrier, bindings internal escape functions
+should manage theses cases.
+
+ * Unicode strings in Python 2 will include the 'u' before the repr'ed string,
+   like so:
+
+    Python 2.7.10 (default, May 26 2015, 04:16:29)
+    [GCC 5.1.0] on linux2
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> u'something something {0!r}'.format(u'foo')
+    u"something something u'foo'"
+
+So query with arguments should use a paramstyle defined in PEP249:
+
+http://www.python.org/dev/peps/pep-0249/#paramstyle
+We use pyformat, which means 'SELECT * FROM foo WHERE bar=%(myval)s'
+used with {'myval': 'some user input'}
+
+So far so good. But this cannot be used for identifier escapes. Identifiers
+are database names, table names and column names. Theses names are not values
+and do not follow the same escape rules (see quote_identifier function for
+details on `_ and % escape policies on identifiers). Using value escaping on
+identifier could fool the SQL engine (badly escaping quotes and not doubling
+` characters. So for identifiers a call to quote_identifier should be done and
+theses identifiers should then be added in strings with format, but without
+__repr__ filter.
+
+Note also that when using query with arguments in _execute all '%' characters
+used in the query should get escaped to '%%' fo MySQLdb, but should not be
+escaped if the query runs without arguments. This is managed by _execute() and
+quote_identifier. This is not the same as escaping '%' to '\%' or '_' to '\%'
+when using a LIKE query (example in db_exists), as this escape is there to
+avoid having _ or % characters interpreted in LIKE queries. The string parted
+of the first query could become (still used with args dictionary for myval):
+'SELECT * FROM {0} WHERE bar=%(myval)s'.format(quote_identifier('user input'))
+
+Check integration tests if you find a hole in theses strings and escapes rules
+
+Finally some examples to sum up.
+
+Given a name f_o%o`b'a"r, in python that would be """f_o%o`b'a"r""". I'll
+avoid python syntax for clarity:
+
+The MySQL way of writing this name is:
+
+value                         : 'f_o%o`b\'a"r' (managed by MySQLdb)
+identifier                    : `f_o%o``b'a"r`
+db identifier in general GRANT: `f\_o\%o``b'a"r`
+db identifier in table GRANT  : `f_o%o``b'a"r`
+in mySQLdb, query with args   : `f_o%%o``b'a"r` (as identifier)
+in mySQLdb, query without args: `f_o%o``b'a"r` (as identifier)
+value in a LIKE query         : 'f\_o\%o`b\'a"r' (quotes managed by MySQLdb)
+
+And theses could be mixed, in a like query value with args: 'f\_o\%%o`b\'a"r'
+'''
 
 
 def __virtual__():
@@ -188,7 +196,7 @@ def __virtual__():
     '''
     if HAS_MYSQLDB:
         return True
-    return False
+    return (False, 'The mysql execution module cannot be loaded: neither MySQLdb nor PyMySQL is available.')
 
 
 def __check_table(name, table, **connection_args):
@@ -234,6 +242,26 @@ def __optimize_table(name, table, **connection_args):
     results = cur.fetchall()
     log.debug(results)
     return results
+
+
+def __password_column(**connection_args):
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return 'Password'
+    cur = dbc.cursor()
+    qry = ('SELECT column_name from information_schema.COLUMNS '
+           'WHERE table_schema=%(schema)s and table_name=%(table)s '
+           'and column_name=%(column)s')
+    args = {
+      'schema': 'mysql',
+      'table':  'user',
+      'column': 'Password'
+    }
+    _execute(cur, qry, args)
+    if int(cur.rowcount) > 0:
+        return 'Password'
+    else:
+        return 'authentication_string'
 
 
 def _connect(**kwargs):
@@ -341,7 +369,7 @@ def _grant_to_tokens(grant):
             - grant: [grant1, grant2] (ala SELECT, USAGE, etc)
             - database: MySQL DB
     '''
-    log.debug('_grant_to_tokens entry {0!r}'.format(grant))
+    log.debug('_grant_to_tokens entry \'{0}\''.format(grant))
     dict_mode = False
     if isinstance(grant, dict):
         dict_mode = True
@@ -359,21 +387,21 @@ def _grant_to_tokens(grant):
     # the shell escape is \` but mysql escape is ``. Spaces should not be
     # exploded as users or db names could contain spaces.
     # Examples of splitting:
-    #"GRANT SELECT, LOCK TABLES, UPDATE, CREATE ON `test ``(:=saltdb)`.*
-    #                                  TO 'foo'@'localhost' WITH GRANT OPTION"
-    #['GRANT', 'SELECT', ',', 'LOCK', 'TABLES', ',', 'UPDATE', ',', 'CREATE',
-    # 'ON', '`test `', '`(:=saltdb)`', '.', '*', 'TO', "'foo'", '@',
-    #"'localhost'", 'WITH', 'GRANT', 'OPTION']
+    # "GRANT SELECT, LOCK TABLES, UPDATE, CREATE ON `test ``(:=saltdb)`.*
+    #                                   TO 'foo'@'localhost' WITH GRANT OPTION"
+    # ['GRANT', 'SELECT', ',', 'LOCK', 'TABLES', ',', 'UPDATE', ',', 'CREATE',
+    #  'ON', '`test `', '`(:=saltdb)`', '.', '*', 'TO', "'foo'", '@',
+    # "'localhost'", 'WITH', 'GRANT', 'OPTION']
     #
-    #'GRANT SELECT, INSERT, UPDATE, CREATE ON `te s.t\'"sa;ltdb`.`tbl ``\'"xx`
-    #                                  TO \'foo \' bar\'@\'localhost\''
-    #['GRANT', 'SELECT', ',', 'INSERT', ',', 'UPDATE', ',', 'CREATE', 'ON',
-    # '`te s.t\'"sa;ltdb`', '.', '`tbl `', '`\'"xx`', 'TO', "'foo '", "bar'",
-    # '@', "'localhost'"]
+    # 'GRANT SELECT, INSERT, UPDATE, CREATE ON `te s.t\'"sa;ltdb`.`tbl ``\'"xx`
+    #                                   TO \'foo \' bar\'@\'localhost\''
+    # ['GRANT', 'SELECT', ',', 'INSERT', ',', 'UPDATE', ',', 'CREATE', 'ON',
+    #  '`te s.t\'"sa;ltdb`', '.', '`tbl `', '`\'"xx`', 'TO', "'foo '", "bar'",
+    #  '@', "'localhost'"]
     #
-    #"GRANT USAGE ON *.* TO 'user \";--,?:&/\\'@'localhost'"
-    #['GRANT', 'USAGE', 'ON', '*', '.', '*', 'TO', '\'user ";--,?:&/\\\'',
-    # '@', "'localhost'"]
+    # "GRANT USAGE ON *.* TO 'user \";--,?:&/\\'@'localhost'"
+    # ['GRANT', 'USAGE', 'ON', '*', '.', '*', 'TO', '\'user ";--,?:&/\\\'',
+    #  '@', "'localhost'"]
     lex = shlex.shlex(grant_sql)
     lex.quotes = '\'`'
     lex.whitespace_split = False
@@ -385,7 +413,7 @@ def _grant_to_tokens(grant):
     position_tracker = 1  # Skip the initial 'GRANT' word token
     database = ''
     phrase = 'grants'
-    #log.debug('_grant_to_tokens lex analysis {0!r}'.format(exploded_grant))
+    #log.debug('_grant_to_tokens lex analysis \'{0}\''.format(exploded_grant))
 
     for token in exploded_grant[position_tracker:]:
 
@@ -454,12 +482,14 @@ def _grant_to_tokens(grant):
         if not dict_mode:
             user = user.strip("'")
             host = host.strip("'")
-        log.debug('grant to token {0!r}::{1!r}::{2!r}::{3!r}'.format(
-            user,
-            host,
-            grant_tokens,
-            database
-        ))
+        log.debug(
+            'grant to token \'{0}\'::\'{1}\'::\'{2}\'::\'{3}\''.format(
+                user,
+                host,
+                grant_tokens,
+                database
+            )
+        )
     except UnboundLocalError:
         host = ''
 
@@ -760,6 +790,8 @@ def free_slave(**connection_args):
         salt '*' mysql.free_slave
     '''
     slave_db = _connect(**connection_args)
+    if slave_db is None:
+        return ''
     slave_cur = slave_db.cursor(MySQLdb.cursors.DictCursor)
     slave_cur.execute('show slave status')
     slave_status = slave_cur.fetchone()
@@ -772,6 +804,8 @@ def free_slave(**connection_args):
         # servers here, and only overriding the host option in the connect
         # function.
         master_db = _connect(**master)
+        if master_db is None:
+            return ''
         master_cur = master_db.cursor()
         master_cur.execute('flush logs')
         master_db.close()
@@ -790,7 +824,7 @@ def free_slave(**connection_args):
         return 'failed'
 
 
-#Database related actions
+# Database related actions
 def db_list(**connection_args):
     '''
     Return a list of databases of a MySQL server using the output
@@ -824,6 +858,57 @@ def db_list(**connection_args):
     return ret
 
 
+def alter_db(name, character_set=None, collate=None, **connection_args):
+    '''
+    Modify database using ``ALTER DATABASE %(dbname)s CHARACTER SET %(charset)s
+    COLLATE %(collation)s;`` query.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.alter_db testdb charset='latin1'
+    '''
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
+    cur = dbc.cursor()
+    existing = db_get(name, **connection_args)
+    qry = 'ALTER DATABASE {0} CHARACTER SET {1} COLLATE {2};'.format(
+        name.replace('%', r'\%').replace('_', r'\_'),
+        character_set or existing.get('character_set'),
+        collate or existing.get('collate'))
+    args = {}
+    _execute(cur, qry, args)
+
+
+def db_get(name, **connection_args):
+    '''
+    Return a list of databases of a MySQL server using the output
+    from the ``SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM
+    INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='dbname';`` query.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.db_get test
+    '''
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
+    cur = dbc.cursor()
+    qry = ('SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM '
+           'INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME=%(dbname)s;')
+    args = {"dbname": name}
+    _execute(cur, qry, args)
+    if cur.rowcount:
+        rows = cur.fetchall()
+        return {'character_set': rows[0][0],
+                'collate': rows[0][1]}
+    return {}
+
+
 def db_tables(name, **connection_args):
     '''
     Shows the tables in the given MySQL database (if exists)
@@ -835,7 +920,7 @@ def db_tables(name, **connection_args):
         salt '*' mysql.db_tables 'database'
     '''
     if not db_exists(name, **connection_args):
-        log.info('Database {0!r} does not exist'.format(name,))
+        log.info('Database \'{0}\' does not exist'.format(name))
         return False
 
     dbc = _connect(**connection_args)
@@ -878,7 +963,7 @@ def db_exists(name, **connection_args):
     # Warn: here db identifier is not backtyped but should be
     #  escaped as a string value. Note also that LIKE special characters
     # '_' and '%' should also be escaped.
-    args = {"dbname": name.replace('%', r'\%').replace('_', r'\_')}
+    args = {"dbname": name}
     qry = "SHOW DATABASES LIKE %(dbname)s;"
     try:
         _execute(cur, qry, args)
@@ -913,7 +998,7 @@ def db_create(name, character_set=None, collate=None, **connection_args):
     '''
     # check if db exists
     if db_exists(name, **connection_args):
-        log.info('DB {0!r} already exists'.format(name))
+        log.info('DB \'{0}\' already exists'.format(name))
         return False
 
     # db doesn't exist, proceed
@@ -923,7 +1008,7 @@ def db_create(name, character_set=None, collate=None, **connection_args):
     cur = dbc.cursor()
     s_name = quote_identifier(name)
     # identifiers cannot be used as values
-    qry = 'CREATE DATABASE {0}'.format(s_name)
+    qry = 'CREATE DATABASE IF NOT EXISTS {0}'.format(s_name)
     args = {}
     if character_set is not None:
         qry += ' CHARACTER SET %(character_set)s'
@@ -935,7 +1020,7 @@ def db_create(name, character_set=None, collate=None, **connection_args):
 
     try:
         if _execute(cur, qry, args):
-            log.info('DB {0!r} created'.format(name))
+            log.info('DB \'{0}\' created'.format(name))
             return True
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
@@ -956,11 +1041,11 @@ def db_remove(name, **connection_args):
     '''
     # check if db exists
     if not db_exists(name, **connection_args):
-        log.info('DB {0!r} does not exist'.format(name))
+        log.info('DB \'{0}\' does not exist'.format(name))
         return False
 
     if name in ('mysql', 'information_scheme'):
-        log.info('DB {0!r} may not be removed'.format(name))
+        log.info('DB \'{0}\' may not be removed'.format(name))
         return False
 
     # db does exists, proceed
@@ -980,10 +1065,10 @@ def db_remove(name, **connection_args):
         return False
 
     if not db_exists(name, **connection_args):
-        log.info('Database {0!r} has been removed'.format(name))
+        log.info('Database \'{0}\' has been removed'.format(name))
         return True
 
-    log.info('Database {0!r} has not been removed'.format(name))
+    log.info('Database \'{0}\' has not been removed'.format(name))
     return False
 
 
@@ -1021,6 +1106,7 @@ def user_exists(user,
                 password_hash=None,
                 passwordless=False,
                 unix_socket=False,
+                password_column=None,
                 **connection_args):
     '''
     Checks if a user exists on the MySQL server. A login can be checked to see
@@ -1037,6 +1123,7 @@ def user_exists(user,
         salt '*' mysql.user_exists 'username' 'hostname' 'password'
         salt '*' mysql.user_exists 'username' 'hostname' password_hash='hash'
         salt '*' mysql.user_exists 'username' passwordless=True
+        salt '*' mysql.user_exists 'username' password_column='authentication_string'
     '''
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
@@ -1052,6 +1139,9 @@ def user_exists(user,
     if dbc is None:
         return False
 
+    if not password_column:
+        password_column = __password_column(**connection_args)
+
     cur = dbc.cursor()
     qry = ('SELECT User,Host FROM mysql.user WHERE User = %(user)s AND '
            'Host = %(host)s')
@@ -1064,12 +1154,12 @@ def user_exists(user,
             qry += ' AND plugin=%(unix_socket)s'
             args['unix_socket'] = 'unix_socket'
         else:
-            qry += ' AND Password = \'\''
+            qry += ' AND ' + password_column + ' = \'\''
     elif password:
-        qry += ' AND Password = PASSWORD(%(password)s)'
+        qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
         args['password'] = str(password)
     elif password_hash:
-        qry += ' AND Password = %(password)s'
+        qry += ' AND ' + password_column + ' = %(password)s'
         args['password'] = password_hash
 
     try:
@@ -1122,6 +1212,7 @@ def user_create(user,
                 password_hash=None,
                 allow_passwordless=False,
                 unix_socket=False,
+                password_column=None,
                 **connection_args):
     '''
     Creates a MySQL user
@@ -1165,12 +1256,15 @@ def user_create(user,
         salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
     '''
     if user_exists(user, host, **connection_args):
-        log.info('User {0!r}@{1!r} already exists'.format(user, host))
+        log.info('User \'{0}\'@\'{1}\' already exists'.format(user, host))
         return False
 
     dbc = _connect(**connection_args)
     if dbc is None:
         return False
+
+    if not password_column:
+        password_column = __password_column(**connection_args)
 
     cur = dbc.cursor()
     qry = 'CREATE USER %(user)s@%(host)s'
@@ -1204,14 +1298,14 @@ def user_create(user,
         log.error(err)
         return False
 
-    if user_exists(user, host, password, password_hash, **connection_args):
-        msg = 'User {0!r}@{1!r} has been created'.format(user, host)
+    if user_exists(user, host, password, password_hash, password_column=password_column, **connection_args):
+        msg = 'User \'{0}\'@\'{1}\' has been created'.format(user, host)
         if not any((password, password_hash)):
             msg += ' with passwordless login'
         log.info(msg)
         return True
 
-    log.info('User {0!r}@{1!r} was not created'.format(user, host))
+    log.info('User \'{0}\'@\'{1}\' was not created'.format(user, host))
     return False
 
 
@@ -1221,6 +1315,7 @@ def user_chpass(user,
                 password_hash=None,
                 allow_passwordless=False,
                 unix_socket=None,
+                password_column=None,
                 **connection_args):
     '''
     Change password for a MySQL user
@@ -1278,8 +1373,11 @@ def user_chpass(user,
     if dbc is None:
         return False
 
+    if not password_column:
+        password_column = __password_column(**connection_args)
+
     cur = dbc.cursor()
-    qry = ('UPDATE mysql.user SET password='
+    qry = ('UPDATE mysql.user SET ' + password_column + '='
            + password_sql +
            ' WHERE User=%(user)s AND Host = %(host)s;')
     args['user'] = user
@@ -1287,7 +1385,10 @@ def user_chpass(user,
     if salt.utils.is_true(allow_passwordless) and \
             salt.utils.is_true(unix_socket):
         if host == 'localhost':
-            qry += ' IDENTIFIED VIA unix_socket'
+            qry = ('UPDATE mysql.user SET ' + password_column + '='
+                   + password_sql + ', plugin=%(unix_socket)s' +
+                   ' WHERE User=%(user)s AND Host = %(host)s;')
+            args['unix_socket'] = 'unix_socket'
         else:
             log.error('Auth via unix_socket can be set only for host=localhost')
     try:
@@ -1301,7 +1402,7 @@ def user_chpass(user,
     if result:
         _execute(cur, 'FLUSH PRIVILEGES;')
         log.info(
-            'Password for user {0!r}@{1!r} has been {2}'.format(
+            'Password for user \'{0}\'@\'{1}\' has been {2}'.format(
                 user, host,
                 'changed' if any((password, password_hash)) else 'cleared'
             )
@@ -1309,7 +1410,7 @@ def user_chpass(user,
         return True
 
     log.info(
-        'Password for user {0!r}@{1!r} was not {2}'.format(
+        'Password for user \'{0}\'@\'{1}\' was not {2}'.format(
             user, host,
             'changed' if any((password, password_hash)) else 'cleared'
         )
@@ -1339,7 +1440,7 @@ def user_remove(user,
     args['user'] = user
     args['host'] = host
     try:
-        result = _execute(cur, qry, args)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1347,10 +1448,10 @@ def user_remove(user,
         return False
 
     if not user_exists(user, host, **connection_args):
-        log.info('User {0!r}@{1!r} has been removed'.format(user, host))
+        log.info('User \'{0}\'@\'{1}\' has been removed'.format(user, host))
         return True
 
-    log.info('User {0!r}@{1!r} has NOT been removed'.format(user, host))
+    log.info('User \'{0}\'@\'{1}\' has NOT been removed'.format(user, host))
     return False
 
 
@@ -1390,11 +1491,11 @@ def db_check(name,
         tables = db_tables(name, **connection_args)
         for table in tables:
             log.info(
-                'Checking table {0!r} in db {1!r}..'.format(name, table)
+                'Checking table \'{0}\' in db \'{1}\'..'.format(name, table)
             )
             ret.append(__check_table(name, table, **connection_args))
     else:
-        log.info('Checking table {0!r} in db {1!r}..'.format(name, table))
+        log.info('Checking table \'{0}\' in db \'{1}\'..'.format(name, table))
         ret = __check_table(name, table, **connection_args)
     return ret
 
@@ -1417,11 +1518,11 @@ def db_repair(name,
         tables = db_tables(name, **connection_args)
         for table in tables:
             log.info(
-                'Repairing table {0!r} in db {1!r}..'.format(name, table)
+                'Repairing table \'{0}\' in db \'{1}\'..'.format(name, table)
             )
             ret.append(__repair_table(name, table, **connection_args))
     else:
-        log.info('Repairing table {0!r} in db {1!r}..'.format(name, table))
+        log.info('Repairing table \'{0}\' in db \'{1}\'..'.format(name, table))
         ret = __repair_table(name, table, **connection_args)
     return ret
 
@@ -1444,12 +1545,12 @@ def db_optimize(name,
         tables = db_tables(name, **connection_args)
         for table in tables:
             log.info(
-                'Optimizing table {0!r} in db {1!r}..'.format(name, table)
+                'Optimizing table \'{0}\' in db \'{1}\'..'.format(name, table)
             )
             ret.append(__optimize_table(name, table, **connection_args))
     else:
         log.info(
-            'Optimizing table {0!r} in db {1!r}..'.format(name, table)
+            'Optimizing table \'{0}\' in db \'{1}\'..'.format(name, table)
         )
         ret = __optimize_table(name, table, **connection_args)
     return ret
@@ -1466,7 +1567,7 @@ def __grant_normalize(grant):
     exploded_grants = grant.split(",")
     for chkgrant in exploded_grants:
         if chkgrant.strip().upper() not in __grants__:
-            raise Exception('Invalid grant : {0!r}'.format(
+            raise Exception('Invalid grant : \'{0}\''.format(
                 chkgrant
             ))
 
@@ -1478,13 +1579,12 @@ def __ssl_option_sanitize(ssl_option):
 
     # Like most other "salt dsl" YAML structures, ssl_option is a list of single-element dicts
     for opt in ssl_option:
-        key = next(opt.iterkeys())
-        value = opt[key]
+        key = next(six.iterkeys(opt))
 
         normal_key = key.strip().upper()
 
         if normal_key not in __ssl_options__:
-            raise Exception('Invalid SSL option : {0!r}'.format(
+            raise Exception('Invalid SSL option : \'{0}\''.format(
                 key
             ))
 
@@ -1554,7 +1654,7 @@ def user_grants(user,
         salt '*' mysql.user_grants 'frank' 'localhost'
     '''
     if not user_exists(user, host, **connection_args):
-        log.info('User {0!r}@{1!r} does not exist'.format(user, host))
+        log.info('User \'{0}\'@\'{1}\' does not exist'.format(user, host))
         return False
 
     dbc = _connect(**connection_args)
@@ -1625,10 +1725,10 @@ def grant_exists(grant,
             if grant_tokens['user'] == target_tokens['user'] and \
                     grant_tokens['database'] == target_tokens['database'] and \
                     grant_tokens['host'] == target_tokens['host'] and \
-                    set(grant_tokens['grant']) == set(target_tokens['grant']):
+                    set(grant_tokens['grant']) >= set(target_tokens['grant']):
                 return True
             else:
-                log.debug('grants mismatch {0!r}<>{1!r}'.format(
+                log.debug('grants mismatch \'{0}\'<>\'{1}\''.format(
                     grant_tokens,
                     target_tokens
                 ))
@@ -1686,14 +1786,14 @@ def grant_add(grant,
             grant, database, user, host, grant_option, escape,
             **connection_args):
         log.info(
-            'Grant {0!r} on {1!r} for user {2!r} has been added'.format(
+            'Grant \'{0}\' on \'{1}\' for user \'{2}\' has been added'.format(
                 grant, database, user
             )
         )
         return True
 
     log.info(
-        'Grant {0!r} on {1!r} for user {2!r} has NOT been added'.format(
+        'Grant \'{0}\' on \'{1}\' for user \'{2}\' has NOT been added'.format(
             grant, database, user
         )
     )
@@ -1767,13 +1867,13 @@ def grant_revoke(grant,
                         escape,
                         **connection_args):
         log.info(
-            'Grant {0!r} on {1!r} for user {2!r} has been '
+            'Grant \'{0}\' on \'{1}\' for user \'{2}\' has been '
             'revoked'.format(grant, database, user)
         )
         return True
 
     log.info(
-        'Grant {0!r} on {1!r} for user {2!r} has NOT been '
+        'Grant \'{0}\' on \'{1}\' for user \'{2}\' has NOT been '
         'revoked'.format(grant, database, user)
     )
     return False
@@ -1807,6 +1907,8 @@ def processlist(**connection_args):
     ret = []
 
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
     cur = dbc.cursor()
     _execute(cur, 'SHOW FULL PROCESSLIST')
     hdr = [c[0] for c in cur.description]
@@ -1870,7 +1972,8 @@ def get_master_status(**connection_args):
     '''
     Retrieves the master status from the minion.
 
-    Returns:
+    Returns::
+
         {'host.domain.com': {'Binlog_Do_DB': '',
                          'Binlog_Ignore_DB': '',
                          'File': 'mysql-bin.000021',
@@ -1886,6 +1989,8 @@ def get_master_status(**connection_args):
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
     conn = _connect(**connection_args)
+    if conn is None:
+        return []
     rtnv = __do_query_into_hash(conn, "SHOW MASTER STATUS")
     conn.close()
 
@@ -1954,6 +2059,8 @@ def get_slave_status(**connection_args):
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
     conn = _connect(**connection_args)
+    if conn is None:
+        return []
     rtnv = __do_query_into_hash(conn, "SHOW SLAVE STATUS")
     conn.close()
 
@@ -1982,6 +2089,8 @@ def showvariables(**connection_args):
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
     conn = _connect(**connection_args)
+    if conn is None:
+        return []
     rtnv = __do_query_into_hash(conn, "SHOW VARIABLES")
     conn.close()
     if len(rtnv) == 0:
@@ -2008,6 +2117,8 @@ def showglobal(**connection_args):
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
     conn = _connect(**connection_args)
+    if conn is None:
+        return []
     rtnv = __do_query_into_hash(conn, "SHOW GLOBAL VARIABLES")
     conn.close()
     if len(rtnv) == 0:

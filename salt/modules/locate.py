@@ -18,7 +18,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'The locate execution module cannot be loaded: only available on non-Windows systems.')
     return True
 
 
@@ -108,7 +108,7 @@ def locate(pattern, database='', limit=0, **kwargs):
         'wholename': 'w',
         }
     for option in kwargs:
-        if bool(kwargs[option]) is True:
+        if bool(kwargs[option]) is True and option in toggles:
             options += toggles[option]
     if options:
         options = '-{0}'.format(options)

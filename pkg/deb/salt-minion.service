@@ -1,0 +1,12 @@
+[Unit]
+Description=The Salt Minion daemon
+After=network.target
+
+[Service]
+Type=notify
+NotifyAccess=all
+LimitNOFILE=8192
+ExecStart=/usr/bin/salt-minion
+
+[Install]
+WantedBy=multi-user.target

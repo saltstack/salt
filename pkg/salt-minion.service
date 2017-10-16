@@ -1,12 +1,13 @@
 [Unit]
 Description=The Salt Minion
-After=syslog.target network.target
+Documentation=man:salt-minion(1) file:///usr/share/doc/salt/html/contents.html https://docs.saltstack.com/en/latest/contents.html
+After=network.target
 
 [Service]
-Type=simple
+Type=notify
+NotifyAccess=all
 LimitNOFILE=8192
 ExecStart=/usr/bin/salt-minion
-KillMode=process
 
 [Install]
 WantedBy=multi-user.target

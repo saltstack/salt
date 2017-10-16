@@ -51,11 +51,12 @@ import glob
 import os
 import re
 import itertools
+import fnmatch
 
 # Import salt libs
 import salt.utils
 import salt.modules.cmdmod
-from salt.modules.systemd import _sd_booted
+import salt.utils.systemd
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -70,9 +71,9 @@ def __virtual__():
     Only work on Ubuntu
     '''
     # Disable on these platforms, specific service modules exist:
-    if _sd_booted(__context__):
-        return False
-    elif __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS'):
+    if salt.utils.systemd.booted(__context__):
+        return (False, 'The upstart execution module failed to load: this system was booted with systemd.')
+    elif __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS', 'Mint'):
         return __virtualname__
     elif __grains__['os'] in ('Debian', 'Raspbian'):
         debian_initctl = '/sbin/initctl'
@@ -80,7 +81,8 @@ def __virtual__():
             initctl_version = salt.modules.cmdmod._run_quiet(debian_initctl + ' version')
             if 'upstart' in initctl_version:
                 return __virtualname__
-    return False
+    return (False, 'The upstart execution module failed to load: '
+        ' the system must be Ubuntu-based, or Debian-based with upstart support.')
 
 
 def _find_utmp():
@@ -90,7 +92,7 @@ def _find_utmp():
     '''
     result = {}
     # These are the likely locations for the file on Ubuntu
-    for utmp in ('/var/run/utmp', '/run/utmp'):
+    for utmp in '/var/run/utmp', '/run/utmp':
         try:
             result[os.stat(utmp).st_mtime] = utmp
         except Exception:
@@ -232,11 +234,24 @@ def _iter_service_names():
         name = os.path.basename(line)
         found.add(name)
         yield name
-    for line in glob.glob('/etc/init/*.conf'):
-        name = os.path.basename(line)[:-5]
-        if name in found:
-            continue
-        yield name
+
+    # This walk method supports nested services as per the init man page
+    # definition 'For example a configuration file /etc/init/rc-sysinit.conf
+    # is named rc-sysinit, while a configuration file /etc/init/net/apache.conf
+    # is named net/apache'
+    init_root = '/etc/init/'
+    for root, dirnames, filenames in os.walk(init_root):
+        relpath = os.path.relpath(root, init_root)
+        for filename in fnmatch.filter(filenames, '*.conf'):
+            if relpath == '.':
+                # service is defined in the root, no need to append prefix.
+                name = filename[:-5]
+            else:
+                # service is nested, append its relative path prefix.
+                name = os.path.join(relpath, filename[:-5])
+            if name in found:
+                continue
+            yield name
 
 
 def get_enabled():

@@ -4,8 +4,7 @@ Salt 2014.7.3 Release Notes
 
 :release: TBA
 
-Version 2014.7.3 is a bugfix release for :doc:`2014.7.0
-</topics/releases/2014.7.0>`.
+Version 2014.7.3 is a bugfix release for :ref:`2014.7.0<release-2014-7-0>`.
 
 Changes:
 
@@ -20,17 +19,17 @@ Changes:
 
 - Major performance improvements to Saltnado
 
-- Allow KVM module to operate under KVM itself or VMWare Fusion
+- Allow KVM module to operate under KVM itself or VMware Fusion
 
 - Various fixes to the Windows installation scripts
 
-- Fix issue where the syndic would not correctly propogate loads to the master
+- Fix issue where the syndic would not correctly propagate loads to the master
   job cache.
 
 - Improve error handling on invalid /etc/network/interfaces file in salt
   networking modules
 
-- Fix bug where a reponse status was not checked for in fileclient.get_url
+- Fix bug where a response status was not checked for in fileclient.get_url
 
 - Enable eauth when running salt in batch mode
 
@@ -92,7 +91,7 @@ Changes:
   works. Fixing it requires either passing through the file twice (the
   first time only to search for content and set a flag), or rewriting
   `file.replace` so it doesn't use `fileinput`
- 
+
 - VCS filreserver fixes/optimizations
 
 - Catch fileserver configuration errors on master start
@@ -137,4 +136,4 @@ Known issues:
 - In multimaster mode, a minion may become temporarily unresponsive
   if modules or pillars are refreshed at the same time that one
   or more masters are down. This can be worked around by setting
-  'auth_timeout' and 'auth_tries' down to shorter periods. 
+  'auth_timeout' and 'auth_tries' down to shorter periods.

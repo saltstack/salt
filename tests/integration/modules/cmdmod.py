@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import textwrap
@@ -83,7 +84,7 @@ class CMDModuleTest(integration.ModuleCase):
 
         from salt.modules import cmdmod
 
-        cmdmod.__grains__ = {'os': 'darwin'}
+        cmdmod.__grains__ = {'os': 'Darwin', 'os_family': 'Solaris'}
         if sys.platform.startswith(('freebsd', 'openbsd')):
             shell = '/bin/sh'
         else:
@@ -155,6 +156,14 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         self.assertEqual(self.run_function('cmd.retcode', ['exit 0'], python_shell=True), 0)
         self.assertEqual(self.run_function('cmd.retcode', ['exit 1'], python_shell=True), 1)
+
+    def test_blacklist_glob(self):
+        '''
+        cmd_blacklist_glob
+        '''
+        self.assertEqual(self.run_function('cmd.run',
+                ['bad_command --foo']).rstrip(),
+                'ERROR: This shell command is not permitted: "bad_command --foo"')
 
     def test_script(self):
         '''

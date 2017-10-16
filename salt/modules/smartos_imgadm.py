@@ -6,12 +6,20 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+import json
 
 # Import Salt libs
 import salt.utils
 import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
+
+# Function aliases
+__func_alias__ = {
+    'list_installed': 'list',
+    'update_installed': 'update',
+    'import_image': 'import'
+}
 
 # Define the module's virtual name
 __virtualname__ = 'imgadm'
@@ -36,13 +44,39 @@ def _exit_status(retcode):
     return ret
 
 
+def _parse_image_meta(image=None, detail=False):
+    if not image:
+        return {}
+
+    if detail:
+        return {
+            'name': image['manifest']['name'],
+            'version': image['manifest']['version'],
+            'os': image['manifest']['os'],
+            'description': image['manifest']['description'],
+            'published': image['manifest']['published_at'],
+            'source': image['source']
+        }
+    else:
+        return '{name}@{version} [{date}]'.format(
+                name=image['manifest']['name'],
+                version=image['manifest']['version'],
+                date=image['manifest']['published_at'],
+            )
+
+
 def __virtual__():
     '''
     Provides imgadm only on SmartOS
     '''
-    if __grains__['os'] == "SmartOS" and _check_imgadm():
+    if salt.utils.is_smartos_globalzone() and _check_imgadm():
         return __virtualname__
-    return False
+    return (
+        False,
+        '{0} module can only be loaded on SmartOS computed nodes'.format(
+            __virtualname__
+        )
+    )
 
 
 def version():
@@ -63,75 +97,98 @@ def version():
     return ret[-1]
 
 
-def update_installed():
+def update_installed(uuid=''):
     '''
-    Gather info on unknown images (locally installed)
+    Gather info on unknown image(s) (locally installed)
+
+    uuid : string
+        optional uuid of image
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' imgadm.update_installed()
+        salt '*' imgadm.update [uuid]
     '''
     imgadm = _check_imgadm()
     if imgadm:
-        cmd = '{0} update'.format(imgadm)
+        cmd = '{0} update {1}'.format(imgadm, uuid).rstrip()
         __salt__['cmd.run'](cmd)
     return {}
 
 
-def avail(search=None):
+def avail(search=None, verbose=False):
     '''
     Return a list of available images
+
+    search : string
+        search keyword
+    verbose : boolean (False)
+        toggle verbose output
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' imgadm.avail [percona]
+        salt '*' imgadm.avail verbose=True
     '''
     ret = {}
     imgadm = _check_imgadm()
-    cmd = '{0} avail'.format(imgadm)
+    cmd = '{0} avail -j'.format(imgadm)
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
+    result = {}
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    if search:
-        for line in res['stdout'].splitlines():
-            if search in line:
-                ret = line
-    else:
-        ret = res['stdout'].splitlines()
-    return ret
+
+    for image in json.loads(res['stdout']):
+        if image['manifest']['disabled'] or not image['manifest']['public']:
+            continue
+        if search and search not in image['manifest']['name']:
+            # we skip if we are searching but don't have a match
+            continue
+        result[image['manifest']['uuid']] = _parse_image_meta(image, verbose)
+
+    return result
 
 
-def list_installed():
+def list_installed(verbose=False):
     '''
     Return a list of installed images
+
+    verbose : boolean (False)
+        toggle verbose output
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' imgadm.list_installed
+        salt '*' imgadm.list [verbose=True]
     '''
     ret = {}
     imgadm = _check_imgadm()
-    cmd = '{0} list'.format(imgadm)
+    cmd = '{0} list -j'.format(imgadm)
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
+    result = {}
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret = res['stdout'].splitlines()
-    return ret
+
+    for image in json.loads(res['stdout']):
+        result[image['manifest']['uuid']] = _parse_image_meta(image, verbose)
+
+    return result
 
 
-def show(uuid=None):
+def show(uuid):
     '''
     Show manifest of a given image
+
+    uuid : string
+        uuid of image
 
     CLI Example:
 
@@ -140,9 +197,6 @@ def show(uuid=None):
         salt '*' imgadm.show e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    if not uuid:
-        ret['Error'] = 'UUID parameter is mandatory'
-        return ret
     imgadm = _check_imgadm()
     cmd = '{0} show {1}'.format(imgadm, uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -150,13 +204,16 @@ def show(uuid=None):
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret[uuid] = res['stdout'].splitlines()
+    ret = json.loads(res['stdout'])
     return ret
 
 
-def get(uuid=None):
+def get(uuid):
     '''
     Return info on an installed image
+
+    uuid : string
+        uuid of image
 
     CLI Example:
 
@@ -165,9 +222,6 @@ def get(uuid=None):
         salt '*' imgadm.get e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    if not uuid:
-        ret['Error'] = 'UUID parameter is mandatory'
-        return ret
     imgadm = _check_imgadm()
     cmd = '{0} get {1}'.format(imgadm, uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -175,24 +229,26 @@ def get(uuid=None):
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret[uuid] = res['stdout'].splitlines()
+    ret = json.loads(res['stdout'])
     return ret
 
 
-def import_image(uuid=None):
+def import_image(uuid, verbose=False):
     '''
     Import an image from the repository
+
+    uuid : string
+        uuid to import
+    verbose : boolean (False)
+        toggle verbose output
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' imgadm.import_image e42f8c84-bbea-11e2-b920-078fab2aab1f
+        salt '*' imgadm.import e42f8c84-bbea-11e2-b920-078fab2aab1f [verbose=True]
     '''
     ret = {}
-    if not uuid:
-        ret['Error'] = 'UUID parameter is mandatory'
-        return ret
     imgadm = _check_imgadm()
     cmd = '{0} import {1}'.format(imgadm, uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -200,13 +256,16 @@ def import_image(uuid=None):
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret[uuid] = res['stdout'].splitlines()
-    return ret
+
+    return {uuid: _parse_image_meta(get(uuid), verbose)}
 
 
-def delete(uuid=None):
+def delete(uuid):
     '''
     Remove an installed image
+
+    uuid : string
+        Specifies uuid to import
 
     CLI Example:
 
@@ -215,9 +274,6 @@ def delete(uuid=None):
         salt '*' imgadm.delete e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    if not uuid:
-        ret['Error'] = 'UUID parameter is mandatory'
-        return ret
     imgadm = _check_imgadm()
     cmd = '{0} delete {1}'.format(imgadm, uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -225,8 +281,48 @@ def delete(uuid=None):
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret[uuid] = res['stdout'].splitlines()
-    return ret
+    # output: Deleted image d5b3865c-0804-11e5-be21-dbc4ce844ddc
+    result = []
+    for image in res['stdout'].splitlines():
+        image = [var for var in image.split(" ") if var]
+        result.append(image[2])
+
+    return result
+
+
+def vacuum(verbose=False):
+    '''
+    Remove unused images
+
+    verbose : boolean (False)
+        toggle verbose output
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' imgadm.vacuum [verbose=True]
+    '''
+    ret = {}
+    imgadm = _check_imgadm()
+    cmd = '{0} vacuum -f'.format(imgadm)
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = _exit_status(retcode)
+        return ret
+    # output: Deleted image d5b3865c-0804-11e5-be21-dbc4ce844ddc (lx-centos-6@20150601)
+    result = {}
+    for image in res['stdout'].splitlines():
+        image = [var for var in image.split(" ") if var]
+        result[image[2]] = {
+            'name': image[3][1:image[3].index('@')],
+            'version': image[3][image[3].index('@')+1:-1]
+        }
+    if verbose:
+        return result
+    else:
+        return list(result.keys())
 
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

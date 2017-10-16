@@ -4,9 +4,11 @@ Salt-specific interface for calling Salt Cloud directly
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import copy
+import salt.utils
 
 # Import salt libs
 try:
@@ -16,6 +18,10 @@ except ImportError:
     HAS_SALTCLOUD = False
 
 import salt.utils
+from salt.exceptions import SaltCloudConfigError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +36,7 @@ def __virtual__():
     '''
     if HAS_SALTCLOUD:
         return True
-    return False
+    return (False, 'The cloud execution module cannot be loaded: only available on non-Windows systems.')
 
 
 def _get_client():
@@ -168,18 +174,17 @@ def get_instance(name, provider=None):
         {{ salt['cloud.get_instance']('myinstance')['mac_address'] }}
 
     '''
-    client = _get_client()
     data = action(fun='show_instance', names=[name], provider=provider)
-    info = salt.utils.cloud.simple_types_filter(data)
+    info = salt.utils.simple_types_filter(data)
     try:
         # get the first: [alias][driver][vm_name]
-        info = info.itervalues().next().itervalues().next().itervalues().next()
+        info = next(six.itervalues(next(six.itervalues(next(six.itervalues(info))))))
     except AttributeError:
         return None
     return info
 
 
-def profile_(profile, names, vm_overrides=None, **kwargs):
+def profile_(profile, names, vm_overrides=None, opts=None, **kwargs):
     '''
     Spin up an instance using Salt Cloud
 
@@ -190,6 +195,8 @@ def profile_(profile, names, vm_overrides=None, **kwargs):
         salt '*' cloud.profile my-gce-config myinstance
     '''
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     info = client.profile(profile, names, vm_overrides=vm_overrides, **kwargs)
     return info
 
@@ -228,11 +235,16 @@ def action(
         salt '*' cloud.action show_image provider=my-ec2-config image=ami-1624987f
     '''
     client = _get_client()
-    info = client.action(fun, cloudmap, names, provider, instance, kwargs)
+    try:
+        info = client.action(fun, cloudmap, names, provider, instance, kwargs)
+    except SaltCloudConfigError as err:
+        log.error(err)
+        return None
+
     return info
 
 
-def create(provider, names, **kwargs):
+def create(provider, names, opts=None, **kwargs):
     '''
     Create an instance using Salt Cloud
 
@@ -243,6 +255,8 @@ def create(provider, names, **kwargs):
         salt minionname cloud.create my-ec2-config myinstance image=ami-1624987f size='t1.micro' ssh_username=ec2-user securitygroup=default delvol_on_destroy=True
     '''
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     info = client.create(provider, names, **kwargs)
     return info
 

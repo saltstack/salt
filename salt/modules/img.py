@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
 Virtual machine image management tools
+
+.. deprecated:: 2016.3.0
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
-# Import 3rd-party libs
-#from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
+# Import salt libs
+import salt.utils
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -24,19 +26,24 @@ def mount_image(location):
 
         salt '*' img.mount_image /tmp/foo
     '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'This function has been deprecated; use "mount.mount" instead. Please '
+        'note that in order to use this functionality with "mount.mount" you '
+        'must set the "util" argument to either "guestfs" or "qemu_nbd".'
+    )
+
     if 'guestfs.mount' in __salt__:
-        return __salt__['guestfs.mount'](location)
+        util = 'guestfs'
     elif 'qemu_nbd.init' in __salt__:
-        mnt = __salt__['qemu_nbd.init'](location)
-        if not mnt:
-            return ''
-        first = next(mnt.iterkeys())
-        __context__['img.mnt_{0}'.format(first)] = mnt
-        return first
-    return ''
+        util = 'qemu_nbd'
+    else:
+        util = 'mount'
+    return __salt__['mount.mount'](location, util=util)
+
 
 # compatibility for api change
-mnt_image = mount_image
+mnt_image = salt.utils.alias_function(mount_image, 'mnt_image')
 
 
 def umount_image(mnt):
@@ -49,11 +56,13 @@ def umount_image(mnt):
 
         salt '*' img.umount_image /mnt/foo
     '''
-    if 'qemu_nbd.clear' in __salt__:
-        if 'img.mnt_{0}'.format(mnt) in __context__:
-            __salt__['qemu_nbd.clear'](__context__['img.mnt_{0}'.format(mnt)])
-            return
-    __salt__['mount.umount'](mnt)
+    salt.utils.warn_until(
+        'Nitrogen',
+        'This function has been deprecated; use "mount.umount" instead. Please '
+        'note that in order to access this functionality with "mount.umount" '
+        'you must pass in a "util" argument other than "mount".'
+    )
+    return __salt__['mount.umount'](mnt, util='qemu_nbd')
 
 
 #def get_image(name):
@@ -89,6 +98,13 @@ def bootstrap(location, size, fmt):
 
         salt '*' img.bootstrap /srv/salt-images/host.qcow 4096 qcow2
     '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'This functionality has been deprecated; use "genesis.bootstrap" '
+        'instead. Please note that the arguments between "img.boostrap" and '
+        'genesis.bootstrap have changed.'
+    )
+
     location = __salt__['img.make_image'](location, size, fmt)
     if not location:
         return ''

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Support for htpasswd module
+Support for htpasswd module. Requires the apache2-utils package for Debian-based distros.
 
 .. versionadded:: 2014.7.0
 
@@ -63,14 +63,14 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
     if grep_ret['retcode'] != 0 or force:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = ('User {0!r} is set to be added to htpasswd '
+            ret['comment'] = ('User \'{0}\' is set to be added to htpasswd '
                               'file').format(name)
             ret['changes'] = {name: True}
             return ret
 
-        useradd_ret = __salt__['webutil.useradd_all'](htpasswd_file, name,
-                                                      password, opts=options,
-                                                      runas=runas)
+        useradd_ret = __salt__['webutil.useradd'](htpasswd_file, name,
+                                                  password, opts=options,
+                                                  runas=runas)
         if useradd_ret['retcode'] == 0:
             ret['result'] = True
             ret['comment'] = useradd_ret['stderr']
@@ -81,7 +81,7 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
             ret['comment'] = useradd_ret['stderr']
             return ret
 
-    if __opts__['test']:
+    if __opts__['test'] and ret['changes']:
         ret['result'] = None
     else:
         ret['result'] = True

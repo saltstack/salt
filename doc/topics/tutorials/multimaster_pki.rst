@@ -1,3 +1,5 @@
+.. _tutorial-multi-master-pki:
+
 =======================================
 Multi-Master-PKI Tutorial With Failover
 =======================================
@@ -117,7 +119,7 @@ debug mode.
 
 .. code-block:: bash
 
-    $ salt-minion -l debug
+    salt-minion -l debug
 
 Upon connecting to the master, the following lines should appear on the output:
 
@@ -220,7 +222,7 @@ line in debug mode
 
 .. code-block:: bash
 
-    $ salt-minion -l debug
+    salt-minion -l debug
 
 The minion will connect to the first master from its master list
 
@@ -306,7 +308,7 @@ That signature can be created with
 
 .. code-block:: bash
 
-    $ salt-key --gen-signature
+    salt-key --gen-signature
 
 This will create a default signature file in the master pki-directory
 
@@ -321,7 +323,7 @@ the signature file in one call
 
 .. code-block:: bash
 
-    $ salt-key --gen-signature --auto-create
+    salt-key --gen-signature --auto-create
 
 
 Telling the master to use the pre-created signature is done with

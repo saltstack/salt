@@ -3,13 +3,7 @@ Getting Started With Rackspace
 ==============================
 
 Rackspace is a major public cloud platform which may be configured using either
-the `rackspace` or the `openstack` driver, depending on your needs.
-
-Please note that the `rackspace` driver is only intended for 1st gen instances,
-aka, "the old cloud" at Rackspace. It is required for 1st gen instances, but
-will *not* work with OpenStack-based instances. Unless you explicitly have a
-reason to use it, it is highly recommended that you use the `openstack` driver
-instead.
+the `openstack` driver.
 
 
 Dependencies
@@ -47,25 +41,17 @@ To use the `openstack` driver (recommended), set up the cloud configuration at
       tenant: 123456
       apikey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-      provider: openstack
+      driver: openstack
 
 
-To use the `rackspace` driver, set up the cloud configuration at
-  ``/etc/salt/cloud.providers`` or
-  ``/etc/salt/cloud.providers.d/rackspace.conf``:
+.. note::
+    .. versionchanged:: 2015.8.0
 
-.. code-block:: yaml
-
-    my-rackspace-config:
-      provider: rackspace
-      # The Rackspace login user
-      user: fred
-      # The Rackspace user's apikey
-      apikey: 901d3f579h23c8v73q9
-
-The settings that follow are for using Rackspace with the `openstack` driver,
-and will not work with the `rackspace` driver.
-
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Compute Region
 ==============
@@ -119,7 +105,7 @@ it can be verified with Salt:
     # salt myinstance test.ping
 
 RackConnect Environments
---------------------------------
+------------------------
 
 Rackspace offers a hybrid hosting configuration option called RackConnect that
 allows you to use a physical firewall appliance with your cloud servers. When
@@ -137,7 +123,7 @@ capability by adding this to your profiles:
         rackconnect: True
 
 Managed Cloud Environments
---------------------------------
+--------------------------
 
 Rackspace offers a managed service level of hosting. As part of the managed
 service level you have the ability to choose from base of lamp installations on
@@ -172,10 +158,10 @@ configuration please add:
       force_first_gen: True
 
 Private Subnets
---------------------------------
-By default salt-cloud will not add Rackspace private networks to new servers.   To enable 
-a private network to a server instantiated by salt cloud, add the following section 
-to the provider file (typically  ``/etc/salt/cloud.providers.d/rackspace.conf``)
+---------------
+By default salt-cloud will not add Rackspace private networks to new servers. To enable
+a private network to a server instantiated by salt cloud, add the following section
+to the provider file (typically ``/etc/salt/cloud.providers.d/rackspace.conf``)
 
 .. code-block:: yaml
 
@@ -190,13 +176,13 @@ to the provider file (typically  ``/etc/salt/cloud.providers.d/rackspace.conf``)
 
 To get the Rackspace private network ID, go to Networking, Networks and hover over the private network name.
 
-The order of the networks in the above code block does not map to the order of the 
+The order of the networks in the above code block does not map to the order of the
 ethernet devices on newly created servers.   Public IP will always be first ( eth0 )
 followed by servicenet ( eth1 ) and then private networks.
 
 Enabling the private network per above gives the option of using the private subnet for
-all master-minion communication, including the bootstrap install of salt-minion.  To 
-enable the minion to use the private subnet, update the master: line in the minion: 
-section of the providers file.  To configure the master to only listen on the private 
-subnet IP, update the interface: line in the /etc/salt/master file to be the private 
+all master-minion communication, including the bootstrap install of salt-minion.  To
+enable the minion to use the private subnet, update the master: line in the minion:
+section of the providers file.  To configure the master to only listen on the private
+subnet IP, update the interface: line in the /etc/salt/master file to be the private
 subnet IP of the salt master.

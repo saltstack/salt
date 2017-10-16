@@ -3,9 +3,10 @@
 from __future__ import absolute_import, print_function
 import hashlib
 import logging
+import os
 import distutils.version  # pylint: disable=no-name-in-module
 
-__virtualname__ = 'rest_tornado'
+__virtualname__ = os.path.abspath(__file__).rsplit('/')[-2] or 'rest_tornado'
 
 logger = logging.getLogger(__virtualname__)
 
@@ -21,7 +22,7 @@ try:
         logger.error('rest_tornado requires at least tornado {0}'.format(min_tornado_version))
 except (ImportError, TypeError) as err:
     has_tornado = False
-    logger.info('ImportError! {0}'.format(str(err)))
+    logger.error('ImportError! {0}'.format(str(err)))
 
 import salt.auth
 
@@ -39,7 +40,11 @@ def start():
     '''
     Start the saltnado!
     '''
-    from . import saltnado
+    try:
+        from . import saltnado
+    except ImportError as err:
+        logger.error('ImportError! {0}'.format(str(err)))
+        return None
 
     mod_opts = __opts__.get(__virtualname__, {})
 

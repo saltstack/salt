@@ -8,6 +8,8 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
+import errno
 import os
 import pwd
 import glob
@@ -27,6 +29,10 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
+from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
@@ -73,9 +79,12 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     @requires_system_grains
     def test_pip_installed_weird_install(self, grains=None):
-        # First, check to see if this is running on CentOS 5. If so, skip this test.
+        # First, check to see if this is running on CentOS 5 or MacOS.
+        # If so, skip this test.
         if grains['os'] in ('CentOS',) and grains['osrelease_info'][0] in (5,):
             self.skipTest('This test does not run reliably on CentOS 5')
+        if grains['os'] in ('MacOS',):
+            self.skipTest('This test does not run reliably on MacOS')
 
         ographite = '/opt/graphite'
         if os.path.isdir(ographite):
@@ -86,7 +95,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             os.makedirs(ographite)
         except OSError as err:
-            if err.errno == 13:
+            if err.errno == errno.EACCES:
                 # Permission denied
                 self.skipTest(
                     'You don\'t have the required permissions to run this test'
@@ -95,10 +104,12 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(ographite):
                 shutil.rmtree(ographite)
 
-        venv_dir = os.path.join(
-            integration.SYS_TMP_DIR, 'pip-installed-weird-install'
-        )
+        venv_dir = os.path.join(integration.TMP, 'pip-installed-weird-install')
         try:
+            # We may be able to remove this, I had to add it because the custom
+            # modules from the test suite weren't available in the jinja
+            # context when running the call to state.sls that comes after.
+            self.run_function('saltutil.sync_modules')
             # Since we don't have the virtualenv created, pip.installed will
             # thrown and error.
             ret = self.run_function(
@@ -108,18 +119,19 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             # We cannot use assertInSaltComment here because we need to skip
             # some of the state return parts
-            for key in ret.keys():
+            for key in six.iterkeys(ret):
                 self.assertTrue(ret[key]['result'])
-                if ret[key]['comment'] == 'Created new virtualenv':
+                if ret[key]['name'] != 'carbon':
                     continue
                 self.assertEqual(
                     ret[key]['comment'],
                     'There was no error installing package \'carbon\' '
                     'although it does not show when calling \'pip.freeze\'.'
                 )
+                break
+            else:
+                raise Exception('Expected state did not run')
         finally:
-            if os.path.isdir(venv_dir):
-                shutil.rmtree(venv_dir)
             if os.path.isdir('/opt/graphite'):
                 shutil.rmtree('/opt/graphite')
 
@@ -169,6 +181,9 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 shutil.rmtree(venv_dir)
 
     def test_issue_5940_multiple_pip_mirrors(self):
+        '''
+        Test multiple pip mirrors.  This test only works with pip < 7.0.0
+        '''
         ret = self.run_function(
             'state.sls', mods='issue-5940-multiple-pip-mirrors'
         )
@@ -182,6 +197,10 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertTrue(
                 os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
             )
+        except (AssertionError, CommandExecutionError):
+            pip_version = self.run_function('pip.version', [venv_dir])
+            if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='7.0.0'):
+                self.skipTest('the --mirrors arg has been deprecated and removed in pip==7.0.0')
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
@@ -349,7 +368,6 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # previously installed
             ret = self.run_function(
                 'pip.install', ['pip==6.0'], upgrade=True,
-                ignore_installed=True,
                 bin_env=venv_dir
             )
             try:
@@ -363,7 +381,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 pprint.pprint(ret)
                 raise
 
-            # Le't make sure we have pip 6.0 installed
+            # Let's make sure we have pip 6.0 installed
             self.assertEqual(
                 self.run_function('pip.list', ['pip'], bin_env=venv_dir),
                 {'pip': '6.0'}

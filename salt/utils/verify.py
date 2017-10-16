@@ -23,7 +23,9 @@ else:
 
 # Import salt libs
 from salt.log import is_console_configured
-from salt.exceptions import SaltClientError
+from salt.log.setup import LOG_LEVELS
+from salt.exceptions import SaltClientError, SaltSystemExit, \
+    CommandExecutionError
 import salt.defaults.exitcodes
 import salt.utils
 
@@ -48,7 +50,7 @@ def zmq_version():
     if not match:
         msg = "Using untested zmq python bindings version: '{0}'".format(ver)
         if is_console_configured():
-            log.warn(msg)
+            log.warning(msg)
         else:
             sys.stderr.write("WARNING {0}\n".format(msg))
         return True
@@ -69,7 +71,7 @@ def zmq_version():
         if "dev" in ver and not point:
             msg = 'Using dev zmq module, please report unexpected results'
             if is_console_configured():
-                log.warn(msg)
+                log.warning(msg)
             else:
                 sys.stderr.write("WARNING: {0}\n".format(msg))
             return True
@@ -116,32 +118,27 @@ def verify_socket(interface, pub_port, ret_port):
     '''
 
     addr_family = lookup_family(interface)
-    pubsock = socket.socket(addr_family, socket.SOCK_STREAM)
-    retsock = socket.socket(addr_family, socket.SOCK_STREAM)
-    try:
-        pubsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        pubsock.bind((interface, int(pub_port)))
-        pubsock.close()
-        retsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        retsock.bind((interface, int(ret_port)))
-        retsock.close()
-        result = True
-    except Exception as exc:
-        if exc.args:
-            msg = ('Unable to bind socket, error: {0}'.format(str(exc)))
-        else:
-            msg = ('Unable to bind socket, this might not be a problem.'
-                   ' Is there another salt-master running?')
-        if is_console_configured():
-            log.warn(msg)
-        else:
-            sys.stderr.write('WARNING: {0}\n'.format(msg))
-        result = False
-    finally:
-        pubsock.close()
-        retsock.close()
+    for port in pub_port, ret_port:
+        sock = socket.socket(addr_family, socket.SOCK_STREAM)
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind((interface, int(port)))
+        except Exception as exc:
+            msg = 'Unable to bind socket {0}:{1}'.format(interface, port)
+            if exc.args:
+                msg = '{0}, error: {1}'.format(msg, str(exc))
+            else:
+                msg = '{0}, this might not be a problem.'.format(msg)
+            msg += '; Is there another salt-master running?'
+            if is_console_configured():
+                log.warning(msg)
+            else:
+                sys.stderr.write('WARNING: {0}\n'.format(msg))
+            return False
+        finally:
+            sock.close()
 
-    return result
+    return True
 
 
 def verify_files(files, user):
@@ -154,12 +151,12 @@ def verify_files(files, user):
     try:
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
-
     except KeyError:
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
         sys.exit(salt.defaults.exitcodes.EX_NOUSER)
+
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
@@ -171,10 +168,19 @@ def verify_files(files, user):
             if not os.path.isfile(fn_):
                 with salt.utils.fopen(fn_, 'w+') as fp_:
                     fp_.write('')
+
+        except IOError as err:
+            if os.path.isfile(dirname):
+                msg = 'Failed to create path {0}, is {1} a file?'.format(fn_, dirname)
+                raise SaltSystemExit(msg=msg)
+            if err.errno != errno.EACCES:
+                raise
+            msg = 'No permissions to access "{0}", are you running as the correct user?'.format(fn_)
+            raise SaltSystemExit(msg=msg)
+
         except OSError as err:
-            msg = 'Failed to create path "{0}" - {1}\n'
-            sys.stderr.write(msg.format(fn_, err))
-            sys.exit(err.errno)
+            msg = 'Failed to create path "{0}" - {1}'.format(fn_, err)
+            raise SaltSystemExit(msg=msg)
 
         stats = os.stat(fn_)
         if uid != stats.st_uid:
@@ -185,13 +191,15 @@ def verify_files(files, user):
     return True
 
 
-def verify_env(dirs, user, permissive=False, pki_dir=''):
+def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
     if salt.utils.is_windows():
-        return True
+        from salt.utils.win_functions import get_current_user
+        return win_verify_env(
+            dirs, get_current_user(), permissive, pki_dir, skip_extra)
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
@@ -267,7 +275,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
         #
         # If the permissions aren't correct, default to the more secure 700.
         # If acls are enabled, the pki_dir needs to remain readable, this
-        # is still secure because the private keys are still only readbale
+        # is still secure because the private keys are still only readable
         # by the user running the master
         if dir_ == pki_dir:
             smode = stat.S_IMODE(mode.st_mode)
@@ -281,8 +289,10 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                         log.critical(msg)
                     else:
                         sys.stderr.write("CRITICAL: {0}\n".format(msg))
-    # Run the extra verification checks
-    zmq_version()
+
+    if skip_extra is False:
+        # Run the extra verification checks
+        zmq_version()
 
 
 def check_user(user):
@@ -476,8 +486,10 @@ def valid_id(opts, id_):
     Returns if the passed id is valid
     '''
     try:
+        if any(x in id_ for x in ('/', '\\', '\0')):
+            return False
         return bool(clean_path(opts['pki_dir'], id_))
-    except (AttributeError, KeyError) as e:
+    except (AttributeError, KeyError, TypeError):
         return False
 
 
@@ -506,5 +518,76 @@ def verify_log(opts):
     '''
     If an insecre logging configuration is found, show a warning
     '''
-    if opts.get('log_level') in ('garbage', 'trace', 'debug'):
-        log.warn('Insecure logging configuration detected! Sensitive data may be logged.')
+    level = LOG_LEVELS.get(opts.get('log_level').lower(), logging.NOTSET)
+
+    if level < logging.INFO:
+        log.warning('Insecure logging configuration detected! Sensitive data may be logged.')
+
+
+def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
+    '''
+    Verify that the named directories are in place and that the environment
+    can shake the salt
+    '''
+    import salt.utils.win_functions
+
+    # Get the root path directory where salt is installed
+    path = dirs[0]
+    while os.path.basename(path) not in ['salt', 'salt-tests-tmpdir']:
+        path, base = os.path.split(path)
+
+    # Create the root path directory if missing
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+    # Set permissions to the root path directory
+    current_user = salt.utils.win_functions.get_current_user()
+    if salt.utils.win_functions.is_admin(current_user):
+        try:
+            salt.utils.win_functions.set_path_owner(path)
+        except CommandExecutionError:
+            msg = 'Unable to securely set the owner of "{0}".'
+            msg = msg.format(path)
+            if is_console_configured():
+                log.critical(msg)
+            else:
+                sys.stderr.write("CRITICAL: {0}\n".format(msg))
+
+        if not permissive:
+            try:
+                salt.utils.win_functions.set_path_permissions(path)
+            except CommandExecutionError:
+                msg = 'Unable to securely set the permissions of "{0}".'
+                msg = msg.format(path)
+                if is_console_configured():
+                    log.critical(msg)
+                else:
+                    sys.stderr.write("CRITICAL: {0}\n".format(msg))
+
+    # Create the directories
+    for dir_ in dirs:
+        if not dir_:
+            continue
+        if not os.path.isdir(dir_):
+            try:
+                os.makedirs(dir_)
+            except OSError as err:
+                msg = 'Failed to create directory path "{0}" - {1}\n'
+                sys.stderr.write(msg.format(dir_, err))
+                sys.exit(err.errno)
+
+        if dir_ == pki_dir:
+            try:
+                salt.utils.win_functions.set_path_owner(dir_)
+                salt.utils.win_functions.set_path_permissions(dir_)
+            except CommandExecutionError:
+                msg = 'Unable to securely set the permissions of "{0}".'
+                msg = msg.format(dir_)
+                if is_console_configured():
+                    log.critical(msg)
+                else:
+                    sys.stderr.write("CRITICAL: {0}\n".format(msg))
+
+    if skip_extra is False:
+        # Run the extra verification checks
+        zmq_version()

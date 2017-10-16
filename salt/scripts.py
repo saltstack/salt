@@ -3,22 +3,21 @@
 This module contains the function calls to execute command line scripts
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import sys
-import traceback
-import logging
-import threading
 import time
+import signal
+import logging
+import functools
+import threading
+import traceback
 from random import randint
 
 # Import salt libs
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
-
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +40,47 @@ def _handle_interrupt(exc, original_exc, hardfail=False, trace=''):
         raise exc
 
 
+def _handle_signals(client, signum, sigframe):
+    trace = traceback.format_exc()
+    try:
+        hardcrash = client.options.hard_crash
+    except (AttributeError, KeyError):
+        hardcrash = False
+
+    if signum == signal.SIGINT:
+        exit_msg = '\nExiting gracefully on Ctrl-c'
+        try:
+            jid = client.local_client.pub_data['jid']
+            exit_msg += (
+                '\n'
+                'This job\'s jid is: {0}\n'
+                'The minions may not have all finished running and any remaining '
+                'minions will return upon completion. To look up the return data '
+                'for this job later, run the following command:\n\n'
+                'salt-run jobs.lookup_jid {0}'.format(jid)
+            )
+        except (AttributeError, KeyError):
+            pass
+    else:
+        exit_msg = None
+
+    _handle_interrupt(
+        SystemExit(exit_msg),
+        Exception('\nExiting with hard crash on Ctrl-c'),
+        hardcrash, trace=trace)
+
+
+def _install_signal_handlers(client):
+    # Install the SIGINT/SIGTERM handlers if not done so far
+    if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+        # No custom signal handling was added, install our own
+        signal.signal(signal.SIGINT, functools.partial(_handle_signals, client))
+
+    if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+        # No custom signal handling was added, install our own
+        signal.signal(signal.SIGINT, functools.partial(_handle_signals, client))
+
+
 def salt_master():
     '''
     Start the salt master.
@@ -50,19 +90,22 @@ def salt_master():
     master.start()
 
 
-def minion_process(queue):
+def minion_process():
     '''
     Start a minion process
     '''
+    import salt.utils
     import salt.cli.daemons
     # salt_minion spawns this function in a new process
+
+    salt.utils.appendproctitle('KeepAlive')
 
     def suicide_when_without_parent(parent_pid):
         '''
         Have the minion suicide if the parent process is gone
 
-        NOTE: there is a small race issue where the parent PID could be replace
-        with another process with the same PID!
+        NOTE: small race issue where the parent PID could be replace
+        with another process with same PID!
         '''
         while True:
             time.sleep(5)
@@ -74,40 +117,38 @@ def minion_process(queue):
                 # forcibly exit, regular sys.exit raises an exception-- which
                 # isn't sufficient in a thread
                 log.error('Minion process encountered exception: {0}'.format(exc))
-                os._exit(999)
+                os._exit(salt.defaults.exitcodes.EX_GENERIC)
+
     if not salt.utils.is_windows():
         thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
         thread.start()
 
-    restart = False
-    minion = None
-    try:
-        minion = salt.cli.daemons.Minion()
-        minion.start()
-    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
-        log.error(exc)
-        restart = True
-    except SystemExit as exc:
-        restart = False
+    minion = salt.cli.daemons.Minion()
 
-    if restart is True:
-        log.warn('** Restarting minion **')
+    try:
+        minion.start()
+    except (SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+        log.warning('Fatal functionality error caught by minion handler:\n', exc_info=True)
+        log.warning('** Restarting minion **')
         delay = 60
-        if minion is not None:
-            if hasattr(minion, 'config'):
-                delay = minion.config.get('random_reauth_delay', 60)
-        random_delay = randint(1, delay)
-        log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
-        # preform delay after minion resources have been cleaned
-        queue.put(random_delay)
-    else:
-        queue.put(0)
+        if minion is not None and hasattr(minion, 'config'):
+            delay = minion.config.get('random_reauth_delay', 60)
+        delay = randint(1, delay)
+        log.info('waiting random_reauth_delay {0}s'.format(delay))
+        time.sleep(delay)
+        sys.exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
 
 
 def salt_minion():
     '''
-    Start the salt minion.
+    Start the salt minion in a subprocess.
+    Auto restart minion on error.
     '''
+    import signal
+
+    import salt.utils.process
+    salt.utils.process.notify_systemd()
+
     import salt.cli.daemons
     import multiprocessing
     if '' in sys.path:
@@ -124,16 +165,142 @@ def salt_minion():
         minion.start()
         return
 
+    def escalate_signal_to_process(pid, signum, sigframe):  # pylint: disable=unused-argument
+        '''
+        Escalate the signal received to the multiprocessing process that
+        is actually running the minion
+        '''
+        # escalate signal
+        os.kill(pid, signum)
+
+    # keep one minion subprocess running
+    prev_sigint_handler = signal.getsignal(signal.SIGINT)
+    prev_sigterm_handler = signal.getsignal(signal.SIGTERM)
+    while True:
+        try:
+            process = multiprocessing.Process(target=minion_process)
+            process.start()
+            signal.signal(signal.SIGTERM,
+                          functools.partial(escalate_signal_to_process,
+                                            process.pid))
+            signal.signal(signal.SIGINT,
+                          functools.partial(escalate_signal_to_process,
+                                            process.pid))
+        except Exception:  # pylint: disable=broad-except
+            # if multiprocessing does not work
+            minion = salt.cli.daemons.Minion()
+            minion.start()
+            break
+
+        process.join()
+
+        # Process exited or was terminated. Since we're going to try to restart
+        # it, we MUST, reset signal handling to the previous handlers
+        signal.signal(signal.SIGINT, prev_sigint_handler)
+        signal.signal(signal.SIGTERM, prev_sigterm_handler)
+
+        if not process.exitcode == salt.defaults.exitcodes.SALT_KEEPALIVE:
+            sys.exit(process.exitcode)
+        # ontop of the random_reauth_delay already preformed
+        # delay extra to reduce flooding and free resources
+        # NOTE: values are static but should be fine.
+        time.sleep(2 + randint(1, 10))
+        # need to reset logging because new minion objects
+        # cause extra log handlers to accumulate
+        rlogger = logging.getLogger()
+        for handler in rlogger.handlers:
+            rlogger.removeHandler(handler)
+        logging.basicConfig()
+
+
+def proxy_minion_process(queue):
+    '''
+    Start a proxy minion process
+    '''
+    import salt.cli.daemons
+    # salt_minion spawns this function in a new process
+
+    def suicide_when_without_parent(parent_pid):
+        '''
+        Have the minion suicide if the parent process is gone
+
+        NOTE: there is a small race issue where the parent PID could be replace
+        with another process with the same PID!
+        '''
+        while True:
+            time.sleep(5)
+            try:
+                # check pid alive (Unix only trick!)
+                os.kill(parent_pid, 0)
+            except OSError:
+                # forcibly exit, regular sys.exit raises an exception-- which
+                # isn't sufficient in a thread
+                os._exit(999)
+
+    if not salt.utils.is_windows():
+        thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
+        thread.start()
+
+    restart = False
+    proxyminion = None
+    status = salt.defaults.exitcodes.EX_OK
+    try:
+        proxyminion = salt.cli.daemons.ProxyMinion()
+        proxyminion.start()
+    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+        log.error('Proxy Minion failed to start: ', exc_info=True)
+        restart = True
+        # status is superfluous since the process will be restarted
+        status = salt.defaults.exitcodes.SALT_KEEPALIVE
+    except SystemExit as exc:
+        restart = False
+        status = exc.code
+
+    if restart is True:
+        log.warning('** Restarting proxy minion **')
+        delay = 60
+        if proxyminion is not None:
+            if hasattr(proxyminion, 'config'):
+                delay = proxyminion.config.get('random_reauth_delay', 60)
+        random_delay = randint(1, delay)
+        log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
+        # preform delay after minion resources have been cleaned
+        queue.put(random_delay)
+    else:
+        queue.put(0)
+    sys.exit(status)
+
+
+def salt_proxy():
+    '''
+    Start a proxy minion.
+    '''
+    import salt.cli.daemons
+    import multiprocessing
+    if '' in sys.path:
+        sys.path.remove('')
+
+    if salt.utils.is_windows():
+        proxyminion = salt.cli.daemons.ProxyMinion()
+        proxyminion.start()
+        return
+
+    if '--disable-keepalive' in sys.argv:
+        sys.argv.remove('--disable-keepalive')
+        proxyminion = salt.cli.daemons.ProxyMinion()
+        proxyminion.start()
+        return
+
     # keep one minion subprocess running
     while True:
         try:
             queue = multiprocessing.Queue()
         except Exception:
             # This breaks in containers
-            minion = salt.cli.daemons.Minion()
-            minion.start()
+            proxyminion = salt.cli.daemons.ProxyMinion()
+            proxyminion.start()
             return
-        process = multiprocessing.Process(target=minion_process, args=(queue,))
+        process = multiprocessing.Process(target=proxy_minion_process, args=(queue,))
         process.start()
         try:
             process.join()
@@ -146,7 +313,7 @@ def salt_minion():
                 restart_delay = 60
             if restart_delay == 0:
                 # Minion process ended naturally, Ctrl+C, --version, etc.
-                break
+                sys.exit(process.exitcode)
             # delay restart to reduce flooding and allow network resources to close
             time.sleep(restart_delay)
         except KeyboardInterrupt:
@@ -163,6 +330,9 @@ def salt_syndic():
     '''
     Start the salt syndic.
     '''
+    import salt.utils.process
+    salt.utils.process.notify_systemd()
+
     import salt.cli.daemons
     pid = os.getpid()
     try:
@@ -177,20 +347,12 @@ def salt_key():
     Manage the authentication keys with salt-key.
     '''
     import salt.cli.key
-    client = None
     try:
         client = salt.cli.key.SaltKey()
+        _install_signal_handlers(client)
         client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
+    except Exception as err:
+        sys.stderr.write("Error: {0}\n".format(err))
 
 
 def salt_cp():
@@ -199,20 +361,9 @@ def salt_cp():
     master.
     '''
     import salt.cli.cp
-    client = None
-    try:
-        client = salt.cli.cp.SaltCPCli()
-        client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
+    client = salt.cli.cp.SaltCPCli()
+    _install_signal_handlers(client)
+    client.run()
 
 
 def salt_call():
@@ -223,20 +374,9 @@ def salt_call():
     import salt.cli.call
     if '' in sys.path:
         sys.path.remove('')
-    client = None
-    try:
-        client = salt.cli.call.SaltCall()
-        client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
+    client = salt.cli.call.SaltCall()
+    _install_signal_handlers(client)
+    client.run()
 
 
 def salt_run():
@@ -246,20 +386,9 @@ def salt_run():
     import salt.cli.run
     if '' in sys.path:
         sys.path.remove('')
-    client = None
-    try:
-        client = salt.cli.run.SaltRun()
-        client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
+    client = salt.cli.run.SaltRun()
+    _install_signal_handlers(client)
+    client.run()
 
 
 def salt_ssh():
@@ -269,20 +398,10 @@ def salt_ssh():
     import salt.cli.ssh
     if '' in sys.path:
         sys.path.remove('')
-    client = None
     try:
         client = salt.cli.ssh.SaltSSH()
+        _install_signal_handlers(client)
         client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
     except SaltClientError as err:
         trace = traceback.format_exc()
         try:
@@ -300,9 +419,12 @@ def salt_cloud():
     The main function for salt-cloud
     '''
     try:
+        # Late-imports for CLI performance
+        import salt.cloud
         import salt.cloud.cli
         has_saltcloud = True
-    except ImportError:
+    except ImportError as e:
+        log.error("Error importing salt cloud {0}".format(e))
         # No salt cloud on Windows
         has_saltcloud = False
     if '' in sys.path:
@@ -312,29 +434,21 @@ def salt_cloud():
         print('salt-cloud is not available in this system')
         sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
 
-    client = None
-    try:
-        client = salt.cloud.cli.SaltCloud()
-        client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
+    client = salt.cloud.cli.SaltCloud()
+    _install_signal_handlers(client)
+    client.run()
 
 
 def salt_api():
     '''
     The main function for salt-api
     '''
+    import salt.utils.process
+    salt.utils.process.notify_systemd()
+
     import salt.cli.api
     sapi = salt.cli.api.SaltAPI()  # pylint: disable=E1120
-    sapi.run()
+    sapi.start()
 
 
 def salt_main():
@@ -345,17 +459,31 @@ def salt_main():
     import salt.cli.salt
     if '' in sys.path:
         sys.path.remove('')
-    client = None
-    try:
-        client = salt.cli.salt.SaltCMD()
-        client.run()
-    except KeyboardInterrupt as err:
-        trace = traceback.format_exc()
-        try:
-            hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(
-            SystemExit('\nExiting gracefully on Ctrl-c'),
-            err,
-            hardcrash, trace=trace)
+    client = salt.cli.salt.SaltCMD()
+    _install_signal_handlers(client)
+    client.run()
+
+
+def salt_spm():
+    '''
+    The main function for spm, the Salt Package Manager
+
+    .. versionadded:: 2015.8.0
+    '''
+    import salt.cli.spm
+    spm = salt.cli.spm.SPM()  # pylint: disable=E1120
+    spm.run()
+
+
+def salt_extend(extension, name, description, salt_dir, merge):
+    '''
+    Quickstart for developing on the saltstack installation
+
+    .. versionadded:: 2016.11.0
+    '''
+    import salt.utils.extend
+    salt.utils.extend.run(extension=extension,
+                          name=name,
+                          description=description,
+                          salt_dir=salt_dir,
+                          merge=merge)

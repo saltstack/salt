@@ -14,10 +14,12 @@ from __future__ import absolute_import
 import sys
 import time
 import binascii
-import datetime
+from datetime import datetime
 import hashlib
 import hmac
 import logging
+import salt.config
+import re
 
 # Import Salt libs
 import salt.utils.xmlutil as xml
@@ -45,6 +47,7 @@ AWS_RETRY_CODES = [
     'InsufficientAddressCapacity',
     'InsufficientReservedInstanceCapacity',
 ]
+AWS_METADATA_TIMEOUT = 3.05
 
 IROLE_CODE = 'use-instance-role-credentials'
 __AccessKeyId__ = ''
@@ -52,6 +55,7 @@ __SecretAccessKey__ = ''
 __Token__ = ''
 __Expiration__ = ''
 __Location__ = ''
+__AssumeCache__ = {}
 
 
 def creds(provider):
@@ -69,27 +73,35 @@ def creds(provider):
     if provider['id'] == IROLE_CODE or provider['key'] == IROLE_CODE:
         # Check to see if we have cache credentials that are still good
         if __Expiration__ != '':
-            timenow = datetime.datetime.utcnow()
+            timenow = datetime.utcnow()
             timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
             if timestamp < __Expiration__:
                 # Current timestamp less than expiration fo cached credentials
                 return __AccessKeyId__, __SecretAccessKey__, __Token__
         # We don't have any cached credentials, or they are expired, get them
-        # TODO: Wrap this with a try and handle exceptions gracefully
 
-        # Connections to instance meta-data must never be proxied
-        result = requests.get(
-            "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
-            proxies={'http': ''},
-        )
-        result.raise_for_status()
-        role = result.text
-        # TODO: Wrap this with a try and handle exceptions gracefully
-        result = requests.get(
-            "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role),
-            proxies={'http': ''},
-        )
-        result.raise_for_status()
+        # Connections to instance meta-data must fail fast and never be proxied
+        try:
+            result = requests.get(
+                "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+                proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
+            )
+            result.raise_for_status()
+            role = result.text.encode(
+                result.encoding if result.encoding else 'utf-8'
+            )
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
+            return provider['id'], provider['key'], ''
+
+        try:
+            result = requests.get(
+                "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role),
+                proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
+            )
+            result.raise_for_status()
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
+            return provider['id'], provider['key'], ''
+
         data = result.json()
         __AccessKeyId__ = data['AccessKeyId']
         __SecretAccessKey__ = data['SecretAccessKey']
@@ -107,7 +119,7 @@ def sig2(method, endpoint, params, provider, aws_api_version):
 
     http://docs.aws.amazon.com/general/latest/gr/signature-version-2.html
     '''
-    timenow = datetime.datetime.utcnow()
+    timenow = datetime.utcnow()
     timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # Retrieve access credentials from meta-data, or use provided
@@ -140,9 +152,61 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     return params_with_headers
 
 
+def assumed_creds(prov_dict, role_arn, location=None):
+    valid_session_name_re = re.compile("[^a-z0-9A-Z+=,.@-]")
+
+    # current time in epoch seconds
+    now = time.mktime(datetime.utcnow().timetuple())
+
+    for key, creds in __AssumeCache__.items():
+        if (creds["Expiration"] - now) <= 120:
+            __AssumeCache__.delete(key)
+
+    if role_arn in __AssumeCache__:
+        c = __AssumeCache__[role_arn]
+        return c["AccessKeyId"], c["SecretAccessKey"], c["SessionToken"]
+
+    version = "2011-06-15"
+    session_name = valid_session_name_re.sub('', salt.config.get_id({"root_dir": None})[0])[0:63]
+
+    headers, requesturl = sig4(
+        'GET',
+        'sts.amazonaws.com',
+        params={
+            "Version": version,
+            "Action": "AssumeRole",
+            "RoleSessionName": session_name,
+            "RoleArn": role_arn,
+            "Policy": '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1", "Effect":"Allow","Action":"*","Resource":"*"}]}',
+            "DurationSeconds": "3600"
+        },
+        aws_api_version=version,
+        data='',
+        uri='/',
+        prov_dict=prov_dict,
+        product='sts',
+        location=location,
+        requesturl="https://sts.amazonaws.com/"
+    )
+    headers["Accept"] = "application/json"
+    result = requests.request('GET', requesturl, headers=headers,
+                              data='',
+                              verify=True)
+
+    if result.status_code >= 400:
+        LOG.info('AssumeRole response: {0}'.format(result.content))
+    result.raise_for_status()
+    resp = result.json()
+
+    data = resp["AssumeRoleResponse"]["AssumeRoleResult"]["Credentials"]
+    __AssumeCache__[role_arn] = data
+    return data["AccessKeyId"], data["SecretAccessKey"], data["SessionToken"]
+
+
 def sig4(method, endpoint, params, prov_dict,
          aws_api_version=DEFAULT_AWS_API_VERSION, location=None,
-         product='ec2', uri='/', requesturl=None, data=''):
+         product='ec2', uri='/', requesturl=None, data='', headers=None,
+         role_arn=None, payload_hash=None):
     '''
     Sign a query against AWS services using Signature Version 4 Signing
     Process. This is documented at:
@@ -151,10 +215,13 @@ def sig4(method, endpoint, params, prov_dict,
     http://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
     http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
     '''
-    timenow = datetime.datetime.utcnow()
+    timenow = datetime.utcnow()
 
     # Retrieve access credentials from meta-data, or use provided
-    access_key_id, secret_access_key, token = creds(prov_dict)
+    if role_arn is None:
+        access_key_id, secret_access_key, token = creds(prov_dict)
+    else:
+        access_key_id, secret_access_key, token = assumed_creds(prov_dict, role_arn, location=location)
 
     if location is None:
         location = get_region_from_metadata()
@@ -162,7 +229,7 @@ def sig4(method, endpoint, params, prov_dict,
         location = DEFAULT_LOCATION
 
     params_with_headers = params.copy()
-    if product != 's3':
+    if product not in ('s3', 'ssm'):
         params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(map(params_with_headers.get, keys))
@@ -171,12 +238,18 @@ def sig4(method, endpoint, params, prov_dict,
     amzdate = timenow.strftime('%Y%m%dT%H%M%SZ')
     datestamp = timenow.strftime('%Y%m%d')
 
-    canonical_headers = 'host:{0}\nx-amz-date:{1}\n'.format(
+    canonical_headers = 'host:{0}\nx-amz-date:{1}'.format(
         endpoint,
         amzdate,
     )
 
     signed_headers = 'host;x-amz-date'
+
+    if isinstance(headers, dict):
+        for header in sorted(headers.keys()):
+            canonical_headers += '\n{0}:{1}'.format(header, headers[header])
+            signed_headers += ';{0}'.format(header)
+    canonical_headers += '\n'
 
     if token != '':
         canonical_headers += 'x-amz-security-token:{0}\n'.format(token)
@@ -186,7 +259,8 @@ def sig4(method, endpoint, params, prov_dict,
 
     # Create payload hash (hash of the request body content). For GET
     # requests, the payload is an empty string ('').
-    payload_hash = hashlib.sha256(data).hexdigest()
+    if not payload_hash:
+        payload_hash = hashlib.sha256(data.encode(__salt_system_encoding__)).hexdigest()
 
     # Combine elements to create create canonical request
     canonical_request = '\n'.join((
@@ -199,14 +273,12 @@ def sig4(method, endpoint, params, prov_dict,
     ))
 
     # Create the string to sign
-    credential_scope = '/'.join((
-        datestamp, location, product, 'aws4_request'
-    ))
+    credential_scope = '/'.join((datestamp, location, product, 'aws4_request'))
     string_to_sign = '\n'.join((
         algorithm,
         amzdate,
         credential_scope,
-        hashlib.sha256(canonical_request).hexdigest()
+        hashlib.sha256(canonical_request.encode(__salt_system_encoding__)).hexdigest()
     ))
 
     # Create the signing key using the function defined above.
@@ -234,18 +306,21 @@ def sig4(method, endpoint, params, prov_dict,
             signature,
         )
 
-    headers = {
+    new_headers = {
         'x-amz-date': amzdate,
         'x-amz-content-sha256': payload_hash,
         'Authorization': authorization_header,
     }
+    if isinstance(headers, dict):
+        for header in sorted(headers.keys()):
+            new_headers[header] = headers[header]
 
     # Add in security token if we have one
     if token != '':
-        headers['X-Amz-Security-Token'] = token
+        new_headers['X-Amz-Security-Token'] = token
 
     requesturl = '{0}?{1}'.format(requesturl, querystring)
-    return headers, requesturl
+    return new_headers, requesturl
 
 
 def _sign(key, msg):
@@ -264,8 +339,11 @@ def _sig_key(key, date_stamp, regionName, serviceName):
     http://docs.aws.amazon.com/general/latest/gr/signature-v4-examples.html#signature-v4-examples-python
     '''
     kDate = _sign(('AWS4' + key).encode('utf-8'), date_stamp)
-    kRegion = _sign(kDate, regionName)
-    kService = _sign(kRegion, serviceName)
+    if regionName:
+        kRegion = _sign(kDate, regionName)
+        kService = _sign(kRegion, serviceName)
+    else:
+        kService = _sign(kDate, serviceName)
     kSigning = _sign(kService, 'aws4_request')
     return kSigning
 
@@ -355,6 +433,11 @@ def query(params=None, setname=None, requesturl=None, location=None,
         )
     )
 
+    # Fallback to ec2's id & key if none is found, for this component
+    if not prov_dict.get('id', None):
+        prov_dict['id'] = providers.get(provider, {}).get('ec2', {}).get('id', {})
+        prov_dict['key'] = providers.get(provider, {}).get('ec2', {}).get('key', {})
+
     if sigver == '4':
         headers, requesturl = sig4(
             method, endpoint, params, prov_dict, aws_api_version, location, product, requesturl=requesturl
@@ -379,7 +462,9 @@ def query(params=None, setname=None, requesturl=None, location=None,
             )
             LOG.trace(
                 'AWS Response Text: {0}'.format(
-                    result.text
+                    result.text.encode(
+                        result.encoding if result.encoding else 'utf-8'
+                    )
                 )
             )
             result.raise_for_status()
@@ -420,7 +505,9 @@ def query(params=None, setname=None, requesturl=None, location=None,
             return {'error': data}, requesturl
         return {'error': data}
 
-    response = result.text
+    response = result.text.encode(
+        result.encoding if result.encoding else 'utf-8'
+    )
 
     root = ET.fromstring(response)
     items = root[1]
@@ -465,10 +552,10 @@ def get_region_from_metadata():
         return __Location__
 
     try:
-        # Connections to instance meta-data must never be proxied
+        # Connections to instance meta-data must fail fast and never be proxied
         result = requests.get(
             "http://169.254.169.254/latest/dynamic/instance-identity/document",
-            proxies={'http': ''},
+            proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
         )
     except requests.exceptions.RequestException:
         LOG.warning('Failed to get AWS region from instance metadata.', exc_info=True)
@@ -487,7 +574,7 @@ def get_region_from_metadata():
     return None
 
 
-def get_location(opts, provider=None):
+def get_location(opts=None, provider=None):
     '''
     Return the region to use, in this order:
         opts['location']
@@ -495,7 +582,11 @@ def get_location(opts, provider=None):
         get_region_from_metadata()
         DEFAULT_LOCATION
     '''
-    ret = opts.get('location', provider.get('location'))
+    if opts is None:
+        opts = {}
+    ret = opts.get('location')
+    if ret is None and provider is not None:
+        ret = provider.get('location')
     if ret is None:
         ret = get_region_from_metadata()
     if ret is None:

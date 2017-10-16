@@ -9,7 +9,11 @@ Requisites
 
 The Salt requisite system is used to create relationships between states. The
 core idea being that, when one state is dependent somehow on another, that
-inter-dependency can be easily defined.
+inter-dependency can be easily defined. These dependencies are expressed by
+declaring the relationships using state names and ID's or names.  The
+generalized form of a requisite target is ``<state name> : <ID or name>``.
+The specific form is defined as a :ref:`Requisite Reference
+<requisite-reference>`
 
 Requisites come in two types: Direct requisites (such as ``require``),
 and requisite_ins (such as ``require_in``). The relationships are
@@ -47,32 +51,120 @@ something", requisite_ins say "Someone depends on me":
 So here, with a requisite_in, the same thing is accomplished as in the first
 example, but the other way around. The vim package is saying "/etc/vimrc depends
 on me". This will result in a ``require`` being inserted into the
-``/etc/vimrc`` state which  targets the ``vim`` state.
+``/etc/vimrc`` state which targets the ``vim`` state.
 
 In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
 
-.. note:: Requisite matching
+Requisite matching
+------------------
 
-    Requisites match on both the ID Declaration and the ``name`` parameter.
-    This means that, in the example above, the ``require_in`` requisite would
-    also have been matched if the ``/etc/vimrc`` state was written as follows:
+Requisites need two pieces of information for matching: The state module name –
+e.g. ``pkg`` –, and the identifier – e.g. vim –, which can be either the ID (the
+first line in the stanza) or the ``- name`` parameter.
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
-        vimrc:
-          file.managed:
-            - name: /etc/vimrc
-            - source: salt://edit/vimrc
+    - require:
+      - pkg: vim
+
+Omitting state module in requisites
+-----------------------------------
+
+.. versionadded:: 2016.3.0
+
+In version 2016.3.0, the state module name was made optional. If the state module
+is omitted, all states matching the ID will be required, regardless of which
+module they are using.
+
+.. code-block:: yaml
+
+    - require:
+      - vim
+
+State target matching
+~~~~~~~~~~~~~~~~~~~~~
+
+In order to understand how state targets are matched, it is helpful to know
+:ref:`how the state compiler is working <compiler_ordering>`. Consider the following
+example:
+
+.. code-block:: yaml
+
+    Deploy server package:
+      file.managed:
+        - name: /usr/local/share/myapp.tar.xz
+        - source: salt://myapp.tar.xz
+
+    Extract server package:
+      archive.extracted:
+        - name: /usr/local/share/myapp
+        - source: /usr/local/share/myapp.tar.xz
+        - archive_format: tar
+        - onchanges:
+          - file: Deploy server package
+
+The first formula is converted to a dictionary which looks as follows (represented
+as YAML, some properties omitted for simplicity) as `High Data`:
+
+.. code-block:: yaml
+
+    Deploy server package:
+      file:
+        - managed
+        - name: /usr/local/share/myapp.tar.xz
+        - source: salt://myapp.tar.xz
+
+The ``file.managed`` format used in the formula is essentially syntactic sugar:
+at the end, the target is ``file``, which is used in the ``Extract server package``
+state above.
+
+Identifier matching
+~~~~~~~~~~~~~~~~~~~
+
+Requisites match on both the ID Declaration and the ``name`` parameter.
+This means that, in the "Deploy server package" example above, a ``require``
+requisite would match with with ``Deploy server package`` *or* ``/usr/local/share/myapp.tar.xz``,
+so either of the following versions for "Extract server package" works:
+
+.. code-block:: yaml
+
+    # (Archive arguments omitted for simplicity)
+
+    # Match by ID declaration
+    Extract server package:
+      archive.extracted:
+        - onchanges:
+          - file: Deploy server package
+
+    # Match by name parameter
+    Extract server package:
+      archive.extracted:
+        - onchanges:
+          - file: /usr/local/share/myapp.tar.xz
 
 
 Direct Requisite and Requisite_in types
 ---------------------------------------
 
-There are six direct requisite statements that can be used in Salt:
-``require``, ``watch``, ``prereq``, ``use``, ``onchanges``, and ``onfail``.
-Each direct requisite also has a corresponding requisite_in: ``require_in``,
-``watch_in``, ``prereq_in``, ``use_in``, ``onchanges_in``, and ``onfail_in``.
+There are several direct requisite statements that can be used in Salt:
+
+* ``require``
+* ``watch``
+* ``prereq``
+* ``use``
+* ``onchanges``
+* ``onfail``
+
+Each direct requisite also has a corresponding requisite_in:
+
+* ``require_in``
+* ``watch_in``
+* ``prereq_in``
+* ``use_in``
+* ``onchanges_in``
+* ``onfail_in``
+
 All of the requisites define specific relationships and always work with the
 dependency logic defined above.
 
@@ -81,15 +173,15 @@ dependency logic defined above.
 require
 ~~~~~~~
 
-The use of ``require`` demands that the dependent state executes before the
-depending state. The state containing the ``require`` requisite is defined as the
-depending state. The state specified in the ``require`` statement is defined as the
-dependent state. If the dependent state's execution succeeds, the depending state
-will then execute. If the dependent state's execution fails, the depending state
+The use of ``require`` demands that the required state executes before the
+dependent state. The state containing the ``require`` requisite is defined as the
+dependent state. The state specified in the ``require`` statement is defined as the
+required state. If the required state's execution succeeds, the dependent state
+will then execute. If the required state's execution fails, the dependent state
 will not execute. In the first example above, the file ``/etc/vimrc`` will only
 execute after the vim package is installed successfully.
 
-Require an entire sls file
+Require an Entire SLS File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As of Salt 0.16.0, it is possible to require an entire sls file. Do this first by
@@ -105,6 +197,10 @@ including the sls file and then setting a state to ``require`` the included sls 
         - require:
           - sls: foo
 
+This will add all of the state declarations found in the given sls file. This means
+that every state in sls `foo` will be required. This makes it very easy to batch
+large groups of states easily in any requisite statement.
+
 .. _requisites-watch:
 
 watch
@@ -118,7 +214,7 @@ in other states.
     If a state should only execute when another state has changes, and
     otherwise do nothing, the new ``onchanges`` requisite should be used
     instead of ``watch``. ``watch`` is designed to add *additional* behavior
-    when there are changes, but otherwise execute normally.
+    when there are changes, but otherwise the state executes normally.
 
 The state containing the ``watch`` requisite is defined as the watching
 state. The state specified in the ``watch`` statement is defined as the watched
@@ -128,35 +224,37 @@ shown in json for clarity:
 
 .. code-block:: json
 
-    "local": {
-        "file_|-/tmp/foo_|-/tmp/foo_|-directory": {
-            "comment": "Directory /tmp/foo updated",
-            "__run_num__": 0,
-            "changes": {
-                "user": "bar"
-            },
-            "name": "/tmp/foo",
-            "result": true
+    {
+        "local": {
+            "file_|-/tmp/foo_|-/tmp/foo_|-directory": {
+                "comment": "Directory /tmp/foo updated",
+                "__run_num__": 0,
+                "changes": {
+                    "user": "bar"
+                },
+                "name": "/tmp/foo",
+                "result": true
+            }
         }
     }
 
-    "local": {
-        "pkgrepo_|-salt-minion_|-salt-minion_|-managed": {
-            "comment": "Package repo 'salt-minion' already configured",
-            "__run_num__": 0,
-            "changes": {},
-            "name": "salt-minion",
-            "result": true
+    {
+        "local": {
+            "pkgrepo_|-salt-minion_|-salt-minion_|-managed": {
+                "comment": "Package repo 'salt-minion' already configured",
+                "__run_num__": 0,
+                "changes": {},
+                "name": "salt-minion",
+                "result": true
+            }
         }
     }
 
 If the "result" of the watched state is ``True``, the watching state *will
-execute normally*. This part of ``watch`` mirrors the functionality of the
-``require`` requisite. If the "result" of the watched state is ``False``, the
-watching state will never run, nor will the watching state's ``mod_watch``
-function execute.
+execute normally*, and if it is ``False``, the watching state will never run.
+This part of ``watch`` mirrors the functionality of the ``require`` requisite.
 
-However, if the "result" of the watched state is ``True``, and the "changes"
+If the "result" of the watched state is ``True`` *and* the "changes"
 key contains a populated dictionary (changes occurred in the watched state),
 then the ``watch`` requisite can add additional behavior. This additional
 behavior is defined by the ``mod_watch`` function within the watching state
@@ -243,6 +341,8 @@ expects to deploy fresh code via the file.recurse call. The site-code
 deployment will only be executed if the graceful-down run completes
 successfully.
 
+.. _requisites-onfail:
+
 onfail
 ~~~~~~
 
@@ -271,6 +371,16 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
         - onfail:
           - mount: primary_mount
 
+.. note::
+
+    Beginning in the ``2016.11.0`` release of Salt, ``onfail`` uses OR logic for
+    multiple listed ``onfail`` requisites. Prior to the ``2016.11.0`` release,
+    ``onfail`` used AND logic. See `Issue #22370`_ for more information.
+
+.. _Issue #22370: https://github.com/saltstack/salt/issues/22370
+
+.. _requisites-onchanges:
+
 onchanges
 ~~~~~~~~~
 
@@ -279,6 +389,54 @@ onchanges
 The ``onchanges`` requisite makes a state only apply if the required states
 generate changes, and if the watched state's "result" is ``True``. This can be
 a useful way to execute a post hook after changing aspects of a system.
+
+If a state has multiple ``onchanges`` requisites then the state will trigger
+if any of the watched states changes.
+
+.. note::
+    One easy-to-make mistake is to use ``onchanges_in`` when ``onchanges`` is
+    supposed to be used. For example, the below configuration is not correct:
+
+    .. code-block:: yaml
+
+        myservice:
+          pkg.installed:
+            - name: myservice
+          file.managed:
+            - name: /etc/myservice/myservice.conf
+            - source: salt://myservice/files/myservice.conf
+            - mode: 600
+          cmd.run:
+            - name: /usr/libexec/myservice/post-changes-hook.sh
+            - onchanges_in:
+              - file: /etc/myservice/myservice.conf
+
+    This will set up a requisite relationship in which the ``cmd.run`` state
+    always executes, and the ``file.managed`` state only executes if the
+    ``cmd.run`` state has changes (which it always will, since the ``cmd.run``
+    state includes the command results as changes).
+
+    It may semantically seem like the the ``cmd.run`` state should only run
+    when there are changes in the file state, but remember that requisite
+    relationships involve one state watching another state, and a
+    :ref:`requisite_in <requisites-onchanges-in>` does the opposite: it forces
+    the specified state to watch the state with the ``requisite_in``.
+
+    The correct usage would be:
+
+    .. code-block:: yaml
+
+        myservice:
+          pkg.installed:
+            - name: myservice
+          file.managed:
+            - name: /etc/myservice/myservice.conf
+            - source: salt://myservice/files/myservice.conf
+            - mode: 600
+          cmd.run:
+            - name: /usr/libexec/myservice/post-changes-hook.sh
+            - onchanges:
+              - file: /etc/myservice/myservice.conf
 
 use
 ~~~
@@ -314,6 +472,7 @@ inherit inherited options.
 
 .. _requisites-require-in:
 .. _requisites-watch-in:
+.. _requisites-onchanges-in:
 
 The _in versions of requisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -321,7 +480,7 @@ The _in versions of requisites
 All of the requisites also have corresponding requisite_in versions, which do
 the reverse of their normal counterparts. The examples below all use
 ``require_in`` as the example, but note that all of the ``_in`` requisites work
-the same way:  They result in a normal requisite in the targeted state, which
+the same way: They result in a normal requisite in the targeted state, which
 targets the state which has defines the requisite_in. Thus, a ``require_in``
 causes the target state to ``require`` the targeting state. Similarly, a
 ``watch_in`` causes the target state to ``watch`` the targeting state. This
@@ -394,6 +553,40 @@ Now the httpd server will only start if php or mod_python are first verified to
 be installed. Thus allowing for a requisite to be defined "after the fact".
 
 
+.. _requisites-fire-event:
+
+Fire Event Notifications
+========================
+
+.. versionadded:: 2015.8.0
+
+The `fire_event` option in a state will cause the minion to send an event to
+the Salt Master upon completion of that individual state.
+
+The following example will cause the minion to send an event to the Salt Master
+with a tag of `salt/state_result/20150505121517276431/dasalt/nano` and the
+result of the state will be the data field of the event. Notice that the `name`
+of the state gets added to the tag.
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: True
+
+In the following example instead of setting `fire_event` to `True`,
+`fire_event` is set to an arbitrary string, which will cause the event to be
+sent with this tag:
+`salt/state_result/20150505121725642845/dasalt/custom/tag/nano/finished`
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: custom/tag/nano/finished
+
 Altering States
 ===============
 
@@ -401,8 +594,17 @@ The state altering system is used to make sure that states are evaluated exactly
 as the user expects. It can be used to double check that a state preformed
 exactly how it was expected to, or to make 100% sure that a state only runs
 under certain conditions. The use of unless or onlyif options help make states
-even more stateful. The check_cmds option helps ensure that the result of a
+even more stateful. The ``check_cmd`` option helps ensure that the result of a
 state is evaluated correctly.
+
+Reload
+------
+
+``reload_modules`` is a boolean option that forces salt to reload its modules
+after a state finishes. ``reload_pillar`` and ``reload_grains`` can also be set.
+See :ref:`Reloading Modules <reloading-modules>`.
+
+.. _unless-requisite:
 
 Unless
 ------
@@ -411,13 +613,15 @@ Unless
 
 The ``unless`` requisite specifies that a state should only run when any of
 the specified commands return ``False``. The ``unless`` requisite operates
-as NOR and is useful in giving more granular control over when a state should
+as NAND and is useful in giving more granular control over when a state should
 execute.
 
 **NOTE**: Under the hood ``unless`` calls ``cmd.retcode`` with
-``python_shell=True``. This means the commands referenced by unless will be
+``python_shell=True``. This means the commands referenced by ``unless`` will be
 parsed by a shell, so beware of side-effects as this shell will be run with the
-same privileges as the salt-minion.
+same privileges as the salt-minion. Also be aware that the boolean value is
+determined by the shell's concept of ``True`` and ``False``, rather than Python's
+concept of ``True`` and ``False``.
 
 .. code-block:: yaml
 
@@ -450,19 +654,23 @@ For example:
 In the above case, ``some_check`` will be run prior to _each_ name -- once for
 ``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.
 
+.. _onlyif-requisite:
+
 Onlyif
 ------
 
 .. versionadded:: 2014.7.0
 
-``onlyif`` is the opposite of ``unless``. If all of the commands in ``onlyif``
-return ``True``, then the state is run. If any of the specified commands
+The ``onlyif`` requisite specifies that if each command listed in ``onlyif``
+returns ``True``, then the state is run. If any of the specified commands
 return ``False``, the state will not run.
 
 **NOTE**: Under the hood ``onlyif`` calls ``cmd.retcode`` with
-``python_shell=True``. This means the commands referenced by unless will be
+``python_shell=True``. This means the commands referenced by ``onlyif`` will be
 parsed by a shell, so beware of side-effects as this shell will be run with the
-same privileges as the salt-minion.
+same privileges as the salt-minion. Also be aware that the boolean value is
+determined by the shell's concept of ``True`` and ``False``, rather than Python's
+concept of ``True`` and ``False``.
 
 .. code-block:: yaml
 
@@ -551,15 +759,18 @@ same privileges as the salt-minion.
         - pattern: ^enabled=0
         - repl: enabled=1
         - check_cmd:
-          - grep 'enabled=0' /etc/yum.repos.d/fedora.repo && return 1 || return 0
+          - ! grep 'enabled=0' /etc/yum.repos.d/fedora.repo
 
-This will attempt to do a replace on all enabled=0 in the .repo file, and
-replace them with enabled=1. The check_cmd is just a bash command. It will do
-a grep for enabled=0 in the file, and if it finds any, it will return a 0, which
-will prompt the && portion of the command to return a 1, causing check_cmd to
-set the state as failed. If it returns a 1, meaning it didn't find any
-'enabled=0' it will hit the || portion of the command, returning a 0, and
+This will attempt to do a replace on all ``enabled=0`` in the .repo file, and
+replace them with ``enabled=1``. The ``check_cmd`` is just a bash command. It
+will do a grep for ``enabled=0`` in the file, and if it finds any, it will
+return a 0, which will be inverted by the leading ``!``, causing ``check_cmd``
+to set the state as failed. If it returns a 1, meaning it didn't find any
+``enabled=0``, it will be inverted by the leading ``!``, returning a 0, and
 declaring the function succeeded.
+
+**NOTE**: This requisite ``check_cmd`` functions differently than the ``check_cmd``
+of the ``file.managed`` state.
 
 Overriding Checks
 -----------------

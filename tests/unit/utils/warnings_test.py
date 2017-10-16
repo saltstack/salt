@@ -10,6 +10,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import sys
 import warnings
 
@@ -81,7 +82,7 @@ class WarnUntilTestCase(TestCase):
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'(.*) is released. Current version is now '
                 r'([\d.]+). Please remove the warning.'):
-            raise_named_version_warning(_version_info_=(sys.maxint, 16, 0))
+            raise_named_version_warning(_version_info_=(getattr(sys, 'maxint', None) or getattr(sys, 'maxsize'), 16, 0))
 
         # Even though we're calling warn_until, we pass _dont_call_warnings
         # because we're only after the RuntimeError
@@ -103,7 +104,7 @@ class WarnUntilTestCase(TestCase):
                 r'(.*). Please remove the warning.'):
             warn_until(
                 'Hydrogen', 'Foo', _dont_call_warnings=True,
-                _version_info_=(sys.maxint, 16, 0)
+                _version_info_=(getattr(sys, 'maxint', None) or getattr(sys, 'maxsize'), 16, 0)
             )
 
         # version on the deprecation message gets properly formatted

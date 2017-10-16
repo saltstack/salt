@@ -67,6 +67,12 @@ class RhipTestCase(TestCase):
                                   rh_ip.build_interface,
                                   'iface', 'slave', True)
 
+                with patch.dict(rh_ip.__salt__, {'network.interfaces': lambda: {'eth': True}}):
+                    self.assertRaises(AttributeError,
+                                      rh_ip.build_interface,
+                                      'iface', 'eth', True, netmask='255.255.255.255', prefix=32,
+                                      test=True)
+
                 with patch.object(rh_ip, '_parse_settings_bond', MagicMock()):
                     mock = jinja2.exceptions.TemplateNotFound('foo')
                     with patch.object(jinja2.Environment,
@@ -99,24 +105,25 @@ class RhipTestCase(TestCase):
         '''
         Test to build a route script for a network interface.
         '''
-        with patch.object(rh_ip, '_parse_routes', MagicMock()):
-            mock = jinja2.exceptions.TemplateNotFound('foo')
-            with patch.object(jinja2.Environment,
-                              'get_template', MagicMock(side_effect=mock)):
-                self.assertEqual(rh_ip.build_routes('iface'), '')
+        with patch.dict(rh_ip.__grains__, {'osrelease': '5.0'}):
+            with patch.object(rh_ip, '_parse_routes', MagicMock()):
+                mock = jinja2.exceptions.TemplateNotFound('foo')
+                with patch.object(jinja2.Environment,
+                                  'get_template', MagicMock(side_effect=mock)):
+                    self.assertEqual(rh_ip.build_routes('iface'), '')
 
-            with patch.object(jinja2.Environment,
-                              'get_template', MagicMock()):
-                with patch.object(rh_ip, '_read_temp', return_value='A'):
-                    self.assertEqual(rh_ip.build_routes('i', test='t'), 'A')
+                with patch.object(jinja2.Environment,
+                                  'get_template', MagicMock()):
+                    with patch.object(rh_ip, '_read_temp', return_value=['A']):
+                        self.assertEqual(rh_ip.build_routes('i', test='t'), ['A', 'A'])
 
-                with patch.object(rh_ip, '_read_file', return_value='A'):
-                    with patch.object(os.path, 'join', return_value='A'):
-                        with patch.object(rh_ip, '_write_file_iface',
-                                          return_value=None):
-                            self.assertEqual(rh_ip.build_routes('i',
-                                                                test=None),
-                                             'A')
+                    with patch.object(rh_ip, '_read_file', return_value=['A']):
+                        with patch.object(os.path, 'join', return_value='A'):
+                            with patch.object(rh_ip, '_write_file_iface',
+                                              return_value=None):
+                                self.assertEqual(rh_ip.build_routes('i',
+                                                                    test=None),
+                                                 ['A', 'A'])
 
     def test_down(self):
         '''
@@ -159,8 +166,8 @@ class RhipTestCase(TestCase):
         Test to return the contents of the interface routes script.
         '''
         with patch.object(os.path, 'join', return_value='A'):
-            with patch.object(rh_ip, '_read_file', return_value='A'):
-                self.assertEqual(rh_ip.get_routes('iface'), 'A')
+            with patch.object(rh_ip, '_read_file', return_value=['A']):
+                self.assertEqual(rh_ip.get_routes('iface'), ['A', 'A'])
 
     def test_get_network_settings(self):
         '''

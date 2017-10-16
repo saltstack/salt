@@ -10,6 +10,10 @@ from __future__ import absolute_import
 import os
 import logging
 
+# Import Salt libs
+import salt.utils
+
+
 __outputter__ = {
     'display': 'txt',
     'install': 'txt',
@@ -30,7 +34,7 @@ def __virtual__():
     '''
     if os.path.isdir('/etc/alternatives'):
         return True
-    return False
+    return (False, 'Cannot load alternatives module: /etc/alternatives dir not found')
 
 
 def _get_cmd():
@@ -59,6 +63,44 @@ def display(name):
     return out['stdout']
 
 
+def show_link(name):
+    '''
+    Display master link for the alternative
+
+    .. versionadded:: 2015.8.13,2016.3.4,2016.11.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' alternatives.show_link editor
+    '''
+
+    if __grains__['os_family'] == 'RedHat':
+        path = '/var/lib/'
+    elif __grains__['os_family'] == 'Suse':
+        path = '/var/lib/rpm/'
+    else:
+        path = '/var/lib/dpkg/'
+
+    path += 'alternatives/{0}'.format(name)
+
+    try:
+        with salt.utils.fopen(path, 'rb') as r_file:
+            return r_file.readlines()[1].rstrip('\n')
+    except OSError:
+        log.error(
+            'alternatives: {0} does not exist'.format(name)
+        )
+    except (IOError, IndexError) as exc:
+        log.error(
+            'alternatives: unable to get master link for {0}. '
+            'Exception: {1}'.format(name, exc)
+        )
+
+    return False
+
+
 def show_current(name):
     '''
     Display the current highest-priority alternative for a given alternatives
@@ -70,14 +112,34 @@ def show_current(name):
 
         salt '*' alternatives.show_current editor
     '''
-    alt_link_path = '/etc/alternatives/{0}'.format(name)
     try:
-        return os.readlink(alt_link_path)
+        return _read_link(name)
     except OSError:
         log.error(
-            'alternatives: path {0} does not exist'.format(alt_link_path)
+            'alternative: {0} does not exist'.format(name)
         )
     return False
+
+
+def check_exists(name, path):
+    '''
+    Check if the given path is an alternative for a name.
+
+    .. versionadded:: 2015.8.4
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' alternatives.check_exists name path
+    '''
+    cmd = [_get_cmd(), '--display', name]
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    if out['retcode'] > 0 and out['stderr'] != '':
+        return False
+
+    return any((line.startswith(path) for line in out['stdout'].splitlines()))
 
 
 def check_installed(name, path):
@@ -91,7 +153,10 @@ def check_installed(name, path):
 
         salt '*' alternatives.check_installed name path
     '''
-    return show_current(name) == path
+    try:
+        return _read_link(name) == path
+    except OSError:
+        return False
 
 
 def install(name, link, path, priority):
@@ -161,3 +226,13 @@ def set_(name, path):
     if out['retcode'] > 0:
         return out['stderr']
     return out['stdout']
+
+
+def _read_link(name):
+    '''
+    Read the link from /etc/alternatives
+
+    Throws an OSError if the link does not exist
+    '''
+    alt_link_path = '/etc/alternatives/{0}'.format(name)
+    return os.readlink(alt_link_path)

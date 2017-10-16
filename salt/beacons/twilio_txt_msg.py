@@ -26,6 +26,17 @@ def __virtual__():
         return False
 
 
+def __validate__(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for twilio_txt_msg beacon should be a list of dicts
+    if not isinstance(config, dict):
+        return False, ('Configuration for twilio_txt_msg beacon '
+                       'must be a dictionary.')
+    return True, 'Valid beacon configuration'
+
+
 def beacon(config):
     '''
     Emit a dict name "texts" whose value is a list

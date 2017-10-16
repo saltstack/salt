@@ -3,15 +3,24 @@
     tests.unit.file_test
     ~~~~~~~~~~~~~~~~~~~~
 '''
-import copy
+# Import pytohn libs
+from __future__ import absolute_import
 import os
+import copy
 import shutil
 import tempfile
-import salt.utils
-from salt.utils import files as util_files
+
+# Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
+
+# Import Salt libs
+import salt.utils
+from salt.utils import files as util_files
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class FilesTestCase(TestCase):
@@ -26,18 +35,18 @@ class FilesTestCase(TestCase):
     }
 
     def _create_temp_structure(self, temp_directory, structure):
-        for folder, files in structure.items():
+        for folder, files in six.iteritems(structure):
             current_directory = os.path.join(temp_directory, folder)
             os.makedirs(current_directory)
-            for name, content in files.items():
+            for name, content in six.iteritems(files):
                 path = os.path.join(temp_directory, folder, name)
                 with salt.utils.fopen(path, 'w+') as fh:
                     fh.write(content)
 
     def _validate_folder_structure_and_contents(self, target_directory,
                                                 desired_structure):
-        for folder, files in desired_structure.items():
-            for name, content in files.items():
+        for folder, files in six.iteritems(desired_structure):
+            for name, content in six.iteritems(files):
                 path = os.path.join(target_directory, folder, name)
                 with salt.utils.fopen(path) as fh:
                     assert fh.read().strip() == content

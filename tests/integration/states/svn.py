@@ -5,6 +5,7 @@ Tests for the SVN state
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
 import socket
@@ -46,6 +47,8 @@ class SvnTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     def tearDown(self):
         shutil.rmtree(self.target, ignore_errors=True)
+        # Reset the dns timeout after the test is over
+        socket.setdefaulttimeout(None)
 
     def test_latest(self):
         '''

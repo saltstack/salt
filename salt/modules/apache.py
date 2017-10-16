@@ -9,16 +9,14 @@ Support for Apache
     Debian-based system is detected.
 '''
 
-# Python3 generators
-from __future__ import generators, print_function, with_statement
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import, generators, print_function, with_statement
 import re
 import logging
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module
+import salt.ext.six as six
 from salt.ext.six.moves import cStringIO
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.request import (
@@ -43,7 +41,7 @@ def __virtual__():
     cmd = _detect_os()
     if salt.utils.which(cmd):
         return 'apache'
-    return False
+    return (False, 'The apache execution module cannot be loaded: apache is not installed.')
 
 
 def _detect_os():
@@ -51,9 +49,10 @@ def _detect_os():
     Apache commands and paths differ depending on packaging
     '''
     # TODO: Add pillar support for the apachectl location
-    if __grains__['os_family'] == 'RedHat':
+    os_family = __grains__['os_family']
+    if os_family == 'RedHat':
         return 'apachectl'
-    elif __grains__['os_family'] == 'Debian':
+    elif os_family == 'Debian' or os_family == 'SUSE':
         return 'apache2ctl'
     else:
         return 'apachectl'
@@ -405,19 +404,19 @@ def _parse_config(conf, slot=None):
         else:
             print('{0}'.format(conf), file=ret, end='')
     elif isinstance(conf, list):
-        print('{0} {1}'.format(str(slot), ' '.join(conf)), file=ret, end='')
+        print('{0} {1}'.format(slot, ' '.join(conf)), file=ret, end='')
     elif isinstance(conf, dict):
         print('<{0} {1}>'.format(
             slot,
             _parse_config(conf['this'])),
-            file=ret
-        )
+              file=ret
+             )
         del conf['this']
-        for key, value in conf.items():
+        for key, value in six.iteritems(conf):
             if isinstance(value, str):
                 print('{0} {1}'.format(key, value), file=ret)
             elif isinstance(value, list):
-                print('{0} {1}'.format(key, ' '.join(value)), file=ret)
+                print(_parse_config(value, key), file=ret)
             elif isinstance(value, dict):
                 print(_parse_config(value, key), file=ret)
         print('</{0}>'.format(slot), file=ret, end='')
@@ -447,11 +446,15 @@ def config(name, config, edit=True):
         salt '*' apache.config /etc/httpd/conf.d/ports.conf config="[{'Listen': '22'}]"
     '''
 
+    configs = []
     for entry in config:
-        key = next(entry.iterkeys())
-        configs = _parse_config(entry[key], key)
-        if edit:
-            with salt.utils.fopen(name, 'w') as configfile:
-                configfile.write('# This file is managed by saltstack.\n')
-                configfile.write(configs)
-    return configs
+        key = next(six.iterkeys(entry))
+        configs.append(_parse_config(entry[key], key))
+
+    # Python auto-correct line endings
+    configstext = "\n".join(configs)
+    if edit:
+        with salt.utils.fopen(name, 'w') as configfile:
+            configfile.write('# This file is managed by Salt.\n')
+            configfile.write(configstext)
+    return configstext

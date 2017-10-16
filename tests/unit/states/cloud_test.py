@@ -146,7 +146,11 @@ class CloudTestCase(TestCase):
         mock = MagicMock(side_effect=[True, False])
         mock_dict = MagicMock(side_effect=[{'cloud': 'saltcloud'},
                                            {'Not Actioned': True},
-                                           {'Not Actioned': True}])
+                                           {'Not Actioned': True},
+                                           {
+                                                'Not Found': True,
+                                                'Not Actioned/Not Running': True
+                                           }])
         mock_d = MagicMock(return_value={})
         with patch.dict(cloud.__salt__, {'cmd.retcode': mock,
                                          'cloud.profile': mock_d,
@@ -171,6 +175,12 @@ class CloudTestCase(TestCase):
             with patch.dict(cloud.__opts__, {'test': True}):
                 comt = ('Instance {0} needs to be created'.format(name))
                 ret.update({'comment': comt, 'result': None})
+                self.assertDictEqual(cloud.profile(name, profile), ret)
+
+            with patch.dict(cloud.__opts__, {'test': False}):
+                comt = (('Failed to create instance {0}'
+                         'using profile {1}').format(name, profile))
+                ret.update({'comment': comt, 'result': False})
                 self.assertDictEqual(cloud.profile(name, profile), ret)
 
             with patch.dict(cloud.__opts__, {'test': False}):

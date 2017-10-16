@@ -170,11 +170,19 @@ is called once for each minion that fetches its pillar data.
 
     def ext_pillar( minion_id, pillar, *args, **kwargs ):
 
-        my_pillar = {}
+        my_pillar = {'external_pillar': {}}
 
-        # Do stuff
+        my_pillar['external_pillar'] = get_external_pillar_dictionary()
 
         return my_pillar
+
+
+You can call pillar with the dictionary's top name to retrieve its data.
+From above example, 'external_pillar' is the top dictionary name. Therefore:
+
+.. code-block:: bash
+
+    salt-call '*' pillar.get external_pillar
 
 
 You shouldn't just add items to ``pillar`` and return that, since that will

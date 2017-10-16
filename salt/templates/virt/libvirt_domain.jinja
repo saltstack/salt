@@ -9,7 +9,7 @@
                 {% endfor %}
         </os>
         <devices>
-                {% for diskname, disk in disks.iteritems() %}
+                {% for diskname, disk in disks.items() %}
                 <disk type='file' device='disk'>
                         <source file='{{ disk.source_file }}' />
                         <target dev='{{ disk.target_dev }}' bus='{{ disk.disk_bus }}' />
@@ -33,9 +33,9 @@
                     <model type='{{ nic.model }}'/>
                 </interface>
                 {% endfor %}
-
+                {% if enable_vnc %}
                 <graphics type='vnc' listen='0.0.0.0' autoport='yes' />
-
+                {% endif %}
                 {% if serial_type == 'pty' %}
                 <serial type='pty'>
                         <target port='0'/>

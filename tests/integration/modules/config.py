@@ -3,6 +3,9 @@
 '''
 Validate the config system
 '''
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
@@ -47,17 +50,17 @@ class ConfigTest(integration.ModuleCase):
         self.assertEqual(
             self.run_function('config.manage_mode', ['"775"']), '0775')
         self.assertEqual(
-            self.run_function('config.manage_mode', ['"1775"']), '01775')
+            self.run_function('config.manage_mode', ['"1775"']), '1775')
         self.assertEqual(
             self.run_function('config.manage_mode', ['"0775"']), '0775')
         self.assertEqual(
-            self.run_function('config.manage_mode', ['"01775"']), '01775')
+            self.run_function('config.manage_mode', ['"01775"']), '1775')
         self.assertEqual(
             self.run_function('config.manage_mode', ['"0"']), '0000')
         self.assertEqual(
             self.run_function('config.manage_mode', ['775']), '0775')
         self.assertEqual(
-            self.run_function('config.manage_mode', ['1775']), '01775')
+            self.run_function('config.manage_mode', ['1775']), '1775')
         self.assertEqual(
             self.run_function('config.manage_mode', ['0']), '0000')
 
@@ -71,12 +74,6 @@ class ConfigTest(integration.ModuleCase):
                     'config.option',
                     ['master_port']),
                 64506)
-        # Master conf opt
-        self.assertEqual(
-                self.run_function(
-                    'config.option',
-                    ['syndic_master']),
-                'localhost')
         # pillar conf opt
         self.assertEqual(
                 self.run_function(

@@ -7,6 +7,9 @@ import yaml
 
 import salt.fileclient
 import salt.utils
+import salt.utils.url
+
+from salt.utils import dictupdate
 
 
 __virtualname__ = 'defaults'
@@ -36,7 +39,7 @@ def _load(formula):
     _mk_client()
     paths = []
     for ext in ('yaml', 'json'):
-        source_url = 'salt://{0}/{1}'.format(formula, 'defaults.' + ext)
+        source_url = salt.utils.url.create(formula + '/defaults.' + ext)
         paths.append(source_url)
     # Fetch files from master
     defaults_files = __context__['cp.fileclient'].cache_files(paths)
@@ -97,3 +100,19 @@ def get(key, default=''):
         return salt.utils.traverse_dict_and_list(defaults, key, default)
     else:
         return defaults
+
+
+def merge(dest, upd):
+    '''
+    defaults.merge
+        Allows deep merging of dicts in formulas.
+
+        CLI Example:
+        .. code-block:: bash
+
+        salt '*' default.merge a=b d=e
+
+    It is more typical to use this in a templating language in formulas,
+    instead of directly on the command-line.
+    '''
+    return dictupdate.update(dest, upd)

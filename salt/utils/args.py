@@ -9,11 +9,16 @@ import re
 import inspect
 
 # Import salt libs
-from salt.ext.six import string_types, integer_types
+import salt.utils.jid
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
-#KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
-KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
+
+if six.PY3:
+    KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)
+else:
+    KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
 
 
 def condition_input(args, kwargs):
@@ -22,7 +27,8 @@ def condition_input(args, kwargs):
     '''
     ret = []
     for arg in args:
-        if isinstance(arg, long):
+        if (six.PY3 and isinstance(arg, six.integer_types) and salt.utils.jid.is_jid(str(arg))) or \
+        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
             ret.append(str(arg))
         else:
             ret.append(arg)
@@ -44,7 +50,7 @@ def parse_input(args, condition=True):
     _args = []
     _kwargs = {}
     for arg in args:
-        if isinstance(arg, string_types):
+        if isinstance(arg, six.string_types):
             arg_name, arg_value = parse_kwarg(arg)
             if arg_name:
                 _kwargs[arg_name] = yamlify_arg(arg_value)
@@ -86,7 +92,7 @@ def yamlify_arg(arg):
     '''
     yaml.safe_load the arg
     '''
-    if not isinstance(arg, string_types):
+    if not isinstance(arg, six.string_types):
         return arg
 
     if arg.strip() == '':
@@ -109,7 +115,7 @@ def yamlify_arg(arg):
             # Only yamlify if it parses into a non-string type, to prevent
             # loss of content due to # as comment character
             parsed_arg = yamlloader.load(arg, Loader=yamlloader.SaltYamlSafeLoader)
-            if isinstance(parsed_arg, string_types) or parsed_arg is None:
+            if isinstance(parsed_arg, six.string_types) or parsed_arg is None:
                 return arg
             return parsed_arg
         if arg == 'None':
@@ -119,14 +125,14 @@ def yamlify_arg(arg):
 
         if isinstance(arg, dict):
             # dicts must be wrapped in curly braces
-            if (isinstance(original_arg, string_types) and
+            if (isinstance(original_arg, six.string_types) and
                     not original_arg.startswith('{')):
                 return original_arg
             else:
                 return arg
 
         elif arg is None \
-                or isinstance(arg, (list, float, integer_types, string_types)):
+                or isinstance(arg, (list, float, six.integer_types, six.string_types)):
             # yaml.safe_load will load '|' as '', don't let it do that.
             if arg == '' and original_arg in ('|',):
                 return original_arg
@@ -144,6 +150,25 @@ def yamlify_arg(arg):
         return original_arg
 
 
+if six.PY3:
+    from collections import namedtuple  # pylint: disable=wrong-import-position,wrong-import-order
+
+    _ArgSpec = namedtuple('ArgSpec', 'args varargs keywords defaults')
+
+    def _getargspec(func):
+        '''
+        Python 3 wrapper for inspect.getargsspec
+
+        inspect.getargsspec is deprecated and will be removed in Python 3.6.
+        '''
+        args, varargs, varkw, defaults, kwonlyargs, _, ann = \
+            inspect.getfullargspec(func)  # pylint: disable=no-member
+        if kwonlyargs or ann:
+            raise ValueError('Function has keyword-only arguments or annotations'
+                             ', use getfullargspec() API which can support them')
+        return _ArgSpec(args, varargs, varkw, defaults)
+
+
 def get_function_argspec(func):
     '''
     A small wrapper around getargspec that also supports callable classes
@@ -151,15 +176,30 @@ def get_function_argspec(func):
     if not callable(func):
         raise TypeError('{0} is not a callable'.format(func))
 
-    if inspect.isfunction(func):
-        aspec = inspect.getargspec(func)
-    elif inspect.ismethod(func):
-        aspec = inspect.getargspec(func)
-        del aspec.args[0]  # self
-    elif isinstance(func, object):
-        aspec = inspect.getargspec(func.__call__)
-        del aspec.args[0]  # self
+    if six.PY2:
+        if inspect.isfunction(func):
+            aspec = inspect.getargspec(func)
+        elif inspect.ismethod(func):
+            aspec = inspect.getargspec(func)
+            del aspec.args[0]  # self
+        elif isinstance(func, object):
+            aspec = inspect.getargspec(func.__call__)
+            del aspec.args[0]  # self
+        else:
+            raise TypeError(
+                'Cannot inspect argument list for \'{0}\''.format(func)
+            )
     else:
-        raise TypeError('Cannot inspect argument list for {0!r}'.format(func))
-
+        if inspect.isfunction(func):
+            aspec = _getargspec(func)  # pylint: disable=redefined-variable-type
+        elif inspect.ismethod(func):
+            aspec = _getargspec(func)
+            del aspec.args[0]  # self
+        elif isinstance(func, object):
+            aspec = _getargspec(func.__call__)
+            del aspec.args[0]  # self
+        else:
+            raise TypeError(
+                'Cannot inspect argument list for \'{0}\''.format(func)
+            )
     return aspec

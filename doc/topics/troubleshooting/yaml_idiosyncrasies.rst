@@ -1,3 +1,5 @@
+.. _yaml-idiosyncrasies:
+
 ===================
 YAML Idiosyncrasies
 ===================
@@ -26,6 +28,7 @@ hit `Enter`. Also, you can convert tabs to 2 spaces by these commands in Vim:
 
 Indentation
 ===========
+
 The suggested syntax for YAML files is to use 2 spaces for indentation,
 but YAML will follow whatever indentation system that the individual file
 uses. Indentation of two spaces works very well for SLS files given the
@@ -39,7 +42,7 @@ Nested Dictionaries
 When :ref:`dicts <python2:typesmapping>` are nested within other data
 structures (particularly lists), the indentation logic sometimes changes.
 Examples of where this might happen include ``context`` and ``default`` options
-from the :doc:`file.managed </ref/states/all/salt.states.file>` state:
+from the :mod:`file.managed <salt.states.file>` state:
 
 .. code-block:: yaml
 
@@ -110,46 +113,75 @@ PyYAML will load these values as boolean ``True`` or ``False``. Un-capitalized
 versions will also be loaded as booleans (``true``, ``false``, ``yes``, ``no``,
 ``on``, and ``off``). This can be especially problematic when constructing
 Pillar data. Make sure that your Pillars which need to use the string versions
-of these values are enclosed in quotes.
+of these values are enclosed in quotes. Pillars will be parsed twice by salt,
+so you'll need to wrap your values in multiple quotes, including double quotation
+marks (``" "``) and single quotation marks (``' '``). Note that spaces are included
+in the quotation type examples for clarity.
 
-Integers are Parsed as Integers
-===============================
-
-NOTE: This has been fixed in salt 0.10.0, as of this release passing an
-integer that is preceded by a 0 will be correctly parsed
-
-When passing :func:`integers <python2:int>` into an SLS file, they are
-passed as integers. This means that if a state accepts a string value
-and an integer is passed, that an integer will be sent. The solution here
-is to send the integer as a string.
-
-This is best explained when setting the mode for a file:
+Multiple quoting examples looks like this:
 
 .. code-block:: yaml
 
-    /etc/vimrc:
-      file:
-        - managed
-        - source: salt://edit/vimrc
-        - user: root
-        - group: root
-        - mode: 644
+    - '"false"'
+    - "'True'"
+    - "'YES'"
+    - '"No"'
 
-Salt manages this well, since the mode is passed as 644, but if the mode is
-zero padded as 0644, then it is read by YAML as an integer and evaluated as
-an octal value, 0644 becomes 420. Therefore, if the file mode is
-preceded by a 0 then it needs to be passed as a string:
+.. note::
+
+    When using multiple quotes in this manner, they must be different. Using ``"" ""``
+    or ``'' ''`` won't work in this case (spaces are included in examples for clarity).
+
+The '%' Sign
+============
+
+The `%` symbol has a special meaning in YAML, it needs to be passed as a
+string literal:
 
 .. code-block:: yaml
 
-    /etc/vimrc:
-      file:
-        - managed
-        - source: salt://edit/vimrc
-        - user: root
-        - group: root
-        - mode: '0644'
+    cheese:
+      ssh_auth.present:
+        - user: tbortels
+        - source: salt://ssh_keys/chease.pub
+        - config: '%h/.ssh/authorized_keys'
 
+Time Expressions
+================
+
+PyYAML will load a time expression as the integer value of that, assuming
+``HH:MM``. So for example, ``12:00`` is loaded by PyYAML as ``720``. An
+excellent explanation for why can be found here__.
+
+To keep time expressions like this from being loaded as integers, always quote
+them.
+
+.. note::
+    When using a jinja ``load_yaml`` map, items must be quoted twice. For
+    example:
+
+    .. code-block:: yaml
+
+        {% load_yaml as wsus_schedule %}
+
+        FRI_10:
+          time: '"23:00"'
+          day: 6 - Every Friday
+        SAT_10:
+          time: '"06:00"'
+          day: 7 - Every Saturday
+        SAT_20:
+          time: '"14:00"'
+          day: 7 - Every Saturday
+        SAT_30:
+          time: '"22:00"'
+          day: 7 - Every Saturday
+        SUN_10:
+          time: '"06:00"'
+          day: 1 - Every Sunday
+        {% endload %}
+
+.. __: http://stackoverflow.com/a/31007425
 
 YAML does not like "Double Short Decs"
 ======================================
@@ -272,8 +304,8 @@ This shell command can find wrong characters in your SLS files:
 
 
 Alternatively you can toggle the `yaml_utf8` setting in your master configuration
- file. This is still an experimental setting but it should manage the right
- encoding conversion in salt after yaml states compilations.
+file. This is still an experimental setting but it should manage the right
+encoding conversion in salt after yaml states compilations.
 
 Underscores stripped in Integer Definitions
 ===========================================
@@ -340,3 +372,13 @@ string with quotes:
     ValueError: month must be in 1..12
     >>> yaml.safe_load('"4017-16-20"')
     '4017-16-20'
+
+
+Keys Limited to 1024 Characters
+===============================
+
+Simple keys are limited to a single line and cannot be longer that 1024 characters.
+This is a limitation from PyYaml, as seen in a comment in `PyYAML's code`_, and
+applies to anything parsed by YAML in Salt.
+
+.. _PyYAML's code: http://pyyaml.org/browser/pyyaml/trunk/lib/yaml/scanner.py#L91

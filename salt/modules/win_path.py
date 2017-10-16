@@ -11,6 +11,7 @@ from __future__ import absolute_import
 # Python Libs
 import logging
 import re
+import os
 from salt.ext.six.moves import map
 
 # Third party libs
@@ -34,7 +35,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_WIN32:
         return 'win_path'
-    return False
+    return (False, "Module win_path: module only works on Windows systems")
 
 
 def _normalize_dir(string):
@@ -130,6 +131,11 @@ def add(path, index=0):
     if index > len(sysPath):
         index = len(sysPath)
 
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if path not in localPath:
+        localPath.append(path)
+        os.environ["PATH"] = os.pathsep.join(localPath)
+
     # Check if we are in the system path at the right location
     try:
         currIndex = sysPath.index(path)
@@ -173,6 +179,11 @@ def remove(path):
     '''
     path = _normalize_dir(path)
     sysPath = get_path()
+
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if path in localPath:
+        localPath.remove(path)
+        os.environ["PATH"] = os.pathsep.join(localPath)
 
     try:
         sysPath.remove(path)

@@ -1,13 +1,15 @@
+.. _tutorial-states-part-2:
+
 =========================================================
 States tutorial, part 2 - More Complex States, Requisites
 =========================================================
 
 .. note::
 
-    This tutorial builds on topics covered in :doc:`part 1 <states_pt1>`. It is
+    This tutorial builds on topics covered in :ref:`part 1 <states-tutorial>`. It is
     recommended that you begin there.
 
-In the :doc:`last part <states_pt1>` of the Salt States tutorial we covered the
+In the :ref:`last part <states-tutorial>` of the Salt States tutorial we covered the
 basics of installing a package. We will now modify our ``webserver.sls`` file
 to have requirements, and use even more Salt States.
 
@@ -65,27 +67,27 @@ installed and running. Include the following at the bottom of your
         - require:                              # requisite declaration
           - pkg: apache                         # requisite reference
 
-**line 9** is the :ref:`id-declaration`. In this example it is the location we
+**line 7** is the :ref:`id-declaration`. In this example it is the location we
 want to install our custom HTML file. (**Note:** the default location that
 Apache serves may differ from the above on your OS or distro. ``/srv/www``
 could also be a likely place to look.)
 
-**Line 10** the :ref:`state-declaration`. This example uses the Salt :mod:`file
+**Line 8** the :ref:`state-declaration`. This example uses the Salt :mod:`file
 state <salt.states.file>`.
 
-**Line 11** is the :ref:`function-declaration`. The :func:`managed function
+**Line 9** is the :ref:`function-declaration`. The :func:`managed function
 <salt.states.file.managed>` will download a file from the master and install it
 in the location specified.
 
-**Line 12** is a :ref:`function-arg-declaration` which, in this example, passes
+**Line 10** is a :ref:`function-arg-declaration` which, in this example, passes
 the ``source`` argument to the :func:`managed function
 <salt.states.file.managed>`.
 
-**Line 13** is a :ref:`requisite-declaration`.
+**Line 11** is a :ref:`requisite-declaration`.
 
-**Line 14** is a :ref:`requisite-reference` which refers to a state and an ID.
+**Line 12** is a :ref:`requisite-reference` which refers to a state and an ID.
 In this example, it is referring to the ``ID declaration`` from our example in
-:doc:`part 1 <states_pt1>`. This declaration tells Salt not to install the HTML
+:ref:`part 1 <states-tutorial>`. This declaration tells Salt not to install the HTML
 file until Apache is installed.
 
 Next, create the ``index.html`` file and save it in the ``webserver``
@@ -93,6 +95,7 @@ directory:
 
 .. code-block:: html
 
+    <!DOCTYPE html>
     <html>
         <head><title>Salt rocks</title></head>
         <body>
@@ -138,10 +141,10 @@ Verify that Apache is now serving your custom HTML.
 
     If the pkg and service names differ on your OS or distro of choice you can
     specify each one separately using a :ref:`name-declaration` which explained
-    in :doc:`Part 3 <states_pt3>`.
+    in :ref:`Part 3 <tutorial-states-part-3>`.
 
 Next steps
 ==========
 
-In :doc:`part 3 <states_pt3>` we will discuss how to use includes, extends, and
+In :ref:`part 3 <tutorial-states-part-3>` we will discuss how to use includes, extends, and
 templating to make a more complete State Tree configuration.

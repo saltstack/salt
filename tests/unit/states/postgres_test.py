@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -367,7 +370,7 @@ class PostgresExtensionTestCase(TestCase):
         self.assertEqual(
             ret,
             {'comment': 'The extension foo has been installed',
-             'changes': {}, 'name': 'foo', 'result': True}
+             'changes': {'foo': 'Installed'}, 'name': 'foo', 'result': True}
         )
         ret = postgres_extension.present('foo')
         self.assertEqual(
@@ -379,7 +382,7 @@ class PostgresExtensionTestCase(TestCase):
         self.assertEqual(
             ret,
             {'comment': 'The extension foo has been upgraded',
-             'changes': {}, 'name': 'foo', 'result': True}
+             'changes': {'foo': 'Upgraded'}, 'name': 'foo', 'result': True}
         )
 
     @patch.dict(OPTS, {'test': True})

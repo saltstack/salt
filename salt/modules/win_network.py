@@ -4,8 +4,15 @@ Module for gathering and managing network information
 '''
 from __future__ import absolute_import
 
+import re
+
 # Import salt libs
 import salt.utils
+import hashlib
+import datetime
+import socket
+import salt.utils.network
+import salt.utils.validate.net
 
 try:
     import salt.utils.winapi
@@ -29,10 +36,10 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES is True:
         return __virtualname__
-    return False
+    return (False, "Module win_network: module only works on Windows systems")
 
 
-def ping(host):
+def ping(host, timeout=False, return_boolean=False):
     '''
     Performs a ping to a host
 
@@ -41,9 +48,36 @@ def ping(host):
     .. code-block:: bash
 
         salt '*' network.ping archlinux.org
+
+    .. versionadded:: 2016.11.0
+
+    Return a True or False instead of ping output.
+
+    .. code-block:: bash
+
+        salt '*' network.ping archlinux.org return_boolean=True
+
+    Set the time to wait for a response in seconds.
+
+    .. code-block:: bash
+
+        salt '*' network.ping archlinux.org timeout=3
     '''
-    cmd = ['ping', '-n', '4', salt.utils.network.sanitize_host(host)]
-    return __salt__['cmd.run'](cmd, python_shell=False)
+    if timeout:
+        # Windows ping differs by having timeout be for individual echo requests.'
+        # Divide timeout by tries to mimic BSD behaviour.
+        timeout = int(timeout) * 1000 // 4
+        cmd = ['ping', '-n', '4', '-w', str(timeout), salt.utils.network.sanitize_host(host)]
+    else:
+        cmd = ['ping', '-n', '4', salt.utils.network.sanitize_host(host)]
+    if return_boolean:
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+        if ret['retcode'] != 0:
+            return False
+        else:
+            return True
+    else:
+        return __salt__['cmd.run'](cmd, python_shell=False)
 
 
 def netstat():
@@ -165,6 +199,35 @@ def nslookup(host):
     return ret
 
 
+def get_route(ip):
+    '''
+    Return routing information for given destination ip
+
+    .. versionadded:: 2016.11.5
+
+    CLI Example::
+
+        salt '*' network.get_route 10.10.10.10
+    '''
+    cmd = 'Find-NetRoute -RemoteIPAddress {0}'.format(ip)
+    out = __salt__['cmd.run'](cmd, shell='powershell', python_shell=True)
+    regexp = re.compile(
+        r"^IPAddress\s+:\s(?P<source>[\d\.:]+)?.*"
+        r"^InterfaceAlias\s+:\s(?P<interface>[\w\.\:\-\ ]+)?.*"
+        r"^NextHop\s+:\s(?P<gateway>[\d\.:]+)",
+        flags=re.MULTILINE | re.DOTALL
+    )
+    m = regexp.search(out)
+    ret = {
+        'destination': ip,
+        'gateway': m.group('gateway'),
+        'interface': m.group('interface'),
+        'source': m.group('source')
+    }
+
+    return ret
+
+
 def dig(host):
     '''
     Performs a DNS lookup with dig
@@ -226,7 +289,7 @@ def hw_addr(iface):
     return salt.utils.network.hw_addr(iface)
 
 # Alias hwaddr to preserve backward compat
-hwaddr = hw_addr
+hwaddr = salt.utils.alias_function(hw_addr, 'hwaddr')
 
 
 def subnets():
@@ -270,7 +333,7 @@ def ip_addrs(interface=None, include_loopback=False):
     return salt.utils.network.ip_addrs(interface=interface,
                                        include_loopback=include_loopback)
 
-ipaddrs = ip_addrs
+ipaddrs = salt.utils.alias_function(ip_addrs, 'ipaddrs')
 
 
 def ip_addrs6(interface=None, include_loopback=False):
@@ -288,4 +351,96 @@ def ip_addrs6(interface=None, include_loopback=False):
     return salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
 
-ipaddrs6 = ip_addrs6
+ipaddrs6 = salt.utils.alias_function(ip_addrs6, 'ipaddrs6')
+
+
+def connect(host, port=None, **kwargs):
+    '''
+    Test connectivity to a host using a particular
+    port from the minion.
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.connect archlinux.org 80
+
+        salt '*' network.connect archlinux.org 80 timeout=3
+
+        salt '*' network.connect archlinux.org 80 timeout=3 family=ipv4
+
+        salt '*' network.connect google-public-dns-a.google.com port=53 proto=udp timeout=3
+    '''
+
+    ret = {'result': None,
+           'comment': ''}
+
+    if not host:
+        ret['result'] = False
+        ret['comment'] = 'Required argument, host, is missing.'
+        return ret
+
+    if not port:
+        ret['result'] = False
+        ret['comment'] = 'Required argument, port, is missing.'
+        return ret
+
+    proto = kwargs.get('proto', 'tcp')
+    timeout = kwargs.get('timeout', 5)
+    family = kwargs.get('family', None)
+
+    if salt.utils.validate.net.ipv4_addr(host) or salt.utils.validate.net.ipv6_addr(host):
+        address = host
+    else:
+        address = '{0}'.format(salt.utils.network.sanitize_host(host))
+
+    try:
+        if proto == 'udp':
+            __proto = socket.SOL_UDP
+        else:
+            __proto = socket.SOL_TCP
+            proto = 'tcp'
+
+        if family:
+            if family == 'ipv4':
+                __family = socket.AF_INET
+            elif family == 'ipv6':
+                __family = socket.AF_INET6
+            else:
+                __family = 0
+        else:
+            __family = 0
+
+        (family,
+         socktype,
+         _proto,
+         garbage,
+         _address) = socket.getaddrinfo(address, port, __family, 0, __proto)[0]
+
+        skt = socket.socket(family, socktype, _proto)
+        skt.settimeout(timeout)
+
+        if proto == 'udp':
+            # Generate a random string of a
+            # decent size to test UDP connection
+            md5h = hashlib.md5()
+            md5h.update(datetime.datetime.now().strftime('%s'))
+            msg = md5h.hexdigest()
+            skt.sendto(msg, _address)
+            recv, svr = skt.recvfrom(255)
+            skt.close()
+        else:
+            skt.connect(_address)
+            skt.shutdown(2)
+    except Exception as exc:
+        ret['result'] = False
+        ret['comment'] = 'Unable to connect to {0} ({1}) on {2} port {3}'\
+            .format(host, _address[0], proto, port)
+        return ret
+
+    ret['result'] = True
+    ret['comment'] = 'Successfully connected to {0} ({1}) on {2} port {3}'\
+        .format(host, _address[0], proto, port)
+    return ret

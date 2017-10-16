@@ -10,10 +10,11 @@ import os
 import re
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
-from salt.modules.systemd import _sd_booted
+import salt.utils.systemd
 import string
 
 log = logging.getLogger(__name__)
@@ -30,20 +31,8 @@ def __virtual__():
     Only run on Linux systems
     '''
     if __grains__['kernel'] != 'Linux':
-        return False
-    global _sd_booted
-    _sd_booted = salt.utils.namespaced_function(_sd_booted, globals())
+        return (False, 'The linux_sysctl execution module cannot be loaded: only available on Linux systems.')
     return __virtualname__
-
-
-def _check_systemd_salt_config():
-    conf = '/etc/sysctl.d/99-salt.conf'
-    if not os.path.exists(conf):
-        sysctl_dir = os.path.split(conf)[0]
-        if not os.path.exists(sysctl_dir):
-            os.makedirs(sysctl_dir)
-        salt.utils.fopen(conf, 'w').close()
-    return conf
 
 
 def default_config():
@@ -59,22 +48,9 @@ def default_config():
 
         salt -G 'kernel:Linux' sysctl.default_config
     '''
-    if _sd_booted(__context__):
-        for line in __salt__['cmd.run_stdout'](
-            'systemctl --version'
-        ).splitlines():
-            if line.startswith('systemd '):
-                version = line.split()[-1]
-                try:
-                    if int(version) >= 207:
-                        return _check_systemd_salt_config()
-                except ValueError:
-                    log.error(
-                        'Unexpected non-numeric systemd version {0!r} '
-                        'detected'.format(version)
-                    )
-                break
-
+    if salt.utils.systemd.booted(__context__) \
+            and salt.utils.systemd.version(__context__) >= 207:
+        return '/etc/sysctl.d/99-salt.conf'
     return '/etc/sysctl.conf'
 
 
@@ -94,16 +70,17 @@ def show(config_file=False):
     ret = {}
     if config_file:
         try:
-            for line in salt.utils.fopen(config_file):
-                if not line.startswith('#') and '=' in line:
-                    # search if we have some '=' instead of ' = ' separators
-                    SPLIT = ' = '
-                    if SPLIT not in line:
-                        SPLIT = SPLIT.strip()
-                    key, value = line.split(SPLIT, 1)
-                    key = key.strip()
-                    value = value.lstrip()
-                    ret[key] = value
+            with salt.utils.fopen(config_file) as fp_:
+                for line in fp_:
+                    if not line.startswith('#') and '=' in line:
+                        # search if we have some '=' instead of ' = ' separators
+                        SPLIT = ' = '
+                        if SPLIT not in line:
+                            SPLIT = SPLIT.strip()
+                        key, value = line.split(SPLIT, 1)
+                        key = key.strip()
+                        value = value.lstrip()
+                        ret[key] = value
         except (OSError, IOError):
             log.error('Could not open sysctl file')
             return None
@@ -144,7 +121,8 @@ def assign(name, value):
         salt '*' sysctl.assign net.ipv4.ip_forward 1
     '''
     value = str(value)
-    sysctl_file = '/proc/sys/{0}'.format(name.translate(string.maketrans('./', '/.')))
+    trantab = ''.maketrans('./', '/.') if six.PY3 else string.maketrans('./', '/.')
+    sysctl_file = '/proc/sys/{0}'.format(name.translate(trantab))
     if not os.path.exists(sysctl_file):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 
@@ -188,6 +166,9 @@ def persist(name, value, config=None):
     edited = False
     # If the sysctl.conf is not present, add it
     if not os.path.isfile(config):
+        sysctl_dir = os.path.dirname(config)
+        if not os.path.exists(sysctl_dir):
+            os.makedirs(sysctl_dir)
         try:
             with salt.utils.fopen(config, 'w+') as _fh:
                 _fh.write('#\n# Kernel sysctl configuration\n#\n')
@@ -240,7 +221,12 @@ def persist(name, value, config=None):
                     if str(running[name]) != str(value):
                         assign(name, value)
                         return 'Updated'
-                return 'Already set'
+                    else:
+                        return 'Already set'
+                # It is missing from the running config. We can not set it.
+                else:
+                    raise CommandExecutionError('sysctl {0} does not exist'.format(name))
+
             nlines.append('{0} = {1}\n'.format(name, value))
             edited = True
             continue

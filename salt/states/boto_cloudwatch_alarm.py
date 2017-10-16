@@ -10,7 +10,7 @@ Amazon's services, and so may incur charges.
 This module uses boto, which can be installed via package, or pip.
 
 This module accepts explicit credentials but can also utilize
-IAM roles assigned to the instance trough Instance Profiles. Dynamic
+IAM roles assigned to the instance through Instance Profiles. Dynamic
 credentials are then automatically obtained from AWS API and no further
 configuration is necessary. More Information available at:
 
@@ -52,9 +52,12 @@ as a passed in dict, or as a string to pull from pillars or minion config:
             alarm_actions:
               - arn:aws:sns:us-east-1:1111111:myalerting-action
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 
-from salt.ext.six import string_types
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -109,18 +112,20 @@ def present(
     # AWS type transformations
     difference = []
     if alarm_details:
-        for k, v in attributes.items():
+        for k, v in six.iteritems(attributes):
             if k not in alarm_details:
                 difference.append("{0}={1} (new)".format(k, v))
                 continue
             v2 = alarm_details[k]
             if v == v2:
                 continue
-            if isinstance(v, string_types) and str(v) == str(v2):
+            if isinstance(v, six.string_types) and str(v) == str(v2):
                 continue
             if isinstance(v, float) and v == float(v2):
                 continue
             if isinstance(v, int) and v == int(v2):
+                continue
+            if isinstance(v, list) and sorted(v) == sorted(v2):
                 continue
             difference.append("{0}='{1}' was: '{2}'".format(k, v, v2))
     else:

@@ -5,19 +5,25 @@ Connection module for Amazon Autoscale Groups
 .. versionadded:: 2014.7.0
 
 :configuration: This module accepts explicit autoscale credentials but can also
-    utilize IAM roles assigned to the instance trough Instance Profiles.
+    utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
-    further configuration is necessary. More Information available at::
+    further configuration is necessary. More Information available at:
 
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    .. code-block:: text
+
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file::
+    in the minion's config file:
+
+    .. code-block:: yaml
 
         asg.keyid: GKTADJGHEIQSXMKKRBJ08H
         asg.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A region may also be specified in the configuration::
+    A region may also be specified in the configuration:
+
+    .. code-block:: yaml
 
         asg.region: us-east-1
 
@@ -26,25 +32,33 @@ Connection module for Amazon Autoscale Groups
     It's also possible to specify key, keyid and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
 
+    .. code-block:: yaml
+
         myprofile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 
 :depends: boto
+:depends: boto3
 '''
-from __future__ import absolute_import
+# keep lint from choking on _get_conn and _cache_id
+#pylint: disable=E0602
 
 # Import Python libs
+from __future__ import absolute_import
+import datetime
 import logging
 import json
-import yaml
+import sys
 import email.mime.multipart
-import salt.ext.six as six
 
 log = logging.getLogger(__name__)
+DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # Import third party libs
+import yaml
+import salt.ext.six as six
 try:
     import boto
     import boto.ec2
@@ -52,11 +66,17 @@ try:
     import boto.ec2.blockdevicemapping as blockdevicemapping
     import boto.ec2.autoscale as autoscale
     logging.getLogger('boto').setLevel(logging.CRITICAL)
+    import boto3  # pylint: disable=unused-import
+    from botocore.exceptions import ClientError
+    logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six import string_types
+
+# Import Salt libs
+import salt.utils.boto3
+import salt.utils.compat
 import salt.utils.odict as odict
 
 
@@ -65,8 +85,20 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_asg module could not be loaded: boto libraries not found')
+
+    __utils__['boto.assign_funcs'](__name__, 'asg', module='ec2.autoscale', pack=__salt__)
+    setattr(sys.modules[__name__], '_get_ec2_conn',
+            __utils__['boto.get_connection_func']('ec2'))
     return True
+
+
+def __init__(opts):
+    salt.utils.compat.pack_dunder(__name__)
+    if HAS_BOTO:
+        __utils__['boto3.assign_funcs'](
+            __name__, 'autoscaling',
+            get_conn_funcname='_get_conn_autoscaling_boto3')
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):
@@ -77,9 +109,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_asg.exists myasg region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         _conn = conn.get_all_groups(names=[name])
         if _conn:
@@ -101,9 +131,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_asg.get_config myasg region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return None
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         asg = conn.get_all_groups(names=[name])
         if asg:
@@ -152,6 +180,22 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                     ("cooldown", policy.cooldown)
                 ])
             )
+        # scheduled actions
+        actions = conn.get_all_scheduled_actions(as_group=name)
+        ret['scheduled_actions'] = {}
+        for action in actions:
+            end_time = None
+            if action.end_time:
+                end_time = action.end_time.isoformat()
+            ret['scheduled_actions'][action.name] = dict([
+              ("min_size", action.min_size),
+              ("max_size", action.max_size),
+              # AWS bug
+              ("desired_capacity", int(action.desired_capacity)),
+              ("start_time", action.start_time.isoformat()),
+              ("end_time", end_time),
+              ("recurrence", action.recurrence)
+            ])
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -163,8 +207,9 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
            health_check_type=None, health_check_period=None,
            placement_group=None, vpc_zone_identifier=None, tags=None,
            termination_policies=None, suspended_processes=None,
-           scaling_policies=None, region=None, key=None, keyid=None,
-           profile=None):
+           scaling_policies=None, scheduled_actions=None, region=None,
+           notification_arn=None, notification_types=None,
+           key=None, keyid=None, profile=None):
     '''
     Create an autoscale group.
 
@@ -172,16 +217,14 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
 
         salt myminion boto_asg.create myasg mylc '["us-east-1a", "us-east-1e"]' 1 10 load_balancers='["myelb", "myelb2"]' tags='[{"key": "Name", value="myasg", "propagate_at_launch": True}]'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-    if isinstance(availability_zones, string_types):
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if isinstance(availability_zones, six.string_types):
         availability_zones = json.loads(availability_zones)
-    if isinstance(load_balancers, string_types):
+    if isinstance(load_balancers, six.string_types):
         load_balancers = json.loads(load_balancers)
-    if isinstance(vpc_zone_identifier, string_types):
+    if isinstance(vpc_zone_identifier, six.string_types):
         vpc_zone_identifier = json.loads(vpc_zone_identifier)
-    if isinstance(tags, string_types):
+    if isinstance(tags, six.string_types):
         tags = json.loads(tags)
     # Make a list of tag objects from the dict.
     _tags = []
@@ -201,10 +244,12 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
             _tag = autoscale.Tag(key=key, value=value, resource_id=name,
                                  propagate_at_launch=propagate_at_launch)
             _tags.append(_tag)
-    if isinstance(termination_policies, string_types):
+    if isinstance(termination_policies, six.string_types):
         termination_policies = json.loads(termination_policies)
-    if isinstance(suspended_processes, string_types):
+    if isinstance(suspended_processes, six.string_types):
         suspended_processes = json.loads(suspended_processes)
+    if isinstance(scheduled_actions, six.string_types):
+        scheduled_actions = json.loads(scheduled_actions)
     try:
         _asg = autoscale.AutoScalingGroup(
             name=name, launch_config=launch_config_name,
@@ -221,6 +266,11 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         conn.create_auto_scaling_group(_asg)
         # create scaling policies
         _create_scaling_policies(conn, name, scaling_policies)
+        # create scheduled actions
+        _create_scheduled_actions(conn, name, scheduled_actions)
+        # create notifications
+        if notification_arn and notification_types:
+            conn.put_notification_configuration(_asg, notification_arn, notification_types)
         log.info('Created ASG {0}'.format(name))
         return True
     except boto.exception.BotoServerError as e:
@@ -235,9 +285,9 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
            health_check_type=None, health_check_period=None,
            placement_group=None, vpc_zone_identifier=None, tags=None,
            termination_policies=None, suspended_processes=None,
-           scaling_policies=None,
-           region=None, key=None, keyid=None,
-           profile=None):
+           scaling_policies=None, scheduled_actions=None,
+           notification_arn=None, notification_types=None,
+           region=None, key=None, keyid=None, profile=None):
     '''
     Update an autoscale group.
 
@@ -246,16 +296,16 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         salt myminion boto_asg.update myasg mylc '["us-east-1a", "us-east-1e"]' 1 10 load_balancers='["myelb", "myelb2"]' tags='[{"key": "Name", value="myasg", "propagate_at_launch": True}]'
     '''
 
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return False, "failed to connect to AWS"
-    if isinstance(availability_zones, string_types):
+    if isinstance(availability_zones, six.string_types):
         availability_zones = json.loads(availability_zones)
-    if isinstance(load_balancers, string_types):
+    if isinstance(load_balancers, six.string_types):
         load_balancers = json.loads(load_balancers)
-    if isinstance(vpc_zone_identifier, string_types):
+    if isinstance(vpc_zone_identifier, six.string_types):
         vpc_zone_identifier = json.loads(vpc_zone_identifier)
-    if isinstance(tags, string_types):
+    if isinstance(tags, six.string_types):
         tags = json.loads(tags)
     # Make a list of tag objects from the dict.
     _tags = []
@@ -275,10 +325,12 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             _tag = autoscale.Tag(key=key, value=value, resource_id=name,
                                  propagate_at_launch=propagate_at_launch)
             _tags.append(_tag)
-    if isinstance(termination_policies, string_types):
+    if isinstance(termination_policies, six.string_types):
         termination_policies = json.loads(termination_policies)
-    if isinstance(suspended_processes, string_types):
+    if isinstance(suspended_processes, six.string_types):
         suspended_processes = json.loads(suspended_processes)
+    if isinstance(scheduled_actions, six.string_types):
+        scheduled_actions = json.loads(scheduled_actions)
     try:
         _asg = autoscale.AutoScalingGroup(
             connection=conn,
@@ -292,6 +344,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             placement_group=placement_group, tags=_tags,
             vpc_zone_identifier=vpc_zone_identifier,
             termination_policies=termination_policies)
+        if notification_arn and notification_types:
+            conn.put_notification_configuration(_asg, notification_arn, notification_types)
         _asg.update()
         # Seems the update call doesn't handle tags, so we'll need to update
         # that separately.
@@ -310,6 +364,13 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         for policy in conn.get_all_policies(as_group=name):
             conn.delete_policy(policy.name, autoscale_group=name)
         _create_scaling_policies(conn, name, scaling_policies)
+        # ### scheduled actions
+        # delete all scheduled actions, then recreate them
+        for scheduled_action in conn.get_all_scheduled_actions(as_group=name):
+            conn.delete_scheduled_action(
+                scheduled_action.name, autoscale_group=name
+            )
+        _create_scheduled_actions(conn, name, scheduled_actions)
         return True, ''
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -332,6 +393,30 @@ def _create_scaling_policies(conn, as_name, scaling_policies):
             conn.create_scaling_policy(policy)
 
 
+def _create_scheduled_actions(conn, as_name, scheduled_actions):
+    '''
+    Helper function to create scheduled actions
+    '''
+    if scheduled_actions:
+        for name, action in six.iteritems(scheduled_actions):
+            if 'start_time' in action and isinstance(action['start_time'], six.string_types):
+                action['start_time'] = datetime.datetime.strptime(
+                    action['start_time'], DATE_FORMAT
+                )
+            if 'end_time' in action and isinstance(action['end_time'], six.string_types):
+                action['end_time'] = datetime.datetime.strptime(
+                    action['end_time'], DATE_FORMAT
+                )
+            conn.create_scheduled_group_action(as_name, name,
+                desired_capacity=action.get('desired_capacity'),
+                min_size=action.get('min_size'),
+                max_size=action.get('max_size'),
+                start_time=action.get('start_time'),
+                end_time=action.get('end_time'),
+                recurrence=action.get('recurrence')
+            )
+
+
 def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
     '''
     Delete an autoscale group.
@@ -340,9 +425,7 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_asg.delete myasg region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.delete_auto_scaling_group(name, force)
         msg = 'Deleted autoscale group {0}.'.format(name)
@@ -366,19 +449,31 @@ def get_cloud_init_mime(cloud_init):
 
         salt myminion boto.get_cloud_init_mime <cloud init>
     '''
-    if isinstance(cloud_init, string_types):
+    if isinstance(cloud_init, six.string_types):
         cloud_init = json.loads(cloud_init)
     _cloud_init = email.mime.multipart.MIMEMultipart()
+    if 'boothooks' in cloud_init:
+        for script_name, script in six.iteritems(cloud_init['boothooks']):
+            _script = email.mime.text.MIMEText(script, 'cloud-boothook')
+            _cloud_init.attach(_script)
     if 'scripts' in cloud_init:
         for script_name, script in six.iteritems(cloud_init['scripts']):
             _script = email.mime.text.MIMEText(script, 'x-shellscript')
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
         cloud_config = cloud_init['cloud-config']
-        _cloud_config = email.mime.text.MIMEText(yaml.dump(dict(cloud_config)),
+        _cloud_config = email.mime.text.MIMEText(_safe_dump(cloud_config),
                                                  'cloud-config')
         _cloud_init.attach(_cloud_config)
     return _cloud_init.as_string()
+
+
+def _safe_dump(data):
+    def ordered_dict_presenter(dumper, data):
+        return dumper.represent_dict(six.iteritems(data))
+    yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
+                         Dumper=yaml.dumper.SafeDumper)
+    return yaml.safe_dump(data, default_flow_style=False)
 
 
 def launch_configuration_exists(name, region=None, key=None, keyid=None,
@@ -390,9 +485,7 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
 
         salt myminion boto_asg.launch_configuration_exists mylc
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         lc = conn.get_all_launch_configurations(names=[name])
         if lc:
@@ -404,6 +497,59 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return False
+
+
+def get_all_launch_configurations(region=None, key=None, keyid=None,
+                                  profile=None):
+    '''
+    Fetch and return all Launch Configuration with details.
+
+    CLI example::
+
+        salt myminion boto_asg.get_all_launch_configurations
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        return conn.get_all_launch_configurations()
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return []
+
+
+def list_launch_configurations(region=None, key=None, keyid=None,
+                                profile=None):
+    '''
+    List all Launch Configurations.
+
+    CLI example::
+
+        salt myminion boto_asg.list_launch_configurations
+    '''
+    ret = get_all_launch_configurations(region, key, keyid, profile)
+    return [r.name for r in ret]
+
+
+def describe_launch_configuration(name, region=None, key=None, keyid=None,
+                                  profile=None):
+    '''
+    Dump details of a given launch configuration.
+
+    CLI example::
+
+        salt myminion boto_asg.describe_launch_configuration mylc
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        lc = conn.get_all_launch_configurations(names=[name])
+        if lc:
+            return lc[0]
+        else:
+            msg = 'The launch configuration does not exist in region {0}'.format(region)
+            log.debug(msg)
+            return None
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return None
 
 
 def create_launch_configuration(name, image_id, key_name=None,
@@ -425,12 +571,10 @@ def create_launch_configuration(name, image_id, key_name=None,
 
         salt myminion boto_asg.create_launch_configuration mylc image_id=ami-0b9c9f62 key_name='mykey' security_groups='["mygroup"]' instance_type='c3.2xlarge'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-    if isinstance(security_groups, string_types):
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if isinstance(security_groups, six.string_types):
         security_groups = json.loads(security_groups)
-    if isinstance(block_device_mappings, string_types):
+    if isinstance(block_device_mappings, six.string_types):
         block_device_mappings = json.loads(block_device_mappings)
     _bdms = []
     if block_device_mappings:
@@ -474,9 +618,7 @@ def delete_launch_configuration(name, region=None, key=None, keyid=None,
 
         salt myminion boto_asg.delete_launch_configuration mylc
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.delete_launch_configuration(name)
         log.info('Deleted LC {0}'.format(name))
@@ -499,7 +641,7 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
 
         salt '*' boto_asg.get_scaling_policy_arn mygroup mypolicy
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     policies = conn.get_all_policies(as_group=as_group)
     for policy in policies:
         if policy.name == scaling_policy_name:
@@ -508,86 +650,64 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
     return None
 
 
-def _get_conn(region, key, keyid, profile):
+def get_all_groups(region=None, key=None, keyid=None, profile=None):
     '''
-    Get a boto connection to autoscale.
+    Return all AutoScale Groups visible in the account
+    (as a list of boto.ec2.autoscale.group.AutoScalingGroup).
+
+    .. versionadded:: 2016.11.0
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt-call boto_asg.get_all_groups region=us-east-1 --output yaml
+
     '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('asg.region'):
-        region = __salt__['config.option']('asg.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('asg.key'):
-        key = __salt__['config.option']('asg.key')
-    if not keyid and __salt__['config.option']('asg.keyid'):
-        keyid = __salt__['config.option']('asg.keyid')
-
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        conn = autoscale.connect_to_region(region, aws_access_key_id=keyid,
-                                           aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto autoscale connection.')
-        return None
-    return conn
+        next_token = ''
+        asgs = []
+        while next_token is not None:
+            ret = conn.get_all_groups(next_token=next_token)
+            asgs += [a for a in ret]
+            next_token = ret.next_token
+        return asgs
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return []
 
 
-def _get_ec2_conn(region, key, keyid, profile):
+def list_groups(region=None, key=None, keyid=None, profile=None):
     '''
-    Get a boto connection to ec2.   Needed for get_instances
+    Return all AutoScale Groups visible in the account
+    (as a list of names).
+
+    .. versionadded:: 2016.11.0
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt-call boto_asg.list_groups region=us-east-1
+
     '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('secgroup.region'):
-        region = __salt__['config.option']('secgroup.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('secgroup.key'):
-        key = __salt__['config.option']('secgroup.key')
-    if not keyid and __salt__['config.option']('secgroup.keyid'):
-        keyid = __salt__['config.option']('secgroup.keyid')
-
-    try:
-        conn = boto.ec2.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make ec2 connection for security groups.')
-        return None
-    return conn
+    return [a.name for a in get_all_groups(region=region, key=key, keyid=keyid, profile=profile)]
 
 
-def get_instances(name, lifecycle_state="InService", health_status="Healthy", attribute="private_ip_address", region=None, key=None, keyid=None, profile=None):
-    """return attribute of all instances in the named autoscale group.
+def get_instances(name, lifecycle_state="InService", health_status="Healthy",
+                  attribute="private_ip_address", attributes=None, region=None,
+                  key=None, keyid=None, profile=None):
+    '''
+    return attribute of all instances in the named autoscale group.
 
     CLI example::
 
         salt-call boto_asg.get_instances my_autoscale_group_name
 
-    """
-    conn = _get_conn(region, key, keyid, profile)
-    ec2_conn = _get_ec2_conn(region, key, keyid, profile)
-    if not conn or not ec2_conn:
-        return False
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    ec2_conn = _get_ec2_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         asgs = conn.get_all_groups(names=[name])
     except boto.exception.BotoServerError as e:
@@ -607,4 +727,62 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy", at
         instance_ids.append(i.instance_id)
     # get full instance info, so that we can return the attribute
     instances = ec2_conn.get_only_instances(instance_ids=instance_ids)
+    if attributes:
+        return [[getattr(instance, attr).encode("ascii") for attr in attributes] for instance in instances]
+    else:
+        # properly handle case when not all instances have the requested attribute
+        return [getattr(instance, attribute).encode("ascii") for instance in instances if getattr(instance, attribute)]
     return [getattr(instance, attribute).encode("ascii") for instance in instances]
+
+
+def enter_standby(name, instance_ids, should_decrement_desired_capacity=False,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Switch desired instances to StandBy mode
+
+    .. versionadded:: 2016.11.0
+
+    CLI example::
+
+        salt-call boto_asg.enter_standby my_autoscale_group_name '["i-xxxxxx"]'
+
+    '''
+    conn = _get_conn_autoscaling_boto3(
+        region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        response = conn.enter_standby(
+            InstanceIds=instance_ids,
+            AutoScalingGroupName=name,
+            ShouldDecrementDesiredCapacity=should_decrement_desired_capacity)
+    except ClientError as e:
+        err = salt.utils.boto3.get_error(e)
+        if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
+            return {'exists': False}
+        return {'error': err}
+    return all(activity['StatusCode'] != 'Failed' for activity in response['Activities'])
+
+
+def exit_standby(name, instance_ids, should_decrement_desired_capacity=False,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Exit desired instances from StandBy mode
+
+    .. versionadded:: 2016.11.0
+
+    CLI example::
+
+        salt-call boto_asg.exit_standby my_autoscale_group_name '["i-xxxxxx"]'
+
+    '''
+    conn = _get_conn_autoscaling_boto3(
+        region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        response = conn.exit_standby(
+            InstanceIds=instance_ids,
+            AutoScalingGroupName=name)
+    except ClientError as e:
+        err = salt.utils.boto3.get_error(e)
+        if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
+            return {'exists': False}
+        return {'error': err}
+    return all(activity['StatusCode'] != 'Failed' for activity in response['Activities'])

@@ -32,22 +32,27 @@ def __virtual__():
         'Gentoo',
         'Ubuntu',
         'Debian',
+        'Devuan',
         'Arch',
         'Arch ARM',
         'ALT',
         'SUSE  Enterprise Server',
+        'SUSE',
         'OEL',
         'Linaro',
         'elementary OS',
         'McAfee  OS Server',
-        'Raspbian'
+        'Void',
+        'Mint',
+        'Raspbian',
+        'XenServer'
     ))
     if __grains__.get('os', '') in disable:
-        return False
+        return (False, 'Your OS is on the disabled list')
     # Disable on all non-Linux OSes as well
     if __grains__['kernel'] != 'Linux':
-        return False
-    # Suse >=12.0 uses systemd
+        return (False, 'Non Linux OSes are not supported')
+    # SUSE >=12.0 uses systemd
     if __grains__.get('os_family', '') == 'Suse':
         try:
             # osrelease might be in decimal format (e.g. "12.1"), or for
@@ -56,10 +61,36 @@ def __virtual__():
             # number (it'd be so much simpler if it was always "X.Y"...)
             import re
             if int(re.split(r'\D+', __grains__.get('osrelease', ''))[0]) >= 12:
-                return False
+                return (False, 'SUSE version greater than or equal to 12 is not supported')
         except ValueError:
-            return False
+            return (False, 'You are missing the os_family grain')
     return 'service'
+
+
+def run(name, action):
+    '''
+    Run the specified service with an action.
+
+    .. versionadded:: 2015.8.1
+
+    name
+        Service name.
+
+    action
+        Action name (like start,  stop,  reload,  restart).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.run apache2 reload
+        salt '*' service.run postgresql initdb
+    '''
+    cmd = os.path.join(
+        _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
+        name
+    ) + ' ' + action
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def start(name):
@@ -72,11 +103,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = os.path.join(
-        _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
-        name
-    ) + ' start'
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['service.run'](name, 'start')
 
 
 def stop(name):
@@ -89,11 +116,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = os.path.join(
-        _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
-        name
-    ) + ' stop'
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['service.run'](name, 'stop')
 
 
 def restart(name):
@@ -106,11 +129,7 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    cmd = os.path.join(
-        _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
-        name
-    ) + ' restart'
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['service.run'](name, 'restart')
 
 
 def status(name, sig=None):
@@ -139,11 +158,7 @@ def reload_(name):
 
         salt '*' service.reload <service name>
     '''
-    cmd = os.path.join(
-        _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
-        name
-    ) + ' reload'
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['service.run'](name, 'reload')
 
 
 def available(name):

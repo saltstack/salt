@@ -1,3 +1,5 @@
+.. _tutorial-multi-master:
+
 =====================
 Multi Master Tutorial
 =====================
@@ -17,6 +19,16 @@ In 0.16.0, the masters do not share any information, keys need to be accepted
 on both masters, and shared files need to be shared manually or use tools like
 the git fileserver backend to ensure that the :conf_master:`file_roots` are
 kept consistent.
+
+Beginning with Salt 2016.11.0, the :ref:`Pluggable Minion Data Cache <pluggable-data-cache>`
+was introduced. The minion data cache contains the Salt Mine data, minion grains, and minion
+pillar information cached on the Salt Master. By default, Salt uses the ``localfs`` cache
+module, but other external data stores can be used instead.
+
+Using a pluggable minion cache modules allows for the data stored on a Salt Master about
+Salt Minions to be replicated on other Salt Masters the Minion is connected to. Please see
+the :ref:`Minion Data Cache <cache>` documentation for more information and configuration
+examples.
 
 Summary of Steps
 ----------------
@@ -62,6 +74,20 @@ connected masters:
       - saltmaster2.example.com
 
 Now the minion can be safely restarted.
+
+.. note::
+
+    If the ipc_mode for the minion is set to TCP (default in Windows), then
+    each minion in the multi-minion setup (one per master) needs its own
+    tcp_pub_port and tcp_pull_port.
+
+    If these settings are left as the default 4510/4511, each minion object
+    will receive a port 2 higher than the previous. Thus the first minion will
+    get 4510/4511, the second will get 4512/4513, and so on. If these port
+    decisions are unacceptable, you must configure tcp_pub_port and
+    tcp_pull_port with lists of ports for each master. The length of these
+    lists should match the number of masters, and there should not be overlap
+    in the lists.
 
 Now the minions will check into the original master and also check into the new
 redundant master. Both masters are first-class and have rights to the minions.
@@ -109,6 +135,16 @@ instructions managed by one master will not agree with other masters.
 The recommended way to sync these is to use a fileserver backend like gitfs or
 to keep these files on shared storage.
 
+.. important::
+   If using gitfs/git_pillar with the cachedir shared between masters using
+   `GlusterFS`_, nfs, or another network filesystem, and the masters are
+   running Salt 2015.5.9 or later, it is strongly recommended not to turn off
+   :conf_master:`gitfs_global_lock`/:conf_master:`git_pillar_global_lock` as
+   doing so will cause lock files to be removed if they were created by a
+   different master.
+
+.. _GlusterFS: http://www.gluster.org/
+
 Pillar_Roots
 ````````````
 
@@ -126,6 +162,6 @@ reason otherwise exists to keep them inconsistent.
 These access control options include but are not limited to:
 
 - external_auth
-- client_acl
+- publisher_acl
 - peer
 - peer_run

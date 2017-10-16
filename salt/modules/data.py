@@ -8,10 +8,16 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import ast
+import logging
 
 # Import salt libs
 import salt.utils
 import salt.payload
+
+# Import 3rd-party lib
+import salt.ext.six as six
+
+log = logging.getLogger(__name__)
 
 
 def clear():
@@ -46,6 +52,7 @@ def load():
 
     try:
         datastore_path = os.path.join(__opts__['cachedir'], 'datastore')
+        # serial.load() will close the filehandle, no need for a "with" block
         fn_ = salt.utils.fopen(datastore_path, 'rb')
         return serial.load(fn_)
     except (IOError, OSError, NameError):
@@ -96,39 +103,6 @@ def update(key, value):
     return True
 
 
-def getval(key):
-    '''
-    Get a value from the minion datastore
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' data.getval <key>
-    '''
-    store = load()
-    if key in store:
-        return store[key]
-
-
-def getvals(*keys):
-    '''
-    Get values from the minion datastore
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' data.getvals <key> [<key> ...]
-    '''
-    store = load()
-    ret = []
-    for key in keys:
-        if key in store:
-            ret.append(store[key])
-    return ret
-
-
 def cas(key, value, old_value):
     '''
     Check and set a value in the minion datastore
@@ -167,3 +141,90 @@ def pop(key, default=None):
     val = store.pop(key, default)
     dump(store)
     return val
+
+
+def get(key, default=None):
+    '''
+    Get a (list of) value(s) from the minion datastore
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.get key
+        salt '*' data.get '["key1", "key2"]'
+    '''
+    store = load()
+
+    if isinstance(key, six.string_types):
+        return store.get(key, default)
+    elif default is None:
+        return [store[k] for k in key if k in store]
+    else:
+        return [store.get(k, default) for k in key]
+
+
+def keys():
+    '''
+    Get all keys from the minion datastore
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.keys
+    '''
+    store = load()
+    return store.keys()
+
+
+def values():
+    '''
+    Get values from the minion datastore
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.values
+    '''
+    store = load()
+    return store.values()
+
+
+def items():
+    '''
+    Get items from the minion datastore
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.items
+    '''
+    store = load()
+    return store.items()
+
+
+def has_key(key):
+    '''
+    Check if key is in the minion datastore
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.has_key <mykey>
+    '''
+    store = load()
+    return key in store

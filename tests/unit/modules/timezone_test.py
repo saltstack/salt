@@ -1,259 +1,394 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+    :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
 '''
-# Import Python libs
+
+# Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
+from salttesting import TestCase, skipIf
 from salttesting.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
-    mock_open,
-    patch)
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 
 from salttesting.helpers import ensure_in_syspath
+from salt.exceptions import SaltInvocationError
 
 ensure_in_syspath('../../')
 
 # Import Salt Libs
-import salt.utils
 from salt.modules import timezone
-import os
-from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-
-# Globals
-timezone.__grains__ = {}
-timezone.__salt__ = {}
-timezone.__opts__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TimezoneTestCase(TestCase):
     '''
-    Test cases for salt.modules.timezone
+    Timezone test case
     '''
-    def test_get_zone(self):
+    TEST_TZ = 'UTC'
+
+    def setUp(self):
         '''
-        Test to get current timezone (i.e. America/Denver)
+        Setup test
+        :return:
         '''
-        mock = MagicMock(side_effect=['Time zone: A', 'A'])
-        with patch.object(salt.utils, 'which', return_value=True):
-            with patch.dict(timezone.__salt__, {'cmd.run': mock}):
-                self.assertEqual(timezone.get_zone(), 'A')
+        timezone.__salt__ = {'file.sed': MagicMock(),
+                             'cmd.run': MagicMock(),
+                             'cmd.retcode': MagicMock(return_value=0)}
+        timezone.__grains__ = {'os': 'unknown'}
 
-                self.assertRaises(CommandExecutionError, timezone.get_zone)
-
-        with patch.object(salt.utils, 'which', return_value=False):
-            file_data = '\n'.join(['#', 'A'])
-            with patch('salt.utils.fopen', mock_open(read_data=file_data),
-                       create=True) as mfile:
-                mfile.return_value.__iter__.return_value = file_data.splitlines()
-                with patch.dict(timezone.__grains__, {'os_family': 'Debian',
-                                                      'os': 'Debian'}):
-                    self.assertEqual(timezone.get_zone(), '#\nA')
-
-                with patch.dict(timezone.__grains__, {'os_family': 'Gentoo',
-                                                      'os': 'Gentoo'}):
-                    self.assertEqual(timezone.get_zone(), '')
-
-            with patch.dict(timezone.__grains__, {'os_family': 'FreeBSD',
-                                                  'os': 'FreeBSD'}):
-                zone = 'America/Denver'
-                linkpath = '/usr/share/zoneinfo/' + zone
-                with patch.object(os, 'readlink', return_value=linkpath):
-                    self.assertEqual(timezone.get_zone(), zone)
-
-            with patch.dict(timezone.__grains__, {'os_family': 'Solaris',
-                                                  'os': 'Solaris'}):
-                fl_data = 'TZ=Foo\n'
-                with patch('salt.utils.fopen',
-                           mock_open(read_data=fl_data)) as mfile:
-                    mfile.return_value.__iter__.return_value = [fl_data]
-                    self.assertEqual(timezone.get_zone(), 'Foo')
-
-    def test_get_zonecode(self):
+    def tearDown(self):
         '''
-        Test to get current timezone (i.e. PST, MDT, etc)
+        Teardown test
+        :return:
         '''
-        with patch.dict(timezone.__salt__, {'cmd.run':
-                                            MagicMock(return_value='A')}):
-            self.assertEqual(timezone.get_zonecode(), 'A')
+        timezone.__salt__ = timezone.__grains__ = None
 
-    def test_get_offset(self):
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    def test_get_zone_centos(self):
         '''
-        Test to get current numeric timezone offset from UCT (i.e. -0700)
+        Test CentOS is recognized
+        :return:
         '''
-        with patch.dict(timezone.__salt__, {'cmd.run':
-                                            MagicMock(return_value='A')}):
-            self.assertEqual(timezone.get_offset(), 'A')
+        timezone.__grains__['os'] = 'centos'
+        with patch('salt.modules.timezone._get_zone_etc_localtime', MagicMock(return_value=self.TEST_TZ)):
+            assert timezone.get_zone() == self.TEST_TZ
 
-    def test_set_zone(self):
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    def test_get_zone_os_family_rh_suse(self):
         '''
-        Test to unlinks, then symlinks /etc/localtime to the set timezone.
+        Test RedHat and Suse are recognized
+        :return:
         '''
-        ret = ('Zone does not exist: /usr/share/lib/zoneinfo/timezone')
-        mock = MagicMock(side_effect=[False, True, True])
-        with patch.dict(timezone.__grains__, {'os_family': 'Solaris'}):
-            with patch.object(os.path, 'exists', mock):
-                self.assertEqual(timezone.set_zone('timezone'), ret)
+        for osfamily in ['RedHat', 'Suse']:
+            timezone.__grains__['os_family'] = [osfamily]
+            with patch('salt.modules.timezone._get_zone_sysconfig', MagicMock(return_value=self.TEST_TZ)):
+                assert timezone.get_zone() == self.TEST_TZ
 
-                with patch.object(os, 'unlink', return_value=None):
-                    with patch.dict(timezone.__salt__,
-                                    {'file.sed':
-                                     MagicMock(return_value=None)}):
-                        self.assertTrue(timezone.set_zone('timezone'))
-
-    def test_zone_compare(self):
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    def test_get_zone_os_family_debian_gentoo(self):
         '''
-        Test to checks the hash sum between the given timezone, and the
-        one set in /etc/localtime.
+        Test Debian and Gentoo are recognized
+        :return:
         '''
-        with patch.dict(timezone.__grains__, {'os_family': 'Solaris'}):
-            self.assertEqual(timezone.zone_compare('timezone'),
-                             'Not implemented for Solaris family')
+        for osfamily in ['Debian', 'Gentoo']:
+            timezone.__grains__['os_family'] = [osfamily]
+            with patch('salt.modules.timezone._get_zone_etc_timezone', MagicMock(return_value=self.TEST_TZ)):
+                assert timezone.get_zone() == self.TEST_TZ
 
-        with patch.dict(timezone.__grains__, {'os_family': 'Sola'}):
-            with patch.object(os.path, 'exists', return_value=False):
-                self.assertEqual(timezone.zone_compare('timezone'),
-                                 'Error: /etc/localtime does not exist.')
-
-        with patch.object(os.path, 'exists', return_value=True):
-            with patch.dict(timezone.__grains__, {'os_family': 'Sola'}):
-                with patch.dict(timezone.__opts__, {'hash_type': 'md5'}):
-                    with patch.object(salt.utils, 'get_hash',
-                                      side_effect=IOError('foo')):
-                        self.assertRaises(SaltInvocationError,
-                                          timezone.zone_compare, 't')
-
-                    with patch.object(salt.utils, 'get_hash',
-                                      side_effect=['A', IOError('foo')]):
-                        self.assertRaises(CommandExecutionError,
-                                          timezone.zone_compare, 't')
-
-                    with patch.object(salt.utils, 'get_hash',
-                                      side_effect=['A', 'A']):
-                        self.assertTrue(timezone.zone_compare('timezone'))
-
-                    with patch.object(salt.utils, 'get_hash',
-                                      side_effect=['A', 'B']):
-                        self.assertFalse(timezone.zone_compare('timezone'))
-
-    def test_get_hwclock(self):
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    def test_get_zone_os_family_allbsd_nilinuxrt(self):
         '''
-        Test to get current hardware clock setting (UTC or localtime)
+        Test *BSD and NILinuxRT are recognized
+        :return:
         '''
-        with patch.object(salt.utils, 'which', return_value=True):
-            with patch.dict(timezone.__salt__,
-                            {'cmd.run':
-                             MagicMock(return_value='rtc in local tz:yes\n')}):
-                self.assertEqual(timezone.get_hwclock(), 'localtime')
+        for osfamily in ['FreeBSD', 'OpenBSD', 'NetBSD', 'NILinuxRT']:
+            timezone.__grains__['os_family'] = osfamily
+            with patch('salt.modules.timezone._get_zone_etc_localtime', MagicMock(return_value=self.TEST_TZ)):
+                assert timezone.get_zone() == self.TEST_TZ
 
-            with patch.dict(timezone.__salt__,
-                            {'cmd.run':
-                             MagicMock(return_value='rtc in local tz:No\n')}):
-                self.assertEqual(timezone.get_hwclock(), 'UTC')
-
-            with patch.dict(timezone.__salt__,
-                            {'cmd.run':
-                             MagicMock(return_value='rtc')}):
-                self.assertRaises(CommandExecutionError, timezone.get_hwclock)
-
-        with patch.object(salt.utils, 'which', return_value=False):
-            with patch.dict(timezone.__grains__, {'os_family': 'RedHat'}):
-                with patch.dict(timezone.__salt__,
-                                {'cmd.run':
-                                 MagicMock(return_value='A')}):
-                    self.assertEqual(timezone.get_hwclock(), 'A')
-
-            with patch.dict(timezone.__grains__, {'os_family': 'Suse'}):
-                with patch.dict(timezone.__salt__,
-                                {'cmd.run':
-                                 MagicMock(return_value='A')}):
-                    self.assertEqual(timezone.get_hwclock(), 'A')
-
-            with patch.dict(timezone.__grains__, {'os_family': 'Debian'}):
-                fl_data = 'UTC=yes\n'
-                with patch('salt.utils.fopen',
-                           mock_open(read_data=fl_data)) as mfile:
-                    mfile.return_value.__iter__.return_value = [fl_data]
-                    self.assertEqual(timezone.get_hwclock(), 'UTC')
-
-                fl_data = 'UTC=no\n'
-                with patch('salt.utils.fopen',
-                           mock_open(read_data=fl_data)) as mfile:
-                    mfile.return_value.__iter__.return_value = [fl_data]
-                    self.assertEqual(timezone.get_hwclock(), 'localtime')
-
-            with patch.dict(timezone.__grains__, {'os_family': 'Gentoo'}):
-                fl_data = 'clock=UTC\n'
-                with patch('salt.utils.fopen',
-                           mock_open(read_data=fl_data)) as mfile:
-                    mfile.return_value.__iter__.return_value = [fl_data]
-                    self.assertEqual(timezone.get_hwclock(), 'UTC')
-
-        mock = MagicMock(return_value=True)
-        with patch.object(os.path, 'isfile', mock):
-            fl_data = 'zone_info=GMT'
-            with patch('salt.utils.fopen',
-                       mock_open(read_data=fl_data),
-                       create=True) as mfile:
-                mfile.return_value.__iter__.return_value = fl_data.splitlines()
-                with patch.object(salt.utils, 'which', return_value=False):
-                    with patch.dict(timezone.__grains__,
-                                    {'os_family': 'Solaris'}):
-                        self.assertEqual(timezone.get_hwclock(), 'UTC')
-
-        mock = MagicMock(return_value=True)
-        with patch.object(os.path, 'isfile', mock):
-            fl_data = 'A=GMT'
-            with patch('salt.utils.fopen',
-                       mock_open(read_data=fl_data),
-                       create=True) as mfile:
-                mfile.return_value.__iter__.return_value = fl_data.splitlines()
-                with patch.object(salt.utils, 'which', return_value=False):
-                    with patch.dict(timezone.__grains__,
-                                    {'os_family': 'Solaris'}):
-                        self.assertEqual(timezone.get_hwclock(), 'localtime')
-
-        with patch.object(salt.utils, 'which', return_value=False):
-            with patch.dict(timezone.__grains__, {'os_family': 'Solaris'}):
-                mock = MagicMock(return_value=False)
-                with patch.object(os.path, 'isfile', mock):
-                    self.assertEqual(timezone.get_hwclock(), 'UTC')
-
-    def test_set_hwclock(self):
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    def test_get_zone_os_family_slowlaris(self):
         '''
-        Test to sets the hardware clock to be either UTC or localtime
+        Test Slowlaris is recognized
+        :return:
         '''
-        zone = 'America/Denver'
-        with patch.object(timezone, 'get_zone', return_value=zone):
+        timezone.__grains__['os_family'] = ['Solaris']
+        with patch('salt.modules.timezone._get_zone_solaris', MagicMock(return_value=self.TEST_TZ)):
+            assert timezone.get_zone() == self.TEST_TZ
 
-            with patch.dict(timezone.__grains__, {'os_family': 'Solaris',
-                                                  'cpuarch': 'sparc'}):
-                self.assertRaises(
-                    SaltInvocationError,
-                    timezone.set_hwclock,
-                    'clock'
-                )
-                self.assertRaises(
-                    SaltInvocationError,
-                    timezone.set_hwclock,
-                    'localtime'
-                )
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    def test_get_zone_os_family_aix(self):
+        '''
+        Test IBM AIX is recognized
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['AIX']
+        with patch('salt.modules.timezone._get_zone_aix', MagicMock(return_value=self.TEST_TZ)):
+            assert timezone.get_zone() == self.TEST_TZ
 
-            with patch.dict(timezone.__grains__,
-                            {'os_family': 'DoesNotMatter'}):
-                with patch.object(os.path, 'exists', return_value=False):
-                    self.assertRaises(
-                        CommandExecutionError,
-                        timezone.set_hwclock,
-                        'UTC'
-                    )
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_set_zone_redhat(self):
+        '''
+        Test zone set on RH series
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['RedHat']
+        assert timezone.set_zone(self.TEST_TZ)
+        name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
+        assert args == ('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="UTC"')
 
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(TimezoneTestCase, needs_daemon=False)
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_set_zone_suse(self):
+        '''
+        Test zone set on SUSE series
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Suse']
+        assert timezone.set_zone(self.TEST_TZ)
+        name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
+        assert args == ('/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="UTC"')
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_set_zone_gentoo(self):
+        '''
+        Test zone set on Gentoo series
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Gentoo']
+        _fopen = MagicMock(return_value=MagicMock(spec=file))
+        with patch('salt.utils.fopen', _fopen):
+            assert timezone.set_zone(self.TEST_TZ)
+            name, args, kwargs = _fopen.mock_calls[0]
+            assert args == ('/etc/timezone', 'w')
+            name, args, kwargs = _fopen.return_value.__enter__.return_value.write.mock_calls[0]
+            assert args == ('UTC',)
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_set_zone_debian(self):
+        '''
+        Test zone set on Debian series
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Debian']
+        _fopen = MagicMock(return_value=MagicMock(spec=file))
+        with patch('salt.utils.fopen', _fopen):
+            assert timezone.set_zone(self.TEST_TZ)
+            name, args, kwargs = _fopen.mock_calls[0]
+            assert args == ('/etc/timezone', 'w')
+            name, args, kwargs = _fopen.return_value.__enter__.return_value.write.mock_calls[0]
+            assert args == ('UTC',)
+
+    @patch('salt.utils.which', MagicMock(return_value=True))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_get_hwclock_timedate_utc(self):
+        '''
+        Test get hwclock UTC/localtime
+        :return:
+        '''
+        with patch('salt.modules.timezone._timedatectl', MagicMock(return_value={'stdout': 'rtc in local tz'})):
+            assert timezone.get_hwclock() == 'UTC'
+        with patch('salt.modules.timezone._timedatectl', MagicMock(return_value={'stdout': 'rtc in local tz:yes'})):
+            assert timezone.get_hwclock() == 'localtime'
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_get_hwclock_suse(self):
+        '''
+        Test get hwclock on SUSE
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Suse']
+        timezone.get_hwclock()
+        name, args, kwarg = timezone.__salt__['cmd.run'].mock_calls[0]
+        assert args == (['tail', '-n', '1', '/etc/adjtime'],)
+        assert kwarg == {'python_shell': False}
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_get_hwclock_redhat(self):
+        '''
+        Test get hwclock on RedHat
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['RedHat']
+        timezone.get_hwclock()
+        name, args, kwarg = timezone.__salt__['cmd.run'].mock_calls[0]
+        assert args == (['tail', '-n', '1', '/etc/adjtime'],)
+        assert kwarg == {'python_shell': False}
+
+    def _test_get_hwclock_debian(self):  # TODO: Enable this when testing environment is working properly
+        '''
+        Test get hwclock on Debian
+        :return:
+        '''
+        with patch('salt.utils.which', MagicMock(return_value=False)):
+            with patch('os.path.exists', MagicMock(return_value=True)):
+                with patch('os.unlink', MagicMock()):
+                    with patch('os.symlink', MagicMock()):
+                        timezone.__grains__['os_family'] = ['Debian']
+                        timezone.get_hwclock()
+                        name, args, kwarg = timezone.__salt__['cmd.run'].mock_calls[0]
+                        assert args == (['tail', '-n', '1', '/etc/adjtime'],)
+                        assert kwarg == {'python_shell': False}
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_get_hwclock_solaris(self):
+        '''
+        Test get hwclock on Solaris
+        :return:
+        '''
+        # Incomplete
+        timezone.__grains__['os_family'] = ['Solaris']
+        assert timezone.get_hwclock() == 'UTC'
+        _fopen = MagicMock(return_value=MagicMock(spec=file))
+        with patch('salt.utils.fopen', _fopen):
+            assert timezone.get_hwclock() == 'localtime'
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_get_hwclock_aix(self):
+        '''
+        Test get hwclock on AIX
+        :return:
+        '''
+        # Incomplete
+        hwclock = 'localtime'
+        if not os.path.isfile('/etc/environment'):
+            hwclock = 'UTC'
+        timezone.__grains__['os_family'] = ['AIX']
+        assert timezone.get_hwclock() == hwclock
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    def test_set_hwclock_aix(self):
+        '''
+        Test set hwclock on AIX
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['AIX']
+        with self.assertRaises(SaltInvocationError):
+            assert timezone.set_hwclock('forty two')
+        assert timezone.set_hwclock('UTC')
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    @patch('salt.modules.timezone.get_zone', MagicMock(return_value='TEST_TIMEZONE'))
+    def test_set_hwclock_solaris(self):
+        '''
+        Test set hwclock on Solaris
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Solaris']
+        timezone.__grains__['cpuarch'] = 'x86'
+
+        with self.assertRaises(SaltInvocationError):
+            assert timezone.set_hwclock('forty two')
+        assert timezone.set_hwclock('UTC')
+        name, args, kwargs = timezone.__salt__['cmd.retcode'].mock_calls[0]
+        assert args == (['rtc', '-z', 'GMT'],)
+        assert kwargs == {'python_shell': False}
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    @patch('salt.modules.timezone.get_zone', MagicMock(return_value='TEST_TIMEZONE'))
+    def test_set_hwclock_arch(self):
+        '''
+        Test set hwclock on arch
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Arch']
+
+        assert timezone.set_hwclock('UTC')
+        name, args, kwargs = timezone.__salt__['cmd.retcode'].mock_calls[0]
+        assert args == (['timezonectl', 'set-local-rtc', 'false'],)
+        assert kwargs == {'python_shell': False}
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    @patch('salt.modules.timezone.get_zone', MagicMock(return_value='TEST_TIMEZONE'))
+    def test_set_hwclock_redhat(self):
+        '''
+        Test set hwclock on RedHat
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['RedHat']
+
+        assert timezone.set_hwclock('UTC')
+        name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
+        assert args == ('/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="TEST_TIMEZONE"')
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    @patch('salt.modules.timezone.get_zone', MagicMock(return_value='TEST_TIMEZONE'))
+    def test_set_hwclock_suse(self):
+        '''
+        Test set hwclock on SUSE
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Suse']
+
+        assert timezone.set_hwclock('UTC')
+        name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
+        assert args == ('/etc/sysconfig/clock', '^TIMEZONE=.*', 'TIMEZONE="TEST_TIMEZONE"')
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    @patch('salt.modules.timezone.get_zone', MagicMock(return_value='TEST_TIMEZONE'))
+    def test_set_hwclock_debian(self):
+        '''
+        Test set hwclock on Debian
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Debian']
+
+        assert timezone.set_hwclock('UTC')
+        name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
+        assert args == ('/etc/default/rcS', '^UTC=.*', 'UTC=yes')
+
+        assert timezone.set_hwclock('localtime')
+        name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[1]
+        assert args == ('/etc/default/rcS', '^UTC=.*', 'UTC=no')
+
+    @patch('salt.utils.which', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('os.unlink', MagicMock())
+    @patch('os.symlink', MagicMock())
+    @patch('salt.modules.timezone.get_zone', MagicMock(return_value='TEST_TIMEZONE'))
+    def test_set_hwclock_gentoo(self):
+        '''
+        Test set hwclock on Gentoo
+        :return:
+        '''
+        timezone.__grains__['os_family'] = ['Gentoo']
+
+        with self.assertRaises(SaltInvocationError):
+            timezone.set_hwclock('forty two')
+
+        timezone.set_hwclock('UTC')
+        name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[0]
+        assert args == ('/etc/conf.d/hwclock', '^clock=.*', 'clock="UTC"')
+
+        timezone.set_hwclock('localtime')
+        name, args, kwargs = timezone.__salt__['file.sed'].mock_calls[1]
+        assert args == ('/etc/conf.d/hwclock', '^clock=.*', 'clock="local"')

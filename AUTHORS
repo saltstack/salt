@@ -8,7 +8,7 @@ Whos Who in Salt
 The Man With the Plan
 ----------------------------
 
-Thomas S Hatch is the main developer of Salt. He is the founder, owner,
+Thomas S. Hatch is the main developer of Salt. He is the founder, owner,
 maintainer and lead of the Salt project, as well as author of the majority
 of the Salt code and documentation.
 
@@ -23,8 +23,11 @@ Developers
 
 Aaron Bull Schaefer <aaron@elasticdog.com>
 Aaron Toponce <aaron.toponce@gmail.com>
+Andrew Hammond <andrew.george.hammond@gmail.com>
 Aditya Kulkarni <adi@saltstack.com>
+Alexander Pyatkin <asp@thexyz.net>
 Andre Sachs <andre@sachs.nom.za>
+Andrew Colin Kissa <andrew@topdog.za.net>
 Andrew Kuhnhausen <trane@errstr.com>
 Antti Kaihola <akaihol+github@ambitone.com>
 archme <archme.mail@gmail.com>
@@ -32,6 +35,7 @@ Brad Barden <brad@mifflinet.net>
 Bret Palsson <bretep@gmail.com>
 Brian Wagner <wags@wagsworld.net>
 C. R. Oldham <cr@saltstack.com>
+Carl Loa Odin <carlodin@gmail.com>
 Carlo Pires <carlopires@gmail.com>
 Chris Rebert <chris.rebert@hulu.com>
 Chris Scheller <schelcj@umich.edu>
@@ -81,6 +85,7 @@ Mickey Malone <mickey.malone@gmail.com>
 Michael Steed <msteed@saltstack.com>
 Mike Place <mp@saltstack.com>
 Mitch Anderson <mitch@metauser.net>
+Mostafa Hussein <mostafa.hussein91@gmail.com>
 Nathaniel Whiteinge <seth@eseth.com>
 Nicolas Delaby <nicolas.delaby@ezeep.com>
 Nicole Thomas <nicole@saltstack.com>
@@ -95,6 +100,8 @@ Robert Fielding
 Sean Channel <pentabular@gmail.com>
 Seth House <seth@eseth.com>
 Seth Vidal <skvidal@fedoraproject.org>
+Stas Alekseev <stas.alekseev@gmail.com>
+Thibault Cohen <titilambert@gmail.com>
 Thomas Schreiber <tom@rizumu.us>
 Thomas S Hatch <thatch45@gmail.com>
 Tor Hveem <xt@bash.no>
@@ -110,6 +117,6 @@ contributors please check ohloh, this file can sometimes be out of date:
 
 https://www.ohloh.net/p/salt/contributors
 
-To see current statistics check out the Github Pulse page:
+To see current statistics check out the GitHub Pulse page:
 
 https://github.com/saltstack/salt/pulse

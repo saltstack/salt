@@ -29,14 +29,17 @@ import errno
 import signal
 import select
 import logging
-import subprocess
 
-if subprocess.mswindows:
+mswindows = (sys.platform == "win32")
+
+if mswindows:
     # pylint: disable=F0401,W0611
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
     import msvcrt
-    import _subprocess
+    import win32api
+    import win32con
+    import win32process
     # pylint: enable=F0401,W0611
 else:
     import pty
@@ -46,6 +49,7 @@ else:
     import resource
 
 # Import salt libs
+import salt.utils
 from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 
@@ -115,10 +119,9 @@ class Terminal(object):
         # Let's avoid Zombies!!!
         _cleanup()
 
-        if not args and not executable and not shell:
+        if not args and not executable:
             raise TerminalException(
-                'You need to pass at least one of \'args\', \'executable\' '
-                'or \'shell=True\''
+                'You need to pass at least one of "args", "executable" '
             )
 
         self.args = args
@@ -175,7 +178,7 @@ class Terminal(object):
             self.stream_stdout = stream_stdout
         else:
             raise TerminalException(
-                'Don\'t know how to handle {0!r} as the VT\'s '
+                'Don\'t know how to handle \'{0}\' as the VT\'s '
                 '\'stream_stdout\' parameter.'.format(stream_stdout)
             )
 
@@ -194,7 +197,7 @@ class Terminal(object):
             self.stream_stderr = stream_stderr
         else:
             raise TerminalException(
-                'Don\'t know how to handle {0!r} as the VT\'s '
+                'Don\'t know how to handle \'{0}\' as the VT\'s '
                 '\'stream_stderr\' parameter.'.format(stream_stderr)
             )
         # <---- Direct Streaming Setup ---------------------------------------
@@ -218,7 +221,7 @@ class Terminal(object):
             '{2}'.format(self.pid, self.child_fd, self.child_fde)
         )
         terminal_command = ' '.join(self.args)
-        if 'decode("base64")' in terminal_command:
+        if 'decode("base64")' in terminal_command or 'base64.b64decode(' in terminal_command:
             log.debug('VT: Salt-SSH SHIM Terminal Command executed. Logged to TRACE')
             log.trace('Terminal Command: {0}'.format(terminal_command))
         else:
@@ -348,7 +351,7 @@ class Terminal(object):
     # <---- Context Manager Methods ------------------------------------------
 
 # ----- Platform Specific Methods ------------------------------------------->
-    if subprocess.mswindows:
+    if mswindows:
         # ----- Windows Methods --------------------------------------------->
         def _execute(self):
             raise NotImplementedError
@@ -382,12 +385,12 @@ class Terminal(object):
             Terminates the process
             '''
             try:
-                _subprocess.TerminateProcess(self._handle, 1)
+                win32api.TerminateProcess(self._handle, 1)
             except OSError:
                 # ERROR_ACCESS_DENIED (winerror 5) is received when the
                 # process already died.
-                ecode = _subprocess.GetExitCodeProcess(self._handle)
-                if ecode == _subprocess.STILL_ACTIVE:
+                ecode = win32process.GetExitCodeProcess(self._handle)
+                if ecode == win32con.STILL_ACTIVE:
                     raise
                 self.exitstatus = ecode
 
@@ -486,6 +489,7 @@ class Terminal(object):
                 # Close parent FDs
                 os.close(stdout_parent_fd)
                 os.close(stderr_parent_fd)
+                salt.utils.reinit_crypto()
 
                 # ----- Make STDOUT the controlling PTY --------------------->
                 child_name = os.ttyname(stdout_child_fd)
@@ -546,6 +550,7 @@ class Terminal(object):
                 # <---- Duplicate Descriptors --------------------------------
             else:
                 # Parent. Close Child PTY's
+                salt.utils.reinit_crypto()
                 os.close(stdout_child_fd)
                 os.close(stderr_child_fd)
 
@@ -632,7 +637,9 @@ class Terminal(object):
             if self.child_fde in rlist:
                 try:
                     stderr = self._translate_newlines(
-                        os.read(self.child_fde, maxsize)
+                        salt.utils.to_str(
+                            os.read(self.child_fde, maxsize)
+                        )
                     )
 
                     if not stderr:
@@ -663,7 +670,9 @@ class Terminal(object):
             if self.child_fd in rlist:
                 try:
                     stdout = self._translate_newlines(
-                        os.read(self.child_fd, maxsize)
+                        salt.utils.to_str(
+                            os.read(self.child_fd, maxsize)
+                        )
                     )
 
                     if not stdout:

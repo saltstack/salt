@@ -4,8 +4,8 @@ Salt 2014.1.4 Release Notes
 
 :release: 2014-05-05
 
-Version 2014.1.4 is another bugfix release for :doc:`2014.1.0
-</topics/releases/2014.1.0>`.  Changes include:
+Version 2014.1.4 is another bugfix release for :ref:`2014.1.0
+<release-2014-1-0>`.  Changes include:
 
 - Fix setup.py dependency issue (:issue:`12031`)
 - Fix handling for IOErrors under certain circumstances (:issue:`11783` and

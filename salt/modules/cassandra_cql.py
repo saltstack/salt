@@ -31,16 +31,66 @@ Cassandra Database Module
             - 192.168.50.12
           port: 9000
           username: cas_admin
+
+    .. versionchanged:: 2016.11.0
+
+    Added support for ``ssl_options`` and ``protocol_version``.
+
+    Example configuration with
+    `ssl options <http://datastax.github.io/python-driver/api/cassandra/cluster.html#cassandra.cluster.Cluster.ssl_options>`_:
+
+    If ``ssl_options`` are present in cassandra config the cassandra_cql returner
+    will use SSL. SSL isn't used if ``ssl_options`` isn't specified.
+
+    .. code-block:: yaml
+
+        cassandra:
+          cluster:
+            - 192.168.50.10
+            - 192.168.50.11
+            - 192.168.50.12
+          port: 9000
+          username: cas_admin
+
+          ssl_options:
+            ca_certs: /etc/ssl/certs/ca-bundle.trust.crt
+
+            # SSL version should be one from the ssl module
+            # This is an optional parameter
+            ssl_version: PROTOCOL_TLSv1
+
+    Additionally you can also specify the ``protocol_version`` to
+    `use <http://datastax.github.io/python-driver/api/cassandra/cluster.html#cassandra.cluster.Cluster.ssl_options>`_.
+
+    .. code-block:: yaml
+
+        cassandra:
+          cluster:
+            - 192.168.50.10
+            - 192.168.50.11
+            - 192.168.50.12
+          port: 9000
+          username: cas_admin
+
+          # defaults to 4, if not set
+          protocol_version: 3
+
 '''
 
 # Import Python Libs
 from __future__ import absolute_import
 import logging
 import json
+import ssl
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
+import salt.ext.six as six
+from salt.ext.six.moves import range
+
+SSL_VERSION = 'ssl_version'
+
+SSL_VERSION = 'ssl_version'
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +101,8 @@ try:
     # pylint: disable=import-error,no-name-in-module
     from cassandra.cluster import Cluster
     from cassandra.cluster import NoHostAvailable
-    from cassandra.connection import ConnectionException, ConnectionShutdown
+    from cassandra.connection import ConnectionException, \
+        ConnectionShutdown, OperationTimedOut
     from cassandra.auth import PlainTextAuthProvider
     from cassandra.query import dict_factory
     # pylint: enable=import-error,no-name-in-module
@@ -69,7 +120,11 @@ def __virtual__():
     '''
     if HAS_DRIVER:
         return __virtualname__
-    return False
+    return (False, 'Cannot load cassandra_cql module: python driver not found')
+
+
+def _async_log_errors(errors):
+    log.error('Cassandra_cql async call returned: {0}'.format(errors))
 
 
 def _load_properties(property_name, config_option, set_default=False, default=None):
@@ -83,7 +138,7 @@ def _load_properties(property_name, config_option, set_default=False, default=No
     :param set_default:   Should a default be set if not found in config.
     :type  set_default:   bool
     :param default:       The default value to be set.
-    :type  default:       str
+    :type  default:       str or int
     :return:              The property fetched from the configuration or default.
     :rtype:               str or list of str
     '''
@@ -107,7 +162,39 @@ def _load_properties(property_name, config_option, set_default=False, default=No
     return property_name
 
 
-def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None):
+def _get_ssl_opts():
+    '''
+    Parse out ssl_options for Cassandra cluster connection.
+    Make sure that the ssl_version (if any specified) is valid.
+    '''
+    sslopts = __salt__['config.option']('cassandra').get('ssl_options', None)
+    ssl_opts = {}
+
+    if sslopts:
+        ssl_opts['ca_certs'] = sslopts['ca_certs']
+        if SSL_VERSION in sslopts:
+            if not sslopts[SSL_VERSION].startswith('PROTOCOL_'):
+                valid_opts = ', '.join(
+                    [x for x in dir(ssl) if x.startswith('PROTOCOL_')]
+                )
+                raise CommandExecutionError('Invalid protocol_version '
+                                            'specified! '
+                                            'Please make sure '
+                                            'that the ssl protocol'
+                                            'version is one from the SSL'
+                                            'module. '
+                                            'Valid options are '
+                                            '{0}'.format(valid_opts))
+            else:
+                ssl_opts[SSL_VERSION] = \
+                    getattr(ssl, sslopts[SSL_VERSION])
+        return ssl_opts
+    else:
+        return None
+
+
+def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None,
+             protocol_version=None):
     '''
     Connect to a Cassandra cluster.
 
@@ -118,6 +205,8 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None):
     :param cql_pass:       The Cassandra user password if authentication is turned on.
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
+    :type  port:           int
+    :param protocol_version:  Cassandra protocol version to use.
     :type  port:           int
     :return:               The session and cluster objects.
     :rtype:                cluster object, session object
@@ -140,19 +229,45 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None):
         and 'cassandra_cql_returner_session' in __context__):
         return __context__['cassandra_cql_returner_cluster'], __context__['cassandra_cql_returner_session']
     else:
+
         contact_points = _load_properties(property_name=contact_points, config_option='cluster')
         contact_points = contact_points if isinstance(contact_points, list) else contact_points.split(',')
         port = _load_properties(property_name=port, config_option='port', set_default=True, default=9042)
         cql_user = _load_properties(property_name=cql_user, config_option='username', set_default=True, default="cassandra")
         cql_pass = _load_properties(property_name=cql_pass, config_option='password', set_default=True, default="cassandra")
+        protocol_version = _load_properties(property_name=protocol_version,
+                                            config_option='protocol_version',
+                                            set_default=True, default=4)
 
         try:
             auth_provider = PlainTextAuthProvider(username=cql_user, password=cql_pass)
-            cluster = Cluster(contact_points, port=port, auth_provider=auth_provider)
-            session = cluster.connect()
+            ssl_opts = _get_ssl_opts()
+            if ssl_opts:
+                cluster = Cluster(contact_points,
+                                  port=port,
+                                  auth_provider=auth_provider,
+                                  ssl_options=ssl_opts,
+                                  protocol_version=protocol_version,
+                                  compression=True)
+            else:
+                cluster = Cluster(contact_points, port=port,
+                                  auth_provider=auth_provider,
+                                  protocol_version=protocol_version,
+                                  compression=True)
+            for recontimes in range(1, 4):
+                try:
+                    session = cluster.connect()
+                    break
+                except OperationTimedOut:
+                    log.warning('Cassandra cluster.connect timed out, try {0}'.format(recontimes))
+                    if recontimes >= 3:
+                        raise
+
             # TODO: Call cluster.shutdown() when the module is unloaded on shutdown.
             __context__['cassandra_cql_returner_cluster'] = cluster
             __context__['cassandra_cql_returner_session'] = session
+            __context__['cassandra_cql_prepared'] = {}
+
             log.debug('Successfully connected to Cassandra cluster at {0}'.format(contact_points))
             return cluster, session
         except TypeError:
@@ -180,6 +295,11 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     :type  params:         str
     :return:               A dictionary from the return values of the query
     :rtype:                list[dict]
+
+    .. code-block:: bash
+
+        # CLI Example: Simple CQL query
+        salt '*' cql_query "SELECT * FROM users_by_name WHERE first_name = 'jane'"
     '''
     try:
         cluster, session = _connect(contact_points=contact_points, port=port, cql_user=cql_user, cql_pass=cql_pass)
@@ -206,10 +326,112 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
             for key, value in six.iteritems(result):
                 # Salt won't return dictionaries with odd types like uuid.UUID
                 if not isinstance(value, six.text_type):
-                    value = str(value)
+                    # Must support Cassandra collection types.
+                    # Namely, Cassandras set, list, and map collections.
+                    if not isinstance(value, (set, list, dict)):
+                        value = str(value)
                 values[key] = value
             ret.append(values)
 
+    return ret
+
+
+def cql_query_with_prepare(query, statement_name, statement_arguments, async=False,
+                           callback_errors=None,
+                           contact_points=None, port=None, cql_user=None, cql_pass=None):
+    '''
+    Run a query on a Cassandra cluster and return a dictionary.
+
+    This function should not be used asynchronously for SELECTs -- it will not
+    return anything and we don't currently have a mechanism for handling a future
+    that will return results.
+
+    :param query:          The query to execute.
+    :type  query:          str
+    :param statement_name: Name to assign the prepared statement in the __context__ dictionary
+    :type  statement_name: str
+    :param statement_arguments: Bind parameters for the SQL statement
+    :type  statement_arguments: list[str]
+    :param async:          Run this query in asynchronous mode
+    :type  async:          bool
+    :param callback_errors: Function to call after query runs if there is an error
+    :type  callback_errors: Function callable
+    :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
+    :type  contact_points: str | list[str]
+    :param cql_user:       The Cassandra user if authentication is turned on.
+    :type  cql_user:       str
+    :param cql_pass:       The Cassandra user password if authentication is turned on.
+    :type  cql_pass:       str
+    :param port:           The Cassandra cluster port, defaults to None.
+    :type  port:           int
+    :param params:         The parameters for the query, optional.
+    :type  params:         str
+    :return:               A dictionary from the return values of the query
+    :rtype:                list[dict]
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Insert data asynchronously
+        salt this-node cassandra_cql.cql_query_with_prepare "name_insert" "INSERT INTO USERS (first_name, last_name) VALUES (?, ?)" \
+            statement_arguments=['John','Doe'], async=True
+
+        # Select data, should not be asynchronous because there is not currently a facility to return data from a future
+        salt this-node cassandra_cql.cql_query_with_prepare "name_select" "SELECT * FROM USERS WHERE first_name=?" \
+            statement_arguments=['John']
+    '''
+    try:
+        cluster, session = _connect(contact_points=contact_points, port=port,
+                                    cql_user=cql_user, cql_pass=cql_pass)
+    except CommandExecutionError:
+        log.critical('Could not get Cassandra cluster session.')
+        raise
+    except BaseException as e:
+        log.critical('Unexpected error while getting Cassandra cluster session: {0}'.format(str(e)))
+        raise
+
+    if statement_name not in __context__['cassandra_cql_prepared']:
+        try:
+            bound_statement = session.prepare(query)
+            __context__['cassandra_cql_prepared'][statement_name] = bound_statement
+        except BaseException as e:
+            log.critical('Unexpected error while preparing SQL statement: {0}'.format(str(e)))
+            raise
+    else:
+        bound_statement = __context__['cassandra_cql_prepared'][statement_name]
+
+    session.row_factory = dict_factory
+    ret = []
+
+    try:
+        if async:
+            future_results = session.execute_async(bound_statement.bind(statement_arguments))
+            # future_results.add_callbacks(_async_log_errors)
+        else:
+            results = session.execute(bound_statement.bind(statement_arguments))
+    except BaseException as e:
+        log.error('Failed to execute query: {0}\n reason: {1}'.format(query, str(e)))
+        msg = "ERROR: Cassandra query failed: {0} reason: {1}".format(query, str(e))
+        raise CommandExecutionError(msg)
+
+    if not async and results:
+        for result in results:
+            values = {}
+            for key, value in six.iteritems(result):
+                # Salt won't return dictionaries with odd types like uuid.UUID
+                if not isinstance(value, six.text_type):
+                    # Must support Cassandra collection types.
+                    # Namely, Cassandras set, list, and map collections.
+                    if not isinstance(value, (set, list, dict)):
+                        value = str(value)
+                values[key] = value
+            ret.append(values)
+
+    # If this was a synchronous call, then we either have a empty list
+    # because there was no return, or we have a return
+    # If this was an async call we only return the empty list
     return ret
 
 
@@ -284,8 +506,8 @@ def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
                       release_version,
                       cql_version,
                       schema_version,
-                      thrift_version 
-                 from system.local 
+                      thrift_version
+                 from system.local
                 limit 1;'''
 
     ret = {}
@@ -459,6 +681,7 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
 
     .. code-block:: bash
 
+        # CLI Example:
         salt 'minion1' cassandra_cql.create_keyspace keyspace=newkeyspace
 
         salt 'minion1' cassandra_cql.create_keyspace keyspace=newkeyspace replication_strategy=NetworkTopologyStrategy \
@@ -485,7 +708,7 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
             replication_map['replication_factor'] = replication_factor
 
         query = '''create keyspace {0}
-                     with replication = {1} 
+                     with replication = {1}
                       and durable_writes = true;'''.format(keyspace, replication_map)
 
         try:
@@ -553,6 +776,8 @@ def list_users(contact_points=None, port=None, cql_user=None, cql_pass=None):
     :return:               The list of existing users.
     :rtype:                dict
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt 'minion1' cassandra_cql.list_users
@@ -595,6 +820,8 @@ def create_user(username, password, superuser=False, contact_points=None, port=N
     :type  port:           int
     :return:
     :rtype:
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -646,6 +873,8 @@ def list_permissions(username=None, resource=None, resource_type='keyspace', per
     :return:               Dictionary of permissions.
     :rtype:                dict
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt 'minion1' cassandra_cql.list_permissions
@@ -653,7 +882,7 @@ def list_permissions(username=None, resource=None, resource_type='keyspace', per
         salt 'minion1' cassandra_cql.list_permissions username=joe resource=test_keyspace permission=select
 
         salt 'minion1' cassandra_cql.list_permissions username=joe resource=test_table resource_type=table \
-        permission=select contact_points=minion1
+          permission=select contact_points=minion1
     '''
     keyspace_cql = "{0} {1}".format(resource_type, resource) if resource else "all keyspaces"
     permission_cql = "{0} permission".format(permission) if permission else "all permissions"
@@ -701,6 +930,8 @@ def grant_permission(username, resource=None, resource_type='keyspace', permissi
     :type  port:           int
     :return:
     :rtype:
+
+    CLI Example:
 
     .. code-block:: bash
 

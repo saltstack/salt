@@ -3,6 +3,9 @@
     :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Libs
 from salt.cli.batch import Batch
 
@@ -21,7 +24,13 @@ class BatchTestCase(TestCase):
     '''
 
     def setUp(self):
-        opts = {'batch': '', 'conf_file': {}, 'tgt': '', 'transport': '', 'timeout': 5}
+        opts = {'batch': '',
+                'conf_file': {},
+                'tgt': '',
+                'transport': '',
+                'timeout': 5,
+                'gather_job_timeout': 5}
+
         mock_client = MagicMock()
         with patch('salt.client.get_local_client', MagicMock(return_value=mock_client)):
             with patch('salt.client.LocalClient.cmd_iter', MagicMock(return_value=[])):

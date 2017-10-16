@@ -19,6 +19,8 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'apache'
 
+SITE_ENABLED_DIR = '/etc/apache2/sites-enabled'
+
 
 def __virtual__():
     '''
@@ -27,7 +29,7 @@ def __virtual__():
     cmd = _detect_os()
     if salt.utils.which(cmd) and __grains__['os_family'] == 'Debian':
         return __virtualname__
-    return False
+    return (False, 'apache execution module not loaded: apache not installed.')
 
 
 def _detect_os():
@@ -45,7 +47,7 @@ def _detect_os():
 
 def check_site_enabled(site):
     '''
-    Checks to see if the specific Site symlink is in /etc/apache2/sites-enabled.
+    Checks to see if the specific site symlink is in /etc/apache2/sites-enabled.
 
     This will only be functional on Debian-based operating systems (Ubuntu,
     Mint, etc).
@@ -55,10 +57,16 @@ def check_site_enabled(site):
     .. code-block:: bash
 
         salt '*' apache.check_site_enabled example.com
+        salt '*' apache.check_site_enabled example.com.conf
     '''
-    if os.path.islink('/etc/apache2/sites-enabled/{0}'.format(site)):
+    if site.endswith('.conf'):
+        site_file = site
+    else:
+        site_file = '{0}.conf'.format(site)
+    if os.path.islink('{0}/{1}'.format(SITE_ENABLED_DIR, site_file)):
         return True
-    elif site == 'default' and os.path.islink('/etc/apache2/sites-enabled/000-{0}'.format(site)):
+    elif site == 'default' and \
+            os.path.islink('{0}/000-{1}'.format(SITE_ENABLED_DIR, site_file)):
         return True
     else:
         return False
@@ -143,15 +151,15 @@ def check_mod_enabled(mod):
 
     .. code-block:: bash
 
-        salt '*' apache.check_mod_enabled status.conf
+        salt '*' apache.check_mod_enabled status
         salt '*' apache.check_mod_enabled status.load
+        salt '*' apache.check_mod_enabled status.conf
     '''
-    if os.path.islink('/etc/apache2/mods-enabled/{0}'.format(mod)):
-        return True
-    elif mod == 'default' and os.path.islink('/etc/apache2/mods-enabled/000-{0}'.format(mod)):
-        return True
+    if mod.endswith('.load') or mod.endswith('.conf'):
+        mod_file = mod
     else:
-        return False
+        mod_file = '{0}.load'.format(mod)
+    return os.path.islink('/etc/apache2/mods-enabled/{0}'.format(mod_file))
 
 
 def a2enmod(mod):
@@ -216,6 +224,103 @@ def a2dismod(mod):
         ret['Status'] = 'Mod {0} Not found'.format(mod)
     elif status == 0:
         ret['Status'] = 'Mod {0} disabled'.format(mod)
+    else:
+        ret['Status'] = status
+
+    return ret
+
+
+def check_conf_enabled(conf):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Checks to see if the specific conf symlink is in /etc/apache2/conf-enabled.
+
+    This will only be functional on Debian-based operating systems (Ubuntu,
+    Mint, etc).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' apache.check_conf_enabled security
+        salt '*' apache.check_conf_enabled security.conf
+    '''
+    if conf.endswith('.conf'):
+        conf_file = conf
+    else:
+        conf_file = '{0}.conf'.format(conf)
+    return os.path.islink('/etc/apache2/conf-enabled/{0}'.format(conf_file))
+
+
+@salt.utils.decorators.which('a2enconf')
+def a2enconf(conf):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Runs a2enconf for the given conf.
+
+    This will only be functional on Debian-based operating systems (Ubuntu,
+    Mint, etc).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' apache.a2enconf security
+    '''
+    ret = {}
+    command = ['a2enconf', conf]
+
+    try:
+        status = __salt__['cmd.retcode'](command, python_shell=False)
+    except Exception as e:
+        return e
+
+    ret['Name'] = 'Apache2 Enable Conf'
+    ret['Conf'] = conf
+
+    if status == 1:
+        ret['Status'] = 'Conf {0} Not found'.format(conf)
+    elif status == 0:
+        ret['Status'] = 'Conf {0} enabled'.format(conf)
+    else:
+        ret['Status'] = status
+
+    return ret
+
+
+@salt.utils.decorators.which('a2disconf')
+def a2disconf(conf):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Runs a2disconf for the given conf.
+
+    This will only be functional on Debian-based operating systems (Ubuntu,
+    Mint, etc).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' apache.a2disconf security
+    '''
+    ret = {}
+    command = ['a2disconf', conf]
+
+    try:
+        status = __salt__['cmd.retcode'](command, python_shell=False)
+    except Exception as e:
+        return e
+
+    ret['Name'] = 'Apache2 Disable Conf'
+    ret['Conf'] = conf
+
+    if status == 256:
+        ret['Status'] = 'Conf {0} Not found'.format(conf)
+    elif status == 0:
+        ret['Status'] = 'Conf {0} disabled'.format(conf)
     else:
         ret['Status'] = status
 

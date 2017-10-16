@@ -7,6 +7,7 @@ Wrapper function for mine operations for salt-ssh
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 
 # Import salt libs
@@ -35,7 +36,9 @@ def get(tgt, fun, expr_form='glob', roster='flat'):
         salt-ssh '*' mine.get '192.168.5.0' network.ipaddrs roster=scan
     '''
     # Set up opts for the SSH object
-    opts = copy.deepcopy(__opts__)
+    opts = copy.deepcopy(__context__['master_opts'])
+    minopts = copy.deepcopy(__opts__)
+    opts.update(minopts)
     if roster:
         opts['roster'] = roster
     opts['argv'] = [fun]

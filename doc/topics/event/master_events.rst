@@ -43,10 +43,10 @@ Key events
 .. salt:event:: salt/key
 
     Fired when accepting and rejecting minions keys on the Salt master.
+    These happen as a result of actions undertaken by the `salt-key` command.
 
     :var id: The minion ID.
-    :var act: The new status of the minion key: ``accept``, ``pend``,
-              ``reject``.
+    :var act: The new status of the minion key: ``accept``, ``delete``,
 
 .. warning:: If a master is in :conf_master:`auto_accept mode`, ``salt/key`` events
              will not be fired when the keys are accepted.  In addition, pre-seeding
@@ -74,7 +74,7 @@ Job events
     :var minions: A list of minion IDs that Salt expects will return data for
         this job.
     :var user: The name of the user that ran the command as defined in Salt's
-        Client ACL or external auth.
+        Publisher ACL or external auth.
 
 .. salt:event:: salt/job/<JID>/ret/<MID>
 
@@ -95,9 +95,50 @@ Job events
     :var id: The minion ID.
     :var jid: The job ID.
 
+Runner Events
+=============
+
+.. salt:event:: salt/run/<JID>/new
+
+    Fired as a runner begins execution
+
+    :var jid: The job ID.
+    :var fun: The name of the runner function, with ``runner.`` prepended to it
+        (e.g. ``runner.jobs.lookup_jid``)
+    :var fun_args: The arguments passed to the runner function (e.g.
+        ``['20160829225914848058']``)
+    :var user: The user who executed the runner (e.g. ``root``)
+
+.. salt:event:: salt/run/<JID>/ret
+
+    Fired when a runner function returns
+
+    :var jid: The job ID.
+    :var fun: The name of the runner function, with ``runner.`` prepended to it
+        (e.g. ``runner.jobs.lookup_jid``)
+    :var fun_args: The arguments passed to the runner function (e.g.
+        ``['20160829225914848058']``)
+    :var return: The data returned by the runner function
+
+.. salt:event:: salt/run/<JID>/args
+
+    .. versionadded:: 2016.11.0
+
+    Fired by the :mod:`state.orchestrate <salt.runners.state.orchestrate>`
+    runner
+
+    :var name: The ID declaration for the orchestration job (i.e. the line
+        above ``salt.state``, ``salt.function``, ``salt.runner``, etc.)
+    :var type: The type of orchestration job being run (e.g. ``state``)
+    :var tgt: The target expression (e.g. ``*``). Included for ``state`` and
+        ``function`` types only.
+    :var args: The args passed to the orchestration job. **Note:** for
+        ``state`` and ``function`` types, also includes an ``expr_form`` which
+        shows what kind of match (``glob``, ``pcre``, etc.) was used.
+
 .. _event-master_presence:
 
-Presence events
+Presence Events
 ===============
 
 .. salt:event:: salt/presence/present

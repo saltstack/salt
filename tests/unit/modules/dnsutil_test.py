@@ -3,6 +3,10 @@
     :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+import logging
+
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -19,6 +23,8 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import dnsutil
+
+log = logging.getLogger(__name__)
 
 mock_hosts_file = '##\n' \
                   '# Host Database\n' \
@@ -58,8 +64,7 @@ if NO_MOCK is False:
                        call.write('::1 localhost'),
                        call.write('\n'),
                        call.write('fe80::1%lo0 localhost'),
-                       call.write('\n'),
-                       call.close()]
+                       call.write('\n')]
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -90,8 +95,8 @@ class DNSUtilTestCase(TestCase):
     @skipIf(True, 'Waiting on bug report fixes')
     def test_parse_zone(self):
         with patch('salt.utils.fopen', mock_open(read_data=mock_soa_zone)):
-            print mock_soa_zone
-            print dnsutil.parse_zone('/var/lib/named/example.com.zone')
+            log.debug(mock_soa_zone)
+            log.debug(dnsutil.parse_zone('/var/lib/named/example.com.zone'))
 
     def test_to_seconds_hour(self):
         self.assertEqual(dnsutil._to_seconds('4H'), 14400,

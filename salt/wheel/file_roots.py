@@ -2,28 +2,22 @@
 '''
 Read in files from the file_root and save files to the file root
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import salt libs
 import salt.utils
 
+# Import 3rd-party libs
+import salt.ext.six as six
 
-def find(path, saltenv='base', env=None):
+
+def find(path, saltenv='base'):
     '''
     Return a dict of the files located with the given path and environment
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     # Return a list of paths + text or bin
     ret = []
     if saltenv not in __opts__['file_roots']:
@@ -40,19 +34,10 @@ def find(path, saltenv='base', env=None):
     return ret
 
 
-def list_env(saltenv='base', env=None):
+def list_env(saltenv='base'):
     '''
     Return all of the file paths found in an environment
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     ret = {}
     if saltenv not in __opts__['file_roots']:
         return ret
@@ -90,24 +75,15 @@ def list_roots():
     return ret
 
 
-def read(path, saltenv='base', env=None):
+def read(path, saltenv='base'):
     '''
     Read the contents of a text file, if the file is binary then
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     # Return a dict of paths + content
     ret = []
     files = find(path, saltenv)
     for fn_ in files:
-        full = next(fn_.iterkeys())
+        full = next(six.iterkeys(fn_))
         form = fn_[full]
         if form == 'txt':
             with salt.utils.fopen(full, 'rb') as fp_:
@@ -115,20 +91,11 @@ def read(path, saltenv='base', env=None):
     return ret
 
 
-def write(data, path, saltenv='base', index=0, env=None):
+def write(data, path, saltenv='base', index=0):
     '''
     Write the named file, by default the first file found is written, but the
     index of the file can be specified to write to a lower priority file root
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     if saltenv not in __opts__['file_roots']:
         return 'Named environment {0} is not present'.format(saltenv)
     if len(__opts__['file_roots'][saltenv]) <= index:

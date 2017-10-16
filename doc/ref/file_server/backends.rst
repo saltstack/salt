@@ -50,8 +50,8 @@ With this configuration, the environments and files defined in the
 not found then the git repositories defined in :conf_master:`gitfs_remotes`
 will be searched.
 
-Environments
-------------
+Defining Environments
+---------------------
 
 Just as the order of the values in :conf_master:`fileserver_backend` matters,
 so too does the order in which different sources are defined within a

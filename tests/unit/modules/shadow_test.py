@@ -3,10 +3,14 @@
     :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
 '''
 
+# Import Pytohn libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salt.utils import is_linux
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 # Import salt libs
 try:
@@ -15,7 +19,9 @@ try:
 except ImportError:
     HAS_SHADOW = False
 
-ensure_in_syspath('../../')
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 _PASSWORD = 'lamepassword'
 
@@ -44,7 +50,7 @@ class LinuxShadowTest(TestCase):
         Test shadow.gen_password
         '''
         self.assertTrue(HAS_SHADOW)
-        for algorithm, hash_info in _HASHES.iteritems():
+        for algorithm, hash_info in six.iteritems(_HASHES):
             self.assertEqual(
                 shadow.gen_password(
                     _PASSWORD,

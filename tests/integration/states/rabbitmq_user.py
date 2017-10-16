@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-
 '''
 Tests for the rabbitmq state
 '''
-
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
@@ -37,7 +36,7 @@ class RabbitUserTestCase(integration.ModuleCase,
             'rabbitmq_user.present', name='null_name', test=True
         )
         self.assertSaltFalseReturn(ret)
-        self.assertInSaltComment('User null_name is set to be created', ret)
+        self.assertInSaltComment('User \'null_name\' is set to be created', ret)
 
     def absent(self):
         '''

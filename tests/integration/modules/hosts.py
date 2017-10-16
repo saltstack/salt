@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-
 '''
 Test the hosts module
 '''
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
 
@@ -168,8 +168,8 @@ class HostsModuleTest(integration.ModuleCase):
         # use an empty one so we can prove the syntax of the entries
         # being added by the hosts module
         self.__clear_hosts()
-        f = salt.utils.fopen(HFN, 'w')
-        f.close()
+        with salt.utils.fopen(HFN, 'w'):
+            pass
 
         self.assertTrue(
             self.run_function(
@@ -207,11 +207,12 @@ class HostsModuleTest(integration.ModuleCase):
         )
 
         # now read the lines and ensure they're formatted correctly
-        lines = salt.utils.fopen(HFN, 'r').read().splitlines()
+        with salt.utils.fopen(HFN, 'r') as fp_:
+            lines = fp_.read().splitlines()
         self.assertEqual(lines, [
             '192.168.1.3\t\thost3.fqdn.com',
-            '192.168.1.1\t\thost1.fqdn.com\t\thost1\t\thost1-reorder',
-            '192.168.1.2\t\thost2.fqdn.com\t\thost2\t\toldhost2\t\thost2-reorder',
+            '192.168.1.1\t\thost1.fqdn.com host1 host1-reorder',
+            '192.168.1.2\t\thost2.fqdn.com host2 oldhost2 host2-reorder',
         ])
 
 

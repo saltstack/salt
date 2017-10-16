@@ -36,7 +36,7 @@ def __virtual__():
     # Disable on these platforms, specific service modules exist:
     if __grains__['os'] == 'FreeBSD':
         return __virtualname__
-    return False
+    return (False, 'The freebsdservice execution module cannot be loaded: only available on FreeBSD systems.')
 
 
 @decorators.memoize
@@ -46,7 +46,7 @@ def _cmd():
     '''
     service = salt.utils.which('service')
     if not service:
-        raise CommandNotFoundError
+        raise CommandNotFoundError('\'service\' command not found')
     return service
 
 
@@ -168,7 +168,7 @@ def _switch(name,                   # pylint: disable=C0103
                 edited = True
     if not edited:
         # Ensure that the file ends in a \n
-        if nlines[-1][-1] != '\n':
+        if len(nlines) > 1 and nlines[-1][-1] != '\n':
             nlines[-1] = '{0}\n'.format(nlines[-1])
         nlines.append('{0}="{1}"\n'.format(rcvar, val))
 
@@ -376,4 +376,6 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '{0} {1} onestatus'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return not __salt__['cmd.retcode'](cmd,
+                                       python_shell=False,
+                                       ignore_retcode=True)

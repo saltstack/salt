@@ -4,8 +4,9 @@
 '''
 
 # Import Salt Libs
-import traceback
+from __future__ import absolute_import
 import os
+import traceback
 
 # Import Salt Testing Libs
 from salttesting.helpers import ensure_in_syspath
@@ -17,6 +18,7 @@ ensure_in_syspath('../../')
 import integration
 import salt.config
 from salt.output import display_output
+import salt.config
 
 
 class OutputReturnTest(integration.ShellCase):
@@ -88,7 +90,10 @@ class OutputReturnTest(integration.ShellCase):
         '''
         opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         opts['output_file'] = os.path.join(
-            opts['root_dir'], 'outputtest')
+            integration.SYS_TMP_DIR,
+            'salt-tests-tmpdir',
+            'outputtest'
+        )
         data = {'foo': {'result': False,
                         'aaa': 'azerzaeréééé',
                         'comment': u'ééééàààà'}}

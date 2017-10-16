@@ -9,15 +9,24 @@ available to all internal apis via the runner system
 from __future__ import absolute_import
 
 # Import python libs
+import logging
 import os
 
 # Import Salt libs
 import salt.cloud
+from salt.exceptions import SaltCloudConfigError
+
+# Get logging started
+log = logging.getLogger(__name__)
+
+
+def _filter_kwargs(k):
+    return dict((x, k[x]) for x in k if not x.startswith('__'))
 
 
 def _get_client():
     '''
-    Return a cloud client
+    Return cloud client
     '''
     client = salt.cloud.CloudClient(
             os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
@@ -79,7 +88,7 @@ def select_query(query_type='list_nodes_select'):
     return info
 
 
-def profile(prof=None, instances=None, **kwargs):
+def profile(prof=None, instances=None, opts=None, **kwargs):
     '''
     Create a cloud vm with the given profile and instances, instances can be a
     list or comma-delimited string
@@ -103,7 +112,9 @@ def profile(prof=None, instances=None, **kwargs):
         return {'Error': 'One or more instances (comma-delimited) must be set'}
 
     client = _get_client()
-    info = client.profile(prof, instances, **kwargs)
+    if isinstance(opts, dict):
+        client.opts.update(opts)
+    info = client.profile(prof, instances, **_filter_kwargs(kwargs))
     return info
 
 
@@ -112,7 +123,7 @@ def map_run(path, **kwargs):
     Execute a salt cloud map file
     '''
     client = _get_client()
-    info = client.map_run(path, **kwargs)
+    info = client.map_run(path, **_filter_kwargs(kwargs))
     return info
 
 
@@ -125,22 +136,31 @@ def destroy(instances):
     return info
 
 
-def action(
-        func=None,
-        cloudmap=None,
-        instances=None,
-        provider=None,
-        instance=None,
-        **kwargs):
+def action(func=None,
+           cloudmap=None,
+           instances=None,
+           provider=None,
+           instance=None,
+           **kwargs):
     '''
     Execute a single action on the given map/provider/instance
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cloud.action start my-salt-vm
     '''
+    info = {}
     client = _get_client()
-    info = client.action(func, cloudmap, instances, provider, instance, kwargs)
+    try:
+        info = client.action(func, cloudmap, instances, provider, instance, **_filter_kwargs(kwargs))
+    except SaltCloudConfigError as err:
+        log.error(err)
     return info
 
 
-def create(provider, instances, **kwargs):
+def create(provider, instances, opts=None, **kwargs):
     '''
     Create an instance using Salt Cloud
 
@@ -157,5 +177,7 @@ def create(provider, instances, **kwargs):
         if not kwarg.startswith('__'):
             create_kwargs[kwarg] = kwargs[kwarg]
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     info = client.create(provider, instances, **create_kwargs)
     return info

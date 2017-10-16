@@ -11,7 +11,9 @@ import itertools
 
 # Salt Modules
 import salt.runner
+import salt.utils
 import salt.config
+import salt.syspaths
 
 
 def __virtual__():
@@ -44,28 +46,52 @@ def genrepo(name, force=False, allow_empty=False):
            'changes': {},
            'comment': ''}
 
-    master_config = salt.config.master_config(os.path.join(salt.syspaths.CONFIG_DIR, 'master'))
-    win_repo = master_config['win_repo']
-    win_repo_mastercachefile = master_config['win_repo_mastercachefile']
+    master_config = salt.config.master_config(
+        os.path.join(salt.syspaths.CONFIG_DIR, 'master')
+    )
 
-    # Check if the win_repo directory exists
-    # if not search for a file with a newer mtime than the win_repo_mastercachefile file
+    if 'win_repo' in master_config:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The \'win_repo\' config option is deprecated, please use '
+            '\'winrepo_dir\' instead.'
+        )
+        winrepo_dir = master_config['win_repo']
+    else:
+        winrepo_dir = master_config['winrepo_dir']
+
+    if 'win_repo_mastercachefile' in master_config:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The \'win_repo_mastercachefile\' config option is deprecated, '
+            'please use \'winrepo_cachefile\' instead.'
+        )
+        winrepo_cachefile = master_config['win_repo_mastercachefile']
+    else:
+        winrepo_cachefile = master_config['winrepo_cachefile']
+
+    # We're actually looking for the full path to the cachefile here, so
+    # prepend the winrepo_dir
+    winrepo_cachefile = os.path.join(winrepo_dir, winrepo_cachefile)
+
+    # Check if the winrepo directory exists
+    # if not search for a file with a newer mtime than the winrepo_cachefile file
     execute = False
     if not force:
-        if not os.path.exists(win_repo):
+        if not os.path.exists(winrepo_dir):
             ret['result'] = False
-            ret['comment'] = 'missing {0}'.format(win_repo)
+            ret['comment'] = '{0} is missing'.format(winrepo_dir)
             return ret
-        elif not os.path.exists(win_repo_mastercachefile):
+        elif not os.path.exists(winrepo_cachefile):
             execute = True
-            ret['comment'] = 'missing {0}'.format(win_repo_mastercachefile)
+            ret['comment'] = '{0} is missing'.format(winrepo_cachefile)
         else:
-            win_repo_mastercachefile_mtime = os.stat(win_repo_mastercachefile)[stat.ST_MTIME]
-            for root, dirs, files in os.walk(win_repo):
+            winrepo_cachefile_mtime = os.stat(winrepo_cachefile)[stat.ST_MTIME]
+            for root, dirs, files in os.walk(winrepo_dir):
                 for name in itertools.chain(files, dirs):
                     full_path = os.path.join(root, name)
-                    if os.stat(full_path)[stat.ST_MTIME] > win_repo_mastercachefile_mtime:
-                        ret['comment'] = 'mtime({0}) < mtime({1})'.format(win_repo_mastercachefile, full_path)
+                    if os.stat(full_path)[stat.ST_MTIME] > winrepo_cachefile_mtime:
+                        ret['comment'] = 'mtime({0}) < mtime({1})'.format(winrepo_cachefile, full_path)
                         execute = True
                         break
 
@@ -80,7 +106,7 @@ def genrepo(name, force=False, allow_empty=False):
     runner_ret = runner.cmd('winrepo.genrepo', [])
     ret['changes'] = {'winrepo': runner_ret}
     if isinstance(runner_ret, dict) and runner_ret == {} and not allow_empty:
-        os.remove(win_repo_mastercachefile)
+        os.remove(winrepo_cachefile)
         ret['result'] = False
         ret['comment'] = 'winrepo.genrepo returned empty'
     return ret
