@@ -18,6 +18,7 @@ from tests.support.mock import (
 import salt.utils
 import salt.utils.data
 import salt.utils.jid
+import salt.utils.path
 import salt.utils.process
 import salt.utils.yamlencoding
 import salt.utils.zeromq
@@ -71,6 +72,14 @@ class UtilsTestCase(TestCase):
         self.assertTrue(salt.utils.jid.is_jid('20131219110700123489'))  # Valid JID
         self.assertFalse(salt.utils.jid.is_jid(20131219110700123489))  # int
         self.assertFalse(salt.utils.jid.is_jid('2013121911070012348911111'))  # Wrong length
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_path_join(self):
+        with patch('salt.utils.is_windows', return_value=False) as is_windows_mock:
+            self.assertFalse(is_windows_mock.return_value)
+            expected_path = os.path.join(os.sep + 'a', 'b', 'c', 'd')
+            ret = salt.utils.path.join('/a/b/c', 'd')
+            self.assertEqual(ret, expected_path)
 
     def test_build_whitespace_split_regex(self):
         expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
@@ -397,6 +406,26 @@ class UtilsTestCase(TestCase):
         # Make sure we handle non-yaml junk data
         ret = salt.utils.data.repack_dictlist(LOREM_IPSUM)
         self.assertDictEqual(ret, {})
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_daemonize_if(self):
+        # pylint: disable=assignment-from-none
+        with patch('sys.argv', ['salt-call']):
+            ret = salt.utils.daemonize_if({})
+            self.assertEqual(None, ret)
+
+        ret = salt.utils.daemonize_if({'multiprocessing': False})
+        self.assertEqual(None, ret)
+
+        with patch('sys.platform', 'win'):
+            ret = salt.utils.daemonize_if({})
+            self.assertEqual(None, ret)
+
+        with patch('salt.utils.daemonize'), \
+                patch('sys.platform', 'not windows'):
+            salt.utils.daemonize_if({})
+            self.assertTrue(salt.utils.daemonize.called)
+        # pylint: enable=assignment-from-none
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_gen_jid(self):
