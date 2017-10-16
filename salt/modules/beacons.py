@@ -28,14 +28,22 @@ __func_alias__ = {
 }
 
 
-def list_(return_yaml=True, where=None):
+def list_(return_yaml=True,
+          include_pillar=True,
+          include_opts=True):
     '''
     List the beacons currently configured on the minion
 
-    :param return_yaml:     Whether to return YAML formatted output, default True
-    :param where:           Return beacon data from opts or pillar, default is
-                            None which will return data from opts and pillar.
-    :return:                List of currently configured Beacons.
+    :param return_yaml:    Whether to return YAML formatted output,
+                           default True
+
+    :param include_pillar: Whether to include beacons that are
+                           configured in pillar, default is True.
+
+    :param include_opts:   Whether to include beacons that are
+                           configured in opts, default is True.
+
+    :return:               List of currently configured Beacons.
 
     CLI Example:
 
@@ -49,7 +57,8 @@ def list_(return_yaml=True, where=None):
     try:
         eventer = salt.utils.event.get_event('minion', opts=__opts__)
         res = __salt__['event.fire']({'func': 'list',
-                                      'where': where},
+                                      'include_pillar': include_pillar,
+                                      'include_opts': include_opts},
                                      'manage_beacons')
         if res:
             event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_list_complete', wait=30)
@@ -343,7 +352,7 @@ def save():
     ret = {'comment': [],
            'result': True}
 
-    beacons = list_(return_yaml=False, where='opts')
+    beacons = list_(return_yaml=False, include_pillar=False)
 
     # move this file into an configurable opt
     sfn = '{0}/{1}/beacons.conf'.format(__opts__['config_dir'],

@@ -218,21 +218,19 @@ class Beacon(object):
             beacons.update(opts_beacons)
         return beacons
 
-    def list_beacons(self, where=None):
+    def list_beacons(self,
+                     include_pillar=True,
+                     include_opts=True):
         '''
         List the beacon items
 
-        where: Whether to include beacon data from, either opts
-               or pillar, default is None which would include data
-               from both.
+        include_pillar: Whether to include beacons that are
+                        configured in pillar, default is True.
 
+        include_opts:   Whether to include beacons that are
+                        configured in opts, default is True.
         '''
-        if where == 'pillar':
-            beacons = self._get_beacons(include_opts=False)
-        elif where == 'opts':
-            beacons = self._get_beacons(include_pillar=False)
-        else:
-            beacons = self._get_beacons()
+        beacons = self._get_beacons(include_pillar, include_opts)
 
         # Fire the complete event back along with the list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
@@ -290,7 +288,7 @@ class Beacon(object):
 
         if name in self._get_beacons(include_opts=False):
             comment = 'Cannot update beacon item {0}, ' \
-                      'it is in pillar.'.format(name)
+                      'because it is configured in pillar.'.format(name)
             complete = False
         else:
             if name in self.opts['beacons']:
@@ -319,7 +317,7 @@ class Beacon(object):
 
         if name in self._get_beacons(include_opts=False):
             comment = 'Cannot modify beacon item {0}, ' \
-                      'it is in pillar.'.format(name)
+                      'it is configured in pillar.'.format(name)
             complete = False
         else:
             comment = 'Updating settings for beacon ' \
@@ -342,7 +340,7 @@ class Beacon(object):
 
         if name in self._get_beacons(include_opts=False):
             comment = 'Cannot delete beacon item {0}, ' \
-                      'it is in pillar.'.format(name)
+                      'it is configured in pillar.'.format(name)
             complete = False
         else:
             if name in self.opts['beacons']:
@@ -395,7 +393,7 @@ class Beacon(object):
 
         if name in self._get_beacons(include_opts=False):
             comment = 'Cannot enable beacon item {0}, ' \
-                      'it is in pillar.'.format(name)
+                      'it is configured in pillar.'.format(name)
             complete = False
         else:
             self._update_enabled(name, True)
@@ -417,7 +415,7 @@ class Beacon(object):
 
         if name in self._get_beacons(include_opts=False):
             comment = 'Cannot disable beacon item {0}, ' \
-                      'it is in pillar.'.format(name)
+                      'it is configured in pillar.'.format(name)
             complete = False
         else:
             self._update_enabled(name, False)
