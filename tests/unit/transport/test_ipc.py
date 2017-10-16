@@ -14,7 +14,6 @@ import tornado.gen
 import tornado.ioloop
 import tornado.testing
 
-import salt.utils
 import salt.config
 import salt.exceptions
 import salt.transport.ipc
