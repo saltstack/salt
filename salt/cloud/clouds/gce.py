@@ -82,7 +82,7 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-from salt.utils import namespaced_function
+from salt.utils.functools import namespaced_function
 from salt.ext import six
 import salt.utils.cloud
 import salt.utils.files

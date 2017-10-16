@@ -10,6 +10,7 @@ from tests.support.unit import TestCase
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.stringutils
 import salt.modules.ini_manage as ini
 
 
@@ -46,7 +47,7 @@ class IniManageTestCase(TestCase):
 
     def setUp(self):
         self.tfile = tempfile.NamedTemporaryFile(delete=False, mode='w+b')
-        self.tfile.write(salt.utils.to_bytes(self.TEST_FILE_CONTENT))
+        self.tfile.write(salt.utils.stringutils.to_bytes(self.TEST_FILE_CONTENT))
         self.tfile.close()
 
     def tearDown(self):
