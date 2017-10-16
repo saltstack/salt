@@ -2,8 +2,16 @@ source "https://rubygems.org"
 
 gem "test-kitchen"
 gem "kitchen-salt", :git => 'https://github.com/gtmanfred/kitchen-salt.git'
-gem 'kitchen-docker', :git => 'https://github.com/test-kitchen/kitchen-docker.git'
 gem 'git'
+
+group :docker do
+  gem 'kitchen-docker', :git => 'https://github.com/test-kitchen/kitchen-docker.git'
+end
+
+group :opennebula do
+  gem 'kitchen-opennebula', :git => 'https://github.com/gtmanfred/kitchen-opennebula.git'
+  gem 'xmlrpc'
+end
 
 group :windows do
   gem 'vagrant-wrapper'
