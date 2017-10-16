@@ -21,6 +21,7 @@ pip install -U docker
 
 More information: https://docker-py.readthedocs.io/en/stable/
 """
+from __future__ import absolute_import
 import docker
 import salt.config
 import salt.loader
