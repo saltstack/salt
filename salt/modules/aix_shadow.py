@@ -7,12 +7,9 @@ Manage account locks on AIX systems
 
 from __future__ import absolute_import
 
-# Import python libraries
-import time
+# Import python librarie
 import logging
 
-# Import salt libs
-import salt.utils
 
 log = logging.getLogger(__name__)
 
