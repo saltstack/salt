@@ -15,13 +15,15 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'aix_account'
 
 def __virtual__():
+
+    
     '''
     Only load if kernel is AIX
     '''
-    if __grains__['kernel'] in ('AIX'):
+    if __grains__['kernel'] == ('AIX'):
         return __virtualname__
 
-    return (False,'The aix_account beacon module failed to load: '
+    return (False, 'The aix_account beacon module failed to load: '
                    'only available on AIX systems.')
 
 
