@@ -154,6 +154,7 @@ verifier:
   name: shell
   remote_exec: true
   sudo: false
+  live_stream: {}
 <% if ENV['TESTOPTS'].nil? %>
   command: '$(kitchen) /tmp/kitchen/testing/tests/runtests.py --run-destructive --sysinfo --transport=zeromq --output-columns=80 --ssh --coverage-xml=/tmp/coverage.xml --xml=/tmp/xml-unittests-output'
 <% else %>
