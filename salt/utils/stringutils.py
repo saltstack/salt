@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for manipulating or otherwise processing strings
+'''
 
 # Import Python libs
 from __future__ import absolute_import, print_function

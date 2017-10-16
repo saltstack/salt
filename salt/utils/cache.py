@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+In-memory caching used by Salt
+'''
 # Import Python libs
 from __future__ import absolute_import, print_function
 import os
