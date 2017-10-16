@@ -170,5 +170,5 @@ verifier:
 <% if ENV['TESTOPTS'].nil? %>
   command: '$(kitchen) /tmp/kitchen/testing/tests/runtests.py --run-destructive --sysinfo --transport=zeromq --output-columns=80 --ssh --coverage-xml=/tmp/coverage.xml --xml=/tmp/xml-unittests-output'
 <% else %>
-  command: '$(kitchen) /tmp/kitchen/testing/tests/runtests.py --run-destructive --output-columns <%= ENV["TESTOPTS"] %>'
+  command: '$(kitchen) /tmp/kitchen/testing/tests/runtests.py --run-destructive --output-columns 80 <%= ENV["TESTOPTS"] %>'
 <% end %>
