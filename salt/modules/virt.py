@@ -9,6 +9,7 @@ Work with virtual machines managed by libvirt
 
 # Import python libs
 from __future__ import absolute_import
+import copy
 import os
 import re
 import sys
@@ -37,6 +38,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.files
+import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
@@ -553,7 +555,8 @@ def _disk_profile(profile, hypervisor, **kwargs):
     else:
         overlay = {}
 
-    disklist = __salt__['config.get']('virt:disk', {}).get(profile, default)
+    disklist = copy.deepcopy(
+        __salt__['config.get']('virt:disk', {}).get(profile, default))
     for key, val in six.iteritems(overlay):
         for i, disks in enumerate(disklist):
             for disk in disks:
@@ -664,7 +667,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
                 msg = 'Malformed MAC address: {0}'.format(dmac)
                 raise CommandExecutionError(msg)
         else:
-            attributes['mac'] = salt.utils.gen_mac()
+            attributes['mac'] = salt.utils.network.gen_mac()
 
     for interface in interfaces:
         _normalize_net_types(interface)
