@@ -2400,9 +2400,10 @@ def create_attach_volumes(name, kwargs, call=None):
             '-a or --action.'
         )
 
-    volumes = kwargs['volumes']
+    volumes = literal_eval(kwargs['volumes'])
     node = kwargs['node']
-    node_data = _expand_node(node)
+    conn = get_conn()
+    node_data = _expand_node(conn.ex_get_node(node))
     letter = ord('a') - 1
 
     for idx, volume in enumerate(volumes):
@@ -2412,9 +2413,9 @@ def create_attach_volumes(name, kwargs, call=None):
           'disk_name': volume_name,
           'location': node_data['extra']['zone']['name'],
           'size': volume['size'],
-          'type': volume['type'],
-          'image': volume['image'],
-          'snapshot': volume['snapshot']
+          'type': volume.get('type', 'pd-standard'),
+          'image': volume.get('image', None),
+          'snapshot': volume.get('snapshot', None)
         }
 
         create_disk(volume_dict, 'function')
