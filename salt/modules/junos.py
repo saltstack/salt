@@ -1393,6 +1393,8 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
         if data.__class__.__bases__[0] == OpTable:
             ret['reply'] = json.loads(data.to_json())
         else:
+            if key is not None:
+                ret['table'][table]['key'] = key
             ret['reply'] = dict(data)
     except Exception as err:
         ret['message'] = 'Uncaught exception - please report: {0}'.format(
