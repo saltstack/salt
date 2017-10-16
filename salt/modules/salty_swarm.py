@@ -33,6 +33,9 @@ server_name = __grains__['id']
 
 
 def swarm_tokens():
+    '''
+    Get the Docker Swarm Manager or Worker join tokens
+    '''
     client = docker.APIClient(base_url='unix://var/run/docker.sock')
     service = client.inspect_swarm()
     return service['JoinTokens']
