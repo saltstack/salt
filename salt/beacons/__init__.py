@@ -295,7 +295,7 @@ class Beacon(object):
                 comment = 'Updating settings for beacon ' \
                           'item: {0}'.format(name)
             else:
-                comment = 'Added new beacon item {0}'.format(name)
+                comment = 'Added new beacon item: {0}'.format(name)
             complete = True
             self.opts['beacons'].update(data)
 
@@ -345,7 +345,7 @@ class Beacon(object):
         else:
             if name in self.opts['beacons']:
                 del self.opts['beacons'][name]
-                comment = 'Deleting beacon item {0}'.format(name)
+                comment = 'Deleting beacon item: {0}'.format(name)
             else:
                 comment = 'Beacon item {0} not found.'.format(name)
             complete = True

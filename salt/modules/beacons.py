@@ -147,7 +147,7 @@ def add(name, beacon_data, **kwargs):
         return ret
 
     if name not in list_available(return_yaml=False):
-        ret['comment'] = 'Beacon {0} is not available.'.format(name)
+        ret['comment'] = 'Beacon "{0}" is not available.'.format(name)
         return ret
 
     if 'test' in kwargs and kwargs['test']:
