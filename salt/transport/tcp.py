@@ -19,7 +19,6 @@ import errno
 
 # Import Salt Libs
 import salt.crypt
-import salt.utils
 import salt.utils.async
 import salt.utils.event
 import salt.utils.platform

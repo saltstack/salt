@@ -11,12 +11,11 @@ import re
 import plistlib
 
 # Import salt libs
-import salt.utils
+import salt.utils.decorators as decorators
+import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.utils.decorators as decorators
-import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 

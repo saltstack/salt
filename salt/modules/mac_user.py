@@ -23,7 +23,6 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 from salt.ext.six import string_types
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
 import salt.utils.decorators.path
 import salt.utils.stringutils

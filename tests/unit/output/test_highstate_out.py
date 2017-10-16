@@ -11,7 +11,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
 # Import Salt Libs
-import salt.utils
 import salt.utils.stringutils
 import salt.output.highstate as highstate
 

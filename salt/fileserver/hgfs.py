@@ -59,11 +59,11 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-import salt.utils
 import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils
+import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 import salt.fileserver
@@ -591,7 +591,7 @@ def _env_is_exposed(env):
     else:
         blacklist = __opts__['hgfs_saltenv_blacklist']
 
-    return salt.utils.check_whitelist_blacklist(
+    return salt.utils.stringutils.check_whitelist_blacklist(
         env,
         whitelist=whitelist,
         blacklist=blacklist,

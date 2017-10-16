@@ -10,7 +10,6 @@ import os
 import re
 
 # Import salt libs
-import salt.utils
 import salt.utils.path
 import salt.utils.files
 import salt.utils.versions

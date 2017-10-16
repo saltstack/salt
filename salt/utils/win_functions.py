@@ -157,3 +157,12 @@ def get_sam_name(username):
         username = '{0}\\{1}'.format(platform.node(), username)
 
     return username.lower()
+
+
+def enable_ctrl_logoff_handler():
+    if HAS_WIN32:
+        ctrl_logoff_event = 5
+        win32api.SetConsoleCtrlHandler(
+            lambda event: True if event == ctrl_logoff_event else False,
+            1
+        )

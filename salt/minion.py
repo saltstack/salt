@@ -74,6 +74,12 @@ try:
     HAS_ZMQ_MONITOR = True
 except ImportError:
     HAS_ZMQ_MONITOR = False
+
+try:
+    import salt.utils.win_functions
+    HAS_WIN_FUNCTIONS = True
+except ImportError:
+    HAS_WIN_FUNCTIONS = False
 # pylint: enable=import-error
 
 # Import salt libs
@@ -86,7 +92,6 @@ import salt.engines
 import salt.payload
 import salt.pillar
 import salt.syspaths
-import salt.utils
 import salt.utils.args
 import salt.utils.context
 import salt.utils.data
@@ -2371,7 +2376,8 @@ class Minion(MinionBase):
         enable_sigusr1_handler()
 
         # Make sure to gracefully handle CTRL_LOGOFF_EVENT
-        salt.utils.enable_ctrl_logoff_handler()
+        if HAS_WIN_FUNCTIONS:
+            salt.utils.win_functions.enable_ctrl_logoff_handler()
 
         # On first startup execute a state run if configured to do so
         self._state_run()

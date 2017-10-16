@@ -124,7 +124,6 @@ import os.path
 import subprocess
 
 # Import salt libs
-import salt.utils
 import salt.utils.cloud
 import salt.utils.network
 import salt.utils.stringutils

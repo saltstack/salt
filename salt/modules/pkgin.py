@@ -17,8 +17,8 @@ import os
 import re
 
 # Import salt libs
-import salt.utils  # TODO: Remove this when alias_function is moved
 import salt.utils.data
+import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.decorators as decorators
@@ -195,7 +195,7 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def version(*names, **kwargs):

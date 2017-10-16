@@ -31,7 +31,6 @@ from tests.support.mock import (
 import yaml
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 import salt.utils.platform
 import salt.states.file as filestate

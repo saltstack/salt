@@ -43,8 +43,8 @@ import logging
 
 
 # Import salt libs
-import salt.utils  # TODO: Remove this once alias_function is moved
 import salt.utils.data
+import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
@@ -335,7 +335,7 @@ def latest_version(name, **kwargs):
     return ''
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def get_fmri(name, **kwargs):

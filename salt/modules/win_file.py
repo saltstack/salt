@@ -62,7 +62,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         list_backups_dir)
 from salt.modules.file import normpath as normpath_
 
-from salt.utils import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function as _namespaced_function
 
 HAS_WINDOWS_MODULES = False
 try:
