@@ -25,6 +25,7 @@ import os
 # Import salt libs
 import salt.utils.platform
 import salt.utils.powershell
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
 _DEFAULT_CONTEXT = 'LocalMachine'
@@ -46,7 +47,7 @@ def __virtual__():
     if not salt.utils.platform.is_windows():
         return False, 'Only available on Windows Systems'
 
-    if salt.utils.version_cmp(__grains__['osversion'], '6.2.9200') == -1:
+    if salt.utils.versions.version_cmp(__grains__['osversion'], '6.2.9200') == -1:
         return False, 'Only available on Windows 8+ / Windows Server 2012 +'
 
     if not __salt__['cmd.shell_info']('powershell')['installed']:

@@ -21,7 +21,7 @@ import time
 from datetime import datetime
 
 # Import salt libs
-import salt.utils
+import salt.utils.functools
 import salt.utils.locales
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
@@ -468,7 +468,7 @@ def set_computer_desc(desc=None):
     return {'Computer Description': get_computer_desc()}
 
 
-set_computer_description = salt.utils.alias_function(set_computer_desc, 'set_computer_description')  # pylint: disable=invalid-name
+set_computer_description = salt.utils.functools.alias_function(set_computer_desc, 'set_computer_description')  # pylint: disable=invalid-name
 
 
 def get_system_info():
@@ -542,7 +542,7 @@ def get_computer_desc():
     return False if desc is None else desc
 
 
-get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')  # pylint: disable=invalid-name
+get_computer_description = salt.utils.functools.alias_function(get_computer_desc, 'get_computer_description')  # pylint: disable=invalid-name
 
 
 def get_hostname():
