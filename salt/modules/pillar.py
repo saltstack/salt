@@ -17,8 +17,11 @@ from salt.ext import six
 
 # Import salt libs
 import salt.pillar
-import salt.utils
+import salt.utils  # TODO: Remove this once alias_function is moved
 import salt.utils.crypt
+import salt.utils.data
+import salt.utils.dictupdate
+import salt.utils.odict
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
 
@@ -125,7 +128,7 @@ def get(key,
 
     if merge:
         if isinstance(default, dict):
-            ret = salt.utils.traverse_dict_and_list(
+            ret = salt.utils.data.traverse_dict_and_list(
                 pillar_dict,
                 key,
                 {},
@@ -143,7 +146,7 @@ def get(key,
                     'skipped.', default, ret, type(ret).__name__
                 )
         elif isinstance(default, list):
-            ret = salt.utils.traverse_dict_and_list(
+            ret = salt.utils.data.traverse_dict_and_list(
                 pillar_dict,
                 key,
                 [],
@@ -165,10 +168,11 @@ def get(key,
                 default, type(default).__name__
             )
 
-    ret = salt.utils.traverse_dict_and_list(pillar_dict,
-                                            key,
-                                            default,
-                                            delimiter)
+    ret = salt.utils.data.traverse_dict_and_list(
+        pillar_dict,
+        key,
+        default,
+        delimiter)
     if ret is KeyError:
         raise KeyError('Pillar key not found: {0}'.format(key))
 
@@ -369,10 +373,11 @@ def item(*args, **kwargs):
 
     try:
         for arg in args:
-            ret[arg] = salt.utils.traverse_dict_and_list(__pillar__,
-                                                         arg,
-                                                         default,
-                                                         delimiter)
+            ret[arg] = salt.utils.data.traverse_dict_and_list(
+                __pillar__,
+                arg,
+                default,
+                delimiter)
     except KeyError:
         pass
 
@@ -490,7 +495,7 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
 
         salt '*' pillar.keys web:sites
     '''
-    ret = salt.utils.traverse_dict_and_list(
+    ret = salt.utils.data.traverse_dict_and_list(
         __pillar__, key, KeyError, delimiter)
 
     if ret is KeyError:
@@ -606,9 +611,9 @@ def filter_by(lookup_dict,
 
         salt '*' pillar.filter_by '{web: Serve it up, db: I query, default: x_x}' role
     '''
-    return salt.utils.filter_by(lookup_dict=lookup_dict,
-                                lookup=pillar,
-                                traverse=__pillar__,
-                                merge=merge,
-                                default=default,
-                                base=base)
+    return salt.utils.data.filter_by(lookup_dict=lookup_dict,
+                                     lookup=pillar,
+                                     traverse=__pillar__,
+                                     merge=merge,
+                                     default=default,
+                                     base=base)

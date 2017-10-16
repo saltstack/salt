@@ -59,7 +59,7 @@ from time import time, sleep
 # Import salt libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.utils
+import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
@@ -237,7 +237,7 @@ def eni_present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    if not salt.utils.exactly_one((subnet_id, subnet_name)):
+    if not salt.utils.data.exactly_one((subnet_id, subnet_name)):
         raise SaltInvocationError('One (but not both) of subnet_id or '
                                   'subnet_name must be provided.')
     if not groups:
@@ -765,10 +765,10 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
     changed_attrs = {}
 
-    if not salt.utils.exactly_one((image_id, image_name)):
+    if not salt.utils.data.exactly_one((image_id, image_name)):
         raise SaltInvocationError('Exactly one of image_id OR '
                                   'image_name must be provided.')
-    if (public_ip or allocation_id or allocate_eip) and not salt.utils.exactly_one((public_ip, allocation_id, allocate_eip)):
+    if (public_ip or allocation_id or allocate_eip) and not salt.utils.data.exactly_one((public_ip, allocation_id, allocate_eip)):
         raise SaltInvocationError('At most one of public_ip, allocation_id OR '
                                   'allocate_eip may be provided.')
 
@@ -1157,7 +1157,7 @@ def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
     filters = {}
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
 
-    if not salt.utils.exactly_one((volume_name, volume_id, instance_name, instance_id)):
+    if not salt.utils.data.exactly_one((volume_name, volume_id, instance_name, instance_id)):
         raise SaltInvocationError("Exactly one of 'volume_name', 'volume_id', "
                                   "'instance_name', or 'instance_id' must be provided.")
     if (instance_name or instance_id) and not device:
@@ -1380,10 +1380,10 @@ def volume_present(name, volume_name=None, volume_id=None, instance_name=None,
     new_dict = {}
     running_states = ('running', 'stopped')
 
-    if not salt.utils.exactly_one((volume_name, volume_id)):
+    if not salt.utils.data.exactly_one((volume_name, volume_id)):
         raise SaltInvocationError("Exactly one of 'volume_name', 'volume_id', "
                                   " must be provided.")
-    if not salt.utils.exactly_one((instance_name, instance_id)):
+    if not salt.utils.data.exactly_one((instance_name, instance_id)):
         raise SaltInvocationError("Exactly one of 'instance_name', or 'instance_id'"
                                   " must be provided.")
     if device is None:
@@ -1525,7 +1525,7 @@ def private_ips_present(name, network_interface_name=None, network_interface_id=
         dict with region, key and keyid.
     '''
 
-    if not salt.utils.exactly_one((network_interface_name, network_interface_id)):
+    if not salt.utils.data.exactly_one((network_interface_name, network_interface_id)):
         raise SaltInvocationError("Exactly one of 'network_interface_name', "
                                   "'network_interface_id' must be provided")
 
@@ -1646,7 +1646,7 @@ def private_ips_absent(name, network_interface_name=None, network_interface_id=N
         dict with region, key and keyid.
     '''
 
-    if not salt.utils.exactly_one((network_interface_name, network_interface_id)):
+    if not salt.utils.data.exactly_one((network_interface_name, network_interface_id)):
         raise SaltInvocationError("Exactly one of 'network_interface_name', "
                                   "'network_interface_id' must be provided")
 

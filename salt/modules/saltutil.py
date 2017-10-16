@@ -46,7 +46,7 @@ import salt.payload
 import salt.runner
 import salt.state
 import salt.transport
-import salt.utils
+import salt.utils  # TODO: Remove this once alias_function is moved
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
@@ -988,7 +988,7 @@ def clear_cache():
 
         salt '*' saltutil.clear_cache
     '''
-    for root, dirs, files in salt.utils.safe_walk(__opts__['cachedir'], followlinks=False):
+    for root, dirs, files in salt.utils.files.safe_walk(__opts__['cachedir'], followlinks=False):
         for name in files:
             try:
                 os.remove(os.path.join(root, name))
@@ -1014,7 +1014,7 @@ def clear_job_cache(hours=24):
         salt '*' saltutil.clear_job_cache hours=12
     '''
     threshold = time.time() - hours * 3600
-    for root, dirs, files in salt.utils.safe_walk(os.path.join(__opts__['cachedir'], 'minion_jobs'),
+    for root, dirs, files in salt.utils.files.safe_walk(os.path.join(__opts__['cachedir'], 'minion_jobs'),
                                                   followlinks=False):
         for name in dirs:
             try:

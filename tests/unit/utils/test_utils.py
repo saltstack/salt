@@ -16,7 +16,9 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.utils
+import salt.utils.data
 import salt.utils.jid
+import salt.utils.process
 import salt.utils.yamlencoding
 import salt.utils.zeromq
 from salt.exceptions import SaltSystemExit, CommandNotFoundError
@@ -65,28 +67,6 @@ class UtilsTestCase(TestCase):
         incorrect_jid_length = 2012
         self.assertEqual(salt.utils.jid.jid_to_time(incorrect_jid_length), '')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_gen_mac(self):
-        with patch('random.randint', return_value=1) as random_mock:
-            self.assertEqual(random_mock.return_value, 1)
-            ret = salt.utils.gen_mac('00:16:3E')
-            expected_mac = '00:16:3E:01:01:01'
-            self.assertEqual(ret, expected_mac)
-
-    def test_mac_str_to_bytes(self):
-        self.assertRaises(ValueError, salt.utils.mac_str_to_bytes, '31337')
-        self.assertRaises(ValueError, salt.utils.mac_str_to_bytes, '0001020304056')
-        self.assertRaises(ValueError, salt.utils.mac_str_to_bytes, '00:01:02:03:04:056')
-        self.assertRaises(ValueError, salt.utils.mac_str_to_bytes, 'a0:b0:c0:d0:e0:fg')
-        self.assertEqual(b'\x10\x08\x06\x04\x02\x00', salt.utils.mac_str_to_bytes('100806040200'))
-        self.assertEqual(b'\xf8\xe7\xd6\xc5\xb4\xa3', salt.utils.mac_str_to_bytes('f8e7d6c5b4a3'))
-
-    def test_ip_bracket(self):
-        test_ipv4 = '127.0.0.1'
-        test_ipv6 = '::1'
-        self.assertEqual(test_ipv4, salt.utils.ip_bracket(test_ipv4))
-        self.assertEqual('[{0}]'.format(test_ipv6), salt.utils.ip_bracket(test_ipv6))
-
     def test_is_jid(self):
         self.assertTrue(salt.utils.jid.is_jid('20131219110700123489'))  # Valid JID
         self.assertFalse(salt.utils.jid.is_jid(20131219110700123489))  # int
@@ -97,11 +77,6 @@ class UtilsTestCase(TestCase):
                          '(?:[\\s]+)?$'
         ret = salt.utils.build_whitespace_split_regex(' '.join(LOREM_IPSUM.split()[:5]))
         self.assertEqual(ret, expected_regex)
-
-    def test_isorted(self):
-        test_list = ['foo', 'Foo', 'bar', 'Bar']
-        expected_list = ['bar', 'Bar', 'foo', 'Foo']
-        self.assertEqual(salt.utils.isorted(test_list), expected_list)
 
     def test_mysql_to_dict(self):
         test_mysql_output = ['+----+------+-----------+------+---------+------+-------+------------------+',
@@ -126,21 +101,21 @@ class UtilsTestCase(TestCase):
         test_three_level_dict = {'a': {'b': {'c': 'v'}}}
 
         self.assertTrue(
-            salt.utils.subdict_match(
+            salt.utils.data.subdict_match(
                 test_two_level_dict, 'foo:bar:baz'
             )
         )
         # In test_two_level_comb_dict, 'foo:bar' corresponds to 'baz:woz', not
         # 'baz'. This match should return False.
         self.assertFalse(
-            salt.utils.subdict_match(
+            salt.utils.data.subdict_match(
                 test_two_level_comb_dict, 'foo:bar:baz'
             )
         )
         # This tests matching with the delimiter in the value part (in other
         # words, that the path 'foo:bar' corresponds to the string 'baz:woz').
         self.assertTrue(
-            salt.utils.subdict_match(
+            salt.utils.data.subdict_match(
                 test_two_level_comb_dict, 'foo:bar:baz:woz'
             )
         )
@@ -148,7 +123,7 @@ class UtilsTestCase(TestCase):
         # to 'baz:woz:wiz', or if there was more deep nesting. But it does not,
         # so this should return False.
         self.assertFalse(
-            salt.utils.subdict_match(
+            salt.utils.data.subdict_match(
                 test_two_level_comb_dict, 'foo:bar:baz:woz:wiz'
             )
         )
@@ -156,11 +131,11 @@ class UtilsTestCase(TestCase):
         # value part 'ghi' should be successfully matched as it is a member of
         # the list corresponding to key path 'abc'. It is somewhat a
         # duplication of a test within test_traverse_dict_and_list, but
-        # salt.utils.subdict_match() does more than just invoke
+        # salt.utils.data.subdict_match() does more than just invoke
         # salt.utils.traverse_list_and_dict() so this particular assertion is a
         # sanity check.
         self.assertTrue(
-            salt.utils.subdict_match(
+            salt.utils.data.subdict_match(
                 test_two_level_dict_and_list, 'abc:ghi'
             )
         )
@@ -168,25 +143,25 @@ class UtilsTestCase(TestCase):
         # list, embedded in a dict. This is a rather absurd case, but it
         # confirms that match recursion works properly.
         self.assertTrue(
-            salt.utils.subdict_match(
+            salt.utils.data.subdict_match(
                 test_two_level_dict_and_list, 'abc:lorem:ipsum:dolor:sit'
             )
         )
         # Test four level dict match for reference
         self.assertTrue(
-            salt.utils.subdict_match(
+            salt.utils.data.subdict_match(
                 test_three_level_dict, 'a:b:c:v'
             )
         )
         self.assertFalse(
         # Test regression in 2015.8 where 'a:c:v' would match 'a:b:c:v'
-            salt.utils.subdict_match(
+            salt.utils.data.subdict_match(
                 test_three_level_dict, 'a:c:v'
             )
         )
         # Test wildcard match
         self.assertTrue(
-            salt.utils.subdict_match(
+            salt.utils.data.subdict_match(
                 test_three_level_dict, 'a:*:c:v'
             )
         )
@@ -196,13 +171,13 @@ class UtilsTestCase(TestCase):
 
         self.assertDictEqual(
             {'not_found': 'nope'},
-            salt.utils.traverse_dict(
+            salt.utils.data.traverse_dict(
                 test_two_level_dict, 'foo:bar:baz', {'not_found': 'nope'}
             )
         )
         self.assertEqual(
             'baz',
-            salt.utils.traverse_dict(
+            salt.utils.data.traverse_dict(
                 test_two_level_dict, 'foo:bar', {'not_found': 'not_found'}
             )
         )
@@ -213,40 +188,40 @@ class UtilsTestCase(TestCase):
             'foo': ['bar', 'baz', {'lorem': {'ipsum': [{'dolor': 'sit'}]}}]
         }
 
-        # Check traversing too far: salt.utils.traverse_dict_and_list() returns
+        # Check traversing too far: salt.utils.data.traverse_dict_and_list() returns
         # the value corresponding to a given key path, and baz is a value
         # corresponding to the key path foo:bar.
         self.assertDictEqual(
             {'not_found': 'nope'},
-            salt.utils.traverse_dict_and_list(
+            salt.utils.data.traverse_dict_and_list(
                 test_two_level_dict, 'foo:bar:baz', {'not_found': 'nope'}
             )
         )
         # Now check to ensure that foo:bar corresponds to baz
         self.assertEqual(
             'baz',
-            salt.utils.traverse_dict_and_list(
+            salt.utils.data.traverse_dict_and_list(
                 test_two_level_dict, 'foo:bar', {'not_found': 'not_found'}
             )
         )
         # Check traversing too far
         self.assertDictEqual(
             {'not_found': 'nope'},
-            salt.utils.traverse_dict_and_list(
+            salt.utils.data.traverse_dict_and_list(
                 test_two_level_dict_and_list, 'foo:bar', {'not_found': 'nope'}
             )
         )
         # Check index 1 (2nd element) of list corresponding to path 'foo'
         self.assertEqual(
             'baz',
-            salt.utils.traverse_dict_and_list(
+            salt.utils.data.traverse_dict_and_list(
                 test_two_level_dict_and_list, 'foo:1', {'not_found': 'not_found'}
             )
         )
         # Traverse a couple times into dicts embedded in lists
         self.assertEqual(
             'sit',
-            salt.utils.traverse_dict_and_list(
+            salt.utils.data.traverse_dict_and_list(
                 test_two_level_dict_and_list,
                 'foo:lorem:ipsum:dolor',
                 {'not_found': 'not_found'}
@@ -267,11 +242,6 @@ class UtilsTestCase(TestCase):
         with patch('zmq.IPC_PATH_MAX_LEN', 1):
             self.assertRaises(SaltSystemExit, salt.utils.zeromq.check_ipc_path_max_len, '1' * 1024)
 
-    def test_test_mode(self):
-        self.assertTrue(salt.utils.test_mode(test=True))
-        self.assertTrue(salt.utils.test_mode(Test=True))
-        self.assertTrue(salt.utils.test_mode(tEsT=True))
-
     def test_option(self):
         test_two_level_dict = {'foo': {'bar': 'baz'}}
 
@@ -279,9 +249,6 @@ class UtilsTestCase(TestCase):
         self.assertEqual('baz', salt.utils.option('foo:bar', {'not_found': 'nope'}, opts=test_two_level_dict))
         self.assertEqual('baz', salt.utils.option('foo:bar', {'not_found': 'nope'}, pillar={'master': test_two_level_dict}))
         self.assertEqual('baz', salt.utils.option('foo:bar', {'not_found': 'nope'}, pillar=test_two_level_dict))
-
-    def test_get_hash_exception(self):
-        self.assertRaises(ValueError, salt.utils.get_hash, '/tmp/foo/', form='INVALID')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_date_cast(self):
@@ -345,17 +312,17 @@ class UtilsTestCase(TestCase):
             self.assertRaises(TypeError, salt.utils.yamlencoding.yaml_encode, testobj)
 
     def test_compare_dicts(self):
-        ret = salt.utils.compare_dicts(old={'foo': 'bar'}, new={'foo': 'bar'})
+        ret = salt.utils.data.compare_dicts(old={'foo': 'bar'}, new={'foo': 'bar'})
         self.assertEqual(ret, {})
 
-        ret = salt.utils.compare_dicts(old={'foo': 'bar'}, new={'foo': 'woz'})
+        ret = salt.utils.data.compare_dicts(old={'foo': 'bar'}, new={'foo': 'woz'})
         expected_ret = {'foo': {'new': 'woz', 'old': 'bar'}}
         self.assertDictEqual(ret, expected_ret)
 
     def test_decode_list(self):
         test_data = [u'unicode_str', [u'unicode_item_in_list', 'second_item_in_list'], {'dict_key': u'dict_val'}]
         expected_ret = ['unicode_str', ['unicode_item_in_list', 'second_item_in_list'], {'dict_key': 'dict_val'}]
-        ret = salt.utils.decode_list(test_data)
+        ret = salt.utils.data.decode_list(test_data)
         self.assertEqual(ret, expected_ret)
 
     def test_decode_dict(self):
@@ -365,7 +332,7 @@ class UtilsTestCase(TestCase):
         expected_ret = {'test_unicode_key': 'test_unicode_val',
                         'test_list_key': ['list_1', 'unicode_list_two'],
                         'test_dict_key': {'test_sub_dict_key': 'test_sub_dict_val'}}
-        ret = salt.utils.decode_dict(test_data)
+        ret = salt.utils.data.decode_dict(test_data)
         self.assertDictEqual(ret, expected_ret)
 
     def test_find_json(self):
@@ -419,36 +386,17 @@ class UtilsTestCase(TestCase):
         expected_ret = {'dict_key_1': 'dict_val_1',
                         'dict_key_2': 'dict_val_2',
                         'dict_key_3': 'dict_val_3'}
-        ret = salt.utils.repack_dictlist(list_of_one_element_dicts)
+        ret = salt.utils.data.repack_dictlist(list_of_one_element_dicts)
         self.assertDictEqual(ret, expected_ret)
 
         # Try with yaml
         yaml_key_val_pair = '- key1: val1'
-        ret = salt.utils.repack_dictlist(yaml_key_val_pair)
+        ret = salt.utils.data.repack_dictlist(yaml_key_val_pair)
         self.assertDictEqual(ret, {'key1': 'val1'})
 
         # Make sure we handle non-yaml junk data
-        ret = salt.utils.repack_dictlist(LOREM_IPSUM)
+        ret = salt.utils.data.repack_dictlist(LOREM_IPSUM)
         self.assertDictEqual(ret, {})
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_daemonize_if(self):
-        # pylint: disable=assignment-from-none
-        with patch('sys.argv', ['salt-call']):
-            ret = salt.utils.daemonize_if({})
-            self.assertEqual(None, ret)
-
-        ret = salt.utils.daemonize_if({'multiprocessing': False})
-        self.assertEqual(None, ret)
-
-        with patch('sys.platform', 'win'):
-            ret = salt.utils.daemonize_if({})
-            self.assertEqual(None, ret)
-
-        with patch('salt.utils.daemonize'):
-            salt.utils.daemonize_if({})
-            self.assertTrue(salt.utils.daemonize.called)
-        # pylint: enable=assignment-from-none
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_gen_jid(self):

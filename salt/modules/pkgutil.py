@@ -14,7 +14,8 @@ from __future__ import absolute_import
 import copy
 
 # Import salt libs
-import salt.utils
+import salt.utils  # TODO: Remove this once alias_function is moved
+import salt.utils.data
 import salt.utils.pkg
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
@@ -83,7 +84,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
 
         salt '*' pkgutil.list_upgrades
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
     upgrades = {}
     lines = __salt__['cmd.run_stdout'](
@@ -113,7 +114,7 @@ def upgrade(refresh=True):
 
         salt '*' pkgutil.upgrade
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     old = list_pkgs()
@@ -124,7 +125,7 @@ def upgrade(refresh=True):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -140,9 +141,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    if salt.utils.data.is_true(kwargs.get('removed')):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -203,7 +204,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkgutil.latest_version CSWpython
         salt '*' pkgutil.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
     if not names:
         return ''
@@ -302,7 +303,7 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -346,7 +347,7 @@ def remove(name=None, pkgs=None, **kwargs):
     __salt__['cmd.run_all'](cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def purge(name=None, pkgs=None, **kwargs):

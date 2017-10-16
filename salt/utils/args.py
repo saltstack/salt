@@ -14,6 +14,7 @@ import shlex
 from salt.exceptions import SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+import salt.utils.data
 import salt.utils.jid
 
 
@@ -327,3 +328,32 @@ def argspec_report(functions, module=''):
                 ret[fun]['kwargs'] = True if kwargs else None
 
     return ret
+
+
+def split_input(val):
+    '''
+    Take an input value and split it into a list, returning the resulting list
+    '''
+    if isinstance(val, list):
+        return val
+    try:
+        return [x.strip() for x in val.split(',')]
+    except AttributeError:
+        return [x.strip() for x in str(val).split(',')]
+
+
+def test_mode(**kwargs):
+    '''
+    Examines the kwargs passed and returns True if any kwarg which matching
+    "Test" in any variation on capitalization (i.e. "TEST", "Test", "TeSt",
+    etc) contains a True value (as determined by salt.utils.data.is_true).
+    '''
+    # Once is_true is moved, remove this import and fix the ref below
+    import salt.utils
+    for arg, value in six.iteritems(kwargs):
+        try:
+            if arg.lower() == 'test' and salt.utils.data.is_true(value):
+                return True
+        except AttributeError:
+            continue
+    return False

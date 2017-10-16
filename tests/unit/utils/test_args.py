@@ -94,3 +94,8 @@ class ArgsTestCase(TestCase):
         ret = salt.utils.args.argspec_report(test_functions, 'test_module.test_spec')
         self.assertDictEqual(ret, {'test_module.test_spec':
                                        {'kwargs': True, 'args': None, 'defaults': None, 'varargs': True}})
+
+    def test_test_mode(self):
+        self.assertTrue(salt.utils.args.test_mode(test=True))
+        self.assertTrue(salt.utils.args.test_mode(Test=True))
+        self.assertTrue(salt.utils.args.test_mode(tEsT=True))

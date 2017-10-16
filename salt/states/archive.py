@@ -22,9 +22,9 @@ from salt.ext.six.moves import shlex_quote as _cmd_quote
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 
 # Import Salt libs
-import salt.utils
 import salt.utils.args
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.url
@@ -60,7 +60,7 @@ def _add_explanation(ret, source_hash_trigger, contents_missing):
 
 
 def _gen_checksum(path):
-    return {'hsum': salt.utils.get_hash(path, form=__opts__['hash_type']),
+    return {'hsum': salt.utils.hashutils.get_hash(path, form=__opts__['hash_type']),
             'hash_type': __opts__['hash_type']}
 
 

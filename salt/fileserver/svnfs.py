@@ -55,8 +55,10 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.url
 import salt.utils.versions
 import salt.fileserver
@@ -139,7 +141,7 @@ def init():
             repo_url = next(iter(remote))
             per_remote_conf = dict(
                 [(key, six.text_type(val)) for key, val in
-                 six.iteritems(salt.utils.repack_dictlist(remote[repo_url]))]
+                 six.iteritems(salt.utils.data.repack_dictlist(remote[repo_url]))]
             )
             if not per_remote_conf:
                 log.error(
@@ -646,7 +648,7 @@ def serve_file(load, fnd):
     with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
-        if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+        if data and six.PY3 and not salt.utils.files.is_binary(fpath):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -696,7 +698,7 @@ def file_hash(load, fnd):
                 return ret
 
     # if we don't have a cache entry-- lets make one
-    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+    ret['hsum'] = salt.utils.hashutils.get_hash(path, __opts__['hash_type'])
     cache_dir = os.path.dirname(cache_path)
     # make cache directory if it doesn't exist
     if not os.path.exists(cache_dir):

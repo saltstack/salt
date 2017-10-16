@@ -21,16 +21,20 @@ import salt.fileclient
 import salt.minion
 import salt.crypt
 import salt.transport
-import salt.utils.url
+import salt.utils.args
 import salt.utils.cache
 import salt.utils.crypt
+import salt.utils.data
 import salt.utils.dictupdate
-import salt.utils.args
+import salt.utils.url
 from salt.exceptions import SaltClientError
 from salt.template import compile_template
-from salt.utils.dictupdate import merge
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
+# Even though dictupdate is imported, invoking salt.utils.dictupdate.merge here
+# causes an UnboundLocalError. This should be investigated and fixed, but until
+# then, leave the import directly below this comment intact.
+from salt.utils.dictupdate import merge
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -905,11 +909,12 @@ class Pillar(object):
         ext = None
         # Bring in CLI pillar data
         if self.pillar_override:
-            pillar = merge(pillar,
-                           self.pillar_override,
-                           self.merge_strategy,
-                           self.opts.get('renderer', 'yaml'),
-                           self.opts.get('pillar_merge_lists', False))
+            pillar = merge(
+                pillar,
+                self.pillar_override,
+                self.merge_strategy,
+                self.opts.get('renderer', 'yaml'),
+                self.opts.get('pillar_merge_lists', False))
 
         for run in self.opts['ext_pillar']:
             if not isinstance(run, dict):
@@ -961,11 +966,12 @@ class Pillar(object):
                 self.rend = salt.loader.render(self.opts, self.functions)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)
-                pillar = merge(self.opts['pillar'],
-                               pillar,
-                               self.merge_strategy,
-                               self.opts.get('renderer', 'yaml'),
-                               self.opts.get('pillar_merge_lists', False))
+                pillar = merge(
+                    self.opts['pillar'],
+                    pillar,
+                    self.merge_strategy,
+                    self.opts.get('renderer', 'yaml'),
+                    self.opts.get('pillar_merge_lists', False))
             else:
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)
@@ -988,11 +994,12 @@ class Pillar(object):
             pillar['_errors'] = errors
 
         if self.pillar_override:
-            pillar = merge(pillar,
-                           self.pillar_override,
-                           self.merge_strategy,
-                           self.opts.get('renderer', 'yaml'),
-                           self.opts.get('pillar_merge_lists', False))
+            pillar = merge(
+                pillar,
+                self.pillar_override,
+                self.merge_strategy,
+                self.opts.get('renderer', 'yaml'),
+                self.opts.get('pillar_merge_lists', False))
 
         decrypt_errors = self.decrypt_pillar(pillar)
         if decrypt_errors:
@@ -1008,11 +1015,11 @@ class Pillar(object):
             decrypt_pillar = self.opts['decrypt_pillar']
             if not isinstance(decrypt_pillar, dict):
                 decrypt_pillar = \
-                    salt.utils.repack_dictlist(self.opts['decrypt_pillar'])
+                    salt.utils.data.repack_dictlist(self.opts['decrypt_pillar'])
             if not decrypt_pillar:
                 errors.append('decrypt_pillar config option is malformed')
             for key, rend in six.iteritems(decrypt_pillar):
-                ptr = salt.utils.traverse_dict(
+                ptr = salt.utils.data.traverse_dict(
                     pillar,
                     key,
                     default=None,
@@ -1044,7 +1051,7 @@ class Pillar(object):
                             # parent is the pillar dict itself.
                             ptr = pillar
                         else:
-                            ptr = salt.utils.traverse_dict(
+                            ptr = salt.utils.data.traverse_dict(
                                 pillar,
                                 parent,
                                 default=None,
