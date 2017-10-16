@@ -69,6 +69,12 @@ Output
     10
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 def _get_values(data):
     # This should be able to be improved
@@ -79,7 +85,7 @@ def _get_values(data):
     # This would enable us to toggle
     # this functionality.
     values = []
-    for _, minion_values in data.items():
+    for _, minion_values in six.iteritems(data):
         if isinstance(minion_values, list):
             values.extend(minion_values)
         else:
@@ -95,7 +101,7 @@ def _string_list(a_list):
     return [str(item) for item in a_list]
 
 
-def output(data):
+def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Display modified ret data
     '''

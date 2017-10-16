@@ -2,62 +2,56 @@
 '''
 Return salt data via email
 
-The following fields can be set in the minion conf file::
+The following fields can be set in the minion conf file. Fields are optional
+unless noted otherwise.
 
-    smtp.from (required)
-    smtp.to (required)
-    smtp.host (required)
-    smtp.port (optional, defaults to 25)
-    smtp.username (optional)
-    smtp.password (optional)
-    smtp.tls (optional, defaults to False)
-    smtp.subject (optional, but helpful)
-    smtp.gpgowner (optional)
-    smtp.fields (optional)
+* ``from`` (required) The name/address of the email sender.
+* ``to`` (required) The names/addresses of the email recipients;
+    comma-delimited. For example: ``you@example.com,someoneelse@example.com``.
+* ``host`` (required) The SMTP server hostname or address.
+* ``port`` The SMTP server port; defaults to ``25``.
+* ``username`` The username used to authenticate to the server. If specified a
+    password is also required. It is recommended but not required to also use
+    TLS with this option.
+* ``password`` The password used to authenticate to the server.
+* ``tls`` Whether to secure the connection using TLS; defaults to ``False``
+* ``subject`` The email subject line.
+* ``fields`` Which fields from the returned data to include in the subject line
+    of the email; comma-delimited. For example: ``id,fun``. Please note, *the
+    subject line is not encrypted*.
+* ``gpgowner`` A user's :file:`~/.gpg` directory. This must contain a gpg
+    public key matching the address the mail is sent to. If left unset, no
+    encryption will be used. Requires :program:`python-gnupg` to be installed.
+* ``template`` The path to a file to be used as a template for the email body.
+* ``renderer`` A Salt renderer, or render-pipe, to use to render the email
+    template. Default ``jinja``.
+
+Below is an example of the above settings in a Salt Minion configuration file:
+
+.. code-block:: yaml
+
+    smtp.from: me@example.net
+    smtp.to: you@example.com
+    smtp.host: localhost
+    smtp.port: 1025
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location. For example:
 
-    alternative.smtp.from
-    alternative.smtp.to
-    alternative.smtp.host
-    alternative.smtp.port
-    alternative.smtp.username
-    alternative.smtp.password
-    alternative.smtp.tls
-    alternative.smtp.subject
-    alternative.smtp.gpgowner
-    alternative.smtp.fields
+.. code-block:: yaml
 
-There are a few things to keep in mind:
+    alternative.smtp.username: saltdev
+    alternative.smtp.password: saltdev
+    alternative.smtp.tls: True
 
-* If a username is used, a password is also required. It is recommended (but
-  not required) to use the TLS setting when authenticating.
-* You should at least declare a subject, but you don't have to.
-* The use of encryption, i.e. setting gpgowner in your settings, requires
-  python-gnupg to be installed.
-* The field gpgowner specifies a user's ~/.gpg directory. This must contain a
-  gpg public key matching the address the mail is sent to. If left unset, no
-  encryption will be used.
-* smtp.fields lets you include the value(s) of various fields in the subject
-  line of the email. These are comma-delimited. For instance::
-
-    smtp.fields: id,fun
-
-  ...will display the id of the minion and the name of the function in the
-  subject line. You may also use 'jid' (the job id), but it is generally
-  recommended not to use 'return', which contains the entire return data
-  structure (which can be very large). Also note that the subject is always
-  unencrypted.
-
-To use the SMTP returner, append '--return smtp' to the salt command.
+To use the SMTP returner, append '--return smtp' to the ``salt`` command.
 
 .. code-block:: bash
 
     salt '*' test.ping --return smtp
 
-To use the alternative configuration, append '--return_config alternative' to the salt command.
+To use the alternative configuration, append '--return_config alternative' to the ``salt`` command.
 
 .. versionadded:: 2015.5.0
 
@@ -65,19 +59,65 @@ To use the alternative configuration, append '--return_config alternative' to th
 
     salt '*' test.ping --return smtp --return_config alternative
 
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the
+``salt`` command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return smtp --return_kwargs '{"to": "user@domain.com"}'
+
+An easy way to test the SMTP returner is to use the development SMTP server
+built into Python. The command below will start a single-threaded SMTP server
+that prints any email it receives to the console.
+
+.. code-block:: python
+
+    python -m smtpd -n -c DebuggingServer localhost:1025
+
+.. versionadded:: 2016.11.0
+
+It is possible to send emails with selected Salt events by configuring ``event_return`` option
+for Salt Master. For example:
+
+.. code-block:: yaml
+
+    event_return: smtp
+
+    event_return_whitelist:
+      - salt/key
+
+    smtp.from: me@example.net
+    smtp.to: you@example.com
+    smtp.host: localhost
+    smtp.subject: 'Salt Master {{act}}ed key from Minion ID: {{id}}'
+    smtp.template: /srv/salt/templates/email.j2
+
+Also you need to create additional file ``/srv/salt/templates/email.j2`` with email body template:
+
+.. code-block:: yaml
+
+    act: {{act}}
+    id: {{id}}
+    result: {{result}}
+
+This configuration enables Salt Master to send an email when accepting or rejecting minions keys.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
-import pprint
 import logging
 import smtplib
 from email.utils import formatdate
 
 # Import Salt libs
+import salt.ext.six as six
 import salt.utils.jid
 import salt.returners
+import salt.loader
+from salt.template import compile_template
 
 try:
     import gnupg
@@ -102,12 +142,15 @@ def _get_options(ret=None):
     attrs = {'from': 'from',
              'to': 'to',
              'host': 'host',
+             'port': 'port',
              'username': 'username',
              'password': 'password',
              'subject': 'subject',
              'gpgowner': 'gpgowner',
              'fields': 'fields',
-             'tls': 'tls'}
+             'tls': 'tls',
+             'renderer': 'renderer',
+             'template': 'template'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
@@ -124,45 +167,72 @@ def returner(ret):
 
     _options = _get_options(ret)
     from_addr = _options.get('from')
-    to_addrs = _options.get('to')
+    to_addrs = _options.get('to').split(',')
     host = _options.get('host')
     port = _options.get('port')
     user = _options.get('username')
     passwd = _options.get('password')
-    subject = _options.get('subject')
+    subject = _options.get('subject') or 'Email from Salt'
     gpgowner = _options.get('gpgowner')
     fields = _options.get('fields').split(',') if 'fields' in _options else []
     smtp_tls = _options.get('tls')
 
+    renderer = _options.get('renderer') or 'jinja'
+    rend = salt.loader.render(__opts__, {})
+    blacklist = __opts__.get('renderer_blacklist')
+    whitelist = __opts__.get('renderer_whitelist')
+
     if not port:
         port = 25
     log.debug('SMTP port has been set to {0}'.format(port))
+
     for field in fields:
         if field in ret:
             subject += ' {0}'.format(ret[field])
+    subject = compile_template(':string:',
+                               rend,
+                               renderer,
+                               blacklist,
+                               whitelist,
+                               input_data=subject,
+                               **ret)
+    if isinstance(subject, six.moves.StringIO):
+        subject = subject.read()
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 
-    content = ('id: {0}\r\n'
-               'function: {1}\r\n'
-               'function args: {2}\r\n'
-               'jid: {3}\r\n'
-               'return: {4}\r\n').format(
-                    ret.get('id'),
-                    ret.get('fun'),
-                    ret.get('fun_args'),
-                    ret.get('jid'),
-                    pprint.pformat(ret.get('return')))
-    if HAS_GNUPG and gpgowner:
-        gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
-                        options=['--trust-model always'])
-        encrypted_data = gpg.encrypt(content, to_addrs)
-        if encrypted_data.ok:
-            log.debug('smtp_return: Encryption successful')
-            content = str(encrypted_data)
-        else:
-            log.error('smtp_return: Encryption failed, only an error message will be sent')
-            content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
+    template = _options.get('template')
+    if template:
+        content = compile_template(template, rend, renderer, blacklist, whitelist, **ret)
+    else:
+        template = ('id: {{id}}\r\n'
+                    'function: {{fun}}\r\n'
+                    'function args: {{fun_args}}\r\n'
+                    'jid: {{jid}}\r\n'
+                    'return: {{return}}\r\n')
+        content = compile_template(':string:',
+                                   rend,
+                                   renderer,
+                                   blacklist,
+                                   whitelist,
+                                   input_data=template,
+                                   **ret)
+
+    if gpgowner:
+        if HAS_GNUPG:
+            gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
+                            options=['--trust-model always'])
+            encrypted_data = gpg.encrypt(content, to_addrs)
+            if encrypted_data.ok:
+                log.debug('smtp_return: Encryption successful')
+                content = str(encrypted_data)
+            else:
+                log.error('smtp_return: Encryption failed, only an error message will be sent')
+                content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
                     encrypted_data.status, encrypted_data.stderr)
+        else:
+            log.error("gnupg python module is required in order to user gpgowner in smtp returner ; ignoring gpgowner configuration for now")
+    if isinstance(content, six.moves.StringIO):
+        content = content.read()
 
     message = ('From: {0}\r\n'
                'To: {1}\r\n'
@@ -170,7 +240,7 @@ def returner(ret):
                'Subject: {3}\r\n'
                '\r\n'
                '{4}').format(from_addr,
-                             to_addrs,
+                             ', '.join(to_addrs),
                              formatdate(localtime=True),
                              subject,
                              content)
@@ -183,6 +253,8 @@ def returner(ret):
     if user and passwd:
         server.login(user, passwd)
         log.debug('smtp_return: Authenticated')
+    # enable logging SMTP session after the login credentials were passed
+    server.set_debuglevel(1)
     server.sendmail(from_addr, to_addrs, message)
     log.debug('smtp_return: Message sent.')
     server.quit()
@@ -193,3 +265,15 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+
+
+def event_return(events):
+    '''
+    Return event data via SMTP
+    '''
+
+    for event in events:
+        ret = event.get('data', False)
+
+        if ret:
+            returner(ret)

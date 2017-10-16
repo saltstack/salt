@@ -13,7 +13,7 @@ from __future__ import absolute_import
 import pprint
 
 
-def output(data):
+def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Output the data in lines, very nice for running commands
     '''

@@ -6,17 +6,13 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range, shlex_quote as _cmd_quote  # pylint: disable=import-error,redefined-builtin
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
+import sys
+import xml.etree.ElementTree as ET
 
 # Import salt libs
 import salt.utils
 import salt.utils.cloud as suc
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -30,15 +26,111 @@ def __virtual__():
     return (False, 'glusterfs server is not installed')
 
 
-def list_peers():
+def _get_minor_version():
+    # Set default version to 6 for tests
+    version = 6
+    cmd = 'gluster --version'
+    result = __salt__['cmd.run'](cmd).splitlines()
+    for line in result:
+        if line.startswith('glusterfs'):
+            version = int(line.split()[1].split('.')[1])
+    return version
+
+
+def _gluster_ok(xml_data):
     '''
-    Return a list of gluster peers
+    Extract boolean return value from Gluster's XML output.
+    '''
+    return int(xml_data.find('opRet').text) == 0
+
+
+def _gluster_output_cleanup(result):
+    '''
+    Gluster versions prior to 6 have a bug that requires tricking
+    isatty. This adds "gluster> " to the output. Strip it off and
+    produce clean xml for ElementTree.
+    '''
+    ret = ''
+    for line in result.splitlines():
+        if line.startswith('gluster>'):
+            ret += line[9:].strip()
+        else:
+            ret += line.strip()
+
+    return ret
+
+
+def _gluster_xml(cmd):
+    '''
+    Perform a gluster --xml command and log result.
+    '''
+    # We will pass the command string as stdin to allow for much longer
+    # command strings. This is especially useful for creating large volumes
+    # where the list of bricks exceeds 128 characters.
+    if _get_minor_version() < 6:
+        result = __salt__['cmd.run'](
+            'script -q -c "gluster --xml --mode=script"', stdin="{0}\n\004".format(cmd)
+        )
+    else:
+        result = __salt__['cmd.run'](
+            'gluster --xml --mode=script', stdin="{0}\n".format(cmd)
+        )
+
+    try:
+        root = ET.fromstring(_gluster_output_cleanup(result))
+    except ET.ParseError:
+        raise CommandExecutionError('\n'.join(result.splitlines()[:-1]))
+
+    if _gluster_ok(root):
+        output = root.find('output')
+        if output:
+            log.info('Gluster call "{0}" succeeded: {1}'.format(cmd, root.find('output').text))
+        else:
+            log.info('Gluster call "{0}" succeeded'.format(cmd))
+    else:
+        log.error('Failed gluster call: {0}: {1}'.format(cmd, root.find('opErrstr').text))
+
+    return root
+
+
+def _gluster(cmd):
+    '''
+    Perform a gluster command and return a boolean status.
+    '''
+    return _gluster_ok(_gluster_xml(cmd))
+
+
+def _etree_to_dict(t):
+    d = {}
+    for child in t:
+        d[child.tag] = _etree_to_dict(child)
+    return d or t.text
+
+
+def _iter(root, term):
+    '''
+    Checks for python2.6 or python2.7
+    '''
+    if sys.version_info < (2, 7):
+        return root.getiterator(term)
+    else:
+        return root.iter(term)
+
+
+def peer_status():
+    '''
+    Return peer status information
+
+    The return value is a dictionary with peer UUIDs as keys and dicts of peer
+    information as values. Hostnames are listed in one list. GlusterFS separates
+    one of the hostnames but the only reason for this seems to be which hostname
+    happens to be used firts in peering.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' glusterfs.list_peers
+        salt '*' glusterfs.peer_status
 
     GLUSTER direct CLI example (to show what salt is sending to gluster):
 
@@ -59,12 +151,43 @@ def list_peers():
 
 
     '''
-    get_peer_list = 'gluster peer status | awk \'/Hostname/ {print $2}\''
-    result = __salt__['cmd.run'](get_peer_list, python_shell=True)
-    if 'No peers present' in result:
+    root = _gluster_xml('peer status')
+    if not _gluster_ok(root):
         return None
-    else:
-        return result.splitlines()
+
+    result = {}
+    for peer in _iter(root, 'peer'):
+        uuid = peer.find('uuid').text
+        result[uuid] = {'hostnames': []}
+        for item in peer:
+            if item.tag == 'hostname':
+                result[uuid]['hostnames'].append(item.text)
+            elif item.tag == 'hostnames':
+                for hostname in item:
+                    if hostname.text not in result[uuid]['hostnames']:
+                        result[uuid]['hostnames'].append(hostname.text)
+            elif item.tag != 'uuid':
+                result[uuid][item.tag] = item.text
+    return result
+
+
+def list_peers():
+    '''
+    Deprecated version of peer_status(), which returns the peered hostnames
+    and some additional information.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glusterfs.list_peers
+
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'The glusterfs.list_peers function is deprecated in favor of'
+        ' more verbose but very similar glusterfs.peer_status.')
+    return peer_status()
 
 
 def peer(name):
@@ -98,14 +221,15 @@ def peer(name):
 
     '''
     if suc.check_name(name, 'a-zA-Z0-9._-'):
-        return 'Invalid characters in peer name'
+        raise SaltInvocationError(
+            'Invalid characters in peer name "{0}"'.format(name))
 
-    cmd = 'gluster peer probe {0}'.format(name)
-    return __salt__['cmd.run'](cmd)
+    cmd = 'peer probe {0}'.format(name)
+    return _gluster(cmd)
 
 
-def create(name, bricks, stripe=False, replica=False, device_vg=False,
-           transport='tcp', start=False):
+def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
+           transport='tcp', start=False, force=False):
     '''
     Create a glusterfs volume.
 
@@ -136,6 +260,9 @@ def create(name, bricks, stripe=False, replica=False, device_vg=False,
     start
         Start the volume after creation
 
+    force
+        Force volume creation, this works even if creating in root FS
+
     CLI Example:
 
     .. code-block:: bash
@@ -151,20 +278,22 @@ def create(name, bricks, stripe=False, replica=False, device_vg=False,
 
     # Error for block devices with multiple bricks
     if device_vg and len(bricks) > 1:
-        return 'Error: Block device backend volume does not support multipl' +\
-            'bricks'
+        raise SaltInvocationError('Block device backend volume does not ' +
+                                  'support multiple bricks')
 
     # Validate bricks syntax
     for brick in bricks:
         try:
             peer_name, path = brick.split(':')
             if not path.startswith('/'):
-                return 'Error: Brick paths must start with /'
+                raise SaltInvocationError(
+                    'Brick paths must start with / in {0}'.format(brick))
         except ValueError:
-            return 'Error: Brick syntax is <peer>:<path>'
+            raise SaltInvocationError(
+                'Brick syntax is <peer>:<path> got {0}'.format(brick))
 
     # Format creation call
-    cmd = 'gluster volume create {0} '.format(name)
+    cmd = 'volume create {0} '.format(name)
     if stripe:
         cmd += 'stripe {0} '.format(stripe)
     if replica:
@@ -174,20 +303,27 @@ def create(name, bricks, stripe=False, replica=False, device_vg=False,
     if transport != 'tcp':
         cmd += 'transport {0} '.format(transport)
     cmd += ' '.join(bricks)
+    if force:
+        cmd += ' force'
 
-    log.debug('Clustering command:\n{0}'.format(cmd))
-    ret = __salt__['cmd.run'](cmd)
-    if 'failed' in ret:
-        return ret
+    if not _gluster(cmd):
+        return False
 
     if start:
-        result = __salt__['cmd.run']('gluster volume start {0}'.format(name))
-        if result.endswith('success'):
-            return 'Volume {0} created and started'.format(name)
-        else:
-            return result
-    else:
-        return 'Volume {0} created. Start volume to use'.format(name)
+        return start_volume(name)
+    return True
+
+
+def create(*args, **kwargs):
+    '''
+    Deprecated version of more consistently named create_volume
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'The glusterfs.create function is deprecated in favor of'
+        ' more descriptive glusterfs.create_volume.'
+    )
+    return create_volume(*args, **kwargs)
 
 
 def list_volumes():
@@ -201,11 +337,11 @@ def list_volumes():
         salt '*' glusterfs.list_volumes
     '''
 
-    results = __salt__['cmd.run']('gluster volume list').splitlines()
-    if results[0] == 'No volumes present in cluster':
-        return []
-    else:
-        return results
+    root = _gluster_xml('volume list')
+    if not _gluster_ok(root):
+        return None
+    results = [x.text for x in _iter(root, 'volume')]
+    return results
 
 
 def status(name):
@@ -222,72 +358,104 @@ def status(name):
         salt '*' glusterfs.status myvolume
     '''
     # Get volume status
-    cmd = 'gluster volume status {0}'.format(name)
-    result = __salt__['cmd.run'](cmd).splitlines()
-    if 'does not exist' in result[0]:
-        return result[0]
-    if 'is not started' in result[0]:
-        return result[0]
+    root = _gluster_xml('volume status {0}'.format(name))
+    if not _gluster_ok(root):
+        # Most probably non-existing volume, the error output is logged
+        # Tiis return value is easy to test and intuitive
+        return None
 
     ret = {'bricks': {}, 'nfs': {}, 'healers': {}}
-    # Iterate line by line, concatenating lines the gluster cli separated
-    for line_number in range(len(result)):
-        line = result[line_number]
-        if line.startswith('Brick'):
-            # See if this line is broken up into multiple lines
-            while len(line.split()) < 5:
-                line_number = line_number + 1
-                line = line.rstrip() + result[line_number]
 
-            # Parse Brick data
-            brick, port, online, pid = line.split()[1:]
-            host, path = brick.split(':')
-            data = {'port': port, 'pid': pid, 'host': host, 'path': path}
-            if online == 'Y':
-                data['online'] = True
-            else:
-                data['online'] = False
-            # Store, keyed by <host>:<brick> string
-            ret['bricks'][brick] = data
-        elif line.startswith('NFS Server on'):
-            # See if this line is broken up into multiple lines
-            while len(line.split()) < 5:
-                line_number = line_number + 1
-                line = line.rstrip() + result[line_number]
+    def etree_legacy_wrap(t):
+        ret = _etree_to_dict(t)
+        ret['online'] = (ret['status'] == '1')
+        ret['host'] = ret['hostname']
+        return ret
 
-            # Parse NFS Server data
-            host, port, online, pid = line.split()[3:]
-            data = {'port': port, 'pid': pid}
-            if online == 'Y':
-                data['online'] = True
-            else:
-                data['online'] = False
-            # Store, keyed by hostname
-            ret['nfs'][host] = data
-        elif line.startswith('Self-heal Daemon on'):
-            # See if this line is broken up into multiple lines
-            while len(line.split()) < 5:
-                line_number = line_number + 1
-                line = line.rstrip() + result[line_number]
+    # Build a hash to map hostname to peerid
+    hostref = {}
+    for node in _iter(root, 'node'):
+        peerid = node.find('peerid').text
+        hostname = node.find('hostname').text
+        if hostname not in ('NFS Server', 'Self-heal Daemon'):
+            hostref[peerid] = hostname
 
-            # Parse NFS Server data
-            host, port, online, pid = line.split()[3:]
-            data = {'port': port, 'pid': pid}
-            if online == 'Y':
-                data['online'] = True
-            else:
-                data['online'] = False
-            # Store, keyed by hostname
-            ret['healers'][host] = data
+    for node in _iter(root, 'node'):
+        hostname = node.find('hostname').text
+        if hostname not in ('NFS Server', 'Self-heal Daemon'):
+            path = node.find('path').text
+            ret['bricks'][
+                '{0}:{1}'.format(hostname, path)] = etree_legacy_wrap(node)
+        elif hostname == 'NFS Server':
+            peerid = node.find('peerid').text
+            true_hostname = hostref[peerid]
+            ret['nfs'][true_hostname] = etree_legacy_wrap(node)
+        else:
+            peerid = node.find('peerid').text
+            true_hostname = hostref[peerid]
+            ret['healers'][true_hostname] = etree_legacy_wrap(node)
+
     return ret
 
 
-def start_volume(name):
+def info(name=None):
+    '''
+    .. versionadded:: 2015.8.4
+
+    Return gluster volume info.
+
+    name
+        Optional name to retrieve only information of one volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glusterfs.info
+
+    '''
+    cmd = 'volume info'
+    if name is not None:
+        cmd += ' ' + name
+
+    root = _gluster_xml(cmd)
+    if not _gluster_ok(root):
+        return None
+
+    ret = {}
+    for volume in _iter(root, 'volume'):
+        name = volume.find('name').text
+        ret[name] = _etree_to_dict(volume)
+
+        bricks = {}
+        for i, brick in enumerate(_iter(volume, 'brick'), start=1):
+            brickkey = 'brick{0}'.format(i)
+            bricks[brickkey] = {'path': brick.text}
+            for child in brick:
+                if not child.tag == 'name':
+                    bricks[brickkey].update({child.tag: child.text})
+            for k, v in brick.items():
+                bricks[brickkey][k] = v
+        ret[name]['bricks'] = bricks
+
+        options = {}
+        for option in _iter(volume, 'option'):
+            options[option.find('name').text] = option.find('value').text
+        ret[name]['options'] = options
+
+    return ret
+
+
+def start_volume(name, force=False):
     '''
     Start a gluster volume.
 
     name
         Volume name
+
+    force
+        Force the volume start even if the volume is started
+        .. versionadded:: 2015.8.4
 
     CLI Example:
 
@@ -295,25 +463,32 @@ def start_volume(name):
 
         salt '*' glusterfs.start mycluster
     '''
-    volumes = list_volumes()
-    if name in volumes:
-        if isinstance(status(name), dict):
-            return 'Volume already started'
-        cmd = 'gluster volume start {0}'.format(name)
-        result = __salt__['cmd.run'](cmd)
-        if result.endswith('success'):
-            return 'Volume {0} started'.format(name)
-        else:
-            return result
-    return 'Volume does not exist'
+    cmd = 'volume start {0}'.format(name)
+    if force:
+        cmd = '{0} force'.format(cmd)
+
+    volinfo = info(name)
+    if name not in volinfo:
+        log.error("Cannot start non-existing volume {0}".format(name))
+        return False
+
+    if not force and volinfo[name]['status'] == '1':
+        log.info("Volume {0} already started".format(name))
+        return True
+
+    return _gluster(cmd)
 
 
-def stop_volume(name):
+def stop_volume(name, force=False):
     '''
     Stop a gluster volume.
 
     name
         Volume name
+
+    force
+        Force stop the volume
+        .. versionadded:: 2015.8.4
 
     CLI Example:
 
@@ -321,18 +496,22 @@ def stop_volume(name):
 
         salt '*' glusterfs.stop_volume mycluster
     '''
-    vol_status = status(name)
-    if isinstance(vol_status, dict):
-        cmd = 'yes | gluster volume stop {0}'.format(_cmd_quote(name))
-        result = __salt__['cmd.run'](cmd, python_shell=True)
-        if result.splitlines()[0].endswith('success'):
-            return 'Volume {0} stopped'.format(name)
-        else:
-            return result
-    return vol_status
+    volinfo = info()
+    if name not in volinfo:
+        log.error('Cannot stop non-existing volume {0}'.format(name))
+        return False
+    if int(volinfo[name]['status']) != 1:
+        log.warning('Attempt to stop already stopped volume {0}'.format(name))
+        return True
+
+    cmd = 'volume stop {0}'.format(name)
+    if force:
+        cmd += ' force'
+
+    return _gluster(cmd)
 
 
-def delete(target, stop=True):
+def delete_volume(target, stop=True):
     '''
     Deletes a gluster volume
 
@@ -342,29 +521,37 @@ def delete(target, stop=True):
     stop
         Stop volume before delete if it is started, True by default
     '''
-    if target not in list_volumes():
-        return 'Volume does not exist'
-
-    cmd = 'yes | gluster volume delete {0}'.format(_cmd_quote(target))
+    volinfo = info()
+    if target not in volinfo:
+        log.error('Cannot delete non-existing volume {0}'.format(target))
+        return False
 
     # Stop volume if requested to and it is running
-    if stop is True and isinstance(status(target), dict):
-        stop_volume(target)
-        stopped = True
-    else:
-        stopped = False
-        # Warn volume is running if stop not requested
-        if isinstance(status(target), dict):
-            return 'Error: Volume must be stopped before deletion'
+    running = (volinfo[target]['status'] == '1')
 
-    result = __salt__['cmd.run'](cmd, python_shell=True)
-    if result.splitlines()[0].endswith('success'):
-        if stopped:
-            return 'Volume {0} stopped and deleted'.format(target)
-        else:
-            return 'Volume {0} deleted'.format(target)
-    else:
-        return result
+    if not stop and running:
+        # Fail if volume is running if stop is not requested
+        log.error('Volume {0} must be stopped before deletion'.format(target))
+        return False
+
+    if running:
+        if not stop_volume(target, force=True):
+            return False
+
+    cmd = 'volume delete {0}'.format(target)
+    return _gluster(cmd)
+
+
+def delete(*args, **kwargs):
+    '''
+    Deprecated version of more consistently named delete_volume
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'The glusterfs.delete function is deprecated in favor of'
+        ' more descriptive glusterfs.delete_volume.'
+    )
+    return delete_volume(*args, **kwargs)
 
 
 def add_volume_bricks(name, bricks):
@@ -378,37 +565,29 @@ def add_volume_bricks(name, bricks):
         List of bricks to add to the volume
     '''
 
+    volinfo = info()
+    if name not in volinfo:
+        log.error('Volume {0} does not exist, cannot add bricks'.format(name))
+        return False
+
     new_bricks = []
 
-    cmd = 'echo yes | gluster volume add-brick {0}'.format(name)
+    cmd = 'volume add-brick {0}'.format(name)
 
     if isinstance(bricks, str):
         bricks = [bricks]
 
-    volume_bricks = status(name)
-
-    if 'does not exist' in volume_bricks:
-        return volume_bricks
-
-    if 'is not started' in volume_bricks:
-        return volume_bricks
+    volume_bricks = [x['path'] for x in volinfo[name]['bricks'].values()]
 
     for brick in bricks:
-        if brick in volume_bricks['bricks']:
-            log.debug('Brick {0} already in volume {1}...excluding from command'.format(brick, name))
+        if brick in volume_bricks:
+            log.debug(
+                'Brick {0} already in volume {1}...excluding from command'.format(brick, name))
         else:
             new_bricks.append(brick)
 
     if len(new_bricks) > 0:
         for brick in new_bricks:
-            cmd += ' '+str(brick)
-
-        result = __salt__['cmd.run'](cmd)
-
-        if result.endswith('success'):
-            return '{0} bricks successfully added to the volume {1}'.format(len(new_bricks), name)
-        else:
-            return result
-
-    else:
-        return 'Bricks already in volume {0}'.format(name)
+            cmd += ' {0}'.format(brick)
+        return _gluster(cmd)
+    return True

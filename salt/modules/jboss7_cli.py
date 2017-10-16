@@ -20,7 +20,7 @@ returns it as a dictionary so that an execution of an operation can then be veri
 
 In order to run each function, jboss_config dictionary with the following properties must be passed:
  * cli_path: the path to jboss-cli script, for example: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
- * controller: the ip addres and port of controller, for example: 10.11.12.13:9999
+ * controller: the IP address and port of controller, for example: 10.11.12.13:9999
  * cli_user: username to connect to jboss administration console if necessary
  * cli_password: password to connect to jboss administration console if necessary
 
@@ -36,12 +36,18 @@ Example:
 
 '''
 
+# Import Python libs
+from __future__ import absolute_import
 import logging
 import re
 import pprint
 import time
 
+# Import Salt libs
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -112,6 +118,7 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
             cli_result['success'] = False
             match = re.search(r'^(JBAS\d+):', cli_result['failure-description'])
             cli_result['err_code'] = match.group(1)
+            cli_result['stdout'] = cli_command_result['stdout']
         else:
             if fail_on_error:
                 raise CommandExecutionError('''Command execution failed, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**cli_command_result))
@@ -131,9 +138,9 @@ def __call_cli(jboss_config, command, retries=1):
         '--connect',
         '--controller="{0}"'.format(jboss_config['controller'])
     ]
-    if 'cli_user' in jboss_config.keys():
+    if 'cli_user' in six.iterkeys(jboss_config):
         command_segments.append('--user="{0}"'.format(jboss_config['cli_user']))
-    if 'cli_password' in jboss_config.keys():
+    if 'cli_password' in six.iterkeys(jboss_config):
         command_segments.append('--password="{0}"'.format(jboss_config['cli_password']))
     command_segments.append('--command="{0}"'.format(__escape_command(command)))
     cli_script = ' '.join(command_segments)
@@ -291,6 +298,9 @@ def __process_tokens_internal(tokens, start_at=0):
         elif __is_assignment(token):
             log.debug("    TYPE: ASSIGNMENT")
             is_assignment = True
+        elif __is_expression(token):
+            log.debug("    TYPE: EXPRESSION")
+            is_expression = True
         else:
             raise CommandExecutionError('Unknown token! Token: {0}'.format(token))
 
@@ -335,11 +345,14 @@ def __is_long(token):
 
 
 def __get_long(token):
-    return long(token[0:-1])
+    if six.PY2:
+        return long(token[0:-1])  # pylint: disable=incompatible-py3-code
+    else:
+        return int(token[0:-1])
 
 
 def __is_datatype(token):
-    return token in ("INT", "BOOLEAN", "STRING", "OBJECT")
+    return token in ("INT", "BOOLEAN", "STRING", "OBJECT", "LONG")
 
 
 def __get_datatype(token):
@@ -361,4 +374,8 @@ def __get_quoted_string(token):
 
 
 def __is_assignment(token):
-    return '=>'
+    return token == '=>'
+
+
+def __is_expression(token):
+    return token == 'expression'

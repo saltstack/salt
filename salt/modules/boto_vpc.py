@@ -4,20 +4,31 @@ Connection module for Amazon VPC
 
 .. versionadded:: 2014.7.0
 
-:configuration: This module accepts explicit VPC credentials but can also
-    utilize IAM roles assigned to the instance trough Instance Profiles.
-    Dynamic credentials are then automatically obtained from AWS API and no
-    further configuration is necessary. More Information available at::
+:depends:
 
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+- boto >= 2.8.0
+- boto3 >= 1.2.6
+
+:configuration: This module accepts explicit VPC credentials but can also
+    utilize IAM roles assigned to the instance through Instance Profiles.
+    Dynamic credentials are then automatically obtained from AWS API and no
+    further configuration is necessary. More Information available at:
+
+    .. code-block:: text
+
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file::
+    in the minion's config file:
+
+    .. code-block:: yaml
 
         vpc.keyid: GKTADJGHEIQSXMKKRBJ08H
         vpc.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A region may also be specified in the configuration::
+    A region may also be specified in the configuration:
+
+    .. code-block:: yaml
 
         vpc.region: us-east-1
 
@@ -26,35 +37,142 @@ Connection module for Amazon VPC
     It's also possible to specify key, keyid and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
 
+    .. code-block:: yaml
+
         myprofile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 
-:depends: boto
+.. versionchanged:: 2015.8.0
+    All methods now return a dictionary. Create and delete methods return:
+
+    .. code-block:: yaml
+
+        created: true
+
+    or
+
+    .. code-block:: yaml
+
+        created: false
+        error:
+          message: error message
+
+    Request methods (e.g., `describe_vpc`) return:
+
+    .. code-block:: yaml
+
+        vpcs:
+          - {...}
+          - {...}
+
+    or
+
+    .. code-block:: yaml
+
+        error:
+          message: error message
+
+.. versionadded:: 2016.11.0
+
+Functions to request, accept, delete and describe VPC peering connections.
+Named VPC peering connections can be requested using these modules.
+VPC owner accounts can accept VPC peering connections (named or otherwise).
+
+Examples showing creation of VPC peering connection
+
+.. code-block:: bash
+
+    # Create a named VPC peering connection
+    salt myminion boto_vpc.request_vpc_peering_connection vpc-4a3e622e vpc-be82e9da name=my_vpc_connection
+    # Without a name
+    salt myminion boto_vpc.request_vpc_peering_connection vpc-4a3e622e vpc-be82e9da
+    # Specify a region
+    salt myminion boto_vpc.request_vpc_peering_connection vpc-4a3e622e vpc-be82e9da region=us-west-2
+
+Check to see if VPC peering connection is pending
+
+.. code-block:: bash
+
+    salt myminion boto_vpc.is_peering_connection_pending name=salt-vpc
+    # Specify a region
+    salt myminion boto_vpc.is_peering_connection_pending name=salt-vpc region=us-west-2
+    # specify an id
+    salt myminion boto_vpc.is_peering_connection_pending conn_id=pcx-8a8939e3
+
+Accept VPC peering connection
+
+.. code-block:: bash
+
+    salt myminion boto_vpc.accept_vpc_peering_connection name=salt-vpc
+    # Specify a region
+    salt myminion boto_vpc.accept_vpc_peering_connection name=salt-vpc region=us-west-2
+    # specify an id
+    salt myminion boto_vpc.accept_vpc_peering_connection conn_id=pcx-8a8939e3
+
+Deleting VPC peering connection via this module
+
+.. code-block:: bash
+
+    # Delete a named VPC peering connection
+    salt myminion boto_vpc.delete_vpc_peering_connection name=salt-vpc
+    # Specify a region
+    salt myminion boto_vpc.delete_vpc_peering_connection name=salt-vpc region=us-west-2
+    # specify an id
+    salt myminion boto_vpc.delete_vpc_peering_connection conn_id=pcx-8a8939e3
 
 '''
-from __future__ import absolute_import
+# keep lint from choking on _get_conn and _cache_id
+#pylint: disable=E0602
 
 # Import Python libs
+from __future__ import absolute_import
 import logging
+import socket
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
+import time
+import random
+
+# Import Salt libs
+import salt.utils.boto
+import salt.utils.boto3
+import salt.utils.compat
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.ext.six.moves import range  # pylint: disable=import-error
+
+# from salt.utils import exactly_one
+# TODO: Uncomment this and s/_exactly_one/exactly_one/
+# See note in utils.boto
+PROVISIONING = 'provisioning'
+PENDING_ACCEPTANCE = 'pending-acceptance'
+ACTIVE = 'active'
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
-    # pylint: disable=import-error
+    #pylint: disable=unused-import
     import boto
+    import botocore
     import boto.vpc
-    # pylint: enable=import-error
+    #pylint: enable=unused-import
+    from boto.exception import BotoServerError
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-
-from salt.ext.six import string_types
+# pylint: enable=import-error
+try:
+    #pylint: disable=unused-import
+    import boto3
+    #pylint: enable=unused-import
+    logging.getLogger('boto3').setLevel(logging.CRITICAL)
+    HAS_BOTO3 = True
+except ImportError:
+    HAS_BOTO3 = False
 
 
 def __virtual__():
@@ -67,74 +185,605 @@ def __virtual__():
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_vpc module could not be loaded: boto libraries not found')
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return False
-    else:
-        return True
+        return (False, 'The boto_vpc module could not be loaded: boto library version 2.8.0 is required')
+    required_boto3_version = '1.2.6'
+    # the boto_vpc execution module relies on the create_nat_gateway() method
+    # which was added in boto3 1.2.6
+    if not HAS_BOTO3:
+        return (False, 'The boto_vpc module could not be loaded: boto3 libraries not found')
+    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
+        return (False, 'The boto_vpc module could not be loaded: boto3 library version 1.2.6 is required')
+    return True
 
 
-def get_subnet_association(subnets, region=None, key=None, keyid=None,
-                           profile=None):
+def __init__(opts):
+    salt.utils.compat.pack_dunder(__name__)
+    if HAS_BOTO:
+        __utils__['boto.assign_funcs'](__name__, 'vpc', pack=__salt__)
+    if HAS_BOTO3:
+        __utils__['boto3.assign_funcs'](__name__, 'ec2',
+                  get_conn_funcname='_get_conn3',
+                  cache_id_funcname='_cache_id3',
+                  exactly_one_funcname=None)
+
+
+def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None,
+              keyid=None, profile=None):
     '''
-    Given a subnet (aka: a vpc zone identifier) or list of subnets, returns
-    vpc association.
+    Check whether a VPC with the given name or id exists.
+    Returns the vpc_id or None. Raises SaltInvocationError if
+    both vpc_id and vpc_name are None. Optionally raise a
+    CommandExecutionError if the VPC does not exist.
 
-    Returns a VPC ID if the given subnets are associated with the same VPC ID.
-    Returns False on an error or if the given subnets are associated with
-    different VPC IDs.
+    .. versionadded:: 2016.3.0
 
-    CLI Examples::
+    CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.get_subnet_association subnet-61b47516
+        salt myminion boto_vpc.check_vpc vpc_name=myvpc profile=awsprofile
+    '''
+
+    if not _exactly_one((vpc_name, vpc_id)):
+        raise SaltInvocationError('One (but not both) of vpc_id or vpc_name '
+                                  'must be provided.')
+    if vpc_name:
+        vpc_id = _get_id(vpc_name=vpc_name, region=region, key=key, keyid=keyid,
+                         profile=profile)
+    elif not _find_vpcs(vpc_id=vpc_id, region=region, key=key, keyid=keyid,
+                        profile=profile):
+        log.info('VPC {0} does not exist.'.format(vpc_id))
+        return None
+    return vpc_id
+
+
+def _create_resource(resource, name=None, tags=None, region=None, key=None,
+                     keyid=None, profile=None, **kwargs):
+    '''
+    Create a VPC resource. Returns the resource id if created, or False
+    if not created.
+    '''
+
+    try:
+        try:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            create_resource = getattr(conn, 'create_' + resource)
+        except AttributeError:
+            raise AttributeError('{0} function does not exist for boto VPC '
+                                 'connection.'.format('create_' + resource))
+
+        if name and _get_resource_id(resource, name, region=region, key=key,
+                                     keyid=keyid, profile=profile):
+            return {'created': False, 'error': {'message':
+                    'A {0} named {1} already exists.'.format(
+                        resource, name)}}
+
+        r = create_resource(**kwargs)
+
+        if r:
+            if isinstance(r, bool):
+                return {'created': True}
+            else:
+                log.info('A {0} with id {1} was created'.format(resource, r.id))
+                _maybe_set_name_tag(name, r)
+                _maybe_set_tags(tags, r)
+
+                if name:
+                    _cache_id(name,
+                              sub_resource=resource,
+                              resource_id=r.id,
+                              region=region,
+                              key=key, keyid=keyid,
+                              profile=profile)
+                return {'created': True, 'id': r.id}
+        else:
+            if name:
+                e = '{0} {1} was not created.'.format(resource, name)
+            else:
+                e = '{0} was not created.'.format(resource)
+            log.warning(e)
+            return {'created': False, 'error': {'message': e}}
+    except BotoServerError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def _delete_resource(resource, name=None, resource_id=None, region=None,
+                     key=None, keyid=None, profile=None, **kwargs):
+    '''
+    Delete a VPC resource. Returns True if successful, otherwise False.
+    '''
+
+    if not _exactly_one((name, resource_id)):
+        raise SaltInvocationError('One (but not both) of name or id must be '
+                                  'provided.')
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+        try:
+            delete_resource = getattr(conn, 'delete_' + resource)
+        except AttributeError:
+            raise AttributeError('{0} function does not exist for boto VPC '
+                                 'connection.'.format('delete_' + resource))
+        if name:
+            resource_id = _get_resource_id(resource, name,
+                                           region=region, key=key,
+                                           keyid=keyid, profile=profile)
+            if not resource_id:
+                return {'deleted': False, 'error': {'message':
+                        '{0} {1} does not exist.'.format(resource, name)}}
+
+        if delete_resource(resource_id, **kwargs):
+            _cache_id(name, sub_resource=resource,
+                      resource_id=resource_id,
+                      invalidate=True,
+                      region=region,
+                      key=key, keyid=keyid,
+                      profile=profile)
+            return {'deleted': True}
+        else:
+            if name:
+                e = '{0} {1} was not deleted.'.format(resource, name)
+            else:
+                e = '{0} was not deleted.'.format(resource)
+            return {'deleted': False, 'error': {'message': e}}
+    except BotoServerError as e:
+        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def _get_resource(resource, name=None, resource_id=None, region=None,
+                  key=None, keyid=None, profile=None):
+    '''
+    Get a VPC resource based on resource type and name or id.
+    Cache the id if name was provided.
+    '''
+
+    if not _exactly_one((name, resource_id)):
+        raise SaltInvocationError('One (but not both) of name or id must be '
+                                  'provided.')
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    f = 'get_all_{0}'.format(resource)
+    if not f.endswith('s'):
+        f = f + 's'
+    get_resources = getattr(conn, f)
+    filter_parameters = {}
+
+    if name:
+        filter_parameters['filters'] = {'tag:Name': name}
+    if resource_id:
+        filter_parameters['{0}_ids'.format(resource)] = resource_id
+
+    try:
+        r = get_resources(**filter_parameters)
+    except BotoServerError as e:
+        if e.code.endswith('.NotFound'):
+            return None
+        raise
+
+    if r:
+        if len(r) == 1:
+            if name:
+                _cache_id(name, sub_resource=resource,
+                          resource_id=r[0].id,
+                          region=region,
+                          key=key, keyid=keyid,
+                          profile=profile)
+            return r[0]
+        else:
+            raise CommandExecutionError('Found more than one '
+                                        '{0} named "{1}"'.format(
+                                            resource, name))
+    else:
+        return None
+
+
+def _find_resources(resource, name=None, resource_id=None, tags=None,
+                    region=None, key=None, keyid=None, profile=None):
+    '''
+    Get VPC resources based on resource type and name, id, or tags.
+    '''
+
+    if all((resource_id, name)):
+        raise SaltInvocationError('Only one of name or id may be '
+                                  'provided.')
+
+    if not any((resource_id, name, tags)):
+        raise SaltInvocationError('At least one of the following must be '
+                                  'provided: id, name, or tags.')
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    f = 'get_all_{0}'.format(resource)
+    if not f.endswith('s'):
+        f = f + 's'
+    get_resources = getattr(conn, f)
+
+    filter_parameters = {}
+    if name:
+        filter_parameters['filters'] = {'tag:Name': name}
+    if resource_id:
+        filter_parameters['{0}_ids'.format(resource)] = resource_id
+    if tags:
+        for tag_name, tag_value in six.iteritems(tags):
+            filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+    try:
+        r = get_resources(**filter_parameters)
+    except BotoServerError as e:
+        if e.code.endswith('.NotFound'):
+            return None
+        raise
+    return r
+
+
+def _get_resource_id(resource, name, region=None, key=None,
+                     keyid=None, profile=None):
+    '''
+    Get an AWS id for a VPC resource by type and name.
+    '''
+
+    _id = _cache_id(name, sub_resource=resource,
+                    region=region, key=key,
+                    keyid=keyid, profile=profile)
+    if _id:
+        return _id
+
+    r = _get_resource(resource, name=name, region=region, key=key,
+                      keyid=keyid, profile=profile)
+
+    if r:
+        return r.id
+
+
+def get_resource_id(resource, name=None, resource_id=None, region=None,
+                    key=None, keyid=None, profile=None):
+    '''
+    Get an AWS id for a VPC resource by type and name.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.get_subnet_association ['subnet-61b47516','subnet-2cb9785b']
+        salt myminion boto_vpc.get_resource_id internet_gateway myigw
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+
     try:
-        # subnet_ids=subnets can accept either a string or a list
-        subnets = conn.get_all_subnets(subnet_ids=subnets)
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
-    # using a set to store vpc_ids - the use of set prevents duplicate
-    # vpc_id values
-    vpc_ids = set()
-    for subnet in subnets:
-        log.debug('examining subnet id: {0} for vpc_id'.format(subnet.id))
-        if subnet in subnets:
-            log.debug('subnet id: {0} is associated with vpc id: {1}'
-                      .format(subnet.id, subnet.vpc_id))
-            vpc_ids.add(subnet.vpc_id)
-    if len(vpc_ids) == 1:
-        vpc_id = vpc_ids.pop()
-        log.info('all subnets are associated with vpc id: {0}'.format(vpc_id))
-        return vpc_id
+        return {'id': _get_resource_id(resource, name, region=region, key=key,
+                                       keyid=keyid, profile=profile)}
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+
+def resource_exists(resource, name=None, resource_id=None, tags=None,
+                    region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a resource type and name, return {exists: true} if it exists,
+    {exists: false} if it does not exist, or {error: {message: error text}
+    on error.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.resource_exists internet_gateway myigw
+
+    '''
+
+    try:
+        return {'exists': bool(_find_resources(resource, name=name,
+                                               resource_id=resource_id,
+                                               tags=tags, region=region,
+                                               key=key, keyid=keyid,
+                                               profile=profile))}
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+
+def _find_vpcs(vpc_id=None, vpc_name=None, cidr=None, tags=None,
+               region=None, key=None, keyid=None, profile=None):
+
+    '''
+    Given VPC properties, find and return matching VPC ids.
+    '''
+
+    if all((vpc_id, vpc_name)):
+        raise SaltInvocationError('Only one of vpc_name or vpc_id may be '
+                                  'provided.')
+
+    if not any((vpc_id, vpc_name, tags, cidr)):
+        raise SaltInvocationError('At least one of the following must be '
+                                  'provided: vpc_id, vpc_name, cidr or tags.')
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    filter_parameters = {'filters': {}}
+
+    if vpc_id:
+        filter_parameters['vpc_ids'] = [vpc_id]
+
+    if cidr:
+        filter_parameters['filters']['cidr'] = cidr
+
+    if vpc_name:
+        filter_parameters['filters']['tag:Name'] = vpc_name
+
+    if tags:
+        for tag_name, tag_value in six.iteritems(tags):
+            filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+    vpcs = conn.get_all_vpcs(**filter_parameters)
+    log.debug('The filters criteria {0} matched the following VPCs:{1}'.format(filter_parameters, vpcs))
+
+    if vpcs:
+        return [vpc.id for vpc in vpcs]
     else:
-        log.info('given subnets are associated with fewer than 1 or greater'
-                 ' than 1 subnets')
-        return False
+        return []
 
 
-def _find_vpc(vpc_id=None, name=None, cidr=None, tags=None, conn=None):
+def _get_id(vpc_name=None, cidr=None, tags=None, region=None, key=None,
+            keyid=None, profile=None):
     '''
-    Given VPC properties, find and return matching VPC_IDs
+    Given VPC properties, return the VPC id if a match is found.
+    '''
+
+    if vpc_name and not any((cidr, tags)):
+        vpc_id = _cache_id(vpc_name, region=region,
+                           key=key, keyid=keyid,
+                           profile=profile)
+        if vpc_id:
+            return vpc_id
+
+    vpc_ids = _find_vpcs(vpc_name=vpc_name, cidr=cidr, tags=tags, region=region,
+                         key=key, keyid=keyid, profile=profile)
+    if vpc_ids:
+        log.debug("Matching VPC: {0}".format(" ".join(vpc_ids)))
+        if len(vpc_ids) == 1:
+            vpc_id = vpc_ids[0]
+            if vpc_name:
+                _cache_id(vpc_name, vpc_id,
+                          region=region, key=key,
+                          keyid=keyid, profile=profile)
+            return vpc_id
+        else:
+            raise CommandExecutionError('Found more than one VPC matching the criteria.')
+    else:
+        log.info('No VPC found.')
+        return None
+
+
+def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None,
+           profile=None):
+    '''
+    Given VPC properties, return the VPC id if a match is found.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.get_id myvpc
 
     '''
-    if not conn:
-        return False
-
-    if not vpc_id and not name and not tags and not cidr:
-        raise SaltInvocationError('At least one of the following must be specified: vpc id, name, cidr or tags.')
 
     try:
+        return {'id': _get_id(vpc_name=name, cidr=cidr, tags=tags, region=region,
+                              key=key, keyid=keyid, profile=profile)}
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+
+def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None,
+           keyid=None, profile=None):
+    '''
+    Given a VPC ID, check to see if the given VPC ID exists.
+
+    Returns True if the given VPC ID exists and returns False if the given
+    VPC ID does not exist.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.exists myvpc
+
+    '''
+
+    try:
+        vpc_ids = _find_vpcs(vpc_id=vpc_id, vpc_name=name, cidr=cidr, tags=tags,
+                             region=region, key=key, keyid=keyid, profile=profile)
+    except BotoServerError as err:
+        boto_err = salt.utils.boto.get_error(err)
+        if boto_err.get('aws', {}).get('code') == 'InvalidVpcID.NotFound':
+            # VPC was not found: handle the error and return False.
+            return {'exists': False}
+        return {'error': boto_err}
+
+    return {'exists': bool(vpc_ids)}
+
+
+def create(cidr_block, instance_tenancy=None, vpc_name=None,
+           enable_dns_support=None, enable_dns_hostnames=None, tags=None,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a valid CIDR block, create a VPC.
+
+    An optional instance_tenancy argument can be provided. If provided, the
+    valid values are 'default' or 'dedicated'
+
+    An optional vpc_name argument can be provided.
+
+    Returns {created: true} if the VPC was created and returns
+    {created: False} if the VPC was not created.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.create '10.0.0.0/24'
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        vpc = conn.create_vpc(cidr_block, instance_tenancy=instance_tenancy)
+        if vpc:
+            log.info('The newly created VPC id is {0}'.format(vpc.id))
+
+            _maybe_set_name_tag(vpc_name, vpc)
+            _maybe_set_tags(tags, vpc)
+            _maybe_set_dns(conn, vpc.id, enable_dns_support, enable_dns_hostnames)
+            _maybe_name_route_table(conn, vpc.id, vpc_name)
+            if vpc_name:
+                _cache_id(vpc_name, vpc.id,
+                          region=region, key=key,
+                          keyid=keyid, profile=profile)
+            return {'created': True, 'id': vpc.id}
+        else:
+            log.warning('VPC was not created')
+            return {'created': False}
+    except BotoServerError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def delete(vpc_id=None, name=None, vpc_name=None, tags=None,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a VPC ID or VPC name, delete the VPC.
+
+    Returns {deleted: true} if the VPC was deleted and returns
+    {deleted: false} if the VPC was not deleted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete vpc_id='vpc-6b1fe402'
+        salt myminion boto_vpc.delete name='myvpc'
+
+    '''
+
+    if name:
+        log.warning('boto_vpc.delete: name parameter is deprecated '
+                    'use vpc_name instead.')
+        vpc_name = name
+
+    if not _exactly_one((vpc_name, vpc_id)):
+        raise SaltInvocationError('One (but not both) of vpc_name or vpc_id must be '
+                                  'provided.')
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        if not vpc_id:
+            vpc_id = _get_id(vpc_name=vpc_name, tags=tags, region=region, key=key,
+                             keyid=keyid, profile=profile)
+            if not vpc_id:
+                return {'deleted': False, 'error': {'message':
+                        'VPC {0} not found'.format(vpc_name)}}
+
+        if conn.delete_vpc(vpc_id):
+            log.info('VPC {0} was deleted.'.format(vpc_id))
+            if vpc_name:
+                _cache_id(vpc_name, resource_id=vpc_id,
+                          invalidate=True,
+                          region=region,
+                          key=key, keyid=keyid,
+                          profile=profile)
+            return {'deleted': True}
+        else:
+            log.warning('VPC {0} was not deleted.'.format(vpc_id))
+            return {'deleted': False}
+    except BotoServerError as e:
+        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def describe(vpc_id=None, vpc_name=None, region=None, key=None,
+             keyid=None, profile=None):
+    '''
+    Given a VPC ID describe its properties.
+
+    Returns a dictionary of interesting properties.
+
+    .. versionchanged:: 2015.8.0
+        Added vpc_name argument
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe vpc_id=vpc-123456
+        salt myminion boto_vpc.describe vpc_name=myvpc
+
+    '''
+
+    if not any((vpc_id, vpc_name)):
+        raise SaltInvocationError('A valid vpc id or name needs to be specified.')
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+    except BotoServerError as err:
+        boto_err = salt.utils.boto.get_error(err)
+        if boto_err.get('aws', {}).get('code') == 'InvalidVpcID.NotFound':
+            # VPC was not found: handle the error and return None.
+            return {'vpc': None}
+        return {'error': boto_err}
+
+    if not vpc_id:
+        return {'vpc': None}
+
+    filter_parameters = {'vpc_ids': vpc_id}
+
+    try:
+        vpcs = conn.get_all_vpcs(**filter_parameters)
+    except BotoServerError as err:
+        return {'error': salt.utils.boto.get_error(err)}
+
+    if vpcs:
+        vpc = vpcs[0]  # Found!
+        log.debug('Found VPC: {0}'.format(vpc.id))
+
+        keys = ('id', 'cidr_block', 'is_default', 'state', 'tags',
+                'dhcp_options_id', 'instance_tenancy')
+        _r = dict([(k, getattr(vpc, k)) for k in keys])
+        _r.update({'region': getattr(vpc, 'region').name})
+        return {'vpc': _r}
+    else:
+        return {'vpc': None}
+
+
+def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Describe all VPCs, matching the filter criteria if provided.
+
+    Returns a a list of dictionaries with interesting properties.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_vpcs
+
+    '''
+
+    keys = ('id',
+            'cidr_block',
+            'is_default',
+            'state',
+            'tags',
+            'dhcp_options_id',
+            'instance_tenancy')
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         filter_parameters = {'filters': {}}
 
         if vpc_id:
@@ -147,191 +796,105 @@ def _find_vpc(vpc_id=None, name=None, cidr=None, tags=None, conn=None):
             filter_parameters['filters']['tag:Name'] = name
 
         if tags:
-            for tag_name, tag_value in tags.items():
+            for tag_name, tag_value in six.iteritems(tags):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         vpcs = conn.get_all_vpcs(**filter_parameters)
-        log.debug('The filters criteria {0} matched the following VPCs:{1}'.format(filter_parameters, vpcs))
 
         if vpcs:
-            return [vpc.id for vpc in vpcs]
+            ret = []
+            for vpc in vpcs:
+                _r = dict([(k, getattr(vpc, k)) for k in keys])
+                _r.update({'region': getattr(vpc, 'region').name})
+                ret.append(_r)
+            return {'vpcs': ret}
         else:
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+            return {'vpcs': []}
+
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
 
 
-def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def _find_subnets(subnet_name=None, vpc_id=None, cidr=None, tags=None, conn=None):
     '''
-    Given a VPC properties, return VPC ID if exist.
-
-    CLI example::
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.get_id myvpc
-
+    Given subnet properties, find and return matching subnet ids
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return None
 
-    vpcs_id = _find_vpc(name=name, cidr=cidr, tags=tags, conn=conn)
-    if vpcs_id:
-        log.info("Matching VPC: {0}".format(" ".join(vpcs_id)))
-        if len(vpcs_id) == 1:
-            return vpcs_id[0]
-        else:
-            raise CommandExecutionError('Found more than one VPC matching the criteria.')
+    if not any([subnet_name, tags, cidr]):
+        raise SaltInvocationError('At least one of the following must be '
+                                  'specified: subnet_name, cidr or tags.')
+
+    filter_parameters = {'filters': {}}
+
+    if cidr:
+        filter_parameters['filters']['cidr'] = cidr
+
+    if subnet_name:
+        filter_parameters['filters']['tag:Name'] = subnet_name
+
+    if vpc_id:
+        filter_parameters['filters']['VpcId'] = vpc_id
+
+    if tags:
+        for tag_name, tag_value in six.iteritems(tags):
+            filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+    subnets = conn.get_all_subnets(**filter_parameters)
+    log.debug('The filters criteria {0} matched the following subnets: {1}'.format(filter_parameters, subnets))
+
+    if subnets:
+        return [subnet.id for subnet in subnets]
     else:
-        log.warning('Could not find VPC.')
-        return None
-
-
-def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None):
-    '''
-    Given a VPC ID, check to see if the given VPC ID exists.
-
-    Returns True if the given VPC ID exists and returns False if the given
-    VPC ID does not exist.
-
-    CLI example::
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.exists myvpc
-
-    '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
-    vpcs = _find_vpc(vpc_id=vpc_id, name=name, cidr=cidr, tags=tags, conn=conn)
-    if vpcs:
-        log.info('VPC exists.')
-        return True
-    else:
-        log.warning('VPC does not exist.')
         return False
 
 
-def create(cidr_block, instance_tenancy=None, vpc_name=None, tags=None, region=None, key=None, keyid=None,
-           profile=None):
+def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
+                  availability_zone=None, subnet_name=None, tags=None,
+                  region=None, key=None, keyid=None, profile=None):
     '''
-    Given a valid CIDR block, create a VPC.
-
-    An optional instance_tenancy argument can be provided. If provided, the valid values are 'default' or 'dedicated'
-    An optional vpc_name argument can be provided.
-
-    Returns True if the VPC was created and returns False if the VPC was not created.
-
-    CLI example::
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.create '10.0.0.0/24'
-
-    '''
-
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
-    try:
-        vpc = conn.create_vpc(cidr_block, instance_tenancy=instance_tenancy)
-        if vpc:
-            log.info('The newly created VPC id is {0}'.format(vpc.id))
-
-            _maybe_set_name_tag(vpc_name, vpc)
-            _maybe_set_tags(tags, vpc)
-
-            return vpc.id
-        else:
-            log.warning('VPC was not created')
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
-
-
-def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
-    '''
-    Given a VPC ID, delete the VPC.
-
-    Returns True if the VPC was deleted and returns False if the VPC was not deleted.
-
-    CLI example::
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.delete 'vpc-6b1fe402'
-
-    '''
-
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
-    try:
-        if conn.delete_vpc(vpc_id):
-            log.info('VPC {0} was deleted.'.format(vpc_id))
-
-            return True
-        else:
-            log.warning('VPC {0} was not deleted.'.format(vpc_id))
-
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
-
-
-def create_subnet(vpc_id, cidr_block, availability_zone=None, subnet_name=None, tags=None, region=None, key=None,
-                  keyid=None, profile=None):
-    '''
-    Given a valid VPC ID and a CIDR block, create a subnet for the VPC.
+    Given a valid VPC ID or Name and a CIDR block, create a subnet for the VPC.
 
     An optional availability zone argument can be provided.
 
     Returns True if the VPC subnet was created and returns False if the VPC subnet was not created.
 
-    CLI example::
+    .. versionchanged:: 2015.8.0
+        Added vpc_name argument
+
+    CLI Examples:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.create_subnet 'vpc-6b1fe402' '10.0.0.0/25'
-
+        salt myminion boto_vpc.create_subnet vpc_id='vpc-6b1fe402' \\
+                subnet_name='mysubnet' cidr_block='10.0.0.0/25'
+        salt myminion boto_vpc.create_subnet vpc_name='myvpc' \\
+                subnet_name='mysubnet', cidr_block='10.0.0.0/25'
     '''
-
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
 
     try:
-        vpc_subnet = conn.create_subnet(vpc_id, cidr_block, availability_zone=availability_zone)
-        if vpc_subnet:
-            log.info('A VPC subnet {0} with {1} available ips on VPC {2}'.format(vpc_subnet.id,
-                                                                                 vpc_subnet.available_ip_address_count,
-                                                                                 vpc_id))
+        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        if not vpc_id:
+            return {'created': False, 'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
+    except BotoServerError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
-            _maybe_set_name_tag(subnet_name, vpc_subnet)
-            _maybe_set_tags(tags, vpc_subnet)
-
-            return vpc_subnet.id
-        else:
-            log.warning('A VPC subnet was not created.')
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    return _create_resource('subnet', name=subnet_name, tags=tags, vpc_id=vpc_id,
+                            availability_zone=availability_zone,
+                            cidr_block=cidr_block, region=region, key=key,
+                            keyid=keyid, profile=profile)
 
 
-def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
+def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
+                  keyid=None, profile=None):
     '''
-    Given a subnet ID, delete the subnet.
+    Given a subnet ID or name, delete the subnet.
 
     Returns True if the subnet was deleted and returns False if the subnet was not deleted.
 
-    CLI example::
+    .. versionchanged:: 2015.8.0
+        Added subnet_name argument
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -339,80 +902,572 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
 
     '''
 
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
-    try:
-        if conn.delete_subnet(subnet_id):
-            log.debug('Subnet {0} was deleted.'.format(subnet_id))
-
-            return True
-        else:
-            log.debug('Subnet {0} was not deleted.'.format(subnet_id))
-
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    return _delete_resource(resource='subnet', name=subnet_name,
+                            resource_id=subnet_id, region=region, key=key,
+                            keyid=keyid, profile=profile)
 
 
-def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def subnet_exists(subnet_id=None, name=None, subnet_name=None, cidr=None,
+                  tags=None, zones=None, region=None, key=None, keyid=None,
+                  profile=None):
     '''
     Check if a subnet exists.
 
     Returns True if the subnet exists, otherwise returns False.
 
-    CLI Example::
+    .. versionchanged:: 2015.8.0
+        Added subnet_name argument
+        Deprecated name argument
+
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_vpc.subnet_exists subnet_id='subnet-6a1fe403'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    if name:
+        log.warning('boto_vpc.subnet_exists: name parameter is deprecated '
+                    'use subnet_name instead.')
+        subnet_name = name
 
-    if not subnet_id and not name and not tags:
-        raise SaltInvocationError('At least one of the following must be specified: subnet id, name or tags.')
+    if not any((subnet_id, subnet_name, cidr, tags, zones)):
+        raise SaltInvocationError('At least one of the following must be '
+                                  'specified: subnet id, cidr, subnet_name, '
+                                  'tags, or zones.')
 
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    except BotoServerError as err:
+        return {'error': salt.utils.boto.get_error(err)}
+
+    filter_parameters = {'filters': {}}
+    if subnet_id:
+        filter_parameters['subnet_ids'] = [subnet_id]
+    if subnet_name:
+        filter_parameters['filters']['tag:Name'] = subnet_name
+    if cidr:
+        filter_parameters['filters']['cidr'] = cidr
+    if tags:
+        for tag_name, tag_value in six.iteritems(tags):
+            filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+    if zones:
+        filter_parameters['filters']['availability_zone'] = zones
+
+    try:
+        subnets = conn.get_all_subnets(**filter_parameters)
+    except BotoServerError as err:
+        boto_err = salt.utils.boto.get_error(err)
+        if boto_err.get('aws', {}).get('code') == 'InvalidSubnetID.NotFound':
+            # Subnet was not found: handle the error and return False.
+            return {'exists': False}
+        return {'error': boto_err}
+
+    log.debug('The filters criteria {0} matched the following subnets:{1}'.format(filter_parameters, subnets))
+    if subnets:
+        log.info('Subnet {0} exists.'.format(subnet_name or subnet_id))
+        return {'exists': True}
+    else:
+        log.info('Subnet {0} does not exist.'.format(subnet_name or subnet_id))
+        return {'exists': False}
+
+
+def get_subnet_association(subnets, region=None, key=None, keyid=None,
+                           profile=None):
+    '''
+    Given a subnet (aka: a vpc zone identifier) or list of subnets, returns
+    vpc association.
+
+    Returns a VPC ID if the given subnets are associated with the same VPC ID.
+    Returns False on an error or if the given subnets are associated with
+    different VPC IDs.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.get_subnet_association subnet-61b47516
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.get_subnet_association ['subnet-61b47516','subnet-2cb9785b']
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+        # subnet_ids=subnets can accept either a string or a list
+        subnets = conn.get_all_subnets(subnet_ids=subnets)
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+    # using a set to store vpc_ids - the use of set prevents duplicate
+    # vpc_id values
+    vpc_ids = set()
+    for subnet in subnets:
+        log.debug('examining subnet id: {0} for vpc_id'.format(subnet.id))
+        if subnet in subnets:
+            log.debug('subnet id: {0} is associated with vpc id: {1}'
+                      .format(subnet.id, subnet.vpc_id))
+            vpc_ids.add(subnet.vpc_id)
+    if not vpc_ids:
+        return {'vpc_id': None}
+    elif len(vpc_ids) == 1:
+        return {'vpc_id': vpc_ids.pop()}
+    else:
+        return {'vpc_ids': list(vpc_ids)}
+
+
+def describe_subnet(subnet_id=None, subnet_name=None, region=None,
+                    key=None, keyid=None, profile=None):
+    '''
+    Given a subnet id or name, describe its properties.
+
+    Returns a dictionary of interesting properties.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_subnet subnet_id=subnet-123456
+        salt myminion boto_vpc.describe_subnet subnet_name=mysubnet
+
+    '''
+    try:
+        subnet = _get_resource('subnet', name=subnet_name, resource_id=subnet_id,
+                               region=region, key=key, keyid=keyid, profile=profile)
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+    if not subnet:
+        return {'subnet': None}
+    log.debug('Found subnet: {0}'.format(subnet.id))
+
+    keys = ('id', 'cidr_block', 'availability_zone', 'tags', 'vpc_id')
+    ret = {'subnet': dict((k, getattr(subnet, k)) for k in keys)}
+    explicit_route_table_assoc = _get_subnet_explicit_route_table(ret['subnet']['id'],
+                                                                  ret['subnet']['vpc_id'],
+                                                                  conn=None, region=region,
+                                                                  key=key, keyid=keyid, profile=profile)
+    if explicit_route_table_assoc:
+        ret['subnet']['explicit_route_table_association_id'] = explicit_route_table_assoc
+    return ret
+
+
+def describe_subnets(subnet_ids=None, subnet_names=None, vpc_id=None, cidr=None,
+                     region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a VPC ID or subnet CIDR, returns a list of associated subnets and
+    their details. Return all subnets if VPC ID or CIDR are not provided.
+    If a subnet id or CIDR is provided, only its associated subnet details will be
+    returned.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_subnets
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_subnets subnet_ids=['subnet-ba1987ab', 'subnet-ba1987cd']
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_subnets vpc_id=vpc-123456
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_subnets cidr=10.0.0.0/21
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         filter_parameters = {'filters': {}}
 
-        if subnet_id:
-            filter_parameters['subnet_ids'] = [subnet_id]
+        if vpc_id:
+            filter_parameters['filters']['vpcId'] = vpc_id
 
-        if name:
-            filter_parameters['filters']['tag:Name'] = name
+        if cidr:
+            filter_parameters['filters']['cidrBlock'] = cidr
 
-        if tags:
-            for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+        if subnet_names:
+            filter_parameters['filters']['tag:Name'] = subnet_names
 
-        subnets = conn.get_all_subnets(**filter_parameters)
-        log.debug('The filters criteria {0} matched the following subnets:{1}'.format(filter_parameters, subnets))
-        if subnets:
-            log.info('Subnet {0} exists.'.format(subnet_id))
+        subnets = conn.get_all_subnets(subnet_ids=subnet_ids, **filter_parameters)
+        log.debug('The filters criteria {0} matched the following subnets: '
+                  '{1}'.format(filter_parameters, subnets))
 
-            return True
-        else:
-            log.warning('Subnet {0} does not exist.'.format(subnet_id))
+        if not subnets:
+            return {'subnets': None}
 
+        subnets_list = []
+        keys = ('id', 'cidr_block', 'availability_zone', 'tags', 'vpc_id')
+        for item in subnets:
+            subnet = {}
+            for key in keys:
+                if hasattr(item, key):
+                    subnet[key] = getattr(item, key)
+            explicit_route_table_assoc = _get_subnet_explicit_route_table(subnet['id'], subnet['vpc_id'], conn=conn)
+            if explicit_route_table_assoc:
+                subnet['explicit_route_table_association_id'] = explicit_route_table_assoc
+            subnets_list.append(subnet)
+        return {'subnets': subnets_list}
+
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+
+def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
+                            vpc_name=None, tags=None, region=None, key=None,
+                            keyid=None, profile=None):
+    '''
+    Create an Internet Gateway, optionally attaching it to an existing VPC.
+
+    Returns the internet gateway id if the internet gateway was created and
+    returns False if the internet gateways was not created.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.create_internet_gateway \\
+                internet_gateway_name=myigw vpc_name=myvpc
+
+    '''
+
+    try:
+        if vpc_id or vpc_name:
+            vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+            if not vpc_id:
+                return {'created': False,
+                        'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
+
+        r = _create_resource('internet_gateway', name=internet_gateway_name,
+                             tags=tags, region=region, key=key, keyid=keyid,
+                             profile=profile)
+        if r.get('created') and vpc_id:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            conn.attach_internet_gateway(r['id'], vpc_id)
+            log.info('Attached internet gateway {0} to '
+                     'VPC {1}'.format(r['id'], (vpc_name or vpc_id)))
+        return r
+    except BotoServerError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def delete_internet_gateway(internet_gateway_id=None,
+                            internet_gateway_name=None,
+                            detach=False, region=None,
+                            key=None, keyid=None, profile=None):
+    '''
+    Delete an internet gateway (by name or id).
+
+    Returns True if the internet gateway was deleted and otherwise False.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete_internet_gateway internet_gateway_id=igw-1a2b3c
+        salt myminion boto_vpc.delete_internet_gateway internet_gateway_name=myigw
+
+    '''
+
+    try:
+        if internet_gateway_name:
+            internet_gateway_id = _get_resource_id('internet_gateway',
+                                                   internet_gateway_name,
+                                                   region=region, key=key,
+                                                   keyid=keyid, profile=profile)
+        if not internet_gateway_id:
+            return {'deleted': False, 'error': {
+                    'message': 'internet gateway {0} does not exist.'.format(
+                        internet_gateway_name)}}
+
+        if detach:
+            igw = _get_resource('internet_gateway',
+                                resource_id=internet_gateway_id, region=region,
+                                key=key, keyid=keyid, profile=profile)
+
+            if not igw:
+                return {'deleted': False, 'error': {
+                        'message': 'internet gateway {0} does not exist.'.format(
+                            internet_gateway_id)}}
+
+            if igw.attachments:
+                conn = _get_conn(region=region, key=key, keyid=keyid,
+                                 profile=profile)
+                conn.detach_internet_gateway(internet_gateway_id,
+                                             igw.attachments[0].vpc_id)
+        return _delete_resource('internet_gateway',
+                                resource_id=internet_gateway_id,
+                                region=region, key=key, keyid=keyid,
+                                profile=profile)
+    except BotoServerError as e:
+        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def _find_nat_gateways(nat_gateway_id=None, subnet_id=None, subnet_name=None, vpc_id=None, vpc_name=None,
+                       states=('pending', 'available'),
+                       region=None, key=None, keyid=None, profile=None):
+    '''
+    Given gateway properties, find and return matching nat gateways
+    '''
+
+    if not any((nat_gateway_id, subnet_id, subnet_name, vpc_id, vpc_name)):
+        raise SaltInvocationError('At least one of the following must be '
+                                  'provided: nat_gateway_id, subnet_id, '
+                                  'subnet_name, vpc_id, or vpc_name.')
+    filter_parameters = {'Filter': []}
+
+    if nat_gateway_id:
+        filter_parameters['NatGatewayIds'] = [nat_gateway_id]
+
+    if subnet_name:
+        subnet_id = _get_resource_id('subnet', subnet_name,
+                                     region=region, key=key,
+                                     keyid=keyid, profile=profile)
+        if not subnet_id:
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+
+    if subnet_id:
+        filter_parameters['Filter'].append({'Name': 'subnet-id', 'Values': [subnet_id]})
+
+    if vpc_name:
+        vpc_id = _get_resource_id('vpc', vpc_name,
+                                     region=region, key=key,
+                                     keyid=keyid, profile=profile)
+        if not vpc_id:
+            return False
+
+    if vpc_id:
+        filter_parameters['Filter'].append({'Name': 'vpc-id', 'Values': [vpc_id]})
+
+    conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+    nat_gateways = []
+    for ret in salt.utils.boto3.paged_call(conn3.describe_nat_gateways,
+                                           marker_flag='NextToken', marker_arg='NextToken',
+                                           **filter_parameters):
+        for gw in ret.get('NatGateways', []):
+            if gw.get('State') in states:
+                nat_gateways.append(gw)
+    log.debug('The filters criteria {0} matched the following nat gateways: {1}'.format(filter_parameters, nat_gateways))
+
+    if nat_gateways:
+        return nat_gateways
+    else:
         return False
 
 
-def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, customer_gateway_name=None, tags=None,
+def nat_gateway_exists(nat_gateway_id=None, subnet_id=None, subnet_name=None,
+                       vpc_id=None, vpc_name=None,
+                       states=('pending', 'available'),
+                       region=None, key=None, keyid=None, profile=None):
+    '''
+    Checks if a nat gateway exists.
+
+    This function requires boto3 to be installed.
+
+    .. versionadded:: 2016.11.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.nat_gateway_exists nat_gateway_id='nat-03b02643b43216fe7'
+        salt myminion boto_vpc.nat_gateway_exists subnet_id='subnet-5b05942d'
+
+    '''
+
+    return bool(_find_nat_gateways(nat_gateway_id=nat_gateway_id,
+                                   subnet_id=subnet_id,
+                                   subnet_name=subnet_name,
+                                   vpc_id=vpc_id,
+                                   vpc_name=vpc_name,
+                                   states=states,
+                           region=region, key=key, keyid=keyid,
+                           profile=profile))
+
+
+def describe_nat_gateways(nat_gateway_id=None, subnet_id=None, subnet_name=None,
+                       vpc_id=None, vpc_name=None,
+                       states=('pending', 'available'),
+                       region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a description of nat gateways matching the selection criteria
+
+    This function requires boto3 to be installed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_nat_gateways nat_gateway_id='nat-03b02643b43216fe7'
+        salt myminion boto_vpc.describe_nat_gateways subnet_id='subnet-5b05942d'
+
+    '''
+
+    return _find_nat_gateways(nat_gateway_id=nat_gateway_id,
+                                   subnet_id=subnet_id,
+                                   subnet_name=subnet_name,
+                                   vpc_id=vpc_id,
+                                   vpc_name=vpc_name,
+                                   states=states,
+                           region=region, key=key, keyid=keyid,
+                           profile=profile)
+
+
+def create_nat_gateway(subnet_id=None,
+                       subnet_name=None, allocation_id=None,
+                       region=None, key=None, keyid=None, profile=None):
+    '''
+    Create a NAT Gateway within an existing subnet. If allocation_id is
+    specified, the elastic IP address it references is associated with the
+    gateway. Otherwise, a new allocation_id is created and used.
+
+    This function requires boto3 to be installed.
+
+    Returns the nat gateway id if the nat gateway was created and
+    returns False if the nat gateway was not created.
+
+    .. versionadded:: 2016.11.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.create_nat_gateway subnet_name=mysubnet
+
+    '''
+
+    try:
+        if all((subnet_id, subnet_name)):
+            raise SaltInvocationError('Only one of subnet_name or subnet_id may be '
+                                  'provided.')
+        if subnet_name:
+            subnet_id = _get_resource_id('subnet', subnet_name,
+                                     region=region, key=key,
+                                     keyid=keyid, profile=profile)
+            if not subnet_id:
+                return {'created': False,
+                        'error': {'message': 'Subnet {0} does not exist.'.format(subnet_name)}}
+        else:
+            if not _get_resource('subnet', resource_id=subnet_id,
+                                 region=region, key=key, keyid=keyid, profile=profile):
+                return {'created': False,
+                        'error': {'message': 'Subnet {0} does not exist.'.format(subnet_id)}}
+
+        conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+
+        if not allocation_id:
+            address = conn3.allocate_address(Domain='vpc')
+            allocation_id = address.get('AllocationId')
+
+        # Have to go to boto3 to create NAT gateway
+        r = conn3.create_nat_gateway(SubnetId=subnet_id, AllocationId=allocation_id)
+        return {'created': True, 'id': r.get('NatGateway', {}).get('NatGatewayId')}
+    except BotoServerError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def delete_nat_gateway(nat_gateway_id,
+                       release_eips=False, region=None,
+                       key=None, keyid=None, profile=None,
+                       wait_for_delete=False, wait_for_delete_retries=5):
+    '''
+    Delete a nat gateway (by id).
+
+    Returns True if the internet gateway was deleted and otherwise False.
+
+    This function requires boto3 to be installed.
+
+    .. versionadded:: 2016.11.0
+
+    nat_gateway_id
+        Id of the NAT Gateway
+
+    releaes_eips
+        whether to release the elastic IPs associated with the given NAT Gateway Id
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    wait_for_delete
+        whether to wait for delete of the NAT gateway to be in failed or deleted
+        state after issuing the delete call.
+
+    wait_for_delete_retries
+        NAT gateway may take some time to be go into deleted or failed state.
+        During the deletion process, subsequent release of elastic IPs may fail;
+        this state will automatically retry this number of times to ensure
+        the NAT gateway is in deleted or failed state before proceeding.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete_nat_gateway nat_gateway_id=igw-1a2b3c
+
+    '''
+
+    try:
+        conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+        gwinfo = conn3.describe_nat_gateways(NatGatewayIds=[nat_gateway_id])
+        if gwinfo:
+            gwinfo = gwinfo.get('NatGateways', [None])[0]
+        conn3.delete_nat_gateway(NatGatewayId=nat_gateway_id)
+
+        # wait for deleting nat gateway to finish prior to attempt to release elastic ips
+        if wait_for_delete:
+            for retry in range(wait_for_delete_retries, 0, -1):
+                if gwinfo and gwinfo['State'] not in ['deleted', 'failed']:
+                    time.sleep((2 ** (wait_for_delete_retries - retry)) + (random.randint(0, 1000) / 1000.0))
+                    gwinfo = conn3.describe_nat_gateways(NatGatewayIds=[nat_gateway_id])
+                    if gwinfo:
+                        gwinfo = gwinfo.get('NatGateways', [None])[0]
+                        continue
+                break
+
+        if release_eips and gwinfo:
+            for addr in gwinfo.get('NatGatewayAddresses'):
+                conn3.release_address(AllocationId=addr.get('AllocationId'))
+        return {'deleted': True}
+    except BotoServerError as e:
+        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn,
+                            customer_gateway_name=None, tags=None,
                             region=None, key=None, keyid=None, profile=None):
     '''
-    Given a valid VPN connection type, a static IP address and a customer gateway’s Border Gateway Protocol (BGP) Autonomous System Number, create a customer gateway.
+    Given a valid VPN connection type, a static IP address and a customer
+    gateway’s Border Gateway Protocol (BGP) Autonomous System Number,
+    create a customer gateway.
 
-    Returns True if the customer gateway was created and returns False if the customer gateway was not created.
+    Returns the customer gateway id if the customer gateway was created and
+    returns False if the customer gateway was not created.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -420,34 +1475,24 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, customer_g
 
     '''
 
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
-    try:
-        customer_gateway = conn.create_customer_gateway(vpn_connection_type, ip_address, bgp_asn)
-        if customer_gateway:
-            log.info('A customer gateway with id {0} was created'.format(customer_gateway.id))
-
-            _maybe_set_name_tag(customer_gateway_name, customer_gateway)
-            _maybe_set_tags(tags, customer_gateway)
-
-            return customer_gateway.id
-        else:
-            log.warning('A customer gateway was not created')
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    return _create_resource('customer_gateway', customer_gateway_name,
+                            type=vpn_connection_type,
+                            ip_address=ip_address, bgp_asn=bgp_asn,
+                            tags=tags, region=region, key=key,
+                            keyid=keyid, profile=profile)
 
 
-def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=None, profile=None):
+def delete_customer_gateway(customer_gateway_id=None, customer_gateway_name=None,
+                            region=None, key=None, keyid=None, profile=None):
     '''
-    Given a customer gateway ID, delete the customer gateway.
+    Given a customer gateway ID or name, delete the customer gateway.
 
     Returns True if the customer gateway was deleted and returns False if the customer gateway was not deleted.
 
-    CLI example::
+    .. versionchanged:: 2015.8.0
+        Added customer_gateway_name argument
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -455,618 +1500,730 @@ def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=No
 
     '''
 
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
-    try:
-        if conn.delete_customer_gateway(customer_gateway_id):
-            log.info('Customer gateway {0} was deleted.'.format(customer_gateway_id))
-
-            return True
-        else:
-            log.warning('Customer gateway {0} was not deleted.'.format(customer_gateway_id))
-
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    return _delete_resource(resource='customer_gateway',
+                            name=customer_gateway_name,
+                            resource_id=customer_gateway_id,
+                            region=region, key=key,
+                            keyid=keyid, profile=profile)
 
 
-def customer_gateway_exists(customer_gateway_id, region=None, key=None, keyid=None, profile=None):
+def customer_gateway_exists(customer_gateway_id=None, customer_gateway_name=None,
+                            region=None, key=None, keyid=None, profile=None):
     '''
     Given a customer gateway ID, check if the customer gateway ID exists.
 
     Returns True if the customer gateway ID exists; Returns False otherwise.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.customer_gateway_exists 'cgw-b6a247df'
+        salt myminion boto_vpc.customer_gateway_exists cgw-b6a247df
+        salt myminion boto_vpc.customer_gateway_exists customer_gatway_name=mycgw
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
 
-    try:
-        if conn.get_all_customer_gateways(customer_gateway_ids=[customer_gateway_id]):
-            log.info('Customer gateway {0} exists.'.format(customer_gateway_id))
-
-            return True
-        else:
-            log.warning('Customer gateway {0} does not exist.'.format(customer_gateway_id))
-
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    return resource_exists('customer_gateway', name=customer_gateway_name,
+                           resource_id=customer_gateway_id,
+                           region=region, key=key, keyid=keyid, profile=profile)
 
 
 def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=None,
-                        netbios_name_servers=None, netbios_node_type=None, dhcp_options_name=None, tags=None,
+                        netbios_name_servers=None, netbios_node_type=None,
+                        dhcp_options_name=None, tags=None, vpc_id=None, vpc_name=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
-    Given valid DHCP options, create a DHCP options record.
+    Given valid DHCP options, create a DHCP options record, optionally associating it with
+    an existing VPC.
 
     Returns True if the DHCP options record was created and returns False if the DHCP options record was not deleted.
 
-    CLI example::
+    .. versionchanged:: 2015.8.0
+        Added vpc_name and vpc_id arguments
+
+    CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.create_dhcp_options domain_name='example.com' domain_name_servers='[1.2.3.4]' ntp_servers='[5.6.7.8]' netbios_name_servers='[10.0.0.1]' netbios_node_type=1
+        salt myminion boto_vpc.create_dhcp_options domain_name='example.com' \\
+                domain_name_servers='[1.2.3.4]' ntp_servers='[5.6.7.8]' \\
+                netbios_name_servers='[10.0.0.1]' netbios_node_type=1 \\
+                vpc_name='myvpc'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
 
     try:
-        dhcp_options = _create_dhcp_options(conn, domain_name=domain_name, domain_name_servers=domain_name_servers,
-                                            ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
-                                            netbios_node_type=netbios_node_type)
-        if dhcp_options:
-            log.info('DHCP options with id {0} were created'.format(dhcp_options.id))
+        if vpc_id or vpc_name:
+            vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+            if not vpc_id:
+                return {'created': False,
+                        'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
 
-            _maybe_set_name_tag(dhcp_options_name, dhcp_options)
-            _maybe_set_tags(tags, dhcp_options)
+        r = _create_resource('dhcp_options', name=dhcp_options_name, domain_name=domain_name,
+                             domain_name_servers=domain_name_servers,
+                             ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
+                             netbios_node_type=netbios_node_type,
+                             region=region, key=key, keyid=keyid,
+                             profile=profile)
+        if r.get('created') and vpc_id:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            conn.associate_dhcp_options(r['id'], vpc_id)
+            log.info('Associated options {0} to '
+                     'VPC {1}'.format(r['id'], (vpc_name or vpc_id)))
+        return r
+    except BotoServerError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
-            return dhcp_options.id
-        else:
-            log.warning('DHCP options with id {0} were not created'.format(dhcp_options.id))
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+
+def get_dhcp_options(dhcp_options_name=None, dhcp_options_id=None,
+                     region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a dict with the current values of the requested DHCP options set
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.get_dhcp_options 'myfunnydhcpoptionsname'
+
+    .. versionadded:: 2016.3.0
+    '''
+    if not any((dhcp_options_name, dhcp_options_id)):
+        raise SaltInvocationError('At least one of the following must be specified: '
+                                  'dhcp_options_name, dhcp_options_id.')
+
+    if not dhcp_options_id and dhcp_options_name:
+        dhcp_options_id = _get_resource_id('dhcp_options', dhcp_options_name,
+                                            region=region, key=key,
+                                            keyid=keyid, profile=profile)
+    if not dhcp_options_id:
+        return {'dhcp_options': {}}
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        r = conn.get_all_dhcp_options(dhcp_options_ids=[dhcp_options_id])
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+    if not r:
+        return {'dhcp_options': None}
+
+    keys = ('domain_name', 'domain_name_servers', 'ntp_servers',
+            'netbios_name_servers', 'netbios_node_type')
+
+    return {'dhcp_options': dict((k, r[0].options.get(k)) for k in keys)}
 
 
-def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id, region=None, key=None, keyid=None, profile=None):
+def delete_dhcp_options(dhcp_options_id=None, dhcp_options_name=None,
+                        region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete dhcp options by id or name.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete_dhcp_options 'dopt-b6a247df'
+
+    '''
+
+    return _delete_resource(resource='dhcp_options',
+                            name=dhcp_options_name,
+                            resource_id=dhcp_options_id,
+                            region=region, key=key,
+                            keyid=keyid, profile=profile)
+
+
+def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id=None, vpc_name=None,
+                                  region=None, key=None, keyid=None, profile=None):
     '''
     Given valid DHCP options id and a valid VPC id, associate the DHCP options record with the VPC.
 
     Returns True if the DHCP options record were associated and returns False if the DHCP options record was not associated.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_vpc.associate_dhcp_options_to_vpc 'dhcp-a0bl34pp' 'vpc-6b1fe402'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
     try:
+        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        if not vpc_id:
+            return {'associated': False,
+                    'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
+
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if conn.associate_dhcp_options(dhcp_options_id, vpc_id):
             log.info('DHCP options with id {0} were associated with VPC {1}'.format(dhcp_options_id, vpc_id))
-
-            return True
+            return {'associated': True}
         else:
             log.warning('DHCP options with id {0} were not associated with VPC {1}'.format(dhcp_options_id, vpc_id))
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+            return {'associated': False, 'error': {'message': 'DHCP options could not be associated.'}}
+    except BotoServerError as e:
+        return {'associated': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_servers=None, ntp_servers=None,
-                                      netbios_name_servers=None, netbios_node_type=None,
-                                      region=None, key=None, keyid=None, profile=None):
-    '''
-    Given valid DHCP options and a valid VPC id, create and associate the DHCP options record with the VPC.
-
-    Returns True if the DHCP options record were created and associated and returns False if the DHCP options record was not created and associated.
-
-    CLI example::
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.associate_new_dhcp_options_to_vpc 'vpc-6b1fe402' domain_name='example.com' domain_name_servers='[1.2.3.4]' ntp_servers='[5.6.7.8]' netbios_name_servers='[10.0.0.1]' netbios_node_type=1
-
-    '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-    try:
-        dhcp_options = _create_dhcp_options(conn, domain_name=domain_name, domain_name_servers=domain_name_servers,
-                                            ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
-                                            netbios_node_type=netbios_node_type)
-        conn.associate_dhcp_options(dhcp_options.id, vpc_id)
-        log.info('DHCP options with id {0} were created and associated with VPC {1}'.format(dhcp_options.id, vpc_id))
-        return dhcp_options.id
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
-
-
-def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def dhcp_options_exists(dhcp_options_id=None, name=None, dhcp_options_name=None,
+                        tags=None, region=None, key=None, keyid=None, profile=None):
     '''
     Check if a dhcp option exists.
 
     Returns True if the dhcp option exists; Returns False otherwise.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_vpc.dhcp_options_exists dhcp_options_id='dhcp-a0bl34pp'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
 
-    if not dhcp_options_id and not name and not tags:
-        raise SaltInvocationError('At least one of the following must be specified: dhcp options id, name or tags.')
+    if name:
+        log.warning('boto_vpc.dhcp_options_exists: name parameter is deprecated '
+                    'use dhcp_options_name instead.')
+        dhcp_options_name = name
 
-    try:
-        filter_parameters = {'filters': {}}
-
-        if dhcp_options_id:
-            filter_parameters['dhcp_options_ids'] = [dhcp_options_id]
-
-        if name:
-            filter_parameters['filters']['tag:Name'] = name
-
-        if tags:
-            for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
-
-        dhcp_options = conn.get_all_dhcp_options(**filter_parameters)
-        log.debug('The filters criteria {0} matched the following DHCP options:{1}'.format(filter_parameters, dhcp_options))
-        if dhcp_options:
-            log.info('DHCP options {0} exists.'.format(dhcp_options_id))
-
-            return True
-        else:
-            log.warning('DHCP options {0} does not exist.'.format(dhcp_options_id))
-
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    return resource_exists('dhcp_options', name=dhcp_options_name,
+                           resource_id=dhcp_options_id, tags=tags,
+                           region=region, key=key, keyid=keyid,
+                           profile=profile)
 
 
-def create_network_acl(vpc_id, network_acl_name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def create_network_acl(vpc_id=None, vpc_name=None, network_acl_name=None,
+                       subnet_id=None, subnet_name=None, tags=None,
+                       region=None, key=None, keyid=None, profile=None):
     '''
     Given a vpc_id, creates a network acl.
 
     Returns the network acl id if successful, otherwise returns False.
 
-    CLI Example::
+    .. versionchanged:: 2015.8.0
+        Added vpc_name, subnet_id, and subnet_name arguments
+
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_vpc.create_network_acl 'vpc-6b1fe402'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+
+    _id = vpc_name or vpc_id
 
     try:
-        network_acl = conn.create_network_acl(vpc_id)
-        if network_acl:
-            log.info('Network ACL with id {0} was created'.format(network_acl.id))
-            _maybe_set_name_tag(network_acl_name, network_acl)
-            _maybe_set_tags(tags, network_acl)
-            return network_acl.id
-        else:
-            log.warning('Network ACL was not created')
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+    except BotoServerError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+    if not vpc_id:
+        return {'created': False,
+                'error': {'message': 'VPC {0} does not exist.'.format(_id)}}
+
+    if all((subnet_id, subnet_name)):
+        raise SaltInvocationError('Only one of subnet_name or subnet_id may be '
+                                  'provided.')
+    if subnet_name:
+        subnet_id = _get_resource_id('subnet', subnet_name,
+                                     region=region, key=key,
+                                     keyid=keyid, profile=profile)
+        if not subnet_id:
+            return {'created': False,
+                    'error': {'message': 'Subnet {0} does not exist.'.format(subnet_name)}}
+    elif subnet_id:
+        if not _get_resource('subnet', resource_id=subnet_id,
+                             region=region, key=key, keyid=keyid, profile=profile):
+            return {'created': False,
+                    'error': {'message': 'Subnet {0} does not exist.'.format(subnet_id)}}
+
+    r = _create_resource('network_acl', name=network_acl_name, vpc_id=vpc_id,
+                         region=region, key=key, keyid=keyid,
+                         profile=profile)
+
+    if r.get('created') and subnet_id:
+        try:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            association_id = conn.associate_network_acl(r['id'], subnet_id)
+        except BotoServerError as e:
+            return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        r['association_id'] = association_id
+    return r
 
 
-def delete_network_acl(network_acl_id, region=None, key=None, keyid=None, profile=None):
+def delete_network_acl(network_acl_id=None, network_acl_name=None, disassociate=False,
+                       region=None, key=None, keyid=None, profile=None):
     '''
-    Deletes a network acl based on the network_acl_id provided.
+    Delete a network acl based on the network_acl_id or network_acl_name provided.
 
-    Returns True if the network acl was deleted successfully, otherwise returns False.
-
-    CLI Example::
+    CLI Examples:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.delete_network_acl 'acl-5fb85d36'
+        salt myminion boto_vpc.delete_network_acl network_acl_id='acl-5fb85d36' \\
+                disassociate=false
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete_network_acl network_acl_name='myacl' \\
+                disassociate=true
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
 
-    try:
-        if conn.delete_network_acl(network_acl_id):
-            log.info('Network ACL with id {0} was deleted'.format(network_acl_id))
-            return True
-        else:
-            log.warning('Network ACL with id {0} was not deleted'.format(network_acl_id))
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    if disassociate:
+        network_acl = _get_resource('network_acl', name=network_acl_name, region=region, key=key, keyid=keyid, profile=profile)
+        if network_acl and network_acl.associations:
+            subnet_id = network_acl.associations[0].subnet_id
+            try:
+                conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+                conn.disassociate_network_acl(subnet_id)
+            except BotoServerError:
+                pass
+
+    return _delete_resource(resource='network_acl',
+                            name=network_acl_name,
+                            resource_id=network_acl_id,
+                            region=region, key=key,
+                            keyid=keyid, profile=profile)
 
 
-def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def network_acl_exists(network_acl_id=None, name=None, network_acl_name=None,
+                       tags=None, region=None, key=None, keyid=None,
+                       profile=None):
     '''
     Checks if a network acl exists.
 
     Returns True if the network acl exists or returns False if it doesn't exist.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_vpc.network_acl_exists network_acl_id='acl-5fb85d36'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
 
-    if not network_acl_id and not name and not tags:
-        raise SaltInvocationError('At least one of the following must be specified: network ACL id, name or tags.')
+    if name:
+        log.warning('boto_vpc.network_acl_exists: name parameter is deprecated '
+                    'use network_acl_name instead.')
+        network_acl_name = name
 
-    try:
-        filter_parameters = {'filters': {}}
-
-        if network_acl_id:
-            filter_parameters['network_acl_ids'] = [network_acl_id]
-
-        if name:
-            filter_parameters['filters']['tag:Name'] = name
-
-        if tags:
-            for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
-
-        network_acls = conn.get_all_network_acls(**filter_parameters)
-        log.debug('The filters criteria {0} matched the following network ACLs:{1}'.format(filter_parameters, network_acls))
-        if network_acls:
-            log.info('Network ACL with id {0} exists.'.format(network_acl_id))
-            return True
-        else:
-            log.warning('Network ACL with id {0} does not exists.'.format(network_acl_id))
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    return resource_exists('network_acl', name=network_acl_name,
+                           resource_id=network_acl_id, tags=tags,
+                           region=region, key=key, keyid=keyid,
+                           profile=profile)
 
 
-def associate_network_acl_to_subnet(network_acl_id, subnet_id, region=None, key=None, keyid=None, profile=None):
+def associate_network_acl_to_subnet(network_acl_id=None, subnet_id=None,
+                                    network_acl_name=None,
+                                    subnet_name=None, region=None,
+                                    key=None, keyid=None, profile=None):
     '''
-    Given a network acl ID and a subnet ID, associates a network acl to a subnet.
+    Given a network acl and subnet ids or names, associate a network acl to a subnet.
 
-    Returns the association ID if successful, otherwise returns False.
-
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.associate_network_acl_to_subnet 'acl-5fb85d36' 'subnet-6a1fe403'
+        salt myminion boto_vpc.associate_network_acl_to_subnet \\
+                network_acl_id='acl-5fb85d36' subnet_id='subnet-6a1fe403'
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.associate_network_acl_to_subnet \\
+                network_acl_id='myacl' subnet_id='mysubnet'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+
+    if network_acl_name:
+        network_acl_id = _get_resource_id('network_acl', network_acl_name,
+                                          region=region, key=key,
+                                          keyid=keyid, profile=profile)
+        if not network_acl_id:
+            return {'associated': False,
+                    'error': {'message': 'Network ACL {0} does not exist.'.format(network_acl_name)}}
+    if subnet_name:
+        subnet_id = _get_resource_id('subnet', subnet_name,
+                                     region=region, key=key,
+                                     keyid=keyid, profile=profile)
+        if not subnet_id:
+            return {'associated': False,
+                    'error': {'message': 'Subnet {0} does not exist.'.format(subnet_name)}}
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         association_id = conn.associate_network_acl(network_acl_id, subnet_id)
         if association_id:
             log.info('Network ACL with id {0} was associated with subnet {1}'.format(network_acl_id, subnet_id))
 
-            return association_id
+            return {'associated': True, 'id': association_id}
         else:
             log.warning('Network ACL with id {0} was not associated with subnet {1}'.format(network_acl_id, subnet_id))
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+            return {'associated': False, 'error': {'message': 'ACL could not be assocaited.'}}
+    except BotoServerError as e:
+        return {'associated': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None, tags=None,
-                                        region=None, key=None, keyid=None, profile=None):
-    '''
-    Given a vpc ID and a subnet ID, associates a new network act to a subnet.
-
-    Returns a dictionary containing the network acl id and the new association id if successful. If unsuccessful,
-    returns False.
-
-    CLI Example::
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.associate_new_network_acl_to_subnet 'vpc-6b1fe402' 'subnet-6a1fe403'
-    '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-    try:
-        network_acl = conn.create_network_acl(vpc_id)
-        if network_acl:
-            log.info('Network ACL with id {0} was created'.format(network_acl.id))
-            _maybe_set_name_tag(network_acl_name, network_acl)
-            _maybe_set_tags(tags, network_acl)
-        else:
-            log.warning('Network ACL was not created')
-            return False
-
-        association_id = conn.associate_network_acl(network_acl.id, subnet_id)
-        if association_id:
-            log.info('Network ACL with id {0} was associated with subnet {1}'.format(network_acl.id, subnet_id))
-
-            return {'network_acl_id': network_acl.id, 'association_id': association_id}
-        else:
-            log.warning('Network ACL with id {0} was not associated with subnet {1}'.format(network_acl.id, subnet_id))
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
-
-
-def disassociate_network_acl(subnet_id, vpc_id=None, region=None, key=None, keyid=None, profile=None):
+def disassociate_network_acl(subnet_id=None, vpc_id=None, subnet_name=None, vpc_name=None,
+                             region=None, key=None, keyid=None, profile=None):
     '''
     Given a subnet ID, disassociates a network acl.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_vpc.disassociate_network_acl 'subnet-6a1fe403'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
 
+    if not _exactly_one((subnet_name, subnet_id)):
+        raise SaltInvocationError('One (but not both) of subnet_id or subnet_name '
+                                  'must be provided.')
+
+    if all((vpc_name, vpc_id)):
+        raise SaltInvocationError('Only one of vpc_id or vpc_name '
+                                  'may be provided.')
     try:
-        return conn.disassociate_network_acl(subnet_id, vpc_id=vpc_id)
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+        if subnet_name:
+            subnet_id = _get_resource_id('subnet', subnet_name,
+                                         region=region, key=key,
+                                         keyid=keyid, profile=profile)
+            if not subnet_id:
+                return {'disassociated': False,
+                        'error': {'message': 'Subnet {0} does not exist.'.format(subnet_name)}}
+
+        if vpc_name or vpc_id:
+            vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        association_id = conn.disassociate_network_acl(subnet_id, vpc_id=vpc_id)
+        return {'disassociated': True, 'association_id': association_id}
+    except BotoServerError as e:
+        return {'disassociated': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
-                             icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
+def _create_network_acl_entry(network_acl_id=None, rule_number=None, protocol=None,
+                              rule_action=None, cidr_block=None, egress=None,
+                              network_acl_name=None, icmp_code=None, icmp_type=None,
+                              port_range_from=None, port_range_to=None, replace=False,
+                              region=None, key=None, keyid=None, profile=None):
+    if replace:
+        rkey = 'replaced'
+    else:
+        rkey = 'created'
+
+    if not _exactly_one((network_acl_name, network_acl_id)):
+        raise SaltInvocationError('One (but not both) of network_acl_id or '
+                                  'network_acl_name must be provided.')
+
+    for v in ('rule_number', 'protocol', 'rule_action', 'cidr_block'):
+        if locals()[v] is None:
+            raise SaltInvocationError('{0} is required.'.format(v))
+
+    if network_acl_name:
+        network_acl_id = _get_resource_id('network_acl', network_acl_name,
+                                          region=region, key=key,
+                                          keyid=keyid, profile=profile)
+    if not network_acl_id:
+        return {rkey: False,
+                'error': {'message': 'Network ACL {0} does not exist.'.format(network_acl_name or network_acl_id)}}
+
+    if isinstance(protocol, six.string_types):
+        if protocol == 'all':
+            protocol = -1
+        else:
+            try:
+                protocol = socket.getprotobyname(protocol)
+            except socket.error as e:
+                raise SaltInvocationError(e)
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        if replace:
+            f = conn.replace_network_acl_entry
+        else:
+            f = conn.create_network_acl_entry
+        created = f(network_acl_id, rule_number, protocol, rule_action,
+                    cidr_block, egress=egress, icmp_code=icmp_code,
+                    icmp_type=icmp_type, port_range_from=port_range_from,
+                    port_range_to=port_range_to)
+        if created:
+            log.info('Network ACL entry was {0}'.format(rkey))
+        else:
+            log.warning('Network ACL entry was not {0}'.format(rkey))
+        return {rkey: created}
+    except BotoServerError as e:
+        return {rkey: False, 'error': salt.utils.boto.get_error(e)}
+
+
+def create_network_acl_entry(network_acl_id=None, rule_number=None, protocol=None,
+                             rule_action=None, cidr_block=None, egress=None,
+                             network_acl_name=None, icmp_code=None, icmp_type=None,
+                             port_range_from=None, port_range_to=None,
                              region=None, key=None, keyid=None, profile=None):
     '''
     Creates a network acl entry.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.create_network_acl_entry 'acl-5fb85d36' '32767' '-1' 'deny' '0.0.0.0/0'
+        salt myminion boto_vpc.create_network_acl_entry 'acl-5fb85d36' '32767' \\
+                'all' 'deny' '0.0.0.0/0' egress=true
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
 
-    try:
-        network_acl_entry = conn.create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
-                                                          cidr_block,
-                                                          egress=egress, icmp_code=icmp_code, icmp_type=icmp_type,
-                                                          port_range_from=port_range_from, port_range_to=port_range_to)
-        if network_acl_entry:
-            log.info('Network ACL entry was created')
-            return True
-        else:
-            log.warning('Network ACL entry was not created')
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    kwargs = locals()
+    return _create_network_acl_entry(**kwargs)
 
 
-def replace_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
-                              icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
+def replace_network_acl_entry(network_acl_id=None, rule_number=None, protocol=None,
+                              rule_action=None, cidr_block=None, egress=None,
+                              network_acl_name=None, icmp_code=None, icmp_type=None,
+                              port_range_from=None, port_range_to=None,
                               region=None, key=None, keyid=None, profile=None):
     '''
+
     Replaces a network acl entry.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.replace_network_acl_entry 'acl-5fb85d36' '32767' '-1' 'deny' '0.0.0.0/0'
+        salt myminion boto_vpc.replace_network_acl_entry 'acl-5fb85d36' '32767' \\
+                'all' 'deny' '0.0.0.0/0' egress=true
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
 
-    try:
-        network_acl_entry = conn.replace_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
-                                                           cidr_block,
-                                                           egress=egress,
-                                                           icmp_code=icmp_code, icmp_type=icmp_type,
-                                                           port_range_from=port_range_from, port_range_to=port_range_to)
-        if network_acl_entry:
-            log.info('Network ACL entry was replaced')
-            return True
-        else:
-            log.warning('Network ACL entry was not replaced')
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    kwargs = locals()
+    return _create_network_acl_entry(replace=True, **kwargs)
 
 
-def delete_network_acl_entry(network_acl_id, rule_number, egress=None, region=None, key=None, keyid=None, profile=None):
+def delete_network_acl_entry(network_acl_id=None, rule_number=None, egress=None,
+                             network_acl_name=None, region=None, key=None, keyid=None,
+                             profile=None):
     '''
     Deletes a network acl entry.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_vpc.delete_network_acl_entry 'acl-5fb85d36' '32767'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    if not _exactly_one((network_acl_name, network_acl_id)):
+        raise SaltInvocationError('One (but not both) of network_acl_id or '
+                                  'network_acl_name must be provided.')
 
+    for v in ('rule_number', 'egress'):
+        if locals()[v] is None:
+            raise SaltInvocationError('{0} is required.'.format(v))
+
+    if network_acl_name:
+        network_acl_id = _get_resource_id('network_acl', network_acl_name,
+                                          region=region, key=key,
+                                          keyid=keyid, profile=profile)
+    if not network_acl_id:
+        return {'deleted': False,
+                'error': {'message': 'Network ACL {0} does not exist.'.format(network_acl_name or network_acl_id)}}
     try:
-        network_acl_entry = conn.delete_network_acl_entry(network_acl_id, rule_number, egress=egress)
-        if network_acl_entry:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        deleted = conn.delete_network_acl_entry(network_acl_id, rule_number, egress=egress)
+        if deleted:
             log.info('Network ACL entry was deleted')
-            return True
         else:
             log.warning('Network ACL was not deleted')
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+        return {'deleted': deleted}
+    except BotoServerError as e:
+        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def create_route_table(vpc_id, route_table_name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def create_route_table(vpc_id=None, vpc_name=None, route_table_name=None,
+                       tags=None, region=None, key=None, keyid=None, profile=None):
     '''
     Creates a route table.
 
-    CLI Example::
+    .. versionchanged:: 2015.8.0
+        Added vpc_name argument
+
+    CLI Examples:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.create_route_table 'vpc-6b1fe402'
-
+        salt myminion boto_vpc.create_route_table vpc_id='vpc-6b1fe402' \\
+                route_table_name='myroutetable'
+        salt myminion boto_vpc.create_route_table vpc_name='myvpc' \\
+                route_table_name='myroutetable'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+    if not vpc_id:
+        return {'created': False, 'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
 
-    try:
-        route_table = conn.create_route_table(vpc_id)
-        if route_table:
-            log.info('Route table with id {0} was created'.format(route_table.id))
-            _maybe_set_name_tag(route_table_name, route_table)
-            _maybe_set_tags(tags, route_table)
-            return route_table.id
-        else:
-            log.warning('Route table ACL was not created')
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    return _create_resource('route_table', route_table_name, tags=tags,
+                            vpc_id=vpc_id, region=region, key=key,
+                            keyid=keyid, profile=profile)
 
 
-def delete_route_table(route_table_id, region=None, key=None, keyid=None, profile=None):
+def delete_route_table(route_table_id=None, route_table_name=None,
+                       region=None, key=None, keyid=None, profile=None):
     '''
     Deletes a route table.
 
-    CLI Example::
+    CLI Examples:
 
-    .. code-example:: bash
+    .. code-block:: bash
 
-        salt myminion boto_vpc.delete_route_table 'rtb-1f382e7d'
+        salt myminion boto_vpc.delete_route_table route_table_id='rtb-1f382e7d'
+        salt myminion boto_vpc.delete_route_table route_table_name='myroutetable'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
-    try:
-        if conn.delete_route_table(route_table_id):
-            log.info('Route table with id {0} was deleted'.format(route_table_id))
-            return True
-        else:
-            log.warning('Route table with id {0} was not deleted'.format(route_table_id))
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    return _delete_resource(resource='route_table', name=route_table_name,
+                            resource_id=route_table_id, region=region, key=key,
+                            keyid=keyid, profile=profile)
 
 
-def route_table_exists(route_table_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def route_table_exists(route_table_id=None, name=None, route_table_name=None,
+                       tags=None, region=None, key=None, keyid=None, profile=None):
     '''
     Checks if a route table exists.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_vpc.route_table_exists route_table_id='rtb-1f382e7d'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
 
-    if not route_table_id and not name and not tags:
-        raise SaltInvocationError('At least one of the following must be specified: route table id, name or tags.')
+    if name:
+        log.warning('boto_vpc.route_table_exists: name parameter is deprecated '
+                    'use route_table_name instead.')
+        route_table_name = name
+
+    return resource_exists('route_table', name=route_table_name,
+                           resource_id=route_table_id, tags=tags,
+                           region=region, key=key, keyid=keyid,
+                           profile=profile)
+
+
+def route_exists(destination_cidr_block, route_table_name=None, route_table_id=None,
+                 gateway_id=None, instance_id=None, interface_id=None, tags=None,
+                 region=None, key=None, keyid=None, profile=None, vpc_peering_connection_id=None):
+    '''
+    Checks if a route exists.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.route_exists destination_cidr_block='10.0.0.0/20' gateway_id='local' route_table_name='test'
+
+    '''
+
+    if not any((route_table_name, route_table_id)):
+        raise SaltInvocationError('At least one of the following must be specified: route table name or route table id.')
+
+    if not any((gateway_id, instance_id, interface_id, vpc_peering_connection_id)):
+        raise SaltInvocationError('At least one of the following must be specified: gateway id, instance id, '
+                                  'interface id or VPC peering connection id.')
 
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         filter_parameters = {'filters': {}}
 
         if route_table_id:
             filter_parameters['route_table_ids'] = [route_table_id]
 
-        if name:
-            filter_parameters['filters']['tag:Name'] = name
+        if route_table_name:
+            filter_parameters['filters']['tag:Name'] = route_table_name
 
         if tags:
-            for tag_name, tag_value in tags.items():
+            for tag_name, tag_value in six.iteritems(tags):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         route_tables = conn.get_all_route_tables(**filter_parameters)
-        if route_tables:
-            log.info('Route table {0} exists.'.format(route_table_id))
 
-            return True
-        else:
-            log.warning('Route table {0} does not exist.'.format(route_table_id))
+        if len(route_tables) != 1:
+            raise SaltInvocationError('Found more than one route table.')
 
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+        route_check = {'destination_cidr_block': destination_cidr_block,
+                       'gateway_id': gateway_id,
+                       'instance_id': instance_id,
+                       'interface_id': interface_id,
+                       'vpc_peering_connection_id': vpc_peering_connection_id
+                       }
+
+        for route_match in route_tables[0].routes:
+
+            route_dict = {'destination_cidr_block': route_match.destination_cidr_block,
+                          'gateway_id': route_match.gateway_id,
+                          'instance_id': route_match.instance_id,
+                          'interface_id': route_match.interface_id,
+                          'vpc_peering_connection_id': vpc_peering_connection_id
+                          }
+            route_comp = set(route_dict.items()) ^ set(route_check.items())
+            if len(route_comp) == 0:
+                log.info('Route {0} exists.'.format(destination_cidr_block))
+                return {'exists': True}
+
+        log.warning('Route {0} does not exist.'.format(destination_cidr_block))
+        return {'exists': False}
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
 
 
-def associate_route_table(route_table_id, subnet_id, region=None, key=None, keyid=None, profile=None):
+def associate_route_table(route_table_id=None, subnet_id=None,
+                          route_table_name=None, subnet_name=None,
+                          region=None, key=None, keyid=None,
+                          profile=None):
     '''
-    Given a route table ID and a subnet ID, associates the route table with the subnet.
+    Given a route table and subnet name or id, associates the route table with the subnet.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_vpc.associate_route_table 'rtb-1f382e7d' 'subnet-6a1fe403'
 
+    .. code-block:: bash
+
+        salt myminion boto_vpc.associate_route_table route_table_name='myrtb' \\
+                subnet_name='mysubnet'
+
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+
+    if all((subnet_id, subnet_name)):
+        raise SaltInvocationError('Only one of subnet_name or subnet_id may be '
+                                  'provided.')
+    if subnet_name:
+        subnet_id = _get_resource_id('subnet', subnet_name,
+                                     region=region, key=key,
+                                     keyid=keyid, profile=profile)
+        if not subnet_id:
+            return {'associated': False,
+                    'error': {'message': 'Subnet {0} does not exist.'.format(subnet_name)}}
+
+    if all((route_table_id, route_table_name)):
+        raise SaltInvocationError('Only one of route_table_name or route_table_id may be '
+                                  'provided.')
+    if route_table_name:
+        route_table_id = _get_resource_id('route_table', route_table_name,
+                                          region=region, key=key,
+                                          keyid=keyid, profile=profile)
+        if not route_table_id:
+            return {'associated': False,
+                    'error': {'message': 'Route table {0} does not exist.'.format(route_table_name)}}
 
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         association_id = conn.associate_route_table(route_table_id, subnet_id)
         log.info('Route table {0} was associated with subnet {1}'.format(route_table_id, subnet_id))
-
-        return association_id
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+        return {'association_id': association_id}
+    except BotoServerError as e:
+        return {'associated': False, 'error': salt.utils.boto.get_error(e)}
 
 
 def disassociate_route_table(association_id, region=None, key=None, keyid=None, profile=None):
@@ -1076,225 +2233,374 @@ def disassociate_route_table(association_id, region=None, key=None, keyid=None, 
     association_id
         The Route Table Association ID to disassociate
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_vpc.disassociate_route_table 'rtbassoc-d8ccddba'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
 
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if conn.disassociate_route_table(association_id):
             log.info('Route table with association id {0} has been disassociated.'.format(association_id))
-
-            return True
+            return {'disassociated': True}
         else:
             log.warning('Route table with association id {0} has not been disassociated.'.format(association_id))
-
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+            return {'disassociated': False}
+    except BotoServerError as e:
+        return {'disassociated': False, 'error': salt.utils.boto.get_error(e)}
 
 
 def replace_route_table_association(association_id, route_table_id, region=None, key=None, keyid=None, profile=None):
     '''
     Replaces a route table association.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_vpc.replace_route_table_association 'rtbassoc-d8ccddba' 'rtb-1f382e7d'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
 
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         association_id = conn.replace_route_table_association_with_assoc(association_id, route_table_id)
         log.info('Route table {0} was reassociated with association id {1}'.format(route_table_id, association_id))
-
-        return association_id
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+        return {'replaced': True, 'association_id': association_id}
+    except BotoServerError as e:
+        return {'replaced': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def create_route(route_table_id, destination_cidr_block, gateway_id=None, instance_id=None, interface_id=None,
-                 region=None, key=None, keyid=None, profile=None):
+def create_route(route_table_id=None, destination_cidr_block=None,
+                 route_table_name=None, gateway_id=None,
+                 internet_gateway_name=None,
+                 instance_id=None, interface_id=None,
+                 vpc_peering_connection_id=None, vpc_peering_connection_name=None,
+                 region=None, key=None, keyid=None, profile=None,
+                 nat_gateway_id=None,
+                 nat_gateway_subnet_name=None,
+                 nat_gateway_subnet_id=None,
+                 ):
     '''
     Creates a route.
 
-    CLI Example::
+    If a nat gateway is specified, boto3 must be installed
+
+    CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.create_route 'rtb-1f382e7d' '10.0.0.0/16'
+        salt myminion boto_vpc.create_route 'rtb-1f382e7d' '10.0.0.0/16' gateway_id='vgw-a1b2c3'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+
+    if not _exactly_one((route_table_name, route_table_id)):
+        raise SaltInvocationError('One (but not both) of route_table_id or route_table_name '
+                                  'must be provided.')
+
+    if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id, vpc_peering_connection_id,
+                         nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
+        raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
+                                  'interface_id, vpc_peering_connection_id, nat_gateway_id, '
+                                  'nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')
+
+    if destination_cidr_block is None:
+        raise SaltInvocationError('destination_cidr_block is required.')
 
     try:
-        if conn.create_route(route_table_id, destination_cidr_block, gateway_id=gateway_id, instance_id=instance_id,
-                             interface_id=interface_id):
-            log.info('Route with cider block {0} on route table {1} was created'.format(route_table_id,
-                                                                                        destination_cidr_block))
+        if route_table_name:
+            route_table_id = _get_resource_id('route_table', route_table_name,
+                                              region=region, key=key,
+                                              keyid=keyid, profile=profile)
+            if not route_table_id:
+                return {'created': False,
+                        'error': {'message': 'route table {0} does not exist.'.format(route_table_name)}}
 
-            return True
-        else:
-            log.warning('Route with cider block {0} on route table {1} was not created'.format(route_table_id,
-                                                                                               destination_cidr_block))
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+        if internet_gateway_name:
+            gateway_id = _get_resource_id('internet_gateway', internet_gateway_name,
+                                          region=region, key=key,
+                                          keyid=keyid, profile=profile)
+            if not gateway_id:
+                return {'created': False,
+                        'error': {'message': 'internet gateway {0} does not exist.'.format(internet_gateway_name)}}
+
+        if vpc_peering_connection_name:
+            vpc_peering_connection_id = _get_resource_id('vpc_peering_connection', vpc_peering_connection_name,
+                                                         region=region, key=key,
+                                                         keyid=keyid, profile=profile)
+            if not vpc_peering_connection_id:
+                return {'created': False,
+                        'error': {'message': 'VPC peering connection {0} does not exist.'.format(vpc_peering_connection_name)}}
+
+        if nat_gateway_subnet_name:
+            gws = describe_nat_gateways(subnet_name=nat_gateway_subnet_name,
+                                     region=region, key=key, keyid=keyid, profile=profile)
+            if not gws:
+                return {'created': False,
+                        'error': {'message': 'nat gateway for {0} does not exist.'.format(nat_gateway_subnet_name)}}
+            nat_gateway_id = gws[0]['NatGatewayId']
+
+        if nat_gateway_subnet_id:
+            gws = describe_nat_gateways(subnet_id=nat_gateway_subnet_id,
+                                     region=region, key=key, keyid=keyid, profile=profile)
+            if not gws:
+                return {'created': False,
+                        'error': {'message': 'nat gateway for {0} does not exist.'.format(nat_gateway_subnet_id)}}
+            nat_gateway_id = gws[0]['NatGatewayId']
+
+    except BotoServerError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+    if not nat_gateway_id:
+        return _create_resource('route', route_table_id=route_table_id,
+                            destination_cidr_block=destination_cidr_block,
+                            gateway_id=gateway_id, instance_id=instance_id,
+                            interface_id=interface_id, vpc_peering_connection_id=vpc_peering_connection_id,
+                            region=region, key=key, keyid=keyid, profile=profile)
+    # for nat gateway, boto3 is required
+    try:
+        conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+        ret = conn3.create_route(RouteTableId=route_table_id,
+                       DestinationCidrBlock=destination_cidr_block,
+                       NatGatewayId=nat_gateway_id)
+        return {'created': True, 'id': ret.get('NatGatewayId')}
+    except BotoServerError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def delete_route(route_table_id, destination_cidr_block, region=None, key=None, keyid=None, profile=None):
+def delete_route(route_table_id=None, destination_cidr_block=None,
+                 route_table_name=None, region=None, key=None,
+                 keyid=None, profile=None):
     '''
     Deletes a route.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_vpc.delete_route 'rtb-1f382e7d' '10.0.0.0/16'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+
+    if not _exactly_one((route_table_name, route_table_id)):
+        raise SaltInvocationError('One (but not both) of route_table_id or route_table_name '
+                                  'must be provided.')
+
+    if destination_cidr_block is None:
+        raise SaltInvocationError('destination_cidr_block is required.')
 
     try:
-        if conn.delete_route(route_table_id, destination_cidr_block):
-            log.info('Route with cider block {0} on route table {1} was deleted'.format(route_table_id,
-                                                                                        destination_cidr_block))
+        if route_table_name:
+            route_table_id = _get_resource_id('route_table', route_table_name,
+                                              region=region, key=key,
+                                              keyid=keyid, profile=profile)
+            if not route_table_id:
+                return {'created': False,
+                        'error': {'message': 'route table {0} does not exist.'.format(route_table_name)}}
+    except BotoServerError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
-            return True
-        else:
-            log.warning('Route with cider block {0} on route table {1} was not deleted'.format(route_table_id,
-                                                                                               destination_cidr_block))
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+    return _delete_resource(resource='route', resource_id=route_table_id,
+                            destination_cidr_block=destination_cidr_block,
+                            region=region, key=key,
+                            keyid=keyid, profile=profile)
 
 
-def replace_route(route_table_id, destination_cidr_block, gateway_id=None, instance_id=None, interface_id=None,
-                  region=None, key=None, keyid=None, profile=None):
+def replace_route(route_table_id=None, destination_cidr_block=None,
+                  route_table_name=None, gateway_id=None,
+                  instance_id=None, interface_id=None,
+                  region=None, key=None, keyid=None, profile=None,
+                  vpc_peering_connection_id=None):
     '''
     Replaces a route.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.replace_route 'rtb-1f382e7d' '10.0.0.0/16'
+        salt myminion boto_vpc.replace_route 'rtb-1f382e7d' '10.0.0.0/16' gateway_id='vgw-a1b2c3'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+
+    if not _exactly_one((route_table_name, route_table_id)):
+        raise SaltInvocationError('One (but not both) of route_table_id or route_table_name '
+                                  'must be provided.')
+
+    if destination_cidr_block is None:
+        raise SaltInvocationError('destination_cidr_block is required.')
 
     try:
-        if conn.replace_route(route_table_id, destination_cidr_block, gateway_id=gateway_id, instance_id=instance_id,
-                              interface_id=interface_id):
-            log.info('Route with cider block {0} on route table {1} was replaced'.format(route_table_id,
-                                                                                         destination_cidr_block))
+        if route_table_name:
+            route_table_id = _get_resource_id('route_table', route_table_name,
+                                              region=region, key=key,
+                                              keyid=keyid, profile=profile)
+            if not route_table_id:
+                return {'replaced': False,
+                        'error': {'message': 'route table {0} does not exist.'.format(route_table_name)}}
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-            return True
+        if conn.replace_route(route_table_id, destination_cidr_block,
+                              gateway_id=gateway_id, instance_id=instance_id,
+                              interface_id=interface_id, vpc_peering_connection_id=vpc_peering_connection_id):
+            log.info('Route with cidr block {0} on route table {1} was '
+                     'replaced'.format(route_table_id, destination_cidr_block))
+            return {'replaced': True}
         else:
-            log.warning('Route with cider block {0} on route table {1} was not replaced'.format(route_table_id,
-                                                                                                destination_cidr_block))
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+            log.warning('Route with cidr block {0} on route table {1} was not replaced'.format(route_table_id,
+                        destination_cidr_block))
+            return {'replaced': False}
+    except BotoServerError as e:
+        return {'replaced': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def _get_conn(region, key, keyid, profile):
+def describe_route_table(route_table_id=None, route_table_name=None,
+                         tags=None, region=None, key=None, keyid=None,
+                         profile=None):
     '''
-    Get a boto connection to vpc.
-    '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
+    Given route table properties, return route table details if matching table(s) exist.
 
-    if not region and __salt__['config.option']('vpc.region'):
-        region = __salt__['config.option']('vpc.region')
+    .. versionadded:: 2015.8.0
 
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('vpc.key'):
-        key = __salt__['config.option']('vpc.key')
-    if not keyid and __salt__['config.option']('vpc.keyid'):
-        keyid = __salt__['config.option']('vpc.keyid')
-
-    try:
-        conn = boto.vpc.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto VPC connection.')
-        return None
-    return conn
-
-
-def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
-    '''
-    Given a VPC ID describe it's properties.
-
-    Returns a dictionary of interesting properties.
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.describe vpc_id=vpc-123456
+        salt myminion boto_vpc.describe_route_table route_table_id='rtb-1f382e7d'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    _ret = dict(cidr_block=None,
-                is_default=None,
-                state=None,
-                tags=None,
-                dhcp_options_id=None,
-                instance_tenancy=None)
 
-    if not conn:
-        return False
-
-    if not vpc_id:
-        raise SaltInvocationError('VPC ID needs to be specified.')
+    salt.utils.warn_until(
+        'Neon',
+         'The \'describe_route_table\' method has been deprecated and '
+         'replaced by \'describe_route_tables\'.'
+    )
+    if not any((route_table_id, route_table_name, tags)):
+        raise SaltInvocationError('At least one of the following must be specified: '
+                                  'route table id, route table name, or tags.')
 
     try:
-        filter_parameters = {'vpc_ids': vpc_id}
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        filter_parameters = {'filters': {}}
 
-        vpcs = conn.get_all_vpcs(**filter_parameters)
+        if route_table_id:
+            filter_parameters['route_table_ids'] = route_table_id
 
-        if vpcs:
-            vpc = vpcs[0]  # Found!
-            log.debug('Found VPC: {0}'.format(vpc.id))
-            for k in _ret.keys():
-                _ret[k] = getattr(vpc, k)
-            return _ret
+        if route_table_name:
+            filter_parameters['filters']['tag:Name'] = route_table_name
 
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return False
+        if tags:
+            for tag_name, tag_value in six.iteritems(tags):
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+        route_tables = conn.get_all_route_tables(**filter_parameters)
+
+        if not route_tables:
+            return {}
+
+        route_table = {}
+        keys = ['id', 'vpc_id', 'tags', 'routes', 'associations']
+        route_keys = ['destination_cidr_block', 'gateway_id', 'instance_id', 'interface_id', 'vpc_peering_connection_id']
+        assoc_keys = ['id', 'main', 'route_table_id', 'subnet_id']
+        for item in route_tables:
+            for key in keys:
+                if hasattr(item, key):
+                    route_table[key] = getattr(item, key)
+                    if key == 'routes':
+                        route_table[key] = _key_iter(key, route_keys, item)
+                    if key == 'associations':
+                        route_table[key] = _key_iter(key, assoc_keys, item)
+        return route_table
+
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+
+def describe_route_tables(route_table_id=None, route_table_name=None,
+                         vpc_id=None,
+                         tags=None, region=None, key=None, keyid=None,
+                         profile=None):
+    '''
+    Given route table properties, return details of all matching route tables.
+
+    This function requires boto3 to be installed.
+
+    .. versionadded:: 2016.11.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_route_tables vpc_id='vpc-a6a9efc3'
+
+    '''
+
+    if not any((route_table_id, route_table_name, tags, vpc_id)):
+        raise SaltInvocationError('At least one of the following must be specified: '
+                                  'route table id, route table name, vpc_id, or tags.')
+
+    try:
+        conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+        filter_parameters = {'Filters': []}
+
+        if route_table_id:
+            filter_parameters['RouteTableIds'] = [route_table_id]
+
+        if vpc_id:
+            filter_parameters['Filters'].append({'Name': 'vpc-id', 'Values': [vpc_id]})
+
+        if route_table_name:
+            filter_parameters['Filters'].append({'Name': 'tag:Name', 'Values': [route_table_name]})
+
+        if tags:
+            for tag_name, tag_value in six.iteritems(tags):
+                filter_parameters['Filters'].append({'Name': 'tag:{0}'.format(tag_name),
+                                                     'Values': [tag_value]})
+
+        route_tables = conn3.describe_route_tables(**filter_parameters).get('RouteTables', [])
+
+        if not route_tables:
+            return []
+
+        tables = []
+        keys = {'id': 'RouteTableId',
+                'vpc_id': 'VpcId',
+                'tags': 'Tags',
+                'routes': 'Routes',
+                'associations': 'Associations'
+            }
+        route_keys = {'destination_cidr_block': 'DestinationCidrBlock',
+                      'gateway_id': 'GatewayId',
+                      'instance_id': 'Instance',
+                      'interface_id': 'NetworkInterfaceId',
+                      'nat_gateway_id': 'NatGatewayId',
+                      }
+        assoc_keys = {'id': 'RouteTableAssociationId',
+                      'main': 'Main',
+                      'route_table_id': 'RouteTableId',
+                      'SubnetId': 'subnet_id',
+                      }
+        for item in route_tables:
+            route_table = {}
+            for outkey, inkey in six.iteritems(keys):
+                if inkey in item:
+                    if outkey == 'routes':
+                        route_table[outkey] = _key_remap(inkey, route_keys, item)
+                    elif outkey == 'associations':
+                        route_table[outkey] = _key_remap(inkey, assoc_keys, item)
+                    elif outkey == 'tags':
+                        route_table[outkey] = {}
+                        for tagitem in item.get(inkey, []):
+                            route_table[outkey][tagitem.get('Key')] = tagitem.get('Value')
+                    else:
+                        route_table[outkey] = item.get(inkey)
+            tables.append(route_table)
+        return tables
+
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
 
 
 def _create_dhcp_options(conn, domain_name=None, domain_name_servers=None, ntp_servers=None, netbios_name_servers=None,
@@ -1313,6 +2619,539 @@ def _maybe_set_name_tag(name, obj):
 
 def _maybe_set_tags(tags, obj):
     if tags:
-        obj.add_tags(tags)
+        # Not all objects in Boto have an 'add_tags()' method.
+        try:
+            obj.add_tags(tags)
+
+        except AttributeError:
+            for tag, value in tags.items():
+                obj.add_tag(tag, value)
 
         log.debug('The following tags: {0} were added to {1}'.format(', '.join(tags), obj))
+
+
+def _maybe_set_dns(conn, vpcid, dns_support, dns_hostnames):
+    if dns_support:
+        conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_support=dns_support)
+        log.debug('DNS spport was set to: {0} on vpc {1}'.format(dns_support, vpcid))
+    if dns_hostnames:
+        conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_hostnames=dns_hostnames)
+        log.debug('DNS hostnames was set to: {0} on vpc {1}'.format(dns_hostnames, vpcid))
+
+
+def _maybe_name_route_table(conn, vpcid, vpc_name):
+    route_tables = conn.get_all_route_tables(filters={'vpc_id': vpcid})
+    if not route_tables:
+        log.warning('no default route table found')
+        return
+    default_table = None
+    for table in route_tables:
+        for association in getattr(table, 'associations', {}):
+            if getattr(association, 'main', False):
+                default_table = table
+                break
+    if not default_table:
+        log.warning('no default route table found')
+        return
+
+    name = '{0}-default-table'.format(vpc_name)
+    _maybe_set_name_tag(name, default_table)
+    log.debug('Default route table name was set to: {0} on vpc {1}'.format(name, vpcid))
+
+
+def _key_iter(key, keys, item):
+    elements_list = []
+    for r_item in getattr(item, key):
+        element = {}
+        for r_key in keys:
+            if hasattr(r_item, r_key):
+                element[r_key] = getattr(r_item, r_key)
+        elements_list.append(element)
+    return elements_list
+
+
+def _key_remap(key, keys, item):
+    elements_list = []
+    for r_item in item.get(key, []):
+        element = {}
+        for r_outkey, r_inkey in six.iteritems(keys):
+            if r_inkey in r_item:
+                element[r_outkey] = r_item.get(r_inkey)
+        elements_list.append(element)
+    return elements_list
+
+
+def _get_subnet_explicit_route_table(subnet_id, vpc_id, conn=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    helper function to find subnet explicit route table associations
+
+    .. versionadded:: 2016.11.0
+    '''
+    if not conn:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if conn:
+        vpc_route_tables = conn.get_all_route_tables(filters={'vpc_id': vpc_id})
+        for vpc_route_table in vpc_route_tables:
+            for rt_association in vpc_route_table.associations:
+                if rt_association.subnet_id == subnet_id and not rt_association.main:
+                    return rt_association.id
+    return None
+
+
+def request_vpc_peering_connection(requester_vpc_id=None, requester_vpc_name=None,
+                                   peer_vpc_id=None, peer_vpc_name=None, name=None,
+                                   peer_owner_id=None, region=None,
+                                   key=None, keyid=None, profile=None, dry_run=False):
+    '''
+    Request a VPC peering connection between two VPCs.
+
+    .. versionadded:: 2016.11.0
+
+    requester_vpc_id
+        ID of the requesting VPC. Exclusive with requester_vpc_name.
+
+    requester_vpc_name
+        Name tag of the requesting VPC.  Exclusive with requester_vpc_id.
+
+    peer_vpc_id
+        ID of the VPC tp crete VPC peering connection with. This can be a VPC in
+        another account. Exclusive with peer_vpc_name.
+
+    peer_vpc_name
+        Name tag of the VPC tp crete VPC peering connection with. This can only
+        be a VPC in the same account, else resolving it into a vpc ID will almost
+        certainly fail. Exclusive with peer_vpc_id.
+
+    name
+        The name to use for this VPC peering connection.
+
+    peer_owner_id
+        ID of the owner of the peer VPC. Defaults to your account ID, so a value
+        is required if peering with a VPC in a different account.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    dry_run
+        If True, skip application and return status.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Create a named VPC peering connection
+        salt myminion boto_vpc.request_vpc_peering_connection vpc-4a3e622e vpc-be82e9da name=my_vpc_connection
+        # Without a name
+        salt myminion boto_vpc.request_vpc_peering_connection vpc-4a3e622e vpc-be82e9da
+        # Specify a region
+        salt myminion boto_vpc.request_vpc_peering_connection vpc-4a3e622e vpc-be82e9da region=us-west-2
+
+    '''
+    conn = _get_conn3(region=region, key=key, keyid=keyid,
+                      profile=profile)
+
+    if name and _vpc_peering_conn_id_for_name(name, conn):
+        raise SaltInvocationError('A VPC peering connection with this name already '
+                                  'exists! Please specify a different name.')
+
+    if not _exactly_one((requester_vpc_id, requester_vpc_name)):
+        raise SaltInvocationError('Exactly one of requester_vpc_id or '
+                                  'requester_vpc_name is required')
+    if not _exactly_one((peer_vpc_id, peer_vpc_name)):
+        raise SaltInvocationError('Exactly one of peer_vpc_id or '
+                                  'peer_vpc_name is required.')
+
+    if requester_vpc_name:
+        requester_vpc_id = _get_id(vpc_name=requester_vpc_name, region=region, key=key,
+                         keyid=keyid, profile=profile)
+        if not requester_vpc_id:
+            return {'error': 'Could not resolve VPC name {0} to an ID'.format(requester_vpc_name)}
+    if peer_vpc_name:
+        peer_vpc_id = _get_id(vpc_name=peer_vpc_name, region=region, key=key,
+                         keyid=keyid, profile=profile)
+        if not peer_vpc_id:
+            return {'error': 'Could not resolve VPC name {0} to an ID'.format(peer_vpc_name)}
+
+    try:
+        log.debug('Trying to request vpc peering connection')
+        if not peer_owner_id:
+            vpc_peering = conn.create_vpc_peering_connection(
+                VpcId=requester_vpc_id,
+                PeerVpcId=peer_vpc_id,
+                DryRun=dry_run)
+        else:
+            vpc_peering = conn.create_vpc_peering_connection(
+                VpcId=requester_vpc_id,
+                PeerVpcId=peer_vpc_id,
+                PeerOwnerId=peer_owner_id,
+                DryRun=dry_run)
+        peering = vpc_peering.get('VpcPeeringConnection', {})
+        peering_conn_id = peering.get('VpcPeeringConnectionId', 'ERROR')
+        msg = 'VPC peering {0} requested.'.format(peering_conn_id)
+        log.debug(msg)
+
+        if name:
+            log.debug('Adding name tag to vpc peering connection')
+            conn.create_tags(
+                Resources=[peering_conn_id],
+                Tags=[{'Key': 'Name', 'Value': name}]
+            )
+            log.debug('Applied name tag to vpc peering connection')
+            msg += ' With name {0}.'.format(name)
+
+        return {'msg': msg}
+    except botocore.exceptions.ClientError as err:
+        log.error('Got an error while trying to request vpc peering')
+        return {'error': salt.utils.boto.get_error(err)}
+
+
+def _get_peering_connection_ids(name, conn):
+    '''
+    :param name: The name of the VPC peering connection.
+    :type name: String
+    :param conn: The boto aws ec2 connection.
+    :return: The id associated with this peering connection
+
+    Returns the VPC peering connection ids
+    given the VPC peering connection name.
+    '''
+    filters = [{
+        'Name': 'tag:Name',
+        'Values': [name],
+    }, {
+        'Name': 'status-code',
+        'Values': [ACTIVE, PENDING_ACCEPTANCE, PROVISIONING],
+    }]
+
+    peerings = conn.describe_vpc_peering_connections(
+        Filters=filters).get('VpcPeeringConnections',
+                             [])
+    return [x['VpcPeeringConnectionId'] for x in peerings]
+
+
+def describe_vpc_peering_connection(name,
+                                    region=None,
+                                    key=None,
+                                    keyid=None,
+                                    profile=None):
+    '''
+    Returns any VPC peering connection id(s) for the given VPC
+    peering connection name.
+
+    VPC peering connection ids are only returned for connections that
+    are in the ``active``, ``pending-acceptance`` or ``provisioning``
+    state.
+
+    .. versionadded:: 2016.11.0
+
+    :param name: The string name for this VPC peering connection
+    :param region: The aws region to use
+    :param key: Your aws key
+    :param keyid: The key id associated with this aws account
+    :param profile: The profile to use
+    :return: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_vpc_peering_connection salt-vpc
+        # Specify a region
+        salt myminion boto_vpc.describe_vpc_peering_connection salt-vpc region=us-west-2
+
+    '''
+    conn = _get_conn3(region=region, key=key, keyid=keyid,
+                      profile=profile)
+    return {
+        'VPC-Peerings': _get_peering_connection_ids(name, conn)
+    }
+
+
+def accept_vpc_peering_connection(  # pylint: disable=too-many-arguments
+                                  conn_id='',
+                                  name='',
+                                  region=None,
+                                  key=None,
+                                  keyid=None,
+                                  profile=None,
+                                  dry_run=False):
+    '''
+    Request a VPC peering connection between two VPCs.
+
+    .. versionadded:: 2016.11.0
+
+    :param conn_id: The ID to use. String type.
+    :param name: The name of this VPC peering connection. String type.
+    :param region: The AWS region to use. Type string.
+    :param key. The key to use for this connection. Type string.
+    :param keyid. The key id to use.
+    :param profile. The profile to use.
+    :param dry_run. The dry_run flag to set.
+    :return: dict
+
+    Warning: Please specify either the ``vpc_peering_connection_id`` or
+    ``name`` but not both. Specifying both will result in an error!
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.accept_vpc_peering_connection name=salt-vpc
+        # Specify a region
+        salt myminion boto_vpc.accept_vpc_peering_connection name=salt-vpc region=us-west-2
+        # specify an id
+        salt myminion boto_vpc.accept_vpc_peering_connection conn_id=pcx-8a8939e3
+
+    '''
+    if not _exactly_one((conn_id, name)):
+        raise SaltInvocationError('One (but not both) of '
+                                  'vpc_peering_connection_id or name '
+                                  'must be provided.')
+
+    conn = _get_conn3(region=region, key=key, keyid=keyid,
+                      profile=profile)
+
+    if name:
+        conn_id = _vpc_peering_conn_id_for_name(name, conn)
+        if not conn_id:
+            raise SaltInvocationError('No ID found for this '
+                                      'VPC peering connection! ({0}) '
+                                      'Please make sure this VPC peering '
+                                      'connection exists '
+                                      'or invoke this function with '
+                                      'a VPC peering connection '
+                                      'ID'.format(name))
+    try:
+        log.debug('Trying to accept vpc peering connection')
+        conn.accept_vpc_peering_connection(
+            DryRun=dry_run,
+            VpcPeeringConnectionId=conn_id)
+        return {'msg': 'VPC peering connection accepted.'}
+    except botocore.exceptions.ClientError as err:
+        log.error('Got an error while trying to accept vpc peering')
+        return {'error': salt.utils.boto.get_error(err)}
+
+
+def _vpc_peering_conn_id_for_name(name, conn):
+    '''
+    Get the ID associated with this name
+    '''
+    log.debug('Retrieving VPC peering connection id')
+    ids = _get_peering_connection_ids(name, conn)
+    if not ids:
+        ids = [None]  # Let callers handle the case where we have no id
+    elif len(ids) > 1:
+        raise SaltInvocationError('Found multiple VPC peering connections '
+                                  'with the same name!! '
+                                  'Please make sure you have only '
+                                  'one VPC peering connection named {0} '
+                                  'or invoke this function with a VPC '
+                                  'peering connection ID'.format(name))
+
+    return ids[0]
+
+
+def delete_vpc_peering_connection(conn_id=None, conn_name=None, region=None,
+                                  key=None, keyid=None, profile=None, dry_run=False):
+    '''
+    Delete a VPC peering connection.
+
+    .. versionadded:: 2016.11.0
+
+    conn_id
+        The connection ID to check.  Exclusive with conn_name.
+
+    conn_name
+        The connection name to check.  Exclusive with conn_id.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    dry_run
+        If True, skip application and simply return projected status.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Create a named VPC peering connection
+        salt myminion boto_vpc.delete_vpc_peering_connection conn_name=salt-vpc
+        # Specify a region
+        salt myminion boto_vpc.delete_vpc_peering_connection conn_name=salt-vpc region=us-west-2
+        # specify an id
+        salt myminion boto_vpc.delete_vpc_peering_connection conn_id=pcx-8a8939e3
+
+    '''
+    if not _exactly_one((conn_id, conn_name)):
+        raise SaltInvocationError('Exactly one of conn_id or '
+                                  'conn_name must be provided.')
+
+    conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+    if conn_name:
+        conn_id = _vpc_peering_conn_id_for_name(conn_name, conn)
+        if not conn_id:
+            raise SaltInvocationError("Couldn't resolve VPC peering connection "
+                                      "{0} to an ID".format(conn_name))
+    try:
+        log.debug('Trying to delete vpc peering connection')
+        conn.delete_vpc_peering_connection(DryRun=dry_run, VpcPeeringConnectionId=conn_id)
+        return {'msg': 'VPC peering connection deleted.'}
+    except botocore.exceptions.ClientError as err:
+        e = salt.utils.boto.get_error(err)
+        log.error('Failed to delete VPC peering {0}: {1}'.format(conn_name or conn_id, e))
+        return {'error': e}
+
+
+def is_peering_connection_pending(conn_id=None, conn_name=None, region=None,
+                                  key=None, keyid=None, profile=None):
+    '''
+    Check if a VPC peering connection is in the pending state.
+
+    .. versionadded:: 2016.11.0
+
+    conn_id
+        The connection ID to check.  Exclusive with conn_name.
+
+    conn_name
+        The connection name to check.  Exclusive with conn_id.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.is_peering_connection_pending conn_name=salt-vpc
+        # Specify a region
+        salt myminion boto_vpc.is_peering_connection_pending conn_name=salt-vpc region=us-west-2
+        # specify an id
+        salt myminion boto_vpc.is_peering_connection_pending conn_id=pcx-8a8939e3
+
+    '''
+    if not _exactly_one((conn_id, conn_name)):
+        raise SaltInvocationError('Exactly one of conn_id or conn_name must be provided.')
+
+    conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+
+    if conn_id:
+        vpcs = conn.describe_vpc_peering_connections(VpcPeeringConnectionIds=[conn_id]).get('VpcPeeringConnections', [])
+    else:
+        filters = [{'Name': 'tag:Name', 'Values': [conn_name]},
+                   {'Name': 'status-code', 'Values': [ACTIVE, PENDING_ACCEPTANCE, PROVISIONING]}]
+        vpcs = conn.describe_vpc_peering_connections(Filters=filters).get('VpcPeeringConnections', [])
+
+    if not vpcs:
+        return False
+    elif len(vpcs) > 1:
+        raise SaltInvocationError('Found more than one ID for the VPC peering '
+                                  'connection ({0}). Please call this function '
+                                  'with an ID instead.'.format(conn_id or conn_name))
+    else:
+        status = vpcs[0]['Status']['Code']
+
+    return status == PENDING_ACCEPTANCE
+
+
+def peering_connection_pending_from_vpc(conn_id=None, conn_name=None, vpc_id=None,
+                                        vpc_name=None, region=None, key=None,
+                                        keyid=None, profile=None):
+    '''
+    Check if a VPC peering connection is in the pending state, and requested from the given VPC.
+
+    .. versionadded:: 2016.11.0
+
+    conn_id
+        The connection ID to check.  Exclusive with conn_name.
+
+    conn_name
+        The connection name to check.  Exclusive with conn_id.
+
+    vpc_id
+        Is this the ID of the requesting VPC for this peering connection.  Exclusive with vpc_name.
+
+    vpc_name
+        Is this the Name of the requesting VPC for this peering connection.  Exclusive with vpc_id.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.is_peering_connection_pending name=salt-vpc
+
+    '''
+    if not _exactly_one((conn_id, conn_name)):
+        raise SaltInvocationError('Exactly one of conn_id or conn_name must be provided.')
+
+    if not _exactly_one((vpc_id, vpc_name)):
+        raise SaltInvocationError('Exactly one of vpc_id or vpc_name must be provided.')
+
+    if vpc_name:
+        vpc_id = check_vpc(vpc_name=vpc_name, region=region, key=key, keyid=keyid, profile=profile)
+        if not vpc_id:
+            log.warning('Could not resolve VPC name {0} to an ID'.format(vpc_name))
+            return False
+
+    conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+    filters = [{'Name': 'requester-vpc-info.vpc-id', 'Values': [vpc_id]},
+               {'Name': 'status-code', 'Values': [ACTIVE, PENDING_ACCEPTANCE, PROVISIONING]}]
+    if conn_id:
+        filters += [{'Name': 'vpc-peering-connection-id', 'Values': [conn_id]}]
+    else:
+        filters += [{'Name': 'tag:Name', 'Values': [conn_name]}]
+
+    vpcs = conn.describe_vpc_peering_connections(Filters=filters).get('VpcPeeringConnections', [])
+
+    if not vpcs:
+        return False
+    elif len(vpcs) > 1:
+        raise SaltInvocationError('Found more than one ID for the VPC peering '
+                                  'connection ({0}). Please call this function '
+                                  'with an ID instead.'.format(conn_id or conn_name))
+    else:
+        status = vpcs[0]['Status']['Code']
+
+    return bool(status == PENDING_ACCEPTANCE)

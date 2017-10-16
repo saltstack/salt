@@ -3,14 +3,36 @@
 Simple returner for Couchbase. Optional configuration
 settings are listed below, along with sane defaults.
 
-couchbase.host:   'salt'
-couchbase.port:   8091
-couchbase.bucket: 'salt'
-couchbase.skip_verify_views: False
+.. code-block:: yaml
 
-  To use the couchbase returner, append '--return couchbase' to the salt command. ex:
+    couchbase.host:   'salt'
+    couchbase.port:   8091
+    couchbase.bucket: 'salt'
+    couchbase.ttl: 24
+    couchbase.password: 'password'
+    couchbase.skip_verify_views: False
+
+To use the couchbase returner, append '--return couchbase' to the salt command. ex:
+
+.. code-block:: bash
 
     salt '*' test.ping --return couchbase
+
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.5.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return couchbase --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return couchbase --return_kwargs '{"bucket": "another-salt"}'
 
 
 All of the return data will be stored in documents as follows:
@@ -24,10 +46,11 @@ nocache: should we not cache the return data
 JID/MINION_ID
 =============
 return: return_data
-out: out_data
+full_ret: full load of job return
 '''
 from __future__ import absolute_import
 
+import json
 import logging
 
 try:
@@ -54,7 +77,7 @@ VERIFIED_VIEWS = False
 
 def __virtual__():
     if not HAS_DEPS:
-        return False
+        return False, 'Could not import couchbase returner; couchbase is not installed.'
 
     # try to load some faster json libraries. In order of fastest to slowest
     json = salt.utils.import_json()
@@ -70,7 +93,8 @@ def _get_options():
     '''
     return {'host': __opts__.get('couchbase.host', 'salt'),
             'port': __opts__.get('couchbase.port', 8091),
-            'bucket': __opts__.get('couchbase.bucket', 'salt')}
+            'bucket': __opts__.get('couchbase.bucket', 'salt'),
+            'password': __opts__.get('couchbase.password', '')}
 
 
 def _get_connection():
@@ -80,9 +104,16 @@ def _get_connection():
     global COUCHBASE_CONN
     if COUCHBASE_CONN is None:
         opts = _get_options()
-        COUCHBASE_CONN = couchbase.Couchbase.connect(host=opts['host'],
-                                                     port=opts['port'],
-                                                     bucket=opts['bucket'])
+        if opts['password']:
+            COUCHBASE_CONN = couchbase.Couchbase.connect(host=opts['host'],
+                                                         port=opts['port'],
+                                                         bucket=opts['bucket'],
+                                                         password=opts['password'])
+        else:
+            COUCHBASE_CONN = couchbase.Couchbase.connect(host=opts['host'],
+                                                         port=opts['port'],
+                                                         bucket=opts['bucket'])
+
     return COUCHBASE_CONN
 
 
@@ -117,14 +148,15 @@ def _get_ttl():
     '''
     Return the TTL that we should store our objects with
     '''
-    return __opts__['keep_jobs'] * 60 * 60  # keep_jobs is in hours
+    return __opts__.get('couchbase.ttl', 24) * 60 * 60  # keep_jobs is in hours
 
 
 #TODO: add to returner docs-- this is a new one
 def prep_jid(nocache=False, passed_jid=None):
     '''
     Return a job id and prepare the job id directory
-    This is the function responsible for making sure jids don't collide (unless its passed a jid)
+    This is the function responsible for making sure jids don't collide (unless
+    its passed a jid)
     So do what you have to do to make sure that stays the case
     '''
     if passed_jid is None:
@@ -149,25 +181,14 @@ def prep_jid(nocache=False, passed_jid=None):
 
 def returner(load):
     '''
-    Return data to the local job cache
+    Return data to couchbase bucket
     '''
     cb_ = _get_connection()
-    try:
-        jid_doc = cb_.get(load['jid'])
-        if jid_doc.value['nocache'] is True:
-            return
-    except couchbase.exceptions.NotFoundError:
-        log.error(
-            'An inconsistency occurred, a job was received with a job id '
-            'that is not present in the local cache: {jid}'.format(**load)
-        )
-        return False
 
     hn_key = '{0}/{1}'.format(load['jid'], load['id'])
     try:
-        ret_doc = {'return': load['return']}
-        if 'out' in load:
-            ret_doc['out'] = load['out']
+        ret_doc = {'return': load['return'],
+                   'full_ret': json.dumps(load)}
 
         cb_.add(hn_key,
                ret_doc,
@@ -183,7 +204,7 @@ def returner(load):
         return False
 
 
-def save_load(jid, clear_load):
+def save_load(jid, clear_load, minion=None):
     '''
     Save the load to the specified jid
     '''
@@ -195,24 +216,41 @@ def save_load(jid, clear_load):
         log.warning('Could not write job cache file for jid: {0}'.format(jid))
         return False
 
+    jid_doc.value['load'] = clear_load
+    cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
+
     # if you have a tgt, save that for the UI etc
-    if 'tgt' in clear_load:
+    if 'tgt' in clear_load and clear_load['tgt'] != '':
         ckminions = salt.utils.minions.CkMinions(__opts__)
         # Retrieve the minions list
         minions = ckminions.check_minions(
             clear_load['tgt'],
             clear_load.get('tgt_type', 'glob')
             )
-        # save the minions to a cache so we can see in the UI
+        save_minions(jid, minions)
+
+
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
+    '''
+    Save/update the minion list for a given jid. The syndic_id argument is
+    included for API compatibility only.
+    '''
+    cb_ = _get_connection()
+
+    try:
+        jid_doc = cb_.get(str(jid))
+    except couchbase.exceptions.NotFoundError:
+        log.warning('Could not write job cache file for jid: {0}'.format(jid))
+        return False
+
+    # save the minions to a cache so we can see in the UI
+    if 'minions' in jid_doc.value:
+        jid_doc.value['minions'] = sorted(
+            set(jid_doc.value['minions'] + minions)
+        )
+    else:
         jid_doc.value['minions'] = minions
-
-    jid_doc.value['load'] = clear_load
-
-    cb_.replace(str(jid),
-               jid_doc.value,
-               cas=jid_doc.cas,
-               ttl=_get_ttl()
-               )
+    cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
 
 
 def get_load(jid):

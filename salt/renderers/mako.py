@@ -3,12 +3,11 @@
 Mako Renderer for Salt
 '''
 
+# Import python libs
 from __future__ import absolute_import
 
-# Import python libs
-from StringIO import StringIO
-
 # Import salt libs
+import salt.ext.six as six
 import salt.utils.templates
 from salt.exceptions import SaltRenderError
 
@@ -33,4 +32,4 @@ def render(template_file, saltenv='base', sls='', context=None, tmplpath=None, *
     if not tmp_data.get('result', False):
         raise SaltRenderError(tmp_data.get('data',
             'Unknown render error in mako renderer'))
-    return StringIO(tmp_data['data'])
+    return six.moves.StringIO(tmp_data['data'])

@@ -15,7 +15,7 @@ state:
 
 Note that this example is probably unnecessary to use in practice, since the
 ``mine_functions`` and ``mine_interval`` config parameters can be used to
-schedule updates for the mine (see :doc:`here </topics/mine/index>` for more
+schedule updates for the mine (see :ref:`here <salt-mine>` for more
 info).
 
 It is sometimes desirable to trigger a function call after a state is executed,
@@ -43,7 +43,18 @@ the execution module function being executed:
 
 Due to how the state system works, if a module function accepts an
 argument called, ``name``, then ``m_name`` must be used to specify that
-argument, to avoid a collision with the ``name`` argument. For example:
+argument, to avoid a collision with the ``name`` argument.
+
+Here is a list of keywords hidden by the state system, which must be prefixed
+with ``m_``:
+
+* fun
+* name
+* names
+* state
+* saltenv
+
+For example:
 
 .. code-block:: yaml
 
@@ -62,14 +73,31 @@ arguments. For example:
         - func: network.ip_addrs
         - kwargs:
             interface: eth0
+
+.. code-block:: yaml
+
+    cloud.create:
+      module.run:
+        - func: cloud.create
+        - provider: test-provider
+        - m_names:
+          - test-vlad
+        - kwargs: {
+              ssh_username: 'ubuntu',
+              image: 'ami-8d6d9daa',
+              securitygroup: 'default',
+              size: 'c3.large',
+              location: 'ap-northeast-1',
+              delvol_on_destroy: 'True'
+          }
+
 '''
 from __future__ import absolute_import
-# Import python libs
-import datetime
 
 # Import salt libs
 import salt.loader
 import salt.utils
+import salt.utils.jid
 from salt.ext.six.moves import range
 
 
@@ -88,11 +116,11 @@ def wait(name, **kwargs):
         return ``True`` but not actually execute, unless one of the following
         two things happens:
 
-        1. The state has a :doc:`watch requisite </ref/states/requisites>`, and
+        1. The state has a :ref:`watch requisite <requisites-watch>`, and
            the state which it is watching changes.
 
-        2. Another state has a :doc:`watch_in requisite
-           </ref/states/requisites>` which references this state, and the state
+        2. Another state has a :ref:`watch_in requisite
+           <requisites-watch-in>` which references this state, and the state
            wth the ``watch_in`` changes.
     '''
     return {'name': name,
@@ -101,7 +129,7 @@ def wait(name, **kwargs):
             'comment': ''}
 
 # Alias module.watch to module.wait
-watch = wait
+watch = salt.utils.alias_function(wait, 'watch')
 
 
 def run(name, **kwargs):
@@ -114,7 +142,7 @@ def run(name, **kwargs):
     ``returner``
         Specify the returner to send the return of the module execution to
 
-    ``**kwargs``
+    ``kwargs``
         Pass any arguments needed to execute the function
     '''
     ret = {'name': name,
@@ -153,6 +181,12 @@ def run(name, **kwargs):
         elif arg == 'fun':
             if 'm_fun' in kwargs:
                 defaults[arg] = kwargs.pop('m_fun')
+        elif arg == 'state':
+            if 'm_state' in kwargs:
+                defaults[arg] = kwargs.pop('m_state')
+        elif arg == 'saltenv':
+            if 'm_saltenv' in kwargs:
+                defaults[arg] = kwargs.pop('m_saltenv')
         if arg in kwargs:
             defaults[arg] = kwargs.pop(arg)
     missing = set()
@@ -161,6 +195,12 @@ def run(name, **kwargs):
             rarg = 'm_name'
         elif arg == 'fun':
             rarg = 'm_fun'
+        elif arg == 'names':
+            rarg = 'm_names'
+        elif arg == 'state':
+            rarg = 'm_state'
+        elif arg == 'saltenv':
+            rarg = 'm_saltenv'
         else:
             rarg = arg
         if rarg not in kwargs and arg not in defaults:
@@ -217,7 +257,7 @@ def run(name, **kwargs):
                 'id': __opts__['id'],
                 'ret': mret,
                 'fun': name,
-                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
+                'jid': salt.utils.jid.gen_jid()}
         returners = salt.loader.returners(__opts__, __salt__)
         if kwargs['returner'] in returners:
             returners[kwargs['returner']](ret_ret)
@@ -239,4 +279,4 @@ def run(name, **kwargs):
                 ret['result'] = False
     return ret
 
-mod_watch = run  # pylint: disable=C0103
+mod_watch = salt.utils.alias_function(run, 'mod_watch')

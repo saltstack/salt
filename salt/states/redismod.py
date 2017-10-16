@@ -28,6 +28,8 @@ overridden in states using the following arguments: ``host``, ``post``, ``db``,
         - db: 0
         - password: somuchkittycat
 '''
+from __future__ import absolute_import
+import copy
 
 __virtualname__ = 'redis'
 
@@ -112,4 +114,60 @@ def absent(name, keys=None, **connection_args):
         __salt__['redis.delete'](name, **connection_args)
         ret['comment'] = 'Key deleted'
         ret['changes']['deleted'] = [name]
+    return ret
+
+
+def slaveof(name, sentinel_host=None, sentinel_port=None, sentinel_password=None, **connection_args):
+    '''
+    Set this redis instance as a slave.
+
+    .. versionadded: 2016.3.0
+
+    name
+        Master to make this a slave of
+
+    sentinel_host
+        Ip of the sentinel to check for the master
+
+    sentinel_port
+        Port of the sentinel to check for the master
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': 'Failed to setup slave'}
+
+    kwargs = copy.copy(connection_args)
+    sentinel_master = __salt__['redis.sentinel_get_master_ip'](name, sentinel_host, sentinel_port, sentinel_password)
+    if sentinel_master['master_host'] in __salt__['network.ip_addrs']():
+        ret['result'] = True
+        ret['comment'] = 'Minion is the master: {0}'.format(name)
+        return ret
+
+    first_master = __salt__['redis.get_master_ip'](**connection_args)
+    if first_master == sentinel_master:
+        ret['result'] = True
+        ret['comment'] = 'Minion already slave of master: {0}'.format(name)
+        return ret
+
+    if __opts__['test'] is True:
+        ret['comment'] = 'Minion will be made a slave of {0}: {1}'.format(name, sentinel_master['host'])
+        ret['result'] = None
+        return ret
+
+    kwargs.update(**sentinel_master)
+    __salt__['redis.slaveof'](**kwargs)
+
+    current_master = __salt__['redis.get_master_ip'](**connection_args)
+    if current_master != sentinel_master:
+        return ret
+
+    ret['result'] = True
+    ret['changes'] = {
+        'old': first_master,
+        'new': current_master,
+    }
+    ret['comment'] = 'Minion successfully connected to master: {0}'.format(name)
+
     return ret

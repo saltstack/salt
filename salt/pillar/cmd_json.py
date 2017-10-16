@@ -22,6 +22,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     Execute a command and read the output as JSON
     '''
     try:
+        command = command.replace('%s', minion_id)
         return json.loads(__salt__['cmd.run'](command))
     except Exception:
         log.critical(

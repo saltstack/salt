@@ -7,9 +7,14 @@ Beacon to fire events at login of users as registered in the wtmp file
     beacons:
       wtmp: {}
 '''
-# Import python libs
+
+# Import Python libs
+from __future__ import absolute_import
 import os
 import struct
+
+# Import salt libs
+import salt.utils
 
 __virtualname__ = 'wtmp'
 WTMP = '/var/log/wtmp'
@@ -25,9 +30,12 @@ FIELDS = [
           'session',
           'time',
           'addr'
-          ]
+]
 SIZE = struct.calcsize(FMT)
 LOC_KEY = 'wtmp.loc'
+
+import logging
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -44,6 +52,16 @@ def _get_loc():
         return __context__[LOC_KEY]
 
 
+def __validate__(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for wtmp beacon should be a list of dicts
+    if not isinstance(config, dict):
+        return False, ('Configuration for wtmp beacon must be a dictionary.')
+    return True, 'Valid beacon configuration'
+
+
 # TODO: add support for only firing events for specific users and login times
 def beacon(config):
     '''
@@ -55,7 +73,7 @@ def beacon(config):
           wtmp: {}
     '''
     ret = []
-    with open(WTMP, 'rb') as fp_:
+    with salt.utils.fopen(WTMP, 'rb') as fp_:
         loc = __context__.get(LOC_KEY, 0)
         if loc == 0:
             fp_.seek(0, 2)

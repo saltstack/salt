@@ -518,9 +518,10 @@ def upgrade_bootstrap(directory='.',
                 if not os.path.isdir(dbuild):
                     os.makedirs(dbuild)
                 # only try to download once per buildout checkout
-                salt.utils.fopen(os.path.join(
-                    dbuild,
-                    '{0}.updated_bootstrap'.format(buildout_ver)))
+                with salt.utils.fopen(os.path.join(
+                        dbuild,
+                        '{0}.updated_bootstrap'.format(buildout_ver))):
+                    pass
             except (OSError, IOError):
                 LOG.info('Bootstrap updated from repository')
                 data = _urlopen(booturl).read()
@@ -720,11 +721,11 @@ def bootstrap(directory='.',
         distribute = False
     if new_st:
         distribute = False
-        LOG.warning(u'Forcing to use setuptools as we have setuptools >= 0.7')
+        LOG.warning('Forcing to use setuptools as we have setuptools >= 0.7')
     if distribute:
         new_st = False
         if buildout_ver == 1:
-            LOG.warning(u'Using distribute !')
+            LOG.warning('Using distribute !')
             bootstrap_args += ' --distribute'
     if not os.path.isdir(dbuild):
         os.makedirs(dbuild)

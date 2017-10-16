@@ -2,6 +2,8 @@
 '''
 Return salt data via xmpp
 
+:depends: sleekxmpp >= 1.3.1
+
 The following fields can be set in the minion conf file::
 
     xmpp.jid (required)
@@ -31,8 +33,8 @@ XMPP settings may also be configured as::
         recipient: someone@xmpp.example.com
 
     xmpp_profile:
-        jid: user@xmpp.domain.com/resource
-        password: password
+        xmpp.jid: user@xmpp.domain.com/resource
+        xmpp.password: password
 
     xmpp:
         profile: xmpp_profile
@@ -55,6 +57,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return xmpp --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return xmpp --return_kwargs '{"recipient": "someone-else@xmpp.example.com"}'
+
 '''
 from __future__ import absolute_import
 
@@ -108,14 +119,16 @@ def __virtual__():
     '''
     Only load this module if right version of sleekxmpp is installed on this minion.
     '''
+    min_version = '1.3.1'
     if HAS_LIBS:
         import sleekxmpp
         # Certain XMPP functionaility we're using doesn't work with versions under 1.3.1
         sleekxmpp_version = distutils.version.LooseVersion(sleekxmpp.__version__)
-        valid_version = distutils.version.LooseVersion('1.3.1')
+        valid_version = distutils.version.LooseVersion(min_version)
         if sleekxmpp_version >= valid_version:
             return __virtualname__
-    return False
+    return False, 'Could not import xmpp returner; sleekxmpp python client is not ' \
+                  'installed or is older than version \'{0}\'.'.format(min_version)
 
 
 class SendMsgBot(_ClientXMPP):

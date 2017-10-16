@@ -17,7 +17,10 @@ def __virtual__():
     '''
     Only run on OpenBSD systems
     '''
-    return __virtualname__ if __grains__['os'] == 'OpenBSD' else False
+    if __grains__['os'] == 'OpenBSD':
+        return __virtualname__
+    return (False, 'The openbsd_sysctl execution module cannot be loaded: '
+            'only available on OpenBSD systems.')
 
 
 def show(config_file=False):
@@ -95,7 +98,8 @@ def persist(name, value, config='/etc/sysctl.conf'):
     # create /etc/sysctl.conf if not present
     if not os.path.isfile(config):
         try:
-            salt.utils.fopen(config, 'w+').close()
+            with salt.utils.fopen(config, 'w+'):
+                pass
         except (IOError, OSError):
             msg = 'Could not create {0}'
             raise CommandExecutionError(msg.format(config))

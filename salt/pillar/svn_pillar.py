@@ -170,7 +170,7 @@ def ext_pillar(minion_id,
         DELIM = '='
         if DELIM not in extraopt:
             log.error('Incorrectly formatted extra parameter. '
-                      'Missing {0!r}: {1}'.format(DELIM, extraopt))
+                      'Missing \'{0}\': {1}'.format(DELIM, extraopt))
         key, val = _extract_key_val(extraopt, DELIM)
         if key == 'root':
             root = val
@@ -193,4 +193,4 @@ def ext_pillar(minion_id,
     opts = deepcopy(__opts__)
     opts['pillar_roots'][branch] = [pillar_dir]
     pil = Pillar(opts, __grains__, minion_id, branch)
-    return pil.compile_pillar()
+    return pil.compile_pillar(ext=False)
