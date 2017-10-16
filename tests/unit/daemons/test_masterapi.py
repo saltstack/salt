@@ -46,7 +46,7 @@ class AutoKeyTestCase(TestCase):
         mock_dirs = (None, None, file_name)
 
         with patch('os.walk', MagicMock(return_value=mock_dirs)) as mock_walk, \
-             patch('salt.utils.fopen', MagicMock(return_value=mock_file)) as mock_open,
+             patch('salt.utils.fopen', MagicMock(return_value=mock_file)) as mock_open, \
              patch('salt.deamons.masterapi.AutoKey.check_permissions', MagicMock(return_value=True)):
             test_func(mock_walk, mock_open)
 
