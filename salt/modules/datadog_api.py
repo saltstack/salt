@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+
+# This module redefines built-in's 'id' and 'type' as Datadog's resource ID's
+# types. Disabling invalid-name, because 'id' is too short.
+# pylint: disable=redefined-builtin, invalid-name
 '''
 An execution module that interacts with the Datadog API
 
@@ -14,8 +18,15 @@ Full argument reference is available on the Datadog API reference page
 https://docs.datadoghq.com/api/
 '''
 
-# Import salt libs
+# Import built-in libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
+import re
+from functools import reduce
+
+# Import salt libs
+from salt.ext import six
+from salt.ext.six.moves import map
 from salt.exceptions import SaltInvocationError
 
 # Import third party libs
@@ -26,6 +37,8 @@ try:
 except ImportError:
     HAS_DATADOG = False
 
+log = logging.getLogger(__name__)
+
 # Define the module's virtual name
 __virtualname__ = 'datadog'
 
@@ -33,24 +46,8 @@ __virtualname__ = 'datadog'
 def __virtual__():
     if HAS_DATADOG:
         return 'datadog'
-    else:
-        message = 'Unable to import the python datadog module. Is it installed?'
-        return False, message
-
-
-def _initialize_connection(api_key, app_key):
-    '''
-    Initialize Datadog connection
-    '''
-    if api_key is None:
-        raise SaltInvocationError('api_key must be specified')
-    if app_key is None:
-        raise SaltInvocationError('app_key must be specified')
-    options = {
-        'api_key': api_key,
-        'app_key': app_key
-    }
-    datadog.initialize(**options)
+    message = 'Unable to import the python datadog module. Is it installed?'
+    return False, message
 
 
 def schedule_downtime(scope,
@@ -96,7 +93,7 @@ def schedule_downtime(scope,
         ret['result'] = True
         ret['comment'] = 'A schedule downtime API call would have been made.'
         return ret
-    _initialize_connection(api_key, app_key)
+    __utils__['datadog.initialize_connection'](api_key, app_key)
 
     # Schedule downtime
     try:
@@ -144,7 +141,7 @@ def cancel_downtime(api_key=None,
         raise SaltInvocationError('api_key must be specified')
     if app_key is None:
         raise SaltInvocationError('app_key must be specified')
-    _initialize_connection(api_key, app_key)
+    __utils__['datadog.initialize_connection'](api_key, app_key)
 
     ret = {'result': False,
            'response': None,
@@ -221,7 +218,7 @@ def post_event(api_key=None,
                                 max length of 100 characters.
     :param source_type_name:    The type of event being posted.
     '''
-    _initialize_connection(api_key, app_key)
+    __utils__['datadog.initialize_connection'](api_key, app_key)
     if title is None:
         raise SaltInvocationError('title must be specified')
     if text is None:
@@ -239,16 +236,17 @@ def post_event(api_key=None,
            'comment': ''}
 
     try:
-        response = datadog.api.Event.create(title=title,
-                                            text=text,
-                                            date_happened=date_happened,
-                                            priority=priority,
-                                            host=host,
-                                            tags=tags,
-                                            alert_type=alert_type,
-                                            aggregation_key=aggregation_key,
-                                            source_type_name=source_type_name
-                                           )
+        response = datadog.api.Event.create(
+            title=title,
+            text=text,
+            date_happened=date_happened,
+            priority=priority,
+            host=host,
+            tags=tags,
+            alert_type=alert_type,
+            aggregation_key=aggregation_key,
+            source_type_name=source_type_name
+        )
     except ValueError:
         comment = ('Unexpected exception in Datadog Post Event API '
                    'call. Are your keys correct?')
@@ -262,3 +260,426 @@ def post_event(api_key=None,
     else:
         ret['comment'] = 'Error in posting event.'
     return ret
+
+
+# The monitor functions simply pass tags and options along to the datadog
+# library. No modifications are made.
+# pylint: disable=dangerous-default-value
+def create_monitor(api_key=None,
+                   app_key=None,
+                   type=None,
+                   query=None,
+                   name=None,
+                   message=None,
+                   tags=[],
+                   options={}):
+    '''
+    Create a datadog monitor
+
+    Required arguments:
+
+    :param query: The query which triggers the monitor
+    :type query: str
+
+    :param type: The type of the monitor
+    :type type: str
+
+    Optional arguments:
+
+    :param name: The name of the monitor
+    :type name: str
+
+    :param message: The message sent when the monitor is triggered
+    :type message: message
+
+    :param tags: A list of tags to attach to the monitor
+    :type tags: list
+
+    :param options: An options dictionary
+    :type options: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call datadog.create_monitor \\
+            query='avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100' \\
+            app_key='0123456789' \\
+            api_key='9876543210'
+    '''
+    __utils__['datadog.initialize_connection'](api_key, app_key)
+
+    ret = {
+        'result': False,
+        'response': None,
+        'comment': ''
+    }
+
+    if __opts__['test']:
+        message = (
+            'A datadog monitor create call would be called.'
+        )
+        ret['result'] = None
+        ret['comment'] = message
+        return ret
+
+    if type == 'composite':
+        success, query = _generate_composite_query(query)
+        if not success:
+            ret['comment'] = query
+            return ret
+
+    res = datadog.api.Monitor.create(
+        type=type,
+        query=query,
+        name=name,
+        message=message,
+        tags=tags,
+        options=options
+    )
+
+    ret['response'] = res
+    if 'errors' in res.keys():
+        ret['comment'] = 'Failed to create monitor'
+        return ret
+
+    ret['result'] = True
+    ret['comment'] = 'Successfully created monitor {}'.format(res['name'])
+
+    return ret
+# pylint: enable=dangerous-default-value
+
+
+# pylint: disable=dangerous-default-value
+def read_monitor(api_key=None,
+                 app_key=None,
+                 id=None,
+                 name=None,
+                 group_states=None,
+                 tags=[],
+                 monitor_tags=[],
+                 with_downtimes=True):
+    '''
+    Get monitor details by name and filters or by id
+
+    Optional arguments:
+
+    :param id: A Datadog ID or list of IDs
+    :type id: int/str/list
+
+    :param name: A Datadog monitor name or list of names
+    :type name: str/list
+
+    :param group_states: Include additional information regarding group states
+    :type group_states: str
+
+    :param tags: A list of tags to filter by
+    :type tags: list
+
+    :param monitor_tags: A list of service or custom tags to filter by
+    :type monitor_tags: list
+
+    :param with_downtimes: Include current downtimes
+    :type with_downtimes: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call datadog.get_monitor id=4861948 \\
+            app_key='0123456789' \\
+            api_key='9876543210'
+
+    Note:
+
+    The tag filters act only on monitors specified by name.
+
+    Note:
+
+    If id is passed to this function, all other filter arguments will be ignored
+    '''
+
+    __utils__['datadog.initialize_connection'](api_key, app_key)
+
+    ret = {
+        'result': False,
+        'response': None,
+        'comment': ''
+    }
+
+    if __opts__['test']:
+        message = (
+            'A datadog monitor read call would be called for {}'
+        )
+        ret['result'] = None
+        ret['comment'] = message.format(
+            'ids {}'.format(id) if id is not None else 'names {}'.format(name)
+        )
+        return ret
+
+    response = []
+    if id is not None:
+        ids = []
+        if isinstance(id, list):
+            ids += id
+        else:
+            ids += [id]
+
+        for _id in ids:
+            if _id:
+                res = datadog.api.Monitor.get(
+                    _id,
+                    group_states=group_states
+                )
+                if 'errors' in res.keys():
+                    ret['response'] = res
+                    ret['comment'] = (
+                        'An error occured when trying to read monitors.'
+                    )
+                    return ret
+                else:
+                    response += [res]
+    else:
+        names = []
+        if isinstance(name, list):
+            names += name
+        else:
+            names += [name]
+
+        for _name in names:
+            res = __utils__['datadog.get_all_monitors'](
+                name=_name,
+                group_states=group_states,
+                tags=tags,
+                monitor_tags=monitor_tags,
+                with_downtimes=with_downtimes
+            )
+            if not res['result']:
+                ret['response'] = res['response']
+                ret['comment'] = (
+                    'An error occured when trying to read monitors.'
+                )
+                return ret
+            else:
+                response += res['response']
+
+    ret['result'] = True
+    ret['response'] = response
+    return ret
+# pylint: enable=dangerous-default-value
+
+
+# pylint: disable=dangerous-default-value
+def update_monitor(api_key=None,
+                   app_key=None,
+                   id=None,
+                   name=None,
+                   query=None,
+                   message='',
+                   options={},
+                   tags=[]):
+    '''
+    Modify a monitor by id or, if none is specified, then by name. If multiple
+    monitors match the name given, this function will take action on the first.
+
+    Optional arguments:
+
+    :param id: The type of the monitor
+    :type id: int
+
+    :param name: The type of the monitor
+    :type name: str
+
+    :param query: The type of the monitor
+    :type query: str
+
+    :param message: The type of the monitor
+    :type message: str
+
+    :param tags: The type of the monitor
+    :type tags: list
+
+    :param options: The type of the monitor
+    :type options: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call datadog.update_monitor name='CPU on host0 - last hour' \\
+            message='CPU has exceeded limit on host0' \\
+            app_key='0123456789' \\
+            api_key='9876543210'
+    '''
+
+    __utils__['datadog.initialize_connection'](api_key, app_key)
+
+    ret = {
+        'result': False,
+        'response': None,
+        'comment': ''
+    }
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'A datadog monitor create call would be called.'
+        return ret
+
+    if id:  # Update the monitor with given ID
+        _id = id
+    elif name:  # Find ID of monitor with given name
+        ids = __utils__['datadog.find_monitors_with_name'](
+            api_key=api_key,
+            app_key=app_key,
+            name=name
+        )
+        if ids:  # Monitor with given name exists
+            _id = ids[0]
+        else:
+            ret['comment'] = "Can't find monitor with name {}".format(name)
+            return ret
+    else:
+        raise SaltInvocationError('Either id or name must be specified.')
+
+    res = datadog.api.Monitor.update(
+        int(_id),
+        name=name,
+        query=query,
+        message=message,
+        options=options,
+        tags=tags
+    )
+
+    ret['response'] = res
+    if 'errors' in res.keys():
+        ret['comment'] = 'Update call failed.'
+        return ret
+
+    ret['result'] = True
+    ret['comment'] = 'Update call returned successfully.'
+    return ret
+# pylint: enable=dangerous-default-value
+
+
+def delete_monitor(api_key=None,
+                   app_key=None,
+                   id=None,
+                   name=None):
+    '''
+    Delete a monitor by ID or name
+
+    .. warning::
+
+    Datadog supports multiple monitors with the same name and different IDs. If
+    passed a name, this module will delete all monitors with that name.
+
+    Optional arguments:
+
+    :param id:       (str/list) - A Datadog ID or list of IDs
+    :type id:       (str/list) - A Datadog ID or list of IDs
+
+    :param name:     (str/list) - A name or list of names
+    :type name:     (str/list) - A name or list of names
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call datadog.delete_monitor name='CPU on host0 - last hour'\\
+            app_key='0123456789' \\
+            api_key='9876543210'
+    '''
+
+    __utils__['datadog.initialize_connection'](api_key, app_key)
+
+    ret = {
+        'result': False,
+        'response': None,
+        'comment': ''
+    }
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'A datadog monitor delete call would be called.'
+        return ret
+
+    ids = []
+    if isinstance(id, (int, str)):
+        id = [id]
+    if isinstance(id, list):
+        ids += id
+    if isinstance(name, str):
+        name = [name]
+    if isinstance(name, list):
+        for _name in name:
+            ids += __utils__['datadog.find_monitors_with_name'](
+                api_key=api_key,
+                app_key=app_key,
+                name=_name
+            )
+
+    response = list(map(datadog.api.Monitor.delete, ids))
+    intermediate = ['deleted_monitor_id' in res for res in response]
+    reduced = reduce(lambda x, y: x and y, intermediate, True)
+
+    ret['response'] = response
+    if not reduced:
+        ret['result'] = False
+        failed_ids = []
+        while True:
+            try:
+                _index = intermediate.index(False)
+            except ValueError:
+                break
+            failed_ids.append(ids[_index])
+            intermediate.pop(_index)
+        ret['comment'] = 'Failed to delete indices {}'.format(', '.join(failed_ids))
+        return ret
+
+    ret['result'] = True
+    ret['comment'] = (
+        'Successfuly deleted monitors {}'.format(', '.join(ids))
+    )
+
+    return ret
+
+
+def _generate_composite_query(query):
+    '''
+    Composite queries must be defined with monitor IDS. Replace names with
+    monitor ids.
+    '''
+
+    word = r'\s*[a-zA-Z0-9\'\.\-\\_:/,%]+\s*'
+    patterns = {
+        'id': r'\d+',
+        'name': r'({})+'.format(word),
+        'open_parentheses': r'\(',
+        'closed_parentheses': r'\)',
+        'and': r'&&',
+        'or': r'\|\|'
+    }
+
+    tokens = []
+    while query:
+        for _name, _pattern in six.iteritems(patterns):
+            _match = re.match(_pattern, query)
+            if _match:
+                token = _match.group(0).rstrip(' ')
+                tokens.append(token)
+                query = query[len(token):].lstrip(' ')
+                break
+        else:  # string did not match patterns
+            return False, 'Trouble matching string {}.'.format(query)
+
+    replaced_tokens = []
+    for token in tokens:
+        if re.match(patterns['name'], token):
+            _id = __utils__['datadog.find_monitors_with_name'](name=token)
+            if not _id:
+                return False, 'Could not find monitor {}.'.format(token)
+            replaced_tokens.append(_id[0])
+        else:
+            replaced_tokens.append(token)
+
+    return True, ' '.join(replaced_tokens)
