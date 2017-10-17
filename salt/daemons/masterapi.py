@@ -370,24 +370,24 @@ class AutoKey(object):
         return True
 
     def check_autosign_grains(self, autosign_grains):
-        if not autosign_grains or 'autosign_grains_dir' not in self.opts:
+        if not autosign_grains or u'autosign_grains_dir' not in self.opts:
             return False
 
-        autosign_grains_dir = self.opts['autosign_grains_dir']
+        autosign_grains_dir = self.opts[u'autosign_grains_dir']
         for root, dirs, filenames in os.walk(autosign_grains_dir):
             for grain in filenames:
                 if grain in autosign_grains:
                     grain_file = os.path.join(autosign_grains_dir, grain)
                     try:
-                        with salt.utils.fopen(grain_file, 'r') as f:
+                        with salt.utils.files.fopen(grain_file, u'r') as f:
                             for line in f:
                                 line = line.strip()
-                                if line.startswith('#'):
+                                if line.startswith(u'#'):
                                     continue
                                 if autosign_grains[grain] == line:
                                     return True
                     except (IOError, OSError):
-                        message = 'Error while opening {}, ignoring content'
+                        message = u'Error while opening {}, ignoring content'
                         log.warning(message.format(grain_file))
                         continue
         return False
