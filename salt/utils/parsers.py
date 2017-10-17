@@ -30,12 +30,14 @@ import salt.defaults.exitcodes
 import salt.log.setup as log
 import salt.syspaths as syspaths
 import salt.version as version
-import salt.utils
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.kinds as kinds
 import salt.utils.platform
+import salt.utils.process
+import salt.utils.stringutils
+import salt.utils.user
 import salt.utils.xdg
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
@@ -772,12 +774,13 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # Since we're not be able to write to the log file or its parent
             # directory (if the log file does not exit), are we the same user
             # as the one defined in the configuration file?
-            current_user = salt.utils.get_user()
+            current_user = salt.utils.user.get_user()
             if self.config['user'] != current_user:
                 # Yep, not the same user!
                 # Is the current user in ACL?
                 acl = self.config['publisher_acl']
-                if salt.utils.check_whitelist_blacklist(current_user, whitelist=six.iterkeys(acl)):
+                if salt.utils.stringutils.check_whitelist_blacklist(
+                            current_user, whitelist=six.iterkeys(acl)):
                     # Yep, the user is in ACL!
                     # Let's write the logfile to its home directory instead.
                     xdg_dir = salt.utils.xdg.xdg_config_dir()
@@ -1003,7 +1006,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                 log.shutdown_multiprocessing_logging_listener(daemonizing=True)
 
             # Late import so logging works correctly
-            salt.utils.daemonize()
+            salt.utils.process.daemonize()
 
         # Setup the multiprocessing log queue listener if enabled
         self._setup_mp_logging_listener()

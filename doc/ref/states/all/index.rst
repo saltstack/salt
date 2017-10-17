@@ -267,6 +267,7 @@ state modules
     tuned
     uptime
     user
+    vagrant
     vault
     vbox_guest
     victorops

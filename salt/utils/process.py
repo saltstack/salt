@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for daemonizing and otherwise modifying running processes
+'''
 
 # Import python libs
 from __future__ import absolute_import, with_statement
@@ -20,7 +23,6 @@ import socket
 
 # Import salt libs
 import salt.defaults.exitcodes
-import salt.utils  # Can be removed once appendproctitle is moved
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -42,6 +44,90 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     pass
+
+try:
+    import setproctitle
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
+
+
+def appendproctitle(name):
+    '''
+    Append "name" to the current process title
+    '''
+    if HAS_SETPROCTITLE:
+        setproctitle.setproctitle(setproctitle.getproctitle() + ' ' + name)
+
+
+def daemonize(redirect_out=True):
+    '''
+    Daemonize a process
+    '''
+    # Avoid circular import
+    import salt.utils.crypt
+    try:
+        pid = os.fork()
+        if pid > 0:
+            # exit first parent
+            salt.utils.crypt.reinit_crypto()
+            sys.exit(salt.defaults.exitcodes.EX_OK)
+    except OSError as exc:
+        log.error(
+            'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
+        )
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
+    # decouple from parent environment
+    os.chdir('/')
+    # noinspection PyArgumentList
+    os.setsid()
+    os.umask(18)
+
+    # do second fork
+    try:
+        pid = os.fork()
+        if pid > 0:
+            salt.utils.crypt.reinit_crypto()
+            sys.exit(salt.defaults.exitcodes.EX_OK)
+    except OSError as exc:
+        log.error(
+            'fork #2 failed: {0} ({1})'.format(
+                exc.errno, exc.strerror
+            )
+        )
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
+    salt.utils.crypt.reinit_crypto()
+
+    # A normal daemonization redirects the process output to /dev/null.
+    # Unfortunately when a python multiprocess is called the output is
+    # not cleanly redirected and the parent process dies when the
+    # multiprocessing process attempts to access stdout or err.
+    if redirect_out:
+        with salt.utils.files.fopen('/dev/null', 'r+') as dev_null:
+            # Redirect python stdin/out/err
+            # and the os stdin/out/err which can be different
+            os.dup2(dev_null.fileno(), sys.stdin.fileno())
+            os.dup2(dev_null.fileno(), sys.stdout.fileno())
+            os.dup2(dev_null.fileno(), sys.stderr.fileno())
+            os.dup2(dev_null.fileno(), 0)
+            os.dup2(dev_null.fileno(), 1)
+            os.dup2(dev_null.fileno(), 2)
+
+
+def daemonize_if(opts):
+    '''
+    Daemonize a module function process if multiprocessing is True and the
+    process is not being called by salt-call
+    '''
+    if 'salt-call' in sys.argv[0]:
+        return
+    if not opts.get('multiprocessing', True):
+        return
+    if sys.platform.startswith('win'):
+        return
+    daemonize(False)
 
 
 def systemd_notify_call(action):
@@ -397,7 +483,7 @@ class ProcessManager(object):
         Load and start all available api modules
         '''
         log.debug('Process Manager starting!')
-        salt.utils.appendproctitle(self.name)
+        appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:

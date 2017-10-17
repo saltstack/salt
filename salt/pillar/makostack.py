@@ -407,13 +407,13 @@ def __virtual__():
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
-    import salt.utils
+    import salt.utils.data
     stack = {}
     stack_config_files = list(args)
     traverse = {
-        'pillar': partial(salt.utils.traverse_dict_and_list, pillar),
-        'grains': partial(salt.utils.traverse_dict_and_list, __grains__),
-        'opts': partial(salt.utils.traverse_dict_and_list, __opts__),
+        'pillar': partial(salt.utils.data.traverse_dict_and_list, pillar),
+        'grains': partial(salt.utils.data.traverse_dict_and_list, __grains__),
+        'opts': partial(salt.utils.data.traverse_dict_and_list, __opts__),
         }
     for matcher, matchs in six.iteritems(kwargs):
         t, matcher = matcher.split(':', 1)

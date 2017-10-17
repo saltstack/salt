@@ -298,7 +298,8 @@ def create(vm_):
         'size': get_size(vm_),
         'image': get_image(vm_),
         'region': get_location(vm_),
-        'ssh_keys': []
+        'ssh_keys': [],
+        'tags': []
     }
 
     # backwards compat
@@ -378,6 +379,10 @@ def create(vm_):
         if not isinstance(ipv6, bool):
             raise SaltCloudConfigError("'ipv6' should be a boolean value.")
         kwargs['ipv6'] = ipv6
+
+    kwargs['tags'] = config.get_cloud_config_value(
+        'tags', vm_, __opts__, search_global=False, default=False
+    )
 
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False, default=None

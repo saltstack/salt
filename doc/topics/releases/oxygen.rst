@@ -56,6 +56,12 @@ The new grains added are:
 * ``fc_wwn``: Show all fibre channel world wide port names for a host
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
 
+Grains Changes
+--------------
+
+* The ``virtual`` grain identifies reports KVM and VMM hypervisors when running
+  an OpenBSD guest
+
 New Modules
 -----------
 
@@ -131,6 +137,56 @@ file. For example:
            - echo 'hello world!'
 
 These commands will run in sequence **before** the bootstrap script is executed.
+
+New salt-cloud Grains
+=====================
+
+When salt cloud creates a new minon, it will now add grain information
+to the minion configuration file, identifying the resources originally used
+to create it.
+
+The generated grain information will appear similar to:
+
+.. code-block:: yaml
+    grains:
+      salt-cloud:
+        driver: ec2
+        provider: my_ec2:ec2
+        profile: ec2-web
+The generation of salt-cloud grains can be surpressed by the
+option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
+
+Upgraded Saltify Driver
+=======================
+
+The salt-cloud Saltify driver is used to provision machines which
+are not controlled by a dedicated cloud supervisor (such as typical hardware
+machines) by pushing a salt-bootstrap command to them and accepting them on
+the salt master. Creation of a node has been its only function and no other
+salt-cloud commands were implemented.
+
+With this upgrade, it can use the salt-api to provide advanced control,
+such as rebooting a machine, querying it along with conventional cloud minions,
+and, ultimately, disconnecting it from its master.
+
+After disconnection from ("destroying" on) one master, a machine can be
+re-purposed by connecting to ("creating" on) a subsequent master.
+
+New Vagrant Driver
+==================
+
+The salt-cloud Vagrant driver brings virtual machines running in a limited
+environment, such as a programmer's workstation, under salt-cloud control.
+This can be useful for experimentation, instruction, or testing salt configurations.
+
+Using salt-api on the master, and a salt-minion running on the host computer,
+the Vagrant driver can create (``vagrant up``), restart (``vagrant reload``),
+and destroy (``vagrant destroy``) VMs, as controlled by salt-cloud profiles
+which designate a ``Vagrantfile`` on the host machine.
+
+The master can be a very limited machine, such as a Raspberry Pi, or a small
+VagrantBox VM.
+
 
 New pillar/master_tops module called saltclass
 ----------------------------------------------

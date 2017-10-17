@@ -15,7 +15,6 @@ import stat
 
 # Import salt libs
 import salt.crypt
-import salt.utils
 import salt.cache
 import salt.client
 import salt.payload
@@ -29,6 +28,7 @@ import salt.key
 import salt.fileserver
 import salt.utils.args
 import salt.utils.atomicfile
+import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gitfs
@@ -38,6 +38,8 @@ import salt.utils.gzip_util
 import salt.utils.jid
 import salt.utils.minions
 import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.user
 import salt.utils.verify
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
@@ -227,7 +229,7 @@ def access_keys(opts):
     acl_users = set(publisher_acl.keys())
     if opts.get('user'):
         acl_users.add(opts['user'])
-    acl_users.add(salt.utils.get_user())
+    acl_users.add(salt.utils.user.get_user())
     for user in acl_users:
         log.info('Preparing the %s key for local communication', user)
         key = mk_key(opts, user)
@@ -239,7 +241,7 @@ def access_keys(opts):
         log.profile('Beginning pwd.getpwall() call in masterapi access_keys function')
         for user in pwd.getpwall():
             user = user.pw_name
-            if user not in keys and salt.utils.check_whitelist_blacklist(user, whitelist=acl_users):
+            if user not in keys and salt.utils.stringutils.check_whitelist_blacklist(user, whitelist=acl_users):
                 keys[user] = mk_key(opts, user)
         log.profile('End pwd.getpwall() call in masterapi access_keys function')
 
@@ -286,7 +288,7 @@ class AutoKey(object):
             pwnam = pwd.getpwnam(user)
             uid = pwnam[2]
             gid = pwnam[3]
-            groups = salt.utils.get_gid_list(user, include_default=False)
+            groups = salt.utils.user.get_gid_list(user, include_default=False)
         except KeyError:
             log.error(
                 'Failed to determine groups for user {0}. The user is not '
@@ -340,7 +342,7 @@ class AutoKey(object):
                 if line.startswith('#'):
                     continue
                 else:
-                    if salt.utils.expr_match(keyid, line):
+                    if salt.utils.stringutils.expr_match(keyid, line):
                         return True
         return False
 
@@ -1233,7 +1235,9 @@ class LocalFuncs(object):
                         auth_ret = True
 
             if auth_ret is not True:
-                auth_list = salt.utils.get_values_of_matching_keys(
+                # Avoid circular import
+                import salt.utils.master
+                auth_list = salt.utils.master.get_values_of_matching_keys(
                         self.opts['publisher_acl'],
                         auth_ret)
                 if not auth_list:

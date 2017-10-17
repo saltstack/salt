@@ -184,7 +184,7 @@ def rsync(src,
             else:
                 raise CommandExecutionError('{0} does not exist'.format(src))
         else:
-            tmp_src = salt.utils.mkstemp()
+            tmp_src = salt.utils.files.mkstemp()
             file_src = __salt__['cp.get_file'](_src,
                                                tmp_src,
                                                saltenv)

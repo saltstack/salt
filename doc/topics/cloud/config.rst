@@ -540,6 +540,17 @@ machines which are already installed, but not Salted. For more information about
 this driver and for configuration examples, please see the
 :ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
 
+.. _config_vagrant:
+
+Vagrant
+-------
+
+The Vagrant driver is a new, experimental driver for controlling a VagrantBox
+virtual machine, and installing Salt on it. The target host machine must be a
+working salt minion, which is controlled via the salt master using salt-api.
+For more information, see
+:ref:`Getting Started With Vagrant <getting-started-with-vagrant>`.
+
 
 Extending Profiles and Cloud Providers Configuration
 ====================================================

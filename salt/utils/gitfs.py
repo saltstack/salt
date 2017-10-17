@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Classes which provide the shared base for GitFS, git_pillar, and winrepo
+'''
 
 # Import python libs
 from __future__ import absolute_import
@@ -20,14 +23,17 @@ import time
 from datetime import datetime
 
 # Import salt libs
-import salt.utils
 import salt.utils.configparser
+import salt.utils.data
 import salt.utils.files
+import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.url
+import salt.utils.user
 import salt.utils.versions
 import salt.fileserver
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
@@ -181,7 +187,7 @@ class GitProvider(object):
                  override_params, cache_root, role='gitfs'):
         self.opts = opts
         self.role = role
-        self.global_saltenv = salt.utils.repack_dictlist(
+        self.global_saltenv = salt.utils.data.repack_dictlist(
             self.opts.get('{0}_saltenv'.format(self.role), []),
             strict=True,
             recurse=True,
@@ -218,7 +224,7 @@ class GitProvider(object):
             self.id = next(iter(remote))
             self.get_url()
 
-            per_remote_conf = salt.utils.repack_dictlist(
+            per_remote_conf = salt.utils.data.repack_dictlist(
                 remote[self.id],
                 strict=True,
                 recurse=True,
@@ -865,7 +871,7 @@ class GitProvider(object):
         Check if an environment is exposed by comparing it against a whitelist
         and blacklist.
         '''
-        return salt.utils.check_whitelist_blacklist(
+        return salt.utils.stringutils.check_whitelist_blacklist(
             tgt_env,
             whitelist=self.saltenv_whitelist,
             blacklist=self.saltenv_blacklist,
@@ -1494,7 +1500,7 @@ class Pygit2(GitProvider):
                     # https://github.com/libgit2/libgit2/issues/2122
                     if "Error stat'ing config file" not in str(exc):
                         raise
-                    home = pwd.getpwnam(salt.utils.get_user()).pw_dir
+                    home = pwd.getpwnam(salt.utils.user.get_user()).pw_dir
                     pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
                     self.repo = pygit2.Repository(self.cachedir)
             except KeyError:
@@ -2618,7 +2624,7 @@ class GitFS(GitBase):
         with salt.utils.files.fopen(fpath, 'rb') as fp_:
             fp_.seek(load['loc'])
             data = fp_.read(self.opts['file_buffer_size'])
-            if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+            if data and six.PY3 and not salt.utils.files.is_binary(fpath):
                 data = data.decode(__salt_system_encoding__)
             if gzip and data:
                 data = salt.utils.gzip_util.compress(data, gzip)
@@ -2646,7 +2652,7 @@ class GitFS(GitBase):
         if not os.path.isfile(hashdest):
             if not os.path.exists(os.path.dirname(hashdest)):
                 os.makedirs(os.path.dirname(hashdest))
-            ret['hsum'] = salt.utils.get_hash(path, self.opts['hash_type'])
+            ret['hsum'] = salt.utils.hashutils.get_hash(path, self.opts['hash_type'])
             with salt.utils.files.fopen(hashdest, 'w+') as fp_:
                 fp_.write(ret['hsum'])
             return ret

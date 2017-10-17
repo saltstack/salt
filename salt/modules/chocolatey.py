@@ -14,7 +14,7 @@ import re
 import tempfile
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.platform
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError, \
@@ -274,9 +274,9 @@ def list_(narrow=None,
     cmd = [choc_path, 'list']
     if narrow:
         cmd.append(narrow)
-    if salt.utils.is_true(all_versions):
+    if salt.utils.data.is_true(all_versions):
         cmd.append('--allversions')
-    if salt.utils.is_true(pre_versions):
+    if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
     if source:
         cmd.extend(['--source', source])
@@ -452,9 +452,9 @@ def install(name,
         cmd.extend(['--version', version])
     if source:
         cmd.extend(['--source', source])
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         cmd.append('--force')
-    if salt.utils.is_true(pre_versions):
+    if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
     if install_args:
         cmd.extend(['--installarguments', install_args])
@@ -802,9 +802,9 @@ def upgrade(name,
         cmd.extend(['-version', version])
     if source:
         cmd.extend(['--source', source])
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         cmd.append('--force')
-    if salt.utils.is_true(pre_versions):
+    if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
     if install_args:
         cmd.extend(['--installarguments', install_args])
@@ -862,7 +862,7 @@ def update(name, source=None, pre_versions=False, no_progress=False):
     cmd = [choc_path, 'update', name]
     if source:
         cmd.extend(['--source', source])
-    if salt.utils.is_true(pre_versions):
+    if salt.utils.data.is_true(pre_versions):
         cmd.append('--prerelease')
     if no_progress:
         cmd.append(_no_progress(__context__))

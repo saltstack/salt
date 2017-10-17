@@ -21,7 +21,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.config
 import salt.loader
-import salt.utils
+import salt.utils.hashutils
 import salt.utils.odict
 import salt.utils.platform
 import salt.modules.state as state
@@ -135,6 +135,9 @@ class MockState(object):
             data = data
             ret = ret
             return True
+
+        def requisite_in(self, data):  # pylint: disable=unused-argument
+            return data, []
 
     class HighState(object):
         '''
@@ -969,7 +972,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(state.pkg(tar_file, "", "md5"), {})
 
             mock = MagicMock(side_effect=[False, 0, 0, 0, 0])
-            with patch.object(salt.utils, 'get_hash', mock):
+            with patch.object(salt.utils.hashutils, 'get_hash', mock):
                 # Verify hash
                 self.assertDictEqual(state.pkg(tar_file, "", "md5"), {})
 

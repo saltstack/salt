@@ -28,11 +28,13 @@ from salt.ext.six.moves import input
 import salt.config
 import salt.loader
 import salt.transport.client
-import salt.utils
 import salt.utils.args
+import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.user
 import salt.utils.versions
+import salt.utils.zeromq
 import salt.payload
 
 log = logging.getLogger(__name__)
@@ -87,9 +89,10 @@ class LoadAuth(object):
         fstr = '{0}.auth'.format(load['eauth'])
         if fstr not in self.auth:
             return False
-        fcall = salt.utils.format_call(self.auth[fstr],
-                                       load,
-                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        fcall = salt.utils.args.format_call(
+            self.auth[fstr],
+            load,
+            expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             if 'kwargs' in fcall:
                 return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
@@ -133,9 +136,10 @@ class LoadAuth(object):
         fstr = '{0}.acl'.format(mod)
         if fstr not in self.auth:
             return None
-        fcall = salt.utils.format_call(self.auth[fstr],
-                                       load,
-                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        fcall = salt.utils.args.format_call(
+            self.auth[fstr],
+            load,
+            expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except Exception as e:
@@ -168,9 +172,10 @@ class LoadAuth(object):
         fstr = '{0}.groups'.format(load['eauth'])
         if fstr not in self.auth:
             return False
-        fcall = salt.utils.format_call(self.auth[fstr],
-                                       load,
-                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        fcall = salt.utils.args.format_call(
+            self.auth[fstr],
+            load,
+            expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except IndexError:
@@ -333,7 +338,7 @@ class LoadAuth(object):
                     log.warning(error_msg)
                     return False
         else:
-            if auth_key != key[salt.utils.get_user()]:
+            if auth_key != key[salt.utils.user.get_user()]:
                 log.warning(error_msg)
                 return False
         return True
@@ -652,7 +657,7 @@ class Resolver(object):
 
     def _send_token_request(self, load):
         if self.opts['transport'] in ('zeromq', 'tcp'):
-            master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
+            master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
                          ':' + str(self.opts['ret_port'])
             channel = salt.transport.client.ReqChannel.factory(self.opts,
                                                                 crypt='clear',
@@ -695,7 +700,7 @@ class Resolver(object):
 
         # Use current user if empty
         if 'username' in ret and not ret['username']:
-            ret['username'] = salt.utils.get_user()
+            ret['username'] = salt.utils.user.get_user()
 
         return ret
 
@@ -766,7 +771,7 @@ class AuthUser(object):
         Returns True if the user is the same user as the one running
         this process and False if not.
         '''
-        return self.user == salt.utils.get_user()
+        return self.user == salt.utils.user.get_user()
 
     def sudo_name(self):
         '''

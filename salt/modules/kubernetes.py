@@ -177,11 +177,11 @@ def _cleanup(**kwargs):
     cert = kubernetes.client.configuration.cert_file
     key = kubernetes.client.configuration.key_file
     if cert and os.path.exists(cert) and os.path.basename(cert).startswith('salt-kube-'):
-        salt.utils.safe_rm(cert)
+        salt.utils.files.safe_rm(cert)
     if key and os.path.exists(key) and os.path.basename(key).startswith('salt-kube-'):
-        salt.utils.safe_rm(key)
+        salt.utils.files.safe_rm(key)
     if ca and os.path.exists(ca) and os.path.basename(ca).startswith('salt-kube-'):
-        salt.utils.safe_rm(ca)
+        salt.utils.files.safe_rm(ca)
 
 
 def ping(**kwargs):
