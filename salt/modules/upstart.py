@@ -54,9 +54,9 @@ import itertools
 import fnmatch
 
 # Import salt libs
-import salt.utils
-import salt.utils.files
 import salt.modules.cmdmod
+import salt.utils.files
+import salt.utils.path
 import salt.utils.systemd
 
 __func_alias__ = {
@@ -482,7 +482,7 @@ def _get_service_exec():
     http://www.debian.org/doc/debian-policy/ch-opersys.html#s9.3.3
     '''
     executable = 'update-rc.d'
-    salt.utils.check_or_die(executable)
+    salt.utils.path.check_or_die(executable)
     return executable
 
 

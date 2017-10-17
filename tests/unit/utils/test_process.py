@@ -10,9 +10,13 @@ import multiprocessing
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
+from tests.support.mock import (
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 
 # Import salt libs
-import salt.utils
 import salt.utils.process
 
 # Import 3rd-party libs
@@ -27,7 +31,7 @@ class TestProcessManager(TestCase):
         Make sure that the process is alive 2s later
         '''
         def spin():
-            salt.utils.appendproctitle('test_basic')
+            salt.utils.process.appendproctitle('test_basic')
             while True:
                 time.sleep(1)
 
@@ -50,7 +54,7 @@ class TestProcessManager(TestCase):
 
     def test_kill(self):
         def spin():
-            salt.utils.appendproctitle('test_kill')
+            salt.utils.process.appendproctitle('test_kill')
             while True:
                 time.sleep(1)
 
@@ -79,7 +83,7 @@ class TestProcessManager(TestCase):
         Make sure that the process is alive 2s later
         '''
         def die():
-            salt.utils.appendproctitle('test_restarting')
+            salt.utils.process.appendproctitle('test_restarting')
 
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(die)
@@ -101,7 +105,7 @@ class TestProcessManager(TestCase):
     @skipIf(sys.version_info < (2, 7), 'Needs > Py 2.7 due to bug in stdlib')
     def test_counter(self):
         def incr(counter, num):
-            salt.utils.appendproctitle('test_counter')
+            salt.utils.process.appendproctitle('test_counter')
             for _ in range(0, num):
                 counter.value += 1
         counter = multiprocessing.Value('i', 0)
@@ -162,3 +166,25 @@ class TestThreadPool(TestCase):
         self.assertEqual(counter.value, 0)
         # make sure the queue is still full
         self.assertEqual(pool._job_queue.qsize(), 1)
+
+
+class TestProcess(TestCase):
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_daemonize_if(self):
+        # pylint: disable=assignment-from-none
+        with patch('sys.argv', ['salt-call']):
+            ret = salt.utils.process.daemonize_if({})
+            self.assertEqual(None, ret)
+
+        ret = salt.utils.process.daemonize_if({'multiprocessing': False})
+        self.assertEqual(None, ret)
+
+        with patch('sys.platform', 'win'):
+            ret = salt.utils.process.daemonize_if({})
+            self.assertEqual(None, ret)
+
+        with patch('salt.utils.process.daemonize'):
+            salt.utils.process.daemonize_if({})
+            self.assertTrue(salt.utils.process.daemonize.called)
+        # pylint: enable=assignment-from-none

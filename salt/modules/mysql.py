@@ -43,7 +43,7 @@ import shlex
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.files
 
 # Import third party libs
@@ -1228,8 +1228,8 @@ def user_exists(user,
     args['user'] = user
     args['host'] = host
 
-    if salt.utils.is_true(passwordless):
-        if salt.utils.is_true(unix_socket):
+    if salt.utils.data.is_true(passwordless):
+        if salt.utils.data.is_true(unix_socket):
             qry += ' AND plugin=%(unix_socket)s'
             args['unix_socket'] = 'unix_socket'
         else:
@@ -1356,8 +1356,8 @@ def user_create(user,
     elif password_hash is not None:
         qry += ' IDENTIFIED BY PASSWORD %(password)s'
         args['password'] = password_hash
-    elif salt.utils.is_true(allow_passwordless):
-        if salt.utils.is_true(unix_socket):
+    elif salt.utils.data.is_true(allow_passwordless):
+        if salt.utils.data.is_true(unix_socket):
             if host == 'localhost':
                 qry += ' IDENTIFIED VIA unix_socket'
             else:
@@ -1441,7 +1441,7 @@ def user_chpass(user,
     elif password_hash is not None:
         password_sql = '%(password)s'
         args['password'] = password_hash
-    elif not salt.utils.is_true(allow_passwordless):
+    elif not salt.utils.data.is_true(allow_passwordless):
         log.error('password or password_hash must be specified, unless '
                   'allow_passwordless=True')
         return False
@@ -1461,8 +1461,8 @@ def user_chpass(user,
            ' WHERE User=%(user)s AND Host = %(host)s;')
     args['user'] = user
     args['host'] = host
-    if salt.utils.is_true(allow_passwordless) and \
-            salt.utils.is_true(unix_socket):
+    if salt.utils.data.is_true(allow_passwordless) and \
+            salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
             qry = ('UPDATE mysql.user SET ' + password_column + '='
                    + password_sql + ', plugin=%(unix_socket)s' +
@@ -1715,7 +1715,7 @@ def __grant_generate(grant,
     args['host'] = host
     if isinstance(ssl_option, list) and len(ssl_option):
         qry += __ssl_option_sanitize(ssl_option)
-    if salt.utils.is_true(grant_option):
+    if salt.utils.data.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
     log.debug('Grant Query generated: {0} args {1}'.format(qry, repr(args)))
     return {'qry': qry, 'args': args}
@@ -1903,7 +1903,7 @@ def grant_revoke(grant,
 
     grant = __grant_normalize(grant)
 
-    if salt.utils.is_true(grant_option):
+    if salt.utils.data.is_true(grant_option):
         grant += ', GRANT OPTION'
 
     db_part = database.rpartition('.')

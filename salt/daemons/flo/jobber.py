@@ -19,11 +19,11 @@ import json
 # Import salt libs
 from salt.ext import six
 import salt.daemons.masterapi
-import salt.utils
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
 import salt.utils.kinds as kinds
+import salt.utils.process
 import salt.utils.stringutils
 import salt.transport
 from raet import raeting, nacling
@@ -273,7 +273,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         data = msg['pub']
         fn_ = os.path.join(self.proc_dir, data['jid'])
         self.opts['__ex_id'] = data['jid']
-        salt.utils.daemonize_if(self.opts)
+        salt.utils.process.daemonize_if(self.opts)
 
         salt.transport.jobber_stack = stack = self._setup_jobber_stack()
         # set up return destination from source

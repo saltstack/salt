@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+Functions which implement running reactor jobs
+'''
+
 
 # Import python libs
 from __future__ import absolute_import
@@ -10,7 +14,7 @@ import logging
 import salt.client
 import salt.runner
 import salt.state
-import salt.utils
+import salt.utils.args
 import salt.utils.cache
 import salt.utils.data
 import salt.utils.event
@@ -232,7 +236,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         '''
         Enter into the server loop
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
 
         # instantiate some classes inside our new process
         self.event = salt.utils.event.get_event(
@@ -338,7 +342,7 @@ class ReactWrap(object):
             )
 
         try:
-            wrap_call = salt.utils.format_call(l_fun, low)
+            wrap_call = salt.utils.args.format_call(l_fun, low)
             args = wrap_call.get('args', ())
             kwargs = wrap_call.get('kwargs', {})
             # TODO: Setting user doesn't seem to work for actual remote pubs
@@ -403,7 +407,7 @@ class ReactWrap(object):
                             )
                             return
 
-                        react_call = salt.utils.format_call(
+                        react_call = salt.utils.args.format_call(
                             react_fun,
                             low,
                             expected_extra_kws=REACTOR_INTERNAL_KEYWORDS

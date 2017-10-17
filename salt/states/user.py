@@ -29,7 +29,7 @@ import os
 import logging
 
 # Import Salt libs
-import salt.utils  # Can be removed once date_format is moved
+import salt.utils.dateutils
 import salt.utils.platform
 import salt.utils.user
 from salt.utils.locales import sdecode, sdecode_if_string
@@ -148,7 +148,7 @@ def _changes(name,
         if expire and lshad['expire'] != expire:
             change['expire'] = expire
     elif 'shadow.info' in __salt__ and salt.utils.platform.is_windows():
-        if expire and expire is not -1 and salt.utils.date_format(lshad['expire']) != salt.utils.date_format(expire):
+        if expire and expire is not -1 and salt.utils.dateutils.strftime(lshad['expire']) != salt.utils.dateutils.strftime(expire):
             change['expire'] = expire
 
     # GECOS fields
@@ -752,7 +752,7 @@ def present(name,
                 if expire:
                     __salt__['shadow.set_expire'](name, expire)
                     spost = __salt__['shadow.info'](name)
-                    if salt.utils.date_format(spost['expire']) != salt.utils.date_format(expire):
+                    if salt.utils.dateutils.strftime(spost['expire']) != salt.utils.dateutils.strftime(expire):
                         ret['comment'] = 'User {0} created but failed to set' \
                                          ' expire days to' \
                                          ' {1}'.format(name, expire)

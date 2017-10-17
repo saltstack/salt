@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
+'''
+Functions dealing with encryption
+'''
 
 from __future__ import absolute_import
 
 # Import Python libs
+import hashlib
 import logging
+import os
 
 log = logging.getLogger(__name__)
 
 # Import Salt libs
 import salt.loader
+import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
 try:
@@ -106,3 +112,29 @@ def reinit_crypto():
     '''
     if HAS_CRYPTO:
         Crypto.Random.atfork()
+
+
+def pem_finger(path=None, key=None, sum_type='sha256'):
+    '''
+    Pass in either a raw pem string, or the path on disk to the location of a
+    pem file, and the type of cryptographic hash to use. The default is SHA256.
+    The fingerprint of the pem will be returned.
+
+    If neither a key nor a path are passed in, a blank string will be returned.
+    '''
+    if not key:
+        if not os.path.isfile(path):
+            return ''
+
+        with salt.utils.files.fopen(path, 'rb') as fp_:
+            key = b''.join([x for x in fp_.readlines() if x.strip()][1:-1])
+
+    pre = getattr(hashlib, sum_type)(key).hexdigest()
+    finger = ''
+    for ind, _ in enumerate(pre):
+        if ind % 2:
+            # Is odd
+            finger += '{0}:'.format(pre[ind])
+        else:
+            finger += pre[ind]
+    return finger.rstrip(':')

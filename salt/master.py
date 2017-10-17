@@ -47,7 +47,6 @@ import tornado.gen  # pylint: disable=F0401
 
 # Import salt libs
 import salt.crypt
-import salt.utils
 import salt.client
 import salt.payload
 import salt.pillar
@@ -65,6 +64,7 @@ import salt.transport.server
 import salt.log.setup
 import salt.utils.args
 import salt.utils.atomicfile
+import salt.utils.crypt
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gitfs
@@ -222,7 +222,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         This is where any data that needs to be cleanly maintained from the
         master is maintained.
         '''
-        salt.utils.appendproctitle(u'Maintenance')
+        salt.utils.process.appendproctitle(u'Maintenance')
 
         # init things that need to be done after the process is forked
         self._post_fork_init()
@@ -652,7 +652,7 @@ class Halite(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Fire up halite!
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
         halite.start(self.hopts)
 
 
@@ -912,13 +912,13 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Start a Master Worker
         '''
-        salt.utils.appendproctitle(self.name)
+        salt.utils.process.appendproctitle(self.name)
         self.clear_funcs = ClearFuncs(
            self.opts,
            self.key,
            )
         self.aes_funcs = AESFuncs(self.opts)
-        salt.utils.reinit_crypto()
+        salt.utils.crypt.reinit_crypto()
         self.__bind()
 
 
@@ -1439,7 +1439,7 @@ class AESFuncs(object):
                 path_name = os.path.split(syndic_cache_path)[0]
                 if not os.path.exists(path_name):
                     os.makedirs(path_name)
-                with salt.utils.fopen(syndic_cache_path, u'w') as wfh:
+                with salt.utils.files.fopen(syndic_cache_path, u'w') as wfh:
                     wfh.write(u'')
 
             # Format individual return loads
@@ -1902,7 +1902,7 @@ class ClearFuncs(object):
                         auth_ret = True
 
             if auth_ret is not True:
-                auth_list = salt.utils.get_values_of_matching_keys(
+                auth_list = salt.utils.master.get_values_of_matching_keys(
                         self.opts[u'publisher_acl'],
                         auth_ret)
                 if not auth_list:
@@ -2166,7 +2166,7 @@ class FloMWorker(MWorker):
         '''
         Prepare the needed objects and socket for iteration within ioflo
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.crypt.appendproctitle(self.__class__.__name__)
         self.clear_funcs = salt.master.ClearFuncs(
                 self.opts,
                 self.key,

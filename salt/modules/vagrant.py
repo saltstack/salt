@@ -34,7 +34,8 @@ import logging
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.ext.six as six
 
@@ -616,7 +617,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
     if get_private_key:
         # retrieve the Vagrant private key from the host
         try:
-            with salt.utils.fopen(ssh_config['IdentityFile']) as pks:
+            with salt.utils.files.fopen(ssh_config['IdentityFile']) as pks:
                 ans['private_key'] = pks.read()
         except (OSError, IOError) as e:
             raise CommandExecutionError("Error processing Vagrant private key file: {}".format(e))

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-#
-# Copyright (C) 2014 SUSE LLC
-
 '''
 Run-time utilities
 '''
+#
+# Copyright (C) 2014 SUSE LLC
+
 
 # Import Python libs
 from __future__ import absolute_import

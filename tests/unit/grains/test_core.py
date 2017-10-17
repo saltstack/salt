@@ -19,7 +19,6 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils
 import salt.utils.platform
 import salt.grains.core as core
 

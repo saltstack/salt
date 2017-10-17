@@ -16,8 +16,8 @@ import os
 import logging
 
 # Import salt libs
-import salt.utils  # Can be removed once alias_function, is_true are moved
 import salt.utils.data
+import salt.utils.functools
 import salt.utils.files
 from salt.exceptions import CommandExecutionError, MinionError
 
@@ -90,9 +90,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -162,7 +162,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name):
@@ -317,7 +317,7 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
         The ID declaration is ignored, as the package name is read from the
         ``sources`` parameter.
     '''
-    if salt.utils.is_true(kwargs.get('refresh')):
+    if salt.utils.data.is_true(kwargs.get('refresh')):
         log.warning('\'refresh\' argument not implemented for solarispkg '
                     'module')
 

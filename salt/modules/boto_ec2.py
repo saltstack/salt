@@ -1778,7 +1778,7 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
         would have been applied.
 
     returns (dict)
-        A dict dsecribing status and any changes.
+        A dict describing status and any changes.
 
     '''
     ret = {'success': True, 'comment': '', 'changes': {}}

@@ -11,7 +11,6 @@ import math
 import json
 
 # Import salt libs
-import salt.utils  # Can be removed once is_true is moved
 import salt.utils.data
 import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -122,7 +121,7 @@ def items(sanitize=False):
 
         salt '*' grains.items sanitize=True
     '''
-    if salt.utils.is_true(sanitize):
+    if salt.utils.data.is_true(sanitize):
         out = dict(__grains__)
         for key, func in six.iteritems(_SANITIZERS):
             if key in out:
@@ -155,7 +154,7 @@ def item(*args, **kwargs):
             ret[arg] = __grains__[arg]
         except KeyError:
             pass
-    if salt.utils.is_true(kwargs.get(u'sanitize')):
+    if salt.utils.data.is_true(kwargs.get(u'sanitize')):
         for arg, func in six.iteritems(_SANITIZERS):
             if arg in ret:
                 ret[arg] = func(ret[arg])

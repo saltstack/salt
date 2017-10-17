@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Classes which provide the shared base for GitFS, git_pillar, and winrepo
+'''
 
 # Import python libs
 from __future__ import absolute_import
@@ -20,11 +23,11 @@ import time
 from datetime import datetime
 
 # Import salt libs
-import salt.utils  # Can be removed once check_whitelist_blacklist, get_hash, is_bin_file, repack_dictlist are moved
 import salt.utils.configparser
 import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
@@ -868,7 +871,7 @@ class GitProvider(object):
         Check if an environment is exposed by comparing it against a whitelist
         and blacklist.
         '''
-        return salt.utils.check_whitelist_blacklist(
+        return salt.utils.stringutils.check_whitelist_blacklist(
             tgt_env,
             whitelist=self.saltenv_whitelist,
             blacklist=self.saltenv_blacklist,
@@ -2621,7 +2624,7 @@ class GitFS(GitBase):
         with salt.utils.files.fopen(fpath, 'rb') as fp_:
             fp_.seek(load['loc'])
             data = fp_.read(self.opts['file_buffer_size'])
-            if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+            if data and six.PY3 and not salt.utils.files.is_binary(fpath):
                 data = data.decode(__salt_system_encoding__)
             if gzip and data:
                 data = salt.utils.gzip_util.compress(data, gzip)
@@ -2649,7 +2652,7 @@ class GitFS(GitBase):
         if not os.path.isfile(hashdest):
             if not os.path.exists(os.path.dirname(hashdest)):
                 os.makedirs(os.path.dirname(hashdest))
-            ret['hsum'] = salt.utils.get_hash(path, self.opts['hash_type'])
+            ret['hsum'] = salt.utils.hashutils.get_hash(path, self.opts['hash_type'])
             with salt.utils.files.fopen(hashdest, 'w+') as fp_:
                 fp_.write(ret['hsum'])
             return ret

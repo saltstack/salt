@@ -13,7 +13,6 @@ import json
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.path
 import salt.utils.user
 import salt.modules.cmdmod

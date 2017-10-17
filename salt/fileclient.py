@@ -24,9 +24,9 @@ import salt.loader
 import salt.payload
 import salt.transport
 import salt.fileserver
-import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.http
 import salt.utils.path
 import salt.utils.platform
@@ -239,7 +239,7 @@ class Client(object):
         for fn_ in self.file_list(saltenv):
             fn_ = sdecode(fn_)
             if fn_.strip() and fn_.startswith(path):
-                if salt.utils.check_include_exclude(
+                if salt.utils.stringutils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
                     fn_ = self.cache_file(
                         salt.utils.url.create(fn_), saltenv, cachedir=cachedir)
@@ -489,7 +489,7 @@ class Client(object):
                 strpath = u'index.html'
 
             if salt.utils.platform.is_windows():
-                strpath = salt.utils.sanitize_win_path_string(strpath)
+                strpath = salt.utils.path.sanitize_win_path(strpath)
 
             dest = os.path.join(dest, strpath)
 
@@ -530,7 +530,7 @@ class Client(object):
                 try:
                     source_hash = source_hash.split('=')[-1]
                     form = salt.utils.files.HASHES_REVMAP[len(source_hash)]
-                    if salt.utils.get_hash(dest, form) == source_hash:
+                    if salt.utils.hashutils.get_hash(dest, form) == source_hash:
                         log.debug(
                             'Cached copy of %s (%s) matches source_hash %s, '
                             'skipping download', url, dest, source_hash
@@ -656,10 +656,14 @@ class Client(object):
             def on_header(hdr):
                 if write_body[1] is not False and write_body[2] is None:
                     if not hdr.strip() and 'Content-Type' not in write_body[1]:
-                        # We've reached the end of the headers and not yet
-                        # found the Content-Type. Reset the values we're
-                        # tracking so that we properly follow the redirect.
-                        write_body[0] = None
+                        # If write_body[0] is True, then we are not following a
+                        # redirect (initial response was a 200 OK). So there is
+                        # no need to reset write_body[0].
+                        if write_body[0] is not True:
+                            # We are following a redirect, so we need to reset
+                            # write_body[0] so that we properly follow it.
+                            write_body[0] = None
+                        # We don't need the HTTPHeaders object anymore
                         write_body[1] = False
                         return
                     # Try to find out what content type encoding is used if
@@ -682,9 +686,12 @@ class Client(object):
                         # If write_body[0] is False, this means that this
                         # header is a 30x redirect, so we need to reset
                         # write_body[0] to None so that we parse the HTTP
-                        # status code from the redirect target.
+                        # status code from the redirect target. Additionally,
+                        # we need to reset write_body[2] so that we inspect the
+                        # headers for the Content-Type of the URL we're
+                        # following.
                         if write_body[0] is write_body[1] is False:
-                            write_body[0] = None
+                            write_body[0] = write_body[2] = None
 
                 # Check the status line of the HTTP request
                 if write_body[0] is None:
@@ -804,7 +811,7 @@ class Client(object):
         '''
         url_data = urlparse(url)
         if salt.utils.platform.is_windows():
-            netloc = salt.utils.sanitize_win_path_string(url_data.netloc)
+            netloc = salt.utils.path.sanitize_win_path(url_data.netloc)
         else:
             netloc = url_data.netloc
 
@@ -968,7 +975,7 @@ class LocalClient(Client):
             fnd_path = fnd
 
         hash_type = self.opts.get(u'hash_type', u'md5')
-        ret[u'hsum'] = salt.utils.get_hash(fnd_path, form=hash_type)
+        ret[u'hsum'] = salt.utils.hashutils.get_hash(fnd_path, form=hash_type)
         ret[u'hash_type'] = hash_type
         return ret
 
@@ -999,7 +1006,7 @@ class LocalClient(Client):
                 fnd_stat = None
 
         hash_type = self.opts.get(u'hash_type', u'md5')
-        ret[u'hsum'] = salt.utils.get_hash(fnd_path, form=hash_type)
+        ret[u'hsum'] = salt.utils.hashutils.get_hash(fnd_path, form=hash_type)
         ret[u'hash_type'] = hash_type
         return ret, fnd_stat
 
@@ -1194,7 +1201,7 @@ class RemoteClient(Client):
                         # Master has prompted a file verification, if the
                         # verification fails, re-download the file. Try 3 times
                         d_tries += 1
-                        hsum = salt.utils.get_hash(dest, salt.utils.stringutils.to_str(data.get(u'hash_type', b'md5')))  # future lint: disable=non-unicode-string
+                        hsum = salt.utils.hashutils.get_hash(dest, salt.utils.stringutils.to_str(data.get(u'hash_type', b'md5')))  # future lint: disable=non-unicode-string
                         if hsum != data[u'hsum']:
                             log.warning(
                                 u'Bad download of file %s, attempt %d of 3',
@@ -1308,7 +1315,7 @@ class RemoteClient(Client):
             else:
                 ret = {}
                 hash_type = self.opts.get(u'hash_type', u'md5')
-                ret[u'hsum'] = salt.utils.get_hash(path, form=hash_type)
+                ret[u'hsum'] = salt.utils.hashutils.get_hash(path, form=hash_type)
                 ret[u'hash_type'] = hash_type
                 return ret
         load = {u'path': path,
