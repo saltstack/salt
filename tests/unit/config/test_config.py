@@ -22,9 +22,9 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
 import salt.minion
-import salt.utils
 import salt.utils.files
 import salt.utils.network
+import salt.utils.platform
 from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
 from salt.exceptions import (
@@ -453,7 +453,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             tempdir = tempfile.mkdtemp(dir=TMP)
             master_config = os.path.join(tempdir, 'master')
 
-            with salt.utils.fopen(master_config, 'w') as fp_:
+            with salt.utils.files.fopen(master_config, 'w') as fp_:
                 fp_.write(
                     'id_function:\n'
                     '  test.echo:\n'
@@ -537,7 +537,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             tempdir = tempfile.mkdtemp(dir=TMP)
             minion_config = os.path.join(tempdir, 'minion')
 
-            with salt.utils.fopen(minion_config, 'w') as fp_:
+            with salt.utils.files.fopen(minion_config, 'w') as fp_:
                 fp_.write(
                     'id_function:\n'
                     '  test.echo:\n'

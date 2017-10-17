@@ -43,7 +43,6 @@ except ImportError:
 # Import salt libs
 import salt.exceptions
 import salt.log
-import salt.utils
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
@@ -848,6 +847,8 @@ def _virtual(osdata):
     elif osdata['kernel'] == 'OpenBSD':
         if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
             grains['virtual'] = 'kvm'
+        if osdata['manufacturer'] == 'OpenBSD':
+            grains['virtual'] = 'vmm'
     elif osdata['kernel'] == 'SunOS':
         if grains['virtual'] == 'LDOM':
             roles = []

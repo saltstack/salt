@@ -21,10 +21,10 @@ usually located at /etc/salt/cloud. For example, add the following:
 # Import python libs
 from __future__ import absolute_import
 import os
+import copy
 
 # Import Salt libs
 import salt.loader
-import salt.utils
 import salt.utils.cloud
 import salt.utils.validate.net
 import salt.config
@@ -63,7 +63,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         ))
         preferred_ip = extract_ipv4(roster_order, ip_list)
 
-        ret[minion_id] = __opts__.get('roster_defaults', {})
+        ret[minion_id] = copy.deepcopy(__opts__.get('roster_defaults', {}))
         ret[minion_id].update({'host': preferred_ip})
 
         ssh_username = salt.utils.cloud.ssh_usernames(vm_, cloud_opts)

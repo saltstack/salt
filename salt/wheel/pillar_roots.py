@@ -28,7 +28,7 @@ def find(path, saltenv='base'):
         if os.path.isfile(full):
             # Add it to the dict
             with salt.utils.files.fopen(full, 'rb') as fp_:
-                if salt.utils.files.is_text_file(fp_):
+                if salt.utils.files.is_text(fp_):
                     ret.append({full: 'txt'})
                 else:
                     ret.append({full: 'bin'})

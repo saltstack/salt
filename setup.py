@@ -183,17 +183,23 @@ class WriteSaltVersion(Command):
         '''
 
     def run(self):
-        if not os.path.exists(SALT_VERSION_HARDCODED):
+        if not os.path.exists(SALT_VERSION_HARDCODED) or self.distribution.with_salt_version:
             # Write the version file
             if getattr(self.distribution, 'salt_version_hardcoded_path', None) is None:
                 print('This command is not meant to be called on it\'s own')
                 exit(1)
 
+            if not self.distribution.with_salt_version:
+                salt_version = __saltstack_version__  # pylint: disable=undefined-variable
+            else:
+                from salt.version import SaltStackVersion
+                salt_version = SaltStackVersion.parse(self.distribution.with_salt_version)
+
             # pylint: disable=E0602
             open(self.distribution.salt_version_hardcoded_path, 'w').write(
                 INSTALL_VERSION_TEMPLATE.format(
                     date=DATE,
-                    full_version_info=__saltstack_version__.full_info
+                    full_version_info=salt_version.full_info
                 )
             )
             # pylint: enable=E0602
@@ -733,6 +739,13 @@ class Build(build):
     def run(self):
         # Run build.run function
         build.run(self)
+        if getattr(self.distribution, 'with_salt_version', False):
+            # Write the hardcoded salt version module salt/_version.py
+            self.distribution.salt_version_hardcoded_path = os.path.join(
+                self.build_lib, 'salt', '_version.py'
+            )
+            self.run_command('write_salt_version')
+
         if getattr(self.distribution, 'running_salt_install', False):
             # If our install attribute is present and set to True, we'll go
             # ahead and write our install time python modules.
@@ -841,6 +854,7 @@ class SaltDistribution(distutils.dist.Distribution):
         ('ssh-packaging', None, 'Run in SSH packaging mode'),
         ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
                                   '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq')] + [
+        ('with-salt-version=', None, 'Set a fixed version for Salt instead calculating it'),
         # Salt's Paths Configuration Settings
         ('salt-root-dir=', None,
          'Salt\'s pre-configured root directory'),
@@ -897,6 +911,9 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_spm_pillar_dir = None
         self.salt_spm_reactor_dir = None
         self.salt_home_dir = None
+
+        # Salt version
+        self.with_salt_version = None
 
         self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
         self.salt_version = __version__  # pylint: disable=undefined-variable

@@ -438,11 +438,13 @@ syndic_user: salt
 
 #####     Salt-SSH Configuration     #####
 ##########################################
+# Define the default salt-ssh roster module to use
+#roster: flat
 
-# Pass in an alternative location for the salt-ssh roster file
+# Pass in an alternative location for the salt-ssh `flat` roster file
 #roster_file: /etc/salt/roster
 
-# Define locations for roster files so they can be chosen when using Salt API.
+# Define locations for `flat` roster files so they can be chosen when using Salt API.
 # An administrator can place roster files into these locations. Then when
 # calling Salt API, parameter 'roster_file' should contain a relative path to
 # these locations. That is, "roster_file=/foo/roster" will be resolved as

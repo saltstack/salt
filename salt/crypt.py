@@ -50,7 +50,7 @@ import salt.defaults.exitcodes
 import salt.payload
 import salt.transport.client
 import salt.transport.frame
-import salt.utils  # Can be removed when pem_finger, reinit_crypto are moved
+import salt.utils.crypt
 import salt.utils.decorators
 import salt.utils.event
 import salt.utils.files
@@ -113,7 +113,7 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     priv = u'{0}.pem'.format(base)
     pub = u'{0}.pub'.format(base)
 
-    salt.utils.reinit_crypto()
+    salt.utils.crypt.reinit_crypto()
     gen = RSA.generate(bits=keysize, e=65537)
     if os.path.isfile(priv):
         # Between first checking and the generation another process has made
@@ -446,7 +446,7 @@ class AsyncAuth(object):
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
-        salt.utils.reinit_crypto()
+        salt.utils.crypt.reinit_crypto()
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:
@@ -634,6 +634,9 @@ class AsyncAuth(object):
                 raise tornado.gen.Return(u'retry')
             else:
                 raise SaltClientError(u'Attempt to authenticate with the salt master failed with timeout error')
+        if not isinstance(payload, dict):
+            log.error(u'Sign-in attempt failed: %s', payload)
+            raise tornado.gen.Return(False)
         if u'load' in payload:
             if u'ret' in payload[u'load']:
                 if not payload[u'load'][u'ret']:
@@ -680,11 +683,11 @@ class AsyncAuth(object):
         if self.opts.get(u'syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get(u'syndic_finger', self.opts.get(u'master_finger', False))
             if syndic_finger:
-                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != syndic_finger:
+                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != syndic_finger:
                     self._finger_fail(syndic_finger, m_pub_fn)
         else:
             if self.opts.get(u'master_finger', False):
-                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != self.opts[u'master_finger']:
+                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != self.opts[u'master_finger']:
                     self._finger_fail(self.opts[u'master_finger'], m_pub_fn)
         auth[u'publish_port'] = payload[u'publish_port']
         raise tornado.gen.Return(auth)
@@ -1029,7 +1032,7 @@ class AsyncAuth(object):
             u'matches the fingerprint of the correct master and that '
             u'this minion is not subject to a man-in-the-middle attack.',
             finger,
-            salt.utils.pem_finger(master_key, sum_type=self.opts[u'hash_type'])
+            salt.utils.crypt.pem_finger(master_key, sum_type=self.opts[u'hash_type'])
         )
         sys.exit(42)
 
@@ -1236,11 +1239,11 @@ class SAuth(AsyncAuth):
         if self.opts.get(u'syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get(u'syndic_finger', self.opts.get(u'master_finger', False))
             if syndic_finger:
-                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != syndic_finger:
+                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != syndic_finger:
                     self._finger_fail(syndic_finger, m_pub_fn)
         else:
             if self.opts.get(u'master_finger', False):
-                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != self.opts[u'master_finger']:
+                if salt.utils.crypt.pem_finger(m_pub_fn, sum_type=self.opts[u'hash_type']) != self.opts[u'master_finger']:
                     self._finger_fail(self.opts[u'master_finger'], m_pub_fn)
         auth[u'publish_port'] = payload[u'publish_port']
         return auth

@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import time
 
 # Import salt libs
-import salt.utils
 import salt.utils.path
 import salt.utils.vt
 

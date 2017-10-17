@@ -39,9 +39,9 @@ except ImportError:
 import salt.config
 import salt.loader
 import salt.syspaths
-import salt.utils  # Can be removed once refresh_dns is moved
 import salt.utils.args
 import salt.utils.files
+import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.version
@@ -163,7 +163,7 @@ def query(url,
 
     match = re.match(r'https?://((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)($|/)', url)
     if not match:
-        salt.utils.refresh_dns()
+        salt.utils.network.refresh_dns()
 
     if backend == 'requests':
         if HAS_REQUESTS is False:

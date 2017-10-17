@@ -41,10 +41,11 @@ from salt.ext.six.moves import configparser
 # pylint: enable=import-error,redefined-builtin
 
 # Import Salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.data
 import salt.utils.decorators.path
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.lazy
 import salt.utils.pkg
@@ -442,7 +443,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name> disableexcludes=main
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
     if len(names) == 0:
         return ''
 
@@ -543,7 +544,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name):
@@ -630,9 +631,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs attr='["version", "arch"]'
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -948,7 +949,7 @@ def list_upgrades(refresh=True, **kwargs):
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db(check_update=False, **kwargs)
 
     cmd = [_yum(), '--quiet']
@@ -965,7 +966,7 @@ def list_upgrades(refresh=True, **kwargs):
     return dict([(x.name, x.version) for x in _yum_pkginfo(out['stdout'])])
 
 # Preserve expected CLI usage (yum list updates)
-list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
+list_updates = salt.utils.functools.alias_function(list_upgrades, 'list_updates')
 
 
 def list_downloaded():
@@ -1322,9 +1323,9 @@ def install(name=None,
     exclude_arg = _get_excludes_option(**kwargs)
     branch_arg = _get_branch_option(**kwargs)
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db(**kwargs)
-    reinstall = salt.utils.is_true(reinstall)
+    reinstall = salt.utils.data.is_true(reinstall)
 
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
@@ -1482,7 +1483,7 @@ def install(name=None,
                 if '*' in version_num:
                     # Resolve wildcard matches
                     candidates = _available.get(pkgname, [])
-                    match = salt.utils.fnmatch_multiple(candidates, version_num)
+                    match = salt.utils.itertools.fnmatch_multiple(candidates, version_num)
                     if match is not None:
                         version_num = match
                     else:
@@ -1680,7 +1681,7 @@ def install(name=None,
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs(versions_as_list=False, attr=diff_attr) if not downloadonly else list_downloaded()
 
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     for pkgname, _ in to_reinstall:
         if pkgname not in ret or pkgname in old:
@@ -1832,7 +1833,7 @@ def upgrade(name=None,
     branch_arg = _get_branch_option(**kwargs)
     extra_args = _get_extra_options(**kwargs)
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db(**kwargs)
 
     old = list_pkgs()
@@ -1872,7 +1873,7 @@ def upgrade(name=None,
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -1953,7 +1954,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -2144,7 +2145,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
     targets = []
     if pkgs:
-        for pkg in salt.utils.repack_dictlist(pkgs):
+        for pkg in salt.utils.data.repack_dictlist(pkgs):
             targets.append(pkg)
     elif sources:
         for source in sources:
@@ -2248,7 +2249,7 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
             ret.append(match)
     return ret
 
-get_locked_packages = salt.utils.alias_function(list_holds, 'get_locked_packages')
+get_locked_packages = salt.utils.functools.alias_function(list_holds, 'get_locked_packages')
 
 
 def verify(*names, **kwargs):
@@ -2555,7 +2556,7 @@ def group_install(name,
 
     return install(pkgs=pkgs, **kwargs)
 
-groupinstall = salt.utils.alias_function(group_install, 'groupinstall')
+groupinstall = salt.utils.functools.alias_function(group_install, 'groupinstall')
 
 
 def list_repos(basedir=None):

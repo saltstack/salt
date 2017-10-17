@@ -15,6 +15,7 @@ When you want to use host globs for target matching, use ``--roster clustershell
 # Import python libs
 from __future__ import absolute_import
 import socket
+import copy
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 REQ_ERROR = None
@@ -43,7 +44,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
 
     for host, addr in host_addrs.items():
         addr = str(addr)
-        ret[addr] = __opts__.get('roster_defaults', {}).copy()
+        ret[addr] = copy.deepcopy(__opts__.get('roster_defaults', {}))
         for port in ports:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -51,7 +52,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
                 sock.connect((addr, port))
                 sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
-                ret[host].update({'host': host, 'port': port})
+                ret[host].update({'host': addr, 'port': port})
             except socket.error:
                 pass
     return ret
