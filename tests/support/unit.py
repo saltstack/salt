@@ -40,6 +40,17 @@ log = logging.getLogger(__name__)
 # i.e. [CPU:15.1%|MEM:48.3%|Z:0]
 SHOW_PROC = 'NO_SHOW_PROC' not in os.environ
 
+LOREM_IPSUM = '''\
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque eget urna a arcu lacinia sagittis.
+Sed scelerisque, lacus eget malesuada vestibulum, justo diam facilisis tortor, in sodales dolor
+nibh eu urna. Aliquam iaculis massa risus, sed elementum risus accumsan id. Suspendisse mattis,
+metus sed lacinia dictum, leo orci dapibus sapien, at porttitor sapien nulla ac velit.
+Duis ac cursus leo, non varius metus. Sed laoreet felis magna, vel tempor diam malesuada nec.
+Quisque cursus odio tortor. In consequat augue nisl, eget lacinia odio vestibulum eget.
+Donec venenatis elementum arcu at rhoncus. Nunc pharetra erat in lacinia convallis. Ut condimentum
+eu mauris sit amet convallis. Morbi vulputate vel odio non laoreet. Nullam in suscipit tellus.
+Sed quis posuere urna.'''
+
 # support python < 2.7 via unittest2
 if sys.version_info < (2, 7):
     try:
