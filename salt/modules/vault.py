@@ -6,6 +6,11 @@
 
 Functions to interact with Hashicorp Vault.
 
+:note: If you see the following error, you'll need to upgrade ``requests`` to atleast 2.4.2
+.. code-block:: shell
+    <timestamp> [salt.pillar][CRITICAL][14337] Pillar render error: Failed to load ext_pillar vault: {'error': "request() got an unexpected keyword argument 'json'"}
+
+
 :configuration: The salt-master must be configured to allow peer-runner
     configuration, as well as configuration for the module.
 

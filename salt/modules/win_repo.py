@@ -15,7 +15,7 @@ import os
 
 # Import salt libs
 import salt.output
-import salt.utils
+import salt.utils.functools
 import salt.utils.path
 import salt.utils.platform
 import salt.loader
@@ -50,9 +50,9 @@ def __virtual__():
     '''
     if salt.utils.platform.is_windows():
         global _genrepo, _update_git_repos
-        _genrepo = salt.utils.namespaced_function(_genrepo, globals())
+        _genrepo = salt.utils.functools.namespaced_function(_genrepo, globals())
         _update_git_repos = \
-            salt.utils.namespaced_function(_update_git_repos, globals())
+            salt.utils.functools.namespaced_function(_update_git_repos, globals())
         return __virtualname__
     return (False, 'This module only works on Windows.')
 

@@ -33,3 +33,5 @@ Tutorials Index
 * :ref:`SaltStack Walk-through <tutorial-salt-walk-through>`
 * :ref:`Writing Salt Tests <tutorial-salt-testing>`
 * :ref:`Multi-cloud orchestration with Apache Libcloud <tutorial-libcloud>`
+* :ref:`Running Salt States and Commands in Docker Containers <docker-sls>`
+* :ref:`Preseed Minion with Accepted Key <tutorial-preseed-key>`

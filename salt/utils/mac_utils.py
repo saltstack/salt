@@ -12,7 +12,6 @@ import os
 import time
 
 # Import Salt Libs
-import salt.utils
 import salt.utils.args
 import salt.utils.platform
 import salt.utils.stringutils

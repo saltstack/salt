@@ -47,8 +47,8 @@ except ImportError:
 from salt.ext import six
 
 # Import salt libs
-import salt.utils  # Can be removed once is_true is moved
 import salt.utils.args
+import salt.utils.data
 import salt.utils.locales
 import salt.utils.user
 from salt.exceptions import CommandExecutionError
@@ -144,7 +144,7 @@ def add(name,
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    if salt.utils.is_true(kwargs.pop('system', False)):
+    if salt.utils.data.is_true(kwargs.pop('system', False)):
         log.warning('pw_user module does not support the \'system\' argument')
     if kwargs:
         log.warning('Invalid kwargs passed to user.add')
@@ -166,7 +166,7 @@ def add(name,
         cmd.extend(['-L', loginclass])
     if shell:
         cmd.extend(['-s', shell])
-    if not salt.utils.is_true(unique):
+    if not salt.utils.data.is_true(unique):
         cmd.append('-o')
     gecos_field = _build_gecos({'fullname': fullname,
                                 'roomnumber': roomnumber,
@@ -187,7 +187,7 @@ def delete(name, remove=False, force=False):
 
         salt '*' user.delete name remove=True force=True
     '''
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         log.error('pw userdel does not support force-deleting user while '
                   'user is logged in')
     cmd = ['pw', 'userdel']

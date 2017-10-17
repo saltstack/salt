@@ -28,9 +28,12 @@ import time
 import salt.config
 import salt.payload
 import salt.state
-import salt.utils
+import salt.utils.args
+import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.functools
+import salt.utils.hashutils
 import salt.utils.jid
 import salt.utils.platform
 import salt.utils.url
@@ -73,7 +76,7 @@ def __virtual__():
     '''
     # Update global namespace with functions that are cloned in this module
     global _orchestrate
-    _orchestrate = salt.utils.namespaced_function(_orchestrate, globals())
+    _orchestrate = salt.utils.functools.namespaced_function(_orchestrate, globals())
 
     return __virtualname__
 
@@ -326,7 +329,7 @@ def _get_test_value(test=None, **kwargs):
     '''
     ret = True
     if test is None:
-        if salt.utils.test_mode(test=test, **kwargs):
+        if salt.utils.args.test_mode(test=test, **kwargs):
             ret = True
         else:
             ret = __opts__.get('test', None)
@@ -1418,6 +1421,12 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
+    # Apply requisites to high data
+    high_, req_in_errors = st_.state.requisite_in(high_)
+    if req_in_errors:
+        # This if statement should not be necessary if there were no errors,
+        # but it is required to get the unit tests to pass.
+        errors.extend(req_in_errors)
     if errors:
         __context__['retcode'] = 1
         return errors
@@ -1774,7 +1783,7 @@ def pkg(pkg_path,
     # TODO - Add ability to download from salt master or other source
     if not os.path.isfile(pkg_path):
         return {}
-    if not salt.utils.get_hash(pkg_path, hash_type) == pkg_sum:
+    if not salt.utils.hashutils.get_hash(pkg_path, hash_type) == pkg_sum:
         return {}
     root = tempfile.mkdtemp()
     s_pkg = tarfile.open(pkg_path, 'r:gz')
@@ -1789,7 +1798,7 @@ def pkg(pkg_path,
     s_pkg.close()
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.files.fopen(lowstate_json, 'r') as fp_:
-        lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
+        lowstate = json.load(fp_, object_hook=salt.utils.data.decode_dict)
     # Check for errors in the lowstate
     for chunk in lowstate:
         if not isinstance(chunk, dict):
@@ -1804,7 +1813,7 @@ def pkg(pkg_path,
     roster_grains_json = os.path.join(root, 'roster_grains.json')
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
-            roster_grains = json.load(fp_, object_hook=salt.utils.decode_dict)
+            roster_grains = json.load(fp_, object_hook=salt.utils.data.decode_dict)
 
     popts = _get_opts(**kwargs)
     if os.path.isfile(roster_grains_json):

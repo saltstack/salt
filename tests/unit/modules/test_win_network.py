@@ -19,7 +19,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.network
 import salt.modules.win_network as win_network
 
 
