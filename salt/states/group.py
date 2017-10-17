@@ -65,11 +65,11 @@ def _changes(name,
         if lgrp['members']:
             lgrp['members'] = [user.lower() for user in lgrp['members']]
         if members:
-            members = [salt.utils.win_functions.get_sam_name(user) for user in members]
+            members = [salt.utils.win_functions.get_sam_name(user).lower() for user in members]
         if addusers:
-            addusers = [salt.utils.win_functions.get_sam_name(user) for user in addusers]
+            addusers = [salt.utils.win_functions.get_sam_name(user).lower() for user in addusers]
         if delusers:
-            delusers = [salt.utils.win_functions.get_sam_name(user) for user in delusers]
+            delusers = [salt.utils.win_functions.get_sam_name(user).lower() for user in delusers]
 
     change = {}
     if gid:
@@ -267,7 +267,7 @@ def present(name,
                 ret['result'] = False
                 ret['comment'] = (
                     'Group {0} has been created but, some changes could not'
-                    ' be applied')
+                    ' be applied'.format(name))
                 ret['changes'] = {'Failed': changes}
         else:
             ret['result'] = False
