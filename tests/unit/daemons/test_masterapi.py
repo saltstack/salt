@@ -29,25 +29,24 @@ class AutoKeyTestCase(TestCase):
 
     def _test_check_autosign_grains(self,
                                     test_func,
-                                    file_content='test_value',
-                                    file_name='test_grain',
-                                    opts={}):
+                                    file_content=u'test_value',
+                                    file_name=u'test_grain',
+                                    autosign_grains_dir=u'test_dir'):
         '''
         Helper function for testing autosign_grains().
 
-        Patches ``os.walk`` to return only ``file_name``, ``salt.utils.fopen`` to open a mock file
-        with ``file_content`` as content and ``AutoKey.check_permissions`` to always return
-        ``True``. Optionally sets ``opts`` values. Then executes test_func. The ``os.walk`` and
-        ``salt.utils.fopen`` mock objects are passed as arguments.
+        Patches ``os.walk`` to return only ``file_name`` and ``salt.utils.fopen`` to open a mock
+        file with ``file_content`` as content. Optionally sets ``opts`` values.
+        Then executes test_func. The ``os.walk`` and ``salt.utils.fopen`` mock objects are passed
+        as arguments.
         '''
-        for key in opts:
-            self.opts[key] = opts[key]
+        if autosign_grains_dir:
+            self.auto_key.opts[u'autosign_grains_dir'] = autosign_grains_dir
         mock_file = io.StringIO(file_content)
-        mock_dirs = (None, None, file_name)
+        mock_dirs = [(None, None, [file_name])]
 
         with patch('os.walk', MagicMock(return_value=mock_dirs)) as mock_walk, \
-             patch('salt.utils.fopen', MagicMock(return_value=mock_file)) as mock_open, \
-             patch('salt.deamons.masterapi.AutoKey.check_permissions', MagicMock(return_value=True)):
+             patch('salt.utils.files.fopen', MagicMock(return_value=mock_file)) as mock_open:
             test_func(mock_walk, mock_open)
 
     def test_check_autosign_grains_no_grains(self):
@@ -63,7 +62,7 @@ class AutoKeyTestCase(TestCase):
             self.assertEqual(mock_walk.call_count, 0)
             self.assertEqual(mock_open.call_count, 0)
 
-        self._test_check_autosign_grains(test_func, opts={'autosign_grains_dir': 'test_dir'})
+        self._test_check_autosign_grains(test_func)
 
     def test_check_autosign_grains_no_autosign_grains_dir(self):
         '''
@@ -71,11 +70,11 @@ class AutoKeyTestCase(TestCase):
         is undefined.
         '''
         def test_func(mock_walk, mock_open):
-            self.assertFalse(self.auto_key.check_autosign_grains({'test_grain': 'test_value'}))
+            self.assertFalse(self.auto_key.check_autosign_grains({u'test_grain': u'test_value'}))
             self.assertEqual(mock_walk.call_count, 0)
             self.assertEqual(mock_open.call_count, 0)
 
-        self._test_check_autosign_grains(test_func)
+        self._test_check_autosign_grains(test_func, autosign_grains_dir=None)
 
     def test_check_autosign_grains_accept(self):
         '''
@@ -83,11 +82,10 @@ class AutoKeyTestCase(TestCase):
         autosign_grain file.
         '''
         def test_func(mock_walk, mock_open):
-            self.assertTrue(self.auto_key.check_autosign_grains({'test_grain': 'test_value'}))
+            self.assertTrue(self.auto_key.check_autosign_grains({u'test_grain': u'test_value'}))
 
-        file_content = '#test_ignore\ntest_value'
-        opts = {'autosign_grains_dir': 'test_dir'}
-        self._test_check_autosign_grains(test_func, file_content=file_content, opts=opts)
+        file_content = u'#test_ignore\ntest_value'
+        self._test_check_autosign_grains(test_func, file_content=file_content)
 
     def test_check_autosign_grains_accept_not(self):
         '''
@@ -95,11 +93,10 @@ class AutoKeyTestCase(TestCase):
         autosign_grain files.
         '''
         def test_func(mock_walk, mock_open):
-            self.assertFalse(self.auto_key.check_autosign_grains({'test_grain': 'test_invalid'}))
+            self.assertFalse(self.auto_key.check_autosign_grains({u'test_grain': u'test_invalid'}))
 
-        file_content = '#test_invalid\ntest_value'
-        opts = {'autosign_grains_dir': 'test_dir'}
-        self._test_check_autosign_grains(test_func, file_content=file_content, opts=opts)
+        file_content = u'#test_invalid\ntest_value'
+        self._test_check_autosign_grains(test_func, file_content=file_content)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
