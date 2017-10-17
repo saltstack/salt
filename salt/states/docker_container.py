@@ -51,7 +51,6 @@ import logging
 # Import salt libs
 from salt.exceptions import CommandExecutionError
 import copy
-import salt.utils
 import salt.utils.args
 import salt.utils.docker
 from salt.ext import six
