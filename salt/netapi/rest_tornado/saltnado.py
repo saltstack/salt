@@ -908,10 +908,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
         f_call = self._format_call_run_job_async(chunk)
         # fire a job off
-        try:
-            pub_data = yield self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-        except EauthAuthenticationError:
-            raise tornado.gen.Return('Not authorized to run this job')
+        pub_data = yield self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
         # if the job didn't publish, lets not wait around for nothing
         # TODO: set header??
