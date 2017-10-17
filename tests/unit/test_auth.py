@@ -61,7 +61,7 @@ class LoadAuthTestCase(TestCase):
                             'show_timeout': False,
                             'test_password': '',
                             'eauth': 'pam'}
-        with patch('salt.utils.format_call') as format_call_mock:
+        with patch('salt.utils.args.format_call') as format_call_mock:
             expected_ret = call('fake_groups_function_str', {
                 'username': 'test_user',
                 'test_password': '',

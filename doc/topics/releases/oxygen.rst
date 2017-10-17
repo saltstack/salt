@@ -56,6 +56,12 @@ The new grains added are:
 * ``fc_wwn``: Show all fibre channel world wide port names for a host
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
 
+Grains Changes
+--------------
+
+* The ``virtual`` grain identifies reports KVM and VMM hypervisors when running
+  an OpenBSD guest
+
 New Modules
 -----------
 
