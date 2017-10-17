@@ -98,6 +98,7 @@ from __future__ import absolute_import
 # Python
 import logging
 import re
+import copy
 
 # Salt libs
 import salt.utils.data
@@ -158,7 +159,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         except LookupError:
             continue
 
-        minion_res = __opts__.get('roster_defaults', {}).copy()
+        minion_res = copy.deepcopy(__opts__.get('roster_defaults', {}))
         for param, order in roster_order.items():
             if not isinstance(order, (list, tuple)):
                 order = [order]

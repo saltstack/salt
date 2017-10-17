@@ -14,7 +14,6 @@ import fnmatch
 # Import salt libs
 import salt.minion
 import salt.fileclient
-import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.locales

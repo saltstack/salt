@@ -19,7 +19,6 @@ import json
 # Import salt libs
 from salt.ext import six
 import salt.daemons.masterapi
-import salt.utils
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files

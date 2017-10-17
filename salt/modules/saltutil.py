@@ -46,11 +46,11 @@ import salt.payload
 import salt.runner
 import salt.state
 import salt.transport
-import salt.utils  # TODO: Remove this once alias_function is moved
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.minion
 import salt.utils.process
 import salt.utils.url
@@ -621,7 +621,7 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         refresh_modules()
     return ret
 
-sync_outputters = salt.utils.alias_function(sync_output, 'sync_outputters')
+sync_outputters = salt.utils.functools.alias_function(sync_output, 'sync_outputters')
 
 
 def sync_clouds(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
@@ -907,7 +907,7 @@ def refresh_pillar():
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
 
-pillar_refresh = salt.utils.alias_function(refresh_pillar, 'pillar_refresh')
+pillar_refresh = salt.utils.functools.alias_function(refresh_pillar, 'pillar_refresh')
 
 
 def refresh_modules(async=True):

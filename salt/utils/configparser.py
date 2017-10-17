@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Custom configparser classes
+'''
 # Import Python libs
 from __future__ import absolute_import
 import re

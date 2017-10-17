@@ -43,7 +43,6 @@ except ImportError:
 # Import salt libs
 import salt.exceptions
 import salt.log
-import salt.utils
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.network

@@ -11,7 +11,7 @@ import json
 import logging
 import traceback
 
-import salt.utils
+import salt.utils.event
 
 # pylint: disable=import-error
 try:

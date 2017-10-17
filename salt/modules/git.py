@@ -12,12 +12,13 @@ import re
 import stat
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -209,7 +210,7 @@ def _git_run(command, cwd=None, user=None, password=None, identity=None,
         for id_file in identity:
             if 'salt://' in id_file:
                 with salt.utils.files.set_umask(0o077):
-                    tmp_identity_file = salt.utils.mkstemp()
+                    tmp_identity_file = salt.utils.files.mkstemp()
                     _id_file = id_file
                     id_file = __salt__['cp.get_file'](id_file,
                                                       tmp_identity_file,
@@ -1242,7 +1243,7 @@ def config_get_regexp(key,
         ret.setdefault(param, []).append(value)
     return ret
 
-config_get_regex = salt.utils.alias_function(config_get_regexp, 'config_get_regex')
+config_get_regex = salt.utils.functools.alias_function(config_get_regexp, 'config_get_regex')
 
 
 def config_set(key,

@@ -22,13 +22,13 @@ import salt.crypt
 import salt.daemons.masterapi
 import salt.exceptions
 import salt.minion
-import salt.utils  # TODO: Remove this once get_master_key is moved
 import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
 import salt.utils.kinds
+import salt.utils.master
 import salt.utils.sdb
 import salt.utils.user
 
@@ -149,7 +149,7 @@ class KeyCLI(object):
                 low[u'eauth'] = self.opts[u'eauth']
         else:
             low[u'user'] = salt.utils.user.get_specific_user()
-            low[u'key'] = salt.utils.get_master_key(low[u'user'], self.opts, skip_perm_errors)
+            low[u'key'] = salt.utils.master.get_master_key(low[u'user'], self.opts, skip_perm_errors)
 
         self.auth = low
 
