@@ -39,7 +39,6 @@ from salt.ext import six
 import salt.utils
 
 # Import salt cloud libs
-import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
     SaltCloudSystemExit,
@@ -723,7 +722,7 @@ def create_node(vm_, newid):
         newnode['hostname'] = vm_['name']
         newnode['ostemplate'] = vm_['image']
 
-        static_props = ('cpuunits', 'description', 'memory', 'onboot', 'net0',
+        static_props = ('cpuunits', 'cpulimit', 'rootfs', 'cores', 'description', 'memory', 'onboot', 'net0',
                         'password', 'nameserver', 'swap', 'storage', 'rootfs')
         for prop in _get_properties('/nodes/{node}/lxc',
                                     'POST',

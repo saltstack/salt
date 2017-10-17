@@ -12,7 +12,7 @@ import os
 
 # Import Salt libs
 import salt.version
-import salt.utils  # Can be removed once alias_function is moved
+import salt.utils.functools
 import salt.utils.platform
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -313,4 +313,4 @@ def managed(name,
                 'old': old if old else ''}
     return ret
 
-manage = salt.utils.alias_function(managed, 'manage')
+manage = salt.utils.functools.alias_function(managed, 'manage')

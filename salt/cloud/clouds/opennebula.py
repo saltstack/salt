@@ -76,7 +76,7 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit
 )
-import salt.utils
+import salt.utils.data
 import salt.utils.files
 
 # Import Third Party Libs
@@ -1575,7 +1575,7 @@ def image_persistent(call=None, kwargs=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.image.persistent(auth, int(image_id), salt.utils.is_true(persist))
+    response = server.one.image.persistent(auth, int(image_id), salt.utils.data.is_true(persist))
 
     data = {
         'action': 'image.persistent',
@@ -2794,7 +2794,7 @@ def vm_allocate(call=None, kwargs=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.vm.allocate(auth, data, salt.utils.is_true(hold))
+    response = server.one.vm.allocate(auth, data, salt.utils.data.is_true(hold))
 
     ret = {
         'action': 'vm.allocate',
@@ -3026,7 +3026,7 @@ def vm_deploy(name, kwargs=None, call=None):
     response = server.one.vm.deploy(auth,
                                     int(vm_id),
                                     int(host_id),
-                                    salt.utils.is_true(capacity_maintained),
+                                    salt.utils.data.is_true(capacity_maintained),
                                     int(datastore_id))
 
     data = {
@@ -3495,8 +3495,8 @@ def vm_migrate(name, kwargs=None, call=None):
     response = server.one.vm.migrate(auth,
                                      vm_id,
                                      int(host_id),
-                                     salt.utils.is_true(live_migration),
-                                     salt.utils.is_true(capacity_maintained),
+                                     salt.utils.data.is_true(live_migration),
+                                     salt.utils.data.is_true(capacity_maintained),
                                      int(datastore_id))
 
     data = {
@@ -3615,7 +3615,7 @@ def vm_resize(name, kwargs=None, call=None):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
     vm_id = int(get_vm_id(kwargs={'name': name}))
-    response = server.one.vm.resize(auth, vm_id, data, salt.utils.is_true(capacity_maintained))
+    response = server.one.vm.resize(auth, vm_id, data, salt.utils.data.is_true(capacity_maintained))
 
     ret = {
         'action': 'vm.resize',

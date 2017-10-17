@@ -8,14 +8,10 @@ Modify, retrieve, or delete values from OpenStack configuration files.
 :platform: linux
 
 '''
+# Import Python libs
 from __future__ import absolute_import
-# Import Salt libs
-import salt.utils
-import salt.exceptions
-
-import salt.utils.decorators.path
-
 import shlex
+
 try:
     import pipes
     HAS_DEPS = True
@@ -28,6 +24,10 @@ elif HAS_DEPS and hasattr(pipes, 'quote'):
     _quote = pipes.quote
 else:
     _quote = None
+
+# Import Salt libs
+import salt.utils.decorators.path
+import salt.exceptions
 
 # Don't shadow built-in's.
 __func_alias__ = {

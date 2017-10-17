@@ -40,6 +40,7 @@ from hashlib import sha256
 from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves import range
 import salt.utils.cloud
+import salt.utils.data
 import salt.config as config
 from salt.exceptions import (
     SaltCloudNotFound,
@@ -187,7 +188,7 @@ def query(params=None):
     log.debug(request.url)
 
     content = request.text
-    result = json.loads(content, object_hook=salt.utils.decode_dict)
+    result = json.loads(content, object_hook=salt.utils.data.decode_dict)
 
     # print('response:')
     # pprint.pprint(result)
