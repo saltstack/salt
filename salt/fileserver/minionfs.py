@@ -31,10 +31,10 @@ import logging
 
 # Import salt libs
 import salt.fileserver
-import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.hashutils
+import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 
@@ -61,7 +61,7 @@ def _is_exposed(minion):
     '''
     Check if the minion is exposed, based on the whitelist and blacklist
     '''
-    return salt.utils.check_whitelist_blacklist(
+    return salt.utils.stringutils.check_whitelist_blacklist(
         minion,
         whitelist=__opts__['minionfs_whitelist'],
         blacklist=__opts__['minionfs_blacklist']

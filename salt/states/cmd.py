@@ -240,8 +240,8 @@ import json
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.functools
 from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.ext.six import string_types
 
@@ -511,7 +511,7 @@ def wait(name,
 
 
 # Alias "cmd.watch" to "cmd.wait", as this is a common misconfiguration
-watch = salt.utils.alias_function(wait, 'watch')
+watch = salt.utils.functools.alias_function(wait, 'watch')
 
 
 def wait_script(name,

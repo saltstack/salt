@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 '''
 Use pycrypto to generate random passwords on the fly.
@@ -28,7 +27,6 @@ except ImportError:
     HAS_CRYPT = False
 
 # Import salt libs
-import salt.utils
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 

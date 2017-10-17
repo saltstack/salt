@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions dealing with encryption
+'''
 
 from __future__ import absolute_import
 

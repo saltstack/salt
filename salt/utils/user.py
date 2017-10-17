@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for querying and modifying a user account and the groups to which it
+belongs.
+'''
 
 from __future__ import absolute_import
 

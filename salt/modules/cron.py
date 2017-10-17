@@ -14,8 +14,8 @@ import os
 import random
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.path
 import salt.utils.stringutils
 from salt.ext.six.moves import range
@@ -366,7 +366,7 @@ def list_tab(user):
     return ret
 
 # For consistency's sake
-ls = salt.utils.alias_function(list_tab, 'ls')
+ls = salt.utils.functools.alias_function(list_tab, 'ls')
 
 
 def set_special(user, special, cmd):
@@ -612,7 +612,7 @@ def rm_job(user,
             return comdat['stderr']
     return ret
 
-rm = salt.utils.alias_function(rm_job, 'rm')
+rm = salt.utils.functools.alias_function(rm_job, 'rm')
 
 
 def set_env(user, name, value=None):
