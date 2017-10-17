@@ -80,8 +80,8 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils  # TODO: Remove this when alias_function is moved
 import salt.utils.data
+import salt.utils.functools
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext import six
@@ -200,7 +200,7 @@ def latest_version(*names, **kwargs):
     return '' if len(names) == 1 else dict((x, '') for x in names)
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def version(*names, **kwargs):
@@ -486,9 +486,9 @@ def remove(name=None, pkgs=None, **kwargs):
     return ret
 
 # Support pkg.delete to remove packages to more closely match pkg_delete
-delete = salt.utils.alias_function(remove, 'delete')
+delete = salt.utils.functools.alias_function(remove, 'delete')
 # No equivalent to purge packages, use remove instead
-purge = salt.utils.alias_function(remove, 'purge')
+purge = salt.utils.functools.alias_function(remove, 'purge')
 
 
 def _rehash():
