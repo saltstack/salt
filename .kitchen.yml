@@ -162,6 +162,7 @@ suites:
         jenkins.sls:
           testing_dir: /tmp/kitchen/testing
           clone_repo: false
+          salttesting_namespec: salttesting==2017.6.1
 verifier:
   name: shell
   remote_exec: true
