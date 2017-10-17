@@ -32,11 +32,13 @@ class DownloadArtifacts(object):
         for remote, local in self.artifacts:
             if remote.endswith('/'):
                 for fxml in self.client.listdir(remote):
-                    print(os.path.join(remote, fxml))
-                    print(os.path.join(local, os.path.basename(fxml)))
-                    self.client.get(os.path.join(remote, fxml), os.path.join(local, os.path.basename(fxml)))
+                    self._do_download(os.path.join(remote, fxml), os.path.join(local, os.path.basename(fxml)))
             else:
-                self.client.get(fxml, os.path.join([local, os.path.basename(fxml)]))
+                self._do_download(remote, os.path.join(local, os.path.basename(remote)))
+
+    def _do_download(self, remote, local):
+        print('Copying from {0} to {1}'.format(remote, local))
+        self.client.get(remote, local)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Jenkins Artifact Download Helper')
