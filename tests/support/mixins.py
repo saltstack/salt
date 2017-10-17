@@ -31,9 +31,9 @@ from tests.support.paths import CODE_DIR
 
 # Import salt libs
 import salt.config
-import salt.utils  # Can be removed once namespaced_function is moved
 import salt.utils.event
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.path
 import salt.utils.stringutils
 import salt.version
@@ -444,7 +444,7 @@ class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder
                     # used to patch above
                     import salt.utils
                     for func in minion_funcs:
-                        minion_funcs[func] = salt.utils.namespaced_function(
+                        minion_funcs[func] = salt.utils.functools.namespaced_function(
                             minion_funcs[func],
                             module_globals,
                             preserve_context=True
