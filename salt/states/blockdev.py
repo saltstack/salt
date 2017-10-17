@@ -159,7 +159,7 @@ def formatted(name, fs_type='ext4', force=False, **kwargs):
         ret['result'] = None
         return ret
 
-    __salt__['disk.format_'](name, fs_type, force=force, **kwargs)
+    __salt__['disk.format'](name, fs_type, force=force, **kwargs)
     current_fs = __salt__['disk.fstype'](name)
 
     # Repeat lsblk check up to 10 times with 3s sleeping between each
