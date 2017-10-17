@@ -189,9 +189,9 @@ except ImportError:
     HAS_NAPALM_LOGS = False
 
 # Import salt libs
-import salt.utils
 import salt.utils.event as event
 import salt.utils.network
+import salt.utils.stringutils
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -337,25 +337,28 @@ def start(transport='zmq',
         try:
             event_os = dict_object['os']
             if os_blacklist or os_whitelist:
-                valid_os = salt.utils.check_whitelist_blacklist(event_os,
-                                                                whitelist=os_whitelist,
-                                                                blacklist=os_blacklist)
+                valid_os = salt.utils.stringutils.check_whitelist_blacklist(
+                    event_os,
+                    whitelist=os_whitelist,
+                    blacklist=os_blacklist)
                 if not valid_os:
                     log.info('Ignoring NOS {} as per whitelist/blacklist'.format(event_os))
                     continue
             event_error = dict_object['error']
             if error_blacklist or error_whitelist:
-                valid_error = salt.utils.check_whitelist_blacklist(event_error,
-                                                                   whitelist=error_whitelist,
-                                                                   blacklist=error_blacklist)
+                valid_error = salt.utils.stringutils.check_whitelist_blacklist(
+                    event_error,
+                    whitelist=error_whitelist,
+                    blacklist=error_blacklist)
                 if not valid_error:
                     log.info('Ignoring error {} as per whitelist/blacklist'.format(event_error))
                     continue
             event_host = dict_object.get('host') or dict_object.get('ip')
             if host_blacklist or host_whitelist:
-                valid_host = salt.utils.check_whitelist_blacklist(event_host,
-                                                                  whitelist=host_whitelist,
-                                                                  blacklist=host_blacklist)
+                valid_host = salt.utils.stringutils.check_whitelist_blacklist(
+                    event_host,
+                    whitelist=host_whitelist,
+                    blacklist=host_blacklist)
                 if not valid_host:
                     log.info('Ignoring messages from {} as per whitelist/blacklist'.format(event_host))
                     continue

@@ -963,6 +963,19 @@ The TCP port for ``mworkers`` to connect to on the master.
 Salt-SSH Configuration
 ======================
 
+.. conf_master:: roster
+
+``roster``
+---------------
+
+Default: ``flat``
+
+Define the default salt-ssh roster module to use
+
+.. code-block:: yaml
+
+    roster: cache
+
 .. conf_master:: roster_file
 
 ``roster_file``
@@ -970,11 +983,30 @@ Salt-SSH Configuration
 
 Default: ``/etc/salt/roster``
 
-Pass in an alternative location for the salt-ssh roster file.
+Pass in an alternative location for the salt-ssh `flat` roster file.
 
 .. code-block:: yaml
 
     roster_file: /root/roster
+
+.. conf_master:: roster_file
+
+``rosters``
+---------------
+
+Default: None
+
+Define locations for `flat` roster files so they can be chosen when using Salt API.
+An administrator can place roster files into these locations.
+Then when calling Salt API, parameter 'roster_file' should contain a relative path to these locations.
+That is, "roster_file=/foo/roster" will be resolved as "/etc/salt/roster.d/foo/roster" etc.
+This feature prevents passing insecure custom rosters through the Salt API.
+
+.. code-block:: yaml
+
+    rosters:
+     - /etc/salt/roster.d
+     - /opt/salt/some/more/rosters
 
 .. conf_master:: ssh_passwd
 

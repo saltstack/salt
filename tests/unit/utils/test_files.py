@@ -6,11 +6,14 @@ Unit Tests for functions located in salt.utils.files.py.
 # Import python libs
 from __future__ import absolute_import
 import os
+import shutil
+import tempfile
 
 # Import Salt libs
 import salt.utils.files
 
 # Import Salt Testing libs
+from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -38,3 +41,31 @@ class FilesUtilTestCase(TestCase):
         except (IOError, OSError):
             error = True
         self.assertFalse(error, 'salt.utils.files.safe_rm raised exception when it should not have')
+
+    def test_safe_walk_symlink_recursion(self):
+        tmp = tempfile.mkdtemp(dir=TMP)
+        try:
+            if os.stat(tmp).st_ino == 0:
+                self.skipTest('inodes not supported in {0}'.format(tmp))
+            os.mkdir(os.path.join(tmp, 'fax'))
+            os.makedirs(os.path.join(tmp, 'foo/bar'))
+            os.symlink('../..', os.path.join(tmp, 'foo/bar/baz'))
+            os.symlink('foo', os.path.join(tmp, 'root'))
+            expected = [
+                (os.path.join(tmp, 'root'), ['bar'], []),
+                (os.path.join(tmp, 'root/bar'), ['baz'], []),
+                (os.path.join(tmp, 'root/bar/baz'), ['fax', 'foo', 'root'], []),
+                (os.path.join(tmp, 'root/bar/baz/fax'), [], []),
+            ]
+            paths = []
+            for root, dirs, names in salt.utils.files.safe_walk(os.path.join(tmp, 'root')):
+                paths.append((root, sorted(dirs), names))
+            if paths != expected:
+                raise AssertionError(
+                    '\n'.join(
+                        ['got:'] + [repr(p) for p in paths] +
+                        ['', 'expected:'] + [repr(p) for p in expected]
+                    )
+                )
+        finally:
+            shutil.rmtree(tmp)

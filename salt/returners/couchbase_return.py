@@ -60,8 +60,9 @@ except ImportError:
     HAS_DEPS = False
 
 # Import salt libs
-import salt.utils
 import salt.utils.jid
+import salt.utils.json
+import salt.utils.minions
 
 log = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ def __virtual__():
         return False, 'Could not import couchbase returner; couchbase is not installed.'
 
     # try to load some faster json libraries. In order of fastest to slowest
-    json = salt.utils.import_json()
+    json = salt.utils.json.import_json()
     couchbase.set_json_converters(json.dumps, json.loads)
 
     return __virtualname__

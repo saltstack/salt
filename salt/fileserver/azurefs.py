@@ -55,9 +55,9 @@ import shutil
 
 # Import salt libs
 import salt.fileserver
-import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.path
 from salt.utils.versions import LooseVersion
 
@@ -166,7 +166,7 @@ def serve_file(load, fnd):
     with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
-        if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+        if data and six.PY3 and not salt.utils.files.is_binary(fpath):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -226,7 +226,7 @@ def update():
             if os.path.exists(fname):
                 # File exists, check the hashes
                 source_md5 = blob.properties.content_settings.content_md5
-                local_md5 = base64.b64encode(salt.utils.get_hash(fname, 'md5').decode('hex'))
+                local_md5 = base64.b64encode(salt.utils.hashutils.get_hash(fname, 'md5').decode('hex'))
                 if local_md5 != source_md5:
                     update = True
             else:
@@ -289,7 +289,7 @@ def file_hash(load, fnd):
     if not os.path.isfile(hashdest):
         if not os.path.exists(os.path.dirname(hashdest)):
             os.makedirs(os.path.dirname(hashdest))
-        ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+        ret['hsum'] = salt.utils.hashutils.get_hash(path, __opts__['hash_type'])
         with salt.utils.files.fopen(hashdest, 'w+') as fp_:
             fp_.write(ret['hsum'])
         return ret

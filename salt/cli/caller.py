@@ -20,12 +20,13 @@ import salt.minion
 import salt.output
 import salt.payload
 import salt.transport
-import salt.utils  # Can be removed once print_cli, activate_profile, and output_profile are moved
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.kinds as kinds
 import salt.utils.minion
+import salt.utils.profile
+import salt.utils.stringutils
 import salt.defaults.exitcodes
 from salt.cli import daemons
 from salt.log import LOG_LEVELS
@@ -113,7 +114,7 @@ class BaseCaller(object):
                     docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts.get('fun', '')):
-                salt.utils.print_cli('{0}:\n{1}\n'.format(name, docs[name]))
+                salt.utils.stringutils.print_cli('{0}:\n{1}\n'.format(name, docs[name]))
 
     def print_grains(self):
         '''
@@ -128,11 +129,11 @@ class BaseCaller(object):
         '''
         profiling_enabled = self.opts.get('profiling_enabled', False)
         try:
-            pr = salt.utils.activate_profile(profiling_enabled)
+            pr = salt.utils.profile.activate_profile(profiling_enabled)
             try:
                 ret = self.call()
             finally:
-                salt.utils.output_profile(
+                salt.utils.profile.output_profile(
                     pr,
                     stats_path=self.opts.get('profiling_path', '/tmp/stats'),
                     stop=True)
@@ -209,7 +210,7 @@ class BaseCaller(object):
                 ret['return'] = func(*args, **kwargs)
             except TypeError as exc:
                 sys.stderr.write('\nPassed invalid arguments: {0}.\n\nUsage:\n'.format(exc))
-                salt.utils.print_cli(func.__doc__)
+                salt.utils.stringutils.print_cli(func.__doc__)
                 active_level = LOG_LEVELS.get(
                     self.opts['log_level'].lower(), logging.ERROR)
                 if active_level <= logging.DEBUG:

@@ -16,7 +16,6 @@ import copy as pycopy
 # Import Salt libs
 import salt.exceptions
 import salt.minion
-import salt.utils  # Can be removed once format_call is moved
 import salt.utils.args
 import salt.utils.doc
 import salt.utils.error
@@ -371,7 +370,7 @@ class SyncClientMixin(object):
                 args = low[u'arg']
                 kwargs = low[u'kwarg']
             else:
-                f_call = salt.utils.format_call(
+                f_call = salt.utils.args.format_call(
                     self.functions[fun],
                     low,
                     expected_extra_kws=CLIENT_INTERNAL_KEYWORDS

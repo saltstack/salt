@@ -28,6 +28,7 @@ from jinja2.ext import Extension
 
 # Import salt libs
 import salt.fileclient
+import salt.utils.data
 import salt.utils.files
 import salt.utils.url
 from salt.utils.decorators.jinja import jinja_filter, jinja_test, jinja_global
@@ -582,7 +583,7 @@ def symmetric_difference(lst1, lst2):
 
 @jinja2.contextfunction
 def show_full_context(ctx):
-    return ctx
+    return salt.utils.data.simple_types_filter({key: value for key, value in ctx.items()})
 
 
 class SerializerExtension(Extension, object):

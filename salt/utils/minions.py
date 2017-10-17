@@ -13,10 +13,10 @@ import logging
 
 # Import salt libs
 import salt.payload
-import salt.utils
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
+import salt.utils.stringutils
 import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltCacheError
@@ -236,7 +236,7 @@ class CkMinions(object):
                 with salt.utils.files.fopen(pki_cache_fn) as fn_:
                     return self.serial.load(fn_)
             else:
-                for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
+                for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
                     if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
                         minions.append(fn_)
             return minions
@@ -263,7 +263,7 @@ class CkMinions(object):
 
         if greedy:
             minions = []
-            for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
+            for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
                 if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
                     minions.append(fn_)
         elif cache_enabled:
@@ -420,7 +420,7 @@ class CkMinions(object):
             cache_enabled = self.opts.get('minion_data_cache', False)
             if greedy:
                 mlist = []
-                for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
+                for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
                     if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
                         mlist.append(fn_)
                 return {'minions': mlist,
@@ -636,7 +636,7 @@ class CkMinions(object):
         Return a list of all minions that have auth'd
         '''
         mlist = []
-        for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
+        for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
             if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
                 mlist.append(fn_)
         return {'minions': mlist, 'missing': []}
@@ -985,7 +985,7 @@ class CkMinions(object):
                 if match.rstrip('%') in groups:
                     auth_list.extend(auth_provider[match])
             else:
-                if salt.utils.expr_match(match, name):
+                if salt.utils.stringutils.expr_match(match, name):
                     name_matched = True
                     auth_list.extend(auth_provider[match])
         if not permissive and not name_matched and '*' in auth_provider:

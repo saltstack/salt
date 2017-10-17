@@ -9,8 +9,8 @@ import re
 import os
 
 # Import salt libs
-import salt.utils  # Can be removed once normalize_mode is moved
 import salt.utils.data
+import salt.utils.files
 import salt.syspaths as syspaths
 
 # Import 3rd-party libs
@@ -82,7 +82,7 @@ def manage_mode(mode):
     # config.manage_mode should no longer be invoked from the __salt__ dunder
     # in Salt code, this function is only being left here for backwards
     # compatibility.
-    return salt.utils.normalize_mode(mode)
+    return salt.utils.files.normalize_mode(mode)
 
 
 def valid_fileproto(uri):

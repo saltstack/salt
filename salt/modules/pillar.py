@@ -17,10 +17,10 @@ from salt.ext import six
 
 # Import salt libs
 import salt.pillar
-import salt.utils  # Can be removed once alias_function is moved
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
+import salt.utils.functools
 import salt.utils.odict
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
@@ -267,7 +267,7 @@ def items(*args, **kwargs):
     return pillar.compile_pillar()
 
 # Allow pillar.data to also be used to return pillar data
-data = salt.utils.alias_function(items, 'data')
+data = salt.utils.functools.alias_function(items, 'data')
 
 
 def _obfuscate_inner(var):

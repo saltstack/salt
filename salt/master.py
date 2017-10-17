@@ -47,7 +47,6 @@ import tornado.gen  # pylint: disable=F0401
 
 # Import salt libs
 import salt.crypt
-import salt.utils  # Can be removed once get_values_of_matching_keys is moved
 import salt.client
 import salt.payload
 import salt.pillar
@@ -1440,7 +1439,7 @@ class AESFuncs(object):
                 path_name = os.path.split(syndic_cache_path)[0]
                 if not os.path.exists(path_name):
                     os.makedirs(path_name)
-                with salt.utils.fopen(syndic_cache_path, u'w') as wfh:
+                with salt.utils.files.fopen(syndic_cache_path, u'w') as wfh:
                     wfh.write(u'')
 
             # Format individual return loads
@@ -1903,7 +1902,7 @@ class ClearFuncs(object):
                         auth_ret = True
 
             if auth_ret is not True:
-                auth_list = salt.utils.get_values_of_matching_keys(
+                auth_list = salt.utils.master.get_values_of_matching_keys(
                         self.opts[u'publisher_acl'],
                         auth_ret)
                 if not auth_list:

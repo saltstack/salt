@@ -18,7 +18,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.pagerduty
 import salt.modules.pagerduty as pagerduty
 
 

@@ -12,7 +12,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
 import salt.beacons.journald as journald
-import salt.utils
+import salt.utils.data
 
 import logging
 log = logging.getLogger(__name__)
@@ -113,7 +113,7 @@ class JournaldBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
-        _expected_return = salt.utils.simple_types_filter(_STUB_JOURNALD_ENTRY)
+        _expected_return = salt.utils.data.simple_types_filter(_STUB_JOURNALD_ENTRY)
         _expected_return['tag'] = 'sshd'
 
         ret = journald.beacon(config)

@@ -7,7 +7,7 @@ A simple beacon to watch journald for specific entries
 from __future__ import absolute_import
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.locales
 import salt.ext.six
 from salt.ext.six.moves import map
@@ -99,7 +99,7 @@ def beacon(config):
                         n_flag += 1
             if n_flag == len(_config['services'][name]):
                 # Match!
-                sub = salt.utils.simple_types_filter(cur)
+                sub = salt.utils.data.simple_types_filter(cur)
                 sub.update({'tag': name})
                 ret.append(sub)
     return ret

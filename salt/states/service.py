@@ -62,7 +62,7 @@ from __future__ import absolute_import
 import time
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.platform
 from salt.utils.args import get_function_argspec as _argspec
 from salt.exceptions import CommandExecutionError
@@ -395,7 +395,7 @@ def running(name,
 
     # Convert enable to boolean in case user passed a string value
     if isinstance(enable, six.string_types):
-        enable = salt.utils.is_true(enable)
+        enable = salt.utils.data.is_true(enable)
 
     # Check if the service is available
     try:
@@ -534,7 +534,7 @@ def dead(name,
 
     # Convert enable to boolean in case user passed a string value
     if isinstance(enable, six.string_types):
-        enable = salt.utils.is_true(enable)
+        enable = salt.utils.data.is_true(enable)
 
     # Check if the service is available
     try:
