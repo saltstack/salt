@@ -17,6 +17,7 @@ from tests.support.mock import (
     NO_MOCK_REASON,
 )
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class AutoKeyTest(TestCase):
     '''
@@ -35,8 +36,8 @@ class AutoKeyTest(TestCase):
         '''
         Helper function for testing autosign_grains().
 
-        Patches ``os.walk`` to return only ``file_name`` and ``salt.utils.files.fopen`` to open a mock
-        file with ``file_content`` as content. Optionally sets ``opts`` values.
+        Patches ``os.walk`` to return only ``file_name`` and ``salt.utils.files.fopen`` to open a
+        mock file with ``file_content`` as content. Optionally sets ``opts`` values.
         Then executes test_func. The ``os.walk`` and ``salt.utils.files.fopen`` mock objects
         are passed to the function as arguments.
         '''
