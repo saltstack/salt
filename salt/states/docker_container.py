@@ -1853,7 +1853,7 @@ def stopped(name=None,
         .. code-block:: yaml
 
             stopped_containers:
-              docker.stopped:
+              docker_container.stopped:
                 - names:
                   - foo
                   - bar
@@ -1862,7 +1862,7 @@ def stopped(name=None,
         .. code-block:: yaml
 
             stopped_containers:
-              docker.stopped:
+              docker_container.stopped:
                 - containers:
                   - foo
                   - bar
@@ -1998,10 +1998,10 @@ def absent(name, force=False):
     .. code-block:: yaml
 
         mycontainer:
-          docker.absent
+          docker_container.absent
 
         multiple_containers:
-          docker.absent:
+          docker_container.absent:
             - names:
               - foo
               - bar
