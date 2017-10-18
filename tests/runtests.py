@@ -448,7 +448,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             dest='daemons',
             action='store_true',
             default=False,
-            help='Run daemon tests'
+            help='Run salt/daemons/*.py tests'
         )
 
     def validate_options(self):
