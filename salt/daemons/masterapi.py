@@ -358,18 +358,19 @@ class AutoKey(object):
             for grain in filenames:
                 if grain in autosign_grains:
                     grain_file = os.path.join(autosign_grains_dir, grain)
-                    try:
-                        with salt.utils.files.fopen(grain_file, u'r') as f:
-                            for line in f:
-                                line = line.strip()
-                                if line.startswith(u'#'):
-                                    continue
-                                if autosign_grains[grain] == line:
-                                    return True
-                    except (IOError, OSError):
-                        message = u'Error while opening {}, ignoring content'
+
+                    if not self.check_permissions(grain_file):
+                        message = 'Wrong permissions for {0}, ignoring content'
                         log.warning(message.format(grain_file))
                         continue
+
+                    with salt.utils.files.fopen(grain_file, u'r') as f:
+                        for line in f:
+                            line = line.strip()
+                            if line.startswith(u'#'):
+                                continue
+                            if autosign_grains[grain] == line:
+                                return True
         return False
 
     def check_autoreject(self, keyid):
