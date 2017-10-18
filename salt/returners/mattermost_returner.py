@@ -4,29 +4,43 @@ Return salt data via mattermost
 
 .. versionadded:: 2017.7.0
 
-The following fields can be set in the minion conf file::
+The following fields can be set in the minion conf file:
+
 .. code-block:: yaml
+
     mattermost.hook (required)
     mattermost.username (optional)
     mattermost.channel (optional)
+
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
 the default location:
+
 .. code-block:: yaml
+
     mattermost.channel
     mattermost.hook
     mattermost.username
+
 mattermost settings may also be configured as:
+
 .. code-block:: yaml
+
     mattermost:
-        channel: RoomName
-        hook: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        username: user
+      channel: RoomName
+      hook: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      username: user
+
 To use the mattermost returner, append '--return mattermost' to the salt command.
+
 .. code-block:: bash
+
     salt '*' test.ping --return mattermost
+
 To override individual configuration items, append --return_kwargs '{'key:': 'value'}' to the salt command.
+
 .. code-block:: bash
+
     salt '*' test.ping --return mattermost --return_kwargs '{'channel': '#random'}'
 '''
 from __future__ import absolute_import
@@ -53,6 +67,7 @@ __virtualname__ = 'mattermost'
 def __virtual__():
     '''
     Return virtual name of the module.
+
     :return: The virtual name of the module.
     '''
     return __virtualname__
@@ -118,6 +133,7 @@ def returner(ret):
 def event_return(events):
     '''
     Send the events to a mattermost room.
+
     :param events:      List of events
     :return:            Boolean if messages were sent successfully.
     '''
@@ -153,6 +169,7 @@ def post_message(channel,
                  hook):
     '''
     Send a message to a mattermost room.
+
     :param channel:     The room name.
     :param message:     The message to send to the mattermost room.
     :param username:    Specify who the message is from.
