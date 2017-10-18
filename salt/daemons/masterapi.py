@@ -282,46 +282,23 @@ class AutoKey(object):
             return True
 
         # After we've ascertained we're not on windows
-        try:
-            user = self.opts['user']
-            pwnam = pwd.getpwnam(user)
-            uid = pwnam[2]
-            gid = pwnam[3]
-            groups = salt.utils.user.get_gid_list(user, include_default=False)
-        except KeyError:
-            log.error(
-                'Failed to determine groups for user {0}. The user is not '
-                'available.\n'.format(
-                    user
-                )
-            )
-            return False
-
+        groups = salt.utils.user.get_gid_list(self.opts['user'], include_default=False)
         fmode = os.stat(filename)
 
-        if os.getuid() == 0:
-            if fmode.st_uid == uid or fmode.st_gid != gid:
-                return True
-            elif self.opts.get('permissive_pki_access', False) \
-                    and fmode.st_gid in groups:
-                return True
-        else:
-            if stat.S_IWOTH & fmode.st_mode:
-                # don't allow others to write to the file
+        if stat.S_IWOTH & fmode.st_mode:
+            # don't allow others to write to the file
+            return False
+
+        if stat.S_IWGRP & fmode.st_mode:
+            # if the group has write access only allow with permissive_pki_access
+            if not self.opts.get('permissive_pki_access', False):
+                return False
+            elif os.getuid() == 0 and fmode.st_gid not in groups:
+                # if salt is root it has to be in the group that has write access
+                # this gives the group 'permission' to have write access
                 return False
 
-            # check group flags
-            if self.opts.get('permissive_pki_access', False) and stat.S_IWGRP & fmode.st_mode:
-                return True
-            elif stat.S_IWGRP & fmode.st_mode:
-                return False
-
-            # check if writable by group or other
-            if not (stat.S_IWGRP & fmode.st_mode or
-                    stat.S_IWOTH & fmode.st_mode):
-                return True
-
-        return False
+        return True
 
     def check_signing_file(self, keyid, signing_file):
         '''
