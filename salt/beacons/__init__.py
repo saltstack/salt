@@ -239,7 +239,7 @@ class Beacon(object):
             log.info('Beacon %s does not have a validate'
                      ' function,  skipping validation.', name)
             valid = True
-            vcomment = 'Validator method not found.'
+            vcomment = 'Beacon %s does not have a validate function,  skipping validation.' % name
 
 
         # Fire the complete event back along with the list of beacons
