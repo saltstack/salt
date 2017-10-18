@@ -848,6 +848,12 @@ class TestDaemon(object):
                 )
             opts_dict['extension_modules'] = os.path.join(opts_dict['root_dir'], 'extension_modules')
 
+            # Copy the autosign_file to the new  master root_dir
+            shutil.copyfile(
+                os.path.join(INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
+                os.path.join(opts_dict['root_dir'], 'autosign_file')
+            )
+
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
             optname = '{0}.file'.format(name)
