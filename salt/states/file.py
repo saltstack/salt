@@ -2258,6 +2258,7 @@ def directory(name,
     if __opts__['test']:
         ret['result'] = presult
         ret['comment'] = pcomment
+        ret['changes'] = ret['pchanges']
         return ret
 
     if not os.path.isdir(name):
