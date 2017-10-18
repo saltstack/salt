@@ -29,7 +29,6 @@ import json
 import yaml
 # pylint: disable=no-name-in-module,import-error,redefined-builtin
 import salt.ext.six as six
-from salt.ext.six.moves import range
 from salt.ext.six.moves.urllib.error import HTTPError
 from salt.ext.six.moves.urllib.request import Request as _Request, urlopen as _urlopen
 # pylint: enable=no-name-in-module,import-error,redefined-builtin
@@ -1558,7 +1557,7 @@ def _consolidate_repo_sources(sources):
             combined_comps = set(repo.comps).union(set(combined.comps))
             consolidated[key].comps = list(combined_comps)
         else:
-            consolidated[key] = sourceslist.SourceEntry(_strip_uri(repo.line))
+            consolidated[key] = sourceslist.SourceEntry(salt.utils.pkg.deb.strip_uri(repo.line))
 
         if repo.file != base_file:
             delete_files.add(repo.file)
@@ -1666,7 +1665,7 @@ def list_repos():
         repo['dist'] = source.dist
         repo['type'] = source.type
         repo['uri'] = source.uri.rstrip('/')
-        repo['line'] = _strip_uri(source.line.strip())
+        repo['line'] = salt.utils.pkg.deb.strip_uri(source.line.strip())
         repo['architectures'] = getattr(source, 'architectures', [])
         repos.setdefault(source.uri, []).append(repo)
     return repos
@@ -2412,18 +2411,6 @@ def file_dict(*packages):
     return __salt__['lowpkg.file_dict'](*packages)
 
 
-def _strip_uri(repo):
-    '''
-    Remove the trailing slash from the URI in a repo definition
-    '''
-    splits = repo.split()
-    for idx in range(len(splits)):
-        if any(splits[idx].startswith(x)
-               for x in ('http://', 'https://', 'ftp://')):
-            splits[idx] = splits[idx].rstrip('/')
-    return ' '.join(splits)
-
-
 def expand_repo_def(**kwargs):
     '''
     Take a repository definition and expand it to the full pkg repository dict
@@ -2439,7 +2426,7 @@ def expand_repo_def(**kwargs):
     _check_apt()
 
     sanitized = {}
-    repo = _strip_uri(kwargs['repo'])
+    repo = salt.utils.pkg.deb.strip_uri(kwargs['repo'])
     if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint', 'neon'):
         dist = __grains__['lsb_distrib_codename']
         owner_name, ppa_name = repo[4:].split('/', 1)
