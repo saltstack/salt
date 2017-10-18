@@ -99,7 +99,7 @@ class UtilsTestCase(TestCase):
     def test_path_join(self):
         with patch('salt.utils.is_windows', return_value=False) as is_windows_mock:
             self.assertFalse(is_windows_mock.return_value)
-            expected_path = '/a/b/c/d'
+            expected_path = os.path.join(os.sep + 'a', 'b', 'c', 'd')
             ret = utils.path_join('/a/b/c', 'd')
             self.assertEqual(ret, expected_path)
 
@@ -985,7 +985,8 @@ class UtilsTestCase(TestCase):
             ret = utils.daemonize_if({})
             self.assertEqual(None, ret)
 
-        with patch('salt.utils.daemonize'):
+        with patch('salt.utils.daemonize'), \
+                patch('sys.platform', 'not windows'):
             utils.daemonize_if({})
             self.assertTrue(utils.daemonize.called)
         # pylint: enable=assignment-from-none
