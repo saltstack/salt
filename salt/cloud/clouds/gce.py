@@ -2080,6 +2080,7 @@ def attach_disk(name=None, kwargs=None, call=None):
     disk_name = kwargs['disk_name']
     mode = kwargs.get('mode', 'READ_WRITE').upper()
     boot = kwargs.get('boot', False)
+    auto_delete = kwargs.get('auto_delete', False)
     if boot and boot.lower() in ['true', 'yes', 'enabled']:
         boot = True
     else:
@@ -2109,7 +2110,8 @@ def attach_disk(name=None, kwargs=None, call=None):
         transport=__opts__['transport']
     )
 
-    result = conn.attach_volume(node, disk, ex_mode=mode, ex_boot=boot)
+    result = conn.attach_volume(node, disk, ex_mode=mode, ex_boot=boot,
+                                ex_auto_delete=auto_delete)
 
     __utils__['cloud.fire_event'](
         'event',
@@ -2389,6 +2391,8 @@ def create_attach_volumes(name, kwargs, call=None):
     'type': The disk type, either pd-standard or pd-ssd. Optional, defaults to pd-standard.
     'image': An image to use for this new disk. Optional.
     'snapshot': A snapshot to use for this new disk. Optional.
+    'auto_delete': An option(bool) to keep or remove the disk upon
+                   instance deletion. Optional, defaults to False.
 
     Volumes are attached in the order in which they are given, thus on a new
     node the first volume will be /dev/sdb, the second /dev/sdc, and so on.
@@ -2416,7 +2420,8 @@ def create_attach_volumes(name, kwargs, call=None):
           'size': volume['size'],
           'type': volume.get('type', 'pd-standard'),
           'image': volume.get('image', None),
-          'snapshot': volume.get('snapshot', None)
+          'snapshot': volume.get('snapshot', None),
+          'auto_delete': volume.get('auto_delete', False)
         }
 
         create_disk(volume_dict, 'function')
