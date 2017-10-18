@@ -239,6 +239,7 @@ class Beacon(object):
             log.info('Beacon %s does not have a validate'
                      ' function,  skipping validation.', name)
             valid = True
+            vcomment = 'Beacon %s does not have a validate function,  skipping validation.' % name
 
         # Fire the complete event back along with the list of beacons
         evt = salt.utils.event.get_event('minion', opts=self.opts)
