@@ -3,7 +3,7 @@
 Beacon to monitor temperature, humidity and pressure using the SenseHat
 of a Raspberry Pi.
 
-.. versionadded:: 2017.7
+.. versionadded:: 2017.7.0
 
 :maintainer:    Benedikt Werner <1benediktwerner@gmail.com>
 :maturity:      new
