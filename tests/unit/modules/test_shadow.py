@@ -42,6 +42,7 @@ _HASHES = dict(
 
 
 @skipIf(not salt.utils.platform.is_linux(), 'minion is not Linux')
+@skipIf(not HAS_SHADOW, 'shadow module is not available')
 class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -62,8 +63,7 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
                 hash_info['pw_hash']
             )
 
-    # 'list_users' function tests: 1
-
+    @skip_if_not_root
     def test_list_users(self):
         '''
         Test if it returns a list of all users
