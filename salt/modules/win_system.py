@@ -664,7 +664,7 @@ def join_domain(domain,
         ret = {'Domain': domain,
                'Restart': False}
         if restart:
-            ret['Restart'] = reboot()
+            ret['Restart'] = reboot(timeout=2, in_seconds=True)
         return ret
 
     log.error(win32api.FormatMessage(err[0]).rstrip())
@@ -752,7 +752,7 @@ def unjoin_domain(username=None,
             ret = {'Workgroup': workgroup,
                    'Restart': False}
             if restart:
-                ret['Restart'] = reboot()
+                ret['Restart'] = reboot(timeout=2, in_seconds=True)
 
             return ret
         else:
