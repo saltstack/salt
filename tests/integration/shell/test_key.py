@@ -281,10 +281,10 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
 
     def test_autosign_grains_accept(self):
         self.run_key('-d minion')
+        self.run_call('test.ping') # get minon to try to authenticate itself again
 
-        time.sleep(1)
         try:
-            self.assertEqual(self.run_key('-l acc'), ['Accepted Keys:', 'sub_minion'])
+            self.assertEqual(self.run_key('-l acc'), ['Accepted Keys:', 'sub_miniosn'])
             self.assertEqual(self.run_key('-l un'), ['Unaccepted Keys:', 'minion'])
         except:
             self.run_key('-a minion')
@@ -296,7 +296,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         with salt.utils.files.fopen(os.path.join(autosign_grains_dir, 'test_grain'), 'w') as f:
             f.write('#invalid_value\ncheese')
 
-        time.sleep(1)
+        self.run_call('test.ping') # get minon to try to authenticate itself again
         try:
             self.assertEqual(self.run_key('-l acc'), ['Accepted Keys:', 'minion', 'sub_minion'])
         finally:
@@ -306,8 +306,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
 
     def test_autosign_grains_fail(self):
         self.run_key('-d minion')
+        self.run_call('test.ping') # get minon to try to authenticate itself again
 
-        time.sleep(1)
         try:
             self.assertEqual(self.run_key('-l acc'), ['Accepted Keys:', 'sub_minion'])
             self.assertEqual(self.run_key('-l un'), ['Unaccepted Keys:', 'minion'])
@@ -321,7 +321,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         with salt.utils.files.fopen(os.path.join(autosign_grains_dir, 'test_grain'), 'w') as f:
             f.write('#cheese\ninvalid_value')
 
-        time.sleep(1)
+        self.run_call('test.ping') # get minon to try to authenticate itself again
         try:
             self.assertEqual(self.run_key('-l acc'), ['Accepted Keys:', 'sub_minion'])
             self.assertEqual(self.run_key('-l un'), ['Unaccepted Keys:', 'minion'])
