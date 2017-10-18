@@ -642,6 +642,10 @@ def _present(name,
                     return ret
 
     if new_interfaces or old_interfaces:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_interfaces:
+            interfaces = new_interfaces | _current_interfaces
         ret['changes'].update({'interfaces':
                                 {'old': _current_interfaces,
                                 'new': interfaces}})
@@ -677,6 +681,10 @@ def _present(name,
                     return ret
 
     if new_sources or old_sources:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_sources:
+            sources = new_sources | _current_sources
         ret['changes'].update({'sources':
                                 {'old': _current_sources,
                                 'new': sources}})
@@ -713,6 +721,10 @@ def _present(name,
                     return ret
 
     if new_rich_rules or old_rich_rules:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_rich_rules:
+            rich_rules = new_rich_rules | _current_rich_rules
         ret['changes'].update({'rich_rules':
                               {'old': _current_rich_rules,
                                'new': rich_rules}})
