@@ -13,6 +13,7 @@ Multiple *.tst files can be created in the saltcheck-tests folder.
 The "id" of a test works in the same manner as in salt state files.
 They should be unique and descriptive.
 Note: saltcheck supports the salt rendering system.  e.g. jinja + yaml will work = dynamically built tests
+      can pull from pillars, grains, and etc.
 
 Example file system layout:
 /srv/salt/apache/
