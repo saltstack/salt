@@ -163,6 +163,9 @@ TEST_SUITES = {
     'external_api':
         {'display_name': 'ExternalAPIs',
          'path': 'integration/externalapi'},
+    'daemons':
+        {'display_name': 'Daemons',
+         'path': 'integration/daemons'},
 }
 
 
@@ -438,6 +441,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             default=False,
             help='Run venafi runner tests'
+        )
+        self.test_selection_group.add_option(
+            '--daemons',
+            '--daemon-tests',
+            dest='daemons',
+            action='store_true',
+            default=False,
+            help='Run daemon tests'
         )
 
     def validate_options(self):

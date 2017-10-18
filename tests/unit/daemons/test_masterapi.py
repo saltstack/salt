@@ -18,9 +18,9 @@ from tests.support.mock import (
 )
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class AutoKeyTestCase(TestCase):
+class AutoKeyTest(TestCase):
     '''
-    TestCase for salt.daemons.masterapi.AutoKey class
+    Test for the salt.daemons.masterapi.AutoKey class
     '''
 
     def setUp(self):
