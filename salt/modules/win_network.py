@@ -11,7 +11,6 @@ import datetime
 import socket
 
 # Import Salt libs
-import salt.utils
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.validate.net
@@ -19,7 +18,7 @@ from salt.modules.network import (wol, get_hostname, interface, interface_ip,
                                   subnets6, ip_in_subnet, convert_cidr,
                                   calc_net, get_fqdn, ifacestartswith,
                                   iphexval)
-from salt.utils import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function as _namespaced_function
 
 try:
     import salt.utils.winapi
@@ -316,7 +315,7 @@ def hw_addr(iface):
     return salt.utils.network.hw_addr(iface)
 
 # Alias hwaddr to preserve backward compat
-hwaddr = salt.utils.alias_function(hw_addr, 'hwaddr')
+hwaddr = salt.utils.functools.alias_function(hw_addr, 'hwaddr')
 
 
 def subnets():
@@ -360,7 +359,7 @@ def ip_addrs(interface=None, include_loopback=False):
     return salt.utils.network.ip_addrs(interface=interface,
                                        include_loopback=include_loopback)
 
-ipaddrs = salt.utils.alias_function(ip_addrs, 'ipaddrs')
+ipaddrs = salt.utils.functools.alias_function(ip_addrs, 'ipaddrs')
 
 
 def ip_addrs6(interface=None, include_loopback=False):
@@ -378,7 +377,7 @@ def ip_addrs6(interface=None, include_loopback=False):
     return salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
 
-ipaddrs6 = salt.utils.alias_function(ip_addrs6, 'ipaddrs6')
+ipaddrs6 = salt.utils.functools.alias_function(ip_addrs6, 'ipaddrs6')
 
 
 def connect(host, port=None, **kwargs):

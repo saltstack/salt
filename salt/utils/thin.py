@@ -70,9 +70,10 @@ except ImportError:
 
 # Import salt libs
 import salt
-import salt.utils
 import salt.utils.files
+import salt.utils.hashutils
 import salt.exceptions
+import salt.version
 
 SALTCALL = '''
 import os
@@ -341,7 +342,7 @@ def thin_sum(cachedir, form='sha1'):
     Return the checksum of the current thin tarball
     '''
     thintar = gen_thin(cachedir)
-    return salt.utils.get_hash(thintar, form)
+    return salt.utils.hashutils.get_hash(thintar, form)
 
 
 def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
@@ -625,4 +626,4 @@ def min_sum(cachedir, form='sha1'):
     Return the checksum of the current thin tarball
     '''
     mintar = gen_min(cachedir)
-    return salt.utils.get_hash(mintar, form)
+    return salt.utils.hashutils.get_hash(mintar, form)

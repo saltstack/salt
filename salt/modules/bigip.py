@@ -22,8 +22,6 @@ except ImportError:
 from salt.ext import six
 
 # Import salt libs
-import salt.utils
-import salt.output
 import salt.exceptions
 
 # Setup the logger

@@ -8,17 +8,17 @@ Comparison Operators in Package Installation
 --------------------------------------------
 
 Salt now supports using comparison operators (e.g. ``>=1.2.3``) when installing
-packages on minions which use :mod:`yum/dnf <salt.modules.yumpkg>` or :mod:`apt
-<salt.modules.aptpkg>`. This is supported both in the :py:func:`pkg.installed
-<salt.states.pkg.installed>` state and in the ``pkg.install`` remote execution
-function.
+packages on minions which use :mod:`yum/dnf <salt.modules.yumpkg>` or
+:mod:`apt <salt.modules.aptpkg>`. This is supported both in the
+:py:func:`pkg.installed <salt.states.pkg.installed>` state and in the ``pkg.install``
+remote execution function.
 
 :ref:`Master Tops <master-tops-system>` Changes
 -----------------------------------------------
 
-When both :ref:`Master Tops <master-tops-system>` and a :ref:`Top File
-<states-top>` produce SLS matches for a given minion, the matches were being
-merged in an unpredictable manner which did not preserve ordering. This has
+When both :ref:`Master Tops <master-tops-system>` and a
+:ref:`Top File <states-top>` produce SLS matches for a given minion, the matches
+were being merged in an unpredictable manner which did not preserve ordering. This has
 been changed. The top file matches now execute in the expected order, followed
 by any master tops matches that are not matched via a top file.
 
@@ -46,6 +46,27 @@ noon PST so the Stormpath external authentication module has been removed.
 
 https://stormpath.com/oktaplusstormpath
 
+New Grains
+----------
+
+New core grains have been added to expose any storage inititator setting.
+
+The new grains added are:
+
+* ``fc_wwn``: Show all fibre channel world wide port names for a host
+* ``iscsi_iqn``: Show the iSCSI IQN name for a host
+
+Grains Changes
+--------------
+
+* The ``virtual`` grain identifies reports KVM and VMM hypervisors when running
+  an OpenBSD guest
+
+New Modules
+-----------
+
+- :mod:`salt.modules.purefa <salt.modules.purefa>`
+
 New NaCl Renderer
 -----------------
 
@@ -55,14 +76,14 @@ New support for Cisco UCS Chassis
 ---------------------------------
 
 The salt proxy minion now allows for control of Cisco USC chassis. See
-the `cimc` modules for details.
+the ``cimc`` modules for details.
 
 New salt-ssh roster
 -------------------
 
 A new roster has been added that allows users to pull in a list of hosts
-for salt-ssh targeting from a ~/.ssh configuration. For full details,
-please see the `sshconfig` roster.
+for salt-ssh targeting from a ``~/.ssh`` configuration. For full details,
+please see the ``sshconfig`` roster.
 
 New GitFS Features
 ------------------
@@ -88,6 +109,13 @@ environments (i.e. ``saltenvs``) have been added:
    ignore all tags and use branches only, and also to keep SHAs from being made
    available as saltenvs.
 
+Additional output modes
+------------------
+
+The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``terse_id``.
+Just like ``mixed_id``, these use the state ID as name in the highstate output.
+For more information on these output modes, see the docs for the :mod:`Highstate Outputter <salt.output.highstate>`.
+
 Salt Cloud Features
 -------------------
 
@@ -109,6 +137,244 @@ file. For example:
            - echo 'hello world!'
 
 These commands will run in sequence **before** the bootstrap script is executed.
+
+New salt-cloud Grains
+=====================
+
+When salt cloud creates a new minon, it will now add grain information
+to the minion configuration file, identifying the resources originally used
+to create it.
+
+The generated grain information will appear similar to:
+
+.. code-block:: yaml
+    grains:
+      salt-cloud:
+        driver: ec2
+        provider: my_ec2:ec2
+        profile: ec2-web
+The generation of salt-cloud grains can be surpressed by the
+option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
+
+Upgraded Saltify Driver
+=======================
+
+The salt-cloud Saltify driver is used to provision machines which
+are not controlled by a dedicated cloud supervisor (such as typical hardware
+machines) by pushing a salt-bootstrap command to them and accepting them on
+the salt master. Creation of a node has been its only function and no other
+salt-cloud commands were implemented.
+
+With this upgrade, it can use the salt-api to provide advanced control,
+such as rebooting a machine, querying it along with conventional cloud minions,
+and, ultimately, disconnecting it from its master.
+
+After disconnection from ("destroying" on) one master, a machine can be
+re-purposed by connecting to ("creating" on) a subsequent master.
+
+New Vagrant Driver
+==================
+
+The salt-cloud Vagrant driver brings virtual machines running in a limited
+environment, such as a programmer's workstation, under salt-cloud control.
+This can be useful for experimentation, instruction, or testing salt configurations.
+
+Using salt-api on the master, and a salt-minion running on the host computer,
+the Vagrant driver can create (``vagrant up``), restart (``vagrant reload``),
+and destroy (``vagrant destroy``) VMs, as controlled by salt-cloud profiles
+which designate a ``Vagrantfile`` on the host machine.
+
+The master can be a very limited machine, such as a Raspberry Pi, or a small
+VagrantBox VM.
+
+
+New pillar/master_tops module called saltclass
+----------------------------------------------
+
+This module clones the behaviour of reclass (http://reclass.pantsfullofunix.net/), without the need of an external app, and add several features to improve flexibility.
+Saltclass lets you define your nodes from simple ``yaml`` files (``.yml``) through hierarchical class inheritance with the possibility to override pillars down the tree.
+
+**Features**
+
+- Define your nodes through hierarchical class inheritance
+- Reuse your reclass datas with minimal modifications
+    - applications => states
+    - parameters => pillars
+- Use Jinja templating in your yaml definitions
+- Access to the following Salt objects in Jinja
+    - ``__opts__``
+    - ``__salt__``
+    - ``__grains__``
+    - ``__pillars__``
+    - ``minion_id``
+- Chose how to merge or override your lists using ^ character (see examples)
+- Expand variables ${} with possibility to escape them if needed \${} (see examples)
+- Ignores missing node/class and will simply return empty without breaking the pillar module completely - will be logged
+
+An example subset of datas is available here: http://git.mauras.ch/salt/saltclass/src/master/examples
+
+==========================  ===========
+Terms usable in yaml files  Description
+==========================  ===========
+classes                     A list of classes that will be processed in order
+states                      A list of states that will be returned by master_tops function
+pillars                     A yaml dictionnary that will be returned by the ext_pillar function
+environment                 Node saltenv that will be used by master_tops
+==========================  ===========
+
+A class consists of:
+
+- zero or more parent classes
+- zero or more states
+- any number of pillars
+
+A child class can override pillars from a parent class.
+A node definition is a class in itself with an added ``environment`` parameter for ``saltenv`` definition.
+
+**class names**
+
+Class names mimic salt way of defining states and pillar files.
+This means that ``default.users`` class name will correspond to one of these:
+
+- ``<saltclass_path>/classes/default/users.yml``
+- ``<saltclass_path>/classes/default/users/init.yml``
+
+**Saltclass tree**
+
+A saltclass tree would look like this:
+
+.. code-block:: text
+
+    <saltclass_path>
+    ├── classes
+    │   ├── app
+    │   │   ├── borgbackup.yml
+    │   │   └── ssh
+    │   │       └── server.yml
+    │   ├── default
+    │   │   ├── init.yml
+    │   │   ├── motd.yml
+    │   │   └── users.yml
+    │   ├── roles
+    │   │   ├── app.yml
+    │   │   └── nginx
+    │   │       ├── init.yml
+    │   │       └── server.yml
+    │   └── subsidiaries
+    │       ├── gnv.yml
+    │       ├── qls.yml
+    │       └── zrh.yml
+    └── nodes
+        ├── geneva
+        │   └── gnv.node1.yml
+        ├── lausanne
+        │   ├── qls.node1.yml
+        │   └── qls.node2.yml
+        ├── node127.yml
+        └── zurich
+            ├── zrh.node1.yml
+            ├── zrh.node2.yml
+            └── zrh.node3.yml
+
+**Examples**
+
+``<saltclass_path>/nodes/lausanne/qls.node1.yml``
+
+.. code-block:: yaml
+
+    environment: base
+
+    classes:
+    {% for class in ['default'] %}
+      - {{ class }}
+    {% endfor %}
+      - subsidiaries.{{ __grains__['id'].split('.')[0] }}
+
+``<saltclass_path>/classes/default/init.yml``
+
+.. code-block:: yaml
+
+    classes:
+      - default.users
+      - default.motd
+
+    states:
+      - openssh
+
+    pillars:
+      default:
+        network:
+          dns:
+            srv1: 192.168.0.1
+            srv2: 192.168.0.2
+            domain: example.com
+        ntp:
+          srv1: 192.168.10.10
+          srv2: 192.168.10.20
+
+``<saltclass_path>/classes/subsidiaries/gnv.yml``
+
+.. code-block:: yaml
+
+    pillars:
+      default:
+        network:
+          sub: Geneva
+          dns:
+            srv1: 10.20.0.1
+            srv2: 10.20.0.2
+            srv3: 192.168.1.1
+            domain: gnv.example.com
+        users:
+          adm1:
+            uid: 1210
+            gid: 1210
+            gecos: 'Super user admin1'
+            homedir: /srv/app/adm1
+          adm3:
+            uid: 1203
+            gid: 1203
+            gecos: 'Super user adm
+
+Variable expansions:
+
+Escaped variables are rendered as is - ``${test}``
+
+Missing variables are rendered as is - ``${net:dns:srv2}``
+
+.. code-block:: yaml
+
+    pillars:
+      app:
+      config:
+        dns:
+          srv1: ${default:network:dns:srv1}
+          srv2: ${net:dns:srv2}
+        uri: https://application.domain/call?\${test}
+        prod_parameters:
+          - p1
+          - p2
+          - p3
+      pkg:
+        - app-core
+        - app-backend
+
+List override:
+
+Not using ``^`` as the first entry will simply merge the lists
+
+.. code-block:: yaml
+
+    pillars:
+      app:
+        pkg:
+          - ^
+          - app-frontend
+
+
+**Known limitation**
+
+Currently you can't have both a variable and an escaped variable in the same string as the escaped one will not be correctly rendered - '\${xx}' will stay as is instead of being rendered as '${xx}'
 
 Newer PyWinRM Versions
 ----------------------
@@ -149,185 +415,200 @@ check the configuration for the correct format and only load if the validation p
 - ``avahi_announce`` beacon
 
     Old behavior:
-    ```
-    beacons:
-      avahi_announce:
-        run_once: True
-        servicetype: _demo._tcp
-        port: 1234
-        txt:
-          ProdName: grains.productname
-          SerialNo: grains.serialnumber
-          Comments: 'this is a test'
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          avahi_announce:
+            run_once: True
+            servicetype: _demo._tcp
+            port: 1234
+            txt:
+              ProdName: grains.productname
+              SerialNo: grains.serialnumber
+              Comments: 'this is a test'
 
     New behavior:
-    ```
-    beacons:
-      avahi_announce:
-        - run_once: True
-        - servicetype: _demo._tcp
-        - port: 1234
-        - txt:
-            ProdName: grains.productname
-            SerialNo: grains.serialnumber
-            Comments: 'this is a test'
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          avahi_announce:
+            - run_once: True
+            - servicetype: _demo._tcp
+            - port: 1234
+            - txt:
+                ProdName: grains.productname
+                SerialNo: grains.serialnumber
+                Comments: 'this is a test'
 
  - ``bonjour_announce`` beacon
 
     Old behavior:
-    ```
-    beacons:
-      bonjour_announce:
-        run_once: True
-        servicetype: _demo._tcp
-        port: 1234
-        txt:
-          ProdName: grains.productname
-          SerialNo: grains.serialnumber
-          Comments: 'this is a test'
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          bonjour_announce:
+            run_once: True
+            servicetype: _demo._tcp
+            port: 1234
+            txt:
+              ProdName: grains.productname
+              SerialNo: grains.serialnumber
+              Comments: 'this is a test'
 
     New behavior:
-    ```
-    beacons:
-      bonjour_announce:
-        - run_once: True
-        - servicetype: _demo._tcp
-        - port: 1234
-        - txt:
-            ProdName: grains.productname
-            SerialNo: grains.serialnumber
-            Comments: 'this is a test'
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          bonjour_announce:
+            - run_once: True
+            - servicetype: _demo._tcp
+            - port: 1234
+            - txt:
+                ProdName: grains.productname
+                SerialNo: grains.serialnumber
+                Comments: 'this is a test'
 
 - ``btmp`` beacon
 
     Old behavior:
-    ```
-    beacons:
-      btmp: {}
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          btmp: {}
 
     New behavior:
-    ```
-    beacons:
-      btmp: []
 
-    ```
+    .. code-block:: yaml
+
+        beacons:
+          btmp: []
 
 - ``glxinfo`` beacon
 
     Old behavior:
-    ```
-    beacons:
-      glxinfo:
-        user: frank
-        screen_event: True
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          glxinfo:
+            user: frank
+            screen_event: True
 
     New behavior:
-    ```
-    beacons:
-      glxinfo:
-        - user: frank
-        - screen_event: True
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          glxinfo:
+            - user: frank
+            - screen_event: True
 
 - ``haproxy`` beacon
 
     Old behavior:
-    ```
-    beacons:
-        haproxy:
-            - www-backend:
-                threshold: 45
-                servers:
+
+    .. code-block:: yaml
+
+        beacons:
+            haproxy:
+                - www-backend:
+                    threshold: 45
+                    servers:
+                        - web1
+                        - web2
+                - interval: 120
+
+    New behavior:
+
+    .. code-block:: yaml
+
+        beacons:
+          haproxy:
+            - backends:
+                www-backend:
+                  threshold: 45
+                  servers:
                     - web1
                     - web2
             - interval: 120
-    ```
-
-    New behavior:
-    ```
-    beacons:
-      haproxy:
-        - backends:
-            www-backend:
-              threshold: 45
-              servers:
-                - web1
-                - web2
-        - interval: 120
-    ```
 
 - ``inotify`` beacon
 
     Old behavior:
-    ```
-    beacons:
-      inotify:
-        /path/to/file/or/dir:
-            mask:
-              - open
-              - create
-              - close_write
-            recurse: True
-            auto_add: True
-            exclude:
-              - /path/to/file/or/dir/exclude1
-              - /path/to/file/or/dir/exclude2
-              - /path/to/file/or/dir/regex[a-m]*$:
-            regex: True
-        coalesce: True
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          inotify:
+            /path/to/file/or/dir:
+                mask:
+                  - open
+                  - create
+                  - close_write
+                recurse: True
+                auto_add: True
+                exclude:
+                  - /path/to/file/or/dir/exclude1
+                  - /path/to/file/or/dir/exclude2
+                  - /path/to/file/or/dir/regex[a-m]*$:
+                regex: True
+            coalesce: True
 
     New behavior:
-    ```
-    beacons:
-      inotify:
-        - files:
-            /path/to/file/or/dir:
-              mask:
-                - open
-                - create
-                - close_write
-              recurse: True
-              auto_add: True
-              exclude:
-                - /path/to/file/or/dir/exclude1
-                - /path/to/file/or/dir/exclude2
-                - /path/to/file/or/dir/regex[a-m]*$:
-              regex: True
-        - coalesce: True
-```
+
+    .. code-block:: yaml
+
+        beacons:
+          inotify:
+            - files:
+                /path/to/file/or/dir:
+                  mask:
+                    - open
+                    - create
+                    - close_write
+                  recurse: True
+                  auto_add: True
+                  exclude:
+                    - /path/to/file/or/dir/exclude1
+                    - /path/to/file/or/dir/exclude2
+                    - /path/to/file/or/dir/regex[a-m]*$:
+                  regex: True
+            - coalesce: True
 
 - ``journald`` beacon
 
     Old behavior:
-    ```
-    beacons:
-      journald:
-        sshd:
-          SYSLOG_IDENTIFIER: sshd
-          PRIORITY: 6
-    ```
 
-    New behavior:
-    ```
-    beacons:
-      journald:
-        - services:
+    .. code-block:: yaml
+
+        beacons:
+          journald:
             sshd:
               SYSLOG_IDENTIFIER: sshd
               PRIORITY: 6
-    ```
+
+    New behavior:
+
+    .. code-block:: yaml
+
+        beacons:
+          journald:
+            - services:
+                sshd:
+                  SYSLOG_IDENTIFIER: sshd
+                  PRIORITY: 6
 
 - ``load`` beacon
 
     Old behavior:
-    ```
+
+    .. code-block:: yaml
+
         beacons:
           load:
             1m:
@@ -341,51 +622,55 @@ check the configuration for the correct format and only load if the validation p
               - 1.0
             emitatstartup: True
             onchangeonly: False
-    ```
 
     New behavior:
-    ```
-    beacons:
-      load:
-        - averages:
-            1m:
-              - 0.0
-              - 2.0
-            5m:
-              - 0.0
-              - 1.5
-            15m:
-              - 0.1
-              - 1.0
-        - emitatstartup: True
-        - onchangeonly: False
-    ```
+
+    .. code-block:: yaml
+
+        beacons:
+          load:
+            - averages:
+                1m:
+                  - 0.0
+                  - 2.0
+                5m:
+                  - 0.0
+                  - 1.5
+                15m:
+                  - 0.1
+                  - 1.0
+            - emitatstartup: True
+            - onchangeonly: False
 
 - ``log`` beacon
 
     Old behavior:
-    ```
-    beacons:
-        log:
-          file: <path>
-          <tag>:
-            regex: <pattern>
-    ```
 
-    New behavior:
-    ```
-    beacons:
-        log:
-          - file: <path>
-          - tags:
+    .. code-block:: yaml
+
+        beacons:
+            log:
+              file: <path>
               <tag>:
                 regex: <pattern>
-    ```
+
+    New behavior:
+
+    .. code-block:: yaml
+
+        beacons:
+            log:
+              - file: <path>
+              - tags:
+                  <tag>:
+                    regex: <pattern>
 
 - ``network_info`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           network_info:
             - eth0:
@@ -398,10 +683,11 @@ check the configuration for the correct format and only load if the validation p
                 errout: 100
                 dropin: 100
                 dropout: 100
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           network_info:
             - interfaces:
@@ -415,12 +701,13 @@ check the configuration for the correct format and only load if the validation p
                   errout: 100
                   dropin: 100
                   dropout: 100
-        ```
 
 - ``network_settings`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           network_settings:
             eth0:
@@ -429,10 +716,11 @@ check the configuration for the correct format and only load if the validation p
                 onvalue: 1
             eth1:
               linkmode:
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           network_settings:
             - interfaces:
@@ -442,12 +730,13 @@ check the configuration for the correct format and only load if the validation p
                       onvalue: 1
                 - eth1:
                     linkmode:
-        ```
 
 - ``proxy_example`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           proxy_example:
             endpoint: beacon
@@ -458,60 +747,66 @@ check the configuration for the correct format and only load if the validation p
         beacons:
           proxy_example:
             - endpoint: beacon
-        ```
 
 - ``ps`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           ps:
             - salt-master: running
             - mysql: stopped
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           ps:
             - processes:
                 salt-master: running
                 mysql: stopped
-        ```
 
 - ``salt_proxy`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           salt_proxy:
             - p8000: {}
             - p8001: {}
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           salt_proxy:
             - proxies:
                 p8000: {}
                 p8001: {}
-        ```
 
 - ``sensehat`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           sensehat:
             humidity: 70%
             temperature: [20, 40]
             temperature_from_pressure: 40
             pressure: 1500
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           sensehat:
             - sensors:
@@ -519,21 +814,22 @@ check the configuration for the correct format and only load if the validation p
                 temperature: [20, 40]
                 temperature_from_pressure: 40
                 pressure: 1500
-        ```
 
 - ``service`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           service:
             salt-master:
             mysql:
 
-        ```
-
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           service:
             - services:
@@ -541,93 +837,102 @@ check the configuration for the correct format and only load if the validation p
                     onchangeonly: True
                     delay: 30
                     uncleanshutdown: /run/nginx.pid
-        ```
 
 - ``sh`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           sh: {}
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           sh: []
-        ```
 
 - ``status`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           status: {}
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           status: []
-        ```
 
 - ``telegram_bot_msg`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           telegram_bot_msg:
             token: "<bot access token>"
             accept_from:
               - "<valid username>"
             interval: 10
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           telegram_bot_msg:
             - token: "<bot access token>"
             - accept_from:
               - "<valid username>"
             - interval: 10
-        ```
 
 - ``twilio_txt_msg`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           twilio_txt_msg:
             account_sid: "<account sid>"
             auth_token: "<auth token>"
             twilio_number: "+15555555555"
             interval: 10
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           twilio_txt_msg:
             - account_sid: "<account sid>"
             - auth_token: "<auth token>"
             - twilio_number: "+15555555555"
             - interval: 10
-        ```
 
 - ``wtmp`` beacon
 
     Old behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           wtmp: {}
-        ```
 
     New behavior:
-        ```
+
+    .. code-block:: yaml
+
         beacons:
           wtmp: []
-        ```
 
 Deprecations
 ------------

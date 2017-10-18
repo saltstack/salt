@@ -35,7 +35,6 @@ from __future__ import absolute_import, print_function
 import logging
 
 # Import Salt libs
-import salt.utils
 import salt.utils.jid
 import salt.returners
 

@@ -22,6 +22,7 @@ from tests.support.helpers import (
 
 # Import Salt libs
 import salt.utils.path
+import salt.utils.pkg.rpm
 import salt.utils.platform
 
 # Import 3rd-party libs
@@ -754,7 +755,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             'pkg.installed',
             name=target,
-            version=salt.utils.str_version_to_evr(version)[1],
+            version=salt.utils.pkg.rpm.version_to_evr(version)[1],
             refresh=False,
         )
         self.assertSaltTrueReturn(ret)
