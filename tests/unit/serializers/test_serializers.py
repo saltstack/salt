@@ -48,7 +48,7 @@ class TestSerializers(TestCase):
             "encrypted_data": EncryptedString("foo")
         }
         serialized = yaml.serialize(data)
-        assert serialized == '{encrypted_data: !encrypted foo, foo: bar}', serialized
+        assert serialized == '{encrypted_data: !encrypted \'foo\', foo: bar}', serialized
 
         deserialized = yaml.deserialize(serialized)
         assert deserialized == data, deserialized
