@@ -69,33 +69,33 @@ def halt(timeout=5, in_seconds=False):
     '''
     Halt a running system.
 
-    :param int timeout:
-        Number of seconds before halting the system.
-        Default is 5 seconds.
+    Args:
 
-    :return: True is successful.
-    :rtype: bool
+        timeout (int):
+            Number of seconds before halting the system. Default is 5 seconds.
 
-    timeout
-        The wait time before the system will be shutdown.
 
-    in_seconds
-        Whether to treat timeout as seconds or minutes.
+        in_seconds (bool):
+            Whether to treat timeout as seconds or minutes.
 
         .. versionadded:: 2015.8.0
+
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.halt 5
+        salt '*' system.halt 5 True
     '''
     return shutdown(timeout=timeout, in_seconds=in_seconds)
 
 
 def init(runlevel):  # pylint: disable=unused-argument
     '''
-    Change the system runlevel on sysV compatible systems
+    Change the system runlevel on sysV compatible systems. Not applicable to
+    Windows
 
     CLI Example:
 
@@ -117,20 +117,19 @@ def poweroff(timeout=5, in_seconds=False):
     '''
     Power off a running system.
 
-    :param int timeout:
-        Number of seconds before powering off the system.
-        Default is 5 seconds.
+    Args:
 
-    :return: True if successful
-    :rtype: bool
+        timeout (int):
+            Number of seconds before powering off the system. Default is 5
+            seconds.
 
-    timeout
-        The wait time before the system will be shutdown.
+        in_seconds (bool):
+            Whether to treat timeout as seconds or minutes.
 
-    in_seconds
-        Whether to treat timeout as seconds or minutes.
+            .. versionadded:: 2015.8.0
 
-        .. versionadded:: 2015.8.0
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -146,35 +145,36 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disabl
     '''
     Reboot a running system.
 
-    :param int timeout:
-        Number of minutes/seconds before rebooting the system. Minutes vs
-        seconds depends on the value of ``in_seconds``.
-        Default is 5 minutes.
+    Args:
 
-    :param bool in_seconds:
-        Whether to treat timeout as seconds or minutes.
+        timeout (int):
+            Number of minutes/seconds before rebooting the system. Minutes vs
+            seconds depends on the value of ``in_seconds``. Default is 5
+            minutes.
 
-        .. versionadded:: 2015.8.0
+        in_seconds (bool):
+            Whether to treat timeout as seconds or minutes.
 
-    :param bool wait_for_reboot:
+            .. versionadded:: 2015.8.0
 
-        Sleeps for timeout + 30 seconds after reboot has been initiated.
-        This is useful for use in a highstate for example where
-        you have many states that could be ran after this one. Which you don't want
-        to start until after the restart i.e You could end up with a half finished state.
+        wait_for_reboot (bool)
+            Sleeps for timeout + 30 seconds after reboot has been initiated.
+            This is useful for use in a highstate for example where you have
+            many states that could be ran after this one. Which you don't want
+            to start until after the restart i.e You could end up with a half
+            finished state.
 
-        .. versionadded:: 2015.8.0
+            .. versionadded:: 2015.8.0
 
-    :param bool only_on_pending_reboot:
+        only_on_pending_reboot (bool):
+            If this is set to True, then then the reboot will only proceed if
+            the system reports a pending reboot. Setting this parameter to True
+            could be useful when calling this function from a final housekeeping
+            state intended to be executed at the end of a state run (using
+            *order: last*).
 
-        If this is set to True, then then the reboot will only proceed
-        if the system reports a pending reboot. Setting this parameter to
-        True could be useful when calling this function from a final housekeeping
-        state intended to be executed
-        at the end of a state run (using *order: last*).
-
-    :return: True if successful (a reboot will occur)
-    :rtype: bool
+    Returns:
+        bool: True if successful (a reboot will occur), otherwise False
 
     CLI Example:
 
@@ -195,9 +195,7 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disabl
               - name: system.reboot
               - only_on_pending_reboot: True
               - order: last
-
     '''
-
     ret = shutdown(timeout=timeout, reboot=True, in_seconds=in_seconds,
                    only_on_pending_reboot=only_on_pending_reboot)
 
@@ -213,52 +211,56 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint:
     '''
     Shutdown a running system.
 
-    :param str message:
-        A message to display to the user before shutting down.
+    Args:
 
-    :param int timeout:
-        The length of time that the shutdown dialog box should be displayed, in
-        seconds. While this dialog box is displayed, the shutdown can be stopped
-        by the shutdown_abort function.
+        message (str):
+            A message to display to the user before shutting down.
 
-        If timeout is not zero, InitiateSystemShutdown displays a dialog box on
-        the specified computer. The dialog box displays the name of the user
-        who called the function, displays the message specified by the
-        lpMessage parameter, and prompts the user to log off. The dialog box
-        beeps when it is created and remains on top of other windows in the
-        system. The dialog box can be moved but not closed. A timer counts down
-        the remaining time before a forced shutdown.
+        timeout (int):
+            The length of time that the shutdown dialog box should be displayed,
+            in seconds. While this dialog box is displayed, the shutdown can be
+            stopped by the shutdown_abort function.
 
-        If timeout is zero, the computer shuts down without displaying the
-        dialog box, and the shutdown cannot be stopped by shutdown_abort.
+            If timeout is not zero, InitiateSystemShutdown displays a dialog box
+            on the specified computer. The dialog box displays the name of the
+            user who called the function, displays the message specified by the
+            lpMessage parameter, and prompts the user to log off. The dialog box
+            beeps when it is created and remains on top of other windows in the
+            system. The dialog box can be moved but not closed. A timer counts
+            down the remaining time before a forced shutdown.
 
-        Default is 5 minutes
+            If timeout is zero, the computer shuts down without displaying the
+            dialog box, and the shutdown cannot be stopped by shutdown_abort.
 
-    :param bool in_seconds:
-        Whether to treat timeout as seconds or minutes.
+            Default is 5 minutes
 
-        .. versionadded:: 2015.8.0
+        in_seconds (bool):
+            Whether to treat timeout as seconds or minutes.
 
-    :param bool force_close:
-        True to force close all open applications. False displays a dialog box
-        instructing the user to close the applications.
+            .. versionadded:: 2015.8.0
 
-    :param bool reboot:
-        True restarts the computer immediately after shutdown.
-        False caches to disk and safely powers down the system.
+        force_close (bool):
+            True to force close all open applications. False displays a dialog
+            box instructing the user to close the applications.
 
-    :param bool only_on_pending_reboot:
-        If this is set to True, then then shutdown will only proceed
-        if the system reports a pending reboot.
+        reboot (bool):
+            True restarts the computer immediately after shutdown. False caches
+            to disk and safely powers down the system.
 
-    :return: True if successful (a shutdown or reboot will occur)
-    :rtype: bool
+        only_on_pending_reboot (bool):
+            If this is set to True, then then shutdown will only proceed if the
+            system reports a pending reboot.
+
+    Returns:
+        bool:
+            True if successful (a shutdown or reboot will occur), otherwise
+            False
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.shutdown 5
+        salt '*' system.shutdown "System will shutdown in 5 minutes"
     '''
     timeout = _convert_minutes_seconds(timeout, in_seconds)
 
@@ -284,8 +286,8 @@ def shutdown_hard():
     '''
     Shutdown a running system with no timeout or warning.
 
-    :return: True if successful
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -301,8 +303,8 @@ def shutdown_abort():
     Abort a shutdown. Only available while the dialog box is being
     displayed to the user. Once the shutdown has initiated, it cannot be aborted
 
-    :return: True if successful
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -326,8 +328,8 @@ def lock():
     '''
     Lock the workstation.
 
-    :return: True if successful
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -342,12 +344,15 @@ def set_computer_name(name):
     '''
     Set the Windows computer name
 
-    :param str name:
-        The new name to give the computer. Requires a reboot to take effect.
+    Args:
 
-    :return:
-        Returns a dictionary containing the old and new names if successful.
-        False if not.
+        name (str):
+            The new name to give the computer. Requires a reboot to take effect.
+
+    Returns:
+        dict:
+            Returns a dictionary containing the old and new names if successful.
+            False if not.
 
     CLI Example:
 
@@ -376,9 +381,10 @@ def get_pending_computer_name():
     retrieving the pending computer name, ``False`` will be returned, and an
     error message will be logged to the minion log.
 
-    :return:
-        Returns the pending name if pending restart. Returns none if not pending
-        restart.
+    Returns:
+        str:
+            Returns the pending name if pending restart. Returns none if not
+            pending restart.
 
     CLI Example:
 
@@ -400,8 +406,8 @@ def get_computer_name():
     '''
     Get the Windows computer name
 
-    :return:
-        Returns the computer name if found. Otherwise returns False
+    Returns:
+        str: Returns the computer name if found. Otherwise returns False
 
     CLI Example:
 
@@ -417,10 +423,13 @@ def set_computer_desc(desc=None):
     '''
     Set the Windows computer description
 
-    :param str desc:
-        The computer description
+    Args:
 
-    :return: False if it fails. Description if successful.
+        desc (str):
+            The computer description
+
+    Returns:
+        str: Description if successful, otherwise False
 
     CLI Example:
 
@@ -460,10 +469,9 @@ def get_system_info():
     '''
     Get system information.
 
-    :return:
-        Returns a Dictionary containing information about the system to include
+    Returns:
+        dict: Dictionary containing information about the system to include
         name, description, version, etc...
-    :rtype: dict
 
     CLI Example:
 
@@ -514,8 +522,9 @@ def get_system_info():
 def get_computer_desc():
     '''
     Get the Windows computer description
-    :return:
-        Returns the computer description if found. Otherwise returns False
+
+    Returns:
+        str: Returns the computer description if found. Otherwise returns False
 
     CLI Example:
 
@@ -532,12 +541,12 @@ get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_com
 
 def get_hostname():
     '''
-    .. versionadded:: 2016.3.0
-
     Get the hostname of the windows minion
 
-    :return:
-        Returns the hostname of the windows minion
+    .. versionadded:: 2016.3.0
+
+    Returns:
+        str: Returns the hostname of the windows minion
 
     CLI Example:
 
@@ -552,13 +561,16 @@ def get_hostname():
 
 def set_hostname(hostname):
     '''
+    Set the hostname of the windows minion, requires a restart before this will
+    be updated.
+
     .. versionadded:: 2016.3.0
 
-    Set the hostname of the windows minion, requires a restart before this
-    will be updated.
+    Args:
+        hostname (str): The hostname to set
 
-    :param str hostname:
-        The hostname to set
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -582,35 +594,38 @@ def join_domain(domain,
     '''
     Join a computer to an Active Directory domain. Requires reboot.
 
-    :param str domain:
-        The domain to which the computer should be joined, e.g.
-        ``example.com``
+    Args:
 
-    :param str username:
-        Username of an account which is authorized to join computers to the
-        specified domain. Need to be either fully qualified like
-        ``user@domain.tld`` or simply ``user``
+        domain (str):
+            The domain to which the computer should be joined, e.g.
+            ``example.com``
 
-    :param str password:
-        Password of the specified user
+        username (str):
+            Username of an account which is authorized to join computers to the
+            specified domain. Need to be either fully qualified like
+            ``user@domain.tld`` or simply ``user``
 
-    :param str account_ou:
-        The DN of the OU below which the account for this computer should be
-        created when joining the domain, e.g.
-        ``ou=computers,ou=departm_432,dc=my-company,dc=com``
+        password (str):
+            Password of the specified user
 
-    :param bool account_exists:
-        If set to ``True`` the computer will only join the domain if the account
-        already exists. If set to ``False`` the computer account will be created
-        if it does not exist, otherwise it will use the existing account.
-        Default is False
+        account_ou (str):
+            The DN of the OU below which the account for this computer should be
+            created when joining the domain, e.g.
+            ``ou=computers,ou=departm_432,dc=my-company,dc=com``
 
-    :param bool restart: Restarts the computer after a successful join
+        account_exists (bool):
+            If set to ``True`` the computer will only join the domain if the
+            account already exists. If set to ``False`` the computer account
+            will be created if it does not exist, otherwise it will use the
+            existing account. Default is False
 
-        .. versionadded:: 2015.8.2/2015.5.7
+        restart (bool):
+            Restarts the computer after a successful join
 
-    :returns: Returns a dictionary if successful. False if unsuccessful.
-    :rtype: dict, bool
+            .. versionadded:: 2015.8.2/2015.5.7
+
+    Returns:
+        dict: Returns a dictionary if successful, otherwise False
 
     CLI Example:
 
@@ -680,32 +695,37 @@ def unjoin_domain(username=None,
     r'''
     Unjoin a computer from an Active Directory Domain. Requires restart.
 
-    :param username:
-        Username of an account which is authorized to manage computer accounts
-        on the domain. Need to be fully qualified like ``user@domain.tld`` or
-        ``domain.tld\user``. If domain not specified, the passed domain will be
-        used. If computer account doesn't need to be disabled, can be None.
+    Args:
 
-    :param str password:
-        Password of the specified user
+        username (str):
+            Username of an account which is authorized to manage computer
+            accounts on the domain. Need to be fully qualified like
+            ``user@domain.tld`` or ``domain.tld\user``. If domain not specified,
+            the passed domain will be used. If computer account doesn't need to
+            be disabled, can be None.
 
-    :param str domain: The domain from which to unjoin the computer. Can be None
+        password (str):
+            Password of the specified user
 
-    :param str workgroup: The workgroup to join the computer to. Default is
-    ``WORKGROUP``
+        domain (str):
+            The domain from which to unjoin the computer. Can be None
 
-        .. versionadded:: 2015.8.2/2015.5.7
+        workgroup (str):
+            The workgroup to join the computer to. Default is ``WORKGROUP``
 
-    :param bool disable:
-        Disable the computer account in Active Directory. True to disable.
-        Default is False
+            .. versionadded:: 2015.8.2/2015.5.7
 
-    :param bool restart: Restart the computer after successful unjoin
+        disable (bool):
+            Disable the computer account in Active Directory. True to disable.
+            Default is False
 
-        .. versionadded:: 2015.8.2/2015.5.7
+        restart (bool):
+            Restart the computer after successful unjoin
 
-    :returns: Returns a dictionary if successful. False if unsuccessful.
-    :rtype: dict, bool
+            .. versionadded:: 2015.8.2/2015.5.7
+
+    Returns:
+        dict: Returns a dictionary if successful, otherwise False
 
     CLI Example:
 
@@ -772,8 +792,8 @@ def get_domain_workgroup():
     .. versionadded:: 2015.5.7
     .. versionadded:: 2015.8.2
 
-    :return: The name of the domain or workgroup
-    :rtype: str
+    Returns:
+        str: The name of the domain or workgroup
 
     CLI Example:
 
@@ -795,11 +815,14 @@ def _try_parse_datetime(time_str, fmts):
     '''
     Attempts to parse the input time_str as a date.
 
-    :param str time_str: A string representing the time
-    :param list fmts: A list of date format strings
+    Args:
 
-    :return: Returns a datetime object if parsed properly. Otherwise None
-    :rtype datetime
+        time_str (str): A string representing the time
+
+        fmts (list): A list of date format strings
+
+    Returns:
+        datetime: Returns a datetime object if parsed properly, otherwise None
     '''
     result = None
     for fmt in fmts:
@@ -815,8 +838,8 @@ def get_system_time():
     '''
     Get the system time.
 
-    :return: Returns the system time in HH:MM:SS AM/PM format.
-    :rtype: str
+    Returns:
+        str: Returns the system time in HH:MM:SS AM/PM format.
 
     CLI Example:
 
@@ -841,15 +864,17 @@ def set_system_time(newtime):
     '''
     Set the system time.
 
-    :param str newtime:
-        The time to set. Can be any of the following formats.
-        - HH:MM:SS AM/PM
-        - HH:MM AM/PM
-        - HH:MM:SS (24 hour)
-        - HH:MM (24 hour)
+    Args:
 
-    :return: Returns True if successful. Otherwise False.
-    :rtype: bool
+        newtime (str):
+            The time to set. Can be any of the following formats:
+            - HH:MM:SS AM/PM
+            - HH:MM AM/PM
+            - HH:MM:SS (24 hour)
+            - HH:MM (24 hour)
+
+    Returns:
+        bool: Returns True if successful, otherwise False.
 
     CLI Example:
 
@@ -881,15 +906,17 @@ def set_system_date_time(years=None,
     element will be used. For example, if you don't pass the year, the current
     system year will be used. (Used by set_system_date and set_system_time)
 
-    :param int years: Years digit, ie: 2015
-    :param int months: Months digit: 1 - 12
-    :param int days: Days digit: 1 - 31
-    :param int hours: Hours digit: 0 - 23
-    :param int minutes: Minutes digit: 0 - 59
-    :param int seconds: Seconds digit: 0 - 59
+    Args:
 
-    :return: True if successful. Otherwise False.
-    :rtype: bool
+        years (int): Years digit, ie: 2015
+        months (int): Months digit: 1 - 12
+        days (int): Days digit: 1 - 31
+        hours (int): Hours digit: 0 - 23
+        minutes (int): Minutes digit: 0 - 59
+        seconds (int): Seconds digit: 0 - 59
+
+    Returns:
+        bool: True if successful, otherwise False.
 
     CLI Example:
 
@@ -954,8 +981,8 @@ def get_system_date():
     '''
     Get the Windows system date
 
-    :return: Returns the system date.
-    :rtype: str
+    Returns:
+        str: Returns the system date.
 
     CLI Example:
 
@@ -971,14 +998,18 @@ def set_system_date(newdate):
     '''
     Set the Windows system date. Use <mm-dd-yy> format for the date.
 
-    :param str newdate:
-        The date to set. Can be any of the following formats
-        - YYYY-MM-DD
-        - MM-DD-YYYY
-        - MM-DD-YY
-        - MM/DD/YYYY
-        - MM/DD/YY
-        - YYYY/MM/DD
+    Args:
+        newdate (str):
+            The date to set. Can be any of the following formats
+            - YYYY-MM-DD
+            - MM-DD-YYYY
+            - MM-DD-YY
+            - MM/DD/YYYY
+            - MM/DD/YY
+            - YYYY/MM/DD
+
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -1003,8 +1034,8 @@ def start_time_service():
     '''
     Start the Windows time service
 
-    :return: True if successful. Otherwise False
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -1019,8 +1050,8 @@ def stop_time_service():
     '''
     Stop the Windows time service
 
-    :return: True if successful. Otherwise False
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -1033,12 +1064,14 @@ def stop_time_service():
 
 def get_pending_component_servicing():
     '''
-    Determine whether there are pending Component Based Servicing tasks that require a reboot.
-
-    :return: A boolean representing whether there are pending Component Based Servicing tasks.
-    :rtype: bool
+    Determine whether there are pending Component Based Servicing tasks that
+    require a reboot.
 
     .. versionadded:: 2016.11.0
+
+    Returns:
+        bool: True if there are pending Component Based Servicing tasks,
+        otherwise False
 
     CLI Example:
 
@@ -1062,12 +1095,13 @@ def get_pending_component_servicing():
 
 def get_pending_domain_join():
     '''
-    Determine whether there is a pending domain join action that requires a reboot.
-
-    :return: A boolean representing whether there is a pending domain join action.
-    :rtype: bool
+    Determine whether there is a pending domain join action that requires a
+    reboot.
 
     .. versionadded:: 2016.11.0
+
+    Returns:
+        bool: True if there is a pending domain join action, otherwise False
 
     CLI Example:
 
@@ -1103,12 +1137,13 @@ def get_pending_domain_join():
 
 def get_pending_file_rename():
     '''
-    Determine whether there are pending file rename operations that require a reboot.
-
-    :return: A boolean representing whether there are pending file rename operations.
-    :rtype: bool
+    Determine whether there are pending file rename operations that require a
+    reboot.
 
     .. versionadded:: 2016.11.0
+
+    Returns:
+        bool: True if there are pending file rename operations, otherwise False
 
     CLI Example:
 
@@ -1137,12 +1172,13 @@ def get_pending_file_rename():
 
 def get_pending_servermanager():
     '''
-    Determine whether there are pending Server Manager tasks that require a reboot.
-
-    :return: A boolean representing whether there are pending Server Manager tasks.
-    :rtype: bool
+    Determine whether there are pending Server Manager tasks that require a
+    reboot.
 
     .. versionadded:: 2016.11.0
+
+    Returns:
+        bool: True if there are pending Server Manager tasks, otherwise False
 
     CLI Example:
 
@@ -1176,10 +1212,10 @@ def get_pending_update():
     '''
     Determine whether there are pending updates that require a reboot.
 
-    :return: A boolean representing whether there are pending updates.
-    :rtype: bool
-
     .. versionadded:: 2016.11.0
+
+    Returns:
+        bool: True if there are pending updates, otherwise False
 
     CLI Example:
 
@@ -1209,28 +1245,24 @@ REBOOT_REQUIRED_NAME = 'Reboot required'
 
 def set_reboot_required_witnessed():
     r'''
-    .. versionadded:: 2016.11.0
-
-    This function is used to remember that
-    an event indicating that a reboot is required was witnessed.
-    This function relies on the salt-minion's ability to create the following
-    volatile registry key in the *HKLM* hive:
+    This function is used to remember that an event indicating that a reboot is
+    required was witnessed. This function relies on the salt-minion's ability to
+    create the following volatile registry key in the *HKLM* hive:
 
        *SYSTEM\\CurrentControlSet\\Services\\salt-minion\\Volatile-Data*
 
-    Because this registry key is volatile, it will not persist
-    beyond the current boot session.
-    Also, in the scope of this key, the name *'Reboot required'* will be
-    assigned the value of *1*.
+    Because this registry key is volatile, it will not persist beyond the
+    current boot session. Also, in the scope of this key, the name *'Reboot
+    required'* will be assigned the value of *1*.
 
-    (For the time being, this this function is being used
-    whenever an install completes with exit code 3010 and
-    this usage can be extended where appropriate in the future.)
+    (For the time being, this function is being used whenever an install
+    completes with exit code 3010 and this usage can be extended where
+    appropriate in the future.)
 
-    :return: A boolean indicating whether or not the salt minion was
-       able to perform the necessary registry operations.
+    .. versionadded:: 2016.11.0
 
-    :rtype: bool
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -1249,20 +1281,17 @@ def set_reboot_required_witnessed():
 
 def get_reboot_required_witnessed():
     '''
+    This tells us if, at any time during the current boot session the salt
+    minion witnessed an event indicating that a reboot is required. (For the
+    time being, this function will return True if an install completed with exit
+    code 3010 during the current boot session and this usage can be extended
+    where appropriate in the future)
+
     .. versionadded:: 2016.11.0
 
-    This tells us if, at any time during the current boot session
-    the salt minion witnessed an event indicating
-    that a reboot is required.
-    (For the time being, this function will return True
-    if an install completed with exit code 3010 during the current
-    boot session and this usage can be extended where appropriate
-    in the future)
-
-    :return: a boolean which will be True if the salt-minion reported
-       a required reboot during the current boot session, otherwise False.
-
-    :rtype: bool
+    Returns:
+        bool: True if the ``Requires reboot`` registry flag is set to ``1``,
+        otherwise False
 
     CLI Example:
 
@@ -1281,10 +1310,10 @@ def get_pending_reboot():
     '''
     Determine whether there is a reboot pending.
 
-    :return: A boolean representing whether reboots are pending.
-    :rtype: bool
-
     .. versionadded:: 2016.11.0
+
+    Returns:
+        bool: True if the system is pending reboot, otherwise False
 
     CLI Example:
 
