@@ -622,4 +622,3 @@ SwapTotal:       4789244 kB'''
 
         self.assertEqual(os_grains.get('mem_total'), 2023)
         self.assertEqual(os_grains.get('swap_total'), 400)
-
