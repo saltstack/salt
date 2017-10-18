@@ -164,7 +164,7 @@ TEST_SUITES = {
         {'display_name': 'ExternalAPIs',
          'path': 'integration/externalapi'},
     'daemons':
-        {'display_name': 'Daemons',
+        {'display_name': 'Daemon',
          'path': 'integration/daemons'},
 }
 
