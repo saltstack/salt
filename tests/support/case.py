@@ -601,7 +601,7 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
         client = salt.spm.SPMClient(ui, config)
         return client
 
-    def run_spm(self, cmd, config, arg=(), minion_tgt='minion'):
+    def run_spm(self, cmd, config, arg=()):
         client = self._spm_client(config)
         spm_cmd = client.run([cmd, arg])
         return spm_cmd
