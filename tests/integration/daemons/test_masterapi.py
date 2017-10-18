@@ -23,7 +23,7 @@ class AutosignGrainsTest(ShellCase):
     def setUp(self):
         shutil.copyfile(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'autosign_grains', 'autosign_file'),
-            os.path.join(TMP, 'root_dir', 'autosign_file')
+            os.path.join(TMP, 'rootdir', 'autosign_file')
         )
         self.run_key('-d minion -y')
         self.run_call('test.ping')  # get minon to try to authenticate itself again
@@ -40,7 +40,7 @@ class AutosignGrainsTest(ShellCase):
     def tearDown(self):
         shutil.copyfile(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
-            os.path.join(TMP, 'root_dir', 'autosign_file')
+            os.path.join(TMP, 'rootdir', 'autosign_file')
         )
         self.run_call('test.ping')  # get minon to try to authenticate itself again
         self.run_key('-a minion -y')
