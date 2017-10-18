@@ -51,6 +51,8 @@ import logging
 import os
 import time
 import yaml
+from json import loads, dumps
+from collections import OrderedDict
 try:
     import salt.utils
     import salt.client
@@ -197,6 +199,12 @@ def run_highstate_tests():
     out_list.append({"TEST RESULTS": {'Passed': passed, 'Failed': failed, 'Missing Tests': missing_tests}})
     return out_list
 
+def _render_file(file_path):
+    '''call the salt utility to render a file'''
+    # salt-call slsutil.renderer /srv/salt/jinjatest/saltcheck-tests/test1.tst
+    rendered =  __salt__['slsutil.renderer'](file_path)
+    log.info("rendered: {}".format(rendered))
+    return rendered
 
 def _is_valid_module(module):
     '''return a list of all modules available on minion'''
@@ -534,7 +542,8 @@ class StateTestLoader(object):
         '''load tests either from one file, or a set of files'''
         self.test_dict = {}
         for myfile in self.test_files:
-            self.load_file(myfile)
+            #self.load_file(myfile)
+            self.load_file_salt_rendered(myfile)
         self.test_files = []
 
     def load_file(self, filepath):
@@ -542,14 +551,28 @@ class StateTestLoader(object):
         loads in one test file
         '''
         try:
-            with salt.utils.files.fopen(filepath, 'r') as myfile:
-                # with open(filepath, 'r') as myfile:
+            with __utils__['files.fopen'](filepath, 'r') as myfile:
+            # with salt.utils.files.fopen(filepath, 'r') as myfile:
+            # with open(filepath, 'r') as myfile:
                 contents_yaml = yaml.load(myfile)
                 for key, value in contents_yaml.items():
                     self.test_dict[key] = value
         except:
             raise
         return
+
+    def load_file_salt_rendered(self, filepath):
+        '''
+        loads in one test file
+        '''
+        # use the salt renderer module to interpret jinja and etc
+        tests = _render_file(filepath)
+        # use json as a convenient way to convert the OrderedDicts from salt renderer
+        mydict = loads(dumps(tests))
+        for key, value in mydict.items():
+            self.test_dict[key] = value
+        return
+
 
     def gather_files(self, filepath):
         '''gather files for a test suite'''
