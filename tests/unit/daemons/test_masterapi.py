@@ -35,10 +35,10 @@ class AutoKeyTestCase(TestCase):
         '''
         Helper function for testing autosign_grains().
 
-        Patches ``os.walk`` to return only ``file_name`` and ``salt.utils.fopen`` to open a mock
+        Patches ``os.walk`` to return only ``file_name`` and ``salt.utils.files.fopen`` to open a mock
         file with ``file_content`` as content. Optionally sets ``opts`` values.
-        Then executes test_func. The ``os.walk`` and ``salt.utils.fopen`` mock objects are passed
-        as arguments.
+        Then executes test_func. The ``os.walk`` and ``salt.utils.files.fopen`` mock objects
+        are passed to the function as arguments.
         '''
         if autosign_grains_dir:
             self.auto_key.opts[u'autosign_grains_dir'] = autosign_grains_dir

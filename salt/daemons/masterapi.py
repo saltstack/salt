@@ -370,6 +370,9 @@ class AutoKey(object):
         return True
 
     def check_autosign_grains(self, autosign_grains):
+        '''
+        Check for matching grains in the autosign_grains_dir.
+        '''
         if not autosign_grains or u'autosign_grains_dir' not in self.opts:
             return False
 

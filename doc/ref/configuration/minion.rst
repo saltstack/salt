@@ -2257,6 +2257,8 @@ minion's pki directory.
 ``autosign_grains``
 ------------------------
 
+.. versionadded:: Oxygen
+
 Default: ``not defined``
 
 The grains that should be sent to the master on authentication to decide if

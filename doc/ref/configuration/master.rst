@@ -1298,6 +1298,8 @@ membership in the :conf_master:`autosign_file` and the
 ``autosign_grains_dir``
 -----------------
 
+.. versionadded:: Oxygen
+
 Default: ``not defined``
 
 If the ``autosign_grains_dir`` is specified, incoming keys from minions with
