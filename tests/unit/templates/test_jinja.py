@@ -33,6 +33,7 @@ from salt.utils.jinja import (
 )
 from salt.utils.templates import JINJA, render_jinja_tmpl
 from salt.utils.odict import OrderedDict
+import salt.utils.stringutils
 
 # Import 3rd party libs
 import yaml
@@ -296,7 +297,7 @@ class TestGetTemplate(TestCase):
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
                          a='Hi', b='Sàlt', saltenv='test', salt=self.local_salt))
-            self.assertEqual(out, salt.utils.to_unicode('Hey world !Hi Sàlt !' + os.linesep))
+            self.assertEqual(out, salt.utils.stringutils.to_unicode('Hey world !Hi Sàlt !' + os.linesep))
             self.assertEqual(fc.requests[0]['path'], 'salt://macro')
 
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
@@ -370,8 +371,8 @@ class TestGetTemplate(TestCase):
         with salt.utils.files.fopen(out['data']) as fp:
             result = fp.read()
             if six.PY2:
-                result = salt.utils.to_unicode(result)
-            self.assertEqual(salt.utils.to_unicode('Assunção' + os.linesep), result)
+                result = salt.utils.stringutils.to_unicode(result)
+            self.assertEqual(salt.utils.stringutils.to_unicode('Assunção' + os.linesep), result)
 
     def test_get_context_has_enough_context(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'
