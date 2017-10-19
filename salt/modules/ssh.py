@@ -847,7 +847,7 @@ def get_known_host(user,
     '''
     Return information about known host from the configfile, if any.
     If there is no such key, return None.
-    
+
     .. deprecated:: Oxygen
 
     CLI Example:
@@ -910,7 +910,7 @@ def recv_known_host(hostname,
                     fingerprint_hash_type=None):
     '''
     Retrieve information about host public key from remote server
-    
+
     .. deprecated:: Oxygen
 
     hostname
