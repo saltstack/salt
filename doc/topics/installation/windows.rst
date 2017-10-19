@@ -45,11 +45,27 @@ but leave any existing config, cache, and PKI information.
 Salt Minion Installation
 ========================
 
+If the system is missing the appropriate version of the Visual C++
+Redistributable (vcredist) the user will be prompted to install it. Click ``OK``
+to install the vcredist. Click ``Cancel`` to abort the installation without
+making modifications to the system.
+
+If Salt is already installed on the system the user will be prompted to remove
+the previous installation. Click ``OK`` to uninstall Salt without removing the
+configuration, PKI information, or cached files. Click ``Cancel`` to abort the
+installation before making any modifications to the system.
+
 After the Welcome and the License Agreement, the installer asks for two bits of
 information to configure the minion; the master hostname and the minion name.
-The installer will update the minion config with these options. If the installer
-finds an existing minion config file, these fields will be populated with values
-from the existing config.
+The installer will update the minion config with these options.
+
+If the installer finds an existing minion config file, these fields will be
+populated with values from the existing config, but they will be grayed out.
+There will also be a checkbox to use the existing config. If you continue, the
+existing config will be used. If the checkbox is unchecked, default values are
+displayed and can be changed. If you continue, the existing config file in
+``c:\salt\conf`` will be removed along with the ``c:\salt\conf\minion.d`
+directory. The values entered will be used with the default config.
 
 The final page allows you to start the minion service and optionally change its
 startup type. By default, the minion is set to ``Automatic``. You can change the
@@ -71,11 +87,6 @@ be managed there or from the command line like any other Windows service.
     sc start salt-minion
     net start salt-minion
 
-.. note::
-    If the minion won't start, you may need to install the Microsoft Visual C++
-    2008 x64 SP1 redistributable. Allow all Windows updates to run salt-minion
-    smoothly.
-
 Installation Prerequisites
 --------------------------
 
@@ -96,15 +107,29 @@ Minion silently:
 =========================  =====================================================
 Option                     Description
 =========================  =====================================================
-``/minion-name=``          A string value to set the minion name. Default is
-                           'hostname'
 ``/master=``               A string value to set the IP address or host name of
-                           the master. Default value is 'salt'
+                           the master. Default value is 'salt'. You can pass a
+                           single master or a comma-separated list of masters.
+                           Setting the master will replace existing config with
+                           the default config. Cannot be used in conjunction
+                           with ``/use-existing-config``
+``/minion-name=``          A string value to set the minion name. Default is
+                           'hostname'. Setting the minion name will replace
+                           existing config with the default config. Cannot be
+                           used in conjunction with ``/use-existing-config``
 ``/start-minion=``         Either a 1 or 0. '1' will start the salt-minion
                            service, '0' will not. Default is to start the
-                           service after installation.
+                           service after installation
 ``/start-minion-delayed``  Set the minion start type to
                            ``Automatic (Delayed Start)``
+``/use-existing-config``   Either a 1 or 0. '1' will use the existing config if
+                           present. '0' will replace existing config with the
+                           default config. Default is '1'. If this is set to '1'
+                           values passed in ``/master`` and ``/minion-name``
+                           will be ignored
+``/S``                     Runs the installation silently. Uses the above
+                           settings or the defaults
+``/?``                     Displays command line help
 =========================  =====================================================
 
 .. note::
