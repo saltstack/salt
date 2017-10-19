@@ -51,9 +51,8 @@ class AutosignGrainsTest(ShellCase):
             autosign_file_path
         )
         os.chmod(autosign_file_path, autosign_file_permissions)
-
-        self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
-        self.run_key('-a minion -y')
+        
+        self.run_call('test.ping -l quiet')  # get minon to authenticate itself again
 
         if os.path.isdir(self.autosign_grains_dir):
             shutil.rmtree(self.autosign_grains_dir)
@@ -64,7 +63,7 @@ class AutosignGrainsTest(ShellCase):
             f.write('#invalid_value\ncheese')
         os.chmod(grain_file_path, autosign_file_permissions)
 
-        self.run_call('test.ping')  # get minon to try to authenticate itself again
+        self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
         self.assertIn('minion', self.run_key('-l acc'))
 
     def test_autosign_grains_fail(self):
@@ -73,6 +72,6 @@ class AutosignGrainsTest(ShellCase):
             f.write('#cheese\ninvalid_value')
         os.chmod(grain_file_path, autosign_file_permissions)
 
-        self.run_call('test.ping')  # get minon to try to authenticate itself again
+        self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
         self.assertNotIn('minion', self.run_key('-l acc'))
         self.assertIn('minion', self.run_key('-l un'))
