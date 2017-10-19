@@ -15,7 +15,7 @@ Support for htpasswd module. Requires the apache2-utils package for Debian-based
 
 '''
 from __future__ import absolute_import
-import salt.utils
+import salt.utils.path
 
 
 __virtualname__ = 'webutil'
@@ -26,7 +26,7 @@ def __virtual__():
     depends on webutil module
     '''
 
-    return __virtualname__ if salt.utils.which('htpasswd') else False
+    return __virtualname__ if salt.utils.path.which('htpasswd') else False
 
 
 def user_exists(name, password=None, htpasswd_file=None, options='',

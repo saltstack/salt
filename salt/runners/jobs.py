@@ -12,13 +12,14 @@ import os
 # Import salt libs
 import salt.client
 import salt.payload
-import salt.utils
+import salt.utils.args
+import salt.utils.files
 import salt.utils.jid
 import salt.minion
 import salt.returners
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltClientError
 
 try:
@@ -325,14 +326,14 @@ def list_jobs(ext_source=None,
                 if isinstance(targets, six.string_types):
                     targets = [targets]
                 for target in targets:
-                    for key in salt.utils.split_input(search_target):
+                    for key in salt.utils.args.split_input(search_target):
                         if fnmatch.fnmatch(target, key):
                             _match = True
 
         if search_function and _match:
             _match = False
             if 'Function' in ret[item]:
-                for key in salt.utils.split_input(search_function):
+                for key in salt.utils.args.split_input(search_function):
                     if fnmatch.fnmatch(ret[item]['Function'], key):
                         _match = True
 
@@ -542,7 +543,7 @@ def _format_job_instance(job):
            'Arguments': list(job.get('arg', [])),
            # unlikely but safeguard from invalid returns
            'Target': job.get('tgt', 'unknown-target'),
-           'Target-type': job.get('tgt_type', []),
+           'Target-type': job.get('tgt_type', 'list'),
            'User': job.get('user', 'root')}
 
     if 'metadata' in job:
@@ -577,13 +578,13 @@ def _walk_through(job_dir, display_progress=False):
 
         for final in os.listdir(t_path):
             load_path = os.path.join(t_path, final, '.load.p')
-            with salt.utils.fopen(load_path, 'rb') as rfh:
+            with salt.utils.files.fopen(load_path, 'rb') as rfh:
                 job = serial.load(rfh)
 
             if not os.path.isfile(load_path):
                 continue
 
-            with salt.utils.fopen(load_path, 'rb') as rfh:
+            with salt.utils.files.fopen(load_path, 'rb') as rfh:
                 job = serial.load(rfh)
             jid = job['jid']
             if display_progress:

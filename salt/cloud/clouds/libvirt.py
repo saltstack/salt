@@ -41,6 +41,7 @@ Example profile:
         master_port: 5506
 
 Tested on:
+- Fedora 26 (libvirt 3.2.1, qemu 2.9.1)
 - Fedora 25 (libvirt 1.3.3.2, qemu 2.6.1)
 - Fedora 23 (libvirt 1.2.18, qemu 2.4.1)
 - Centos 7 (libvirt 1.2.17, qemu 1.5.3)
@@ -63,7 +64,7 @@ import os
 from xml.etree import ElementTree
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     import libvirt  # pylint: disable=import-error
     from libvirt import libvirtError
@@ -73,7 +74,6 @@ except ImportError:
 
 # Import salt libs
 import salt.config as config
-import salt.utils
 import salt.utils.cloud
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -81,9 +81,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit
 )
-
-# Get logging started
-log = logging.getLogger(__name__)
 
 VIRT_STATE_NAME_MAP = {0: 'running',
                        1: 'running',
@@ -98,6 +95,20 @@ IP_LEARNING_XML = """<filterref filter='clean-traffic'>
       </filterref>"""
 
 __virtualname__ = 'libvirt'
+
+# Set up logging
+log = logging.getLogger(__name__)
+
+
+def libvirt_error_handler(ctx, error):  # pylint: disable=unused-argument
+    '''
+    Redirect stderr prints from libvirt to salt logging.
+    '''
+    log.debug("libvirt error {0}".format(error))
+
+
+if HAS_LIBVIRT:
+    libvirt.registerErrorHandler(f=libvirt_error_handler, ctx=None)
 
 
 def __virtual__():
@@ -278,7 +289,9 @@ def create(vm_):
     if ip_source not in set(['ip-learning', 'qemu-agent']):
         raise SaltCloudSystemExit("'ip_source' must be one of qemu-agent or ip-learning. Got '{0}'".format(ip_source))
 
-    log.info("Cloning machine '{0}' with strategy '{1}'".format(vm_['name'], clone_strategy))
+    validate_xml = vm_.get('validate_xml') if vm_.get('validate_xml') is not None else True
+
+    log.info("Cloning '{0}' with strategy '{1}' validate_xml='{2}'".format(vm_['name'], clone_strategy, validate_xml))
 
     try:
         # Check for required profile parameters before sending any API calls.
@@ -409,10 +422,12 @@ def create(vm_):
                 else:
                     raise SaltCloudExecutionFailure("Disk type '{0}' not supported".format(disk_type))
 
-            log.debug("Clone XML '{0}'".format(domain_xml))
             clone_xml = ElementTree.tostring(domain_xml)
+            log.debug("Clone XML '{0}'".format(clone_xml))
 
-            clone_domain = conn.defineXMLFlags(clone_xml, libvirt.VIR_DOMAIN_DEFINE_VALIDATE)
+            validate_flags = libvirt.VIR_DOMAIN_DEFINE_VALIDATE if validate_xml else 0
+            clone_domain = conn.defineXMLFlags(clone_xml, validate_flags)
+
             cleanup.append({'what': 'domain', 'item': clone_domain})
             clone_domain.createWithFlags(libvirt.VIR_DOMAIN_START_FORCE_BOOT)
 
@@ -512,7 +527,7 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -523,7 +538,7 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -606,6 +621,9 @@ def find_pool_and_volume(conn, path):
 
 
 def generate_new_name(orig_name):
+    if '.' not in orig_name:
+        return '{0}-{1}'.format(orig_name, uuid.uuid1())
+
     name, ext = orig_name.rsplit('.', 1)
     return '{0}-{1}.{2}'.format(name, uuid.uuid1(), ext)
 

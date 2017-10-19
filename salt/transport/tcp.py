@@ -19,10 +19,11 @@ import errno
 
 # Import Salt Libs
 import salt.crypt
-import salt.utils
-import salt.utils.verify
-import salt.utils.event
 import salt.utils.async
+import salt.utils.event
+import salt.utils.platform
+import salt.utils.process
+import salt.utils.verify
 import salt.payload
 import salt.exceptions
 import salt.transport.frame
@@ -30,7 +31,7 @@ import salt.transport.ipc
 import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltReqTimeoutError, SaltClientError
 from salt.transport import iter_transport_opts
 
@@ -55,7 +56,7 @@ try:
 except ImportError:
     from Crypto.Cipher import PKCS1_OAEP
 
-if six.PY3 and salt.utils.is_windows():
+if six.PY3 and salt.utils.platform.is_windows():
     USE_LOAD_BALANCER = True
 else:
     USE_LOAD_BALANCER = False
@@ -569,7 +570,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             process_manager.add_process(
                 LoadBalancerServer, args=(self.opts, self.socket_queue)
             )
-        elif not salt.utils.is_windows():
+        elif not salt.utils.platform.is_windows():
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _set_tcp_keepalive(self._socket, self.opts)
@@ -592,7 +593,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                                                  io_loop=self.io_loop,
                                                  ssl_options=self.opts.get('ssl'))
         else:
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 _set_tcp_keepalive(self._socket, self.opts)
@@ -1324,7 +1325,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         '''
         Bind to the interface specified in the configuration file
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
 
         if log_queue is not None:
             salt.log.setup.set_multiprocessing_logging_queue(log_queue)
@@ -1378,7 +1379,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         do the actual publishing
         '''
         kwargs = {}
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             kwargs['log_queue'] = (
                 salt.log.setup.get_multiprocessing_logging_queue()
             )

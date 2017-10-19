@@ -10,8 +10,10 @@ import re
 import os
 
 # import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.files
 import salt.utils.mac_utils
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __virtualname__ = 'softwareupdate'
@@ -21,7 +23,7 @@ def __virtual__():
     '''
     Only for MacOS
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return (False, 'The softwareupdate module could not be loaded: '
                        'module only works on MacOS systems.')
 
@@ -46,7 +48,7 @@ def _get_available(recommended=False, restart=False):
     rexp = re.compile('(?m)^   [*|-] '
                       r'([^ ].*)[\r\n].*\(([^\)]+)')
 
-    if salt.utils.is_true(recommended):
+    if salt.utils.data.is_true(recommended):
         # rexp parses lines that look like the following:
         #    * Safari6.1.2MountainLion-6.1.2
         #         Safari (6.1.2), 51679K [recommended]
@@ -64,7 +66,7 @@ def _get_available(recommended=False, restart=False):
         version_num = _get(line, 'version')
         ret[name] = version_num
 
-    if not salt.utils.is_true(restart):
+    if not salt.utils.data.is_true(restart):
         return ret
 
     # rexp parses lines that look like the following:
@@ -340,7 +342,7 @@ def list_downloads():
     ret = []
     for update in _get_available():
         for f in dist_files:
-            with salt.utils.fopen(f) as fhr:
+            with salt.utils.files.fopen(f) as fhr:
                 if update.rsplit('-', 1)[0] in fhr.read():
                     ret.append(update)
 

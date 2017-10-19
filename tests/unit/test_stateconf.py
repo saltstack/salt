@@ -17,7 +17,7 @@ from salt.exceptions import SaltRenderError
 from salt.ext.six.moves import StringIO
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']

@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import os
 import logging
 from salt.ext.six import string_types
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip
 
 
@@ -17,6 +17,7 @@ from salt.ext.six.moves import zip
 # Import libcloud
 try:
     import libcloud
+    import re
     from libcloud.compute.types import Provider
     from libcloud.compute.providers import get_driver
     from libcloud.compute.deployment import (
@@ -39,8 +40,8 @@ import salt.utils.event
 import salt.client
 
 # Import salt cloud libs
-import salt.utils
 import salt.utils.cloud
+import salt.utils.data
 import salt.config as config
 from salt.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
@@ -122,7 +123,7 @@ def get_node(conn, name):
     nodes = conn.list_nodes()
     for node in nodes:
         if node.name == name:
-            __utils__['cloud.cache_node'](salt.utils.simple_types_filter(node.__dict__), __active_provider_name__, __opts__)
+            __utils__['cloud.cache_node'](salt.utils.data.simple_types_filter(node.__dict__), __active_provider_name__, __opts__)
             return node
 
 

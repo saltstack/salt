@@ -51,9 +51,9 @@ import logging
 # Import salt libs
 from salt.exceptions import CommandExecutionError
 import copy
-import salt.utils
+import salt.utils.args
 import salt.utils.docker
-import salt.ext.six as six
+from salt.ext import six
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -2058,7 +2058,7 @@ def mod_watch(name, sfun=None, **kwargs):
         return running(name, **watch_kwargs)
 
     if sfun == 'stopped':
-        return stopped(name, **salt.utils.clean_kwargs(**kwargs))
+        return stopped(name, **salt.utils.args.clean_kwargs(**kwargs))
 
     return {'name': name,
             'changes': {},

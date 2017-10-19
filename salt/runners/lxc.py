@@ -14,14 +14,15 @@ import logging
 
 # Import Salt libs
 import salt.client
-import salt.utils
-import salt.utils.virt
+import salt.utils.args
 import salt.utils.cloud
+import salt.utils.files
+import salt.utils.virt
 import salt.key
 from salt.utils.odict import OrderedDict as _OrderedDict
 
 # Import 3rd-party lib
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -275,7 +276,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         ret['result'] = False
         return ret
 
-    kw = salt.utils.clean_kwargs(**kwargs)
+    kw = salt.utils.args.clean_kwargs(**kwargs)
     pub_key = kw.get('pub_key', None)
     priv_key = kw.get('priv_key', None)
     explicit_auth = pub_key and priv_key
@@ -308,7 +309,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     cmds = []
     for name in names:
         args = [name]
-        kw = salt.utils.clean_kwargs(**kwargs)
+        kw = salt.utils.args.clean_kwargs(**kwargs)
         if saltcloud_mode:
             kw = copy.deepcopy(kw)
             kw['name'] = name
@@ -372,10 +373,10 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         if explicit_auth:
             fcontent = ''
             if os.path.exists(key):
-                with salt.utils.fopen(key) as fic:
+                with salt.utils.files.fopen(key) as fic:
                     fcontent = fic.read().strip()
             if pub_key.strip() != fcontent:
-                with salt.utils.fopen(key, 'w') as fic:
+                with salt.utils.files.fopen(key, 'w') as fic:
                     fic.write(pub_key)
                     fic.flush()
         mid = j_ret.get('mid', None)

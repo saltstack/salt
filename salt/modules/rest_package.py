@@ -4,9 +4,12 @@ Package support for the REST example
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
-import salt.utils
+
+# Import Salt libs
+import salt.utils.data
+import salt.utils.platform
 
 
 log = logging.getLogger(__name__)
@@ -20,12 +23,21 @@ def __virtual__():
     Only work on systems that are a proxy minion
     '''
     try:
-        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+        if salt.utils.platform.is_proxy() \
+                and __opts__['proxy']['proxytype'] == 'rest_sample':
             return __virtualname__
     except KeyError:
-        return (False, 'The rest_package execution module failed to load.  Check the proxy key in pillar.')
+        return (
+            False,
+            'The rest_package execution module failed to load. Check the '
+            'proxy key in pillar.'
+        )
 
-    return (False, 'The rest_package execution module failed to load: only works on a rest_sample proxy minion.')
+    return (
+        False,
+        'The rest_package execution module failed to load: only works on a '
+        'rest_sample proxy minion.'
+    )
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -62,8 +74,7 @@ def upgrade(refresh=True, skip_verify=True, **kwargs):
     old = __proxy__['rest_sample.package_list']()
     new = __proxy__['rest_sample.uptodate']()
     pkg_installed = __proxy__['rest_sample.upgrade']()
-    ret = salt.utils.compare_dicts(old, pkg_installed)
-    return ret
+    return salt.utils.data.compare_dicts(old, pkg_installed)
 
 
 def installed(

@@ -40,11 +40,16 @@ import base64
 import logging
 import yaml
 import tempfile
+import signal
+from time import sleep
+from contextlib import contextmanager
 
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
-import salt.utils
+import salt.utils.files
 import salt.utils.templates
+from salt.exceptions import TimeoutError
+from salt.ext.six.moves import range  # pylint: disable=import-error
 
 try:
     import kubernetes  # pylint: disable=import-self
@@ -76,6 +81,21 @@ def __virtual__():
         return __virtualname__
 
     return False, 'python kubernetes library not found'
+
+
+if not salt.utils.platform.is_windows():
+    @contextmanager
+    def _time_limit(seconds):
+        def signal_handler(signum, frame):
+            raise TimeoutError
+        signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
+
+    POLLING_TIME_LIMIT = 30
 
 
 # pylint: disable=no-member
@@ -157,11 +177,11 @@ def _cleanup(**kwargs):
     cert = kubernetes.client.configuration.cert_file
     key = kubernetes.client.configuration.key_file
     if cert and os.path.exists(cert) and os.path.basename(cert).startswith('salt-kube-'):
-        salt.utils.safe_rm(cert)
+        salt.utils.files.safe_rm(cert)
     if key and os.path.exists(key) and os.path.basename(key).startswith('salt-kube-'):
-        salt.utils.safe_rm(key)
+        salt.utils.files.safe_rm(key)
     if ca and os.path.exists(ca) and os.path.basename(ca).startswith('salt-kube-'):
-        salt.utils.safe_rm(ca)
+        salt.utils.files.safe_rm(ca)
 
 
 def ping(**kwargs):
@@ -692,7 +712,30 @@ def delete_deployment(name, namespace='default', **kwargs):
             name=name,
             namespace=namespace,
             body=body)
-        return api_response.to_dict()
+        mutable_api_response = api_response.to_dict()
+        if not salt.utils.platform.is_windows():
+            try:
+                with _time_limit(POLLING_TIME_LIMIT):
+                    while show_deployment(name, namespace) is not None:
+                        sleep(1)
+                    else:  # pylint: disable=useless-else-on-loop
+                        mutable_api_response['code'] = 200
+            except TimeoutError:
+                pass
+        else:
+            # Windows has not signal.alarm implementation, so we are just falling
+            # back to loop-counting.
+            for i in range(60):
+                if show_deployment(name, namespace) is None:
+                    mutable_api_response['code'] = 200
+                    break
+                else:
+                    sleep(1)
+        if mutable_api_response['code'] != 200:
+            log.warning('Reached polling time limit. Deployment is not yet '
+                        'deleted, but we are backing off. Sorry, but you\'ll '
+                        'have to check manually.')
+        return mutable_api_response
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
@@ -1361,7 +1404,7 @@ def __read_and_render_yaml_file(source,
         raise CommandExecutionError(
             'Source file \'{0}\' not found'.format(source))
 
-    with salt.utils.fopen(sfn, 'r') as src:
+    with salt.utils.files.fopen(sfn, 'r') as src:
         contents = src.read()
 
         if template:
