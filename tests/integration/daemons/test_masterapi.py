@@ -34,7 +34,7 @@ class AutosignGrainsTest(ShellCase):
         os.chmod(autosign_file_path, autosign_file_permissions)
 
         self.run_key('-d minion -y')
-        self.run_call('test.ping')  # get minon to try to authenticate itself again
+        self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
 
         if 'minion' in self.run_key('-l acc'):
             self.skipTest('Could not deauthorize minion')
@@ -52,7 +52,7 @@ class AutosignGrainsTest(ShellCase):
         )
         os.chmod(autosign_file_path, autosign_file_permissions)
 
-        self.run_call('test.ping')  # get minon to try to authenticate itself again
+        self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
         self.run_key('-a minion -y')
 
         if os.path.isdir(self.autosign_grains_dir):
