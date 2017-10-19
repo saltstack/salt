@@ -33,6 +33,7 @@ from salt.utils.jinja import (
 )
 from salt.utils.templates import JINJA, render_jinja_tmpl
 from salt.utils.odict import OrderedDict
+import salt.utils.stringutils
 
 # Import 3rd party libs
 import yaml
@@ -176,12 +177,9 @@ class TestGetTemplate(TestCase):
         with salt.utils.files.fopen(fn_) as fp_:
             out = render_jinja_tmpl(
                 fp_.read(),
-                dict(
-                    opts=self.local_opts,
-                    saltenv='test',
-                    salt=self.local_salt
-                ))
-        self.assertEqual(out, 'world\n')
+                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+            )
+        self.assertEqual(out, 'world' + os.linesep)
 
     def test_fallback_noloader(self):
         '''
@@ -192,12 +190,9 @@ class TestGetTemplate(TestCase):
         with salt.utils.files.fopen(filename) as fp_:
             out = render_jinja_tmpl(
                 fp_.read(),
-                dict(
-                    opts=self.local_opts,
-                    saltenv='test',
-                    salt=self.local_salt
-                ))
-        self.assertEqual(out, 'Hey world !a b !\n')
+                dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+            )
+        self.assertEqual(out, 'Hey world !a b !' + os.linesep)
 
     def test_saltenv(self):
         '''
@@ -216,7 +211,7 @@ class TestGetTemplate(TestCase):
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
                          a='Hi', b='Salt', saltenv='test', salt=self.local_salt))
-            self.assertEqual(out, 'Hey world !Hi Salt !\n')
+            self.assertEqual(out, 'Hey world !Hi Salt !' + os.linesep)
             self.assertEqual(fc.requests[0]['path'], 'salt://macro')
 
     def test_macro_additional_log_for_generalexc(self):
@@ -225,7 +220,7 @@ class TestGetTemplate(TestCase):
         more output from trace.
         '''
         expected = r'''Jinja error:.*division.*
-.*/macrogeneral\(2\):
+.*macrogeneral\(2\):
 ---
 \{% macro mymacro\(\) -%\}
 \{\{ 1/0 \}\}    <======================
@@ -249,7 +244,7 @@ class TestGetTemplate(TestCase):
         more output from trace.
         '''
         expected = r'''Jinja variable 'b' is undefined
-.*/macroundefined\(2\):
+.*macroundefined\(2\):
 ---
 \{% macro mymacro\(\) -%\}
 \{\{b.greetee\}\} <-- error is here    <======================
@@ -272,7 +267,7 @@ class TestGetTemplate(TestCase):
         If  we failed in a macro, get more output from trace.
         '''
         expected = r'''Jinja syntax error: expected token .*end.*got '-'.*
-.*/macroerror\(2\):
+.*macroerror\(2\):
 ---
 # macro
 \{% macro mymacro\(greeting, greetee='world'\) -\} <-- error is here    <======================
@@ -302,7 +297,7 @@ class TestGetTemplate(TestCase):
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
                          a='Hi', b='Sàlt', saltenv='test', salt=self.local_salt))
-            self.assertEqual(out, u'Hey world !Hi Sàlt !\n')
+            self.assertEqual(out, salt.utils.stringutils.to_unicode('Hey world !Hi Sàlt !' + os.linesep))
             self.assertEqual(fc.requests[0]['path'], 'salt://macro')
 
             filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
@@ -313,7 +308,7 @@ class TestGetTemplate(TestCase):
                                'file_roots': self.local_opts['file_roots'],
                                'pillar_roots': self.local_opts['pillar_roots']},
                          a='Hi', b='Sàlt', saltenv='test', salt=self.local_salt))
-            self.assertEqual(u'Assunção\n', out)
+            self.assertEqual(u'Assunção' + os.linesep, out)
             self.assertEqual(fc.requests[0]['path'], 'salt://macro')
 
     @skipIf(HAS_TIMELIB is False, 'The `timelib` library is not installed.')
@@ -376,8 +371,8 @@ class TestGetTemplate(TestCase):
         with salt.utils.files.fopen(out['data']) as fp:
             result = fp.read()
             if six.PY2:
-                result = result.decode('utf-8')
-            self.assertEqual(u'Assunção\n', result)
+                result = salt.utils.stringutils.to_unicode(result)
+            self.assertEqual(salt.utils.stringutils.to_unicode('Assunção' + os.linesep), result)
 
     def test_get_context_has_enough_context(self):
         template = '1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf'

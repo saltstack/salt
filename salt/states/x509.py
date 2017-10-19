@@ -163,7 +163,6 @@ import copy
 
 # Import Salt Libs
 import salt.exceptions
-import salt.utils
 
 # Import 3rd-party libs
 from salt.ext import six

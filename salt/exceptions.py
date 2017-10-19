@@ -235,9 +235,10 @@ class SaltRenderError(SaltException):
         if trace:
             exc_str += u'\n{0}\n'.format(trace)
         if self.line_num and self.buffer:
-            import salt.utils
+            # Avoid circular import
             import salt.utils.stringutils
-            self.context = salt.utils.get_context(
+            import salt.utils.templates
+            self.context = salt.utils.templates.get_context(
                 self.buffer,
                 self.line_num,
                 marker=marker
@@ -263,6 +264,12 @@ class SaltClientTimeout(SaltException):
 class SaltCacheError(SaltException):
     '''
     Thrown when a problem was encountered trying to read or write from the salt cache
+    '''
+
+
+class TimeoutError(SaltException):
+    '''
+    Thrown when an opration cannot be completet within a given time limit.
     '''
 
 
@@ -433,6 +440,18 @@ class VMwareConnectionError(VMwareSaltError):
 class VMwareObjectRetrievalError(VMwareSaltError):
     '''
     Used when a VMware object cannot be retrieved
+    '''
+
+
+class VMwareObjectExistsError(VMwareSaltError):
+    '''
+    Used when a VMware object exists
+    '''
+
+
+class VMwareObjectNotFoundError(VMwareSaltError):
+    '''
+    Used when a VMware object was not found
     '''
 
 

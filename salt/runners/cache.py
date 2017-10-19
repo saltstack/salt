@@ -12,18 +12,17 @@ import os
 import salt.config
 from salt.ext import six
 import salt.log
-import salt.utils
 import salt.utils.args
+import salt.utils.gitfs
 import salt.utils.master
 import salt.utils.versions
 import salt.payload
 import salt.cache
+import salt.fileserver.gitfs
+import salt.pillar.git_pillar
+import salt.runners.winrepo
 from salt.exceptions import SaltInvocationError
 from salt.fileserver import clear_lock as _clear_lock
-from salt.fileserver.gitfs import PER_REMOTE_OVERRIDES as __GITFS_OVERRIDES
-from salt.pillar.git_pillar \
-    import PER_REMOTE_OVERRIDES as __GIT_PILLAR_OVERRIDES
-from salt.runners.winrepo import PER_REMOTE_OVERRIDES as __WINREPO_OVERRIDES
 
 log = logging.getLogger(__name__)
 
@@ -324,14 +323,19 @@ def clear_git_lock(role, remote=None, **kwargs):
         salt-run cache.clear_git_lock git_pillar
     '''
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    type_ = salt.utils.split_input(kwargs.pop('type', ['update', 'checkout']))
+    type_ = salt.utils.args.split_input(kwargs.pop('type', ['update', 'checkout']))
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
     if role == 'gitfs':
-        git_objects = [salt.utils.gitfs.GitFS(__opts__)]
-        git_objects[0].init_remotes(__opts__['gitfs_remotes'],
-                                    __GITFS_OVERRIDES)
+        git_objects = [
+            salt.utils.gitfs.GitFS(
+                __opts__,
+                __opts__['gitfs_remotes'],
+                per_remote_overrides=salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
+                per_remote_only=salt.fileserver.gitfs.PER_REMOTE_ONLY
+            )
+        ]
     elif role == 'git_pillar':
         git_objects = []
         for ext_pillar in __opts__['ext_pillar']:
@@ -339,8 +343,11 @@ def clear_git_lock(role, remote=None, **kwargs):
             if key == 'git':
                 if not isinstance(ext_pillar['git'], list):
                     continue
-                obj = salt.utils.gitfs.GitPillar(__opts__)
-                obj.init_remotes(ext_pillar['git'], __GIT_PILLAR_OVERRIDES)
+                obj = salt.utils.gitfs.GitPillar(
+                    __opts__,
+                    ext_pillar['git'],
+                    per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
+                    per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
                 git_objects.append(obj)
     elif role == 'winrepo':
         winrepo_dir = __opts__['winrepo_dir']
@@ -351,8 +358,12 @@ def clear_git_lock(role, remote=None, **kwargs):
             (winrepo_remotes, winrepo_dir),
             (__opts__['winrepo_remotes_ng'], __opts__['winrepo_dir_ng'])
         ):
-            obj = salt.utils.gitfs.WinRepo(__opts__, base_dir)
-            obj.init_remotes(remotes, __WINREPO_OVERRIDES)
+            obj = salt.utils.gitfs.WinRepo(
+                __opts__,
+                remotes,
+                per_remote_overrides=salt.runners.winrepo.PER_REMOTE_OVERRIDES,
+                per_remote_only=salt.runners.winrepo.PER_REMOTE_ONLY,
+                cache_root=base_dir)
             git_objects.append(obj)
     else:
         raise SaltInvocationError('Invalid role \'{0}\''.format(role))

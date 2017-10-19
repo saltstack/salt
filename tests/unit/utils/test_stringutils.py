@@ -3,8 +3,7 @@
 from __future__ import absolute_import
 
 # Import Salt libs
-from tests.support.unit import TestCase
-from tests.unit.utils.test_utils import LOREM_IPSUM
+from tests.support.unit import TestCase, LOREM_IPSUM
 import salt.utils.stringutils
 
 # Import 3rd-party libs
@@ -97,3 +96,9 @@ class StringutilsTestCase(TestCase):
             ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
             un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
             self.assertEqual(salt.utils.stringutils.to_unicode(ut, 'utf-8'), un)
+
+    def test_build_whitespace_split_regex(self):
+        expected_regex = '(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,' \
+                         '(?:[\\s]+)?$'
+        ret = salt.utils.stringutils.build_whitespace_split_regex(' '.join(LOREM_IPSUM.split()[:5]))
+        self.assertEqual(ret, expected_regex)

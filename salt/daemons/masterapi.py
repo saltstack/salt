@@ -15,7 +15,6 @@ import stat
 
 # Import salt libs
 import salt.crypt
-import salt.utils
 import salt.cache
 import salt.client
 import salt.payload
@@ -29,6 +28,7 @@ import salt.key
 import salt.fileserver
 import salt.utils.args
 import salt.utils.atomicfile
+import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gitfs
@@ -38,6 +38,8 @@ import salt.utils.gzip_util
 import salt.utils.jid
 import salt.utils.minions
 import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.user
 import salt.utils.verify
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
@@ -67,12 +69,11 @@ def init_git_pillar(opts):
     for opts_dict in [x for x in opts.get('ext_pillar', [])]:
         if 'git' in opts_dict:
             try:
-                pillar = salt.utils.gitfs.GitPillar(opts)
-                pillar.init_remotes(
+                pillar = salt.utils.gitfs.GitPillar(
+                    opts,
                     opts_dict['git'],
-                    git_pillar.PER_REMOTE_OVERRIDES,
-                    git_pillar.PER_REMOTE_ONLY
-                )
+                    per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
+                    per_remote_only=git_pillar.PER_REMOTE_ONLY)
                 ret.append(pillar)
             except FileserverConfigError:
                 if opts.get('git_pillar_verify_config', True):
@@ -170,6 +171,14 @@ def clean_old_jobs(opts):
 
 
 def mk_key(opts, user):
+    if HAS_PWD:
+        uid = None
+        try:
+            uid = pwd.getpwnam(user).pw_uid
+        except KeyError:
+            # User doesn't exist in the system
+            if opts['client_acl_verify']:
+                return None
     if salt.utils.platform.is_windows():
         # The username may contain '\' if it is in Windows
         # 'DOMAIN\username' format. Fix this for the keyfile path.
@@ -197,9 +206,9 @@ def mk_key(opts, user):
     # Write access is necessary since on subsequent runs, if the file
     # exists, it needs to be written to again. Windows enforces this.
     os.chmod(keyfile, 0o600)
-    if HAS_PWD:
+    if HAS_PWD and uid is not None:
         try:
-            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+            os.chown(keyfile, uid, -1)
         except OSError:
             # The master is not being run as root and can therefore not
             # chown the key file
@@ -214,27 +223,26 @@ def access_keys(opts):
     '''
     # TODO: Need a way to get all available users for systems not supported by pwd module.
     #       For now users pattern matching will not work for publisher_acl.
-    users = []
     keys = {}
     publisher_acl = opts['publisher_acl']
     acl_users = set(publisher_acl.keys())
     if opts.get('user'):
         acl_users.add(opts['user'])
-    acl_users.add(salt.utils.get_user())
-    if opts['client_acl_verify'] and HAS_PWD:
-        log.profile('Beginning pwd.getpwall() call in masterarpi access_keys function')
-        for user in pwd.getpwall():
-            users.append(user.pw_name)
-        log.profile('End pwd.getpwall() call in masterarpi access_keys function')
+    acl_users.add(salt.utils.user.get_user())
     for user in acl_users:
         log.info('Preparing the %s key for local communication', user)
-        keys[user] = mk_key(opts, user)
+        key = mk_key(opts, user)
+        if key is not None:
+            keys[user] = key
 
     # Check other users matching ACL patterns
-    if HAS_PWD:
-        for user in users:
-            if user not in keys and salt.utils.check_whitelist_blacklist(user, whitelist=acl_users):
+    if opts['client_acl_verify'] and HAS_PWD:
+        log.profile('Beginning pwd.getpwall() call in masterapi access_keys function')
+        for user in pwd.getpwall():
+            user = user.pw_name
+            if user not in keys and salt.utils.stringutils.check_whitelist_blacklist(user, whitelist=acl_users):
                 keys[user] = mk_key(opts, user)
+        log.profile('End pwd.getpwall() call in masterapi access_keys function')
 
     return keys
 
@@ -279,7 +287,7 @@ class AutoKey(object):
             pwnam = pwd.getpwnam(user)
             uid = pwnam[2]
             gid = pwnam[3]
-            groups = salt.utils.get_gid_list(user, include_default=False)
+            groups = salt.utils.user.get_gid_list(user, include_default=False)
         except KeyError:
             log.error(
                 'Failed to determine groups for user {0}. The user is not '
@@ -333,7 +341,7 @@ class AutoKey(object):
                 if line.startswith('#'):
                     continue
                 else:
-                    if salt.utils.expr_match(keyid, line):
+                    if salt.utils.stringutils.expr_match(keyid, line):
                         return True
         return False
 
@@ -1226,7 +1234,9 @@ class LocalFuncs(object):
                         auth_ret = True
 
             if auth_ret is not True:
-                auth_list = salt.utils.get_values_of_matching_keys(
+                # Avoid circular import
+                import salt.utils.master
+                auth_list = salt.utils.master.get_values_of_matching_keys(
                         self.opts['publisher_acl'],
                         auth_ret)
                 if not auth_list:

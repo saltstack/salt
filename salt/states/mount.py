@@ -644,7 +644,7 @@ def mounted(name,
                                                                device,
                                                                mkmnt=mkmnt,
                                                                fstype=fstype,
-                                                               opts=opts)
+                                                               mount_opts=opts)
 
         if out == 'present':
             ret['comment'] += '. Entry already exists in the fstab.'

@@ -16,9 +16,9 @@ import traceback
 
 # Import Salt libs
 import salt.loader
-import salt.utils
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -127,7 +127,7 @@ def display_output(data, out=None, opts=None, **kwargs):
                     ofh.close()
             return
         if display_data:
-            salt.utils.print_cli(display_data)
+            salt.utils.stringutils.print_cli(display_data)
     except IOError as exc:
         # Only raise if it's NOT a broken pipe
         if exc.errno != errno.EPIPE:

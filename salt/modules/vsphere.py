@@ -170,20 +170,24 @@ from functools import wraps
 
 # Import Salt Libs
 from salt.ext import six
-import salt.utils
 import salt.utils.args
 import salt.utils.dictupdate as dictupdate
 import salt.utils.http
 import salt.utils.path
+import salt.utils.pbm
 import salt.utils.vmware
 import salt.utils.vsan
 from salt.exceptions import CommandExecutionError, VMwareSaltError, \
         ArgumentValueError, InvalidConfigError, VMwareObjectRetrievalError, \
-        VMwareApiError, InvalidEntityError
+        VMwareApiError, InvalidEntityError, VMwareObjectExistsError
 from salt.utils.decorators import depends, ignores_kwargs
 from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
         ESXClusterEntitySchema
 from salt.config.schemas.vcenter import VCenterEntitySchema
+from salt.config.schemas.esxi import DiskGroupsDiskIdSchema, \
+        VmfsDatastoreSchema, SimpleHostCacheSchema
+
+log = logging.getLogger(__name__)
 
 # Import Third Party Libs
 try:
@@ -193,7 +197,15 @@ except ImportError:
     HAS_JSONSCHEMA = False
 
 try:
-    from pyVmomi import vim, vmodl, VmomiSupport
+    from pyVmomi import vim, vmodl, pbm, VmomiSupport
+
+    # We check the supported vim versions to infer the pyVmomi version
+    if 'vim25/6.0' in VmomiSupport.versionMap and \
+        sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
+
+        log.error('pyVmomi not loaded: Incompatible versions '
+                  'of Python. See Issue #29537.')
+        raise ImportError()
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -204,24 +216,11 @@ if esx_cli:
 else:
     HAS_ESX_CLI = False
 
-log = logging.getLogger(__name__)
-
 __virtualname__ = 'vsphere'
-__proxyenabled__ = ['esxi', 'esxcluster', 'esxdatacenter']
+__proxyenabled__ = ['esxi', 'esxcluster', 'esxdatacenter', 'vcenter']
 
 
 def __virtual__():
-    if not HAS_JSONSCHEMA:
-        return False, 'Execution module did not load: jsonschema not found'
-    if not HAS_PYVMOMI:
-        return False, 'Execution module did not load: pyVmomi not found'
-
-    # We check the supported vim versions to infer the pyVmomi version
-    if 'vim25/6.0' in VmomiSupport.versionMap and \
-        sys.version_info > (2, 7) and sys.version_info < (2, 7, 9):
-
-        return False, ('Execution module did not load: Incompatible versions '
-                       'of Python and pyVmomi present. See Issue #29537.')
     return __virtualname__
 
 
@@ -254,6 +253,8 @@ def _get_proxy_connection_details():
         details = __salt__['esxcluster.get_details']()
     elif proxytype == 'esxdatacenter':
         details = __salt__['esxdatacenter.get_details']()
+    elif proxytype == 'vcenter':
+        details = __salt__['vcenter.get_details']()
     else:
         raise CommandExecutionError('\'{0}\' proxy is not supported'
                                     ''.format(proxytype))
@@ -379,7 +380,7 @@ def gets_service_instance_via_proxy(fn):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter', 'vcenter')
 def get_service_instance_via_proxy(service_instance=None):
     '''
     Returns a service instance to the proxied endpoint (vCenter/ESXi host).
@@ -399,7 +400,7 @@ def get_service_instance_via_proxy(service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter', 'vcenter')
 def disconnect(service_instance):
     '''
     Disconnects from a vCenter or ESXi host
@@ -1934,7 +1935,7 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter', 'vcenter')
 @gets_service_instance_via_proxy
 def test_vcenter_connection(service_instance=None):
     '''
@@ -3622,8 +3623,1330 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
     return ret
 
 
+def _get_dvs_config_dict(dvs_name, dvs_config):
+    '''
+    Returns the dict representation of the DVS config
+
+    dvs_name
+        The name of the DVS
+
+    dvs_config
+        The DVS config
+    '''
+    log.trace('Building the dict of the DVS \'{0}\' config'.format(dvs_name))
+    conf_dict = {'name': dvs_name,
+                 'contact_email': dvs_config.contact.contact,
+                 'contact_name': dvs_config.contact.name,
+                 'description': dvs_config.description,
+                 'lacp_api_version': dvs_config.lacpApiVersion,
+                 'network_resource_control_version':
+                 dvs_config.networkResourceControlVersion,
+                 'network_resource_management_enabled':
+                 dvs_config.networkResourceManagementEnabled,
+                 'max_mtu': dvs_config.maxMtu}
+    if isinstance(dvs_config.uplinkPortPolicy,
+                  vim.DVSNameArrayUplinkPortPolicy):
+        conf_dict.update(
+            {'uplink_names': dvs_config.uplinkPortPolicy.uplinkPortName})
+    return conf_dict
+
+
+def _get_dvs_link_discovery_protocol(dvs_name, dvs_link_disc_protocol):
+    '''
+    Returns the dict representation of the DVS link discovery protocol
+
+    dvs_name
+        The name of the DVS
+
+    dvs_link_disc_protocl
+        The DVS link discovery protocol
+    '''
+    log.trace('Building the dict of the DVS \'{0}\' link discovery '
+              'protocol'.format(dvs_name))
+    return {'operation': dvs_link_disc_protocol.operation,
+            'protocol': dvs_link_disc_protocol.protocol}
+
+
+def _get_dvs_product_info(dvs_name, dvs_product_info):
+    '''
+    Returns the dict representation of the DVS product_info
+
+    dvs_name
+        The name of the DVS
+
+    dvs_product_info
+        The DVS product info
+    '''
+    log.trace('Building the dict of the DVS \'{0}\' product '
+              'info'.format(dvs_name))
+    return {'name': dvs_product_info.name,
+            'vendor': dvs_product_info.vendor,
+            'version': dvs_product_info.version}
+
+
+def _get_dvs_capability(dvs_name, dvs_capability):
+    '''
+    Returns the dict representation of the DVS product_info
+
+    dvs_name
+        The name of the DVS
+
+    dvs_capability
+        The DVS capability
+    '''
+    log.trace('Building the dict of the DVS \'{0}\' capability'
+              ''.format(dvs_name))
+    return {'operation_supported': dvs_capability.dvsOperationSupported,
+            'portgroup_operation_supported':
+            dvs_capability.dvPortGroupOperationSupported,
+            'port_operation_supported': dvs_capability.dvPortOperationSupported}
+
+
+def _get_dvs_infrastructure_traffic_resources(dvs_name,
+                                              dvs_infra_traffic_ress):
+    '''
+    Returns a list of dict representations of the DVS infrastructure traffic
+    resource
+
+    dvs_name
+        The name of the DVS
+
+    dvs_infra_traffic_ress
+        The DVS infrastructure traffic resources
+    '''
+    log.trace('Building the dicts of the DVS \'{0}\' infrastructure traffic '
+              'resources'.format(dvs_name))
+    res_dicts = []
+    for res in dvs_infra_traffic_ress:
+        res_dict = {'key': res.key,
+                    'limit': res.allocationInfo.limit,
+                    'reservation': res.allocationInfo.reservation}
+        if res.allocationInfo.shares:
+            res_dict.update({'num_shares': res.allocationInfo.shares.shares,
+                             'share_level': res.allocationInfo.shares.level})
+        res_dicts.append(res_dict)
+    return res_dicts
+
+
 @depends(HAS_PYVMOMI)
 @supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
+def list_dvss(datacenter=None, dvs_names=None, service_instance=None):
+    '''
+    Returns a list of distributed virtual switches (DVSs).
+    The list can be filtered by the datacenter or DVS names.
+
+    datacenter
+        The datacenter to look for DVSs in.
+        Default value is None.
+
+    dvs_names
+        List of DVS names to look for. If None, all DVSs are returned.
+        Default value is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_dvss
+
+        salt '*' vsphere.list_dvss dvs_names=[dvs1,dvs2]
+    '''
+    ret_list = []
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+
+    for dvs in salt.utils.vmware.get_dvss(dc_ref, dvs_names, (not dvs_names)):
+        dvs_dict = {}
+        # XXX: Because of how VMware did DVS object inheritance we can\'t
+        # be more restrictive when retrieving the dvs config, we have to
+        # retrieve the entire object
+        props = salt.utils.vmware.get_properties_of_managed_object(
+            dvs, ['name', 'config', 'capability', 'networkResourcePool'])
+        dvs_dict = _get_dvs_config_dict(props['name'], props['config'])
+        # Product info
+        dvs_dict.update(
+            {'product_info':
+             _get_dvs_product_info(props['name'],
+                                   props['config'].productInfo)})
+        # Link Discovery Protocol
+        if props['config'].linkDiscoveryProtocolConfig:
+            dvs_dict.update(
+                {'link_discovery_protocol':
+                 _get_dvs_link_discovery_protocol(
+                     props['name'],
+                     props['config'].linkDiscoveryProtocolConfig)})
+        # Capability
+        dvs_dict.update({'capability':
+                         _get_dvs_capability(props['name'],
+                                             props['capability'])})
+        # InfrastructureTrafficResourceConfig - available with vSphere 6.0
+        if hasattr(props['config'], 'infrastructureTrafficResourceConfig'):
+            dvs_dict.update({
+                'infrastructure_traffic_resource_pools':
+                _get_dvs_infrastructure_traffic_resources(
+                    props['name'],
+                    props['config'].infrastructureTrafficResourceConfig)})
+        ret_list.append(dvs_dict)
+    return ret_list
+
+
+def _apply_dvs_config(config_spec, config_dict):
+    '''
+    Applies the values of the config dict dictionary to a config spec
+    (vim.VMwareDVSConfigSpec)
+    '''
+    if config_dict.get('name'):
+        config_spec.name = config_dict['name']
+    if config_dict.get('contact_email') or config_dict.get('contact_name'):
+        if not config_spec.contact:
+            config_spec.contact = vim.DVSContactInfo()
+        config_spec.contact.contact = config_dict.get('contact_email')
+        config_spec.contact.name = config_dict.get('contact_name')
+    if config_dict.get('description'):
+        config_spec.description = config_dict.get('description')
+    if config_dict.get('max_mtu'):
+        config_spec.maxMtu = config_dict.get('max_mtu')
+    if config_dict.get('lacp_api_version'):
+        config_spec.lacpApiVersion = config_dict.get('lacp_api_version')
+    if config_dict.get('network_resource_control_version'):
+        config_spec.networkResourceControlVersion = \
+                config_dict.get('network_resource_control_version')
+    if config_dict.get('uplink_names'):
+        if not config_spec.uplinkPortPolicy or \
+           not isinstance(config_spec.uplinkPortPolicy,
+                          vim.DVSNameArrayUplinkPortPolicy):
+
+            config_spec.uplinkPortPolicy = \
+                    vim.DVSNameArrayUplinkPortPolicy()
+        config_spec.uplinkPortPolicy.uplinkPortName = \
+                config_dict['uplink_names']
+
+
+def _apply_dvs_link_discovery_protocol(disc_prot_config, disc_prot_dict):
+    '''
+    Applies the values of the disc_prot_dict dictionary to a link discovery
+    protocol config object (vim.LinkDiscoveryProtocolConfig)
+    '''
+    disc_prot_config.operation = disc_prot_dict['operation']
+    disc_prot_config.protocol = disc_prot_dict['protocol']
+
+
+def _apply_dvs_product_info(product_info_spec, product_info_dict):
+    '''
+    Applies the values of the product_info_dict dictionary to a product info
+    spec (vim.DistributedVirtualSwitchProductSpec)
+    '''
+    if product_info_dict.get('name'):
+        product_info_spec.name = product_info_dict['name']
+    if product_info_dict.get('vendor'):
+        product_info_spec.vendor = product_info_dict['vendor']
+    if product_info_dict.get('version'):
+        product_info_spec.version = product_info_dict['version']
+
+
+def _apply_dvs_capability(capability_spec, capability_dict):
+    '''
+    Applies the values of the capability_dict dictionary to a DVS capability
+    object (vim.vim.DVSCapability)
+    '''
+    if 'operation_supported' in capability_dict:
+        capability_spec.dvsOperationSupported = \
+                capability_dict['operation_supported']
+    if 'port_operation_supported' in capability_dict:
+        capability_spec.dvPortOperationSupported = \
+                capability_dict['port_operation_supported']
+    if 'portgroup_operation_supported' in capability_dict:
+        capability_spec.dvPortGroupOperationSupported = \
+                capability_dict['portgroup_operation_supported']
+
+
+def _apply_dvs_infrastructure_traffic_resources(infra_traffic_resources,
+                                                resource_dicts):
+    '''
+    Applies the values of the resource dictionaries to infra traffic resources,
+    creating the infra traffic resource if required
+    (vim.DistributedVirtualSwitchProductSpec)
+    '''
+    for res_dict in resource_dicts:
+        filtered_traffic_resources = \
+                [r for r in infra_traffic_resources if r.key == res_dict['key']]
+        if filtered_traffic_resources:
+            traffic_res = filtered_traffic_resources[0]
+        else:
+            traffic_res = vim.DvsHostInfrastructureTrafficResource()
+            traffic_res.key = res_dict['key']
+            traffic_res.allocationInfo = \
+                    vim.DvsHostInfrastructureTrafficResourceAllocation()
+            infra_traffic_resources.append(traffic_res)
+        if res_dict.get('limit'):
+            traffic_res.allocationInfo.limit = res_dict['limit']
+        if res_dict.get('reservation'):
+            traffic_res.allocationInfo.reservation = res_dict['reservation']
+        if res_dict.get('num_shares') or res_dict.get('share_level'):
+            if not traffic_res.allocationInfo.shares:
+                traffic_res.allocationInfo.shares = vim.SharesInfo()
+        if res_dict.get('share_level'):
+            traffic_res.allocationInfo.shares.level = \
+                    vim.SharesLevel(res_dict['share_level'])
+        if res_dict.get('num_shares'):
+            #XXX Even though we always set the number of shares if provided,
+            #the vCenter will ignore it unless the share level is 'custom'.
+            traffic_res.allocationInfo.shares.shares = res_dict['num_shares']
+
+
+def _apply_dvs_network_resource_pools(network_resource_pools, resource_dicts):
+    '''
+    Applies the values of the resource dictionaries to network resource pools,
+    creating the resource pools if required
+    (vim.DVSNetworkResourcePoolConfigSpec)
+    '''
+    for res_dict in resource_dicts:
+        ress = [r for r in network_resource_pools if r.key == res_dict['key']]
+        if ress:
+            res = ress[0]
+        else:
+            res = vim.DVSNetworkResourcePoolConfigSpec()
+            res.key = res_dict['key']
+            res.allocationInfo = \
+                    vim.DVSNetworkResourcePoolAllocationInfo()
+            network_resource_pools.append(res)
+        if res_dict.get('limit'):
+            res.allocationInfo.limit = res_dict['limit']
+        if res_dict.get('num_shares') and res_dict.get('share_level'):
+            if not res.allocationInfo.shares:
+                res.allocationInfo.shares = vim.SharesInfo()
+            res.allocationInfo.shares.shares = res_dict['num_shares']
+            res.allocationInfo.shares.level = \
+                    vim.SharesLevel(res_dict['share_level'])
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
+def create_dvs(dvs_dict, dvs_name, service_instance=None):
+    '''
+    Creates a distributed virtual switch (DVS).
+
+    Note: The ``dvs_name`` param will override any name set in ``dvs_dict``.
+
+    dvs_dict
+        Dict representation of the new DVS (exmaple in salt.states.dvs)
+
+    dvs_name
+        Name of the DVS to be created.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.create_dvs dvs dict=$dvs_dict dvs_name=dvs_name
+    '''
+    log.trace('Creating dvs \'{0}\' with dict = {1}'.format(dvs_name,
+                                                            dvs_dict))
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    # Make the name of the DVS consistent with the call
+    dvs_dict['name'] = dvs_name
+    # Build the config spec from the input
+    dvs_create_spec = vim.DVSCreateSpec()
+    dvs_create_spec.configSpec = vim.VMwareDVSConfigSpec()
+    _apply_dvs_config(dvs_create_spec.configSpec, dvs_dict)
+    if dvs_dict.get('product_info'):
+        dvs_create_spec.productInfo = vim.DistributedVirtualSwitchProductSpec()
+        _apply_dvs_product_info(dvs_create_spec.productInfo,
+                                dvs_dict['product_info'])
+    if dvs_dict.get('capability'):
+        dvs_create_spec.capability = vim.DVSCapability()
+        _apply_dvs_capability(dvs_create_spec.capability,
+                              dvs_dict['capability'])
+    if dvs_dict.get('link_discovery_protocol'):
+        dvs_create_spec.configSpec.linkDiscoveryProtocolConfig = \
+                vim.LinkDiscoveryProtocolConfig()
+        _apply_dvs_link_discovery_protocol(
+            dvs_create_spec.configSpec.linkDiscoveryProtocolConfig,
+            dvs_dict['link_discovery_protocol'])
+    if dvs_dict.get('infrastructure_traffic_resource_pools'):
+        dvs_create_spec.configSpec.infrastructureTrafficResourceConfig = []
+        _apply_dvs_infrastructure_traffic_resources(
+            dvs_create_spec.configSpec.infrastructureTrafficResourceConfig,
+            dvs_dict['infrastructure_traffic_resource_pools'])
+    log.trace('dvs_create_spec = {}'.format(dvs_create_spec))
+    salt.utils.vmware.create_dvs(dc_ref, dvs_name, dvs_create_spec)
+    if 'network_resource_management_enabled' in dvs_dict:
+        dvs_refs = salt.utils.vmware.get_dvss(dc_ref,
+                                              dvs_names=[dvs_name])
+        if not dvs_refs:
+            raise VMwareObjectRetrievalError(
+                'DVS \'{0}\' wasn\'t found in datacenter \'{1}\''
+                ''.format(dvs_name, datacenter))
+        dvs_ref = dvs_refs[0]
+        salt.utils.vmware.set_dvs_network_resource_management_enabled(
+            dvs_ref, dvs_dict['network_resource_management_enabled'])
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
+def update_dvs(dvs_dict, dvs, service_instance=None):
+    '''
+    Updates a distributed virtual switch (DVS).
+
+    Note: Updating the product info, capability, uplinks of a DVS is not
+          supported so the corresponding entries in ``dvs_dict`` will be
+          ignored.
+
+    dvs_dict
+        Dictionary with the values the DVS should be update with
+        (exmaple in salt.states.dvs)
+
+    dvs
+        Name of the DVS to be updated.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.update_dvs dvs_dict=$dvs_dict dvs=dvs1
+    '''
+    # Remove ignored properties
+    log.trace('Updating dvs \'{0}\' with dict = {1}'.format(dvs, dvs_dict))
+    for prop in ['product_info', 'capability', 'uplink_names', 'name']:
+        if prop in dvs_dict:
+            del dvs_dict[prop]
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
+    if not dvs_refs:
+        raise VMwareObjectRetrievalError('DVS \'{0}\' wasn\'t found in '
+                                         'datacenter \'{1}\''
+                                         ''.format(dvs, datacenter))
+    dvs_ref = dvs_refs[0]
+    # Build the config spec from the input
+    dvs_props = salt.utils.vmware.get_properties_of_managed_object(
+        dvs_ref, ['config', 'capability'])
+    dvs_config = vim.VMwareDVSConfigSpec()
+    # Copy all of the properties in the config of the of the DVS to a
+    # DvsConfigSpec
+    skipped_properties = ['host']
+    for prop in dvs_config.__dict__.keys():
+        if prop in skipped_properties:
+            continue
+        if hasattr(dvs_props['config'], prop):
+            setattr(dvs_config, prop, getattr(dvs_props['config'], prop))
+    _apply_dvs_config(dvs_config, dvs_dict)
+    if dvs_dict.get('link_discovery_protocol'):
+        if not dvs_config.linkDiscoveryProtocolConfig:
+            dvs_config.linkDiscoveryProtocolConfig = \
+                    vim.LinkDiscoveryProtocolConfig()
+        _apply_dvs_link_discovery_protocol(
+            dvs_config.linkDiscoveryProtocolConfig,
+            dvs_dict['link_discovery_protocol'])
+    if dvs_dict.get('infrastructure_traffic_resource_pools'):
+        if not dvs_config.infrastructureTrafficResourceConfig:
+            dvs_config.infrastructureTrafficResourceConfig = []
+        _apply_dvs_infrastructure_traffic_resources(
+            dvs_config.infrastructureTrafficResourceConfig,
+            dvs_dict['infrastructure_traffic_resource_pools'])
+    log.trace('dvs_config= {}'.format(dvs_config))
+    salt.utils.vmware.update_dvs(dvs_ref, dvs_config_spec=dvs_config)
+    if 'network_resource_management_enabled' in dvs_dict:
+        salt.utils.vmware.set_dvs_network_resource_management_enabled(
+            dvs_ref, dvs_dict['network_resource_management_enabled'])
+    return True
+
+
+def _get_dvportgroup_out_shaping(pg_name, pg_default_port_config):
+    '''
+    Returns the out shaping policy of a distributed virtual portgroup
+
+    pg_name
+        The name of the portgroup
+
+    pg_default_port_config
+        The dafault port config of the portgroup
+    '''
+    log.trace('Retrieving portgroup\'s \'{0}\' out shaping '
+              'config'.format(pg_name))
+    out_shaping_policy = pg_default_port_config.outShapingPolicy
+    if not out_shaping_policy:
+        return {}
+    return {'average_bandwidth': out_shaping_policy.averageBandwidth.value,
+            'burst_size': out_shaping_policy.burstSize.value,
+            'enabled': out_shaping_policy.enabled.value,
+            'peak_bandwidth': out_shaping_policy.peakBandwidth.value}
+
+
+def _get_dvportgroup_security_policy(pg_name, pg_default_port_config):
+    '''
+    Returns the security policy of a distributed virtual portgroup
+
+    pg_name
+        The name of the portgroup
+
+    pg_default_port_config
+        The dafault port config of the portgroup
+    '''
+    log.trace('Retrieving portgroup\'s \'{0}\' security policy '
+              'config'.format(pg_name))
+    sec_policy = pg_default_port_config.securityPolicy
+    if not sec_policy:
+        return {}
+    return {'allow_promiscuous': sec_policy.allowPromiscuous.value,
+            'forged_transmits': sec_policy.forgedTransmits.value,
+            'mac_changes': sec_policy.macChanges.value}
+
+
+def _get_dvportgroup_teaming(pg_name, pg_default_port_config):
+    '''
+    Returns the teaming of a distributed virtual portgroup
+
+    pg_name
+        The name of the portgroup
+
+    pg_default_port_config
+        The dafault port config of the portgroup
+    '''
+    log.trace('Retrieving portgroup\'s \'{0}\' teaming'
+              'config'.format(pg_name))
+    teaming_policy = pg_default_port_config.uplinkTeamingPolicy
+    if not teaming_policy:
+        return {}
+    ret_dict = {'notify_switches': teaming_policy.notifySwitches.value,
+                'policy': teaming_policy.policy.value,
+                'reverse_policy': teaming_policy.reversePolicy.value,
+                'rolling_order': teaming_policy.rollingOrder.value}
+    if teaming_policy.failureCriteria:
+        failure_criteria = teaming_policy.failureCriteria
+        ret_dict.update({'failure_criteria': {
+            'check_beacon': failure_criteria.checkBeacon.value,
+            'check_duplex': failure_criteria.checkDuplex.value,
+            'check_error_percent': failure_criteria.checkErrorPercent.value,
+            'check_speed': failure_criteria.checkSpeed.value,
+            'full_duplex': failure_criteria.fullDuplex.value,
+            'percentage': failure_criteria.percentage.value,
+            'speed': failure_criteria.speed.value}})
+    if teaming_policy.uplinkPortOrder:
+        uplink_order = teaming_policy.uplinkPortOrder
+        ret_dict.update({'port_order': {
+            'active': uplink_order.activeUplinkPort,
+            'standby': uplink_order.standbyUplinkPort}})
+    return ret_dict
+
+
+def _get_dvportgroup_dict(pg_ref):
+    '''
+    Returns a dictionary with a distributed virutal portgroup data
+
+
+    pg_ref
+        Portgroup reference
+    '''
+    props = salt.utils.vmware.get_properties_of_managed_object(
+        pg_ref, ['name', 'config.description', 'config.numPorts',
+                 'config.type', 'config.defaultPortConfig'])
+    pg_dict = {'name': props['name'],
+               'description': props.get('config.description'),
+               'num_ports': props['config.numPorts'],
+               'type': props['config.type']}
+    if props['config.defaultPortConfig']:
+        dpg = props['config.defaultPortConfig']
+        if dpg.vlan and \
+           isinstance(dpg.vlan,
+                      vim.VmwareDistributedVirtualSwitchVlanIdSpec):
+
+            pg_dict.update({'vlan_id': dpg.vlan.vlanId})
+        pg_dict.update({'out_shaping':
+                        _get_dvportgroup_out_shaping(
+                            props['name'],
+                            props['config.defaultPortConfig'])})
+        pg_dict.update({'security_policy':
+                        _get_dvportgroup_security_policy(
+                            props['name'],
+                            props['config.defaultPortConfig'])})
+        pg_dict.update({'teaming':
+                        _get_dvportgroup_teaming(
+                            props['name'],
+                            props['config.defaultPortConfig'])})
+    return pg_dict
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
+def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
+    '''
+    Returns a list of distributed virtual switch portgroups.
+    The list can be filtered by the portgroup names or by the DVS.
+
+    dvs
+        Name of the DVS containing the portgroups.
+        Default value is None.
+
+    portgroup_names
+        List of portgroup names to look for. If None, all portgroups are
+        returned.
+        Default value is None
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.list_dvporgroups
+
+        salt '*' vsphere.list_dvportgroups dvs=dvs1
+
+        salt '*' vsphere.list_dvportgroups portgroup_names=[pg1]
+
+        salt '*' vsphere.list_dvportgroups dvs=dvs1 portgroup_names=[pg1]
+    '''
+    ret_dict = []
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    if dvs:
+        dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
+        if not dvs_refs:
+            raise VMwareObjectRetrievalError('DVS \'{0}\' was not '
+                                             'retrieved'.format(dvs))
+        dvs_ref = dvs_refs[0]
+    get_all_portgroups = True if not portgroup_names else False
+    for pg_ref in salt.utils.vmware.get_dvportgroups(
+        parent_ref=dvs_ref if dvs else dc_ref,
+        portgroup_names=portgroup_names,
+        get_all_portgroups=get_all_portgroups):
+
+        ret_dict.append(_get_dvportgroup_dict(pg_ref))
+    return ret_dict
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
+def list_uplink_dvportgroup(dvs, service_instance=None):
+    '''
+    Returns the uplink portgroup of a distributed virtual switch.
+
+    dvs
+        Name of the DVS containing the portgroup.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_uplink_dvportgroup dvs=dvs_name
+    '''
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
+    if not dvs_refs:
+        raise VMwareObjectRetrievalError('DVS \'{0}\' was not '
+                                         'retrieved'.format(dvs))
+    uplink_pg_ref = salt.utils.vmware.get_uplink_dvportgroup(dvs_refs[0])
+    return _get_dvportgroup_dict(uplink_pg_ref)
+
+
+def _apply_dvportgroup_out_shaping(pg_name, out_shaping, out_shaping_conf):
+    '''
+    Applies the values in out_shaping_conf to an out_shaping object
+
+    pg_name
+        The name of the portgroup
+
+    out_shaping
+        The vim.DVSTrafficShapingPolicy to apply the config to
+
+    out_shaping_conf
+        The out shaping config
+    '''
+    log.trace('Building portgroup\'s \'{0}\' out shaping '
+              'policy'.format(pg_name))
+    if out_shaping_conf.get('average_bandwidth'):
+        out_shaping.averageBandwidth = vim.LongPolicy()
+        out_shaping.averageBandwidth.value = \
+                out_shaping_conf['average_bandwidth']
+    if out_shaping_conf.get('burst_size'):
+        out_shaping.burstSize = vim.LongPolicy()
+        out_shaping.burstSize.value = out_shaping_conf['burst_size']
+    if 'enabled' in out_shaping_conf:
+        out_shaping.enabled = vim.BoolPolicy()
+        out_shaping.enabled.value = out_shaping_conf['enabled']
+    if out_shaping_conf.get('peak_bandwidth'):
+        out_shaping.peakBandwidth = vim.LongPolicy()
+        out_shaping.peakBandwidth.value = out_shaping_conf['peak_bandwidth']
+
+
+def _apply_dvportgroup_security_policy(pg_name, sec_policy, sec_policy_conf):
+    '''
+    Applies the values in sec_policy_conf to a security policy object
+
+    pg_name
+        The name of the portgroup
+
+    sec_policy
+        The vim.DVSTrafficShapingPolicy to apply the config to
+
+    sec_policy_conf
+        The out shaping config
+    '''
+    log.trace('Building portgroup\'s \'{0}\' security policy '.format(pg_name))
+    if 'allow_promiscuous' in sec_policy_conf:
+        sec_policy.allowPromiscuous = vim.BoolPolicy()
+        sec_policy.allowPromiscuous.value = \
+                sec_policy_conf['allow_promiscuous']
+    if 'forged_transmits' in sec_policy_conf:
+        sec_policy.forgedTransmits = vim.BoolPolicy()
+        sec_policy.forgedTransmits.value = sec_policy_conf['forged_transmits']
+    if 'mac_changes' in sec_policy_conf:
+        sec_policy.macChanges = vim.BoolPolicy()
+        sec_policy.macChanges.value = sec_policy_conf['mac_changes']
+
+
+def _apply_dvportgroup_teaming(pg_name, teaming, teaming_conf):
+    '''
+    Applies the values in teaming_conf to a teaming policy object
+
+    pg_name
+        The name of the portgroup
+
+    teaming
+        The vim.VmwareUplinkPortTeamingPolicy to apply the config to
+
+    teaming_conf
+        The teaming config
+    '''
+    log.trace('Building portgroup\'s \'{0}\' teaming'.format(pg_name))
+    if 'notify_switches' in teaming_conf:
+        teaming.notifySwitches = vim.BoolPolicy()
+        teaming.notifySwitches.value = teaming_conf['notify_switches']
+    if 'policy' in teaming_conf:
+        teaming.policy = vim.StringPolicy()
+        teaming.policy.value = teaming_conf['policy']
+    if 'reverse_policy' in teaming_conf:
+        teaming.reversePolicy = vim.BoolPolicy()
+        teaming.reversePolicy.value = teaming_conf['reverse_policy']
+    if 'rolling_order' in teaming_conf:
+        teaming.rollingOrder = vim.BoolPolicy()
+        teaming.rollingOrder.value = teaming_conf['rolling_order']
+    if 'failure_criteria' in teaming_conf:
+        if not teaming.failureCriteria:
+            teaming.failureCriteria = vim.DVSFailureCriteria()
+        failure_criteria_conf = teaming_conf['failure_criteria']
+        if 'check_beacon' in failure_criteria_conf:
+            teaming.failureCriteria.checkBeacon = vim.BoolPolicy()
+            teaming.failureCriteria.checkBeacon.value = \
+                    failure_criteria_conf['check_beacon']
+        if 'check_duplex' in failure_criteria_conf:
+            teaming.failureCriteria.checkDuplex = vim.BoolPolicy()
+            teaming.failureCriteria.checkDuplex.value = \
+                    failure_criteria_conf['check_duplex']
+        if 'check_error_percent' in failure_criteria_conf:
+            teaming.failureCriteria.checkErrorPercent = vim.BoolPolicy()
+            teaming.failureCriteria.checkErrorPercent.value = \
+                    failure_criteria_conf['check_error_percent']
+        if 'check_speed' in failure_criteria_conf:
+            teaming.failureCriteria.checkSpeed = vim.StringPolicy()
+            teaming.failureCriteria.checkSpeed.value = \
+                    failure_criteria_conf['check_speed']
+        if 'full_duplex' in failure_criteria_conf:
+            teaming.failureCriteria.fullDuplex = vim.BoolPolicy()
+            teaming.failureCriteria.fullDuplex.value = \
+                    failure_criteria_conf['full_duplex']
+        if 'percentage' in failure_criteria_conf:
+            teaming.failureCriteria.percentage = vim.IntPolicy()
+            teaming.failureCriteria.percentage.value = \
+                    failure_criteria_conf['percentage']
+        if 'speed' in failure_criteria_conf:
+            teaming.failureCriteria.speed = vim.IntPolicy()
+            teaming.failureCriteria.speed.value = \
+                    failure_criteria_conf['speed']
+    if 'port_order' in teaming_conf:
+        if not teaming.uplinkPortOrder:
+            teaming.uplinkPortOrder = vim.VMwareUplinkPortOrderPolicy()
+        if 'active' in teaming_conf['port_order']:
+            teaming.uplinkPortOrder.activeUplinkPort = \
+                    teaming_conf['port_order']['active']
+        if 'standby' in teaming_conf['port_order']:
+            teaming.uplinkPortOrder.standbyUplinkPort = \
+                    teaming_conf['port_order']['standby']
+
+
+def _apply_dvportgroup_config(pg_name, pg_spec, pg_conf):
+    '''
+    Applies the values in conf to a distributed portgroup spec
+
+    pg_name
+        The name of the portgroup
+
+    pg_spec
+        The vim.DVPortgroupConfigSpec to apply the config to
+
+    pg_conf
+        The portgroup config
+    '''
+    log.trace('Building portgroup\'s \'{0}\' spec'.format(pg_name))
+    if 'name' in pg_conf:
+        pg_spec.name = pg_conf['name']
+    if 'description' in pg_conf:
+        pg_spec.description = pg_conf['description']
+    if 'num_ports' in pg_conf:
+        pg_spec.numPorts = pg_conf['num_ports']
+    if 'type' in pg_conf:
+        pg_spec.type = pg_conf['type']
+
+    if not pg_spec.defaultPortConfig:
+        for prop in ['vlan_id', 'out_shaping', 'security_policy', 'teaming']:
+            if prop in pg_conf:
+                pg_spec.defaultPortConfig = vim.VMwareDVSPortSetting()
+    if 'vlan_id' in pg_conf:
+        pg_spec.defaultPortConfig.vlan = \
+                vim.VmwareDistributedVirtualSwitchVlanIdSpec()
+        pg_spec.defaultPortConfig.vlan.vlanId = pg_conf['vlan_id']
+    if 'out_shaping' in pg_conf:
+        if not pg_spec.defaultPortConfig.outShapingPolicy:
+            pg_spec.defaultPortConfig.outShapingPolicy = \
+                    vim.DVSTrafficShapingPolicy()
+        _apply_dvportgroup_out_shaping(
+            pg_name, pg_spec.defaultPortConfig.outShapingPolicy,
+            pg_conf['out_shaping'])
+    if 'security_policy' in pg_conf:
+        if not pg_spec.defaultPortConfig.securityPolicy:
+            pg_spec.defaultPortConfig.securityPolicy = \
+                    vim.DVSSecurityPolicy()
+        _apply_dvportgroup_security_policy(
+            pg_name, pg_spec.defaultPortConfig.securityPolicy,
+            pg_conf['security_policy'])
+    if 'teaming' in pg_conf:
+        if not pg_spec.defaultPortConfig.uplinkTeamingPolicy:
+            pg_spec.defaultPortConfig.uplinkTeamingPolicy = \
+                    vim.VmwareUplinkPortTeamingPolicy()
+        _apply_dvportgroup_teaming(
+            pg_name, pg_spec.defaultPortConfig.uplinkTeamingPolicy,
+            pg_conf['teaming'])
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
+def create_dvportgroup(portgroup_dict, portgroup_name, dvs,
+                       service_instance=None):
+    '''
+    Creates a distributed virtual portgroup.
+
+    Note: The ``portgroup_name`` param will override any name already set
+    in ``portgroup_dict``.
+
+    portgroup_dict
+        Dictionary with the config values the portgroup should be created with
+        (exmaple in salt.states.dvs).
+
+    portgroup_name
+        Name of the portgroup to be created.
+
+    dvs
+        Name of the DVS that will contain the portgroup.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.create_dvportgroup portgroup_dict=<dict>
+            portgroup_name=pg1 dvs=dvs1
+    '''
+    log.trace('Creating portgroup\'{0}\' in dvs \'{1}\' '
+              'with dict = {2}'.format(portgroup_name, dvs, portgroup_dict))
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
+    if not dvs_refs:
+        raise VMwareObjectRetrievalError('DVS \'{0}\' was not '
+                                         'retrieved'.format(dvs))
+    # Make the name of the dvportgroup consistent with the parameter
+    portgroup_dict['name'] = portgroup_name
+    spec = vim.DVPortgroupConfigSpec()
+    _apply_dvportgroup_config(portgroup_name, spec, portgroup_dict)
+    salt.utils.vmware.create_dvportgroup(dvs_refs[0], spec)
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
+def update_dvportgroup(portgroup_dict, portgroup, dvs, service_instance=True):
+    '''
+    Updates a distributed virtual portgroup.
+
+    portgroup_dict
+        Dictionary with the values the portgroup should be update with
+        (exmaple in salt.states.dvs).
+
+    portgroup
+        Name of the portgroup to be updated.
+
+    dvs
+        Name of the DVS containing the portgroups.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.update_dvportgroup portgroup_dict=<dict>
+            portgroup=pg1
+
+        salt '*' vsphere.update_dvportgroup portgroup_dict=<dict>
+            portgroup=pg1 dvs=dvs1
+    '''
+    log.trace('Updating portgroup\'{0}\' in dvs \'{1}\' '
+              'with dict = {2}'.format(portgroup, dvs, portgroup_dict))
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
+    if not dvs_refs:
+        raise VMwareObjectRetrievalError('DVS \'{0}\' was not '
+                                         'retrieved'.format(dvs))
+    pg_refs = salt.utils.vmware.get_dvportgroups(dvs_refs[0],
+                                                 portgroup_names=[portgroup])
+    if not pg_refs:
+        raise VMwareObjectRetrievalError('Portgroup \'{0}\' was not '
+                                         'retrieved'.format(portgroup))
+    pg_props = salt.utils.vmware.get_properties_of_managed_object(pg_refs[0],
+                                                                  ['config'])
+    spec = vim.DVPortgroupConfigSpec()
+    # Copy existing properties in spec
+    for prop in ['autoExpand', 'configVersion', 'defaultPortConfig',
+                 'description', 'name', 'numPorts', 'policy', 'portNameFormat',
+                 'scope', 'type', 'vendorSpecificConfig']:
+        setattr(spec, prop, getattr(pg_props['config'], prop))
+    _apply_dvportgroup_config(portgroup, spec, portgroup_dict)
+    salt.utils.vmware.update_dvportgroup(pg_refs[0], spec)
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster')
+@gets_service_instance_via_proxy
+def remove_dvportgroup(portgroup, dvs, service_instance=None):
+    '''
+    Removes a distributed virtual portgroup.
+
+    portgroup
+        Name of the portgroup to be removed.
+
+    dvs
+        Name of the DVS containing the portgroups.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.remove_dvportgroup portgroup=pg1 dvs=dvs1
+    '''
+    log.trace('Removing portgroup\'{0}\' in dvs \'{1}\' '
+              ''.format(portgroup, dvs))
+    proxy_type = get_proxy_type()
+    if proxy_type == 'esxdatacenter':
+        datacenter = __salt__['esxdatacenter.get_details']()['datacenter']
+        dc_ref = _get_proxy_target(service_instance)
+    elif proxy_type == 'esxcluster':
+        datacenter = __salt__['esxcluster.get_details']()['datacenter']
+        dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
+    if not dvs_refs:
+        raise VMwareObjectRetrievalError('DVS \'{0}\' was not '
+                                         'retrieved'.format(dvs))
+    pg_refs = salt.utils.vmware.get_dvportgroups(dvs_refs[0],
+                                                 portgroup_names=[portgroup])
+    if not pg_refs:
+        raise VMwareObjectRetrievalError('Portgroup \'{0}\' was not '
+                                         'retrieved'.format(portgroup))
+    salt.utils.vmware.remove_dvportgroup(pg_refs[0])
+    return True
+
+
+def _get_policy_dict(policy):
+    '''Returns a dictionary representation of a policy'''
+    profile_dict = {'name': policy.name,
+                    'description': policy.description,
+                    'resource_type': policy.resourceType.resourceType}
+    subprofile_dicts = []
+    if isinstance(policy, pbm.profile.CapabilityBasedProfile) and \
+       isinstance(policy.constraints,
+                  pbm.profile.SubProfileCapabilityConstraints):
+
+        for subprofile in policy.constraints.subProfiles:
+            subprofile_dict = {'name': subprofile.name,
+                               'force_provision': subprofile.forceProvision}
+            cap_dicts = []
+            for cap in subprofile.capability:
+                cap_dict = {'namespace': cap.id.namespace,
+                            'id': cap.id.id}
+                # We assume there is one constraint with one value set
+                val = cap.constraint[0].propertyInstance[0].value
+                if isinstance(val, pbm.capability.types.Range):
+                    val_dict = {'type': 'range',
+                                'min': val.min,
+                                'max': val.max}
+                elif isinstance(val, pbm.capability.types.DiscreteSet):
+                    val_dict = {'type': 'set',
+                                'values': val.values}
+                else:
+                    val_dict = {'type': 'scalar',
+                                'value': val}
+                cap_dict['setting'] = val_dict
+                cap_dicts.append(cap_dict)
+            subprofile_dict['capabilities'] = cap_dicts
+            subprofile_dicts.append(subprofile_dict)
+    profile_dict['subprofiles'] = subprofile_dicts
+    return profile_dict
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def list_storage_policies(policy_names=None, service_instance=None):
+    '''
+    Returns a list of storage policies.
+
+    policy_names
+        Names of policies to list. If None, all policies are listed.
+        Default is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.list_storage_policies
+
+        salt '*' vsphere.list_storage_policy policy_names=[policy_name]
+    '''
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    if not policy_names:
+        policies = salt.utils.pbm.get_storage_policies(profile_manager,
+                                                       get_all_policies=True)
+    else:
+        policies = salt.utils.pbm.get_storage_policies(profile_manager,
+                                                       policy_names)
+    return [_get_policy_dict(p) for p in policies]
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def list_default_vsan_policy(service_instance=None):
+    '''
+    Returns the default vsan storage policy.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.list_storage_policies
+
+        salt '*' vsphere.list_storage_policy policy_names=[policy_name]
+    '''
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    policies = salt.utils.pbm.get_storage_policies(profile_manager,
+                                                   get_all_policies=True)
+    def_policies = [p for p in policies
+                    if p.systemCreatedProfileType == 'VsanDefaultProfile']
+    if not def_policies:
+        raise VMwareObjectRetrievalError('Default VSAN policy was not '
+                                         'retrieved')
+    return _get_policy_dict(def_policies[0])
+
+
+def _get_capability_definition_dict(cap_metadata):
+    # We assume each capability definition has one property with the same id
+    # as the capability so we display its type as belonging to the capability
+    # The object model permits multiple properties
+    return {'namespace': cap_metadata.id.namespace,
+            'id': cap_metadata.id.id,
+            'mandatory': cap_metadata.mandatory,
+            'description': cap_metadata.summary.summary,
+            'type': cap_metadata.propertyMetadata[0].type.typeName}
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def list_capability_definitions(service_instance=None):
+    '''
+    Returns a list of the metadata of all capabilities in the vCenter.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.list_capabilities
+    '''
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    ret_list = [_get_capability_definition_dict(c) for c in
+                salt.utils.pbm.get_capability_definitions(profile_manager)]
+    return ret_list
+
+
+def _apply_policy_config(policy_spec, policy_dict):
+    '''Applies a policy dictionary to a policy spec'''
+    log.trace('policy_dict = {0}'.format(policy_dict))
+    if policy_dict.get('name'):
+        policy_spec.name = policy_dict['name']
+    if policy_dict.get('description'):
+        policy_spec.description = policy_dict['description']
+    if policy_dict.get('subprofiles'):
+        # Incremental changes to subprofiles and capabilities are not
+        # supported because they would complicate updates too much
+        # The whole configuration of all sub-profiles is expected and applied
+        policy_spec.constraints = pbm.profile.SubProfileCapabilityConstraints()
+        subprofiles = []
+        for subprofile_dict in policy_dict['subprofiles']:
+            subprofile_spec = \
+                    pbm.profile.SubProfileCapabilityConstraints.SubProfile(
+                        name=subprofile_dict['name'])
+            cap_specs = []
+            if subprofile_dict.get('force_provision'):
+                subprofile_spec.forceProvision = \
+                        subprofile_dict['force_provision']
+            for cap_dict in subprofile_dict['capabilities']:
+                prop_inst_spec = pbm.capability.PropertyInstance(
+                    id=cap_dict['id']
+                )
+                setting_type = cap_dict['setting']['type']
+                if setting_type == 'set':
+                    prop_inst_spec.value = pbm.capability.types.DiscreteSet()
+                    prop_inst_spec.value.values = cap_dict['setting']['values']
+                elif setting_type == 'range':
+                    prop_inst_spec.value = pbm.capability.types.Range()
+                    prop_inst_spec.value.max = cap_dict['setting']['max']
+                    prop_inst_spec.value.min = cap_dict['setting']['min']
+                elif setting_type == 'scalar':
+                    prop_inst_spec.value = cap_dict['setting']['value']
+                cap_spec = pbm.capability.CapabilityInstance(
+                    id=pbm.capability.CapabilityMetadata.UniqueId(
+                        id=cap_dict['id'],
+                        namespace=cap_dict['namespace']),
+                    constraint=[pbm.capability.ConstraintInstance(
+                        propertyInstance=[prop_inst_spec])])
+                cap_specs.append(cap_spec)
+            subprofile_spec.capability = cap_specs
+            subprofiles.append(subprofile_spec)
+        policy_spec.constraints.subProfiles = subprofiles
+    log.trace('updated policy_spec = {0}'.format(policy_spec))
+    return policy_spec
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def create_storage_policy(policy_name, policy_dict, service_instance=None):
+    '''
+    Creates a storage policy.
+
+    Supported capability types: scalar, set, range.
+
+    policy_name
+        Name of the policy to create.
+        The value of the argument will override any existing name in
+        ``policy_dict``.
+
+    policy_dict
+        Dictionary containing the changes to apply to the policy.
+        (exmaple in salt.states.pbm)
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.create_storage_policy policy_name='policy name'
+            policy_dict="$policy_dict"
+    '''
+    log.trace('create storage policy \'{0}\', dict = {1}'
+              ''.format(policy_name, policy_dict))
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    policy_create_spec = pbm.profile.CapabilityBasedProfileCreateSpec()
+    # Hardcode the storage profile resource type
+    policy_create_spec.resourceType = pbm.profile.ResourceType(
+        resourceType=pbm.profile.ResourceTypeEnum.STORAGE)
+    # Set name argument
+    policy_dict['name'] = policy_name
+    log.trace('Setting policy values in policy_update_spec')
+    _apply_policy_config(policy_create_spec, policy_dict)
+    salt.utils.pbm.create_storage_policy(profile_manager, policy_create_spec)
+    return {'create_storage_policy': True}
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def update_storage_policy(policy, policy_dict, service_instance=None):
+    '''
+    Updates a storage policy.
+
+    Supported capability types: scalar, set, range.
+
+    policy
+        Name of the policy to update.
+
+    policy_dict
+        Dictionary containing the changes to apply to the policy.
+        (exmaple in salt.states.pbm)
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.update_storage_policy policy='policy name'
+            policy_dict="$policy_dict"
+    '''
+    log.trace('updating storage policy, dict = {0}'.format(policy_dict))
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    policies = salt.utils.pbm.get_storage_policies(profile_manager, [policy])
+    if not policies:
+        raise VMwareObjectRetrievalError('Policy \'{0}\' was not found'
+                                         ''.format(policy))
+    policy_ref = policies[0]
+    policy_update_spec = pbm.profile.CapabilityBasedProfileUpdateSpec()
+    log.trace('Setting policy values in policy_update_spec')
+    for prop in ['description', 'constraints']:
+        setattr(policy_update_spec, prop, getattr(policy_ref, prop))
+    _apply_policy_config(policy_update_spec, policy_dict)
+    salt.utils.pbm.update_storage_policy(profile_manager, policy_ref,
+                                         policy_update_spec)
+    return {'update_storage_policy': True}
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxcluster', 'esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def list_default_storage_policy_of_datastore(datastore, service_instance=None):
+    '''
+    Returns a list of datastores assign the the storage policies.
+
+    datastore
+        Name of the datastore to assign.
+        The datastore needs to be visible to the VMware entity the proxy
+        points to.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.list_default_storage_policy_of_datastore datastore=ds1
+    '''
+    log.trace('Listing the default storage policy of datastore \'{0}\''
+              ''.format(datastore))
+    # Find datastore
+    target_ref = _get_proxy_target(service_instance)
+    ds_refs = salt.utils.vmware.get_datastores(service_instance, target_ref,
+                                               datastore_names=[datastore])
+    if not ds_refs:
+        raise VMwareObjectRetrievalError('Datastore \'{0}\' was not '
+                                         'found'.format(datastore))
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    policy = salt.utils.pbm.get_default_storage_policy_of_datastore(
+        profile_manager, ds_refs[0])
+    return _get_policy_dict(policy)
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxcluster', 'esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def assign_default_storage_policy_to_datastore(policy, datastore,
+                                               service_instance=None):
+    '''
+    Assigns a storage policy as the default policy to a datastore.
+
+    policy
+        Name of the policy to assign.
+
+    datastore
+        Name of the datastore to assign.
+        The datastore needs to be visible to the VMware entity the proxy
+        points to.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter.
+        Default is None.
+
+    .. code-block:: bash
+        salt '*' vsphere.assign_storage_policy_to_datastore
+            policy='policy name' datastore=ds1
+    '''
+    log.trace('Assigning policy {0} to datastore {1}'
+              ''.format(policy, datastore))
+    profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
+    # Find policy
+    policies = salt.utils.pbm.get_storage_policies(profile_manager, [policy])
+    if not policies:
+        raise VMwareObjectRetrievalError('Policy \'{0}\' was not found'
+                                         ''.format(policy))
+    policy_ref = policies[0]
+    # Find datastore
+    target_ref = _get_proxy_target(service_instance)
+    ds_refs = salt.utils.vmware.get_datastores(service_instance, target_ref,
+                                               datastore_names=[datastore])
+    if not ds_refs:
+        raise VMwareObjectRetrievalError('Datastore \'{0}\' was not '
+                                         'found'.format(datastore))
+    ds_ref = ds_refs[0]
+    salt.utils.pbm.assign_default_storage_policy_to_datastore(
+        profile_manager, policy_ref, ds_ref)
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxdatacenter', 'esxcluster', 'vcenter')
 @gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
     '''
@@ -3661,7 +4984,7 @@ def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxdatacenter')
+@supports_proxies('esxdatacenter', 'vcenter')
 @gets_service_instance_via_proxy
 def create_datacenter(datacenter_name, service_instance=None):
     '''
@@ -4237,6 +5560,60 @@ def list_datastores_via_proxy(datastore_names=None, backing_disk_ids=None,
 
 
 @depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def create_vmfs_datastore(datastore_name, disk_id, vmfs_major_version,
+                          safety_checks=True, service_instance=None):
+    '''
+    Creates a ESXi host disk group with the specified cache and capacity disks.
+
+    datastore_name
+        The name of the datastore to be created.
+
+    disk_id
+        The disk id (canonical name) on which the datastore is created.
+
+    vmfs_major_version
+        The VMFS major version.
+
+    safety_checks
+        Specify whether to perform safety check or to skip the checks and try
+        performing the required task. Default is True.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.create_vmfs_datastore datastore_name=ds1 disk_id=
+            vmfs_major_version=5
+    '''
+    log.debug('Validating vmfs datastore input')
+    schema = VmfsDatastoreSchema.serialize()
+    try:
+        jsonschema.validate(
+            {'datastore': {'name': datastore_name,
+                           'backing_disk_id': disk_id,
+                           'vmfs_version': vmfs_major_version}},
+            schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise ArgumentValueError(exc)
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    if safety_checks:
+        disks = salt.utils.vmware.get_disks(host_ref, disk_ids=[disk_id])
+        if not disks:
+            raise VMwareObjectRetrievalError(
+                'Disk \'{0}\' was not found in host \'{1}\''.format(disk_id,
+                                                                    hostname))
+    ds_ref = salt.utils.vmware.create_vmfs_datastore(
+        host_ref, datastore_name, disks[0], vmfs_major_version)
+    return True
+
+
+@depends(HAS_PYVMOMI)
 @supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
 @gets_service_instance_via_proxy
 def rename_datastore(datastore_name, new_datastore_name,
@@ -4271,6 +5648,40 @@ def rename_datastore(datastore_name, new_datastore_name,
                                          ''.format(datastore_name))
     ds = datastores[0]
     salt.utils.vmware.rename_datastore(ds, new_datastore_name)
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def remove_datastore(datastore, service_instance=None):
+    '''
+    Removes a datastore. If multiple datastores an error is raised.
+
+    datastore
+        Datastore name
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.remove_datastore ds_name
+    '''
+    log.trace('Removing datastore \'{0}\''.format(datastore))
+    target = _get_proxy_target(service_instance)
+    datastores = salt.utils.vmware.get_datastores(
+        service_instance,
+        reference=target,
+        datastore_names=[datastore])
+    if not datastores:
+        raise VMwareObjectRetrievalError(
+            'Datastore \'{0}\' was not found'.format(datastore))
+    if len(datastores) > 1:
+        raise VMwareObjectRetrievalError(
+            'Multiple datastores \'{0}\' were found'.format(datastore))
+    salt.utils.vmware.remove_datastore(service_instance, datastores[0])
     return True
 
 
@@ -4486,6 +5897,600 @@ def assign_license(license_key, license_name, entity, entity_display_name,
         license_name,
         entity_ref=_get_entity(service_instance, entity),
         entity_name=entity_display_name)
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter', 'vcenter')
+@gets_service_instance_via_proxy
+def list_hosts_via_proxy(hostnames=None, datacenter=None,
+                         cluster=None, service_instance=None):
+    '''
+    Returns a list of hosts for the the specified VMware environment. The list
+    of hosts can be filtered by datacenter name and/or cluster name
+
+    hostnames
+        Hostnames to filter on.
+
+    datacenter_name
+        Name of datacenter. Only hosts in this datacenter will be retrieved.
+        Default is None.
+
+    cluster_name
+        Name of cluster. Only hosts in this cluster will be retrieved. If a
+        datacenter is not specified the first cluster with this name will be
+        considerred. Default is None.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_hosts_via_proxy
+
+        salt '*' vsphere.list_hosts_via_proxy hostnames=[esxi1.example.com]
+
+        salt '*' vsphere.list_hosts_via_proxy datacenter=dc1 cluster=cluster1
+    '''
+    if cluster:
+        if not datacenter:
+            raise salt.exceptions.ArgumentValueError(
+                'Datacenter is required when cluster is specified')
+    get_all_hosts = False
+    if not hostnames:
+        get_all_hosts = True
+    hosts = salt.utils.vmware.get_hosts(service_instance,
+                                        datacenter_name=datacenter,
+                                        host_names=hostnames,
+                                        cluster_name=cluster,
+                                        get_all_hosts=get_all_hosts)
+    return [salt.utils.vmware.get_managed_object_name(h) for h in hosts]
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def list_disks(disk_ids=None, scsi_addresses=None, service_instance=None):
+    '''
+    Returns a list of dict representations of the disks in an ESXi host.
+    The list of disks can be filtered by disk canonical names or
+    scsi addresses.
+
+    disk_ids:
+        List of disk canonical names to be retrieved. Default is None.
+
+    scsi_addresses
+        List of scsi addresses of disks to be retrieved. Default is None
+
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_disks
+
+        salt '*' vsphere.list_disks disk_ids='[naa.00, naa.001]'
+
+        salt '*' vsphere.list_disks
+            scsi_addresses='[vmhba0:C0:T0:L0, vmhba1:C0:T0:L0]'
+    '''
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    log.trace('Retrieving disks if host \'{0}\''.format(hostname))
+    log.trace('disk ids = {0}'.format(disk_ids))
+    log.trace('scsi_addresses = {0}'.format(scsi_addresses))
+    # Default to getting all disks if no filtering is done
+    get_all_disks = True if not (disk_ids or scsi_addresses) else False
+    ret_list = []
+    scsi_address_to_lun = salt.utils.vmware.get_scsi_address_to_lun_map(
+        host_ref, hostname=hostname)
+    canonical_name_to_scsi_address = {
+        lun.canonicalName: scsi_addr
+        for scsi_addr, lun in six.iteritems(scsi_address_to_lun)}
+    for d in salt.utils.vmware.get_disks(host_ref, disk_ids, scsi_addresses,
+                                         get_all_disks):
+        ret_list.append({'id': d.canonicalName,
+                         'scsi_address':
+                         canonical_name_to_scsi_address[d.canonicalName]})
+    return ret_list
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def erase_disk_partitions(disk_id=None, scsi_address=None,
+                          service_instance=None):
+    '''
+    Erases the partitions on a disk.
+    The disk can be specified either by the canonical name, or by the
+    scsi_address.
+
+    disk_id
+        Canonical name of the disk.
+        Either ``disk_id`` or ``scsi_address`` needs to be specified
+        (``disk_id`` supersedes ``scsi_address``.
+
+    scsi_address
+        Scsi address of the disk.
+        ``disk_id`` or ``scsi_address`` needs to be specified
+        (``disk_id`` supersedes ``scsi_address``.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.erase_disk_partitions scsi_address='vmhaba0:C0:T0:L0'
+
+        salt '*' vsphere.erase_disk_partitions disk_id='naa.000000000000001'
+    '''
+    if not disk_id and not scsi_address:
+        raise ArgumentValueError('Either \'disk_id\' or \'scsi_address\' '
+                                 'needs to be specified')
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    if not disk_id:
+        scsi_address_to_lun = \
+                salt.utils.vmware.get_scsi_address_to_lun_map(host_ref)
+        if scsi_address not in scsi_address_to_lun:
+            raise VMwareObjectRetrievalError(
+                'Scsi lun with address \'{0}\' was not found on host \'{1}\''
+                ''.format(scsi_address, hostname))
+        disk_id = scsi_address_to_lun[scsi_address].canonicalName
+        log.trace('[{0}] Got disk id \'{1}\' for scsi address \'{2}\''
+                  ''.format(hostname, disk_id, scsi_address))
+    log.trace('Erasing disk partitions on disk \'{0}\' in host \'{1}\''
+              ''.format(disk_id, hostname))
+    salt.utils.vmware.erase_disk_partitions(service_instance,
+                                            host_ref, disk_id,
+                                            hostname=hostname)
+    log.info('Erased disk partitions on disk \'{0}\' on host \'{1}\''
+             ''.format(disk_id, hostname))
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def list_disk_partitions(disk_id=None, scsi_address=None,
+                          service_instance=None):
+    '''
+    Lists the partitions on a disk.
+    The disk can be specified either by the canonical name, or by the
+    scsi_address.
+
+    disk_id
+        Canonical name of the disk.
+        Either ``disk_id`` or ``scsi_address`` needs to be specified
+        (``disk_id`` supersedes ``scsi_address``.
+
+    scsi_address`
+        Scsi address of the disk.
+        ``disk_id`` or ``scsi_address`` needs to be specified
+        (``disk_id`` supersedes ``scsi_address``.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_disk_partitions scsi_address='vmhaba0:C0:T0:L0'
+
+        salt '*' vsphere.list_disk_partitions disk_id='naa.000000000000001'
+    '''
+    if not disk_id and not scsi_address:
+        raise ArgumentValueError('Either \'disk_id\' or \'scsi_address\' '
+                                 'needs to be specified')
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    if not disk_id:
+        scsi_address_to_lun = \
+                salt.utils.vmware.get_scsi_address_to_lun_map(host_ref)
+        if scsi_address not in scsi_address_to_lun:
+            raise VMwareObjectRetrievalError(
+                'Scsi lun with address \'{0}\' was not found on host \'{1}\''
+                ''.format(scsi_address, hostname))
+        disk_id = scsi_address_to_lun[scsi_address].canonicalName
+        log.trace('[{0}] Got disk id \'{1}\' for scsi address \'{2}\''
+                  ''.format(hostname, disk_id, scsi_address))
+    log.trace('Listing disk partitions on disk \'{0}\' in host \'{1}\''
+              ''.format(disk_id, hostname))
+    partition_info = \
+            salt.utils.vmware.get_disk_partition_info(host_ref, disk_id)
+    ret_list = []
+    # NOTE: 1. The layout view has an extra 'None' partition for free space
+    #       2. The orders in the layout/partition views are not the same
+    for part_spec in partition_info.spec.partition:
+        part_layout = [p for p in partition_info.layout.partition
+                       if p.partition == part_spec.partition][0]
+        part_dict = {'hostname': hostname,
+                     'device': disk_id,
+                     'format': partition_info.spec.partitionFormat,
+                     'partition': part_spec.partition,
+                     'type': part_spec.type,
+                     'sectors':
+                     part_spec.endSector - part_spec.startSector + 1,
+                     'size_KB':
+                     (part_layout.end.block - part_layout.start.block + 1) *
+                     part_layout.start.blockSize / 1024}
+        ret_list.append(part_dict)
+    return ret_list
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def list_diskgroups(cache_disk_ids=None, service_instance=None):
+    '''
+    Returns a list of disk group dict representation on an ESXi host.
+    The list of disk groups can be filtered by the cache disks
+    canonical names. If no filtering is applied, all disk groups are returned.
+
+    cache_disk_ids:
+        List of cache disk canonical names of the disk groups to be retrieved.
+        Default is None.
+
+    use_proxy_details
+        Specify whether to use the proxy minion's details instead of the
+        arguments
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.list_diskgroups
+
+        salt '*' vsphere.list_diskgroups cache_disk_ids='[naa.000000000000001]'
+    '''
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    log.trace('Listing diskgroups in \'{0}\''.format(hostname))
+    get_all_diskgroups = True if not cache_disk_ids else False
+    ret_list = []
+    for dg in salt.utils.vmware.get_diskgroups(host_ref, cache_disk_ids,
+                                               get_all_diskgroups):
+        ret_list.append(
+            {'cache_disk': dg.ssd.canonicalName,
+             'capacity_disks': [d.canonicalName for d in dg.nonSsd]})
+    return ret_list
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def create_diskgroup(cache_disk_id, capacity_disk_ids, safety_checks=True,
+                     service_instance=None):
+    '''
+    Creates disk group on an ESXi host with the specified cache and
+    capacity disks.
+
+    cache_disk_id
+        The canonical name of the disk to be used as a cache. The disk must be
+        ssd.
+
+    capacity_disk_ids
+        A list containing canonical names of the capacity disks. Must contain at
+        least one id. Default is True.
+
+    safety_checks
+        Specify whether to perform safety check or to skip the checks and try
+        performing the required task. Default value is True.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.create_diskgroup cache_disk_id='naa.000000000000001'
+            capacity_disk_ids='[naa.000000000000002, naa.000000000000003]'
+    '''
+    log.trace('Validating diskgroup input')
+    schema = DiskGroupsDiskIdSchema.serialize()
+    try:
+        jsonschema.validate(
+            {'diskgroups': [{'cache_id': cache_disk_id,
+                              'capacity_ids': capacity_disk_ids}]},
+            schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise ArgumentValueError(exc)
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    if safety_checks:
+        diskgroups = \
+                salt.utils.vmware.get_diskgroups(host_ref, [cache_disk_id])
+        if diskgroups:
+            raise VMwareObjectExistsError(
+                'Diskgroup with cache disk id \'{0}\' already exists ESXi '
+                'host \'{1}\''.format(cache_disk_id, hostname))
+    disk_ids = capacity_disk_ids[:]
+    disk_ids.insert(0, cache_disk_id)
+    disks = salt.utils.vmware.get_disks(host_ref, disk_ids=disk_ids)
+    for id in disk_ids:
+        if not [d for d in disks if d.canonicalName == id]:
+            raise VMwareObjectRetrievalError(
+                'No disk with id \'{0}\' was found in ESXi host \'{1}\''
+                ''.format(id, hostname))
+    cache_disk = [d for d in disks if d.canonicalName == cache_disk_id][0]
+    capacity_disks = [d for d in disks if d.canonicalName in capacity_disk_ids]
+    vsan_disk_mgmt_system = \
+            salt.utils.vsan.get_vsan_disk_management_system(service_instance)
+    dg = salt.utils.vsan.create_diskgroup(service_instance,
+                                          vsan_disk_mgmt_system,
+                                          host_ref,
+                                          cache_disk,
+                                          capacity_disks)
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def add_capacity_to_diskgroup(cache_disk_id, capacity_disk_ids,
+                              safety_checks=True, service_instance=None):
+    '''
+    Adds capacity disks to the disk group with the specified cache disk.
+
+    cache_disk_id
+        The canonical name of the cache disk.
+
+    capacity_disk_ids
+        A list containing canonical names of the capacity disks to add.
+
+    safety_checks
+        Specify whether to perform safety check or to skip the checks and try
+        performing the required task. Default value is True.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.add_capacity_to_diskgroup
+            cache_disk_id='naa.000000000000001'
+            capacity_disk_ids='[naa.000000000000002, naa.000000000000003]'
+    '''
+    log.trace('Validating diskgroup input')
+    schema = DiskGroupsDiskIdSchema.serialize()
+    try:
+        jsonschema.validate(
+            {'diskgroups': [{'cache_id': cache_disk_id,
+                             'capacity_ids': capacity_disk_ids}]},
+            schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise ArgumentValueError(exc)
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    disks = salt.utils.vmware.get_disks(host_ref, disk_ids=capacity_disk_ids)
+    if safety_checks:
+        for id in capacity_disk_ids:
+            if not [d for d in disks if d.canonicalName == id]:
+                raise VMwareObjectRetrievalError(
+                    'No disk with id \'{0}\' was found in ESXi host \'{1}\''
+                    ''.format(id, hostname))
+    diskgroups = \
+            salt.utils.vmware.get_diskgroups(
+                host_ref, cache_disk_ids=[cache_disk_id])
+    if not diskgroups:
+        raise VMwareObjectRetrievalError(
+            'No diskgroup with cache disk id \'{0}\' was found in ESXi '
+            'host \'{1}\''.format(cache_disk_id, hostname))
+    vsan_disk_mgmt_system = \
+            salt.utils.vsan.get_vsan_disk_management_system(service_instance)
+    salt.utils.vsan.add_capacity_to_diskgroup(service_instance,
+                                              vsan_disk_mgmt_system,
+                                              host_ref,
+                                              diskgroups[0],
+                                              disks)
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def remove_capacity_from_diskgroup(cache_disk_id, capacity_disk_ids,
+                                   data_evacuation=True, safety_checks=True,
+                                   service_instance=None):
+    '''
+    Remove capacity disks from the disk group with the specified cache disk.
+
+    cache_disk_id
+        The canonical name of the cache disk.
+
+    capacity_disk_ids
+        A list containing canonical names of the capacity disks to add.
+
+    data_evacuation
+        Specifies whether to gracefully evacuate the data on the capacity disks
+        before removing them from the disk group. Default value is True.
+
+    safety_checks
+        Specify whether to perform safety check or to skip the checks and try
+        performing the required task. Default value is True.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.remove_capacity_from_diskgroup
+            cache_disk_id='naa.000000000000001'
+            capacity_disk_ids='[naa.000000000000002, naa.000000000000003]'
+    '''
+    log.trace('Validating diskgroup input')
+    schema = DiskGroupsDiskIdSchema.serialize()
+    try:
+        jsonschema.validate(
+            {'diskgroups': [{'cache_id': cache_disk_id,
+                             'capacity_ids': capacity_disk_ids}]},
+            schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise ArgumentValueError(str(exc))
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    disks = salt.utils.vmware.get_disks(host_ref, disk_ids=capacity_disk_ids)
+    if safety_checks:
+        for id in capacity_disk_ids:
+            if not [d for d in disks if d.canonicalName == id]:
+                raise VMwareObjectRetrievalError(
+                    'No disk with id \'{0}\' was found in ESXi host \'{1}\''
+                    ''.format(id, hostname))
+    diskgroups = \
+            salt.utils.vmware.get_diskgroups(host_ref,
+                                             cache_disk_ids=[cache_disk_id])
+    if not diskgroups:
+        raise VMwareObjectRetrievalError(
+            'No diskgroup with cache disk id \'{0}\' was found in ESXi '
+            'host \'{1}\''.format(cache_disk_id, hostname))
+    log.trace('data_evacuation = {0}'.format(data_evacuation))
+    salt.utils.vsan.remove_capacity_from_diskgroup(
+        service_instance, host_ref, diskgroups[0],
+        capacity_disks=[d for d in disks
+                        if d.canonicalName in capacity_disk_ids],
+        data_evacuation=data_evacuation)
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def remove_diskgroup(cache_disk_id, data_accessibility=True,
+                     service_instance=None):
+    '''
+    Remove the diskgroup with the specified cache disk.
+
+    cache_disk_id
+        The canonical name of the cache disk.
+
+    data_accessibility
+        Specifies whether to ensure data accessibility. Default value is True.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.remove_diskgroup cache_disk_id='naa.000000000000001'
+    '''
+    log.trace('Validating diskgroup input')
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    diskgroups = \
+            salt.utils.vmware.get_diskgroups(host_ref,
+                                             cache_disk_ids=[cache_disk_id])
+    if not diskgroups:
+        raise VMwareObjectRetrievalError(
+            'No diskgroup with cache disk id \'{0}\' was found in ESXi '
+            'host \'{1}\''.format(cache_disk_id, hostname))
+    log.trace('data accessibility = {0}'.format(data_accessibility))
+    salt.utils.vsan.remove_diskgroup(
+        service_instance, host_ref, diskgroups[0],
+        data_accessibility=data_accessibility)
+    return True
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def get_host_cache(service_instance=None):
+    '''
+    Returns the host cache configuration on the proxy host.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.get_host_cache
+    '''
+    # Default to getting all disks if no filtering is done
+    ret_dict = {}
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    hci = salt.utils.vmware.get_host_cache(host_ref)
+    if not hci:
+        log.debug('Host cache not configured on host \'{0}\''.format(hostname))
+        ret_dict['enabled'] = False
+        return ret_dict
+
+    # TODO Support multiple host cache info objects (on multiple datastores)
+    return {'enabled': True,
+            'datastore': {'name': hci.key.name},
+            'swap_size': '{}MiB'.format(hci.swapSize)}
+
+
+@depends(HAS_PYVMOMI)
+@depends(HAS_JSONSCHEMA)
+@supports_proxies('esxi')
+@gets_service_instance_via_proxy
+def configure_host_cache(enabled, datastore=None, swap_size_MiB=None,
+                         service_instance=None):
+    '''
+    Configures the host cache on the selected host.
+
+    enabled
+        Boolean flag specifying whether the host cache is enabled.
+
+    datastore
+        Name of the datastore that contains the host cache. Must be set if
+        enabled is ``true``.
+
+    swap_size_MiB
+        Swap size in Mibibytes. Needs to be set if enabled is ``true``. Must be
+        smaller thant the datastore size.
+
+    service_instance
+        Service instance (vim.ServiceInstance) of the vCenter/ESXi host.
+        Default is None.
+
+    .. code-block:: bash
+
+        salt '*' vsphere.configure_host_cache enabled=False
+
+        salt '*' vsphere.configure_host_cache enabled=True datastore=ds1
+            swap_size_MiB=1024
+    '''
+    log.debug('Validating host cache input')
+    schema = SimpleHostCacheSchema.serialize()
+    try:
+        jsonschema.validate({'enabled': enabled,
+                             'datastore_name': datastore,
+                             'swap_size_MiB': swap_size_MiB},
+                            schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise ArgumentValueError(exc)
+    if not enabled:
+        raise ArgumentValueError('Disabling the host cache is not supported')
+    ret_dict = {'enabled': False}
+
+    host_ref = _get_proxy_target(service_instance)
+    hostname = __proxy__['esxi.get_details']()['esxi_host']
+    if datastore:
+        ds_refs = salt.utils.vmware.get_datastores(
+            service_instance, host_ref, datastore_names=[datastore])
+        if not ds_refs:
+            raise VMwareObjectRetrievalError(
+                'Datastore \'{0}\' was not found on host '
+                '\'{1}\''.format(datastore, hostname))
+        ds_ref = ds_refs[0]
+    salt.utils.vmware.configure_host_cache(host_ref, ds_ref, swap_size_MiB)
+    return True
 
 
 def _check_hosts(service_instance, host, host_names):
@@ -5116,7 +7121,7 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxcluster', 'esxdatacenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter', 'vcenter')
 def _get_proxy_target(service_instance):
     '''
     Returns the target object of a proxy.
@@ -5144,6 +7149,21 @@ def _get_proxy_target(service_instance):
 
         reference = salt.utils.vmware.get_datacenter(service_instance,
                                                      datacenter)
+    elif proxy_type == 'vcenter':
+        # vcenter proxy - the target is the root folder
+        reference = salt.utils.vmware.get_root_folder(service_instance)
+    elif proxy_type == 'esxi':
+        # esxi proxy
+        details = __proxy__['esxi.get_details']()
+        if 'vcenter' not in details:
+            raise InvalidEntityError('Proxies connected directly to ESXi '
+                                     'hosts are not supported')
+        references = salt.utils.vmware.get_hosts(
+            service_instance, host_names=details['esxi_host'])
+        if not references:
+            raise VMwareObjectRetrievalError(
+                'ESXi host \'{0}\' was not found'.format(details['esxi_host']))
+        reference = references[0]
     log.trace('reference = {0}'.format(reference))
     return reference
 
@@ -5167,3 +7187,19 @@ def _get_esxcluster_proxy_details():
             det.get('protocol'), det.get('port'), det.get('mechanism'), \
             det.get('principal'), det.get('domain'), det.get('datacenter'), \
             det.get('cluster')
+
+
+def _get_esxi_proxy_details():
+    '''
+    Returns the running esxi's proxy details
+    '''
+    det = __proxy__['esxi.get_details']()
+    host = det.get('host')
+    if det.get('vcenter'):
+        host = det['vcenter']
+    esxi_hosts = None
+    if det.get('esxi_host'):
+        esxi_hosts = [det['esxi_host']]
+    return host, det.get('username'), det.get('password'), \
+            det.get('protocol'), det.get('port'), det.get('mechanism'), \
+            det.get('principal'), det.get('domain'), esxi_hosts

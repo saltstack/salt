@@ -12,7 +12,7 @@ import os
 
 # Import Salt libs
 import salt.version
-import salt.utils  # Can be removed once alias_function is moved
+import salt.utils.functools
 import salt.utils.platform
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -66,6 +66,10 @@ def managed(name,
 
     name
         Path to the virtualenv.
+
+    venv_bin: virtualenv
+        The name (and optionally path) of the virtualenv command. This can also
+        be set globally in the minion config file as ``virtualenv.venv_bin``.
 
     requirements: None
         Path to a pip requirements file. If the path begins with ``salt://``
@@ -313,4 +317,4 @@ def managed(name,
                 'old': old if old else ''}
     return ret
 
-manage = salt.utils.alias_function(managed, 'manage')
+manage = salt.utils.functools.alias_function(managed, 'manage')

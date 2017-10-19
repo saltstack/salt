@@ -17,10 +17,11 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils.parsers
 import salt.log.setup as log
 import salt.config
 import salt.syspaths
+import salt.utils.parsers
+import salt.utils.platform
 
 
 class ErrorMock(object):  # pylint: disable=too-few-public-methods
@@ -78,7 +79,8 @@ class LogSetupMock(object):
         '''
         Mock
         '''
-        return None
+        import multiprocessing
+        return multiprocessing.Queue()
 
     def setup_multiprocessing_logging_listener(self, opts, *args):  # pylint: disable=invalid-name,unused-argument
         '''
@@ -488,6 +490,7 @@ class LogSettingsParserTests(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
 class MasterOptionParserTestCase(LogSettingsParserTests):
     '''
     Tests parsing Salt Master options
@@ -514,6 +517,7 @@ class MasterOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
 class MinionOptionParserTestCase(LogSettingsParserTests):
     '''
     Tests parsing Salt Minion options
@@ -567,6 +571,7 @@ class ProxyMinionOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
 class SyndicOptionParserTestCase(LogSettingsParserTests):
     '''
     Tests parsing Salt Syndic options
@@ -957,6 +962,48 @@ class SaltAPIParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.SaltAPIParser
         self.addCleanup(delattr, self, 'parser')
 
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class DaemonMixInTestCase(TestCase):
+    '''
+    Tests the PIDfile deletion in the DaemonMixIn.
+    '''
+
+    def setUp(self):
+        '''
+        Setting up
+        '''
+        # Set PID
+        self.pid = '/some/fake.pid'
+
+        # Setup mixin
+        self.mixin = salt.utils.parsers.DaemonMixIn()
+        self.mixin.info = None
+        self.mixin.config = {}
+        self.mixin.config['pidfile'] = self.pid
+
+    def test_pid_file_deletion(self):
+        '''
+        PIDfile deletion without exception.
+        '''
+        with patch('os.unlink', MagicMock()) as os_unlink:
+            with patch('os.path.isfile', MagicMock(return_value=True)):
+                with patch.object(self.mixin, 'info', MagicMock()):
+                    self.mixin._mixin_before_exit()
+                    assert self.mixin.info.call_count == 0
+                    assert os_unlink.call_count == 1
+
+    def test_pid_file_deletion_with_oserror(self):
+        '''
+        PIDfile deletion with exception
+        '''
+        with patch('os.unlink', MagicMock(side_effect=OSError())) as os_unlink:
+            with patch('os.path.isfile', MagicMock(return_value=True)):
+                with patch.object(self.mixin, 'info', MagicMock()):
+                    self.mixin._mixin_before_exit()
+                    assert os_unlink.call_count == 1
+                    self.mixin.info.assert_called_with(
+                        'PIDfile could not be deleted: {0}'.format(self.pid))
 
 # Hide the class from unittest framework when it searches for TestCase classes in the module
 del LogSettingsParserTests
