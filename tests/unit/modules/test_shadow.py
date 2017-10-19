@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import skip_if_not_root
 
 # Import salt libs
 try:
