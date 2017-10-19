@@ -15,7 +15,6 @@ import stat
 
 # Import salt libs
 import salt.crypt
-import salt.utils  # Can be removed once check_whitelist_blacklist, expr_match, get_values_of_matching_keys are moved
 import salt.cache
 import salt.client
 import salt.payload
@@ -39,6 +38,7 @@ import salt.utils.gzip_util
 import salt.utils.jid
 import salt.utils.minions
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -69,12 +69,11 @@ def init_git_pillar(opts):
     for opts_dict in [x for x in opts.get('ext_pillar', [])]:
         if 'git' in opts_dict:
             try:
-                pillar = salt.utils.gitfs.GitPillar(opts)
-                pillar.init_remotes(
+                pillar = salt.utils.gitfs.GitPillar(
+                    opts,
                     opts_dict['git'],
-                    git_pillar.PER_REMOTE_OVERRIDES,
-                    git_pillar.PER_REMOTE_ONLY
-                )
+                    per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
+                    per_remote_only=git_pillar.PER_REMOTE_ONLY)
                 ret.append(pillar)
             except FileserverConfigError:
                 if opts.get('git_pillar_verify_config', True):
@@ -241,7 +240,7 @@ def access_keys(opts):
         log.profile('Beginning pwd.getpwall() call in masterapi access_keys function')
         for user in pwd.getpwall():
             user = user.pw_name
-            if user not in keys and salt.utils.check_whitelist_blacklist(user, whitelist=acl_users):
+            if user not in keys and salt.utils.stringutils.check_whitelist_blacklist(user, whitelist=acl_users):
                 keys[user] = mk_key(opts, user)
         log.profile('End pwd.getpwall() call in masterapi access_keys function')
 
@@ -342,7 +341,7 @@ class AutoKey(object):
                 if line.startswith('#'):
                     continue
                 else:
-                    if salt.utils.expr_match(keyid, line):
+                    if salt.utils.stringutils.expr_match(keyid, line):
                         return True
         return False
 
@@ -1235,7 +1234,9 @@ class LocalFuncs(object):
                         auth_ret = True
 
             if auth_ret is not True:
-                auth_list = salt.utils.get_values_of_matching_keys(
+                # Avoid circular import
+                import salt.utils.master
+                auth_list = salt.utils.master.get_values_of_matching_keys(
                         self.opts['publisher_acl'],
                         auth_ret)
                 if not auth_list:

@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.utils
 import salt.utils.path
 import salt.utils.decorators as decorators
 

@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for creating and working with job IDs
+'''
+
 from __future__ import absolute_import
 from __future__ import print_function
 

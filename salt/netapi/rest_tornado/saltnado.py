@@ -214,15 +214,16 @@ ioloop.install()
 
 # salt imports
 import salt.netapi
-import salt.utils
+import salt.utils.args
 import salt.utils.event
+import salt.utils.json
 from salt.utils.event import tagify
 import salt.client
 import salt.runner
 import salt.auth
 from salt.exceptions import EauthAuthenticationError
 
-json = salt.utils.import_json()
+json = salt.utils.json.import_json()
 logger = logging.getLogger()
 
 # The clients rest_cherrypi supports. We want to mimic the interface, but not
@@ -1053,9 +1054,13 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         pub_data = self.saltclients['runner'](chunk)
         raise tornado.gen.Return(pub_data)
 
-    # salt.utils.format_call doesn't work for functions having the annotation tornado.gen.coroutine
+    # salt.utils.args.format_call doesn't work for functions having the
+    # annotation tornado.gen.coroutine
     def _format_call_run_job_async(self, chunk):
-        f_call = salt.utils.format_call(salt.client.LocalClient.run_job, chunk, is_class_method=True)
+        f_call = salt.utils.args.format_call(
+            salt.client.LocalClient.run_job,
+            chunk,
+            is_class_method=True)
         f_call.get('kwargs', {})['io_loop'] = tornado.ioloop.IOLoop.current()
         return f_call
 

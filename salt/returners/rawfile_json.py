@@ -23,7 +23,6 @@ import logging
 import json
 
 import salt.returners
-import salt.utils
 import salt.utils.files
 
 log = logging.getLogger(__name__)

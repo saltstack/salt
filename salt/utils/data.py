@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for manipulating, inspecting, or otherwise working with data types
+and data structures.
+'''
 
 from __future__ import absolute_import
 
@@ -12,6 +16,7 @@ import yaml
 
 # Import Salt libs
 import salt.utils.dictupdate
+import salt.utils.stringutils
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
@@ -116,22 +121,6 @@ def exactly_one(l):
     return exactly_n(l)
 
 
-def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
-    '''
-    Traverse a dict using a colon-delimited (or otherwise delimited, using the
-    'delimiter' param) target string. The target 'foo:bar:baz' will return
-    data['foo']['bar']['baz'] if this value exists, and will otherwise return
-    the dict in the default argument.
-    '''
-    try:
-        for each in key.split(delimiter):
-            data = data[each]
-    except (KeyError, IndexError, TypeError):
-        # Encountered a non-indexable value in the middle of traversing
-        return default
-    return data
-
-
 def filter_by(lookup_dict,
               lookup,
               traverse,
@@ -183,6 +172,22 @@ def filter_by(lookup_dict,
             salt.utils.dictupdate.update(ret, copy.deepcopy(merge))
 
     return ret
+
+
+def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
+    '''
+    Traverse a dict using a colon-delimited (or otherwise delimited, using the
+    'delimiter' param) target string. The target 'foo:bar:baz' will return
+    data['foo']['bar']['baz'] if this value exists, and will otherwise return
+    the dict in the default argument.
+    '''
+    try:
+        for each in key.split(delimiter):
+            data = data[each]
+    except (KeyError, IndexError, TypeError):
+        # Encountered a non-indexable value in the middle of traversing
+        return default
+    return data
 
 
 def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
@@ -420,3 +425,144 @@ def repack_dictlist(data,
             else:
                 ret[key_cb(key)] = val_cb(key, val)
     return ret
+
+
+@jinja_filter('is_list')
+def is_list(value):
+    '''
+    Check if a variable is a list.
+    '''
+    return isinstance(value, list)
+
+
+@jinja_filter('is_iter')
+def is_iter(y, ignore=six.string_types):
+    '''
+    Test if an object is iterable, but not a string type.
+
+    Test if an object is an iterator or is iterable itself. By default this
+    does not return True for string objects.
+
+    The `ignore` argument defaults to a list of string types that are not
+    considered iterable. This can be used to also exclude things like
+    dictionaries or named tuples.
+
+    Based on https://bitbucket.org/petershinners/yter
+    '''
+
+    if ignore and isinstance(y, ignore):
+        return False
+    try:
+        iter(y)
+        return True
+    except TypeError:
+        return False
+
+
+@jinja_filter('sorted_ignorecase')
+def sorted_ignorecase(to_sort):
+    '''
+    Sort a list of strings ignoring case.
+
+    >>> L = ['foo', 'Foo', 'bar', 'Bar']
+    >>> sorted(L)
+    ['Bar', 'Foo', 'bar', 'foo']
+    >>> sorted(L, key=lambda x: x.lower())
+    ['bar', 'Bar', 'foo', 'Foo']
+    >>>
+    '''
+    return sorted(to_sort, key=lambda x: x.lower())
+
+
+def is_true(value=None):
+    '''
+    Returns a boolean value representing the "truth" of the value passed. The
+    rules for what is a "True" value are:
+
+        1. Integer/float values greater than 0
+        2. The string values "True" and "true"
+        3. Any object for which bool(obj) returns True
+    '''
+    # First, try int/float conversion
+    try:
+        value = int(value)
+    except (ValueError, TypeError):
+        pass
+    try:
+        value = float(value)
+    except (ValueError, TypeError):
+        pass
+
+    # Now check for truthiness
+    if isinstance(value, (six.integer_types, float)):
+        return value > 0
+    elif isinstance(value, six.string_types):
+        return str(value).lower() == 'true'
+    else:
+        return bool(value)
+
+
+@jinja_filter('mysql_to_dict')
+def mysql_to_dict(data, key):
+    '''
+    Convert MySQL-style output to a python dictionary
+    '''
+    ret = {}
+    headers = ['']
+    for line in data:
+        if not line:
+            continue
+        if line.startswith('+'):
+            continue
+        comps = line.split('|')
+        for comp in range(len(comps)):
+            comps[comp] = comps[comp].strip()
+        if len(headers) > 1:
+            index = len(headers) - 1
+            row = {}
+            for field in range(index):
+                if field < 1:
+                    continue
+                else:
+                    row[headers[field]] = salt.utils.stringutils.to_num(comps[field])
+            ret[row[key]] = row
+        else:
+            headers = comps
+    return ret
+
+
+def simple_types_filter(data):
+    '''
+    Convert the data list, dictionary into simple types, i.e., int, float, string,
+    bool, etc.
+    '''
+    if data is None:
+        return data
+
+    simpletypes_keys = (six.string_types, six.text_type, six.integer_types, float, bool)
+    simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
+
+    if isinstance(data, (list, tuple)):
+        simplearray = []
+        for value in data:
+            if value is not None:
+                if isinstance(value, (dict, list)):
+                    value = simple_types_filter(value)
+                elif not isinstance(value, simpletypes_values):
+                    value = repr(value)
+            simplearray.append(value)
+        return simplearray
+
+    if isinstance(data, dict):
+        simpledict = {}
+        for key, value in six.iteritems(data):
+            if key is not None and not isinstance(key, simpletypes_keys):
+                key = repr(key)
+            if value is not None and isinstance(value, (dict, list, tuple)):
+                value = simple_types_filter(value)
+            elif value is not None and not isinstance(value, simpletypes_values):
+                value = repr(value)
+            simpledict[key] = value
+        return simpledict
+
+    return data

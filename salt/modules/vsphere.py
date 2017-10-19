@@ -170,14 +170,13 @@ from functools import wraps
 
 # Import Salt Libs
 from salt.ext import six
-import salt.utils
 import salt.utils.args
 import salt.utils.dictupdate as dictupdate
 import salt.utils.http
 import salt.utils.path
+import salt.utils.pbm
 import salt.utils.vmware
 import salt.utils.vsan
-import salt.utils.pbm
 from salt.exceptions import CommandExecutionError, VMwareSaltError, \
         ArgumentValueError, InvalidConfigError, VMwareObjectRetrievalError, \
         VMwareApiError, InvalidEntityError, VMwareObjectExistsError

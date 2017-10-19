@@ -74,7 +74,6 @@ except ImportError:
 
 # Import salt libs
 import salt.config as config
-import salt.utils
 import salt.utils.cloud
 from salt.exceptions import (
     SaltCloudConfigError,

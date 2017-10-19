@@ -74,15 +74,49 @@ class ArgsTestCase(TestCase):
                 args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
 
             # Make sure we raise an error if we don't pass in the requisite number of arguments
-            self.assertRaises(SaltInvocationError, salt.utils.format_call, dummy_func, {'1': 2})
+            self.assertRaises(SaltInvocationError, salt.utils.args.format_call, dummy_func, {'1': 2})
 
             # Make sure we warn on invalid kwargs
-            ret = salt.utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3})
+            ret = salt.utils.args.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3})
             self.assertGreaterEqual(len(ret['warnings']), 1)
 
-            ret = salt.utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3},
+            ret = salt.utils.args.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3},
                                          expected_extra_kws=('first', 'second', 'third'))
             self.assertDictEqual(ret, {'args': [], 'kwargs': {}})
+
+    def test_format_call_simple_args(self):
+        def foo(one, two=2, three=3):
+            pass
+
+        self.assertEqual(
+            salt.utils.args.format_call(foo, dict(one=10, two=20, three=30)),
+            {'args': [10], 'kwargs': dict(two=20, three=30)}
+        )
+        self.assertEqual(
+            salt.utils.args.format_call(foo, dict(one=10, two=20)),
+            {'args': [10], 'kwargs': dict(two=20, three=3)}
+        )
+        self.assertEqual(
+            salt.utils.args.format_call(foo, dict(one=2)),
+            {'args': [2], 'kwargs': dict(two=2, three=3)}
+        )
+
+    def test_format_call_mimic_typeerror_exceptions(self):
+        def foo(one, two=2, three=3):
+            pass
+
+        def foo2(one, two, three=3):
+            pass
+
+        with self.assertRaisesRegex(
+                SaltInvocationError,
+                r'foo takes at least 1 argument \(0 given\)'):
+            salt.utils.args.format_call(foo, dict(two=3))
+
+        with self.assertRaisesRegex(
+                TypeError,
+                r'foo2 takes at least 2 arguments \(1 given\)'):
+            salt.utils.args.format_call(foo2, dict(one=1))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_argspec_report(self):
@@ -94,3 +128,8 @@ class ArgsTestCase(TestCase):
         ret = salt.utils.args.argspec_report(test_functions, 'test_module.test_spec')
         self.assertDictEqual(ret, {'test_module.test_spec':
                                        {'kwargs': True, 'args': None, 'defaults': None, 'varargs': True}})
+
+    def test_test_mode(self):
+        self.assertTrue(salt.utils.args.test_mode(test=True))
+        self.assertTrue(salt.utils.args.test_mode(Test=True))
+        self.assertTrue(salt.utils.args.test_mode(tEsT=True))

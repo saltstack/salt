@@ -34,7 +34,8 @@ import logging
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.ext.six as six
 
@@ -54,7 +55,6 @@ def __virtual__():
     '''
     run Vagrant commands if possible
     '''
-    # noinspection PyUnresolvedReferences
     if salt.utils.path.which('vagrant') is None:
         return False, 'The vagrant module could not be loaded: vagrant command not found'
     return __virtualname__
@@ -297,6 +297,11 @@ def vm_state(name='', cwd=None):
                  'provider': _, # the Vagrant VM provider
                  'name': _} # salt_id name
 
+    Known bug: if there are multiple machines in your Vagrantfile, and you request
+    the status of the ``primary`` machine, which you defined by leaving the ``machine``
+    parameter blank, then you may receive the status of all of them.
+    Please specify the actual machine name for each VM if there are more than one.
+
     '''
 
     if name:
@@ -320,7 +325,7 @@ def vm_state(name='', cwd=None):
                 datum = {'machine': tokens[0],
                          'state': ' '.join(tokens[1:-1]),
                          'provider': tokens[-1].lstrip('(').rstrip(')'),
-                         'name': name or get_machine_id(tokens[0], cwd)
+                         'name': get_machine_id(tokens[0], cwd)
                          }
                 info.append(datum)
             except IndexError:
@@ -364,7 +369,7 @@ def init(name,  # Salt_id for created VM
     # passed-in keyword arguments overwrite vm dictionary values
     vm_['cwd'] = cwd or vm_.get('cwd')
     if not vm_['cwd']:
-        raise SaltInvocationError('Path to Vagrantfile must be defined by \'cwd\' argument')
+        raise SaltInvocationError('Path to Vagrantfile must be defined by "cwd" argument')
     vm_['machine'] = machine or vm_.get('machine', machine)
     vm_['runas'] = runas or vm_.get('runas', runas)
     vm_['vagrant_provider'] = vagrant_provider or vm_.get('vagrant_provider', '')
@@ -422,7 +427,7 @@ def shutdown(name):
     '''
     Send a soft shutdown (vagrant halt) signal to the named vm.
 
-    This does the same thing as vagrant.stop. Other VM control
+    This does the same thing as vagrant.stop. Other-VM control
     modules use "stop" and "shutdown" to differentiate between
     hard and soft shutdowns.
 
@@ -475,7 +480,7 @@ def pause(name):
     return ret == 0
 
 
-def reboot(name):
+def reboot(name, provision=False):
     '''
     Reboot a VM. (vagrant reload)
 
@@ -483,12 +488,16 @@ def reboot(name):
 
     .. code-block:: bash
 
-        salt <host> vagrant.reboot <salt_id>
+        salt <host> vagrant.reboot <salt_id> provision=True
+
+    :param name: The salt_id name you will use to control this VM
+    :param provision: (False) also re-run the Vagrant provisioning scripts.
     '''
     vm_ = get_vm_info(name)
     machine = vm_['machine']
+    prov = '--provision' if provision else ''
 
-    cmd = 'vagrant reload {}'.format(machine)
+    cmd = 'vagrant reload {} {}'.format(machine, prov)
     ret = __salt__['cmd.retcode'](cmd,
                                   runas=vm_.get('runas'),
                                   cwd=vm_.get('cwd'))
@@ -616,7 +625,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
     if get_private_key:
         # retrieve the Vagrant private key from the host
         try:
-            with salt.utils.fopen(ssh_config['IdentityFile']) as pks:
+            with salt.utils.files.fopen(ssh_config['IdentityFile']) as pks:
                 ans['private_key'] = pks.read()
         except (OSError, IOError) as e:
             raise CommandExecutionError("Error processing Vagrant private key file: {}".format(e))

@@ -14,8 +14,8 @@ from __future__ import absolute_import
 import copy
 
 # Import salt libs
-import salt.utils  # Can be removed once alias_function, is_true are moved
 import salt.utils.data
+import salt.utils.functools
 import salt.utils.pkg
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
@@ -84,7 +84,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
 
         salt '*' pkgutil.list_upgrades
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
     upgrades = {}
     lines = __salt__['cmd.run_stdout'](
@@ -114,7 +114,7 @@ def upgrade(refresh=True):
 
         salt '*' pkgutil.upgrade
     '''
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     old = list_pkgs()
@@ -141,9 +141,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    if salt.utils.data.is_true(kwargs.get('removed')):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -204,7 +204,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkgutil.latest_version CSWpython
         salt '*' pkgutil.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
     if not names:
         return ''
@@ -241,7 +241,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):

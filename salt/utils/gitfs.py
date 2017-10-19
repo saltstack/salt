@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Classes which provide the shared base for GitFS, git_pillar, and winrepo
+'''
 
 # Import python libs
 from __future__ import absolute_import
@@ -17,14 +20,16 @@ import shutil
 import stat
 import subprocess
 import time
+import tornado.ioloop
+import weakref
 from datetime import datetime
 
 # Import salt libs
-import salt.utils  # Can be removed once check_whitelist_blacklist, get_hash, is_bin_file, repack_dictlist are moved
 import salt.utils.configparser
 import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
@@ -868,7 +873,7 @@ class GitProvider(object):
         Check if an environment is exposed by comparing it against a whitelist
         and blacklist.
         '''
-        return salt.utils.check_whitelist_blacklist(
+        return salt.utils.stringutils.check_whitelist_blacklist(
             tgt_env,
             whitelist=self.saltenv_whitelist,
             blacklist=self.saltenv_blacklist,
@@ -1922,12 +1927,47 @@ class GitBase(object):
     '''
     Base class for gitfs/git_pillar
     '''
-    def __init__(self, opts, git_providers=None, cache_root=None):
+    def __init__(self, opts, remotes=None, per_remote_overrides=(),
+                 per_remote_only=PER_REMOTE_ONLY, git_providers=None,
+                 cache_root=None, init_remotes=True):
         '''
         IMPORTANT: If specifying a cache_root, understand that this is also
         where the remotes will be cloned. A non-default cache_root is only
         really designed right now for winrepo, as its repos need to be checked
         out into the winrepo locations and not within the cachedir.
+
+        As of the Oxygen release cycle, the classes used to interface with
+        Pygit2 and GitPython can be overridden by passing the git_providers
+        argument when spawning a class instance. This allows for one to write
+        classes which inherit from salt.utils.gitfs.Pygit2 or
+        salt.utils.gitfs.GitPython, and then direct one of the GitBase
+        subclasses (GitFS, GitPillar, WinRepo) to use the custom class. For
+        example:
+
+        .. code-block:: Python
+
+            import salt.utils.gitfs
+            from salt.fileserver.gitfs import PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY
+
+            class CustomPygit2(salt.utils.gitfs.Pygit2):
+                def fetch_remotes(self):
+                    ...
+                    Alternate fetch behavior here
+                    ...
+
+            git_providers = {
+                'pygit2': CustomPygit2,
+                'gitpython': salt.utils.gitfs.GitPython,
+            }
+
+            gitfs = salt.utils.gitfs.GitFS(
+                __opts__,
+                __opts__['gitfs_remotes'],
+                per_remote_overrides=PER_REMOTE_OVERRIDES,
+                per_remote_only=PER_REMOTE_ONLY,
+                git_providers=git_providers)
+
+            gitfs.fetch_remotes()
         '''
         self.opts = opts
         self.git_providers = git_providers if git_providers is not None \
@@ -1943,8 +1983,13 @@ class GitBase(object):
         self.hash_cachedir = salt.utils.path.join(self.cache_root, 'hash')
         self.file_list_cachedir = salt.utils.path.join(
             self.opts['cachedir'], 'file_lists', self.role)
+        if init_remotes:
+            self.init_remotes(
+                remotes if remotes is not None else [],
+                per_remote_overrides,
+                per_remote_only)
 
-    def init_remotes(self, remotes, per_remote_overrides,
+    def init_remotes(self, remotes, per_remote_overrides=(),
                      per_remote_only=PER_REMOTE_ONLY):
         '''
         Initialize remotes
@@ -2468,9 +2513,51 @@ class GitFS(GitBase):
     '''
     Functionality specific to the git fileserver backend
     '''
-    def __init__(self, opts):
-        self.role = 'gitfs'
-        super(GitFS, self).__init__(opts)
+    role = 'gitfs'
+    instance_map = weakref.WeakKeyDictionary()
+
+    def __new__(cls, opts, remotes=None, per_remote_overrides=(),
+                per_remote_only=PER_REMOTE_ONLY, git_providers=None,
+                cache_root=None, init_remotes=True):
+        '''
+        If we are not initializing remotes (such as in cases where we just want
+        to load the config so that we can run clear_cache), then just return a
+        new __init__'ed object. Otherwise, check the instance map and re-use an
+        instance if one exists for the current process. Weak references are
+        used to ensure that we garbage collect instances for threads which have
+        exited.
+        '''
+        # No need to get the ioloop reference if we're not initializing remotes
+        io_loop = tornado.ioloop.IOLoop.current() if init_remotes else None
+        if not init_remotes or io_loop not in cls.instance_map:
+            # We only evaluate the second condition in this if statement if
+            # we're initializing remotes, so we won't get here unless io_loop
+            # is something other than None.
+            obj = object.__new__(cls)
+            super(GitFS, obj).__init__(
+                opts,
+                remotes if remotes is not None else [],
+                per_remote_overrides=per_remote_overrides,
+                per_remote_only=per_remote_only,
+                git_providers=git_providers if git_providers is not None
+                    else GIT_PROVIDERS,
+                cache_root=cache_root,
+                init_remotes=init_remotes)
+            if not init_remotes:
+                log.debug('Created gitfs object with uninitialized remotes')
+            else:
+                log.debug('Created gitfs object for process %s', os.getpid())
+                # Add to the instance map so we can re-use later
+                cls.instance_map[io_loop] = obj
+            return obj
+        log.debug('Re-using gitfs object for process %s', os.getpid())
+        return cls.instance_map[io_loop]
+
+    def __init__(self, opts, remotes, per_remote_overrides=(),  # pylint: disable=super-init-not-called
+                 per_remote_only=PER_REMOTE_ONLY, git_providers=None,
+                 cache_root=None, init_remotes=True):
+        # Initialization happens above in __new__(), so don't do anything here
+        pass
 
     def dir_list(self, load):
         '''
@@ -2621,7 +2708,7 @@ class GitFS(GitBase):
         with salt.utils.files.fopen(fpath, 'rb') as fp_:
             fp_.seek(load['loc'])
             data = fp_.read(self.opts['file_buffer_size'])
-            if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+            if data and six.PY3 and not salt.utils.files.is_binary(fpath):
                 data = data.decode(__salt_system_encoding__)
             if gzip and data:
                 data = salt.utils.gzip_util.compress(data, gzip)
@@ -2649,7 +2736,7 @@ class GitFS(GitBase):
         if not os.path.isfile(hashdest):
             if not os.path.exists(os.path.dirname(hashdest)):
                 os.makedirs(os.path.dirname(hashdest))
-            ret['hsum'] = salt.utils.get_hash(path, self.opts['hash_type'])
+            ret['hsum'] = salt.utils.hashutils.get_hash(path, self.opts['hash_type'])
             with salt.utils.files.fopen(hashdest, 'w+') as fp_:
                 fp_.write(ret['hsum'])
             return ret
@@ -2752,9 +2839,7 @@ class GitPillar(GitBase):
     '''
     Functionality specific to the git external pillar
     '''
-    def __init__(self, opts):
-        self.role = 'git_pillar'
-        super(GitPillar, self).__init__(opts)
+    role = 'git_pillar'
 
     def checkout(self):
         '''
@@ -2842,9 +2927,7 @@ class WinRepo(GitBase):
     '''
     Functionality specific to the winrepo runner
     '''
-    def __init__(self, opts, winrepo_dir):
-        self.role = 'winrepo'
-        super(WinRepo, self).__init__(opts, cache_root=winrepo_dir)
+    role = 'winrepo'
 
     def checkout(self):
         '''
