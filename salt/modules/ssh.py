@@ -25,6 +25,7 @@ import salt.utils.decorators.path
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
@@ -846,6 +847,8 @@ def get_known_host(user,
     '''
     Return information about known host from the configfile, if any.
     If there is no such key, return None.
+    
+    .. deprecated:: Oxygen
 
     CLI Example:
 
@@ -853,10 +856,11 @@ def get_known_host(user,
 
         salt '*' ssh.get_known_host <user> <hostname>
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
             'Neon',
-            'get_known_host has been deprecated in favour of '
-            'get_known_host_entries.'
+            '\'get_known_host\' has been deprecated in favour of '
+            '\'get_known_host_entries\'. \'get_known_host\' will be '
+            'removed in Salt Neon.'
     )
     known_hosts = get_known_host_entries(user, hostname, config, port, fingerprint_hash_type)
     return known_hosts[0] if known_hosts else None
@@ -906,6 +910,8 @@ def recv_known_host(hostname,
                     fingerprint_hash_type=None):
     '''
     Retrieve information about host public key from remote server
+    
+    .. deprecated:: Oxygen
 
     hostname
         The name of the remote host (e.g. "github.com")
@@ -942,10 +948,11 @@ def recv_known_host(hostname,
 
         salt '*' ssh.recv_known_host <hostname> enc=<enc> port=<port>
     '''
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
             'Neon',
-            'recv_known_host has been deprecated in favour of '
-            'recv_known_host_entries.'
+            '\'recv_known_host\' has been deprecated in favour of '
+            '\'recv_known_host_entries\'. \'recv_known_host\' will be '
+            'removed in Salt Neon.'
     )
     known_hosts = recv_known_host_entries(hostname, enc, port, hash_known_hosts, timeout, fingerprint_hash_type)
     return known_hosts[0] if known_hosts else None
