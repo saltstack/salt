@@ -1,2 +1,2 @@
-# match everything expect 'minion'
+# match everything except 'minion'
 ^(?!minion$)
