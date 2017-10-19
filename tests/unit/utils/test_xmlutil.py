@@ -3,6 +3,7 @@
     tests.unit.xmlutil_test
     ~~~~~~~~~~~~~~~~~~~~
 '''
+from __future__ import absolute_import
 # Import Salt Testing libs
 from tests.support.unit import TestCase
 
