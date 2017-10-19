@@ -1,2 +1,2 @@
-sub_minion
-syndic
+# match everything expect 'minion'
+^(?!minion$)

@@ -1,3 +1,2 @@
-minion
-sub_minion
-syndic
+# match everything
+*
