@@ -792,7 +792,8 @@ class FileTestCase(TestCase):
                     with patch.dict(filestate.__opts__, {'test': True}):
                         comt = ('The following files will be changed:\n{0}:'
                                 ' directory - new\n'.format(name))
-                        ret.update({'comment': comt, 'result': None, 'pchanges': {'/etc/grub.conf': {'directory': 'new'}}})
+                        ret.update({'comment': comt, 'result': None, 'pchanges': {'/etc/grub.conf': {'directory': 'new'}},
+                                    'changes': {'/etc/grub.conf': {'directory': 'new'}}})
                         self.assertDictEqual(filestate.directory(name,
                                                                  user=user,
                                                                  group=group),
