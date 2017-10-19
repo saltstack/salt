@@ -74,7 +74,6 @@ except ImportError:
     HAS_KAZOO = False
 
 # Import Salt libraries
-import salt.utils
 import salt.utils.stringutils
 
 __virtualname__ = 'zookeeper'

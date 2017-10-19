@@ -33,6 +33,9 @@ Connection module for Amazon ALB
             keyid: GKTADJGHEIQSXMKKRBJ08H
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
+
+:depends: boto3
+
 '''
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
@@ -52,6 +55,8 @@ from salt.ext import six
 try:
     # pylint: disable=unused-import
     import salt.utils.boto3
+    import boto3
+    import botocore
     # pylint: enable=unused-import
 
     # TODO Version check using salt.utils.versions

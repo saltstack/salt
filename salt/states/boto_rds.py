@@ -77,7 +77,7 @@ import os
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
-import salt.utils
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 
@@ -464,7 +464,7 @@ def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
     '''
-    if not salt.utils.exactly_one((subnet_ids, subnet_names)):
+    if not salt.utils.data.exactly_one((subnet_ids, subnet_names)):
         raise SaltInvocationError('One (but not both) of subnet_ids or '
                                   'subnet_names must be provided.')
 
@@ -697,7 +697,10 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
         changed = {}
         for items in parameters:
             for k, value in items.items():
-                params[k] = value
+                if type(value) is bool:
+                    params[k] = 'on' if value else 'off'
+                else:
+                    params[k] = str(value)
         logging.debug('Parameters from user are : {0}.'.format(params))
         options = __salt__['boto_rds.describe_parameters'](name=name, region=region, key=key, keyid=keyid, profile=profile)
         if not options.get('result'):
@@ -705,8 +708,8 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
             ret['comment'] = os.linesep.join([ret['comment'], 'Faled to get parameters for group  {0}.'.format(name)])
             return ret
         for parameter in options['parameters'].values():
-            if parameter['ParameterName'] in params and str(params.get(parameter['ParameterName'])) != str(parameter['ParameterValue']):
-                logging.debug('Values that are being compared are {0}:{1} .'.format(params.get(parameter['ParameterName']), parameter['ParameterValue']))
+            if parameter['ParameterName'] in params and params.get(parameter['ParameterName']) != str(parameter['ParameterValue']):
+                logging.debug('Values that are being compared for {0} are {1}:{2} .'.format(parameter['ParameterName'], params.get(parameter['ParameterName']), parameter['ParameterValue']))
                 changed[parameter['ParameterName']] = params.get(parameter['ParameterName'])
         if len(changed) > 0:
             if __opts__['test']:
@@ -715,9 +718,9 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
                 return ret
             update = __salt__['boto_rds.update_parameter_group'](name, parameters=changed, apply_method=apply_method, tags=tags, region=region,
                                                                  key=key, keyid=keyid, profile=profile)
-            if not update:
+            if 'error' in update:
                 ret['result'] = False
-                ret['comment'] = os.linesep.join([ret['comment'], 'Failed to change parameters {0} for group {1}.'.format(changed, name)])
+                ret['comment'] = os.linesep.join([ret['comment'], 'Failed to change parameters {0} for group {1}:'.format(changed, name), update['error']['message']])
                 return ret
             ret['changes']['Parameters'] = changed
             ret['comment'] = os.linesep.join([ret['comment'], 'Parameters {0} for group {1} are changed.'.format(changed, name)])
