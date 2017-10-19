@@ -136,6 +136,9 @@ class MockState(object):
             ret = ret
             return True
 
+        def requisite_in(self, data):  # pylint: disable=unused-argument
+            return data, []
+
     class HighState(object):
         '''
             Mock HighState class

@@ -69,12 +69,11 @@ def init_git_pillar(opts):
     for opts_dict in [x for x in opts.get('ext_pillar', [])]:
         if 'git' in opts_dict:
             try:
-                pillar = salt.utils.gitfs.GitPillar(opts)
-                pillar.init_remotes(
+                pillar = salt.utils.gitfs.GitPillar(
+                    opts,
                     opts_dict['git'],
-                    git_pillar.PER_REMOTE_OVERRIDES,
-                    git_pillar.PER_REMOTE_ONLY
-                )
+                    per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
+                    per_remote_only=git_pillar.PER_REMOTE_ONLY)
                 ret.append(pillar)
             except FileserverConfigError:
                 if opts.get('git_pillar_verify_config', True):

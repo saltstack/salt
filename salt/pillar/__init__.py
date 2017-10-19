@@ -891,11 +891,11 @@ class Pillar(object):
                 # Avoid circular import
                 import salt.utils.gitfs
                 import salt.pillar.git_pillar
-                git_pillar = salt.utils.gitfs.GitPillar(self.opts)
-                git_pillar.init_remotes(
+                git_pillar = salt.utils.gitfs.GitPillar(
+                    self.opts,
                     self.ext['git'],
-                    salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                    salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                    per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
+                    per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
                 git_pillar.fetch_remotes()
         except TypeError:
             # Handle malformed ext_pillar

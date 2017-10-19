@@ -428,6 +428,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         controllers = root.findall('.//devices/controller')
         # There should be no controller
         self.assertTrue(len(controllers) == 0)
+        # kvm mac address shoud start with 52:54:00
+        self.assertTrue("mac address='52:54:00" in xml_data)
 
     def test_mixed_dict_and_list_as_profile_objects(self):
 

@@ -246,6 +246,7 @@ Server configuration values and their defaults:
 
     # Bind to LDAP anonymously to determine group membership
     # Active Directory does not allow anonymous binds without special configuration
+    # In addition, if auth.ldap.anonymous is True, empty bind passwords are not permitted.
     auth.ldap.anonymous: False
 
     # FOR TESTING ONLY, this is a VERY insecure setting.
@@ -285,7 +286,11 @@ and groups, it re-authenticates as the user running the Salt commands.
 
 If you are already aware of the structure of your DNs and permissions in your LDAP store are set such that
 users can look up their own group memberships, then the first and second users can be the same.  To tell Salt this is
-the case, omit the ``auth.ldap.bindpw`` parameter.  You can template the ``binddn`` like this:
+the case, omit the ``auth.ldap.bindpw`` parameter.  Note this is not the same thing as using an anonymous bind.
+Most LDAP servers will not permit anonymous bind, and as mentioned above, if `auth.ldap.anonymous` is False you
+cannot use an empty password.
+
+You can template the ``binddn`` like this:
 
 .. code-block:: yaml
 
