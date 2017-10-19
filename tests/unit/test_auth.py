@@ -14,6 +14,7 @@ from tests.support.mock import patch, call, NO_MOCK, NO_MOCK_REASON, MagicMock
 import salt.master
 from tests.support.case import ModuleCase
 from salt import auth
+import salt.utils
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -146,6 +147,7 @@ class MasterACLTestCase(ModuleCase):
                                 }
         self.addCleanup(delattr, self, 'valid_clear_load')
 
+    @skipIf(salt.utils.is_windows(), 'PAM eauth not available on Windows')
     def test_master_publish_name(self):
         '''
         Test to ensure a simple name can auth against a given function.
@@ -214,6 +216,7 @@ class MasterACLTestCase(ModuleCase):
         self.clear.publish(self.valid_clear_load)
         self.assertEqual(self.fire_event_mock.mock_calls, [])
 
+    @skipIf(salt.utils.is_windows(), 'PAM eauth not available on Windows')
     def test_master_minion_glob(self):
         '''
         Test to ensure we can allow access to a given
@@ -250,6 +253,7 @@ class MasterACLTestCase(ModuleCase):
         # Unimplemented
         pass
 
+    @skipIf(salt.utils.is_windows(), 'PAM eauth not available on Windows')
     def test_args_empty_spec(self):
         '''
         Test simple arg restriction allowed.
@@ -267,6 +271,7 @@ class MasterACLTestCase(ModuleCase):
             self.clear.publish(self.valid_clear_load)
             self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'], 'test.empty')
 
+    @skipIf(salt.utils.is_windows(), 'PAM eauth not available on Windows')
     def test_args_simple_match(self):
         '''
         Test simple arg restriction allowed.
@@ -287,6 +292,7 @@ class MasterACLTestCase(ModuleCase):
             self.clear.publish(self.valid_clear_load)
             self.assertEqual(self.fire_event_mock.call_args[0][0]['fun'], 'test.echo')
 
+    @skipIf(salt.utils.is_windows(), 'PAM eauth not available on Windows')
     def test_args_more_args(self):
         '''
         Test simple arg restriction allowed to pass unlisted args.
@@ -345,6 +351,7 @@ class MasterACLTestCase(ModuleCase):
             self.clear.publish(self.valid_clear_load)
             self.assertEqual(self.fire_event_mock.mock_calls, [])
 
+    @skipIf(salt.utils.is_windows(), 'PAM eauth not available on Windows')
     def test_args_kwargs_match(self):
         '''
         Test simple kwargs restriction allowed.
@@ -416,6 +423,7 @@ class MasterACLTestCase(ModuleCase):
             self.clear.publish(self.valid_clear_load)
             self.assertEqual(self.fire_event_mock.mock_calls, [])
 
+    @skipIf(salt.utils.is_windows(), 'PAM eauth not available on Windows')
     def test_args_mixed_match(self):
         '''
         Test mixed args and kwargs restriction allowed.
@@ -559,6 +567,7 @@ class AuthACLTestCase(ModuleCase):
                                  }
         self.addCleanup(delattr, self, 'valid_clear_load')
 
+    @skipIf(salt.utils.is_windows(), 'PAM eauth not available on Windows')
     def test_acl_simple_allow(self):
         self.clear.publish(self.valid_clear_load)
         self.assertEqual(self.auth_check_mock.call_args[0][0],
