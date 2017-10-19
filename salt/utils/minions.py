@@ -578,10 +578,9 @@ class CkMinions(object):
             if search is None:
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts['publish_port']))
-            if '127.0.0.1' in addrs or '0.0.0.0' in addrs:
-                # Add in possible ip addresses of a locally connected minion
+            if '127.0.0.1' in addrs:
+                # Add in the address of a possible locally-connected minion.
                 addrs.discard('127.0.0.1')
-                addrs.discard('0.0.0.0')
                 addrs.update(set(salt.utils.network.ip_addrs(include_loopback=include_localhost)))
             if subset:
                 search = subset
