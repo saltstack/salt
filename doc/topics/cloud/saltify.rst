@@ -33,9 +33,9 @@ the salt-master:
 
 However, if you wish to use the more advanced capabilities of salt-cloud, such as
 rebooting, listing, and disconnecting machines, then the salt master must fill
-the role usually performed by a vendor's cloud management system. In order to do
-that, you must configure your salt master as a salt-api server, and supply credentials
-to use it. (See ``salt-api setup`` below.)
+the role usually performed by a vendor's cloud management system. The salt master
+must be running on the salt-cloud machine, and created nodes must be connected to the
+master.
 
 
 Profiles
@@ -165,67 +165,3 @@ Return values:
   - ``True``: Credential verification succeeded
   - ``False``: Credential verification succeeded
   - ``None``: Credential verification was not attempted.
-
-Provisioning salt-api
-=====================
-
-In order to query or control minions it created, saltify needs to send commands
-to the salt master.  It does that using the network interface to salt-api.
-
-The salt-api is not enabled by default. The following example will provide a
-simple installation.
-
-.. code-block:: yaml
-
-    # file /etc/salt/cloud.profiles.d/my_saltify_profiles.conf
-    hw_41:  # a theoretical example hardware machine
-      ssh_host: 10.100.9.41  # the hard address of your target
-      ssh_username: vagrant  # a user name which has passwordless sudo
-      password: vagrant      # on your target machine
-      provider: my_saltify_provider
-
-
-.. code-block:: yaml
-
-    # file /etc/salt/cloud.providers.d/saltify_provider.conf
-    my_saltify_provider:
-      driver: saltify
-      eauth: pam
-      username: vagrant  # supply some sudo-group-member's name
-      password: vagrant  # and password on the salt master
-      minion:
-        master: 10.100.9.5  # the hard address of the master
-
-
-.. code-block:: yaml
-
-    # file /etc/salt/master.d/auth.conf
-    #  using salt-api ... members of the 'sudo' group can do anything ...
-    external_auth:
-      pam:
-        sudo%:
-          - .*
-          - '@wheel'
-          - '@runner'
-          - '@jobs'
-
-
-.. code-block:: yaml
-
-    # file /etc/salt/master.d/api.conf
-    # see https://docs.saltstack.com/en/latest/ref/netapi/all/salt.netapi.rest_cherrypy.html
-    rest_cherrypy:
-      host: localhost
-      port: 8000
-      ssl_crt: /etc/pki/tls/certs/localhost.crt
-      ssl_key: /etc/pki/tls/certs/localhost.key
-      thread_pool: 30
-      socket_queue_size: 10
-
-
-Start your target machine as a Salt minion named "node41" by:
-
-.. code-block:: bash
-
-    $ sudo salt-cloud -p hw_41 node41
-
