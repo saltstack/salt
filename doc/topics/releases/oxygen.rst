@@ -116,6 +116,31 @@ The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``te
 Just like ``mixed_id``, these use the state ID as name in the highstate output.
 For more information on these output modes, see the docs for the :mod:`Highstate Outputter <salt.output.highstate>`.
 
+Windows Installer: Changes to existing config handling
+------------------------------------------------------
+Behavior with existing configuration has changed. With previous installers the
+existing config was used and the master and minion id could be modified via the
+installer. It was problematic in that it didn't account for configuration that
+may be defined in the ``minion.d`` directory. This change gives you the option
+via a checkbox to either use the existing config with out changes or the default
+config using values you pass to the installer. If you choose to use the existing
+config then no changes are made. If not, the existing config is deleted, to
+include the ``minion.d`` directory, and the default config is used. A
+command-line switch (``/use-existing-config``) has also been added to control
+this behavior.
+
+Windows Installer: Multi-master configuration
+---------------------------------------------
+The installer now has the ability to apply a multi-master configuration either
+from the gui or the command line. The ``master`` field in the gui can accept
+either a single master or a comma-separated list of masters. The command-line
+switch (``/master=``) can accept the same.
+
+Windows Installer: Command-line help
+------------------------------------
+The Windows installer will now display command-line help when a help switch
+(``/?``) is passed.
+
 Salt Cloud Features
 -------------------
 
@@ -394,7 +419,7 @@ Solaris Logical Domains In Virtual Grain
 ----------------------------------------
 
 Support has been added to the ``virtual`` grain for detecting Solaris LDOMs
-running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is 
+running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is
 populated as a list of domain roles.
 
 Lists of comments in state returns
@@ -409,7 +434,7 @@ Beacon configuration changes
 
 In order to remain consistent and to align with other Salt components such as states,
 support for configuring beacons using dictionary based configuration has been deprecated
-in favor of list based configuration.  All beacons have a validation function which will 
+in favor of list based configuration.  All beacons have a validation function which will
 check the configuration for the correct format and only load if the validation passes.
 
 - ``avahi_announce`` beacon
