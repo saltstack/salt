@@ -16,6 +16,7 @@ Functions to interact with Hashicorp Vault.
 
         vault:
             url: https://vault.service.domain:8200
+            verify: /etc/ssl/certs/ca-certificates.crt
             auth:
                 method: token
                 token: 11111111-2222-3333-4444-555555555555
@@ -26,6 +27,10 @@ Functions to interact with Hashicorp Vault.
 
     url
         Url to your Vault installation. Required.
+
+    verify
+        For details please see
+        http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
 
     auth
         Currently only token auth is supported. The token must be able to create

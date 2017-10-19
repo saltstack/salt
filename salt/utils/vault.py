@@ -124,6 +124,9 @@ def make_request(method, resource, profile=None, **args):
     connection = _get_vault_connection()
     token, vault_url = connection['token'], connection['url']
 
+    if "verify" not in args:
+        args["verify"] = __opts__['vault'].get('verify', None)
+
     url = "{0}/{1}".format(vault_url, resource)
     headers = {'X-Vault-Token': token, 'Content-Type': 'application/json'}
     response = requests.request(method, url, headers=headers, **args)
