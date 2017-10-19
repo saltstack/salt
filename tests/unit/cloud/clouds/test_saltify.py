@@ -18,13 +18,14 @@ from salt.cloud.clouds import saltify
 
 TEST_PROFILES = {
     'testprofile1': NotImplemented,
-    'testprofile2': {'ssh_username': 'fred',
-                     'ssh_host': 'betty',
-                     'remove_config_on_destroy': False,
-                     'shutdown_on_destroy': True
+    'testprofile2': {  # this profile is used in test_saltify_destroy()
+                     'ssh_username': 'fred',
+                     'remove_config_on_destroy': False,  # expected for test
+                     'shutdown_on_destroy': True  # expected value for test
                      }
     }
 TEST_PROFILE_NAMES = ['testprofile1', 'testprofile2']
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
@@ -34,7 +35,7 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
     LOCAL_OPTS = {
         'providers': {
             'sfy1': {
-                'saltify' : {
+                'saltify': {
                     'driver': 'saltify',
                     'profiles': TEST_PROFILES
                     }
@@ -89,7 +90,6 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
         '''
         self.assertEqual(saltify.avail_locations(), {})
 
-
     def test_avail_sizes(self):
         '''
         Test the avail_sizes will always return {}
@@ -104,7 +104,6 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             saltify.avail_images()['Profiles'].sort(),
             testlist.sort())
-
 
     def test_list_nodes(self):
         '''
@@ -161,16 +160,16 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
         # NOTE: this assumes that the call order never changes,
         # so to keep things simple, we will not use remove_config...
         result_list = [
-                {'nodeS1': {  # first call returns grains.get
+                {'nodeS1': {  # first call is grains.get
                     'driver': 'saltify',
                     'provider': 'saltify',
                     'profile': 'testprofile2'}
-                    #  Note:
-                    #    testprofile2 has remove_config_on_destroy: False
-                    #    and shutdown_on_destroy: True
                 },
+                #  Note:
+                #    testprofile2 has remove_config_on_destroy: False
+                #    and shutdown_on_destroy: True
                 {'nodeS1':  # last call shuts down the minion
-                     'system.shutdown worked' },
+                     'a system.shutdown worked message'},
             ]
         mm_cmd = MagicMock(side_effect=result_list)
         lcl = salt.client.LocalClient()
