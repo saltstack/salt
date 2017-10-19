@@ -172,7 +172,7 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
                 {'nodeS1':  # last call shuts down the minion
                      'system.shutdown worked' },
             ]
-        mm_cmd = MagicMock(return_value=True, side_effect=result_list)
+        mm_cmd = MagicMock(side_effect=result_list)
         lcl = salt.client.LocalClient()
         lcl.cmd = mm_cmd
         with patch('salt.client.LocalClient', return_value=lcl):
