@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import os
 import shutil
+import stat
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -15,6 +16,11 @@ from tests.support.paths import TMP, INTEGRATION_TEST_DIR
 import salt.utils.files
 
 
+# all read, only owner write
+autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
+autosign_file_path = os.path.join(TMP, 'rootdir', 'autosign_file')
+
+
 class AutosignGrainsTest(ShellCase):
     '''
     Test autosigning minions based on grain values.
@@ -23,15 +29,17 @@ class AutosignGrainsTest(ShellCase):
     def setUp(self):
         shutil.copyfile(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'autosign_grains', 'autosign_file'),
-            os.path.join(TMP, 'rootdir', 'autosign_file')
+            autosign_file_path
         )
+        os.chmod(autosign_file_path, autosign_file_permissions)
+
         self.run_key('-d minion -y')
         self.run_call('test.ping')  # get minon to try to authenticate itself again
 
         if 'minion' in self.run_key('-l acc'):
             self.skipTest('Could not deauthorize minion')
         if 'minion' not in self.run_key('-l un'):
-            self.skipTest('minion did not try to authenticate itself')
+            self.skipTest('minion did not try to reauthenticate itself')
 
         self.autosign_grains_dir = os.path.join(self.master_opts['autosign_grains_dir'])
         if not os.path.isdir(self.autosign_grains_dir):
@@ -40,8 +48,10 @@ class AutosignGrainsTest(ShellCase):
     def tearDown(self):
         shutil.copyfile(
             os.path.join(INTEGRATION_TEST_DIR, 'files', 'autosign_file'),
-            os.path.join(TMP, 'rootdir', 'autosign_file')
+            autosign_file_path
         )
+        os.chmod(autosign_file_path, autosign_file_permissions)
+
         self.run_call('test.ping')  # get minon to try to authenticate itself again
         self.run_key('-a minion -y')
 
