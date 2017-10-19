@@ -59,15 +59,19 @@ class AutosignGrainsTest(ShellCase):
             shutil.rmtree(self.autosign_grains_dir)
 
     def test_autosign_grains_accept(self):
-        with salt.utils.files.fopen(os.path.join(self.autosign_grains_dir, 'test_grain'), 'w') as f:
+        grain_file_path = os.path.join(self.autosign_grains_dir, 'test_grain')
+        with salt.utils.files.fopen(grain_file_path, 'w') as f:
             f.write('#invalid_value\ncheese')
+        os.chmod(grain_file_path, autosign_file_permissions)
 
         self.run_call('test.ping')  # get minon to try to authenticate itself again
         self.assertIn('minion', self.run_key('-l acc'))
 
     def test_autosign_grains_fail(self):
-        with salt.utils.files.fopen(os.path.join(self.autosign_grains_dir, 'test_grain'), 'w') as f:
+        grain_file_path = os.path.join(self.autosign_grains_dir, 'test_grain')
+        with salt.utils.files.fopen(grain_file_path, 'w') as f:
             f.write('#cheese\ninvalid_value')
+        os.chmod(grain_file_path, autosign_file_permissions)
 
         self.run_call('test.ping')  # get minon to try to authenticate itself again
         self.assertNotIn('minion', self.run_key('-l acc'))
