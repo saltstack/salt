@@ -11,7 +11,7 @@ import copy
 from datetime import datetime, timedelta
 
 # Import salt libs
-import salt.utils  # Can be removed once print_cli is moved
+import salt.utils.stringutils
 import salt.client
 import salt.output
 import salt.exceptions
@@ -73,7 +73,7 @@ class Batch(object):
                     m = next(six.iterkeys(ret))
                 except StopIteration:
                     if not self.quiet:
-                        salt.utils.print_cli('No minions matched the target.')
+                        salt.utils.stringutils.print_cli('No minions matched the target.')
                     break
                 if m is not None:
                     fret.add(m)
@@ -95,7 +95,7 @@ class Batch(object):
                 return int(self.opts['batch'])
         except ValueError:
             if not self.quiet:
-                salt.utils.print_cli('Invalid batch data sent: {0}\nData must be in the '
+                salt.utils.stringutils.print_cli('Invalid batch data sent: {0}\nData must be in the '
                           'form of %10, 10% or 3'.format(self.opts['batch']))
 
     def __update_wait(self, wait):
@@ -147,7 +147,7 @@ class Batch(object):
             # We already know some minions didn't respond to the ping, so inform
             # the user we won't be attempting to run a job on them
             for down_minion in self.down_minions:
-                salt.utils.print_cli('Minion {0} did not respond. No job will be sent.'.format(down_minion))
+                salt.utils.stringutils.print_cli('Minion {0} did not respond. No job will be sent.'.format(down_minion))
 
         # Iterate while we still have things to execute
         while len(ret) < len(self.minions):
@@ -172,7 +172,7 @@ class Batch(object):
 
             if next_:
                 if not self.quiet:
-                    salt.utils.print_cli('\nExecuting run on {0}\n'.format(sorted(next_)))
+                    salt.utils.stringutils.print_cli('\nExecuting run on {0}\n'.format(sorted(next_)))
                 # create a new iterator for this batch of minions
                 new_iter = self.local.cmd_iter_no_block(
                                 *args,
@@ -219,14 +219,14 @@ class Batch(object):
                             if part['data']['id'] in minion_tracker[queue]['minions']:
                                 minion_tracker[queue]['minions'].remove(part['data']['id'])
                             else:
-                                salt.utils.print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(part['id']))
+                                salt.utils.stringutils.print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(part['id']))
                         else:
                             parts.update(part)
                             for id in part:
                                 if id in minion_tracker[queue]['minions']:
                                     minion_tracker[queue]['minions'].remove(id)
                                 else:
-                                    salt.utils.print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(id))
+                                    salt.utils.stringutils.print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(id))
                 except StopIteration:
                     # if a iterator is done:
                     # - set it to inactive

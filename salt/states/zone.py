@@ -115,10 +115,9 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.utils
 import salt.utils.args
-import salt.utils.files
 import salt.utils.atomicfile
+import salt.utils.files
 from salt.modules.zonecfg import _parse_value, _zonecfg_resource_default_selectors
 from salt.exceptions import CommandExecutionError
 from salt.utils.odict import OrderedDict

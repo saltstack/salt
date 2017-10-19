@@ -14,7 +14,6 @@ import fnmatch
 # Import salt libs
 import salt.minion
 import salt.fileclient
-import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
 import salt.utils.locales
@@ -748,7 +747,7 @@ def stat_file(path, saltenv='base', octal=True):
     stat = _client().hash_and_stat_file(path, saltenv)[1]
     if stat is None:
         return stat
-    return salt.utils.st_mode_to_octal(stat[0]) if octal is True else stat[0]
+    return salt.utils.files.st_mode_to_octal(stat[0]) if octal is True else stat[0]
 
 
 def push(path, keep_symlinks=False, upload_path=None, remove_source=False):

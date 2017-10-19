@@ -128,12 +128,12 @@ def setup_handlers():
                     callable(transport_registry.compute_scope)):
                 conf_extras = transport_registry.compute_scope(url, dsn_config)
                 dsn_config.update(conf_extras)
-            options.update({
-                'project': dsn_config['SENTRY_PROJECT'],
-                'servers': dsn_config['SENTRY_SERVERS'],
-                'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
-                'secret_key': dsn_config['SENTRY_SECRET_KEY']
-            })
+                options.update({
+                    'project': dsn_config['SENTRY_PROJECT'],
+                    'servers': dsn_config['SENTRY_SERVERS'],
+                    'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
+                    'secret_key': dsn_config['SENTRY_SECRET_KEY']
+                })
         except ValueError as exc:
             log.info(
                 'Raven failed to parse the configuration provided '

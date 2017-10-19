@@ -20,7 +20,6 @@ import subprocess
 
 # Import salt libs
 from salt.ext import six
-import salt.utils
 import salt.utils.decorators.path
 import salt.utils.files
 import salt.utils.path

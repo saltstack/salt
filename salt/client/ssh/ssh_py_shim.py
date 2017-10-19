@@ -137,7 +137,7 @@ def need_deployment():
     sys.exit(EX_THIN_DEPLOY)
 
 
-# Adapted from salt.utils.get_hash()
+# Adapted from salt.utils.hashutils.get_hash()
 def get_hash(path, form=u'sha1', chunk_size=4096):
     '''
     Generate a hash digest string for a file.

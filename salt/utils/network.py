@@ -12,6 +12,7 @@ import types
 import socket
 import logging
 import platform
+import random
 import subprocess
 from string import ascii_letters, digits
 
@@ -31,7 +32,9 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.zeromq
 from salt._compat import ipaddress
+from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
 
 # inet_pton does not exist in Windows, this is a workaround
@@ -39,6 +42,14 @@ if salt.utils.platform.is_windows():
     from salt.ext import win_inet_pton  # pylint: disable=unused-import
 
 log = logging.getLogger(__name__)
+
+try:
+    import ctypes
+    import ctypes.util
+    libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("c"))
+    res_init = libc.__res_init
+except (ImportError, OSError, AttributeError, TypeError):
+    pass
 
 # pylint: disable=C0103
 
@@ -1648,3 +1659,133 @@ def _aix_remotes_on(port, which_end):
             continue
         remotes.add(remote_host)
     return remotes
+
+
+@jinja_filter('gen_mac')
+def gen_mac(prefix='AC:DE:48'):
+    '''
+    Generates a MAC address with the defined OUI prefix.
+
+    Common prefixes:
+
+     - ``00:16:3E`` -- Xen
+     - ``00:18:51`` -- OpenVZ
+     - ``00:50:56`` -- VMware (manually generated)
+     - ``52:54:00`` -- QEMU/KVM
+     - ``AC:DE:48`` -- PRIVATE
+
+    References:
+
+     - http://standards.ieee.org/develop/regauth/oui/oui.txt
+     - https://www.wireshark.org/tools/oui-lookup.html
+     - https://en.wikipedia.org/wiki/MAC_address
+    '''
+    return '{0}:{1:02X}:{2:02X}:{3:02X}'.format(prefix,
+                                                random.randint(0, 0xff),
+                                                random.randint(0, 0xff),
+                                                random.randint(0, 0xff))
+
+
+@jinja_filter('mac_str_to_bytes')
+def mac_str_to_bytes(mac_str):
+    '''
+    Convert a MAC address string into bytes. Works with or without separators:
+
+    b1 = mac_str_to_bytes('08:00:27:13:69:77')
+    b2 = mac_str_to_bytes('080027136977')
+    assert b1 == b2
+    assert isinstance(b1, bytes)
+    '''
+    if len(mac_str) == 12:
+        pass
+    elif len(mac_str) == 17:
+        sep = mac_str[2]
+        mac_str = mac_str.replace(sep, '')
+    else:
+        raise ValueError('Invalid MAC address')
+    if six.PY3:
+        mac_bytes = bytes(int(mac_str[s:s+2], 16) for s in range(0, 12, 2))
+    else:
+        mac_bytes = ''.join(chr(int(mac_str[s:s+2], 16)) for s in range(0, 12, 2))
+    return mac_bytes
+
+
+def refresh_dns():
+    '''
+    issue #21397: force glibc to re-read resolv.conf
+    '''
+    try:
+        res_init()
+    except NameError:
+        # Exception raised loading the library, thus res_init is not defined
+        pass
+
+
+@jinja_filter('dns_check')
+def dns_check(addr, port, safe=False, ipv6=None):
+    '''
+    Return the ip resolved by dns, but do not exit on failure, only raise an
+    exception. Obeys system preference for IPv4/6 address resolution.
+    Tries to connect to the address before considering it useful. If no address
+    can be reached, the first one resolved is used as a fallback.
+    '''
+    error = False
+    lookup = addr
+    seen_ipv6 = False
+    try:
+        refresh_dns()
+        hostnames = socket.getaddrinfo(
+            addr, None, socket.AF_UNSPEC, socket.SOCK_STREAM
+        )
+        if not hostnames:
+            error = True
+        else:
+            resolved = False
+            candidates = []
+            for h in hostnames:
+                # It's an IP address, just return it
+                if h[4][0] == addr:
+                    resolved = addr
+                    break
+
+                if h[0] == socket.AF_INET and ipv6 is True:
+                    continue
+                if h[0] == socket.AF_INET6 and ipv6 is False:
+                    continue
+
+                candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
+
+                if h[0] != socket.AF_INET6 or ipv6 is not None:
+                    candidates.append(candidate_addr)
+
+                try:
+                    s = socket.socket(h[0], socket.SOCK_STREAM)
+                    s.connect((candidate_addr.strip('[]'), port))
+                    s.close()
+
+                    resolved = candidate_addr
+                    break
+                except socket.error:
+                    pass
+            if not resolved:
+                if len(candidates) > 0:
+                    resolved = candidates[0]
+                else:
+                    error = True
+    except TypeError:
+        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
+        raise SaltSystemExit(code=42, msg=err)
+    except socket.error:
+        error = True
+
+    if error:
+        err = ('DNS lookup or connection check of \'{0}\' failed.').format(addr)
+        if safe:
+            if salt.log.is_console_configured():
+                # If logging is not configured it also means that either
+                # the master or minion instance calling this hasn't even
+                # started running
+                log.error(err)
+            raise SaltClientError()
+        raise SaltSystemExit(code=42, msg=err)
+    return resolved

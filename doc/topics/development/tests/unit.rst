@@ -123,7 +123,7 @@ to the module being tests one should do:
            }
 
 Consider this more extensive example from 
-``tests/unit/modules/test_libcloud_dns.py``::
+``tests/unit/modules/test_libcloud_dns.py``:
 
 .. code-block:: python
 

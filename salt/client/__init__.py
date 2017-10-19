@@ -32,15 +32,16 @@ import salt.cache
 import salt.payload
 import salt.transport
 import salt.loader
-import salt.utils
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
+import salt.utils.jid
 import salt.utils.minions
 import salt.utils.platform
+import salt.utils.user
 import salt.utils.verify
 import salt.utils.versions
-import salt.utils.jid
+import salt.utils.zeromq
 import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError,
@@ -157,7 +158,7 @@ class LocalClient(object):
                 )
             self.opts = salt.config.client_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
-        self.salt_user = salt.utils.get_specific_user()
+        self.salt_user = salt.utils.user.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
         self.auto_reconnect = auto_reconnect
@@ -1790,7 +1791,7 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        master_uri = u'tcp://' + salt.utils.ip_bracket(self.opts[u'interface']) + \
+        master_uri = u'tcp://' + salt.utils.zeromq.ip_bracket(self.opts[u'interface']) + \
                      u':' + str(self.opts[u'ret_port'])
         channel = salt.transport.Channel.factory(self.opts,
                                                  crypt=u'clear',
@@ -1898,7 +1899,7 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        master_uri = u'tcp://' + salt.utils.ip_bracket(self.opts[u'interface']) + \
+        master_uri = u'tcp://' + salt.utils.zeromq.ip_bracket(self.opts[u'interface']) + \
                      u':' + str(self.opts[u'ret_port'])
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
                                                                 io_loop=io_loop,
