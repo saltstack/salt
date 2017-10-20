@@ -763,7 +763,7 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
     '''
     Describe all VPCs, matching the filter criteria if provided.
 
-    Returns a a list of dictionaries with interesting properties.
+    Returns a list of dictionaries with interesting properties.
 
     .. versionadded:: 2015.8.0
 
