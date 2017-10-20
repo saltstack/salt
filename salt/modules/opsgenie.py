@@ -6,8 +6,11 @@ Module for sending data to OpsGenie
 
 :configuration: This module can be used in Reactor System for
     posting data to OpsGenie as a remote-execution function.
+
     For example:
+
     .. code-block:: yaml
+
         opsgenie_event_poster:
           local.opsgenie.post_data:
             - tgt: 'salt-minion'
@@ -40,6 +43,9 @@ def post_data(api_key=None, name='OpsGenie Execution Module', reason=None,
     module with your designated tag (og-tag in this case).
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt-call event.send 'og-tag' '{"reason" : "Overheating CPU!"}'
 
     Required parameters:
