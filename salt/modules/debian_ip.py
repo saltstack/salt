@@ -1388,7 +1388,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     for opt in ['up_cmds', 'pre_up_cmds', 'post_up_cmds',
                 'down_cmds', 'pre_down_cmds', 'post_down_cmds']:
         if opt in opts:
-            iface_data['inet'][opt] = opts[opt]
+            iface_data[def_addrfam][opt] = opts[opt]
 
     for addrfam in ['inet', 'inet6']:
         if 'addrfam' in iface_data[addrfam] and iface_data[addrfam]['addrfam'] == addrfam:
