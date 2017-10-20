@@ -1139,7 +1139,8 @@ class Schedule(object):
                     # Sort the list of "whens" from earlier to later schedules
                     _when.sort()
 
-                    for i in _when:
+                    # Copy the list so we can loop through it
+                    for i in copy.deepcopy(_when):
                         if i < now and len(_when) > 1:
                             # Remove all missed schedules except the latest one.
                             # We need it to detect if it was triggered previously.
