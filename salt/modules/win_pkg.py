@@ -796,8 +796,7 @@ def genrepo(**kwargs):
 
     with salt.utils.fopen(repo_details.winrepo_file, mode) as repo_cache:
         repo_cache.write(serial.dumps(ret))
-    # save reading it back again. ! this breaks due to utf8 issues
-    # __context__['winrepo.data'] = ret
+    # For some reason we can not save ret into __context__['winrepo.data'] as this breaks due to utf8 issues
     successful_count = len(successful_verbose)
     error_count = len(ret['errors'])
     if verbose:
