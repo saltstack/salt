@@ -11,7 +11,7 @@ import salt.daemons.masterapi as masterapi
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
+from salttesting.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
 
 
 def gen_permissions(owner='', group='', others=''):
