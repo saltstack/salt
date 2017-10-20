@@ -144,7 +144,7 @@ def get_current_user():
 
 
 def get_sam_name(username):
-    '''
+    r'''
     Gets the SAM name for a user. It basically prefixes a username without a
     backslash with the computer name. If the user does not exist, a SAM
     compatible name will be returned using the local hostname as the domain.
