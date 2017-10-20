@@ -61,10 +61,11 @@ from salt.ext import six
 HAS_KEYSTONE = False
 try:
     # pylint: disable=import-error
-    from keystoneclient.v2_0 import client
     import keystoneclient.exceptions
     HAS_KEYSTONE = True
-    from keystoneclient.v3 import client as client3
+    from keystoneclient import discover
+    from keystoneauth1 import session
+    from keystoneauth1.identity import generic
     # pylint: enable=import-error
 except ImportError:
     pass
@@ -111,6 +112,9 @@ def _get_kwargs(profile=None, **connection_args):
     insecure = get('insecure', False)
     token = get('token')
     endpoint = get('endpoint', 'http://127.0.0.1:35357/v2.0')
+    user_domain_name=get('user_domain_name', 'Default')
+    project_domain_name=get('project_domain_name', 'Default')
+
 
     if token:
         kwargs = {'token': token,
@@ -120,7 +124,9 @@ def _get_kwargs(profile=None, **connection_args):
                   'password': password,
                   'tenant_name': tenant,
                   'tenant_id': tenant_id,
-                  'auth_url': auth_url}
+                  'auth_url': auth_url,
+                  'user_domain_name': user_domain_name,
+                  'project_domain_name': project_domain_name}
         # 'insecure' keyword not supported by all v2.0 keystone clients
         #   this ensures it's only passed in when defined
         if insecure:
@@ -159,15 +165,23 @@ def auth(profile=None, **connection_args):
     '''
     kwargs = _get_kwargs(profile=profile, **connection_args)
 
-    if float(api_version(profile=profile, **connection_args).strip('v')) >= 3:
+    disc = discover.Discover(auth_url=kwargs['auth_url'])
+    v2_auth_url = disc.url_for('v2.0')
+    v3_auth_url = disc.url_for('v3.0')
+    if v3_auth_url:
         global _OS_IDENTITY_API_VERSION
         global _TENANTS
         _OS_IDENTITY_API_VERSION = 3
         _TENANTS = 'projects'
-        return client3.Client(**kwargs)
+        kwargs['auth_url']=v3_auth_url
     else:
-        return client.Client(**kwargs)
-
+        kwargs['auth_url']=v2_auth_url
+        kwargs.pop('user_domain_name')
+        kwargs.pop('project_domain_name')
+    auth = generic.Password(**kwargs)
+    sess = session.Session(auth=auth)
+    ks_cl = disc.create_client(session=sess)
+    return ks_cl
 
 def ec2_credentials_create(user_id=None, name=None,
                            tenant_id=None, tenant=None,
