@@ -1277,7 +1277,7 @@ will be automatically accepted. Matches will be searched for first by string
 comparison, then by globbing, then by full-string regex matching.
 The file must be readonly except for it's owner.
 If :conf_master:`permissive_pki_access` is ``True`` the owning group can also
-have write access, but if salt is running as ``root`` it must be a member of that group.
+have write access, but if Salt is running as ``root`` it must be a member of that group.
 This should still be considered a less than secure option, due to the fact
 that trust is based on just the requesting minion id.
 
