@@ -36,6 +36,12 @@ def __virtual__():
     return (False, "Module win_groupadd: module only works on Windows systems")
 
 
+def _get_computer_object():
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
+    return nt.GetObject('', 'WinNT://.,computer')
+
+
 def add(name, **kwargs):
     '''
     Add the specified group
@@ -60,10 +66,8 @@ def add(name, **kwargs):
            'comment': ''}
 
     if not info(name):
-        pythoncom.CoInitialize()
-        nt = win32com.client.Dispatch('AdsNameSpaces')
+        compObj = _get_computer_object()
         try:
-            compObj = nt.GetObject('', 'WinNT://.,computer')
             newGroup = compObj.Create('group', name)
             newGroup.SetInfo()
             ret['changes'].append('Successfully created group {0}'.format(name))
@@ -104,10 +108,8 @@ def delete(name, **kwargs):
            'comment': ''}
 
     if info(name):
-        pythoncom.CoInitialize()
-        nt = win32com.client.Dispatch('AdsNameSpaces')
+        compObj = _get_computer_object()
         try:
-            compObj = nt.GetObject('', 'WinNT://.,computer')
             compObj.Delete('group', name)
             ret['changes'].append(('Successfully removed group {0}').format(name))
         except pywintypes.com_error as com_err:
@@ -144,14 +146,12 @@ def info(name):
 
         salt '*' group.info foo
     '''
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-
+    groupObj = _get_group_object(name)
+    existing_members = _get_group_members(groupObj)
     try:
-        groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
         gr_name = groupObj.Name
         gr_mem = []
-        for member in groupObj.members():
+        for member in existing_members:
             gr_mem.append(
                     member.ADSPath.replace('WinNT://', '').replace(
                     '/', '\\').encode('ascii', 'backslashreplace'))
@@ -213,6 +213,21 @@ def getent(refresh=False):
     return ret
 
 
+def _get_group_object(name):
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
+    return nt.GetObject('', 'WinNT://./' + name + ',group')
+
+
+def _get_group_members(groupObj):
+    existingMembers = []
+    for member in groupObj.members():
+        existingMembers.append(
+            member.ADSPath.replace('WinNT://', '').replace(
+                '/', '\\').encode('ascii', 'backslashreplace').lower())
+    return existingMembers
+
+
 def adduser(name, username, **kwargs):
     '''
     Add a user to a group
@@ -240,17 +255,11 @@ def adduser(name, username, **kwargs):
            'changes': {'Users Added': []},
            'comment': ''}
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-    groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
-    existingMembers = []
-    for member in groupObj.members():
-        existingMembers.append(
-                member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace').lower())
+    groupObj = _get_group_object(name)
+    existingMembers = _get_group_members(groupObj)
 
     try:
-        if salt.utils.win_functions.get_sam_name(username).lower() not in existingMembers:
+        if salt.utils.win_functions.get_sam_name(username) not in existingMembers:
             if not __opts__['test']:
                 groupObj.Add('WinNT://' + username.replace('\\', '/'))
 
@@ -299,17 +308,11 @@ def deluser(name, username, **kwargs):
            'changes': {'Users Removed': []},
            'comment': ''}
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-    groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
-    existingMembers = []
-    for member in groupObj.members():
-        existingMembers.append(
-                member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace').lower())
+    groupObj = _get_group_object(name)
+    existingMembers = _get_group_members(groupObj)
 
     try:
-        if salt.utils.win_functions.get_sam_name(username).lower() in existingMembers:
+        if salt.utils.win_functions.get_sam_name(username) in existingMembers:
             if not __opts__['test']:
                 groupObj.Remove('WinNT://' + username.replace('\\', '/'))
 
