@@ -37,8 +37,10 @@ class AutosignGrainsTest(ShellCase):
         self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
 
         if 'minion' in self.run_key('-l acc'):
+            self.tearDown()
             self.skipTest('Could not deauthorize minion')
         if 'minion' not in self.run_key('-l un'):
+            self.tearDown()
             self.skipTest('minion did not try to reauthenticate itself')
 
         self.autosign_grains_dir = os.path.join(self.master_opts['autosign_grains_dir'])
