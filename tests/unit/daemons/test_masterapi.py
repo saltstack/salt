@@ -54,8 +54,8 @@ class AutoKeyTest(TestCase):
                 self.auto_key.opts['permissive_pki_access'] = permissive_pki
                 with patch('os.stat', self.os_stat_mock), \
                         patch('os.getuid', MagicMock(return_value=uid)), \
-                        patch('salt.utils.user.get_gid_list', MagicMock(return_value=groups)), \
-                        patch('salt.utils.platform.is_windows', MagicMock(return_value=is_windows)):
+                        patch('salt.utils.get_gid_list', MagicMock(return_value=groups)), \
+                        patch('salt.utils.is_windows', MagicMock(return_value=is_windows)):
                     func(self)
             return wrapper
         return decorator
