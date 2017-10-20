@@ -306,7 +306,7 @@ class AutoKey(object):
             return True
 
         # After we've ascertained we're not on windows
-        groups = salt.utils.user.get_gid_list(self.opts['user'], include_default=False)
+        groups = salt.utils.get_gid_list(self.opts['user'], include_default=False)
         fmode = os.stat(filename)
 
         if stat.S_IWOTH & fmode.st_mode:
