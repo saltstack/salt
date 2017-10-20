@@ -6,7 +6,6 @@ from functools import wraps
 import stat
 
 # Import Salt libs
-import salt.config
 import salt.daemons.masterapi as masterapi
 
 # Import Salt Testing Libs
