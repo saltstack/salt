@@ -111,13 +111,21 @@ class TestVerify(TestCase):
     def test_verify_env(self):
         root_dir = tempfile.mkdtemp(dir=TMP)
         var_dir = os.path.join(root_dir, 'var', 'log', 'salt')
-        verify_env([var_dir], getpass.getuser())
+        key_dir = os.path.join(root_dir, 'key_dir')
+        verify_env([var_dir, key_dir], getpass.getuser(), sensitive_dirs=[key_dir])
         self.assertTrue(os.path.exists(var_dir))
-        dir_stat = os.stat(var_dir)
-        self.assertEqual(dir_stat.st_uid, os.getuid())
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
-        self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
+        self.assertTrue(os.path.exists(key_dir))
+
+        var_dir_stat = os.stat(var_dir)
+        self.assertEqual(var_dir_stat.st_uid, os.getuid())
+        self.assertEqual(var_dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
+        self.assertEqual(var_dir_stat.st_mode & stat.S_IRWXG, 40)
+        self.assertEqual(var_dir_stat.st_mode & stat.S_IRWXO, 5)
+
+        key_dir_stat = os.stat(key_dir)
+        self.assertEqual(key_dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
+        self.assertEqual(key_dir_stat.st_mode & stat.S_IRWXG, 0)
+        self.assertEqual(key_dir_stat.st_mode & stat.S_IRWXO, 0)
 
     @requires_network(only_local_network=True)
     def test_verify_socket(self):

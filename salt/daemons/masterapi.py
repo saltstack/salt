@@ -183,11 +183,11 @@ def mk_key(opts, user):
         # The username may contain '\' if it is in Windows
         # 'DOMAIN\username' format. Fix this for the keyfile path.
         keyfile = os.path.join(
-            opts['cachedir'], '.{0}_key'.format(user.replace('\\', '_'))
+            opts['key_dir'], '.{0}_key'.format(user.replace('\\', '_'))
         )
     else:
         keyfile = os.path.join(
-            opts['cachedir'], '.{0}_key'.format(user)
+            opts['key_dir'], '.{0}_key'.format(user)
         )
 
     if os.path.exists(keyfile):

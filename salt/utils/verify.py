@@ -194,13 +194,13 @@ def verify_files(files, user):
     return True
 
 
-def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
+def verify_env(dirs, user, permissive=False, sensitive_dirs=None, skip_extra=False):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
     '''
     if salt.utils.platform.is_windows():
-        return win_verify_env(dirs, permissive, pki_dir, skip_extra)
+        return win_verify_env(dirs, permissive, sensitive_dirs, skip_extra)
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
@@ -275,10 +275,11 @@ def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
         # to read in what it needs to integrate.
         #
         # If the permissions aren't correct, default to the more secure 700.
-        # If acls are enabled, the pki_dir needs to remain readable, this
-        # is still secure because the private keys are still only readable
-        # by the user running the master
-        if dir_ == pki_dir:
+        # If acls are enabled, the sensitive_dirs (i.e. pki_dir, key_dir) needs to
+        # remain readable, this is still secure because the private keys are still
+        # only readable by the user running the master
+        sensitive_dirs = sensitive_dirs or []
+        if dir_ in sensitive_dirs:
             smode = stat.S_IMODE(mode.st_mode)
             if smode != 448 and smode != 488:
                 if os.access(dir_, os.W_OK):
@@ -525,7 +526,7 @@ def verify_log(opts):
         log.warning('Insecure logging configuration detected! Sensitive data may be logged.')
 
 
-def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
+def win_verify_env(dirs, permissive=False, sensitive_dirs=None, skip_extra=False):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
@@ -596,8 +597,9 @@ def win_verify_env(dirs, permissive=False, pki_dir='', skip_extra=False):
                 sys.stderr.write(msg.format(dir_, err))
                 sys.exit(err.errno)
 
-        # The PKI dir gets its own permissions
-        if dir_ == pki_dir:
+        # The senitive_dirs (i.e. pki_dir, key_dir) gets its own permissions
+        sensitive_dirs = sensitive_dirs or []
+        if dir_ in sensitive_dirs:
             try:
                 # Make Administrators group the owner
                 salt.utils.win_dacl.set_owner(path, 'S-1-5-32-544')
