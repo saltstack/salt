@@ -138,7 +138,8 @@ class Registry(object):  # pylint: disable=R0903
             'REG_DWORD':     _winreg.REG_DWORD,
             'REG_EXPAND_SZ': _winreg.REG_EXPAND_SZ,
             'REG_MULTI_SZ':  _winreg.REG_MULTI_SZ,
-            'REG_SZ':        _winreg.REG_SZ
+            'REG_SZ':        _winreg.REG_SZ,
+            'REG_QWORD':     11  # REG_QWORD isn't in the winreg library
         }
         self.opttype = {
             'REG_OPTION_NON_VOLATILE': _winreg.REG_OPTION_NON_VOLATILE,
@@ -150,7 +151,8 @@ class Registry(object):  # pylint: disable=R0903
             _winreg.REG_DWORD:     'REG_DWORD',
             _winreg.REG_EXPAND_SZ: 'REG_EXPAND_SZ',
             _winreg.REG_MULTI_SZ:  'REG_MULTI_SZ',
-            _winreg.REG_SZ:        'REG_SZ'
+            _winreg.REG_SZ:        'REG_SZ',
+            11:                    'REG_QWORD'  # REG_QWORD isn't in the winreg library
         }
         self.opttype_reverse = {
             _winreg.REG_OPTION_NON_VOLATILE: 'REG_OPTION_NON_VOLATILE',
@@ -577,6 +579,18 @@ def set_value(hive,
     hkey = registry.hkeys[local_hive]
     vtype_value = registry.vtype[local_vtype]
     access_mask = registry.registry_32[use_32bit_registry] | _winreg.KEY_ALL_ACCESS
+
+    # Check data type and cast to expected type
+    # int will automatically become long on 64bit numbers
+    # https://www.python.org/dev/peps/pep-0237/
+    reg_type = {1: str,  # REG_SZ
+                2: str,  # REG_EXPAND_SZ
+                3: bin,  # REG_BINARY
+                4: int,  # REG_DWORD
+                7: list,  # REG_MULTI_SZ
+                11: int}  # REG_QWORD (unsupported)
+    local_vdata = reg_type[vtype_value](local_vdata)
+
     if volatile:
         create_options = registry.opttype['REG_OPTION_VOLATILE']
     else:
