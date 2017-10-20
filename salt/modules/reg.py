@@ -589,7 +589,8 @@ def set_value(hive,
                 4: int,  # REG_DWORD
                 7: list,  # REG_MULTI_SZ
                 11: int}  # REG_QWORD (unsupported)
-    local_vdata = reg_type[vtype_value](local_vdata)
+    if not isinstance(local_vdata, reg_type[vtype_value]):
+        local_vdata = reg_type[vtype_value](local_vdata)
 
     if volatile:
         create_options = registry.opttype['REG_OPTION_VOLATILE']
