@@ -256,7 +256,7 @@ def create(vm_):
         wol_mac = config.get_cloud_config_value(
             'wake_on_lan_mac', vm_, __opts__, default='')
         wol_host = config.get_cloud_config_value(
-            'wol_sender_node', vm_, __opts__, default = '')
+            'wol_sender_node', vm_, __opts__, default='')
         if wol_mac and wol_host:
             log.info('sending wake-on-lan to %s using node %s',
                      wol_mac, wol_host)
@@ -267,7 +267,7 @@ def create(vm_):
             log.info('network.wol returned value %s', ret)
             if ret and ret[wol_host]:
                 sleep_time = config.get_cloud_config_value(
-                    'wol_boot_wait', vm_, __opts__, default = 30)
+                    'wol_boot_wait', vm_, __opts__, default=30)
                 if sleep_time > 0.0:
                     log.info('delaying %d seconds for boot', sleep_time)
                     time.sleep(sleep_time)
