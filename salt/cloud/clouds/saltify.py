@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
+.. _`saltify-module`:
+
 Saltify Module
 ==============
 
 The Saltify module is designed to install Salt on a remote machine, virtual or
 bare metal, using SSH. This module is useful for provisioning machines which
 are already installed, but not Salted.
+
+.. versionchanged:: Oxygen
+    The wake_on_lan capability, and actions destroy, reboot, and query functions were added.
 
 Use of this module requires some configuration in cloud profile and provider
 files as described in the
@@ -15,6 +20,7 @@ files as described in the
 # Import python libs
 from __future__ import absolute_import
 import logging
+import time
 
 # Import salt libs
 import salt.utils.cloud
@@ -210,12 +216,58 @@ def show_instance(name, call=None):
 
 def create(vm_):
     '''
-    Provision a single machine
+    if configuration parameter ``deploy`` is ``True``,
+
+        Provision a single machine, adding its keys to the salt master
+
+    else,
+
+        Test ssh connections to the machine
+
+    Configuration parameters:
+
+    - deploy:  (see above)
+    - provider:  name of entry in ``salt/cloud.providers.d/???`` file
+    - ssh_host: IP address or DNS name of the new machine
+    - ssh_username:  name used to log in to the new machine
+    - ssh_password:  password to log in (unless key_filename is used)
+    - key_filename:  (optional) SSH private key for passwordless login
+    - ssh_port: (default=22) TCP port for SSH connection
+    - wake_on_lan_mac:  (optional) hardware (MAC) address for wake on lan
+    - wol_sender_node:  (optional) salt minion to send wake on lan command
+    - wol_boot_wait:  (default=30) seconds to delay while client boots
+    - force_minion_config: (optional) replace the minion configuration files on the new machine
+
+    See also
+    :ref:`Miscellaneous Salt Cloud Options <misc-salt-cloud-options>`
+    and
+    :ref:`Getting Started with Saltify <getting-started-with-saltify>`
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -p mymachine my_new_id
     '''
     deploy_config = config.get_cloud_config_value(
         'deploy', vm_, __opts__, default=False)
 
     if deploy_config:
+        wol_mac = config.get_cloud_config_value(
+            'wake_on_lan_mac', vm_, __opts__, default='')
+        wol_host = config.get_cloud_config_value(
+            'wol_sender_node', vm_, __opts__, default = '')
+        if wol_mac and wol_host:
+            log.info('sending wake-on-lan to %s using node %s',
+                     wol_mac, wol_host)
+            local = salt.client.LocalClient()
+            ret = local.cmd(wol_host, 'network.wol', [wol_mac])
+            log.info('network.wol returned value %s', ret)
+            if ret and ret[wol_host]:
+                sleep_time = config.get_cloud_config_value(
+                    'wol_boot_wait', vm_, __opts__, default = 30)
+                log.info('delaying %d seconds for boot', sleep_time)
+                time.sleep(sleep_time)
         log.info('Provisioning existing machine %s', vm_['name'])
         ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     else:

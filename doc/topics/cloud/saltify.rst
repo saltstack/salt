@@ -37,6 +37,12 @@ the role usually performed by a vendor's cloud management system. The salt maste
 must be running on the salt-cloud machine, and created nodes must be connected to the
 master.
 
+Additional information about which configuration options apply to which actions
+can be studied in the
+:ref:`Saltify Module documentation <saltify-module>`
+and the
+:ref:`Miscellaneous Salt Cloud Options <misc-salt-cloud-options>`
+document.
 
 Profiles
 ========
@@ -76,7 +82,6 @@ to it can be verified with Salt:
 .. code-block:: bash
 
     salt my-machine test.ping
-
 
 Destroy Options
 ---------------
