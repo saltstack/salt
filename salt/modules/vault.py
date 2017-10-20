@@ -37,6 +37,8 @@ Functions to interact with Hashicorp Vault.
         For details please see
         http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
 
+        .. versionadded:: Oxygen
+
     auth
         Currently only token auth is supported. The token must be able to create
         tokens with the policies that should be assigned to minions. Required.
