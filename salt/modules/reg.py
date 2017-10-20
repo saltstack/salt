@@ -583,8 +583,8 @@ def set_value(hive,
     # Check data type and cast to expected type
     # int will automatically become long on 64bit numbers
     # https://www.python.org/dev/peps/pep-0237/
-    reg_type = {1: str,  # REG_SZ
-                2: str,  # REG_EXPAND_SZ
+    reg_type = {1: six.text_type,  # REG_SZ
+                2: six.text_type,  # REG_EXPAND_SZ
                 3: bin,  # REG_BINARY
                 4: int,  # REG_DWORD
                 7: list,  # REG_MULTI_SZ
