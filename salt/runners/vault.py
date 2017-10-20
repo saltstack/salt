@@ -65,7 +65,11 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
             return {'error': response.reason}
 
         authData = response.json()['auth']
-        return {'token': authData['client_token'], 'url': config['url']}
+        return {
+            'token': authData['client_token'],
+            'url': config['url'],
+            'verify': verify,
+        }
     except Exception as e:
         return {'error': str(e)}
 
