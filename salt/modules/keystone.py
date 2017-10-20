@@ -61,8 +61,10 @@ from salt.ext import six
 HAS_KEYSTONE = False
 try:
     # pylint: disable=import-error
+    from keystoneclient.v2_0 import client
     import keystoneclient.exceptions
     HAS_KEYSTONE = True
+    from keystoneclient.v3 import client as client3
     from keystoneclient import discover
     from keystoneauth1 import session
     from keystoneauth1.identity import generic
@@ -112,10 +114,8 @@ def _get_kwargs(profile=None, **connection_args):
     insecure = get('insecure', False)
     token = get('token')
     endpoint = get('endpoint', 'http://127.0.0.1:35357/v2.0')
-    user_domain_name=get('user_domain_name', 'Default')
-    project_domain_name=get('project_domain_name', 'Default')
-
-
+    user_domain_name = get('user_domain_name', 'Default')
+    project_domain_name = get('project_domain_name', 'Default')
     if token:
         kwargs = {'token': token,
                   'endpoint': endpoint}
@@ -173,15 +173,16 @@ def auth(profile=None, **connection_args):
         global _TENANTS
         _OS_IDENTITY_API_VERSION = 3
         _TENANTS = 'projects'
-        kwargs['auth_url']=v3_auth_url
+        kwargs['auth_url'] = v3_auth_url
     else:
-        kwargs['auth_url']=v2_auth_url
+        kwargs['auth_url'] = v2_auth_url
         kwargs.pop('user_domain_name')
         kwargs.pop('project_domain_name')
     auth = generic.Password(**kwargs)
     sess = session.Session(auth=auth)
     ks_cl = disc.create_client(session=sess)
     return ks_cl
+
 
 def ec2_credentials_create(user_id=None, name=None,
                            tenant_id=None, tenant=None,
