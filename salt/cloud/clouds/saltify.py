@@ -261,13 +261,16 @@ def create(vm_):
             log.info('sending wake-on-lan to %s using node %s',
                      wol_mac, wol_host)
             local = salt.client.LocalClient()
-            ret = local.cmd(wol_host, 'network.wol', [wol_mac])
+            if isinstance(wol_mac, six.string_types):
+                wol_mac = [wol_mac]  # a smart user may have passed more params
+            ret = local.cmd(wol_host, 'network.wol', wol_mac)
             log.info('network.wol returned value %s', ret)
             if ret and ret[wol_host]:
                 sleep_time = config.get_cloud_config_value(
                     'wol_boot_wait', vm_, __opts__, default = 30)
-                log.info('delaying %d seconds for boot', sleep_time)
-                time.sleep(sleep_time)
+                if sleep_time > 0.0:
+                    log.info('delaying %d seconds for boot', sleep_time)
+                    time.sleep(sleep_time)
         log.info('Provisioning existing machine %s', vm_['name'])
         ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     else:

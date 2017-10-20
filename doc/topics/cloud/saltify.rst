@@ -107,6 +107,42 @@ and will attempt the following options:
 
 .. versionadded:: Oxygen
 
+Wake On LAN
+-----------
+In addition to connecting a hardware machine to a Salt master,
+you have the option of sending a wake-on-LAN
+`magic packet`_
+to start the machine running.
+
+.. _magic packet: https://en.wikipedia.org/wiki/Wake-on-LAN
+
+The "magic packet" must be sent by an existing salt minion which is on
+the same network segment as the target machine. (Or your router
+must be set up especially to route WoL packets.) Your target machine
+must be set up to listen for WoL and to respond appropriatly.
+
+You must provide the Salt node id of the machine which will send
+the WoL packet \(parameter ``wol_sender_node``\), and
+the hardware MAC address of the machine you intend to wake,
+\(parameter ``wake_on_lan_mac``\). If both parameters are defined,
+the WoL will be sent. The cloud master will then sleep a while
+\(parameter ``wol_boot_wait``) to give the target machine time to
+boot up before we start probing its SSH port to begin deploying
+Salt to it. The default sleep time is 30 seconds.
+
+.. code-block:: yaml
+
+    # /etc/salt/cloud.profiles.d/saltify.conf
+
+    salt-this-machine:
+      ssh_host: 12.34.56.78
+      ssh_username: root
+      key_filename: '/etc/salt/mysshkey.pem'
+      provider: my-saltify-config
+      wake_on_lan_mac: '00:e0:4c:70:2a:b2'  # found with ifconfig
+      wol_sender_node: bevymaster  # its on this network segment
+      wol_boot_wait: 45  # seconds to sleep
+
 Using Map Files
 ---------------
 The settings explained in the section above may also be set in a map file. An
