@@ -76,16 +76,16 @@ def __virtual__():
 
 def _to_mbcs(vdata):
     '''
-    Converts unicode to to current users character encoding.
+    Converts unicode to to current users character encoding. Use this for values
+    returned by reg functions
     '''
     return salt.utils.to_unicode(vdata, 'mbcs')
 
 
 def _to_unicode(vdata):
     '''
-    Converts from current users character encoding to unicode.
-    When instr has a value of None, the return value of the function
-    will also be None.
+    Converts from current users character encoding to unicode. Use this for
+    parameters being pass to reg functions
     '''
     return salt.utils.to_unicode(vdata, 'utf-8')
 
@@ -161,13 +161,8 @@ def _key_exists(hive, key, use_32bit_registry=False):
     :return: Returns True if found, False if not found
     :rtype: bool
     '''
-
-    if PY2:
-        local_hive = _to_unicode(hive)
-        local_key = _to_unicode(key)
-    else:
-        local_hive = hive
-        local_key = key
+    local_hive = _to_unicode(hive)
+    local_key = _to_unicode(key)
 
     registry = Registry()
     hkey = registry.hkeys[local_hive]
@@ -357,7 +352,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
     # Setup the return array
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
-    local_vname = _to_unicode(vname) if vname else None
+    local_vname = _to_unicode(vname)
 
     ret = {'hive':  local_hive,
            'key':   local_key,
@@ -497,7 +492,7 @@ def set_value(hive,
     '''
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
-    local_vname = _to_unicode(vname) if vname else None
+    local_vname = _to_unicode(vname)
     local_vtype = _to_unicode(vtype)
 
     registry = Registry()
@@ -668,7 +663,7 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
 
     local_hive = _to_unicode(hive)
     local_key = _to_unicode(key)
-    local_vname = _to_unicode(vname) if vname else None
+    local_vname = _to_unicode(vname)
 
     registry = Registry()
     hkey = registry.hkeys[local_hive]
