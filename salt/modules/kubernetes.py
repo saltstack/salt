@@ -164,12 +164,15 @@ def _setup_conn(**kwargs):
 
     if client_key_file:
         kubernetes.client.configuration.key_file = client_key_file
-    if client_key:
+    elif client_key:
         with tempfile.NamedTemporaryFile(prefix='salt-kube-', delete=False) as k:
             k.write(base64.b64decode(client_key))
             kubernetes.client.configuration.key_file = k.name
     else:
         kubernetes.client.configuration.key_file = None
+
+    # The return makes unit testing easier
+    return vars(kubernetes.client.configuration)
 
 
 def _cleanup(**kwargs):

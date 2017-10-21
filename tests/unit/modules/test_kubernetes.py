@@ -129,3 +129,21 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(
                     kubernetes.kubernetes.client.ExtensionsV1beta1Api().
                     create_namespaced_deployment().to_dict.called)
+
+    def test_setup_client_key_file(self):
+        '''
+        Test that the `kubernetes.client-key-file` configuration isn't overwritten
+        :return:
+        '''
+        def settings(name, value=None):
+            data = {
+                'kubernetes.client-key-file': '/home/testuser/.minikube/client.key',
+            }
+            return data.get(name, value)
+
+        with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=settings)}):
+            config = kubernetes._setup_conn()
+            self.assertEqual(
+                settings('kubernetes.client-key-file'),
+                config['key_file'],
+            )
