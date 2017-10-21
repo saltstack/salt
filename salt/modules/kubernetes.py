@@ -272,7 +272,7 @@ def node_labels(name, **kwargs):
     match = node(name, **kwargs)
 
     if match is not None:
-        return match.metadata.labels
+        return match['metadata']['labels']
 
     return {}
 

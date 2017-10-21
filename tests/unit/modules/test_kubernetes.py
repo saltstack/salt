@@ -147,3 +147,22 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 settings('kubernetes.client-key-file'),
                 config['key_file'],
             )
+
+    def test_node_labels(self):
+        '''
+        Test kubernetes.node_labels
+        :return:
+        '''
+        with patch('salt.modules.kubernetes.node') as mock_node:
+            mock_node.return_value = {
+                'metadata': {
+                    'labels': {
+                        u'kubernetes.io/hostname': 'minikube',
+                        u'kubernetes.io/os': 'linux',
+                    }
+                }
+            }
+            self.assertEqual(
+                kubernetes.node_labels('minikube'),
+                {u'kubernetes.io/hostname': 'minikube', u'kubernetes.io/os': 'linux'},
+            )
