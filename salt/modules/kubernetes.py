@@ -35,6 +35,7 @@ In case both are provided the `file` entry is prefered.
 
 # Import Python Futures
 from __future__ import absolute_import
+import sys
 import os.path
 import base64
 import logging
@@ -1447,6 +1448,13 @@ def __dict_to_object_meta(name, namespace, metadata):
     '''
     meta_obj = kubernetes.client.V1ObjectMeta()
     meta_obj.namespace = namespace
+
+    # Replicate `kubectl [create|replace|apply] --record`
+    if 'annotations' not in metadata:
+        metadata['annotations'] = {}
+    if 'kubernetes.io/change-cause' not in metadata['annotations']:
+        metadata['annotations']['kubernetes.io/change-cause'] = ' '.join(sys.argv)
+
     for key, value in iteritems(metadata):
         if hasattr(meta_obj, key):
             setattr(meta_obj, key, value)

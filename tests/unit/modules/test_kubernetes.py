@@ -166,3 +166,29 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 kubernetes.node_labels('minikube'),
                 {u'kubernetes.io/hostname': 'minikube', u'kubernetes.io/os': 'linux'},
             )
+
+    def test_adding_change_cause_annotation(self):
+        '''
+        Tests adding a `kubernetes.io/change-cause` annotation just like
+        kubectl [apply|create|replace] --record does
+        :return:
+        '''
+        with patch('salt.modules.kubernetes.sys.argv', ['/usr/bin/salt-call', 'state.apply']) as mock_sys:
+            func = getattr(kubernetes, '__dict_to_object_meta')
+            data = func(name='test-pod', namespace='test', metadata={})
+
+            self.assertEqual(data.name, 'test-pod')
+            self.assertEqual(data.namespace, 'test')
+            self.assertEqual(
+                data.annotations,
+                {'kubernetes.io/change-cause': '/usr/bin/salt-call state.apply'}
+            )
+
+            # Ensure any specified annotations aren't overwritten
+            test_metadata = {'annotations': {'kubernetes.io/change-cause': 'NOPE'}}
+            data = func(name='test-pod', namespace='test', metadata=test_metadata)
+
+            self.assertEqual(
+                data.annotations,
+                {'kubernetes.io/change-cause': 'NOPE'}
+            )
