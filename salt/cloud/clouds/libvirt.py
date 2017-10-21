@@ -462,16 +462,37 @@ def create(vm_):
 
         return ret
     except Exception as e:  # pylint: disable=broad-except
-        # Try to clean up in as much cases as possible
-        log.info('Cleaning up after exception clean up items: {0}'.format(cleanup))
-        for leftover in cleanup:
-            what = leftover['what']
-            item = leftover['item']
-            if what == 'domain':
-                destroy_domain(conn, item)
-            if what == 'volume':
-                item.delete()
+        do_cleanup(cleanup)
         raise e
+
+
+def do_cleanup(cleanup):
+    # Try to clean up in as many cases as possible. Libvirt behavior changed
+    # somewhat over time, so try to be robust.
+    log.info('Cleaning up after exception')
+    for leftover in cleanup:
+        what = leftover['what']
+        item = leftover['item']
+        if what == 'domain':
+            log.info('Cleaning up {0} {1}'.format(what, item.name()))
+            try:
+                item.destroy()
+                log.debug('{0} {1} forced off'.format(what, item.name()))
+            except libvirtError:
+                pass
+            try:
+                item.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE+
+                                   libvirt.VIR_DOMAIN_UNDEFINE_SNAPSHOTS_METADATA+
+                                   libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
+                log.debug('{0} {1} undefined'.format(what, item.name()))
+            except libvirtError:
+                pass
+        if what == 'volume':
+            try:
+                item.delete()
+                log.debug('{0} {1} cleaned up'.format(what, item.name()))
+            except libvirtError:
+                pass
 
 
 def destroy(name, call=None):
