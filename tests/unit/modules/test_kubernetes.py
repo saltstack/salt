@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import
 
+from contextlib import contextmanager
+
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
@@ -22,6 +24,20 @@ except ImportError:
     kubernetes = False
 if not kubernetes.HAS_LIBS:
     kubernetes = False
+
+
+@contextmanager
+def mock_kubernetes_library():
+    """
+    After fixing the bug in 1c821c0e77de58892c77d8e55386fac25e518c31,
+    it caused kubernetes._cleanup() to get called for virtually every
+    test, which blows up. This prevents that specific blow-up once
+    """
+    with patch('salt.modules.kubernetes.kubernetes') as mock_kubernetes_lib:
+        mock_kubernetes_lib.client.configuration.ssl_ca_cert = ''
+        mock_kubernetes_lib.client.configuration.cert_file = ''
+        mock_kubernetes_lib.client.configuration.key_file = ''
+        yield mock_kubernetes_lib
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -44,7 +60,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         Test node listing.
         :return:
         '''
-        with patch('salt.modules.kubernetes.kubernetes') as mock_kubernetes_lib:
+        with mock_kubernetes_library() as mock_kubernetes_lib:
             with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
                 mock_kubernetes_lib.client.CoreV1Api.return_value = Mock(
                     **{"list_node.return_value.to_dict.return_value":
@@ -58,7 +74,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         Tests deployment listing.
         :return:
         '''
-        with patch('salt.modules.kubernetes.kubernetes') as mock_kubernetes_lib:
+        with mock_kubernetes_library() as mock_kubernetes_lib:
             with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
                 mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
                     **{"list_namespaced_deployment.return_value.to_dict.return_value":
@@ -73,7 +89,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         Tests services listing.
         :return:
         '''
-        with patch('salt.modules.kubernetes.kubernetes') as mock_kubernetes_lib:
+        with mock_kubernetes_library() as mock_kubernetes_lib:
             with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
                 mock_kubernetes_lib.client.CoreV1Api.return_value = Mock(
                     **{"list_namespaced_service.return_value.to_dict.return_value":
@@ -87,7 +103,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         Tests pods listing.
         :return:
         '''
-        with patch('salt.modules.kubernetes.kubernetes') as mock_kubernetes_lib:
+        with mock_kubernetes_library() as mock_kubernetes_lib:
             with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
                 mock_kubernetes_lib.client.CoreV1Api.return_value = Mock(
                     **{"list_namespaced_pod.return_value.to_dict.return_value":
@@ -102,7 +118,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         Tests deployment deletion
         :return:
         '''
-        with patch('salt.modules.kubernetes.kubernetes') as mock_kubernetes_lib:
+        with mock_kubernetes_library() as mock_kubernetes_lib:
             with patch('salt.modules.kubernetes.show_deployment', Mock(return_value=None)):
                 with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
                     mock_kubernetes_lib.client.V1DeleteOptions = Mock(return_value="")
@@ -119,7 +135,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         Tests deployment creation.
         :return:
         '''
-        with patch('salt.modules.kubernetes.kubernetes') as mock_kubernetes_lib:
+        with mock_kubernetes_library() as mock_kubernetes_lib:
             with patch.dict(kubernetes.__salt__, {'config.option': Mock(return_value="")}):
                 mock_kubernetes_lib.client.ExtensionsV1beta1Api.return_value = Mock(
                     **{"create_namespaced_deployment.return_value.to_dict.return_value": {}}
