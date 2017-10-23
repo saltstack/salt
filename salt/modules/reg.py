@@ -383,7 +383,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         except WindowsError:  # pylint: disable=E0602
             ret['vdata'] = ('(value not set)')
             ret['vtype'] = 'REG_SZ'
-    except WindowsError as exc:  # pylint: disable=E0602
+    except pywintypes.error as exc:  # pylint: disable=E0602
         log.debug(exc)
         log.debug('Cannot find key: {0}\\{1}'.format(local_hive, local_key))
         ret['comment'] = 'Cannot find key: {0}\\{1}'.format(local_hive, local_key)
@@ -503,21 +503,19 @@ def set_value(hive,
     # Check data type and cast to expected type
     # int will automatically become long on 64bit numbers
     # https://www.python.org/dev/peps/pep-0237/
-    reg_type = {1: six.text_type,  # REG_SZ
-                2: six.text_type,  # REG_EXPAND_SZ
-                3: bin,  # REG_BINARY
-                4: int,  # REG_DWORD
-                7: list,  # REG_MULTI_SZ
-                11: int}  # REG_QWORD (unsupported)
+
+    # String Types to Unicode
+    if vtype_value in [1, 2]:
+        local_vdata = _to_unicode(vdata)
+    # Don't touch binary...
+    elif vtype_value == 3:
+        local_vdata = vdata
     # Make sure REG_MULTI_SZ is a list of strings
-    if vtype_value == 7:
+    elif vtype_value == 7:
         local_vdata = [_to_unicode(i) for i in vdata]
+    # Everything else is int
     else:
-        # Make sure string types are encoded
-        if vtype_value in [1, 2]:
-            local_vdata = _to_unicode(vdata)
-        else:
-            local_vdata = reg_type[vtype_value](vdata)
+        local_vdata = int(vdata)
 
     if volatile:
         create_options = registry.opttype['REG_OPTION_VOLATILE']
