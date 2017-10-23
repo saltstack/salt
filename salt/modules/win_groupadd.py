@@ -37,21 +37,43 @@ def __virtual__():
 
 
 def _get_computer_object():
+    '''
+    A helper function to get the object for the local machine
+
+    Returns:
+        object: Returns the computer object for the local machine
+    '''
     pythoncom.CoInitialize()
     nt = win32com.client.Dispatch('AdsNameSpaces')
     return nt.GetObject('', 'WinNT://.,computer')
 
 
 def _get_group_object(name):
+    '''
+    A helper function to get a specified group object
+
+    Args:
+
+        name (str): The name of the object
+
+    Returns:
+        object: The specified group object
+    '''
     pythoncom.CoInitialize()
     nt = win32com.client.Dispatch('AdsNameSpaces')
     return nt.GetObject('', 'WinNT://./' + name + ',group')
 
 
 def _get_all_groups():
+    '''
+    A helper function that gets a list of group objects for all groups on the
+    machine
+
+    Returns:
+        iter: A list of objects for all groups on the machine
+    '''
     pythoncom.CoInitialize()
     nt = win32com.client.Dispatch('AdsNameSpaces')
-
     results = nt.GetObject('', 'WinNT://.')
     results.Filter = ['group']
     return results
@@ -60,6 +82,9 @@ def _get_all_groups():
 def _get_username(member):
     '''
     Resolve the username from the member object returned from a group query
+
+    Returns:
+        str: The username converted to domain\\username format
     '''
     return member.ADSPath.replace('WinNT://', '').replace(
         '/', '\\').encode('ascii', 'backslashreplace')
