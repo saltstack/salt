@@ -38,6 +38,7 @@ from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR,
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
+import salt.utils
 
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
