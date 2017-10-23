@@ -45,7 +45,7 @@ def setval(key, val, false_unsets=False, permanent=False):
 
     permanent
         On Windows minions this will set the environment variable in the
-        registry so that it is always added as a environment variable when
+        registry so that it is always added as an environment variable when
         applications open. If you want to set the variable to HKLM instead of
         HKCU just pass in "HKLM" for this parameter. On all other minion types
         this will be ignored. Note: This will only take affect on applications
@@ -144,7 +144,7 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False, pe
 
     permanent
         On Windows minions this will set the environment variable in the
-        registry so that it is always added as a environment variable when
+        registry so that it is always added as an environment variable when
         applications open. If you want to set the variable to HKLM instead of
         HKCU just pass in "HKLM" for this parameter. On all other minion types
         this will be ignored. Note: This will only take affect on applications

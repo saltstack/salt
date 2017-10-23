@@ -250,7 +250,7 @@ def adduser(name, username, **kwargs):
                 '/', '\\').encode('ascii', 'backslashreplace').lower())
 
     try:
-        if salt.utils.win_functions.get_sam_name(username) not in existingMembers:
+        if salt.utils.win_functions.get_sam_name(username).lower() not in existingMembers:
             if not __opts__['test']:
                 groupObj.Add('WinNT://' + username.replace('\\', '/'))
 
@@ -309,7 +309,7 @@ def deluser(name, username, **kwargs):
                 '/', '\\').encode('ascii', 'backslashreplace').lower())
 
     try:
-        if salt.utils.win_functions.get_sam_name(username) in existingMembers:
+        if salt.utils.win_functions.get_sam_name(username).lower() in existingMembers:
             if not __opts__['test']:
                 groupObj.Remove('WinNT://' + username.replace('\\', '/'))
 

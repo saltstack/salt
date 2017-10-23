@@ -686,7 +686,7 @@ def ps(path):
 
 def up(path, service_names=None):
     '''
-    Create and start containers defined in the the docker-compose.yml file
+    Create and start containers defined in the docker-compose.yml file
     located in path, service_names is a python list, if omitted create and
     start all containers
 
