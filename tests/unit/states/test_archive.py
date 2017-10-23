@@ -33,14 +33,14 @@ def _isfile_side_effect(path):
     If so, just add an entry in the dictionary for the path being used for tar.
     '''
     return {
-        os.sep + os.path.join('tmp', 'foo.tar.gz'): True,
-        os.path.join('c:\\tmp', 'foo.tar.gz'): True,
-        os.sep + os.path.join('tmp', 'out'): False,
-        os.path.join('c:\\tmp', 'out'): False,
-        os.sep + os.path.join('usr', 'bin', 'tar'): True,
-        os.sep + os.path.join('bin', 'tar'): True,
-        os.sep + os.path.join('tmp', 'test_extracted_tar'): False,
-        os.path.join('c:\\tmp', 'test_extracted_tar'): False,
+        '/tmp/foo.tar.gz': True,
+        'c:\\tmp\\foo.tar.gz': True,
+        '/tmp/out': False,
+        '\\tmp\\out': False,
+        '/usr/bin/tar': True,
+        '/bin/tar': True,
+        '/tmp/test_extracted_tar': False,
+        'c:\\tmp\\test_extracted_tar': False,
     }[path]
 
 
@@ -63,11 +63,12 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         archive.extracted tar options
         '''
 
-        source = os.sep + os.path.join('tmp', 'foo.tar.gz')
-        tmp_dir = os.sep + os.path.join('tmp', 'test_extracted_tar')
         if salt.utils.is_windows():
-            source = os.path.join('c:\\tmp', 'foo.tar.gz')
-            tmp_dir = os.path.join('c:\\tmp', 'test_extracted_tar')
+            source = 'c:\\tmp\\foo.tar.gz'
+            tmp_dir = 'c:\\tmp\\test_extracted_tar'
+        else:
+            source = '/tmp/foo.tar.gz'
+            tmp_dir = '/tmp/test_extracted_tar'
         test_tar_opts = [
             '--no-anchored foo',
             'v -p --opt',
@@ -127,7 +128,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         Tests the call of extraction with gnutar
         '''
         gnutar = MagicMock(return_value='tar (GNU tar)')
-        source = os.sep + os.path.join('tmp', 'foo.tar.gz')
+        source = '/tmp/foo.tar.gz'
         mock_false = MagicMock(return_value=False)
         mock_true = MagicMock(return_value=True)
         state_single_mock = MagicMock(return_value={'local': {'result': True}})
@@ -166,7 +167,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         Tests the call of extraction with bsdtar
         '''
         bsdtar = MagicMock(return_value='tar (bsdtar)')
-        source = os.sep + os.path.join('tmp', 'foo.tar.gz')
+        source = '/tmp/foo.tar.gz'
         mock_false = MagicMock(return_value=False)
         mock_true = MagicMock(return_value=True)
         state_single_mock = MagicMock(return_value={'local': {'result': True}})

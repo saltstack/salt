@@ -13,6 +13,7 @@ import os
 import re
 import shlex
 import stat
+import string
 import tarfile
 from contextlib import closing
 
@@ -770,8 +771,10 @@ def extracted(name,
         urlparsed_source.netloc,
         urlparsed_source.path).rstrip(os.sep)
 
+    # urlparsed_scheme will be the drive letter if this is a Windows file path
+    # This checks for a drive letter as the scheme and changes it to file
     if urlparsed_scheme and \
-            urlparsed_scheme.lower() in 'abcdefghijklmnopqrstuvwxyz':
+            urlparsed_scheme.lower() in string.ascii_lowercase:
         urlparsed_path = ':'.join([urlparsed_scheme, urlparsed_path])
         urlparsed_scheme = 'file'
 
