@@ -249,7 +249,7 @@ def post_event(api_key=None,
                                             alert_type=alert_type,
                                             aggregation_key=aggregation_key,
                                             source_type_name=source_type_name
-                                            )
+                                           )
     except ValueError:
         comment = ('Unexpected exception in Datadog Post Event API '
                    'call. Are your keys correct?')
