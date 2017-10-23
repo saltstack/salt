@@ -48,6 +48,15 @@ def _get_group_object(name):
     return nt.GetObject('', 'WinNT://./' + name + ',group')
 
 
+def _get_all_groups():
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
+
+    results = nt.GetObject('', 'WinNT://.')
+    results.Filter = ['group']
+    return results
+
+
 def _get_username(member):
     '''
     Resolve the username from the member object returned from a group query
@@ -425,15 +434,6 @@ def members(name, members_list, **kwargs):
                 #return ret
 
     return ret
-
-
-def _get_all_groups():
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-
-    results = nt.GetObject('', 'WinNT://.')
-    results.Filter = ['group']
-    return results
 
 
 def list_groups(refresh=False):
