@@ -42,6 +42,20 @@ def _get_computer_object():
     return nt.GetObject('', 'WinNT://.,computer')
 
 
+def _get_group_object(name):
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
+    return nt.GetObject('', 'WinNT://./' + name + ',group')
+
+
+def _get_username(member):
+    '''
+    Resolve the username from the member object returned from a group query
+    '''
+    return member.ADSPath.replace('WinNT://', '').replace(
+        '/', '\\').encode('ascii', 'backslashreplace').lower()
+
+
 def add(name, **kwargs):
     '''
     Add the specified group
@@ -147,14 +161,9 @@ def info(name):
         salt '*' group.info foo
     '''
     groupObj = _get_group_object(name)
-    existing_members = _get_group_members(groupObj)
     try:
         gr_name = groupObj.Name
-        gr_mem = []
-        for member in existing_members:
-            gr_mem.append(
-                    member.ADSPath.replace('WinNT://', '').replace(
-                    '/', '\\').encode('ascii', 'backslashreplace'))
+        gr_mem = [_get_username(x) for x in groupObj.members()]
     except pywintypes.com_error:
         return False
 
@@ -199,33 +208,13 @@ def getent(refresh=False):
     results = nt.GetObject('', 'WinNT://.')
     results.Filter = ['group']
     for result in results:
-        member_list = []
-        for member in result.members():
-            member_list.append(
-                    member.AdsPath.replace('WinNT://', '').replace(
-                    '/', '\\').encode('ascii', 'backslashreplace'))
         group = {'gid': __salt__['file.group_to_gid'](result.name),
-                'members': member_list,
+                'members': [_get_username(x) for x in result.members()],
                 'name': result.name,
                 'passwd': 'x'}
         ret.append(group)
     __context__['group.getent'] = ret
     return ret
-
-
-def _get_group_object(name):
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-    return nt.GetObject('', 'WinNT://./' + name + ',group')
-
-
-def _get_group_members(groupObj):
-    existingMembers = []
-    for member in groupObj.members():
-        existingMembers.append(
-            member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace').lower())
-    return existingMembers
 
 
 def adduser(name, username, **kwargs):
@@ -256,10 +245,11 @@ def adduser(name, username, **kwargs):
            'comment': ''}
 
     groupObj = _get_group_object(name)
-    existingMembers = _get_group_members(groupObj)
+    existingMembers = [_get_username(x) for x in groupObj.members()]
+    username = salt.utils.win_functions.get_sam_name(username)
 
     try:
-        if salt.utils.win_functions.get_sam_name(username) not in existingMembers:
+        if username not in existingMembers:
             if not __opts__['test']:
                 groupObj.Add('WinNT://' + username.replace('\\', '/'))
 
@@ -309,7 +299,7 @@ def deluser(name, username, **kwargs):
            'comment': ''}
 
     groupObj = _get_group_object(name)
-    existingMembers = _get_group_members(groupObj)
+    existingMembers = [_get_username(x) for x in groupObj.members()]
 
     try:
         if salt.utils.win_functions.get_sam_name(username) in existingMembers:
@@ -368,10 +358,8 @@ def members(name, members_list, **kwargs):
         ret['comment'].append('Members is not a list object')
         return ret
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
     try:
-        groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
+        groupObj = _get_group_object(name)
     except pywintypes.com_error as com_err:
         if len(com_err.excepinfo) >= 2:
             friendly_error = com_err.excepinfo[2].rstrip('\r\n')
@@ -380,12 +368,7 @@ def members(name, members_list, **kwargs):
                 'Failure accessing group {0}.  {1}'
                 ).format(name, friendly_error))
         return ret
-    existingMembers = []
-    for member in groupObj.members():
-        existingMembers.append(
-                member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace').lower())
-
+    existingMembers = [_get_username(x) for x in groupObj.members()]
     existingMembers.sort()
     members_list.sort()
 
