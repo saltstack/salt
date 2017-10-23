@@ -53,7 +53,7 @@ def _get_username(member):
     Resolve the username from the member object returned from a group query
     '''
     return member.ADSPath.replace('WinNT://', '').replace(
-        '/', '\\').encode('ascii', 'backslashreplace').lower()
+        '/', '\\').encode('ascii', 'backslashreplace')
 
 
 def add(name, **kwargs):
@@ -160,8 +160,8 @@ def info(name):
 
         salt '*' group.info foo
     '''
-    groupObj = _get_group_object(name)
     try:
+        groupObj = _get_group_object(name)
         gr_name = groupObj.Name
         gr_mem = [_get_username(x) for x in groupObj.members()]
     except pywintypes.com_error:
@@ -202,15 +202,12 @@ def getent(refresh=False):
 
     ret = []
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
+    results = _get_all_groups()
 
-    results = nt.GetObject('', 'WinNT://.')
-    results.Filter = ['group']
     for result in results:
-        group = {'gid': __salt__['file.group_to_gid'](result.name),
+        group = {'gid': __salt__['file.group_to_gid'](result.Name),
                 'members': [_get_username(x) for x in result.members()],
-                'name': result.name,
+                'name': result.Name,
                 'passwd': 'x'}
         ret.append(group)
     __context__['group.getent'] = ret
@@ -244,7 +241,16 @@ def adduser(name, username, **kwargs):
            'changes': {'Users Added': []},
            'comment': ''}
 
-    groupObj = _get_group_object(name)
+    try:
+        groupObj = _get_group_object(name)
+    except pywintypes.com_error as com_err:
+        if len(com_err.excepinfo) >= 2:
+            friendly_error = com_err.excepinfo[2].rstrip('\r\n')
+        ret['result'] = False
+        ret['comment'] = 'Failure accessing group {0}. {1}' \
+                         ''.format(name, friendly_error)
+        return ret
+
     existingMembers = [_get_username(x) for x in groupObj.members()]
     username = salt.utils.win_functions.get_sam_name(username)
 
@@ -298,7 +304,16 @@ def deluser(name, username, **kwargs):
            'changes': {'Users Removed': []},
            'comment': ''}
 
-    groupObj = _get_group_object(name)
+    try:
+        groupObj = _get_group_object(name)
+    except pywintypes.com_error as com_err:
+        if len(com_err.excepinfo) >= 2:
+            friendly_error = com_err.excepinfo[2].rstrip('\r\n')
+        ret['result'] = False
+        ret['comment'] = 'Failure accessing group {0}. {1}' \
+                         ''.format(name, friendly_error)
+        return ret
+
     existingMembers = [_get_username(x) for x in groupObj.members()]
 
     try:
@@ -412,6 +427,15 @@ def members(name, members_list, **kwargs):
     return ret
 
 
+def _get_all_groups():
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
+
+    results = nt.GetObject('', 'WinNT://.')
+    results.Filter = ['group']
+    return results
+
+
 def list_groups(refresh=False):
     '''
     Return a list of groups
@@ -434,18 +458,14 @@ def list_groups(refresh=False):
         salt '*' group.list_groups
     '''
     if 'group.list_groups' in __context__ and not refresh:
-        return __context__['group.getent']
+        return __context__['group.list_groups']
+
+    results = _get_all_groups()
 
     ret = []
 
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-
-    results = nt.GetObject('', 'WinNT://.')
-    results.Filter = ['group']
-
     for result in results:
-        ret.append(result.name)
+        ret.append(result.Name)
 
     __context__['group.list_groups'] = ret
 
