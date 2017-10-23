@@ -8,7 +8,7 @@ Salt minion.
 
 Use of this module requires some configuration in cloud profile and provider
 files as described in the
-:ref:`Gettting Started with Vagrant <getting-started-with-vagrant>` documentation.
+:ref:`Getting Started with Vagrant <getting-started-with-vagrant>` documentation.
 
 .. versionadded:: Oxygen
 
