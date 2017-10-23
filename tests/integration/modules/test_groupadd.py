@@ -2,15 +2,18 @@
 
 # Import python libs
 from __future__ import absolute_import
-import string
+import grp
+import os
 import random
+import string
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
-# Import 3rd-party libs
+# Import Salt libs
 from salt.ext.six.moves import range
+import salt.utils.files
 
 
 @skip_if_not_root
@@ -57,18 +60,91 @@ class GroupModuleTest(ModuleCase):
             for x in range(size)
         )
 
+    def __get_system_group_gid_range(self):
+        '''
+        Returns (SYS_GID_MIN, SYS_GID_MAX)
+        '''
+        defs_file = '/etc/login.defs'
+        if os.path.exists(defs_file):
+            with salt.utils.files.fopen(defs_file) as defs_fd:
+                login_defs = dict([x.split()
+                                   for x in defs_fd.readlines()
+                                   if x.strip()
+                                   and not x.strip().startswith('#')])
+        else:
+            login_defs = {'SYS_GID_MIN': 101,
+                          'SYS_GID_MAX': 999}
+
+        gid_min = login_defs.get('SYS_GID_MIN', 101)
+        gid_max = login_defs.get('SYS_GID_MAX',
+                                 int(login_defs.get('GID_MIN', 1000)) - 1)
+
+        return gid_min, gid_max
+
+    def __get_free_system_gid(self):
+        '''
+        Find a free system gid
+        '''
+
+        gid_min, gid_max = self.__get_system_group_gid_range()
+
+        busy_gids = [x.gr_gid
+                     for x in grp.getgrall()
+                     if gid_min <= x.gr_gid <= gid_max]
+
+        # find free system gid
+        for gid in range(gid_min, gid_max + 1):
+            if gid not in busy_gids:
+                return gid
+
     @destructiveTest
     def test_add(self):
         '''
         Test the add group function
         '''
-        #add a new group
+        # add a new group
         self.assertTrue(self.run_function('group.add', [self._group, self._gid]))
         group_info = self.run_function('group.info', [self._group])
         self.assertEqual(group_info['name'], self._group)
         self.assertEqual(group_info['gid'], self._gid)
-        #try adding the group again
+        # try adding the group again
         self.assertFalse(self.run_function('group.add', [self._group, self._gid]))
+
+    @destructiveTest
+    def test_add_system_group(self):
+        '''
+        Test the add group function with system=True
+        '''
+
+        gid_min, gid_max = self.__get_system_group_gid_range()
+
+        # add a new system group
+        self.assertTrue(self.run_function('group.add',
+                                          [self._group, None, True]))
+        group_info = self.run_function('group.info', [self._group])
+        self.assertEqual(group_info['name'], self._group)
+        self.assertTrue(gid_min <= group_info['gid'] <= gid_max)
+        # try adding the group again
+        self.assertFalse(self.run_function('group.add',
+                                           [self._group]))
+
+    @destructiveTest
+    def test_add_system_group_gid(self):
+        '''
+        Test the add group function with system=True and a specific gid
+        '''
+
+        gid = self.__get_free_system_gid()
+
+        # add a new system group
+        self.assertTrue(self.run_function('group.add',
+                                          [self._group, gid, True]))
+        group_info = self.run_function('group.info', [self._group])
+        self.assertEqual(group_info['name'], self._group)
+        self.assertEqual(group_info['gid'], gid)
+        # try adding the group again
+        self.assertFalse(self.run_function('group.add',
+                                           [self._group, gid]))
 
     @destructiveTest
     def test_delete(self):
@@ -77,10 +153,10 @@ class GroupModuleTest(ModuleCase):
         '''
         self.assertTrue(self.run_function('group.add', [self._group]))
 
-        #correct functionality
+        # correct functionality
         self.assertTrue(self.run_function('group.delete', [self._group]))
 
-        #group does not exist
+        # group does not exist
         self.assertFalse(self.run_function('group.delete', [self._no_group]))
 
     @destructiveTest
@@ -117,11 +193,11 @@ class GroupModuleTest(ModuleCase):
         self.assertTrue(self.run_function('group.adduser', [self._group, self._user]))
         group_info = self.run_function('group.info', [self._group])
         self.assertIn(self._user, group_info['members'])
-        #try add a non existing user
+        # try to add a non existing user
         self.assertFalse(self.run_function('group.adduser', [self._group, self._no_user]))
-        #try add a user to non existing group
+        # try to add a user to non existing group
         self.assertFalse(self.run_function('group.adduser', [self._no_group, self._user]))
-        #try add a non existing user to a non existing group
+        # try to add a non existing user to a non existing group
         self.assertFalse(self.run_function('group.adduser', [self._no_group, self._no_user]))
 
     @destructiveTest

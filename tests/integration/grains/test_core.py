@@ -10,9 +10,9 @@ from __future__ import absolute_import
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
-# Import salt libs
-import salt.utils
-if salt.utils.is_windows():
+# Import Salt libs
+import salt.utils.platform
+if salt.utils.platform.is_windows():
     try:
         import salt.modules.reg
     except ImportError:
@@ -23,7 +23,7 @@ class TestGrainsCore(ModuleCase):
     '''
     Test the core grains grains
     '''
-    @skipIf(not salt.utils.is_windows(), 'Only run on Windows')
+    @skipIf(not salt.utils.platform.is_windows(), 'Only run on Windows')
     def test_win_cpu_model(self):
         '''
         test grains['cpu_model']

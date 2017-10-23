@@ -85,7 +85,8 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 from tests.support.unit import skipIf
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
 from salt.utils.gitfs import GITPYTHON_MINVER, PYGIT2_MINVER
 from salt.utils.versions import LooseVersion
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES as VIRTUALENV_NAMES
@@ -106,9 +107,9 @@ try:
 except ImportError:
     HAS_PYGIT2 = False
 
-HAS_SSHD = bool(salt.utils.which('sshd'))
-HAS_NGINX = bool(salt.utils.which('nginx'))
-HAS_VIRTUALENV = bool(salt.utils.which_bin(VIRTUALENV_NAMES))
+HAS_SSHD = bool(salt.utils.path.which('sshd'))
+HAS_NGINX = bool(salt.utils.path.which('nginx'))
+HAS_VIRTUALENV = bool(salt.utils.path.which_bin(VIRTUALENV_NAMES))
 
 
 def _rand_key_name(length):
@@ -118,7 +119,7 @@ def _rand_key_name(length):
 
 
 def _windows_or_mac():
-    return salt.utils.is_windows() or salt.utils.is_darwin()
+    return salt.utils.platform.is_windows() or salt.utils.platform.is_darwin()
 
 
 class GitPythonMixin(object):

@@ -34,7 +34,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -134,8 +134,8 @@ def present(name, driver=None, driver_opts=None, force=False):
            'changes': {},
            'result': False,
            'comment': ''}
-    if salt.utils.is_dictlist(driver_opts):
-        driver_opts = salt.utils.repack_dictlist(driver_opts)
+    if salt.utils.data.is_dictlist(driver_opts):
+        driver_opts = salt.utils.data.repack_dictlist(driver_opts)
     volume = _find_volume(name)
     if not volume:
         if __opts__['test']:
@@ -187,7 +187,7 @@ def present(name, driver=None, driver_opts=None, force=False):
                 ret['result'] = result
                 return ret
 
-    ret['result'] = None if __opts__['test'] else True
+    ret['result'] = True
     ret['comment'] = 'Volume \'{0}\' already exists.'.format(name)
     return ret
 
