@@ -77,7 +77,6 @@ try:
 except ImportError:
     HAS_LIBS = False
 
-import salt.utils
 import salt.utils.jid
 
 log = logging.getLogger(__name__)

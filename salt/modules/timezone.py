@@ -13,8 +13,8 @@ import re
 import string
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
@@ -118,7 +118,7 @@ def _get_zone_etc_localtime():
             )
             # Regular file. Try to match the hash.
             hash_type = __opts__.get('hash_type', 'md5')
-            tzfile_hash = salt.utils.get_hash(tzfile, hash_type)
+            tzfile_hash = salt.utils.hashutils.get_hash(tzfile, hash_type)
             # Not a link, just a copy of the tzdata file
             for root, dirs, files in os.walk(tzdir):
                 for filename in files:
@@ -127,7 +127,7 @@ def _get_zone_etc_localtime():
                     if olson_name[0] in string.ascii_lowercase:
                         continue
                     if tzfile_hash == \
-                            salt.utils.get_hash(full_path, hash_type):
+                            salt.utils.hashutils.get_hash(full_path, hash_type):
                         return olson_name
     raise CommandExecutionError('Unable to determine timezone')
 

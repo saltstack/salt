@@ -43,7 +43,6 @@ except ImportError:
 # Import salt libs
 import salt.exceptions
 import salt.log
-import salt.utils
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
@@ -848,6 +847,8 @@ def _virtual(osdata):
     elif osdata['kernel'] == 'OpenBSD':
         if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
             grains['virtual'] = 'kvm'
+        if osdata['manufacturer'] == 'OpenBSD':
+            grains['virtual'] = 'vmm'
     elif osdata['kernel'] == 'SunOS':
         if grains['virtual'] == 'LDOM':
             roles = []
@@ -1409,7 +1410,10 @@ def os_data():
                             .format(' '.join(init_cmdline))
                         )
 
-        # Add lsb grains on any distro with lsb-release
+        # Add lsb grains on any distro with lsb-release. Note that this import
+        # can fail on systems with lsb-release installed if the system package
+        # does not install the python package for the python interpreter used by
+        # Salt (i.e. python2 or python3)
         try:
             import lsb_release  # pylint: disable=import-error
             release = lsb_release.get_distro_information()
@@ -1458,7 +1462,13 @@ def os_data():
                     if 'VERSION_ID' in os_release:
                         grains['lsb_distrib_release'] = os_release['VERSION_ID']
                     if 'PRETTY_NAME' in os_release:
-                        grains['lsb_distrib_codename'] = os_release['PRETTY_NAME']
+                        codename = os_release['PRETTY_NAME']
+                        # https://github.com/saltstack/salt/issues/44108
+                        if os_release['ID'] == 'debian':
+                            codename_match = re.search(r'\((\w+)\)$', codename)
+                            if codename_match:
+                                codename = codename_match.group(1)
+                        grains['lsb_distrib_codename'] = codename
                     if 'CPE_NAME' in os_release:
                         if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
                             grains['os'] = "SUSE"
@@ -2517,7 +2527,8 @@ def _linux_iqn():
             for line in _iscsi:
                 if line.find('InitiatorName') != -1:
                     iqn = line.split('=')
-                    ret.extend([iqn[1]])
+                    final_iqn = iqn[1].rstrip()
+                    ret.extend([final_iqn])
     return ret
 
 
@@ -2532,7 +2543,8 @@ def _aix_iqn():
     aixret = __salt__['cmd.run'](aixcmd)
     if aixret[0].isalpha():
         iqn = aixret.split()
-        ret.extend([iqn[1]])
+        final_iqn = iqn[1].rstrip()
+        ret.extend([final_iqn])
     return ret
 
 
@@ -2545,6 +2557,7 @@ def _linux_wwns():
     for fcfile in glob.glob('/sys/class/fc_host/*/port_name'):
         with salt.utils.files.fopen(fcfile, 'r') as _wwn:
             for line in _wwn:
+                line = line.rstrip()
                 ret.extend([line[2:]])
     return ret
 
@@ -2571,6 +2584,7 @@ def _windows_iqn():
     for line in cmdret['stdout'].splitlines():
         if line[0].isalpha():
             continue
+        line = line.rstrip()
         ret.extend([line])
 
     return ret
@@ -2587,6 +2601,7 @@ def _windows_wwns():
     cmdret = __salt__['cmd.run_ps'](ps_cmd)
 
     for line in cmdret:
+        line = line.rstrip()
         ret.append(line)
 
     return ret

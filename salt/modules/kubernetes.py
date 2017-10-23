@@ -83,7 +83,7 @@ def __virtual__():
     return False, 'python kubernetes library not found'
 
 
-if not salt.utils.is_windows():
+if not salt.utils.platform.is_windows():
     @contextmanager
     def _time_limit(seconds):
         def signal_handler(signum, frame):
@@ -177,11 +177,11 @@ def _cleanup(**kwargs):
     cert = kubernetes.client.configuration.cert_file
     key = kubernetes.client.configuration.key_file
     if cert and os.path.exists(cert) and os.path.basename(cert).startswith('salt-kube-'):
-        salt.utils.safe_rm(cert)
+        salt.utils.files.safe_rm(cert)
     if key and os.path.exists(key) and os.path.basename(key).startswith('salt-kube-'):
-        salt.utils.safe_rm(key)
+        salt.utils.files.safe_rm(key)
     if ca and os.path.exists(ca) and os.path.basename(ca).startswith('salt-kube-'):
-        salt.utils.safe_rm(ca)
+        salt.utils.files.safe_rm(ca)
 
 
 def ping(**kwargs):
@@ -713,7 +713,7 @@ def delete_deployment(name, namespace='default', **kwargs):
             namespace=namespace,
             body=body)
         mutable_api_response = api_response.to_dict()
-        if not salt.utils.is_windows():
+        if not salt.utils.platform.is_windows():
             try:
                 with _time_limit(POLLING_TIME_LIMIT):
                     while show_deployment(name, namespace) is not None:

@@ -24,8 +24,8 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils  # Can be removed when is_true, compare_dicts are moved
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
 import salt.utils.itertools
 import salt.utils.path
@@ -81,7 +81,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
     if len(names) == 0:
         return ''
@@ -132,7 +132,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db(failhard=False):
+def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
     '''
     Updates the opkg database to latest packages based upon repositories
 
@@ -282,7 +282,7 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    refreshdb = salt.utils.is_true(refresh)
+    refreshdb = salt.utils.data.is_true(refresh)
 
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
@@ -386,7 +386,7 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if pkg_type == 'file' and reinstall:
         # For file-based packages, prepare 'to_reinstall' to have a list
@@ -474,7 +474,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -514,7 +514,7 @@ def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     return remove(name=name, pkgs=pkgs)
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
     '''
     Upgrades all packages via ``opkg upgrade``
 
@@ -537,7 +537,7 @@ def upgrade(refresh=True):
            'comment': '',
            }
 
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     old = list_pkgs()
@@ -548,7 +548,7 @@ def upgrade(refresh=True):
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -769,9 +769,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -803,7 +803,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):  # pylint: disable=unused-argument
     '''
     List all available package upgrades.
 
@@ -814,7 +814,7 @@ def list_upgrades(refresh=True):
         salt '*' pkg.list_upgrades
     '''
     ret = {}
-    if salt.utils.is_true(refresh):
+    if salt.utils.data.is_true(refresh):
         refresh_db()
 
     cmd = ['opkg', 'list-upgradable']
@@ -976,7 +976,7 @@ def info_installed(*names, **kwargs):
     return ret
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):  # pylint: disable=unused-argument
     '''
     Check whether or not an upgrade is available for a given package
 
@@ -989,7 +989,7 @@ def upgrade_available(name):
     return latest_version(name) != ''
 
 
-def version_cmp(pkg1, pkg2, ignore_epoch=False):
+def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):  # pylint: disable=unused-argument
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
@@ -1038,7 +1038,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
     return None
 
 
-def list_repos():
+def list_repos(**kwargs):  # pylint: disable=unused-argument
     '''
     Lists all repos on /etc/opkg/*.conf
 
@@ -1075,7 +1075,7 @@ def list_repos():
     return repos
 
 
-def get_repo(alias):
+def get_repo(alias, **kwargs):  # pylint: disable=unused-argument
     '''
     Display a repo from the /etc/opkg/*.conf
 
@@ -1146,7 +1146,7 @@ def _mod_repo_in_file(alias, repostr, filepath):
         fhandle.writelines(output)
 
 
-def del_repo(alias):
+def del_repo(alias, **kwargs):  # pylint: disable=unused-argument
     '''
     Delete a repo from /etc/opkg/*.conf
 
@@ -1260,7 +1260,7 @@ def mod_repo(alias, **kwargs):
         refresh_db()
 
 
-def file_list(*packages):
+def file_list(*packages, **kwargs):  # pylint: disable=unused-argument
     '''
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's package database (not
@@ -1281,7 +1281,7 @@ def file_list(*packages):
     return {'errors': output['errors'], 'files': files}
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):  # pylint: disable=unused-argument
     '''
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the system's
@@ -1323,7 +1323,7 @@ def file_dict(*packages):
     return {'errors': errors, 'packages': ret}
 
 
-def owner(*paths):
+def owner(*paths, **kwargs):  # pylint: disable=unused-argument
     '''
     Return the name of the package that owns the file. Multiple file paths can
     be passed. Like :mod:`pkg.version <salt.modules.opkg.version`, if a single

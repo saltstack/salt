@@ -74,7 +74,6 @@ except ImportError:
 
 # Import salt libs
 import salt.config as config
-import salt.utils
 import salt.utils.cloud
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -101,7 +100,7 @@ __virtualname__ = 'libvirt'
 log = logging.getLogger(__name__)
 
 
-def libvirt_error_handler(ctx, error):
+def libvirt_error_handler(ctx, error):  # pylint: disable=unused-argument
     '''
     Redirect stderr prints from libvirt to salt logging.
     '''

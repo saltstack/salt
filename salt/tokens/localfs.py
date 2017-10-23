@@ -10,7 +10,7 @@ import hashlib
 import os
 import logging
 
-import salt.utils
+import salt.utils.files
 import salt.payload
 
 log = logging.getLogger(__name__)

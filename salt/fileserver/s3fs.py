@@ -68,9 +68,9 @@ import logging
 # Import salt libs
 import salt.fileserver as fs
 import salt.modules
-import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.versions
 
 # Import 3rd-party libs
@@ -180,7 +180,7 @@ def file_hash(load, fnd):
             fnd['path'])
 
     if os.path.isfile(cached_file_path):
-        ret['hsum'] = salt.utils.get_hash(cached_file_path)
+        ret['hsum'] = salt.utils.hashutils.get_hash(cached_file_path)
         ret['hash_type'] = 'md5'
 
     return ret
@@ -216,7 +216,7 @@ def serve_file(load, fnd):
     with salt.utils.files.fopen(cached_file_path, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
-        if data and six.PY3 and not salt.utils.is_bin_file(cached_file_path):
+        if data and six.PY3 and not salt.utils.files.is_binary(cached_file_path):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -619,7 +619,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
 
             if file_etag.find('-') == -1:
                 file_md5 = file_etag
-                cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
+                cached_md5 = salt.utils.hashutils.get_hash(cached_file_path, 'md5')
 
                 # hashes match we have a cache hit
                 if cached_md5 == file_md5:

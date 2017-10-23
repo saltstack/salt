@@ -22,9 +22,9 @@ from salt.ext.six.moves import shlex_quote as _cmd_quote
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 
 # Import Salt libs
-import salt.utils
 import salt.utils.args
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.url
@@ -60,7 +60,7 @@ def _add_explanation(ret, source_hash_trigger, contents_missing):
 
 
 def _gen_checksum(path):
-    return {'hsum': salt.utils.get_hash(path, form=__opts__['hash_type']),
+    return {'hsum': salt.utils.hashutils.get_hash(path, form=__opts__['hash_type']),
             'hash_type': __opts__['hash_type']}
 
 
@@ -414,7 +414,7 @@ def extracted(name,
         .. versionadded:: 2017.7.3
 
     keep : True
-        Same as ``keep_source``.
+        Same as ``keep_source``, kept for backward-compatibility.
 
         .. note::
             If both ``keep_source`` and ``keep`` are used, ``keep`` will be
@@ -663,6 +663,21 @@ def extracted(name,
         # Neither was passed, default is True
         keep_source = True
 
+    if 'keep_source' in kwargs and 'keep' in kwargs:
+        ret.setdefault('warnings', []).append(
+            'Both \'keep_source\' and \'keep\' were used. Since these both '
+            'do the same thing, \'keep\' was ignored.'
+        )
+        keep_source = bool(kwargs.pop('keep_source'))
+        kwargs.pop('keep')
+    elif 'keep_source' in kwargs:
+        keep_source = bool(kwargs.pop('keep_source'))
+    elif 'keep' in kwargs:
+        keep_source = bool(kwargs.pop('keep'))
+    else:
+        # Neither was passed, default is True
+        keep_source = True
+
     if not _path_is_abs(name):
         ret['comment'] = '{0} is not an absolute path'.format(name)
         return ret
@@ -763,7 +778,8 @@ def extracted(name,
         # Get rid of "file://" from start of source_match
         source_match = os.path.realpath(os.path.expanduser(urlparsed_source.path))
         if not os.path.isfile(source_match):
-            ret['comment'] = 'Source file \'{0}\' does not exist'.format(source_match)
+            ret['comment'] = 'Source file \'{0}\' does not exist'.format(
+                                salt.utils.url.redact_http_basic_auth(source_match))
             return ret
 
     valid_archive_formats = ('tar', 'rar', 'zip')
@@ -914,7 +930,7 @@ def extracted(name,
             # file states would be unavailable.
             ret['comment'] = (
                 'Unable to cache {0}, file.cached state not available'.format(
-                    source_match
+                    salt.utils.url.redact_http_basic_auth(source_match)
                 )
             )
             return ret
@@ -926,7 +942,9 @@ def extracted(name,
                                                skip_verify=skip_verify,
                                                saltenv=__env__)
         except Exception as exc:
-            msg = 'Failed to cache {0}: {1}'.format(source_match, exc.__str__())
+            msg = 'Failed to cache {0}: {1}'.format(
+                    salt.utils.url.redact_http_basic_auth(source_match),
+                    exc.__str__())
             log.exception(msg)
             ret['comment'] = msg
             return ret
@@ -1157,7 +1175,8 @@ def extracted(name,
             if not ret['result']:
                 ret['comment'] = \
                     '{0} does not match the desired source_hash {1}'.format(
-                        source_match, source_sum['hsum']
+                        salt.utils.url.redact_http_basic_auth(source_match),
+                        source_sum['hsum']
                     )
                 return ret
 

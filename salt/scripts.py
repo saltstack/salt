@@ -97,11 +97,12 @@ def minion_process():
     Start a minion process
     '''
     import salt.utils.platform
+    import salt.utils.process
     import salt.cli.daemons
 
     # salt_minion spawns this function in a new process
 
-    salt.utils.appendproctitle(u'KeepAlive')
+    salt.utils.process.appendproctitle(u'KeepAlive')
 
     def handle_hup(manager, sig, frame):
         manager.minion.reload()

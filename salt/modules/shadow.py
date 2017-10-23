@@ -19,7 +19,7 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils  # Can be removed when is_true is moved
+import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
@@ -278,7 +278,7 @@ def set_password(name, password, use_usermod=False):
 
         salt '*' shadow.set_password root '$1$UYCIxa628.9qXjpQCjM4a..'
     '''
-    if not salt.utils.is_true(use_usermod):
+    if not salt.utils.data.is_true(use_usermod):
         # Edit the shadow file directly
         # ALT Linux uses tcb to store password hashes. More information found
         # in manpage (http://docs.altlinux.org/manpages/tcb.5.html)

@@ -10,13 +10,15 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 import salt.config
 import salt.loader
 import salt.utils.files
+import salt.utils.platform
+import salt.utils.stringutils
 import salt.modules.file as filemod
 import salt.modules.config as configmod
 import salt.modules.cmdmod as cmdmod
@@ -48,7 +50,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'grains': {},
                 },
                 '__grains__': {'kernel': 'Linux'},
-                '__utils__': {'files.is_text_file': MagicMock(return_value=True)},
+                '__utils__': {'files.is_text': MagicMock(return_value=True)},
             }
         }
 
@@ -92,45 +94,56 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 'repl': 'baz=\\g<value>',
                 'append_if_not_found': True,
         }
-        base = 'foo=1\nbar=2'
-        expected = '{base}\n{repl}\n'.format(base=base, **args)
+        base = os.linesep.join(['foo=1', 'bar=2'])
+
         # File ending with a newline, no match
-        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
-            tfile.write(base + '\n')
+        with tempfile.NamedTemporaryFile('w+b', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_bytes(base + os.linesep))
             tfile.flush()
-            filemod.replace(tfile.name, **args)
-            with salt.utils.files.fopen(tfile.name) as tfile2:
-                self.assertEqual(tfile2.read(), expected)
+        filemod.replace(tfile.name, **args)
+        expected = os.linesep.join([base, 'baz=\\g<value>']) + os.linesep
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
+        os.remove(tfile.name)
+
         # File not ending with a newline, no match
-        with tempfile.NamedTemporaryFile('w+') as tfile:
-            tfile.write(base)
+        with tempfile.NamedTemporaryFile('w+b', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_bytes(base))
             tfile.flush()
-            filemod.replace(tfile.name, **args)
-            with salt.utils.files.fopen(tfile.name) as tfile2:
-                self.assertEqual(tfile2.read(), expected)
+        filemod.replace(tfile.name, **args)
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
+        os.remove(tfile.name)
+
         # A newline should not be added in empty files
-        with tempfile.NamedTemporaryFile('w+') as tfile:
-            filemod.replace(tfile.name, **args)
-            with salt.utils.files.fopen(tfile.name) as tfile2:
-                self.assertEqual(tfile2.read(), args['repl'] + '\n')
+        with tempfile.NamedTemporaryFile('w+b', delete=False) as tfile:
+            pass
+        filemod.replace(tfile.name, **args)
+        expected = args['repl'] + os.linesep
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
+        os.remove(tfile.name)
+
         # Using not_found_content, rather than repl
-        with tempfile.NamedTemporaryFile('w+') as tfile:
-            args['not_found_content'] = 'baz=3'
-            expected = '{base}\n{not_found_content}\n'.format(base=base, **args)
-            tfile.write(base)
+        with tempfile.NamedTemporaryFile('w+b', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_bytes(base))
             tfile.flush()
-            filemod.replace(tfile.name, **args)
-            with salt.utils.files.fopen(tfile.name) as tfile2:
-                self.assertEqual(tfile2.read(), expected)
+        args['not_found_content'] = 'baz=3'
+        expected = os.linesep.join([base, 'baz=3']) + os.linesep
+        filemod.replace(tfile.name, **args)
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
+        os.remove(tfile.name)
+
         # not appending if matches
-        with tempfile.NamedTemporaryFile('w+') as tfile:
-            base = 'foo=1\n#baz=42\nbar=2\n'
-            expected = 'foo=1\nbaz=42\nbar=2\n'
-            tfile.write(base)
+        with tempfile.NamedTemporaryFile('w+b', delete=False) as tfile:
+            base = os.linesep.join(['foo=1', 'baz=42', 'bar=2'])
+            tfile.write(salt.utils.stringutils.to_bytes(base))
             tfile.flush()
-            filemod.replace(tfile.name, **args)
-            with salt.utils.files.fopen(tfile.name) as tfile2:
-                self.assertEqual(tfile2.read(), expected)
+        expected = base
+        filemod.replace(tfile.name, **args)
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
 
     def test_backup(self):
         fext = '.bak'
@@ -207,7 +220,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                     'grains': {},
                 },
                 '__grains__': {'kernel': 'Linux'},
-                '__utils__': {'files.is_text_file': MagicMock(return_value=True)},
+                '__utils__': {'files.is_text': MagicMock(return_value=True)},
             }
         }
 
@@ -250,25 +263,26 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         del self.tfile
 
     def test_replace_multiline(self):
-        new_multiline_content = (
-            "Who's that then?\nWell, how'd you become king,"
-            "then?\nWe found them. I'm not a witch.\nWe shall"
-            "say 'Ni' again to you, if you do not appease us."
-        )
+        new_multiline_content = os.linesep.join([
+            "Who's that then?",
+            "Well, how'd you become king, then?",
+            "We found them. I'm not a witch.",
+            "We shall say 'Ni' again to you, if you do not appease us."
+        ])
         filemod.blockreplace(self.tfile.name,
                              '#-- START BLOCK 1',
                              '#-- END BLOCK 1',
                              new_multiline_content,
                              backup=False)
 
-        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+        with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
             filecontent = fp.read()
-        self.assertIn('#-- START BLOCK 1'
-                      + "\n" + new_multiline_content
-                      + "\n"
-                      + '#-- END BLOCK 1', filecontent)
-        self.assertNotIn('old content part 1', filecontent)
-        self.assertNotIn('old content part 2', filecontent)
+        self.assertIn(salt.utils.stringutils.to_bytes(
+            os.linesep.join([
+                '#-- START BLOCK 1', new_multiline_content, '#-- END BLOCK 1'])),
+            filecontent)
+        self.assertNotIn(b'old content part 1', filecontent)
+        self.assertNotIn(b'old content part 2', filecontent)
 
     def test_replace_append(self):
         new_content = "Well, I didn't vote for you."
@@ -295,10 +309,12 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                              backup=False,
                              append_if_not_found=True)
 
-        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
-            self.assertIn('#-- START BLOCK 2'
-                          + "\n" + new_content
-                          + '#-- END BLOCK 2', fp.read())
+        with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
+            self.assertIn(salt.utils.stringutils.to_bytes(
+                os.linesep.join([
+                    '#-- START BLOCK 2',
+                    '{0}#-- END BLOCK 2'.format(new_content)])),
+                fp.read())
 
     def test_replace_append_newline_at_eof(self):
         '''
@@ -312,27 +328,33 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                 'content': 'baz',
                 'append_if_not_found': True,
         }
-        block = '{marker_start}\n{content}{marker_end}\n'.format(**args)
-        expected = base + '\n' + block
+        block = os.linesep.join(['#start', 'baz#stop']) + os.linesep
         # File ending with a newline
-        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
-            tfile.write(base + '\n')
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_bytes(base + os.linesep))
             tfile.flush()
-            filemod.blockreplace(tfile.name, **args)
-            with salt.utils.files.fopen(tfile.name) as tfile2:
-                self.assertEqual(tfile2.read(), expected)
+        filemod.blockreplace(tfile.name, **args)
+        expected = os.linesep.join([base, block])
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
+        os.remove(tfile.name)
+
         # File not ending with a newline
-        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
-            tfile.write(base)
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_bytes(base))
             tfile.flush()
-            filemod.blockreplace(tfile.name, **args)
-            with salt.utils.files.fopen(tfile.name) as tfile2:
-                self.assertEqual(tfile2.read(), expected)
+        filemod.blockreplace(tfile.name, **args)
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
+        os.remove(tfile.name)
+
         # A newline should not be added in empty files
-        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
-            filemod.blockreplace(tfile.name, **args)
-            with salt.utils.files.fopen(tfile.name) as tfile2:
-                self.assertEqual(tfile2.read(), block)
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            pass
+        filemod.blockreplace(tfile.name, **args)
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), block)
+        os.remove(tfile.name)
 
     def test_replace_prepend(self):
         new_content = "Well, I didn't vote for you."
@@ -347,10 +369,11 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             prepend_if_not_found=False,
             backup=False
         )
-        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
-            self.assertNotIn(
-                '#-- START BLOCK 2' + "\n"
-                + new_content + '#-- END BLOCK 2',
+        with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
+            self.assertNotIn(salt.utils.stringutils.to_bytes(
+                os.linesep.join([
+                    '#-- START BLOCK 2',
+                    '{0}#-- END BLOCK 2'.format(new_content)])),
                 fp.read())
 
         filemod.blockreplace(self.tfile.name,
@@ -359,12 +382,12 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                              backup=False,
                              prepend_if_not_found=True)
 
-        with salt.utils.files.fopen(self.tfile.name, 'r') as fp:
+        with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
             self.assertTrue(
-                fp.read().startswith(
-                    '#-- START BLOCK 2'
-                    + "\n" + new_content
-                    + '#-- END BLOCK 2'))
+                fp.read().startswith(salt.utils.stringutils.to_bytes(
+                    os.linesep.join([
+                        '#-- START BLOCK 2',
+                        '{0}#-- END BLOCK 2'.format(new_content)]))))
 
     def test_replace_partial_marked_lines(self):
         filemod.blockreplace(self.tfile.name,
@@ -481,6 +504,27 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    def test_check_file_meta_no_lsattr(self):
+        '''
+        Ensure that we skip attribute comparison if lsattr(1) is not found
+        '''
+        source = "salt:///README.md"
+        name = "/home/git/proj/a/README.md"
+        source_sum = {}
+        stats_result = {'size': 22, 'group': 'wheel', 'uid': 0, 'type': 'file',
+                        'mode': '0600', 'gid': 0, 'target': name, 'user':
+                        'root', 'mtime': 1508356390, 'atime': 1508356390,
+                        'inode': 447, 'ctime': 1508356390}
+        with patch('salt.modules.file.stats') as m_stats:
+            m_stats.return_value = stats_result
+            with patch('salt.utils.path.which') as m_which:
+                m_which.return_value = None
+                result = filemod.check_file_meta(name, name, source, source_sum,
+                                                 'root', 'root', '755', None,
+                                                 'base')
+        self.assertTrue(result, None)
+
+    @skipIf(salt.utils.platform.is_windows(), 'SED is not available on Windows')
     def test_sed_limit_escaped(self):
         with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             tfile.write(SED_CONTENT)
@@ -505,127 +549,131 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         newlines at end of file.
         '''
         # File ending with a newline
-        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
-            tfile.write('foo\n')
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_bytes('foo' + os.linesep))
             tfile.flush()
-            filemod.append(tfile.name, 'bar')
-            with salt.utils.files.fopen(tfile.name) as tfile2:
-                self.assertEqual(tfile2.read(), 'foo\nbar\n')
+        filemod.append(tfile.name, 'bar')
+        expected = os.linesep.join(['foo', 'bar']) + os.linesep
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
+
         # File not ending with a newline
-        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
-            tfile.write('foo')
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_bytes('foo'))
             tfile.flush()
+        filemod.append(tfile.name, 'bar')
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
+
+        # A newline should be added in empty files
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
             filemod.append(tfile.name, 'bar')
-            with salt.utils.files.fopen(tfile.name) as tfile2:
-                self.assertEqual(tfile2.read(), 'foo\nbar\n')
-        # A newline should not be added in empty files
-        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
-            filemod.append(tfile.name, 'bar')
-            with salt.utils.files.fopen(tfile.name) as tfile2:
-                self.assertEqual(tfile2.read(), 'bar\n')
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), 'bar' + os.linesep)
 
     def test_extract_hash(self):
         '''
         Check various hash file formats.
         '''
         # With file name
-        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
-            tfile.write(
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_bytes(
                 'rc.conf ef6e82e4006dee563d98ada2a2a80a27\n'
                 'ead48423703509d37c4a90e6a0d53e143b6fc268 example.tar.gz\n'
                 'fe05bcdcdc4928012781a5f1a2a77cbb5398e106 ./subdir/example.tar.gz\n'
                 'ad782ecdac770fc6eb9a62e44f90873fb97fb26b foo.tar.bz2\n'
-            )
+            ))
             tfile.flush()
 
-            result = filemod.extract_hash(tfile.name, '', '/rc.conf')
-            self.assertEqual(result, {
-                'hsum': 'ef6e82e4006dee563d98ada2a2a80a27',
-                'hash_type': 'md5'
-            })
+        result = filemod.extract_hash(tfile.name, '', '/rc.conf')
+        self.assertEqual(result, {
+            'hsum': 'ef6e82e4006dee563d98ada2a2a80a27',
+            'hash_type': 'md5'
+        })
 
-            result = filemod.extract_hash(tfile.name, '', '/example.tar.gz')
-            self.assertEqual(result, {
+        result = filemod.extract_hash(tfile.name, '', '/example.tar.gz')
+        self.assertEqual(result, {
+            'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
+            'hash_type': 'sha1'
+        })
+
+        # All the checksums in this test file are sha1 sums. We run this
+        # loop three times. The first pass tests auto-detection of hash
+        # type by length of the hash. The second tests matching a specific
+        # type. The third tests a failed attempt to match a specific type,
+        # since sha256 was requested but sha1 is what is in the file.
+        for hash_type in ('', 'sha1', 'sha256'):
+            # Test the source_hash_name argument. Even though there are
+            # matches in the source_hash file for both the file_name and
+            # source params, they should be ignored in favor of the
+            # source_hash_name.
+            file_name = '/example.tar.gz'
+            source = 'https://mydomain.tld/foo.tar.bz2?key1=val1&key2=val2'
+            source_hash_name = './subdir/example.tar.gz'
+            result = filemod.extract_hash(
+                tfile.name,
+                hash_type,
+                file_name,
+                source,
+                source_hash_name)
+            expected = {
+                'hsum': 'fe05bcdcdc4928012781a5f1a2a77cbb5398e106',
+                'hash_type': 'sha1'
+            } if hash_type != 'sha256' else None
+            self.assertEqual(result, expected)
+
+            # Test both a file_name and source but no source_hash_name.
+            # Even though there are matches for both file_name and
+            # source_hash_name, file_name should be preferred.
+            file_name = '/example.tar.gz'
+            source = 'https://mydomain.tld/foo.tar.bz2?key1=val1&key2=val2'
+            source_hash_name = None
+            result = filemod.extract_hash(
+                tfile.name,
+                hash_type,
+                file_name,
+                source,
+                source_hash_name)
+            expected = {
                 'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
                 'hash_type': 'sha1'
-            })
+            } if hash_type != 'sha256' else None
+            self.assertEqual(result, expected)
 
-            # All the checksums in this test file are sha1 sums. We run this
-            # loop three times. The first pass tests auto-detection of hash
-            # type by length of the hash. The second tests matching a specific
-            # type. The third tests a failed attempt to match a specific type,
-            # since sha256 was requested but sha1 is what is in the file.
-            for hash_type in ('', 'sha1', 'sha256'):
-                # Test the source_hash_name argument. Even though there are
-                # matches in the source_hash file for both the file_name and
-                # source params, they should be ignored in favor of the
-                # source_hash_name.
-                file_name = '/example.tar.gz'
-                source = 'https://mydomain.tld/foo.tar.bz2?key1=val1&key2=val2'
-                source_hash_name = './subdir/example.tar.gz'
-                result = filemod.extract_hash(
-                    tfile.name,
-                    hash_type,
-                    file_name,
-                    source,
-                    source_hash_name)
-                expected = {
-                    'hsum': 'fe05bcdcdc4928012781a5f1a2a77cbb5398e106',
-                    'hash_type': 'sha1'
-                } if hash_type != 'sha256' else None
-                self.assertEqual(result, expected)
-
-                # Test both a file_name and source but no source_hash_name.
-                # Even though there are matches for both file_name and
-                # source_hash_name, file_name should be preferred.
-                file_name = '/example.tar.gz'
-                source = 'https://mydomain.tld/foo.tar.bz2?key1=val1&key2=val2'
-                source_hash_name = None
-                result = filemod.extract_hash(
-                    tfile.name,
-                    hash_type,
-                    file_name,
-                    source,
-                    source_hash_name)
-                expected = {
-                    'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
-                    'hash_type': 'sha1'
-                } if hash_type != 'sha256' else None
-                self.assertEqual(result, expected)
-
-                # Test both a file_name and source but no source_hash_name.
-                # Since there is no match for the file_name, the source is
-                # matched.
-                file_name = '/somefile.tar.gz'
-                source = 'https://mydomain.tld/foo.tar.bz2?key1=val1&key2=val2'
-                source_hash_name = None
-                result = filemod.extract_hash(
-                    tfile.name,
-                    hash_type,
-                    file_name,
-                    source,
-                    source_hash_name)
-                expected = {
-                    'hsum': 'ad782ecdac770fc6eb9a62e44f90873fb97fb26b',
-                    'hash_type': 'sha1'
-                } if hash_type != 'sha256' else None
-                self.assertEqual(result, expected)
+            # Test both a file_name and source but no source_hash_name.
+            # Since there is no match for the file_name, the source is
+            # matched.
+            file_name = '/somefile.tar.gz'
+            source = 'https://mydomain.tld/foo.tar.bz2?key1=val1&key2=val2'
+            source_hash_name = None
+            result = filemod.extract_hash(
+                tfile.name,
+                hash_type,
+                file_name,
+                source,
+                source_hash_name)
+            expected = {
+                'hsum': 'ad782ecdac770fc6eb9a62e44f90873fb97fb26b',
+                'hash_type': 'sha1'
+            } if hash_type != 'sha256' else None
+            self.assertEqual(result, expected)
 
         # Hash only, no file name (Maven repo checksum format)
         # Since there is no name match, the first checksum in the file will
         # always be returned, never the second.
-        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
-            tfile.write('ead48423703509d37c4a90e6a0d53e143b6fc268\n'
-                        'ad782ecdac770fc6eb9a62e44f90873fb97fb26b\n')
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            tfile.write(salt.utils.stringutils.to_bytes(
+                'ead48423703509d37c4a90e6a0d53e143b6fc268\n'
+                'ad782ecdac770fc6eb9a62e44f90873fb97fb26b\n'))
             tfile.flush()
 
-            for hash_type in ('', 'sha1', 'sha256'):
-                result = filemod.extract_hash(tfile.name, hash_type, '/testfile')
-                expected = {
-                    'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
-                    'hash_type': 'sha1'
-                } if hash_type != 'sha256' else None
-                self.assertEqual(result, expected)
+        for hash_type in ('', 'sha1', 'sha256'):
+            result = filemod.extract_hash(tfile.name, hash_type, '/testfile')
+            expected = {
+                'hsum': 'ead48423703509d37c4a90e6a0d53e143b6fc268',
+                'hash_type': 'sha1'
+            } if hash_type != 'sha256' else None
+            self.assertEqual(result, expected)
 
     def test_user_to_uid_int(self):
         '''
@@ -778,6 +826,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(os.remove, self.myfile)
         self.addCleanup(delattr, self, 'myfile')
 
+    @skipIf(salt.utils.platform.is_windows(), 'os.symlink is not available on Windows')
     def test_symlink_already_in_desired_state(self):
         os.symlink(self.tfile.name, self.directory + '/a_link')
         self.addCleanup(os.remove, self.directory + '/a_link')

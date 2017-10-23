@@ -146,24 +146,24 @@ library. The following two lines set up the imports:
 .. code-block:: python
 
     from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-    import salt.utils
+    import salt.utils.functools
 
 And then a series of declarations will make the necessary functions available
 within the cloud module.
 
 .. code-block:: python
 
-    get_size = salt.utils.namespaced_function(get_size, globals())
-    get_image = salt.utils.namespaced_function(get_image, globals())
-    avail_locations = salt.utils.namespaced_function(avail_locations, globals())
-    avail_images = salt.utils.namespaced_function(avail_images, globals())
-    avail_sizes = salt.utils.namespaced_function(avail_sizes, globals())
-    script = salt.utils.namespaced_function(script, globals())
-    destroy = salt.utils.namespaced_function(destroy, globals())
-    list_nodes = salt.utils.namespaced_function(list_nodes, globals())
-    list_nodes_full = salt.utils.namespaced_function(list_nodes_full, globals())
-    list_nodes_select = salt.utils.namespaced_function(list_nodes_select, globals())
-    show_instance = salt.utils.namespaced_function(show_instance, globals())
+    get_size = salt.utils.functools.namespaced_function(get_size, globals())
+    get_image = salt.utils.functools.namespaced_function(get_image, globals())
+    avail_locations = salt.utils.functools.namespaced_function(avail_locations, globals())
+    avail_images = salt.utils.functools.namespaced_function(avail_images, globals())
+    avail_sizes = salt.utils.functools.namespaced_function(avail_sizes, globals())
+    script = salt.utils.functools.namespaced_function(script, globals())
+    destroy = salt.utils.functools.namespaced_function(destroy, globals())
+    list_nodes = salt.utils.functools.namespaced_function(list_nodes, globals())
+    list_nodes_full = salt.utils.functools.namespaced_function(list_nodes_full, globals())
+    list_nodes_select = salt.utils.functools.namespaced_function(list_nodes_select, globals())
+    show_instance = salt.utils.functools.namespaced_function(show_instance, globals())
 
 If necessary, these functions may be replaced by removing the appropriate
 declaration line, and then adding the function as normal.

@@ -13,11 +13,11 @@ import traceback
 import random
 
 # Import Salt libs
-import salt
-import salt.utils
 import salt.utils.args
+import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.platform
+import salt.utils.versions
 import salt.version
 import salt.loader
 from salt.ext import six
@@ -198,7 +198,7 @@ def versions_report():
     return '\n'.join(salt.version.versions_report())
 
 
-versions = salt.utils.alias_function(versions_report, 'versions')
+versions = salt.utils.functools.alias_function(versions_report, 'versions')
 
 
 def conf_test():
@@ -495,7 +495,7 @@ def opts_pkg():
 
 
 def rand_str(size=9999999999, hash_type=None):
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Neon',
         'test.rand_str has been renamed to test.random_hash'
     )
