@@ -463,12 +463,27 @@ def create(vm_):
         return ret
     except Exception as e:  # pylint: disable=broad-except
         do_cleanup(cleanup)
+        # throw the root cause after cleanup
         raise e
 
 
 def do_cleanup(cleanup):
-    # Try to clean up in as many cases as possible. Libvirt behavior changed
-    # somewhat over time, so try to be robust.
+    '''
+    Clean up clone domain leftovers as much as possible.
+
+    Extra robust clean up in order to deal with some small changes in libvirt
+    behavior over time. Passed in volumes and domains are deleted, any errors
+    are ignored. Used when cloning/provisioning a domain fails.
+
+    :param cleanup: list containing dictonaries with two keys: 'what' and 'item'.
+                    If 'what' is domain the 'item' is a libvirt domain object.
+                    If 'what' is volume then the item is a libvirt volume object.
+
+    Returns:
+        none
+
+    .. versionadded: 2017.7.3
+    '''
     log.info('Cleaning up after exception')
     for leftover in cleanup:
         what = leftover['what']
