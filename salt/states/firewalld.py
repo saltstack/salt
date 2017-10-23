@@ -82,7 +82,7 @@ import logging
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -145,7 +145,7 @@ def __virtual__():
     '''
     Ensure the firewall-cmd is available
     '''
-    if salt.utils.which('firewall-cmd'):
+    if salt.utils.path.which('firewall-cmd'):
         return True
 
     return (False, 'firewall-cmd is not available, firewalld is probably not installed.')

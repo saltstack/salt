@@ -23,37 +23,88 @@ Please check Installation_ for complete details.
 Pillar
 ------
 
-The napalm proxy configuration requires four mandatory parameters in order to connect to the network device:
+The napalm proxy configuration requires the following parameters in order to connect to the network device:
 
-* driver: specifies the network device operating system. For a complete list of the supported operating systems \
-please refer to the `NAPALM Read the Docs page`_.
-* host: hostname
-* username: username to be used when connecting to the device
-* passwd: the password needed to establish the connection
-* optional_args: dictionary with the optional arguments. Check the complete list of supported `optional arguments`_
+driver
+    Specifies the network device operating system.
+    For a complete list of the supported operating systems please refer to the
+    `NAPALM Read the Docs page`_.
 
-.. _`NAPALM Read the Docs page`: https://napalm.readthedocs.io/en/latest/#supported-network-operating-systems
-.. _`optional arguments`: http://napalm.readthedocs.io/en/latest/support/index.html#list-of-supported-optional-arguments
+host
+    The IP Address or FQDN to use when connecting to the device. Alternatively,
+    the following field names can be used instead: ``hostname``, ``fqdn``, ``ip``.
 
-.. versionadded:: 2017.7.0
+username
+    The username to be used when connecting to the device.
 
-* always_alive: in certain less dynamic environments, maintaining the remote connection permanently
+passwd
+    The password needed to establish the connection.
+
+    .. note::
+
+        This field may not be mandatory when working with SSH-based drivers, and
+        the username has a SSH key properly configured on the device targeted to
+        be managed.
+
+optional_args
+    Dictionary with the optional arguments.
+    Check the complete list of supported `optional arguments`_.
+
+always_alive: ``True``
+    In certain less dynamic environments, maintaining the remote connection permanently
     open with the network device is not always beneficial. In that case, the user can
     select to initialize the connection only when needed, by specifying this field to ``false``.
     Default: ``true`` (maintains the connection with the remote network device).
 
-Example:
+    .. versionadded:: 2017.7.0
+
+provider: ``napalm_base``
+    The module that provides the ``get_network_device`` function.
+    This option is useful when the user has more specific needs and requires
+    to extend the NAPALM capabilities using a private library implementation.
+    The only constraint is that the alternative library needs to have the
+    ``get_network_device`` function available.
+
+    .. versionadded:: 2017.7.1
+
+multiprocessing: ``False``
+    Overrides the :conf_minion:`multiprocessing` option, per proxy minion.
+    The ``multiprocessing`` option must be turned off for SSH-based proxies.
+    However, some NAPALM drivers (e.g. Arista, NX-OS) are not SSH-based.
+    As multiple proxy minions may share the same configuration file,
+    this option permits the configuration of the ``multiprocessing`` option
+    more specifically, for some proxy minions.
+
+    .. versionadded:: 2017.7.2
+
+
+.. _`NAPALM Read the Docs page`: https://napalm.readthedocs.io/en/latest/#supported-network-operating-systems
+.. _`optional arguments`: http://napalm.readthedocs.io/en/latest/support/index.html#list-of-supported-optional-arguments
+
+Proxy pillar file example:
 
 .. code-block:: yaml
 
     proxy:
-        proxytype: napalm
-        driver: junos
-        host: core05.nrt02
-        username: my_username
-        passwd: my_password
-        optional_args:
-            port: 12201
+      proxytype: napalm
+      driver: junos
+      host: core05.nrt02
+      username: my_username
+      passwd: my_password
+      optional_args:
+        port: 12201
+
+Example using a user-specific library, extending NAPALM's capabilities, e.g. ``custom_napalm_base``:
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: napalm
+      driver: ios
+      fqdn: cr1.th2.par.as1234.net
+      username: salt
+      password: ''
+      provider: custom_napalm_base
 
 .. seealso::
 

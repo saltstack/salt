@@ -70,8 +70,10 @@ except ImportError:
 
 # Import salt libs
 import salt
-import salt.utils
+import salt.utils.files
+import salt.utils.hashutils
 import salt.exceptions
+import salt.version
 
 SALTCALL = '''
 import os
@@ -181,15 +183,15 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     thinver = os.path.join(thindir, 'version')
     pythinver = os.path.join(thindir, '.thin-gen-py-version')
     salt_call = os.path.join(thindir, 'salt-call')
-    with salt.utils.fopen(salt_call, 'w+') as fp_:
+    with salt.utils.files.fopen(salt_call, 'w+') as fp_:
         fp_.write(SALTCALL)
     if os.path.isfile(thintar):
         if not overwrite:
             if os.path.isfile(thinver):
-                with salt.utils.fopen(thinver) as fh_:
+                with salt.utils.files.fopen(thinver) as fh_:
                     overwrite = fh_.read() != salt.version.__version__
                 if overwrite is False and os.path.isfile(pythinver):
-                    with salt.utils.fopen(pythinver) as fh_:
+                    with salt.utils.files.fopen(pythinver) as fh_:
                         overwrite = fh_.read() != str(sys.version_info[0])
             else:
                 overwrite = True
@@ -318,9 +320,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         tfp.add('salt-call')
     elif compress == 'zip':
         tfp.write('salt-call')
-    with salt.utils.fopen(thinver, 'w+') as fp_:
+    with salt.utils.files.fopen(thinver, 'w+') as fp_:
         fp_.write(salt.version.__version__)
-    with salt.utils.fopen(pythinver, 'w+') as fp_:
+    with salt.utils.files.fopen(pythinver, 'w+') as fp_:
         fp_.write(str(sys.version_info[0]))
     os.chdir(os.path.dirname(thinver))
     if compress == 'gzip':
@@ -340,7 +342,7 @@ def thin_sum(cachedir, form='sha1'):
     Return the checksum of the current thin tarball
     '''
     thintar = gen_thin(cachedir)
-    return salt.utils.get_hash(thintar, form)
+    return salt.utils.hashutils.get_hash(thintar, form)
 
 
 def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
@@ -366,15 +368,15 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
     minver = os.path.join(mindir, 'version')
     pyminver = os.path.join(mindir, '.min-gen-py-version')
     salt_call = os.path.join(mindir, 'salt-call')
-    with salt.utils.fopen(salt_call, 'w+') as fp_:
+    with salt.utils.files.fopen(salt_call, 'w+') as fp_:
         fp_.write(SALTCALL)
     if os.path.isfile(mintar):
         if not overwrite:
             if os.path.isfile(minver):
-                with salt.utils.fopen(minver) as fh_:
+                with salt.utils.files.fopen(minver) as fh_:
                     overwrite = fh_.read() != salt.version.__version__
                 if overwrite is False and os.path.isfile(pyminver):
-                    with salt.utils.fopen(pyminver) as fh_:
+                    with salt.utils.files.fopen(pyminver) as fh_:
                         overwrite = fh_.read() != str(sys.version_info[0])
             else:
                 overwrite = True
@@ -606,9 +608,9 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
 
     os.chdir(mindir)
     tfp.add('salt-call')
-    with salt.utils.fopen(minver, 'w+') as fp_:
+    with salt.utils.files.fopen(minver, 'w+') as fp_:
         fp_.write(salt.version.__version__)
-    with salt.utils.fopen(pyminver, 'w+') as fp_:
+    with salt.utils.files.fopen(pyminver, 'w+') as fp_:
         fp_.write(str(sys.version_info[0]))
     os.chdir(os.path.dirname(minver))
     tfp.add('version')
@@ -624,4 +626,4 @@ def min_sum(cachedir, form='sha1'):
     Return the checksum of the current thin tarball
     '''
     mintar = gen_min(cachedir)
-    return salt.utils.get_hash(mintar, form)
+    return salt.utils.hashutils.get_hash(mintar, form)

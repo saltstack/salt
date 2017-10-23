@@ -18,8 +18,9 @@ import json
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.dictupdate
+import salt.utils.path
+import salt.utils.platform
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -39,10 +40,10 @@ def __virtual__():
     Figure out if we need to be loaded
     '''
     ## collect mdata grains in a SmartOS zone
-    if salt.utils.is_smartos_zone():
+    if salt.utils.platform.is_smartos_zone():
         return __virtualname__
     ## collect mdata grains in a LX zone
-    if salt.utils.is_linux() and 'BrandZ virtual linux' in os.uname():
+    if salt.utils.platform.is_linux() and 'BrandZ virtual linux' in os.uname():
         return __virtualname__
     return False
 
@@ -54,10 +55,10 @@ def _user_mdata(mdata_list=None, mdata_get=None):
     grains = {}
 
     if not mdata_list:
-        mdata_list = salt.utils.which('mdata-list')
+        mdata_list = salt.utils.path.which('mdata-list')
 
     if not mdata_get:
-        mdata_get = salt.utils.which('mdata-get')
+        mdata_get = salt.utils.path.which('mdata-get')
 
     if not mdata_list or not mdata_get:
         return grains
@@ -97,10 +98,10 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
     ]
 
     if not mdata_list:
-        mdata_list = salt.utils.which('mdata-list')
+        mdata_list = salt.utils.path.which('mdata-list')
 
     if not mdata_get:
-        mdata_get = salt.utils.which('mdata-get')
+        mdata_get = salt.utils.path.which('mdata-get')
 
     if not mdata_list or not mdata_get:
         return grains
@@ -154,8 +155,8 @@ def mdata():
     Provide grains from the SmartOS metadata
     '''
     grains = {}
-    mdata_list = salt.utils.which('mdata-list')
-    mdata_get = salt.utils.which('mdata-get')
+    mdata_list = salt.utils.path.which('mdata-list')
+    mdata_get = salt.utils.path.which('mdata-get')
 
     grains = salt.utils.dictupdate.update(grains, _user_mdata(mdata_list, mdata_get), merge_lists=True)
     grains = salt.utils.dictupdate.update(grains, _sdc_mdata(mdata_list, mdata_get), merge_lists=True)

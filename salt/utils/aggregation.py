@@ -112,7 +112,7 @@ from copy import copy
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 __all__ = ['aggregate', 'Aggregate', 'Map', 'Scalar', 'Sequence']
 

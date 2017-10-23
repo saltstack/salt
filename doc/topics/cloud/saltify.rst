@@ -16,7 +16,7 @@ The Saltify driver has no external dependencies.
 Configuration
 =============
 
-Because the Saltify driver does not use an actual cloud provider host, it has a
+Because the Saltify driver does not use an actual cloud provider host, it can have a
 simple provider configuration. The only thing that is required to be set is the
 driver name, and any other potentially useful information, like the location of
 the salt-master:
@@ -30,6 +30,12 @@ the salt-master:
       minion:
         master: 111.222.333.444
       provider: saltify
+
+However, if you wish to use the more advanced capabilities of salt-cloud, such as
+rebooting, listing, and disconnecting machines, then the salt master must fill
+the role usually performed by a vendor's cloud management system. The salt master
+must be running on the salt-cloud machine, and created nodes must be connected to the
+master.
 
 
 Profiles
@@ -71,6 +77,30 @@ to it can be verified with Salt:
 
     salt my-machine test.ping
 
+
+Destroy Options
+---------------
+
+For obvious reasons, the ``destroy`` action does not actually vaporize hardware.
+If the salt  master is connected using salt-api, it can tear down parts of
+the client machines.  It will remove the client's key from the salt master,
+and will attempt the following options:
+
+.. code-block:: yaml
+
+  - remove_config_on_destroy: true
+    # default: true
+    # Deactivate salt-minion on reboot and
+    # delete the minion config and key files from its ``/etc/salt`` directory,
+    #   NOTE: If deactivation is unsuccessful (older Ubuntu machines) then when
+    #   salt-minion restarts it will automatically create a new, unwanted, set
+    #   of key files. The ``force_minion_config`` option must be used in that case.
+
+  - shutdown_on_destroy: false
+    # default: false
+    # send a ``shutdown`` command to the client.
+
+.. versionadded:: Oxygen
 
 Using Map Files
 ---------------

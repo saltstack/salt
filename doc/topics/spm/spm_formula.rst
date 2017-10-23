@@ -11,7 +11,7 @@ describes the package. An example of this file is:
 
     name: apache
     os: RedHat, Debian, Ubuntu, SUSE, FreeBSD
-    os_family: RedHat, Debian, SUSE, FreeBSD
+    os_family: RedHat, Debian, Suse, FreeBSD
     version: 201506
     release: 2
     summary: Formula for installing Apache

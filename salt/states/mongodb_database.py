@@ -8,7 +8,7 @@ and can be done using mongodb_user.present
 
 from __future__ import absolute_import
 
-import salt.utils
+import salt.utils.versions
 
 
 def absent(name,
@@ -47,7 +47,7 @@ def absent(name,
            'result': True,
            'comment': ''}
 
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'The \'mongodb_database.absent\' function has been deprecated and will be removed in Salt '
         '{version}. Please use \'mongodb.database_absent\' instead.'

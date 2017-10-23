@@ -10,7 +10,7 @@ import logging
 import time
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 HAS_NOVA = False
 # pylint: disable=import-error
 try:
@@ -36,7 +36,8 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-import salt.utils
+import salt.utils.cloud
+import salt.utils.files
 from salt.exceptions import SaltCloudSystemExit
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -289,8 +290,9 @@ class SaltNova(object):
         self.session = keystoneauth1.session.Session(auth=options, verify=verify)
         conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
         self.kwargs['auth_token'] = conn.client.session.get_token()
-        self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': 'identity'}).json().get('catalog', [])
-        if conn.client.get_endpoint(service_type='identity').endswith('v3'):
+        identity_service_type = kwargs.get('identity_service_type', 'identity')
+        self.catalog = conn.client.session.get('/auth/catalog', endpoint_filter={'service_type': identity_service_type}).json().get('catalog', [])
+        if conn.client.get_endpoint(service_type=identity_service_type).endswith('v3'):
             self._v3_setup(region_name)
         else:
             self._v2_setup(region_name)
@@ -763,7 +765,7 @@ class SaltNova(object):
         '''
         nt_ks = self.compute_conn
         if pubfile:
-            with salt.utils.fopen(pubfile, 'r') as fp_:
+            with salt.utils.files.fopen(pubfile, 'r') as fp_:
                 pubkey = fp_.read()
         if not pubkey:
             return False

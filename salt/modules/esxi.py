@@ -30,7 +30,9 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import salt.utils
+
+# Import Salt libs
+import salt.utils.platform
 
 
 log = logging.getLogger(__name__)
@@ -43,7 +45,7 @@ def __virtual__():
     '''
     Only work on proxy
     '''
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return __virtualname__
     return (False, 'The esxi execution module failed to load: '
             'only available on proxy minions.')
@@ -54,3 +56,7 @@ def cmd(command, *args, **kwargs):
     proxy_cmd = proxy_prefix + '.ch_config'
 
     return __proxy__[proxy_cmd](command, *args, **kwargs)
+
+
+def get_details():
+    return __proxy__['esxi.get_details']()

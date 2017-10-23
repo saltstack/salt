@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for interacting with the job cache
+'''
 
 # Import Python libs
 from __future__ import absolute_import
@@ -18,7 +21,7 @@ def store_job(opts, load, event=None, mminion=None):
     Store job information using the configured master_job_cache
     '''
     # Generate EndTime
-    endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid())
+    endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid(opts))
     # If the return data is invalid, just ignore it
     if any(key not in load for key in ('return', 'jid', 'id')):
         return False
@@ -99,10 +102,10 @@ def store_job(opts, load, event=None, mminion=None):
         log.error(emsg)
         raise KeyError(emsg)
 
-    if 'jid' in load \
-            and 'get_load' in mminion.returners \
-            and not mminion.returners[getfstr](load.get('jid', '')):
+    try:
         mminion.returners[savefstr](load['jid'], load)
+    except KeyError as e:
+        log.error("Load does not contain 'jid': %s", e)
     mminion.returners[fstr](load)
 
     if (opts.get('job_cache_store_endtime')

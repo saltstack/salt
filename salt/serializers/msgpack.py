@@ -16,7 +16,7 @@ from salt.log import setup_console_logger
 from salt.serializers import DeserializationError, SerializationError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

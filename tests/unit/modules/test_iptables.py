@@ -60,6 +60,9 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(iptables.build_rule(**{'if': 'not eth0'}),
                              '! -i eth0')
 
+            self.assertEqual(iptables.build_rule(**{'proto': 'tcp', 'syn': '!'}),
+                            '-p tcp ! --syn')
+
             self.assertEqual(iptables.build_rule(dports=[80, 443], proto='tcp'),
                              '-p tcp -m multiport --dports 80,443')
 

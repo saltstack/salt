@@ -265,7 +265,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it runs a2enconf for the given conf.
         '''
-        with patch('salt.utils.which', MagicMock(return_value='a2enconf')):
+        with patch('salt.utils.path.which', MagicMock(return_value='a2enconf')):
             mock = MagicMock(return_value=1)
             with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
                 self.assertEqual(deb_apache.a2enconf('security'),
@@ -277,7 +277,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it runs a2enconf for the given conf.
         '''
-        with patch('salt.utils.which', MagicMock(return_value='a2enconf')):
+        with patch('salt.utils.path.which', MagicMock(return_value='a2enconf')):
             mock = MagicMock(return_value=0)
             with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
                 self.assertEqual(deb_apache.a2enconf('security'),
@@ -289,7 +289,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it runs a2enconf for the given conf.
         '''
-        with patch('salt.utils.which', MagicMock(return_value='a2enconf')):
+        with patch('salt.utils.path.which', MagicMock(return_value='a2enconf')):
             mock = MagicMock(return_value=2)
             with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
                 self.assertEqual(deb_apache.a2enconf('security'),
@@ -301,7 +301,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it runs a2enconf for the given conf.
         '''
-        with patch('salt.utils.which', MagicMock(return_value='a2enconf')):
+        with patch('salt.utils.path.which', MagicMock(return_value='a2enconf')):
             mock = MagicMock(side_effect=Exception('error'))
             with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
                 self.assertEqual(str(deb_apache.a2enconf('security')),
@@ -313,7 +313,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it runs a2disconf for the given conf.
         '''
-        with patch('salt.utils.which', MagicMock(return_value='a2disconf')):
+        with patch('salt.utils.path.which', MagicMock(return_value='a2disconf')):
             mock = MagicMock(return_value=256)
             with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
                 self.assertEqual(deb_apache.a2disconf('security'),
@@ -325,7 +325,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it runs a2disconf for the given conf.
         '''
-        with patch('salt.utils.which', MagicMock(return_value='a2disconf')):
+        with patch('salt.utils.path.which', MagicMock(return_value='a2disconf')):
             mock = MagicMock(return_value=0)
             with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
                 self.assertEqual(deb_apache.a2disconf('security'),
@@ -337,7 +337,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it runs a2disconf for the given conf.
         '''
-        with patch('salt.utils.which', MagicMock(return_value='a2disconf')):
+        with patch('salt.utils.path.which', MagicMock(return_value='a2disconf')):
             mock = MagicMock(return_value=2)
             with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
                 self.assertEqual(deb_apache.a2disconf('security'),
@@ -349,7 +349,7 @@ class DebApacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it runs a2disconf for the given conf.
         '''
-        with patch('salt.utils.which', MagicMock(return_value='a2disconf')):
+        with patch('salt.utils.path.which', MagicMock(return_value='a2disconf')):
             mock = MagicMock(side_effect=Exception('error'))
             with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
                 self.assertEqual(str(deb_apache.a2disconf('security')),
