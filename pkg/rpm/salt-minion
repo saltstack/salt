@@ -67,9 +67,7 @@ _su_cmd() {
 
 
 _get_pid() {
-    netstat -n $NS_NOTRIM -ap --protocol=unix 2>$ERROR_TO_DEVNULL \
-        | sed -r -e "\|\s${SOCK_DIR}/minion_event_${MINION_ID_HASH}_pub\.ipc$|"'!d; s|/.*||; s/.*\s//;' \
-        | uniq
+    cat $PID_FILE 2>/dev/null
 }
 
 
