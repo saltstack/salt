@@ -5339,7 +5339,7 @@ def set_(computer_policy=None, user_policy=None,
                                     _regedits[regedit]['policy']['Registry']['Type'])
                         else:
                             _ret = __salt__['reg.delete_value'](
-                                    _regedits[regedit]['polic']['Registry']['Hive'],
+                                    _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'])
                         if not _ret:
