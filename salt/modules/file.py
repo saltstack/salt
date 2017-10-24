@@ -3183,8 +3183,9 @@ def link(src, path):
     try:
         os.link(src, path)
         return True
-    except (OSError, IOError):
-        raise CommandExecutionError('Could not create \'{0}\''.format(path))
+    except (OSError, IOError) as e:
+        msg = 'Could not create hard link \'{0}\' -> {1}: {2}'
+        raise CommandExecutionError(msg.format(path, src, e))
     return False
 
 
@@ -3231,8 +3232,9 @@ def symlink(src, path):
     try:
         os.symlink(src, path)
         return True
-    except (OSError, IOError):
-        raise CommandExecutionError('Could not create \'{0}\''.format(path))
+    except (OSError, IOError) as e:
+        msg = 'Could not create symlink \'{0}\' -> {1}: {2}'
+        raise CommandExecutionError(msg.format(path, src, e))
     return False
 
 
