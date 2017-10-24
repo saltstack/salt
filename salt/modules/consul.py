@@ -1953,7 +1953,7 @@ def status_peers(consul_url):
 
     :param consul_url: The Consul server URL.
     :return: Retrieves the Raft peers for the
-             datacenter in which the the agent is running.
+             datacenter in which the agent is running.
 
     CLI Example:
 
