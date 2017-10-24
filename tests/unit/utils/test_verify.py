@@ -63,6 +63,16 @@ class TestVerify(TestCase):
         opts = {'pki_dir': '/tmp/whatever'}
         self.assertFalse(valid_id(opts, None))
 
+    def test_valid_id_pathsep(self):
+        '''
+        Path separators in id should make it invalid
+        '''
+        opts = {'pki_dir': '/tmp/whatever'}
+        # We have to test both path separators because os.path.normpath will
+        # convert forward slashes to backslashes on Windows.
+        for pathsep in ('/', '\\'):
+            self.assertFalse(valid_id(opts, pathsep.join(('..', 'foobar'))))
+
     def test_zmq_verify(self):
         self.assertTrue(zmq_version())
 

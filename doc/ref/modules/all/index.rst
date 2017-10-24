@@ -299,6 +299,7 @@ execution modules
     openstack_mng
     openvswitch
     opkg
+    opsgenie
     oracle
     osquery
     out
@@ -432,6 +433,7 @@ execution modules
     uptime
     useradd
     uwsgi
+    vagrant
     varnish
     vault
     vbox_guest

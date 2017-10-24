@@ -16,7 +16,7 @@ import yaml
 from salt.ext import six
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
@@ -36,7 +36,7 @@ def _repack_pkgs(pkgs, normalize=True):
     return dict(
         [
             (_normalize_name(str(x)), str(y) if y is not None else y)
-            for x, y in six.iteritems(salt.utils.repack_dictlist(pkgs))
+            for x, y in six.iteritems(salt.utils.data.repack_dictlist(pkgs))
         ]
     )
 
@@ -191,7 +191,7 @@ def version(*names, **kwargs):
     '''
     ret = {}
     versions_as_list = \
-        salt.utils.is_true(kwargs.pop('versions_as_list', False))
+        salt.utils.data.is_true(kwargs.pop('versions_as_list', False))
     pkg_glob = False
     if len(names) != 0:
         pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)

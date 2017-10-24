@@ -11,7 +11,7 @@ remove roles/features.
 from __future__ import absolute_import
 
 # Import salt modules
-import salt.utils
+import salt.utils.data
 import salt.utils.versions
 
 
@@ -194,7 +194,7 @@ def installed(name,
 
     # Get the changes
     new = __salt__['win_servermanager.list_installed']()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret['changes'] = salt.utils.data.compare_dicts(old, new)
 
     return ret
 
@@ -325,6 +325,6 @@ def removed(name, features=None, remove_payload=False, restart=False):
 
     # Get the changes
     new = __salt__['win_servermanager.list_installed']()
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret['changes'] = salt.utils.data.compare_dicts(old, new)
 
     return ret

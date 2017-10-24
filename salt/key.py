@@ -22,12 +22,15 @@ import salt.crypt
 import salt.daemons.masterapi
 import salt.exceptions
 import salt.minion
-import salt.utils
 import salt.utils.args
+import salt.utils.crypt
+import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.kinds
+import salt.utils.master
 import salt.utils.sdb
-import salt.utils.kinds as kinds
+import salt.utils.user
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
@@ -145,8 +148,8 @@ class KeyCLI(object):
                 low.update(res)
                 low[u'eauth'] = self.opts[u'eauth']
         else:
-            low[u'user'] = salt.utils.get_specific_user()
-            low[u'key'] = salt.utils.get_master_key(low[u'user'], self.opts, skip_perm_errors)
+            low[u'user'] = salt.utils.user.get_specific_user()
+            low[u'key'] = salt.utils.master.get_master_key(low[u'user'], self.opts, skip_perm_errors)
 
         self.auth = low
 
@@ -364,7 +367,7 @@ class Key(object):
     def __init__(self, opts, io_loop=None):
         self.opts = opts
         kind = self.opts.get(u'__role', u'')  # application kind
-        if kind not in kinds.APPL_KINDS:
+        if kind not in salt.utils.kinds.APPL_KINDS:
             emsg = (u"Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + u'\n')
             raise ValueError(emsg)
@@ -415,7 +418,7 @@ class Key(object):
         keydir, keyname, keysize, user = self._get_key_attrs(keydir, keyname,
                                                              keysize, user)
         salt.crypt.gen_keys(keydir, keyname, keysize, user, self.passphrase)
-        return salt.utils.pem_finger(os.path.join(keydir, keyname + u'.pub'))
+        return salt.utils.crypt.pem_finger(os.path.join(keydir, keyname + u'.pub'))
 
     def gen_signature(self, privkey, pubkey, sig_path):
         '''
@@ -543,7 +546,7 @@ class Key(object):
         if u',' in match and isinstance(match, six.string_types):
             match = match.split(u',')
         for status, keys in six.iteritems(matches):
-            for key in salt.utils.isorted(keys):
+            for key in salt.utils.data.sorted_ignorecase(keys):
                 if isinstance(match, list):
                     for match_item in match:
                         if fnmatch.fnmatch(key, match_item):
@@ -565,7 +568,7 @@ class Key(object):
         ret = {}
         cur_keys = self.list_keys()
         for status, keys in six.iteritems(match_dict):
-            for key in salt.utils.isorted(keys):
+            for key in salt.utils.data.sorted_ignorecase(keys):
                 for keydir in (self.ACC, self.PEND, self.REJ, self.DEN):
                     if keydir and fnmatch.filter(cur_keys.get(keydir, []), key):
                         ret.setdefault(keydir, []).append(key)
@@ -576,7 +579,7 @@ class Key(object):
         Return a dict of local keys
         '''
         ret = {u'local': []}
-        for fn_ in salt.utils.isorted(os.listdir(self.opts[u'pki_dir'])):
+        for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(self.opts[u'pki_dir'])):
             if fn_.endswith(u'.pub') or fn_.endswith(u'.pem'):
                 path = os.path.join(self.opts[u'pki_dir'], fn_)
                 if os.path.isfile(path):
@@ -602,7 +605,7 @@ class Key(object):
                 continue
             ret[os.path.basename(dir_)] = []
             try:
-                for fn_ in salt.utils.isorted(os.listdir(dir_)):
+                for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(dir_)):
                     if not fn_.startswith(u'.'):
                         if os.path.isfile(os.path.join(dir_, fn_)):
                             ret[os.path.basename(dir_)].append(fn_)
@@ -627,25 +630,25 @@ class Key(object):
         ret = {}
         if match.startswith(u'acc'):
             ret[os.path.basename(acc)] = []
-            for fn_ in salt.utils.isorted(os.listdir(acc)):
+            for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(acc)):
                 if not fn_.startswith(u'.'):
                     if os.path.isfile(os.path.join(acc, fn_)):
                         ret[os.path.basename(acc)].append(fn_)
         elif match.startswith(u'pre') or match.startswith(u'un'):
             ret[os.path.basename(pre)] = []
-            for fn_ in salt.utils.isorted(os.listdir(pre)):
+            for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(pre)):
                 if not fn_.startswith(u'.'):
                     if os.path.isfile(os.path.join(pre, fn_)):
                         ret[os.path.basename(pre)].append(fn_)
         elif match.startswith(u'rej'):
             ret[os.path.basename(rej)] = []
-            for fn_ in salt.utils.isorted(os.listdir(rej)):
+            for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(rej)):
                 if not fn_.startswith(u'.'):
                     if os.path.isfile(os.path.join(rej, fn_)):
                         ret[os.path.basename(rej)].append(fn_)
         elif match.startswith(u'den') and den is not None:
             ret[os.path.basename(den)] = []
-            for fn_ in salt.utils.isorted(os.listdir(den)):
+            for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(den)):
                 if not fn_.startswith(u'.'):
                     if os.path.isfile(os.path.join(den, fn_)):
                         ret[os.path.basename(den)].append(fn_)
@@ -660,7 +663,7 @@ class Key(object):
         ret = {}
         for status, keys in six.iteritems(self.name_match(match)):
             ret[status] = {}
-            for key in salt.utils.isorted(keys):
+            for key in salt.utils.data.sorted_ignorecase(keys):
                 path = os.path.join(self.opts[u'pki_dir'], status, key)
                 with salt.utils.files.fopen(path, u'r') as fp_:
                     ret[status][key] = fp_.read()
@@ -673,7 +676,7 @@ class Key(object):
         ret = {}
         for status, keys in six.iteritems(self.list_keys()):
             ret[status] = {}
-            for key in salt.utils.isorted(keys):
+            for key in salt.utils.data.sorted_ignorecase(keys):
                 path = os.path.join(self.opts[u'pki_dir'], status, key)
                 with salt.utils.files.fopen(path, u'r') as fp_:
                     ret[status][key] = fp_.read()
@@ -926,7 +929,7 @@ class Key(object):
                     path = os.path.join(self.opts[u'pki_dir'], key)
                 else:
                     path = os.path.join(self.opts[u'pki_dir'], status, key)
-                ret[status][key] = salt.utils.pem_finger(path, sum_type=hash_type)
+                ret[status][key] = salt.utils.crypt.pem_finger(path, sum_type=hash_type)
         return ret
 
     def finger_all(self, hash_type=None):
@@ -944,7 +947,7 @@ class Key(object):
                     path = os.path.join(self.opts[u'pki_dir'], key)
                 else:
                     path = os.path.join(self.opts[u'pki_dir'], status, key)
-                ret[status][key] = salt.utils.pem_finger(path, sum_type=hash_type)
+                ret[status][key] = salt.utils.crypt.pem_finger(path, sum_type=hash_type)
         return ret
 
 
@@ -1000,7 +1003,7 @@ class RaetKey(Key):
                             cache.flush(u'{0}/{1}'.format(self.ACC, minion))
 
         kind = self.opts.get(u'__role', u'')  # application kind
-        if kind not in kinds.APPL_KINDS:
+        if kind not in salt.utils.kinds.APPL_KINDS:
             emsg = (u"Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + u'\n')
             raise ValueError(emsg)
@@ -1164,7 +1167,7 @@ class RaetKey(Key):
         ret = {}
         for status, keys in six.iteritems(self.name_match(match)):
             ret[status] = {}
-            for key in salt.utils.isorted(keys):
+            for key in salt.utils.data.sorted_ignorecase(keys):
                 ret[status][key] = self._get_key_str(key, status)
         return ret
 
@@ -1175,7 +1178,7 @@ class RaetKey(Key):
         ret = {}
         for status, keys in six.iteritems(self.list_keys()):
             ret[status] = {}
-            for key in salt.utils.isorted(keys):
+            for key in salt.utils.data.sorted_ignorecase(keys):
                 ret[status][key] = self._get_key_str(key, status)
         return ret
 

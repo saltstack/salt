@@ -115,7 +115,6 @@ import re
 import sys
 
 # Import salt libs
-import salt.utils
 import salt.utils.jid
 from salt.ext import six
 
@@ -170,7 +169,7 @@ def _format_job_instance(job):
            'Arguments': json.loads(job.get('arg', '[]')),
            # unlikely but safeguard from invalid returns
            'Target': job.get('tgt', 'unknown-target'),
-           'Target-type': job.get('tgt_type', []),
+           'Target-type': job.get('tgt_type', 'list'),
            'User': job.get('user', 'root')}
     # TODO: Add Metadata support when it is merged from develop
     return ret

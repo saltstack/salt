@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+Custom YAML loading in Salt
+'''
+
 # Import python libs
 from __future__ import absolute_import
 import warnings

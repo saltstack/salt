@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-The networking module for Debian based distros
+The networking module for Debian-based distros
 
 References:
 
@@ -46,7 +46,7 @@ __virtualname__ = 'ip'
 
 def __virtual__():
     '''
-    Confine this module to Debian based distros
+    Confine this module to Debian-based distros
     '''
     if __grains__['os_family'] == 'Debian':
         return __virtualname__
@@ -1562,7 +1562,7 @@ def _read_temp_ifaces(iface, data):
         return ''
 
     ifcfg = template.render({'name': iface, 'data': data})
-    # Return as a array so the difflib works
+    # Return as an array so the difflib works
     return [item + '\n' for item in ifcfg.split('\n')]
 
 
@@ -1616,7 +1616,7 @@ def _write_file_ifaces(iface, data, **settings):
         else:
             fout.write(ifcfg)
 
-    # Return as a array so the difflib works
+    # Return as an array so the difflib works
     return saved_ifcfg.split('\n')
 
 
@@ -1646,7 +1646,7 @@ def _write_file_ppp_ifaces(iface, data):
     with salt.utils.files.fopen(filename, 'w') as fout:
         fout.write(ifcfg)
 
-    # Return as a array so the difflib works
+    # Return as an array so the difflib works
     return filename
 
 

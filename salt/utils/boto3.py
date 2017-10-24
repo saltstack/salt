@@ -46,7 +46,6 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
-import salt.utils
 import salt.utils.stringutils
 
 # Import third party libs
@@ -308,7 +307,7 @@ def assign_funcs(modname, service, module=None,
     setattr(mod, get_conn_funcname, get_connection_func(service, module=module))
     setattr(mod, cache_id_funcname, cache_id_func(service))
 
-    # TODO: Remove this and import salt.utils.exactly_one into boto_* modules instead
+    # TODO: Remove this and import salt.utils.data.exactly_one into boto_* modules instead
     # Leaving this way for now so boto modules can be back ported
     if exactly_one_funcname is not None:
         setattr(mod, exactly_one_funcname, exactly_one)

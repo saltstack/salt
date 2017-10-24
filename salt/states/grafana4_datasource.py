@@ -151,6 +151,12 @@ def present(name,
         ret['changes'] = data
         return ret
 
+    # At this stage, the datasource exists; however, the object provided by
+    # Grafana may lack some null keys compared to our "data" dict:
+    for key in data:
+        if key not in datasource:
+            datasource[key] = None
+
     if data == datasource:
         ret['changes'] = None
         ret['comment'] = 'Data source {0} already up-to-date'.format(name)

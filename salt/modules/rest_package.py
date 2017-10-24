@@ -4,9 +4,11 @@ Package support for the REST example
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
-import salt.utils
+
+# Import Salt libs
+import salt.utils.data
 import salt.utils.platform
 
 
@@ -72,8 +74,7 @@ def upgrade(refresh=True, skip_verify=True, **kwargs):
     old = __proxy__['rest_sample.package_list']()
     new = __proxy__['rest_sample.uptodate']()
     pkg_installed = __proxy__['rest_sample.upgrade']()
-    ret = salt.utils.compare_dicts(old, pkg_installed)
-    return ret
+    return salt.utils.data.compare_dicts(old, pkg_installed)
 
 
 def installed(

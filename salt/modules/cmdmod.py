@@ -24,8 +24,8 @@ import re
 import tempfile
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -33,6 +33,7 @@ import salt.utils.powershell
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.timed_subprocess
+import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
 import salt.grains.extra
@@ -187,7 +188,7 @@ def _check_loglevel(level='info', quiet=False):
         )
         return LOG_LEVELS['info']
 
-    if salt.utils.is_true(quiet) or str(level).lower() == 'quiet':
+    if salt.utils.data.is_true(quiet) or str(level).lower() == 'quiet':
         return None
 
     try:
@@ -204,7 +205,7 @@ def _parse_env(env):
     if not env:
         env = {}
     if isinstance(env, list):
-        env = salt.utils.repack_dictlist(env)
+        env = salt.utils.data.repack_dictlist(env)
     if not isinstance(env, dict):
         env = {}
     return env
@@ -401,10 +402,8 @@ def _run(cmd,
             msg = 'missing salt/utils/win_runas.py'
             raise CommandExecutionError(msg)
 
-        if not isinstance(cmd, list):
-            cmd = salt.utils.args.shlex_split(cmd, posix=False)
-
-        cmd = ' '.join(cmd)
+        if isinstance(cmd, (list, tuple)):
+            cmd = ' '.join(cmd)
 
         return win_runas(cmd, runas, password, cwd)
 
@@ -524,7 +523,7 @@ def _run(cmd,
 
     if runas or umask:
         kwargs['preexec_fn'] = functools.partial(
-            salt.utils.chugid_and_umask,
+            salt.utils.user.chugid_and_umask,
             runas,
             _umask)
 
@@ -541,11 +540,11 @@ def _run(cmd,
             .format(cwd)
         )
 
-    if python_shell is not True and not isinstance(cmd, list):
-        posix = True
-        if salt.utils.platform.is_windows():
-            posix = False
-        cmd = salt.utils.args.shlex_split(cmd, posix=posix)
+    if python_shell is not True \
+            and not salt.utils.platform.is_windows() \
+            and not isinstance(cmd, list):
+        cmd = salt.utils.args.shlex_split(cmd)
+
     if not use_vt:
         # This is where the magic happens
         try:
@@ -2774,8 +2773,8 @@ def shell_info(shell, list_modules=False):
     '''
     regex_shells = {
         'bash': [r'version (\d\S*)', 'bash', '--version'],
-        'bash-test-error': [r'versioZ ([-\w.]+)', 'bash', '--version'],  # used to test a error result
-        'bash-test-env': [r'(HOME=.*)', 'bash', '-c', 'declare'],  # used to test a error result
+        'bash-test-error': [r'versioZ ([-\w.]+)', 'bash', '--version'],  # used to test an error result
+        'bash-test-env': [r'(HOME=.*)', 'bash', '-c', 'declare'],  # used to test an error result
         'zsh': [r'^zsh (\d\S*)', 'zsh', '--version'],
         'tcsh': [r'^tcsh (\d\S*)', 'tcsh', '--version'],
         'cmd': [r'Version ([\d.]+)', 'cmd.exe', '/C', 'ver'],
