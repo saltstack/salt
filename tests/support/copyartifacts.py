@@ -3,7 +3,7 @@
 Script for copying back xml junit files from tests
 '''
 from __future__ import absolute_import
-import argparse # pylint disable=minimum-python-version
+import argparse  # pylint: disable=minimum-python-version
 import os
 import paramiko
 import subprocess
@@ -17,9 +17,9 @@ class DownloadArtifacts(object):
         self.client = self.setup_transport()
 
     def setup_transport(self):
-        # pylint disable=minimum-python-version
+        # pylint: disable=minimum-python-version
         config = yaml.load(subprocess.check_output(['bundle', 'exec', 'kitchen', 'diagnose', self.instance]))
-        # pylint enable=minimum-python-version
+        # pylint: enable=minimum-python-version
         state = config['instances'][self.instance]['state_file']
         tport = config['instances'][self.instance]['transport']
         transport = paramiko.Transport((
