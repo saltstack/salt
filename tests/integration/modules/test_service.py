@@ -11,7 +11,7 @@ from tests.support.helpers import destructiveTest
 # Import Salt libs
 import salt.utils
 
-SERVICE_NAME = 'cronie'
+SERVICE_NAME = 'crond'
 
 
 @destructiveTest
