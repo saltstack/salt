@@ -689,9 +689,14 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if opt in opts:
             result[opt] = opts[opt]
 
-    for opt in ['ipaddrs', 'ipv6addrs']:
-        if opt in opts:
-            result[opt] = opts[opt]
+    if 'ipaddrs' in opts:
+        result['ipaddrs'] = []
+        for opt in opts['ipaddrs']:
+            ip, prefix = [i.strip() for i in opt.split('/')]
+            result['ipaddrs'].append({'ipaddr': ip, 'prefix': prefix})
+
+    if 'ipv6addrs' in opts:
+        result['ipv6addrs'] = opts['ipv6addrs']
 
     if 'enable_ipv6' in opts:
         result['enable_ipv6'] = opts['enable_ipv6']
