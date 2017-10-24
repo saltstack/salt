@@ -1,3 +1,5 @@
+# This file is only used for running the test suite with kitchen-salt.
+
 source "https://rubygems.org"
 
 gem "test-kitchen"
