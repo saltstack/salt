@@ -44,7 +44,7 @@ from salt.utils import migrations
 import salt.utils.kinds as kinds
 
 try:
-    from salt.utils import ip_bracket
+    from salt.utils.zeromq import ip_bracket
     import salt.utils.parsers
     from salt.utils.verify import check_user, verify_env, verify_socket
 except ImportError as exc:

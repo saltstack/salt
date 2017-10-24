@@ -16,6 +16,7 @@ import os
 import json
 import socket
 import sys
+import glob
 import re
 import platform
 import logging
@@ -42,7 +43,6 @@ except ImportError:
 # Import salt libs
 import salt.exceptions
 import salt.log
-import salt.utils
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
@@ -65,6 +65,7 @@ __salt__ = {
     'cmd.run_all': salt.modules.cmdmod._run_all_quiet,
     'smbios.records': salt.modules.smbios.records,
     'smbios.get': salt.modules.smbios.get,
+    'cmd.run_ps': salt.modules.cmdmod.powershell,
 }
 log = logging.getLogger(__name__)
 
@@ -846,6 +847,8 @@ def _virtual(osdata):
     elif osdata['kernel'] == 'OpenBSD':
         if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
             grains['virtual'] = 'kvm'
+        if osdata['manufacturer'] == 'OpenBSD':
+            grains['virtual'] = 'vmm'
     elif osdata['kernel'] == 'SunOS':
         if grains['virtual'] == 'LDOM':
             roles = []
@@ -1205,6 +1208,10 @@ _OS_FAMILY_MAP = {
     'Raspbian': 'Debian',
     'Devuan': 'Debian',
     'antiX': 'Debian',
+    'Kali': 'Debian',
+    'neon': 'Debian',
+    'Cumulus': 'Debian',
+    'Deepin': 'Debian',
     'NILinuxRT': 'NILinuxRT',
     'NILinuxRT-XFCE': 'NILinuxRT',
     'KDE neon': 'Debian',
@@ -1403,7 +1410,10 @@ def os_data():
                             .format(' '.join(init_cmdline))
                         )
 
-        # Add lsb grains on any distro with lsb-release
+        # Add lsb grains on any distro with lsb-release. Note that this import
+        # can fail on systems with lsb-release installed if the system package
+        # does not install the python package for the python interpreter used by
+        # Salt (i.e. python2 or python3)
         try:
             import lsb_release  # pylint: disable=import-error
             release = lsb_release.get_distro_information()
@@ -1452,7 +1462,13 @@ def os_data():
                     if 'VERSION_ID' in os_release:
                         grains['lsb_distrib_release'] = os_release['VERSION_ID']
                     if 'PRETTY_NAME' in os_release:
-                        grains['lsb_distrib_codename'] = os_release['PRETTY_NAME']
+                        codename = os_release['PRETTY_NAME']
+                        # https://github.com/saltstack/salt/issues/44108
+                        if os_release['ID'] == 'debian':
+                            codename_match = re.search(r'\((\w+)\)$', codename)
+                            if codename_match:
+                                codename = codename_match.group(1)
+                        grains['lsb_distrib_codename'] = codename
                     if 'CPE_NAME' in os_release:
                         if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
                             grains['os'] = "SUSE"
@@ -2446,7 +2462,7 @@ def default_gateway():
         ip_gw: True   # True if either of the above is True, False otherwise
     '''
     grains = {}
-    if not salt.utils.which('ip'):
+    if not salt.utils.path.which('ip'):
         return {}
     grains['ip_gw'] = False
     grains['ip4_gw'] = False
@@ -2468,3 +2484,124 @@ def default_gateway():
         except Exception as exc:
             pass
     return grains
+
+
+def fc_wwn():
+    '''
+    Return list of fiber channel HBA WWNs
+    '''
+    grains = {}
+    grains['fc_wwn'] = False
+    if salt.utils.platform.is_linux():
+        grains['fc_wwn'] = _linux_wwns()
+    elif salt.utils.platform.is_windows():
+        grains['fc_wwn'] = _windows_wwns()
+    return grains
+
+
+def iscsi_iqn():
+    '''
+    Return iSCSI IQN
+    '''
+    grains = {}
+    grains['iscsi_iqn'] = False
+    if salt.utils.platform.is_linux():
+        grains['iscsi_iqn'] = _linux_iqn()
+    elif salt.utils.platform.is_windows():
+        grains['iscsi_iqn'] = _windows_iqn()
+    elif salt.utils.platform.is_aix():
+        grains['iscsi_iqn'] = _aix_iqn()
+    return grains
+
+
+def _linux_iqn():
+    '''
+    Return iSCSI IQN from a Linux host.
+    '''
+    ret = []
+
+    initiator = '/etc/iscsi/initiatorname.iscsi'
+
+    if os.path.isfile(initiator):
+        with salt.utils.files.fopen(initiator, 'r') as _iscsi:
+            for line in _iscsi:
+                if line.find('InitiatorName') != -1:
+                    iqn = line.split('=')
+                    final_iqn = iqn[1].rstrip()
+                    ret.extend([final_iqn])
+    return ret
+
+
+def _aix_iqn():
+    '''
+    Return iSCSI IQN from an AIX host.
+    '''
+    ret = []
+
+    aixcmd = 'lsattr -E -l iscsi0 | grep initiator_name'
+
+    aixret = __salt__['cmd.run'](aixcmd)
+    if aixret[0].isalpha():
+        iqn = aixret.split()
+        final_iqn = iqn[1].rstrip()
+        ret.extend([final_iqn])
+    return ret
+
+
+def _linux_wwns():
+    '''
+    Return Fibre Channel port WWNs from a Linux host.
+    '''
+    ret = []
+
+    for fcfile in glob.glob('/sys/class/fc_host/*/port_name'):
+        with salt.utils.files.fopen(fcfile, 'r') as _wwn:
+            for line in _wwn:
+                line = line.rstrip()
+                ret.extend([line[2:]])
+    return ret
+
+
+def _windows_iqn():
+    '''
+    Return iSCSI IQN from a Windows host.
+    '''
+    ret = []
+
+    wmic = salt.utils.path.which('wmic')
+
+    if not wmic:
+        return ret
+
+    namespace = r'\\root\WMI'
+    mspath = 'MSiSCSIInitiator_MethodClass'
+    get = 'iSCSINodeName'
+
+    cmdret = __salt__['cmd.run_all'](
+        '{0} /namespace:{1} path {2} get {3} /format:table'.format(
+            wmic, namespace, mspath, get))
+
+    for line in cmdret['stdout'].splitlines():
+        if line[0].isalpha():
+            continue
+        line = line.rstrip()
+        ret.extend([line])
+
+    return ret
+
+
+def _windows_wwns():
+    '''
+    Return Fibre Channel port WWNs from a Windows host.
+    '''
+    ps_cmd = r'Get-WmiObject -class MSFC_FibrePortHBAAttributes -namespace "root\WMI" | Select -Expandproperty Attributes | %{($_.PortWWN | % {"{0:x2}" -f $_}) -join ""}'
+
+    ret = []
+
+    cmdret = __salt__['cmd.run_ps'](ps_cmd)
+
+    for line in cmdret:
+        line = line.rstrip()
+        ret.append(line)
+
+    return ret

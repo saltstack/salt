@@ -132,7 +132,7 @@ def procs():
     uind = 0
     pind = 0
     cind = 0
-    plines = __salt__['cmd.run'](__grains__['ps']).splitlines()
+    plines = __salt__['cmd.run'](__grains__['ps'], python_shell=True).splitlines()
     guide = plines.pop(0).split()
     if 'USER' in guide:
         uind = guide.index('USER')
@@ -1417,7 +1417,7 @@ def pid(sig):
     '''
 
     cmd = __grains__['ps']
-    output = __salt__['cmd.run_stdout'](cmd)
+    output = __salt__['cmd.run_stdout'](cmd, python_shell=True)
 
     pids = ''
     for line in output.splitlines():

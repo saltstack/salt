@@ -299,6 +299,7 @@ execution modules
     openstack_mng
     openvswitch
     opkg
+    opsgenie
     oracle
     osquery
     out
@@ -327,6 +328,7 @@ execution modules
     ps
     publish
     puppet
+    purefa
     pushbullet
     pushover_notify
     pw_group
@@ -431,6 +433,7 @@ execution modules
     uptime
     useradd
     uwsgi
+    vagrant
     varnish
     vault
     vbox_guest

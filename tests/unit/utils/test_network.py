@@ -445,3 +445,18 @@ class NetworkTestCase(TestCase):
                 patch('os.path.exists', MagicMock(return_value=False)), \
                 patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1', '1.2.3.4'])):
             self.assertEqual(network.generate_minion_id(), '1.2.3.4')
+
+    def test_gen_mac(self):
+        with patch('random.randint', return_value=1) as random_mock:
+            self.assertEqual(random_mock.return_value, 1)
+            ret = network.gen_mac('00:16:3E')
+            expected_mac = '00:16:3E:01:01:01'
+            self.assertEqual(ret, expected_mac)
+
+    def test_mac_str_to_bytes(self):
+        self.assertRaises(ValueError, network.mac_str_to_bytes, '31337')
+        self.assertRaises(ValueError, network.mac_str_to_bytes, '0001020304056')
+        self.assertRaises(ValueError, network.mac_str_to_bytes, '00:01:02:03:04:056')
+        self.assertRaises(ValueError, network.mac_str_to_bytes, 'a0:b0:c0:d0:e0:fg')
+        self.assertEqual(b'\x10\x08\x06\x04\x02\x00', network.mac_str_to_bytes('100806040200'))
+        self.assertEqual(b'\xf8\xe7\xd6\xc5\xb4\xa3', network.mac_str_to_bytes('f8e7d6c5b4a3'))

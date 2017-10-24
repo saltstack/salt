@@ -16,7 +16,7 @@ from tests.support.mock import (
 )
 # Import Salt Libs
 import salt.modules.hosts as hosts
-import salt.utils
+import salt.utils.platform
 from salt.ext.six.moves import StringIO
 
 
@@ -94,7 +94,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         Tests true if the alias is set
         '''
         hosts_file = '/etc/hosts'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             hosts_file = r'C:\Windows\System32\Drivers\etc\hosts'
 
         with patch('salt.modules.hosts.__get_hosts_filename',
@@ -198,7 +198,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         Tests if specified host entry gets added from the hosts file
         '''
         hosts_file = '/etc/hosts'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             hosts_file = r'C:\Windows\System32\Drivers\etc\hosts'
 
         with patch('salt.utils.files.fopen', mock_open()), \

@@ -41,6 +41,7 @@ Example profile:
         master_port: 5506
 
 Tested on:
+- Fedora 26 (libvirt 3.2.1, qemu 2.9.1)
 - Fedora 25 (libvirt 1.3.3.2, qemu 2.6.1)
 - Fedora 23 (libvirt 1.2.18, qemu 2.4.1)
 - Centos 7 (libvirt 1.2.17, qemu 1.5.3)
@@ -73,7 +74,6 @@ except ImportError:
 
 # Import salt libs
 import salt.config as config
-import salt.utils
 import salt.utils.cloud
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -81,9 +81,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit
 )
-
-# Get logging started
-log = logging.getLogger(__name__)
 
 VIRT_STATE_NAME_MAP = {0: 'running',
                        1: 'running',
@@ -98,6 +95,20 @@ IP_LEARNING_XML = """<filterref filter='clean-traffic'>
       </filterref>"""
 
 __virtualname__ = 'libvirt'
+
+# Set up logging
+log = logging.getLogger(__name__)
+
+
+def libvirt_error_handler(ctx, error):  # pylint: disable=unused-argument
+    '''
+    Redirect stderr prints from libvirt to salt logging.
+    '''
+    log.debug("libvirt error {0}".format(error))
+
+
+if HAS_LIBVIRT:
+    libvirt.registerErrorHandler(f=libvirt_error_handler, ctx=None)
 
 
 def __virtual__():
@@ -280,7 +291,7 @@ def create(vm_):
 
     validate_xml = vm_.get('validate_xml') if vm_.get('validate_xml') is not None else True
 
-    log.info("Cloning machine '{0}' with strategy '{1}' validate_xml='{2}'".format(vm_['name'], clone_strategy, validate_xml))
+    log.info("Cloning '{0}' with strategy '{1}' validate_xml='{2}'".format(vm_['name'], clone_strategy, validate_xml))
 
     try:
         # Check for required profile parameters before sending any API calls.
@@ -516,7 +527,7 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -527,7 +538,7 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )

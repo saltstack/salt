@@ -46,7 +46,6 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
-import salt.utils
 import salt.utils.stringutils
 
 # Import third party libs
@@ -182,7 +181,7 @@ def cache_id_func(service):
     '''
     Returns a partial `cache_id` function for the provided service.
 
-    ... code-block:: python
+    .. code-block:: python
 
         cache_id = __utils__['boto.cache_id_func']('ec2')
         cache_id('myinstance', 'i-a1b2c3')
@@ -233,7 +232,7 @@ def get_connection_func(service, module=None):
     '''
     Returns a partial `get_connection` function for the provided service.
 
-    ... code-block:: python
+    .. code-block:: python
 
         get_conn = __utils__['boto.get_connection_func']('ec2')
         conn = get_conn()
@@ -308,7 +307,7 @@ def assign_funcs(modname, service, module=None,
     setattr(mod, get_conn_funcname, get_connection_func(service, module=module))
     setattr(mod, cache_id_funcname, cache_id_func(service))
 
-    # TODO: Remove this and import salt.utils.exactly_one into boto_* modules instead
+    # TODO: Remove this and import salt.utils.data.exactly_one into boto_* modules instead
     # Leaving this way for now so boto modules can be back ported
     if exactly_one_funcname is not None:
         setattr(mod, exactly_one_funcname, exactly_one)
@@ -327,16 +326,6 @@ def paged_call(function, *args, **kwargs):
         if not marker:
             break
         kwargs[marker_arg] = marker
-
-
-def get_role_arn(name, region=None, key=None, keyid=None, profile=None):
-    if name.startswith('arn:aws:iam:'):
-        return name
-
-    account_id = __salt__['boto_iam.get_account_id'](
-        region=region, key=key, keyid=keyid, profile=profile
-    )
-    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
 
 
 def ordered(obj):

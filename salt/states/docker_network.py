@@ -35,7 +35,7 @@ import logging
 
 # Import salt libs
 from salt.ext import six
-import salt.utils
+import salt.utils.data
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -122,8 +122,8 @@ def present(name,
            'result': False,
            'comment': ''}
 
-    if salt.utils.is_dictlist(driver_opts):
-        driver_opts = salt.utils.repack_dictlist(driver_opts)
+    if salt.utils.data.is_dictlist(driver_opts):
+        driver_opts = salt.utils.data.repack_dictlist(driver_opts)
 
     # If any containers are specified, get details of each one, we need the Id and Name fields later
     if containers is not None:

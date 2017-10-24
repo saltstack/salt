@@ -281,7 +281,10 @@ def vb_get_network_addresses(machine_name=None, machine=None):
     # We can't trust virtualbox to give us up to date guest properties if the machine isn't running
     # For some reason it may give us outdated (cached?) values
     if machine.state == _virtualboxManager.constants.MachineState_Running:
-        total_slots = int(machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/Count'))
+        try:
+            total_slots = int(machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/Count'))
+        except ValueError:
+            total_slots = 0
         for i in range(total_slots):
             try:
                 address = machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/{0}/V4/IP'.format(i))
