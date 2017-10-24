@@ -78,8 +78,6 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
             win_groupadd: {'__opts__': {'test': False}}
         }
 
-    # 'add' function tests: 1
-
     def test_add(self):
         '''
         Test adding a new group
@@ -125,8 +123,6 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
                                   'name': 'foo',
                                   'result': False,
                                   'comment': 'Failed to create group foo. C'})
-
-    # 'delete' function tests: 1
 
     def test_delete(self):
         '''
@@ -179,9 +175,6 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
                  'result': False,
                  'comment': 'Failed to remove group foo.  C'})
 
-
-    # 'info' function tests: 1
-
     def test_info(self):
         '''
         Test if it return information about a group.
@@ -199,7 +192,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
             return_value=[
                 MockGroupObj('salt', ['WinNT://HOST/steve']),
                 MockGroupObj('salty', ['WinNT://HOST/spongebob'])])
-        mock_g_to_g = MagicMock(side_effect=[1,2,3,4,5])
+        mock_g_to_g = MagicMock(side_effect=[1, 2])
         with patch.object(win_groupadd, '_get_all_groups', groupobj_mock),\
              patch.dict(win_groupadd.__salt__, {'file.group_to_gid': mock_g_to_g}):
             self.assertListEqual(
@@ -264,7 +257,6 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
                  'comment': 'Failed to add HOST\\username to group foo.  C',
                  'result': False})
 
-
     def test_adduser_group_does_not_exist(self):
         groupobj_mock = MagicMock(side_effect=PYWINTYPES_ERROR)
         with patch.object(win_groupadd, '_get_group_object', groupobj_mock), \
@@ -275,8 +267,6 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
                  'name': 'foo',
                  'comment': 'Failure accessing group foo. C',
                  'result': False})
-
-    # 'deluser' function tests: 3
 
     def test_deluser(self):
         '''
@@ -334,8 +324,6 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
                  'name': 'foo',
                  'comment': 'Failure accessing group foo. C',
                  'result': False})
-
-    # 'members' function tests: 1
 
     def test_members(self):
         '''
