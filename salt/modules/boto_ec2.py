@@ -52,8 +52,8 @@ import time
 import json
 
 # Import Salt libs
-import salt.utils
 import salt.utils.compat
+import salt.utils.data
 from salt.ext import six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
@@ -154,7 +154,7 @@ def get_unassociated_eip_address(domain='standard', region=None, key=None,
     Return the first unassociated EIP
 
     domain
-        Indicates whether the address is a EC2 address or a VPC address
+        Indicates whether the address is an EC2 address or a VPC address
         (standard|vpc).
 
     CLI Example:
@@ -293,7 +293,7 @@ def release_eip_address(public_ip=None, allocation_id=None, region=None, key=Non
 
     .. versionadded:: 2016.3.0
     '''
-    if not salt.utils.exactly_one((public_ip, allocation_id)):
+    if not salt.utils.data.exactly_one((public_ip, allocation_id)):
         raise SaltInvocationError("Exactly one of 'public_ip' OR "
                                   "'allocation_id' must be provided")
 
@@ -344,9 +344,9 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
 
     .. versionadded:: 2016.3.0
     '''
-    if not salt.utils.exactly_one((instance_id, instance_name,
-                                   network_interface_id,
-                                   network_interface_name)):
+    if not salt.utils.data.exactly_one((instance_id, instance_name,
+                                        network_interface_id,
+                                        network_interface_name)):
         raise SaltInvocationError("Exactly one of 'instance_id', "
                                   "'instance_name', 'network_interface_id', "
                                   "'network_interface_name' must be provided")
@@ -452,8 +452,8 @@ def assign_private_ip_addresses(network_interface_name=None, network_interface_i
 
     .. versionadded:: 2017.7.0
     '''
-    if not salt.utils.exactly_one((network_interface_name,
-                                   network_interface_id)):
+    if not salt.utils.data.exactly_one((network_interface_name,
+                                        network_interface_id)):
         raise SaltInvocationError("Exactly one of 'network_interface_name', "
                                   "'network_interface_id' must be provided")
 
@@ -506,8 +506,8 @@ def unassign_private_ip_addresses(network_interface_name=None, network_interface
 
     .. versionadded:: 2017.7.0
     '''
-    if not salt.utils.exactly_one((network_interface_name,
-                                   network_interface_id)):
+    if not salt.utils.data.exactly_one((network_interface_name,
+                                        network_interface_id)):
         raise SaltInvocationError("Exactly one of 'network_interface_name', "
                                   "'network_interface_id' must be provided")
 
@@ -771,9 +771,9 @@ def get_tags(instance_id=None, keyid=None, key=None, profile=None,
 def exists(instance_id=None, name=None, tags=None, region=None, key=None,
            keyid=None, profile=None, in_states=None, filters=None):
     '''
-    Given a instance id, check to see if the given instance id exists.
+    Given an instance id, check to see if the given instance id exists.
 
-    Returns True if the given an instance with the given id, name, or tags
+    Returns True if the given instance with the given id, name, or tags
     exists; otherwise, False is returned.
 
     CLI Example:
@@ -1425,7 +1425,7 @@ def create_network_interface(name, subnet_id=None, subnet_name=None,
 
         salt myminion boto_ec2.create_network_interface my_eni subnet-12345 description=my_eni groups=['my_group']
     '''
-    if not salt.utils.exactly_one((subnet_id, subnet_name)):
+    if not salt.utils.data.exactly_one((subnet_id, subnet_name)):
         raise SaltInvocationError('One (but not both) of subnet_id or '
                                   'subnet_name must be provided.')
 
@@ -1524,13 +1524,13 @@ def attach_network_interface(device_index, name=None, network_interface_id=None,
 
         salt myminion boto_ec2.attach_network_interface my_eni instance_name=salt-master device_index=0
     '''
-    if not salt.utils.exactly_one((name, network_interface_id)):
+    if not salt.utils.data.exactly_one((name, network_interface_id)):
         raise SaltInvocationError(
             "Exactly one (but not both) of 'name' or 'network_interface_id' "
             "must be provided."
         )
 
-    if not salt.utils.exactly_one((instance_name, instance_id)):
+    if not salt.utils.data.exactly_one((instance_name, instance_id)):
         raise SaltInvocationError(
             "Exactly one (but not both) of 'instance_name' or 'instance_id' "
             "must be provided."
@@ -1778,7 +1778,7 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
         would have been applied.
 
     returns (dict)
-        A dict dsecribing status and any changes.
+        A dict describing status and any changes.
 
     '''
     ret = {'success': True, 'comment': '', 'changes': {}}

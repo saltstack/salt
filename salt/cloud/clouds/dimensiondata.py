@@ -55,12 +55,9 @@ except ImportError:
 # Import generic libcloud functions
 # from salt.cloud.libcloudfuncs import *
 
-# Import salt libs
-import salt.utils
-
 # Import salt.cloud libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
-from salt.utils import namespaced_function
+from salt.utils.functools import namespaced_function
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (

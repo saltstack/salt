@@ -138,7 +138,7 @@ import json
 import os
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.data
 import salt.utils.files
 import salt.utils.odict as odict
 import salt.utils.dictupdate as dictupdate
@@ -1535,7 +1535,7 @@ def policy_present(name, policy_document, path=None, description=None,
         if isinstance(policy_document, six.string_types):
             policy_document = json.loads(policy_document)
 
-        r = salt.utils.compare_dicts(describeDict, policy_document)
+        r = salt.utils.data.compare_dicts(describeDict, policy_document)
 
         if bool(r):
             if __opts__['test']:
