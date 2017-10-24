@@ -10,7 +10,7 @@ The __utils__ dict will not be automatically available to execution modules
 until 2015.8.0. The `salt.utils.compat.pack_dunder` helper function
 provides backwards compatibility.
 
-This module provides common functionality for the boto execution modules.
+This module provides common functionality for the boto3 execution modules.
 The expected usage is to call `apply_funcs` from the `__virtual__` function
 of the module. This will bring properly initilized partials of  `_get_conn`
 and `_cache_id` into the module's namespace.
@@ -25,7 +25,7 @@ Example Usage:
             # only required in 2015.2
             salt.utils.compat.pack_dunder(__name__)
 
-            __utils__['boto.apply_funcs'](__name__, 'vpc')
+            __utils__['boto3.apply_funcs'](__name__, 'vpc')
 
         def test():
             conn = _get_conn()
@@ -43,7 +43,8 @@ from functools import partial
 
 # Import salt libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
 import salt.utils.stringutils
 import salt.utils.versions
@@ -52,17 +53,14 @@ import salt.utils.versions
 # pylint: disable=import-error
 try:
     # pylint: disable=import-error
-    import boto
+    import botocore
     import boto3
-    import boto.exception
-    import boto3.session
-    import botocore  # pylint: disable=W0611
 
     # pylint: enable=import-error
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
-    HAS_BOTO = True
+    HAS_BOTO3 = True
 except ImportError:
-    HAS_BOTO = False
+    HAS_BOTO3 = False
 # pylint: enable=import-error
 
 
@@ -71,10 +69,21 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only load if boto libraries exist and if boto libraries are greater than
+    Only load if boto3 libraries exist and if boto3 libraries are greater than
     a given version.
     '''
-    return salt.utils.versions.check_boto_reqs()
+    # boto_s3_bucket module requires boto3 1.2.6 and botocore 1.3.23 for
+    # idempotent ACL operations via the fix in  https://github.com/boto/boto3/issues/390
+    required_boto3_version = '1.2.6'
+    required_botocore_version = '1.3.23'
+    if not HAS_BOTO3:
+        return False
+    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
+        return False
+    elif _LooseVersion(botocore.__version__) < _LooseVersion(required_botocore_version):
+        return False
+    else:
+        return True
 
 
 def _option(value):
@@ -90,7 +99,8 @@ def _option(value):
         return __pillar__[value]
 
 
-def _get_profile(service, region, key, keyid, profile):
+def _get_profile(service, region=None, key=None, keyid=None, profile=None,
+                 aws_session_token=None, aws_profile=None):
     if profile:
         if isinstance(profile, six.string_types):
             _profile = _option(profile)
@@ -113,32 +123,39 @@ def _get_profile(service, region, key, keyid, profile):
         keyid = _option(service + '.keyid')
 
     label = 'boto_{0}:'.format(service)
-    if keyid:
+    if keyid and key:
         hash_string = region + keyid + key
         if six.PY3:
             hash_string = salt.utils.stringutils.to_bytes(hash_string)
         cxkey = label + hashlib.md5(hash_string).hexdigest()
-    else:
+    elif aws_session_token:
+        hash_string = region + aws_session_key
+        if six.PY3:
+            hash_string = salt.utils.to_bytes(hash_string)
+        cxkey = label + hashlib.md5(hash_string).hexdigest()
+    elif aws_profile:
+        cxkey = label + aws_profile
+    else:  # Fall back to IAM, hopefully...
         cxkey = label + region
 
-    return (cxkey, region, key, keyid)
+    return {'cxkey': cxkey, 'region': region, 'key': key, 'keyid': keyid,
+            'aws_session_token': aws_session_token, 'aws_profile': aws_profile}
 
 
 def cache_id(service, name, sub_resource=None, resource_id=None,
              invalidate=False, region=None, key=None, keyid=None,
-             profile=None):
+             profile=None, aws_session_token=None, aws_profile=None):
     '''
     Cache, invalidate, or retrieve an AWS resource id keyed by name.
 
     .. code-block:: python
 
-        __utils__['boto.cache_id']('ec2', 'myinstance',
-                                   'i-a1b2c3',
-                                   profile='custom_profile')
+        __utils__['boto3.cache_id']('ec2', 'myinstance', 'i-a1b2c3', profile='custom_profile')
     '''
 
-    cxkey, _, _, _ = _get_profile(service, region, key,
-                                  keyid, profile)
+    prof = _get_profile(service, region, key, keyid, profile,
+                        aws_session_token, aws_profile)
+    cxkey = prof['cxkey']
     if sub_resource:
         cxkey = '{0}:{1}:{2}:id'.format(cxkey, sub_resource, name)
     else:
@@ -168,7 +185,7 @@ def cache_id_func(service):
 
     .. code-block:: python
 
-        cache_id = __utils__['boto.cache_id_func']('ec2')
+        cache_id = __utils__['boto3.cache_id_func']('ec2')
         cache_id('myinstance', 'i-a1b2c3')
         instance_id = cache_id('myinstance')
     '''
@@ -176,40 +193,61 @@ def cache_id_func(service):
 
 
 def get_connection(service, module=None, region=None, key=None, keyid=None,
-                   profile=None):
+                   profile=None, aws_session_token=None, botocore_session=None,
+                   aws_profile=None, test_func=None):
     '''
-    Return a boto connection for the service.
+    Return a boto3 connection for the service.
 
     .. code-block:: python
 
-        conn = __utils__['boto.get_connection']('ec2', profile='custom_profile')
+        conn = __utils__['boto3.get_connection']('ec2', profile='custom_profile')
     '''
 
-    module = module or service
+    service_name = module or service
 
-    cxkey, region, key, keyid = _get_profile(service, region, key,
-                                             keyid, profile)
-    cxkey = cxkey + ':conn3'
+    prof = _get_profile(service, region, key, keyid, profile,
+                        aws_session_token, aws_profile)
+    cxkey = prof['cxkey'] + ':conn3'
 
     if cxkey in __context__:
         return __context__[cxkey]
 
+    # This try/excpet does absolutlely no good BTW, unless `test_func` is passed in.
+    # Boto3 doesn't attempt a bind until the first client op is called, which means this will
+    # never throw, while any auth errors will happen within the client function call itself.
+    # This implies that any functions not trapping on auth errors will stacktrace...
     try:
-        session = boto3.session.Session(aws_access_key_id=keyid,
-                          aws_secret_access_key=key,
-                          region_name=region)
+        session = boto3.Session(aws_access_key_id=prof.get('keyid'),
+                                aws_secret_access_key=prof.get('key'),
+                                region_name=prof.get('region'),
+                                aws_session_token=prof.get('aws_session_token'),
+                                botocore_session=botocore_session,
+                                profile_name=prof.get('aws_profile'))
         if session is None:
-            raise SaltInvocationError('Region "{0}" is not '
-                                      'valid.'.format(region))
-        conn = session.client(module)
+            raise CommandExecutionError("Failed to create Boto3 Session.  Verify the "
+                                        "region '{0}' is valid.".format(prof.get('region')))
+        conn = session.client(service_name)
         if conn is None:
-            raise SaltInvocationError('Region "{0}" is not '
-                                      'valid.'.format(region))
-    except boto.exception.NoAuthHandlerFound:
-        raise SaltInvocationError('No authentication credentials found when '
-                                  'attempting to make boto {0} connection to '
-                                  'region "{1}".'.format(service, region))
+            raise CommandExecutionError("Failed to create Boto3 client for {0}.  "
+                                        "Verify the region '{1}' is valid.".format(
+                                        service_name, prof.get('region')))
+        # To module writers:
+        # If you pass in a name of a test_func() of your boto3 resource which takes no args,
+        # we can use it to validate your creds are good here, while setting up the connection
+        # the first time.  Otherwise one has the joy of checking for auth success inside every
+        # single function call :(  Note that the connection is cached once it's up, so this
+        # will only be needed / reached once per "API endpoint + cred style".
+        if test_func and getattr(conn, test_func, None):
+            getattr(conn, test_func)()  # Call and discard, just to test creds work...
+    except botocore.exceptions.ClientError as e:
+        err = get_error(e)
+        if err['code'] in ('NoCredentialsError', 'ProfileNotFound'):
+            raise CommandExecutionError('Error authenticating for service `{0}`: {1}'.format(
+                                        service_name, err['message']))
+        raise CommandExecutionError('Error creating client for service `{0}`: {1}'.format(
+                                    service_name, err['message']))
     __context__[cxkey] = conn
+
     return conn
 
 
@@ -219,7 +257,7 @@ def get_connection_func(service, module=None):
 
     .. code-block:: python
 
-        get_conn = __utils__['boto.get_connection_func']('ec2')
+        get_conn = __utils__['boto3.get_connection_func']('ec2')
         conn = get_conn()
     '''
     return partial(get_connection, service, module=module)
@@ -229,40 +267,22 @@ def get_region(service, region, profile):
     """
     Retrieve the region for a particular AWS service based on configured region and/or profile.
     """
-    _, region, _, _ = _get_profile(service, region, None, None, profile)
-
-    return region
+    prof = _get_profile(service, region, None, None, profile)
+    return prof.get('region')
 
 
 def get_error(e):
-    # The returns from boto modules vary greatly between modules. We need to
-    # assume that none of the data we're looking for exists.
-    aws = {}
-
-    message = ''
-    if six.PY2:
-        if hasattr(e, 'status'):
-            aws['status'] = e.status
-        if hasattr(e, 'reason'):
-            aws['reason'] = e.reason
-        if six.text_type(e) != '':
-            aws['message'] = six.text_type(e)
-        if hasattr(e, 'error_code') and e.error_code is not None:
-            aws['code'] = e.error_code
-
-        if 'message' in aws and 'reason' in aws:
-            message = '{0}: {1}'.format(aws['reason'], aws['message'])
-        elif 'message' in aws:
-            message = aws['message']
-        elif 'reason' in aws:
-            message = aws['reason']
-    elif six.PY3:
-        message = e.args[0]
-
-    r = {'message': message}
-    if aws:
-        r['aws'] = aws
-    return r
+    '''
+    Parse a boto3 error object.  Return a hopefully useful description of what went wrong,
+    along with the AWS error code, if available.
+    '''
+    ret = {'message': str(e)}
+    if getattr(e, 'error_code', None):
+        ec = getattr(e, 'error_code', None)
+    else:
+        ec = getattr(e, 'response', {}).get('Error', {}).get('Code')
+    ret.update({'code': ec if ec else 'unknown'})
+    return ret
 
 
 def exactly_n(l, n=1):
@@ -286,14 +306,14 @@ def assign_funcs(modname, service, module=None,
 
     .. code-block:: python
 
-        _utils__['boto.assign_partials'](__name__, 'ec2')
+        _utils__['boto3.assign_partials'](__name__, 'ec2')
     '''
     mod = sys.modules[modname]
     setattr(mod, get_conn_funcname, get_connection_func(service, module=module))
     setattr(mod, cache_id_funcname, cache_id_func(service))
 
-    # TODO: Remove this and import salt.utils.data.exactly_one into boto_* modules instead
-    # Leaving this way for now so boto modules can be back ported
+    # TODO: Remove this and import salt.utils.exactly_one into boto_* modules instead
+    # Leaving this way for now so boto3 modules can be back ported
     if exactly_one_funcname is not None:
         setattr(mod, exactly_one_funcname, exactly_one)
 
