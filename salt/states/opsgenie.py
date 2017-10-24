@@ -2,10 +2,14 @@
 '''
 Create/Close an alert in OpsGenie
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 .. versionadded:: Oxygen
+
 This state is useful for creating or closing alerts in OpsGenie
 during state runs.
+
 .. code-block:: yaml
+
     used_space:
       disk.status:
         - name: /
