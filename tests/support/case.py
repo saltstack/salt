@@ -442,6 +442,16 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                catch_stderr=catch_stderr,
                                timeout=timeout)
 
+    def run_spm(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
+        '''
+        Execute spm
+        '''
+        return self.run_script('spm',
+                               arg_str,
+                               with_retcode=with_retcode,
+                               catch_stderr=catch_stderr,
+                               timeout=timeout)
+
     def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
         '''
         Execute salt-ssh
@@ -554,6 +564,49 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                timeout=timeout)
 
 
+class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
+    '''
+    Class for handling spm commands
+    '''
+
+    def _spm_config(self):
+        self._tmp_spm = tempfile.mkdtemp()
+        config = self.get_temp_config('minion', **{
+            'spm_logfile': os.path.join(self._tmp_spm, 'log'),
+            'spm_repos_config': os.path.join(self._tmp_spm, 'etc', 'spm.repos'),
+            'spm_cache_dir': os.path.join(self._tmp_spm, 'cache'),
+            'spm_build_dir': os.path.join(self._tmp_spm, 'build'),
+            'spm_build_exclude': ['.git'],
+            'spm_db_provider': 'sqlite3',
+            'spm_files_provider': 'local',
+            'spm_db': os.path.join(self._tmp_spm, 'packages.db'),
+            'extension_modules': os.path.join(self._tmp_spm, 'modules'),
+            'file_roots': {'base': [self._tmp_spm, ]},
+            'formula_path': os.path.join(self._tmp_spm, 'spm'),
+            'pillar_path': os.path.join(self._tmp_spm, 'pillar'),
+            'reactor_path': os.path.join(self._tmp_spm, 'reactor'),
+            'assume_yes': True,
+            'force': False,
+            'verbose': False,
+            'cache': 'localfs',
+            'cachedir': os.path.join(self._tmp_spm, 'cache'),
+            'spm_repo_dups': 'ignore',
+            'spm_share_dir': os.path.join(self._tmp_spm, 'share'),
+        })
+        return config
+
+    def _spm_client(self, config):
+        import salt.spm
+        ui = salt.spm.SPMCmdlineInterface()
+        client = salt.spm.SPMClient(ui, config)
+        return client
+
+    def run_spm(self, cmd, config, arg=()):
+        client = self._spm_client(config)
+        spm_cmd = client.run([cmd, arg])
+        return spm_cmd
+
+
 class ModuleCase(TestCase, SaltClientTestCaseMixin):
     '''
     Execute a module function
@@ -572,7 +625,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         behavior of the raw function call
         '''
         know_to_return_none = (
-            'file.chown', 'file.chgrp', 'ssh.recv_known_host'
+            'file.chown', 'file.chgrp', 'ssh.recv_known_host_entries'
         )
         if 'f_arg' in kwargs:
             kwargs['arg'] = kwargs.pop('f_arg')

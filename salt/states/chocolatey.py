@@ -9,7 +9,8 @@ Manage Chocolatey package installs
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
 
@@ -111,7 +112,7 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
         installed_version = version_info[full_name]['installed'][0]
 
         if version:
-            if salt.utils.compare_versions(
+            if salt.utils.versions.compare(
                     ver1=installed_version, oper="==", ver2=version):
                 if force:
                     ret['changes'] = {
@@ -181,7 +182,7 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
     # Get list of installed packages after 'chocolatey.install'
     post_install = __salt__['chocolatey.list'](local_only=True)
 
-    ret['changes'] = salt.utils.compare_dicts(pre_install, post_install)
+    ret['changes'] = salt.utils.data.compare_dicts(pre_install, post_install)
 
     return ret
 
@@ -258,6 +259,6 @@ def uninstalled(name, version=None, uninstall_args=None, override_args=False):
     # Get list of installed packages after 'chocolatey.uninstall'
     post_uninstall = __salt__['chocolatey.list'](local_only=True)
 
-    ret['changes'] = salt.utils.compare_dicts(pre_uninstall, post_uninstall)
+    ret['changes'] = salt.utils.data.compare_dicts(pre_uninstall, post_uninstall)
 
     return ret
