@@ -35,7 +35,6 @@ from __future__ import unicode_literals
 import sys
 import logging
 from salt.ext.six.moves import range  # pylint: disable=W0622,import-error
-from salt.ext import six
 
 # Import third party libs
 try:
