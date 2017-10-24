@@ -910,8 +910,8 @@ def compare_container(first, second, ignore=None):
                     ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
             else:
                 if item == 'Links':
-                    val1 = _scrub_links(val1, first)
-                    val2 = _scrub_links(val2, second)
+                    val1 = sorted(_scrub_links(val1, first))
+                    val2 = sorted(_scrub_links(val2, second))
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
         # Check for optionally-present items that were in the second container
@@ -933,8 +933,8 @@ def compare_container(first, second, ignore=None):
                     ret.setdefault(conf_dict, {})[item] = {'old': image1, 'new': image2}
             else:
                 if item == 'Links':
-                    val1 = _scrub_links(val1, first)
-                    val2 = _scrub_links(val2, second)
+                    val1 = sorted(_scrub_links(val1, first))
+                    val2 = sorted(_scrub_links(val2, second))
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
     return ret
