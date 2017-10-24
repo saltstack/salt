@@ -28,7 +28,6 @@ from __future__ import absolute_import
 import logging
 
 # Import 3rd-party libs
-from salt.ext import six
 try:
     import requests
     HAS_REQUESTS = True
