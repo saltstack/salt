@@ -1410,7 +1410,10 @@ def os_data():
                             .format(' '.join(init_cmdline))
                         )
 
-        # Add lsb grains on any distro with lsb-release
+        # Add lsb grains on any distro with lsb-release. Note that this import
+        # can fail on systems with lsb-release installed if the system package
+        # does not install the python package for the python interpreter used by
+        # Salt (i.e. python2 or python3)
         try:
             import lsb_release  # pylint: disable=import-error
             release = lsb_release.get_distro_information()
@@ -1459,7 +1462,13 @@ def os_data():
                     if 'VERSION_ID' in os_release:
                         grains['lsb_distrib_release'] = os_release['VERSION_ID']
                     if 'PRETTY_NAME' in os_release:
-                        grains['lsb_distrib_codename'] = os_release['PRETTY_NAME']
+                        codename = os_release['PRETTY_NAME']
+                        # https://github.com/saltstack/salt/issues/44108
+                        if os_release['ID'] == 'debian':
+                            codename_match = re.search(r'\((\w+)\)$', codename)
+                            if codename_match:
+                                codename = codename_match.group(1)
+                        grains['lsb_distrib_codename'] = codename
                     if 'CPE_NAME' in os_release:
                         if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
                             grains['os'] = "SUSE"

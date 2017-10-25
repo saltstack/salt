@@ -154,7 +154,7 @@ def get_unassociated_eip_address(domain='standard', region=None, key=None,
     Return the first unassociated EIP
 
     domain
-        Indicates whether the address is a EC2 address or a VPC address
+        Indicates whether the address is an EC2 address or a VPC address
         (standard|vpc).
 
     CLI Example:
@@ -771,9 +771,9 @@ def get_tags(instance_id=None, keyid=None, key=None, profile=None,
 def exists(instance_id=None, name=None, tags=None, region=None, key=None,
            keyid=None, profile=None, in_states=None, filters=None):
     '''
-    Given a instance id, check to see if the given instance id exists.
+    Given an instance id, check to see if the given instance id exists.
 
-    Returns True if the given an instance with the given id, name, or tags
+    Returns True if the given instance with the given id, name, or tags
     exists; otherwise, False is returned.
 
     CLI Example:
