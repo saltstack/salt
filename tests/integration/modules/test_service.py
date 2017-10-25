@@ -15,7 +15,7 @@ SERVICE_NAME = 'docker'
 
 
 @destructiveTest
-@skipIf(salt.utils.which('docker') is None, 'crond not installed')
+@skipIf(salt.utils.which('docker') is None, 'docker is not installed')
 class ServiceModuleTest(ModuleCase):
     '''
     Module testing the service module
