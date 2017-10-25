@@ -599,16 +599,17 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
         for f_dir in dirs:
             os.makedirs(f_dir)
 
-        import salt.utils
+        # Late import
+        import salt.utils.files
 
-        with salt.utils.fopen(self.formula_sls, 'w') as fp:
+        with salt.utils.files.fopen(self.formula_sls, 'w') as fp:
             fp.write(textwrap.dedent('''\
                      install-apache:
                        pkg.installed:
                          - name: apache2
                      '''))
 
-        with salt.utils.fopen(self.formula_file, 'w') as fp:
+        with salt.utils.files.fopen(self.formula_file, 'w') as fp:
             fp.write(textwrap.dedent('''\
                      name: apache
                      os: RedHat, Debian, Ubuntu, Suse, FreeBSD
@@ -655,9 +656,10 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
         repo_conf_dir = self.config['spm_repos_config'] + '.d'
         os.makedirs(repo_conf_dir)
 
-        import salt.utils
+        # Late import
+        import salt.utils.files
 
-        with salt.utils.fopen(os.path.join(repo_conf_dir, 'spm.repo'), 'w') as fp:
+        with salt.utils.files.fopen(os.path.join(repo_conf_dir, 'spm.repo'), 'w') as fp:
             fp.write(textwrap.dedent('''\
                      local_repo:
                        url: file://{0}
