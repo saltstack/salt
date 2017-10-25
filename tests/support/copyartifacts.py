@@ -2,7 +2,7 @@
 '''
 Script for copying back xml junit files from tests
 '''
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import argparse  # pylint: disable=minimum-python-version
 import os
 import paramiko
