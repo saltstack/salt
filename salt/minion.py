@@ -1665,7 +1665,25 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
+        fn_ = os.path.join(minion_instance.proc_dir, data[u'jid'])
+
+        if opts[u'multiprocessing'] and not salt.utils.platform.is_windows():
+            # Shutdown the multiprocessing before daemonizing
+            salt.log.setup.shutdown_multiprocessing_logging()
+
+            salt.utils.process.daemonize_if(opts)
+
+            # Reconfigure multiprocessing logging after daemonizing
+            salt.log.setup.setup_multiprocessing_logging()
+
         salt.utils.process.appendproctitle(u'{0}._thread_multi_return {1}'.format(cls.__name__, data[u'jid']))
+
+        sdata = {u'pid': os.getpid()}
+        sdata.update(data)
+        log.info(u'Starting a new job with PID %s', sdata[u'pid'])
+        with salt.utils.files.fopen(fn_, u'w+b') as fp_:
+            fp_.write(minion_instance.serial.dumps(sdata))
+
         multifunc_ordered = opts.get(u'multifunc_ordered', False)
         num_funcs = len(data[u'fun'])
         if multifunc_ordered:
