@@ -11,7 +11,7 @@ from tests.support.helpers import destructiveTest
 # Import Salt libs
 import salt.utils
 
-SERVICE_NAME = 'crond'
+SERVICE_NAME = 'docker'
 
 
 @destructiveTest
