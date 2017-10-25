@@ -431,6 +431,10 @@ def _present(name,
                     return ret
 
     if new_icmp_types or old_icmp_types:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_block_icmp:
+            block_icmp = new_icmp_types | _current_icmp_blocks
         ret['changes'].update({'icmp_types':
                                 {'old': _current_icmp_blocks,
                                 'new': block_icmp}})
@@ -522,6 +526,10 @@ def _present(name,
                     return ret
 
     if new_ports or old_ports:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_ports:
+            ports = new_ports | _current_ports
         ret['changes'].update({'ports':
                                 {'old': _current_ports,
                                 'new': ports}})
@@ -569,6 +577,10 @@ def _present(name,
                     return ret
 
     if new_port_fwd or old_port_fwd:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_port_fwd:
+            port_fwd = new_port_fwd | _current_port_fwd
         ret['changes'].update({'port_fwd':
                                 {'old': [fwd.todict() for fwd in
                                          _current_port_fwd],
@@ -606,6 +618,10 @@ def _present(name,
                     return ret
 
     if new_services or old_services:
+        # If we're not pruning, include current items in new output so it's clear
+        # that they're still present
+        if not prune_services:
+            services = new_services | _current_services
         ret['changes'].update({'services':
                                 {'old': _current_services,
                                 'new': services}})
