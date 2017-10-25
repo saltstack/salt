@@ -814,8 +814,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         ret.update({
                             'comment': comt,
                             'result': None,
-                            'pchanges': p_chg
-                            'changes': {'/etc/grub.conf': {'directory': 'new'}}})
+                            'pchanges': p_chg,
+                            'changes': {'/etc/grub.conf': {'directory': 'new'}}
                         })
                         self.assertDictEqual(filestate.directory(name,
                                                                  user=user,
