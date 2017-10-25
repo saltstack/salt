@@ -6,14 +6,10 @@ Tests for the spm build utility
 from __future__ import absolute_import
 import os
 import shutil
-import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import SPMCase
 from tests.support.helpers import destructiveTest
-
-# Import Salt Libraries
-import salt.utils
 
 
 @destructiveTest
@@ -23,32 +19,7 @@ class SPMBuildTest(SPMCase):
     '''
     def setUp(self):
         self.config = self._spm_config()
-        self.formula_dir = os.path.join(' '.join(self.config['file_roots']['base']), 'formulas')
-        self.formula_sls_dir = os.path.join(self.formula_dir, 'apache')
-        self.formula_sls = os.path.join(self.formula_sls_dir, 'apache.sls')
-        self.formula_file = os.path.join(self.formula_dir, 'FORMULA')
-
-        dirs = [self.formula_dir, self.formula_sls_dir]
-        for formula_dir in dirs:
-            os.makedirs(formula_dir)
-
-        with salt.utils.fopen(self.formula_sls, 'w') as fp:
-            fp.write(textwrap.dedent('''\
-                     install-apache:
-                       pkg.installed:
-                         - name: apache2
-                     '''))
-
-        with salt.utils.fopen(self.formula_file, 'w') as fp:
-            fp.write(textwrap.dedent('''\
-                     name: apache
-                     os: RedHat, Debian, Ubuntu, Suse, FreeBSD
-                     os_family: RedHat, Debian, Suse, FreeBSD
-                     version: 201506
-                     release: 2
-                     summary: Formula for installing Apache
-                     description: Formula for installing Apache
-                     '''))
+        self._spm_build_files(self.config)
 
     def test_spm_build(self):
         '''
