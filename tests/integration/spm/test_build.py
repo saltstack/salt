@@ -11,6 +11,7 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.case import SPMCase, ModuleCase
 from tests.support.helpers import destructiveTest
+from tests.support.unit import skipIf
 
 # Import Salt Libraries
 import salt.utils
@@ -61,6 +62,7 @@ class SPMBuildTest(SPMCase, ModuleCase):
         # Make sure formula path dir is created
         self.assertTrue(os.path.isdir(self.config['formula_path']))
 
+    @skipIf(salt.utils.which('fallocate') is None, 'fallocate not installed')
     def test_spm_build_big_file(self):
         '''
         test spm build
