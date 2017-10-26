@@ -269,6 +269,7 @@ def _run(cmd,
          python_shell=False,
          env=None,
          clean_env=False,
+         prepend_path=None,
          rstrip=True,
          template=None,
          umask=None,
@@ -491,6 +492,9 @@ def _run(cmd,
     else:
         run_env = os.environ.copy()
         run_env.update(env)
+
+    if prepend_path:
+        run_env['PATH'] = prepend_path + ':' + run_env['PATH']
 
     if python_shell is None:
         python_shell = False
@@ -768,6 +772,7 @@ def run(cmd,
         python_shell=None,
         env=None,
         clean_env=False,
+        prepend_path=None,
         template=None,
         rstrip=True,
         umask=None,
@@ -864,6 +869,9 @@ def run(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -949,6 +957,7 @@ def run(cmd,
                stderr=subprocess.STDOUT,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -991,6 +1000,7 @@ def shell(cmd,
         shell=DEFAULT_SHELL,
         env=None,
         clean_env=False,
+        prepend_path=None,
         template=None,
         rstrip=True,
         umask=None,
@@ -1079,6 +1089,9 @@ def shell(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1157,6 +1170,7 @@ def shell(cmd,
                shell=shell,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -1182,6 +1196,7 @@ def run_stdout(cmd,
                python_shell=None,
                env=None,
                clean_env=False,
+               prepend_path=None,
                template=None,
                rstrip=True,
                umask=None,
@@ -1265,6 +1280,9 @@ def run_stdout(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1319,6 +1337,7 @@ def run_stdout(cmd,
                python_shell=python_shell,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -1363,6 +1382,7 @@ def run_stderr(cmd,
                python_shell=None,
                env=None,
                clean_env=False,
+               prepend_path=None,
                template=None,
                rstrip=True,
                umask=None,
@@ -1447,6 +1467,9 @@ def run_stderr(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1501,6 +1524,7 @@ def run_stderr(cmd,
                python_shell=python_shell,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -1545,6 +1569,7 @@ def run_all(cmd,
             python_shell=None,
             env=None,
             clean_env=False,
+            prepend_path=None,
             template=None,
             rstrip=True,
             umask=None,
@@ -1631,6 +1656,9 @@ def run_all(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1709,6 +1737,7 @@ def run_all(cmd,
                python_shell=python_shell,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -3458,6 +3487,7 @@ def run_bg(cmd,
         python_shell=None,
         env=None,
         clean_env=False,
+        prepend_path=None,
         template=None,
         umask=None,
         timeout=None,
@@ -3545,6 +3575,9 @@ def run_bg(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -3613,6 +3646,7 @@ def run_bg(cmd,
                cwd=cwd,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                umask=umask,
                log_callback=log_callback,
