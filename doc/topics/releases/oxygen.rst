@@ -1095,3 +1095,10 @@ The ``version.py`` file had the following changes:
 Warnings for moving away from the ``env`` option were removed. ``saltenv`` should be
 used instead. The removal of these warnings does not have a behavior change. Only
 the warning text was removed.
+
+Sentry Log Handler
+------------------
+
+Configuring sentry raven python client via ``project``, ``servers``, ``public_key
+and ``secret_key`` is deprecated and won't work with sentry clients > 3.0.
+Instead, the ``dsn`` config param must be used.
