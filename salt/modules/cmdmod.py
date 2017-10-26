@@ -2602,7 +2602,7 @@ def run_chroot(root,
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
-     clean_env:
+    clean_env:
         Attempt to clean out all other shell environment variables and set
         only those provided in the 'env' argument to this function.
 
