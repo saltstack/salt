@@ -13,7 +13,6 @@ import salt.utils
 
 
 @destructiveTest
-@skipIf(salt.utils.which('docker') is None, 'docker is not installed')
 class ServiceModuleTest(ModuleCase):
     '''
     Module testing the service module
