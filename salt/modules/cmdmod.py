@@ -494,7 +494,7 @@ def _run(cmd,
         run_env.update(env)
 
     if prepend_path:
-        run_env['PATH'] = prepend_path + ':' + run_env['PATH']
+        run_env['PATH'] = ':'.join((prepend_path, run_env['PATH']))
 
     if python_shell is None:
         python_shell = False
