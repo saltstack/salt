@@ -872,6 +872,8 @@ def run(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
       to $PATH
 
+      .. versionadded:: Oxygen
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1092,6 +1094,8 @@ def shell(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
       to $PATH
 
+      .. versionadded:: Oxygen
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1283,6 +1287,8 @@ def run_stdout(cmd,
     :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
       to $PATH
 
+      .. versionadded:: Oxygen
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1469,6 +1475,8 @@ def run_stderr(cmd,
 
     :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
       to $PATH
+
+      .. versionadded:: Oxygen
 
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
@@ -1658,6 +1666,8 @@ def run_all(cmd,
 
     :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
       to $PATH
+
+      .. versionadded:: Oxygen
 
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
@@ -3577,6 +3587,8 @@ def run_bg(cmd,
 
     :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
       to $PATH
+
+      .. versionadded:: Oxygen
 
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,

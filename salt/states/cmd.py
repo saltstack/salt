@@ -717,6 +717,8 @@ def run(name,
         $PATH segment to prepend (trailing ':' not necessary) to $PATH. This is
         an easier alternative to the Jinja workaround.
 
+        .. versionadded:: Oxygen
+
     stateful
         The command being executed is expected to return data about executing
         a state. For more information, see the :ref:`stateful-argument` section.
