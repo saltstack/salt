@@ -453,11 +453,13 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                catch_stderr=catch_stderr,
                                timeout=timeout)
 
-    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
+    def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False,
+                timeout=60, wipe=True):  # pylint: disable=W0221
         '''
         Execute salt-ssh
         '''
-        arg_str = '-ldebug -W -c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(
+        arg_str = '-ldebug{0} -c {1} -i --priv {2} --roster-file {3} --out=json localhost {4}'.format(
+            ' -W' if wipe else '',
             self.get_config_dir(),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
@@ -797,11 +799,12 @@ class SSHCase(ShellCase):
     def _arg_str(self, function, arg):
         return '{0} {1}'.format(function, ' '.join(arg))
 
-    def run_function(self, function, arg=(), timeout=90, **kwargs):
+    def run_function(self, function, arg=(), timeout=90, wipe=True, **kwargs):
         '''
         We use a 90s timeout here, which some slower systems do end up needing
         '''
-        ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout)
+        ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout,
+                           wipe=wipe)
         try:
             return json.loads(ret)['localhost']
         except Exception:
