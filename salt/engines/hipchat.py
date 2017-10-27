@@ -48,13 +48,15 @@ try:
 except ImportError:
     HAS_HYPCHAT = False
 
-import salt.utils
+import salt.utils.args
+import salt.utils.event
 import salt.utils.files
+import salt.utils.http
 import salt.runner
 import salt.client
 import salt.loader
 import salt.output
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():
@@ -93,7 +95,7 @@ def _publish_file(token, room, filepath, message='', outputter=None, api_url=Non
     headers['Authorization'] = "Bearer " + token
     msg = json.dumps({'message': message})
 
-    with salt.utils.fopen(filepath, 'rb') as rfh:
+    with salt.utils.files.fopen(filepath, 'rb') as rfh:
         payload = """\
 --boundary123456
 Content-Type: application/json; charset=UTF-8
@@ -339,13 +341,13 @@ def start(token,
             args = []
             kwargs = {}
 
-            cmdline = salt.utils.shlex_split(text)
+            cmdline = salt.utils.args.shlex_split(text)
             cmd = cmdline[0]
 
             # Evaluate aliases
             if aliases and isinstance(aliases, dict) and cmd in aliases.keys():
                 cmdline = aliases[cmd].get('cmd')
-                cmdline = salt.utils.shlex_split(cmdline)
+                cmdline = salt.utils.args.shlex_split(cmdline)
                 cmd = cmdline[0]
 
             # Parse args and kwargs
@@ -411,8 +413,8 @@ def start(token,
                 _publish_code_message(token, room, ret, message=message_string, outputter=outputter, api_url=api_url)
             else:
                 tmp_path_fn = salt.utils.files.mkstemp()
-                with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
+                with salt.utils.files.fopen(tmp_path_fn, 'w+') as fp_:
                     fp_.write(json.dumps(ret, sort_keys=True, indent=4))
                 _publish_file(token, room, tmp_path_fn, message=message_string, api_url=api_url)
-                salt.utils.safe_rm(tmp_path_fn)
+                salt.utils.files.safe_rm(tmp_path_fn)
         time.sleep(wait_time or _DEFAULT_SLEEP)

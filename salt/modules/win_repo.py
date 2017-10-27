@@ -15,7 +15,9 @@ import os
 
 # Import salt libs
 import salt.output
-import salt.utils
+import salt.utils.functools
+import salt.utils.path
+import salt.utils.platform
 import salt.loader
 import salt.template
 from salt.exceptions import CommandExecutionError, SaltRenderError
@@ -46,11 +48,11 @@ def __virtual__():
     '''
     Set the winrepo module if the OS is Windows
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         global _genrepo, _update_git_repos
-        _genrepo = salt.utils.namespaced_function(_genrepo, globals())
+        _genrepo = salt.utils.functools.namespaced_function(_genrepo, globals())
         _update_git_repos = \
-            salt.utils.namespaced_function(_update_git_repos, globals())
+            salt.utils.functools.namespaced_function(_update_git_repos, globals())
         return __virtualname__
     return (False, 'This module only works on Windows.')
 
@@ -114,7 +116,7 @@ def update_git_repos(clean=False):
 
         salt-call winrepo.update_git_repos
     '''
-    if not salt.utils.which('git'):
+    if not salt.utils.path.which('git'):
         raise CommandExecutionError(
             'Git for Windows is not installed, or not configured to be '
             'accessible from the Command Prompt'

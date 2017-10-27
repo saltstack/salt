@@ -17,11 +17,11 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils.parsers
 import salt.log.setup as log
 import salt.config
 import salt.syspaths
-import salt.utils
+import salt.utils.parsers
+import salt.utils.platform
 
 
 class ErrorMock(object):  # pylint: disable=too-few-public-methods
@@ -490,7 +490,7 @@ class LogSettingsParserTests(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'Windows uses a logging listener')
+@skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
 class MasterOptionParserTestCase(LogSettingsParserTests):
     '''
     Tests parsing Salt Master options
@@ -517,7 +517,7 @@ class MasterOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'Windows uses a logging listener')
+@skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
 class MinionOptionParserTestCase(LogSettingsParserTests):
     '''
     Tests parsing Salt Minion options
@@ -571,7 +571,7 @@ class ProxyMinionOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(salt.utils.is_windows(), 'Windows uses a logging listener')
+@skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
 class SyndicOptionParserTestCase(LogSettingsParserTests):
     '''
     Tests parsing Salt Syndic options

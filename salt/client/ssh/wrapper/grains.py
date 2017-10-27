@@ -11,44 +11,46 @@ import math
 import json
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Seed the grains dict so cython will build
 __grains__ = {}
 
 
 def _serial_sanitizer(instr):
-    '''Replaces the last 1/4 of a string with X's'''
+    '''
+    Replaces the last 1/4 of a string with X's
+    '''
     length = len(instr)
     index = int(math.floor(length * .75))
-    return '{0}{1}'.format(instr[:index], 'X' * (length - index))
+    return u'{0}{1}'.format(instr[:index], u'X' * (length - index))
 
 
-_FQDN_SANITIZER = lambda x: 'MINION.DOMAINNAME'
-_HOSTNAME_SANITIZER = lambda x: 'MINION'
-_DOMAINNAME_SANITIZER = lambda x: 'DOMAINNAME'
+_FQDN_SANITIZER = lambda x: u'MINION.DOMAINNAME'
+_HOSTNAME_SANITIZER = lambda x: u'MINION'
+_DOMAINNAME_SANITIZER = lambda x: u'DOMAINNAME'
 
 
 # A dictionary of grain -> function mappings for sanitizing grain output. This
 # is used when the 'sanitize' flag is given.
 _SANITIZERS = {
-    'serialnumber': _serial_sanitizer,
-    'domain': _DOMAINNAME_SANITIZER,
-    'fqdn': _FQDN_SANITIZER,
-    'id': _FQDN_SANITIZER,
-    'host': _HOSTNAME_SANITIZER,
-    'localhost': _HOSTNAME_SANITIZER,
-    'nodename': _HOSTNAME_SANITIZER,
+    u'serialnumber': _serial_sanitizer,
+    u'domain': _DOMAINNAME_SANITIZER,
+    u'fqdn': _FQDN_SANITIZER,
+    u'id': _FQDN_SANITIZER,
+    u'host': _HOSTNAME_SANITIZER,
+    u'localhost': _HOSTNAME_SANITIZER,
+    u'nodename': _HOSTNAME_SANITIZER,
 }
 
 
-def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
+def get(key, default=u'', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     '''
     Attempt to retrieve the named value from grains, if the named value is not
     available return the passed default. The default return is an empty string.
@@ -73,10 +75,11 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
         grains = __grains__
     else:
         grains = json.loads(json.dumps(__grains__))
-    return salt.utils.traverse_dict_and_list(__grains__,
-                                             key,
-                                             default,
-                                             delimiter)
+    return salt.utils.data.traverse_dict_and_list(
+        __grains__,
+        key,
+        default,
+        delimiter)
 
 
 def has_value(key):
@@ -97,7 +100,9 @@ def has_value(key):
 
         salt '*' grains.has_value pkg:apache
     '''
-    return True if salt.utils.traverse_dict_and_list(__grains__, key, False) else False
+    return True \
+        if salt.utils.data.traverse_dict_and_list(__grains__, key, False) \
+        else False
 
 
 def items(sanitize=False):
@@ -116,7 +121,7 @@ def items(sanitize=False):
 
         salt '*' grains.items sanitize=True
     '''
-    if salt.utils.is_true(sanitize):
+    if salt.utils.data.is_true(sanitize):
         out = dict(__grains__)
         for key, func in six.iteritems(_SANITIZERS):
             if key in out:
@@ -149,7 +154,7 @@ def item(*args, **kwargs):
             ret[arg] = __grains__[arg]
         except KeyError:
             pass
-    if salt.utils.is_true(kwargs.get('sanitize')):
+    if salt.utils.data.is_true(kwargs.get(u'sanitize')):
         for arg, func in six.iteritems(_SANITIZERS):
             if arg in ret:
                 ret[arg] = func(ret[arg])
@@ -170,9 +175,9 @@ def ls():  # pylint: disable=C0103
 
 
 def filter_by(lookup_dict,
-              grain='os_family',
+              grain=u'os_family',
               merge=None,
-              default='default',
+              default=u'default',
               base=None):
     '''
     .. versionadded:: 0.17.0
@@ -266,12 +271,12 @@ def filter_by(lookup_dict,
 
         elif isinstance(base_values, collections.Mapping):
             if not isinstance(ret, collections.Mapping):
-                raise SaltException('filter_by default and look-up values must both be dictionaries.')
+                raise SaltException(u'filter_by default and look-up values must both be dictionaries.')
             ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
     if merge:
         if not isinstance(merge, collections.Mapping):
-            raise SaltException('filter_by merge argument must be a dictionary.')
+            raise SaltException(u'filter_by merge argument must be a dictionary.')
         else:
             if ret is None:
                 ret = merge

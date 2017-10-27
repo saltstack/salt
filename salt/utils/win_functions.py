@@ -159,3 +159,12 @@ def get_sam_name(username):
         return '\\'.join([platform.node()[:15].upper(), username])
     username, domain, _ = win32security.LookupAccountSid(None, sid_obj)
     return '\\'.join([domain, username])
+
+
+def enable_ctrl_logoff_handler():
+    if HAS_WIN32:
+        ctrl_logoff_event = 5
+        win32api.SetConsoleCtrlHandler(
+            lambda event: True if event == ctrl_logoff_event else False,
+            1
+        )

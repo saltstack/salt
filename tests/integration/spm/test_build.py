@@ -13,7 +13,7 @@ from tests.support.case import SPMCase
 from tests.support.helpers import destructiveTest
 
 # Import Salt Libraries
-import salt.utils
+import salt.utils.files
 
 
 @destructiveTest
@@ -32,14 +32,14 @@ class SPMBuildTest(SPMCase):
         for formula_dir in dirs:
             os.makedirs(formula_dir)
 
-        with salt.utils.fopen(self.formula_sls, 'w') as fp:
+        with salt.utils.files.fopen(self.formula_sls, 'w') as fp:
             fp.write(textwrap.dedent('''\
                      install-apache:
                        pkg.installed:
                          - name: apache2
                      '''))
 
-        with salt.utils.fopen(self.formula_file, 'w') as fp:
+        with salt.utils.files.fopen(self.formula_file, 'w') as fp:
             fp.write(textwrap.dedent('''\
                      name: apache
                      os: RedHat, Debian, Ubuntu, Suse, FreeBSD

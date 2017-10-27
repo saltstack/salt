@@ -10,7 +10,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-import salt.utils
+import salt.utils.platform
 import salt.modules.pip as pip
 from salt.exceptions import CommandExecutionError
 
@@ -297,7 +297,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             mock_path.join = join
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     venv_path = 'c:\\test_env'
                     bin_path = os.path.join(venv_path, 'Scripts', 'pip.exe').encode('string-escape')
                 else:
@@ -1131,7 +1131,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_run = MagicMock(return_value='pip 1.4.1 /path/to/site-packages/pip')
         mock_run_all = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run': mock_run,
+        with patch.dict(pip.__salt__, {'cmd.run_stdout': mock_run,
                                        'cmd.run_all': mock_run_all}):
             with patch('salt.modules.pip._get_pip_bin',
                        MagicMock(return_value='pip')):

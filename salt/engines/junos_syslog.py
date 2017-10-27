@@ -102,8 +102,11 @@ except ImportError:
     class DatagramProtocol(object):
         pass
 
-from salt.utils import event
-from salt.ext.six import moves
+import salt.utils.event as event
+
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 # logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -264,7 +267,7 @@ class _SyslogServerFactory(DatagramProtocol):
                     "jnpr/syslog". Using the default topic.')
                 self.title = ['jnpr', 'syslog', 'hostname', 'event']
             else:
-                for i in moves.range(2, len(topics)):
+                for i in range(2, len(topics)):
                     if topics[i] not in data:
                         log.debug(
                             'Please check the topic specified. \
@@ -305,7 +308,7 @@ class _SyslogServerFactory(DatagramProtocol):
         send_this_event = True
         for key in options:
             if key in data:
-                if isinstance(options[key], (str, int)):
+                if isinstance(options[key], (six.string_types, int)):
                     if str(options[key]) != str(data[key]):
                         send_this_event = False
                         break
@@ -328,7 +331,7 @@ class _SyslogServerFactory(DatagramProtocol):
             if 'event' in data:
                 topic = 'jnpr/syslog'
 
-                for i in moves.range(2, len(self.title)):
+                for i in range(2, len(self.title)):
                     topic += '/' + str(data[self.title[i]])
                     log.debug(
                         'Junos Syslog - sending this event on the bus: \

@@ -18,6 +18,7 @@ Salt Table of Contents
     topics/ssh/index
     topics/cloud/index
     topics/proxyminion/index
+    topics/network_automation/index
     topics/virt/index
     ref/cli/index
     ref/index

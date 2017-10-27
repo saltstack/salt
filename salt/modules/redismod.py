@@ -9,7 +9,7 @@ Module to provide redis functionality to Salt
 
 .. code-block:: yaml
 
-    redis.host: 'localhost'
+    redis.host: 'salt'
     redis.port: 6379
     redis.db: 0
     redis.password: None

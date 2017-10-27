@@ -51,6 +51,7 @@ import datetime
 import logging
 import json
 import sys
+import time
 import email.mime.multipart
 
 log = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # Import third party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 try:
     import boto
     import boto.ec2
@@ -325,6 +326,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
                      'resource_id': t['ResourceId'],
                      'propagate_at_launch': t.get('PropagateAtLaunch', False)}
                           for t in current_tags]
+    add_tags = []
     desired_tags = []
     if tags:
         tags = __utils__['boto3.ordered'](tags)
@@ -345,7 +347,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
                     'resource_id': name,
                     'propagate_at_launch': propagate_at_launch}
             if _tag not in current_tags:
-                desired_tags.append(_tag)
+                add_tags.append(_tag)
+            desired_tags.append(_tag)
     delete_tags = [t for t in current_tags if t not in desired_tags]
 
     try:
@@ -358,7 +361,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             default_cooldown=default_cooldown,
             health_check_type=health_check_type,
             health_check_period=health_check_period,
-            placement_group=placement_group, tags=desired_tags,
+            placement_group=placement_group, tags=add_tags,
             vpc_zone_identifier=vpc_zone_identifier,
             termination_policies=termination_policies)
         if notification_arn and notification_types:
@@ -366,9 +369,9 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         _asg.update()
         # Seems the update call doesn't handle tags, so we'll need to update
         # that separately.
-        if desired_tags:
-            log.debug('Adding/updating tags from ASG: {}'.format(desired_tags))
-            conn.create_or_update_tags([autoscale.Tag(**t) for t in desired_tags])
+        if add_tags:
+            log.debug('Adding/updating tags from ASG: {}'.format(add_tags))
+            conn.create_or_update_tags([autoscale.Tag(**t) for t in add_tags])
         if delete_tags:
             log.debug('Deleting tags from ASG: {}'.format(delete_tags))
             conn.delete_tags([autoscale.Tag(**t) for t in delete_tags])
@@ -675,11 +678,23 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
         salt '*' boto_asg.get_scaling_policy_arn mygroup mypolicy
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    policies = conn.get_all_policies(as_group=as_group)
-    for policy in policies:
-        if policy.name == scaling_policy_name:
-            return policy.policy_arn
-    log.error('Could not convert: {0}'.format(as_group))
+    retries = 30
+    while retries > 0:
+        retries -= 1
+        try:
+            policies = conn.get_all_policies(as_group=as_group)
+            for policy in policies:
+                if policy.name == scaling_policy_name:
+                    return policy.policy_arn
+            log.error('Could not convert: {0}'.format(as_group))
+            return None
+        except boto.exception.BotoServerError as e:
+            if e.error_code != 'Throttling':
+                raise
+            log.debug('Throttled by API, will retry in 5 seconds')
+            time.sleep(5)
+
+    log.error('Maximum number of retries exceeded')
     return None
 
 
@@ -761,11 +776,18 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy",
     # get full instance info, so that we can return the attribute
     instances = ec2_conn.get_only_instances(instance_ids=instance_ids)
     if attributes:
-        return [[getattr(instance, attr).encode("ascii") for attr in attributes] for instance in instances]
+        return [[_convert_attribute(instance, attr) for attr in attributes] for instance in instances]
     else:
         # properly handle case when not all instances have the requested attribute
-        return [getattr(instance, attribute).encode("ascii") for instance in instances if getattr(instance, attribute)]
-    return [getattr(instance, attribute).encode("ascii") for instance in instances]
+        return [_convert_attribute(instance, attribute) for instance in instances if getattr(instance, attribute)]
+
+
+def _convert_attribute(instance, attribute):
+    if attribute == "tags":
+        tags = dict(getattr(instance, attribute))
+        return {key.encode("utf-8"): value.encode("utf-8") for key, value in six.iteritems(tags)}
+
+    return getattr(instance, attribute).encode("ascii")
 
 
 def enter_standby(name, instance_ids, should_decrement_desired_capacity=False,

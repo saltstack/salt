@@ -43,11 +43,11 @@ from functools import partial
 from salt.loader import minion_mods
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
-import salt.utils
+import salt.utils.stringutils
 
 # Import third party libs
 # pylint: disable=import-error
@@ -109,7 +109,7 @@ def _get_profile(service, region, key, keyid, profile):
     if keyid:
         hash_string = region + keyid + key
         if six.PY3:
-            hash_string = salt.utils.to_bytes(hash_string)
+            hash_string = salt.utils.stringutils.to_bytes(hash_string)
         cxkey = label + hashlib.md5(hash_string).hexdigest()
     else:
         cxkey = label + region
@@ -159,7 +159,7 @@ def cache_id_func(service):
     '''
     Returns a partial `cache_id` function for the provided service.
 
-    ... code-block:: python
+    .. code-block:: python
 
         cache_id = __utils__['boto.cache_id_func']('ec2')
         cache_id('myinstance', 'i-a1b2c3')
@@ -208,7 +208,7 @@ def get_connection_func(service, module=None):
     '''
     Returns a partial `get_connection` function for the provided service.
 
-    ... code-block:: python
+    .. code-block:: python
 
         get_conn = __utils__['boto.get_connection_func']('ec2')
         conn = get_conn()
@@ -271,7 +271,7 @@ def assign_funcs(modname, service, module=None, pack=None):
     setattr(mod, '_get_conn', get_connection_func(service, module=module))
     setattr(mod, '_cache_id', cache_id_func(service))
 
-    # TODO: Remove this and import salt.utils.exactly_one into boto_* modules instead
+    # TODO: Remove this and import salt.utils.data.exactly_one into boto_* modules instead
     # Leaving this way for now so boto modules can be back ported
     setattr(mod, '_exactly_one', exactly_one)
 

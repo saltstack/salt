@@ -34,7 +34,7 @@ from tests.support.mock import (
 )
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.utils.verify import (
     check_user,
     verify_env,
@@ -189,7 +189,7 @@ class TestVerify(TestCase):
 
                     for n in range(prev, newmax):
                         kpath = os.path.join(keys_dir, str(n))
-                        with salt.utils.fopen(kpath, 'w') as fp_:
+                        with salt.utils.files.fopen(kpath, 'w') as fp_:
                             fp_.write(str(n))
 
                     opts = {
@@ -224,7 +224,7 @@ class TestVerify(TestCase):
                 newmax = mof_test
                 for n in range(prev, newmax):
                     kpath = os.path.join(keys_dir, str(n))
-                    with salt.utils.fopen(kpath, 'w') as fp_:
+                    with salt.utils.files.fopen(kpath, 'w') as fp_:
                         fp_.write(str(n))
 
                 opts = {

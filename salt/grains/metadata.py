@@ -59,6 +59,8 @@ def _search(prefix="latest/"):
             # they have stuff underneath. This will not be doubled up though,
             # because lines ending with a slash are checked first.
             ret[line] = _search(prefix=os.path.join(prefix, line + '/'))
+        elif line.endswith(('dynamic', 'meta-data')):
+            ret[line] = _search(prefix=os.path.join(prefix, line))
         elif '=' in line:
             key, value = line.split('=')
             ret[value] = _search(prefix=os.path.join(prefix, key))

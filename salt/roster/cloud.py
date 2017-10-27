@@ -25,7 +25,6 @@ import copy
 
 # Import Salt libs
 import salt.loader
-import salt.utils
 import salt.utils.cloud
 import salt.utils.validate.net
 import salt.config

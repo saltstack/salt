@@ -11,7 +11,6 @@ import os
 import yaml
 import tarfile
 import shutil
-import msgpack
 import hashlib
 import logging
 import sys
@@ -26,14 +25,16 @@ import salt.client
 import salt.config
 import salt.loader
 import salt.cache
-import salt.utils
-import salt.utils.http as http
 import salt.syspaths as syspaths
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
 from salt.ext.six.moves import filter
 from salt.template import compile_template
+import salt.utils.files
+import salt.utils.http as http
+import salt.utils.platform
+import salt.utils.win_functions
 from salt.utils.yamldumper import SafeOrderedDumper
 
 # Get logging started
@@ -357,7 +358,7 @@ class SPMClient(object):
                 dl_url = dl_url.replace('file://', '')
                 shutil.copyfile(dl_url, out_file)
             else:
-                with salt.utils.fopen(out_file, 'w') as outf:
+                with salt.utils.files.fopen(out_file, 'w') as outf:
                     outf.write(self._query_http(dl_url, repo_info['info']))
 
         # First we download everything, then we install
@@ -494,9 +495,7 @@ class SPMClient(object):
 
         # No defaults for this in config.py; default to the current running
         # user and group
-        import salt.utils
-        if salt.utils.is_windows():
-            import salt.utils.win_functions
+        if salt.utils.platform.is_windows():
             uname = gname = salt.utils.win_functions.get_current_user()
             uname_sid = salt.utils.win_functions.get_sid_from_name(uname)
             uid = self.opts.get('spm_uid', uname_sid)
@@ -624,7 +623,7 @@ class SPMClient(object):
 
         for repo_file in repo_files:
             repo_path = '{0}.d/{1}'.format(self.opts['spm_repos_config'], repo_file)
-            with salt.utils.fopen(repo_path) as rph:
+            with salt.utils.files.fopen(repo_path) as rph:
                 repo_data = yaml.safe_load(rph)
                 for repo in repo_data:
                     if repo_data[repo].get('enabled', True) is False:
@@ -682,7 +681,7 @@ class SPMClient(object):
             dl_path = '{0}/SPM-METADATA'.format(repo_info['url'])
             if dl_path.startswith('file://'):
                 dl_path = dl_path.replace('file://', '')
-                with salt.utils.fopen(dl_path, 'r') as rpm:
+                with salt.utils.files.fopen(dl_path, 'r') as rpm:
                     metadata = yaml.safe_load(rpm)
             else:
                 metadata = self._query_http(dl_path, repo_info)
@@ -793,7 +792,7 @@ class SPMClient(object):
                     repo_metadata[spm_name]['filename'] = spm_file
 
         metadata_filename = '{0}/SPM-METADATA'.format(repo_path)
-        with salt.utils.fopen(metadata_filename, 'w') as mfh:
+        with salt.utils.files.fopen(metadata_filename, 'w') as mfh:
             yaml.dump(
                 repo_metadata,
                 mfh,
@@ -1028,7 +1027,7 @@ class SPMClient(object):
         formula_path = '{0}/FORMULA'.format(self.abspath)
         if not os.path.exists(formula_path):
             raise SPMPackageError('Formula file {0} not found'.format(formula_path))
-        with salt.utils.fopen(formula_path) as fp_:
+        with salt.utils.files.fopen(formula_path) as fp_:
             formula_conf = yaml.safe_load(fp_)
 
         for field in ('name', 'version', 'release', 'summary', 'description'):

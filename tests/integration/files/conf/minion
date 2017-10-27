@@ -64,6 +64,30 @@ grains:
     keystone.password: demopass
     keystone.tenant: demo
     keystone.auth_url: 'http://127.0.0.1:5000/v3/'
+  zookeeper:
+    prod:
+      hosts: 'localhost:2181'
+      default_acl:
+        - username: daniel
+          password: test
+          read: true
+          write: true
+          create: true
+          delete: true
+          admin: true
+      username: daniel
+      password: test
+    hosts: 'localhost:2181'
+    default_acl:
+      - username: daniel
+        password: test
+        read: true
+        write: true
+        create: true
+        delete: true
+        admin: true
+    username: daniel
+    password: test
 
 config_test:
   spam: eggs

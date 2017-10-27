@@ -10,8 +10,8 @@ from __future__ import absolute_import
 
 import json
 import logging
-import salt.utils
 import salt.utils.http
+import salt.utils.platform
 from salt.exceptions import get_error_message
 
 
@@ -21,9 +21,13 @@ log = logging.getLogger(__file__)
 
 def __virtual__():
     # only valid in proxy minions for now
-    if salt.utils.is_proxy() and 'proxy' in __opts__:
+    if salt.utils.platform.is_proxy() and 'proxy' in __opts__:
         return True
-    return (False, 'The marathon execution module cannot be loaded: this only works in proxy minions.')
+    return (
+        False,
+        'The marathon execution module cannot be loaded: this only works on '
+        'proxy minions.'
+    )
 
 
 def _base_url():

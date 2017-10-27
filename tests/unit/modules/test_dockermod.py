@@ -18,6 +18,8 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.config
+import salt.loader
 from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
 import salt.modules.dockermod as docker_mod
@@ -39,7 +41,12 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     Validate docker module
     '''
     def setup_loader_modules(self):
-        return {docker_mod: {'__context__': {'docker.docker_version': ''}}}
+        utils = salt.loader.utils(
+            salt.config.DEFAULT_MINION_OPTS,
+            whitelist=['state']
+        )
+        return {docker_mod: {'__context__': {'docker.docker_version': ''},
+                             '__utils__': utils}}
 
     try:
         docker_version = docker_mod.docker.version_info
@@ -183,8 +190,26 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(docker_mod.__dict__,
                         {'__salt__': __salt__}):
             with patch.object(docker_mod, '_get_client', get_client_mock):
-                docker_mod.create_network('foo', driver='bridge')
-        client.create_network.assert_called_once_with('foo', driver='bridge')
+                docker_mod.create_network('foo',
+                                          driver='bridge',
+                                          driver_opts={},
+                                          gateway='192.168.0.1',
+                                          ip_range='192.168.0.128/25',
+                                          subnet='192.168.0.0/24'
+                                          )
+        client.create_network.assert_called_once_with('foo',
+                                                      driver='bridge',
+                                                      options={},
+                                                      ipam={
+                                                          'Config': [{
+                                                              'Gateway': '192.168.0.1',
+                                                              'IPRange': '192.168.0.128/25',
+                                                              'Subnet': '192.168.0.0/24'
+                                                          }],
+                                                          'Driver': 'default',
+                                                          'Options': {}
+                                                      },
+                                                      check_duplicate=True)
 
     @skipIf(docker_version < (1, 5, 0),
             'docker module must be installed to run this test or is too old. >=1.5.0')
@@ -660,21 +685,28 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
         # Check that the directory is different each time
         # [ call(name, [args]), ...
+        self.maxDiff = None
         self.assertIn('mkdir', docker_run_all_mock.mock_calls[0][1][1])
-        self.assertIn('mkdir', docker_run_all_mock.mock_calls[3][1][1])
+        self.assertIn('mkdir', docker_run_all_mock.mock_calls[4][1][1])
         self.assertNotEqual(docker_run_all_mock.mock_calls[0][1][1],
-                            docker_run_all_mock.mock_calls[3][1][1])
-
-        self.assertIn('salt-call', docker_run_all_mock.mock_calls[1][1][1])
-        self.assertIn('salt-call', docker_run_all_mock.mock_calls[4][1][1])
-        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
                             docker_run_all_mock.mock_calls[4][1][1])
 
-        # check directory cleanup
-        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[2][1][1])
-        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[5][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[2][1][1])
+        self.assertIn('salt-call', docker_run_all_mock.mock_calls[6][1][1])
         self.assertNotEqual(docker_run_all_mock.mock_calls[2][1][1],
+                            docker_run_all_mock.mock_calls[6][1][1])
+
+        # check thin untar
+        self.assertIn('tarfile', docker_run_all_mock.mock_calls[1][1][1])
+        self.assertIn('tarfile', docker_run_all_mock.mock_calls[5][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[1][1][1],
                             docker_run_all_mock.mock_calls[5][1][1])
+
+        # check directory cleanup
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[3][1][1])
+        self.assertIn('rm -rf', docker_run_all_mock.mock_calls[7][1][1])
+        self.assertNotEqual(docker_run_all_mock.mock_calls[3][1][1],
+                            docker_run_all_mock.mock_calls[7][1][1])
 
         self.assertEqual({"retcode": 0, "comment": "container cmd"}, ret)
 

@@ -52,7 +52,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
                 sock.connect((addr, port))
                 sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
-                ret[host].update({'host': host, 'port': port})
+                ret[host].update({'host': addr, 'port': port})
             except socket.error:
                 pass
     return ret
