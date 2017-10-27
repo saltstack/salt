@@ -17,11 +17,12 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
-import salt.utils.yast
-import salt.utils.preseed
-import salt.utils.kickstart
-import salt.utils.validate.path
 import salt.syspaths
+import salt.utils.kickstart
+import salt.utils.path
+import salt.utils.preseed
+import salt.utils.validate.path
+import salt.utils.yast
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
@@ -305,7 +306,7 @@ def _bootstrap_yum(
 
     root
         The root of the image to install to. Will be created as a directory if
-        if does not exist. (e.x.: /root/arch)
+        it does not exist. (e.x.: /root/arch)
 
     pkg_confs
         The location of the conf files to copy into the image, to point yum
@@ -373,7 +374,7 @@ def _bootstrap_deb(
 
     root
         The root of the image to install to. Will be created as a directory if
-        if does not exist. (e.x.: /root/wheezy)
+        it does not exist. (e.x.: /root/wheezy)
 
     arch
         Architecture of the target image. (e.x.: amd64)
@@ -399,7 +400,7 @@ def _bootstrap_deb(
     if repo_url is None:
         repo_url = 'http://ftp.debian.org/debian/'
 
-    if not salt.utils.which('debootstrap'):
+    if not salt.utils.path.which('debootstrap'):
         log.error('Required tool debootstrap is not installed.')
         return False
 
@@ -471,7 +472,7 @@ def _bootstrap_pacman(
 
     root
         The root of the image to install to. Will be created as a directory if
-        if does not exist. (e.x.: /root/arch)
+        it does not exist. (e.x.: /root/arch)
 
     pkg_confs
         The location of the conf files to copy into the image, to point pacman
@@ -479,7 +480,7 @@ def _bootstrap_pacman(
 
     img_format
         The image format to be used. The ``dir`` type needs no special
-        treatment, but others need special treatement.
+        treatment, but others need special treatment.
 
     pkgs
         A list of packages to be installed on this image. For Arch Linux, this
@@ -578,7 +579,7 @@ def avail_platforms():
     for platform in CMD_MAP:
         ret[platform] = True
         for cmd in CMD_MAP[platform]:
-            if not salt.utils.which(cmd):
+            if not salt.utils.path.which(cmd):
                 ret[platform] = False
     return ret
 
@@ -692,7 +693,7 @@ def ldd_deps(filename, ret=None):
         salt myminion genesis.ldd_deps /bin/bash
     '''
     if not os.path.exists(filename):
-        filename = salt.utils.which(filename)
+        filename = salt.utils.path.which(filename)
 
     if ret is None:
         ret = []

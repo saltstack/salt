@@ -147,7 +147,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.dictupdate as dictupdate
 
 __virtualname__ = 'boto_vpc'
@@ -960,6 +960,8 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
+        if ret['result'] is None and __opts__['test']:
+            return ret
     _ret = _routes_present(route_table_name=name, routes=routes, tags=tags,
                            region=region, key=key, keyid=keyid, profile=profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
@@ -1511,7 +1513,7 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
         'comment': 'Boto VPC peering state'
     }
 
-    if not pending['exists']:
+    if not pending:
         ret['result'] = True
         ret['changes'].update({
             'old': 'No pending VPC peering connection found. '

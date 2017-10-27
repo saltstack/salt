@@ -15,11 +15,10 @@ import salt.modules.virt as virt
 import salt.modules.config as config
 from salt._compat import ElementTree as ET
 import salt.config
-import salt.utils
 
 # Import third party libs
 import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -429,6 +428,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         controllers = root.findall('.//devices/controller')
         # There should be no controller
         self.assertTrue(len(controllers) == 0)
+        # kvm mac address shoud start with 52:54:00
+        self.assertTrue("mac address='52:54:00" in xml_data)
 
     def test_mixed_dict_and_list_as_profile_objects(self):
 

@@ -9,7 +9,8 @@ import logging
 import json
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ def _check_imgadm():
     '''
     Looks to see if imgadm is present on the system
     '''
-    return salt.utils.which('imgadm')
+    return salt.utils.path.which('imgadm')
 
 
 def _exit_status(retcode):
@@ -69,7 +70,7 @@ def __virtual__():
     '''
     Provides imgadm only on SmartOS
     '''
-    if salt.utils.is_smartos_globalzone() and _check_imgadm():
+    if salt.utils.platform.is_smartos_globalzone() and _check_imgadm():
         return __virtualname__
     return (
         False,
