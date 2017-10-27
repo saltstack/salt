@@ -6,7 +6,7 @@ Proxmox Cloud Module
 .. versionadded:: 2014.7.0
 
 The Proxmox cloud module is used to control access to cloud providers using
-the Proxmox system (KVM / OpenVZ).
+the Proxmox system (KVM / OpenVZ / LXC).
 
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
  ``/etc/salt/cloud.providers.d/proxmox.conf``:
@@ -232,7 +232,7 @@ def _check_ip_available(ip_addr):
             log.debug('IP "{0}" is already defined'.format(ip_addr))
             return False
 
-    log.debug('IP {0!r} is available to be defined'.format(ip_addr))
+    log.debug('IP \'{0}\' is available to be defined'.format(ip_addr))
     return True
 
 
@@ -322,7 +322,7 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
 
     ret = {}
     for resource in resources:
-        if 'type' in resource and resource['type'] in ['openvz', 'qemu']:
+        if 'type' in resource and resource['type'] in ['openvz', 'qemu', 'lxc']:
             name = resource['name']
             ret[name] = resource
 
@@ -520,18 +520,31 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
 
+    if 'use_dns' in vm_ and 'ip_address' not in vm_:
+        use_dns = vm_['use_dns']
+        if use_dns:
+            from socket import gethostbyname, gaierror
+            try:
+                ip_address = gethostbyname(str(vm_['name']))
+            except gaierror:
+                log.debug('Resolving of {hostname} failed'.format(hostname=str(vm_['name'])))
+            else:
+                vm_['ip_address'] = str(ip_address)
+
     try:
-        data = create_node(vm_)
+        newid = _get_next_vmid()
+        data = create_node(vm_, newid)
     except Exception as exc:
         log.error(
             'Error creating {0} on PROXMOX\n\n'
@@ -546,7 +559,10 @@ def create(vm_):
 
     ret['creation_data'] = data
     name = vm_['name']        # hostname which we know
-    vmid = data['vmid']       # vmid which we have received
+    if 'clone' in vm_ and vm_['clone'] is True:
+        vmid = newid
+    else:
+        vmid = data['vmid']       # vmid which we have received
     host = data['node']       # host which we have received
     nodeType = data['technology']  # VM tech (Qemu / OpenVZ)
 
@@ -592,9 +608,9 @@ def create(vm_):
     ret = __utils__['cloud.bootstrap'](vm_, __opts__)
 
     # Report success!
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -603,17 +619,18 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
     )
 
     return ret
 
 
-def create_node(vm_):
+def create_node(vm_, newid):
     '''
     Build and submit the requestdata to create a new node
     '''
@@ -622,8 +639,9 @@ def create_node(vm_):
     if 'technology' not in vm_:
         vm_['technology'] = 'openvz'  # default virt tech if none is given
 
-    if vm_['technology'] not in ['qemu', 'openvz']:
+    if vm_['technology'] not in ['qemu', 'openvz', 'lxc']:
         # Wrong VM type given
+        log.error('Wrong VM type. Valid options are: qemu, openvz (proxmox3) or lxc (proxmox4)')
         raise SaltCloudExecutionFailure
 
     if 'host' not in vm_:
@@ -639,7 +657,7 @@ def create_node(vm_):
 
     # Required by both OpenVZ and Qemu (KVM)
     vmhost = vm_['host']
-    newnode['vmid'] = _get_next_vmid()
+    newnode['vmid'] = newid
 
     for prop in 'cpuunits', 'description', 'memory', 'onboot':
         if prop in vm_:  # if the property is set, use it for the VM request
@@ -651,12 +669,38 @@ def create_node(vm_):
         newnode['ostemplate'] = vm_['image']
 
         # optional VZ settings
-        for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid':
+        for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid', 'storage':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
+
+    elif vm_['technology'] == 'lxc':
+        # LXC related settings, using non-default names:
+        newnode['hostname'] = vm_['name']
+        newnode['ostemplate'] = vm_['image']
+
+        for prop in 'cpuunits', 'description', 'memory', 'onboot', 'net0', 'password', 'nameserver', 'swap', 'storage':
+            if prop in vm_:  # if the property is set, use it for the VM request
+                newnode[prop] = vm_[prop]
+
+        # inform user the "disk" option is not supported for LXC hosts
+        if 'disk' in vm_:
+            log.warning('The "disk" option is not supported for LXC hosts and was ignored')
+
+        # LXC specific network config
+        # OpenVZ allowed specifying IP and gateway. To ease migration from
+        # Proxmox 3, I've mapped the ip_address and gw to a generic net0 config.
+        # If you need more control, please use the net0 option directly.
+        # This also assumes a /24 subnet.
+        if 'ip_address' in vm_ and 'net0' not in vm_:
+            newnode['net0'] = 'bridge=vmbr0,ip=' + vm_['ip_address'] + '/24,name=eth0,type=veth'
+
+            # gateway is optional and does not assume a default
+            if 'gw' in vm_:
+                newnode['net0'] = newnode['net0'] + ',gw=' + vm_['gw']
+
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        for prop in 'acpi', 'cores', 'cpu', 'pool':
+        for prop in 'acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
@@ -665,12 +709,23 @@ def create_node(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': newnode},
+        args={'kwargs': newnode},
+        sock_dir=__opts__['sock_dir'],
     )
 
     log.debug('Preparing to generate a node using these parameters: {0} '.format(
               newnode))
-    node = query('post', 'nodes/{0}/{1}'.format(vmhost, vm_['technology']), newnode)
+    if 'clone' in vm_ and vm_['clone'] is True and vm_['technology'] == 'qemu':
+        postParams = {}
+        postParams['newid'] = newnode['vmid']
+
+        for prop in 'description', 'format', 'full', 'name':
+            if 'clone_' + prop in vm_:  # if the property is set, use it for the VM request
+                postParams[prop] = vm_['clone_' + prop]
+
+        node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(vmhost, vm_['clone_from']), postParams)
+    else:
+        node = query('post', 'nodes/{0}/{1}'.format(vmhost, vm_['technology']), newnode)
     return _parse_proxmox_upid(node, vm_)
 
 
@@ -773,7 +828,8 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -787,6 +843,10 @@ def destroy(name, call=None):
         if not wait_for_state(vmobj['vmid'], 'stopped'):
             return {'Error': 'Unable to stop {0}, command timed out'.format(name)}
 
+        # required to wait a bit here, otherwise the VM is sometimes
+        # still locked and destroy fails.
+        time.sleep(1)
+
         query('delete', 'nodes/{0}/{1}'.format(
             vmobj['node'], vmobj['id']
         ))
@@ -794,7 +854,8 @@ def destroy(name, call=None):
             'event',
             'destroyed instance',
             'salt/cloud/{0}/destroyed'.format(name),
-            {'name': name},
+            args={'name': name},
+            sock_dir=__opts__['sock_dir'],
             transport=__opts__['transport']
         )
         if __opts__.get('update_cachedir', False) is True:

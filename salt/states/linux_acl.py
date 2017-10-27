@@ -28,6 +28,9 @@ Ensure a Linux ACL does not exist
 # Import Python libs
 from __future__ import absolute_import
 
+# Import python libs
+import os
+
 # Import salt libs
 import salt.utils
 
@@ -57,6 +60,11 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
            'comment': ''}
 
     _octal = {'r': 4, 'w': 2, 'x': 1, '-': 0}
+
+    if not os.path.exists(name):
+        ret['comment'] = '{0} does not exist'.format(name)
+        ret['result'] = False
+        return ret
 
     __current_perms = __salt__['acl.getfacl'](name)
 
@@ -97,10 +105,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
                     ret['result'] = None
                     return ret
 
-                if recurse:
-                    __salt__['acl.modfacl'](acl_type, acl_name, perms, name, recursive=True)
-                else:
-                    __salt__['acl.modfacl'](acl_type, acl_name, perms, name)
+                __salt__['acl.modfacl'](acl_type, acl_name, perms, name, recursive=recurse)
         else:
             ret['comment'] = 'Permissions will be applied'
 
@@ -108,10 +113,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
                 ret['result'] = None
                 return ret
 
-            if recurse:
-                __salt__['acl.modfacl'](acl_type, acl_name, perms, name, recursive=True)
-            else:
-                __salt__['acl.modfacl'](acl_type, acl_name, perms, name)
+            __salt__['acl.modfacl'](acl_type, acl_name, perms, name, recursive=recurse)
     else:
         ret['comment'] = 'ACL Type does not exist'
         ret['result'] = False
@@ -127,6 +129,11 @@ def absent(name, acl_type, acl_name='', perms='', recurse=False):
            'result': True,
            'changes': {},
            'comment': ''}
+
+    if not os.path.exists(name):
+        ret['comment'] = '{0} does not exist'.format(name)
+        ret['result'] = False
+        return ret
 
     __current_perms = __salt__['acl.getfacl'](name)
 
@@ -164,10 +171,7 @@ def absent(name, acl_type, acl_name='', perms='', recurse=False):
                 ret['result'] = None
                 return ret
 
-            if recurse:
-                __salt__['acl.delfacl'](acl_type, acl_name, perms, name, recursive=True)
-            else:
-                __salt__['acl.delfacl'](acl_type, acl_name, perms, name)
+            __salt__['acl.delfacl'](acl_type, acl_name, perms, name, recursive=recurse)
         else:
             ret['comment'] = 'Permissions are in the desired state'
 

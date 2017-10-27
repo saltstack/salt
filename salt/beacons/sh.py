@@ -40,7 +40,7 @@ def _get_shells():
     return __context__['sh.shells']
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''

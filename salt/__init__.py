@@ -35,9 +35,12 @@ def __define_global_system_encoding_variable__():
     # This is the most trustworthy source of the system encoding, though, if
     # salt is being imported after being daemonized, this information is lost
     # and reset to None
-    encoding = sys.stdin.encoding
+    if sys.stdin is not None:
+        encoding = sys.stdin.encoding
+    else:
+        encoding = None
     if not encoding:
-        # If the system is properly codfigured this should return a valid
+        # If the system is properly configured this should return a valid
         # encoding. MS Windows has problems with this and reports the wrong
         # encoding
         import locale
@@ -51,7 +54,7 @@ def __define_global_system_encoding_variable__():
         # This is now garbage collectable
         del locale
         if not encoding:
-            # This is most likely asccii which is not the best but we were
+            # This is most likely ascii which is not the best but we were
             # unable to find a better encoding. If this fails, we fall all
             # the way back to ascii
             encoding = sys.getdefaultencoding() or 'ascii'

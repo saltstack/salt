@@ -96,6 +96,65 @@ class NpmTestCase(TestCase):
             with patch.object(json, 'loads', mock_err):
                 self.assertEqual(npm.list_('coffee-script'), 'SALT')
 
+    # 'cache_clean' function tests: 1
+
+    @patch('salt.modules.npm._check_valid_version',
+           MagicMock(return_value=True))
+    def test_cache_clean(self):
+        '''
+        Test if it cleans the cached NPM packages.
+        '''
+        mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
+        with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
+            self.assertFalse(npm.cache_clean())
+
+        mock = MagicMock(return_value={'retcode': 0})
+        with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
+            self.assertTrue(npm.cache_clean())
+
+        mock = MagicMock(return_value={'retcode': 0})
+        with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
+            self.assertTrue(npm.cache_clean('coffee-script'))
+
+    # 'cache_list' function tests: 1
+
+    @patch('salt.modules.npm._check_valid_version',
+           MagicMock(return_value=True))
+    def test_cache_list(self):
+        '''
+        Test if it lists the NPM cache.
+        '''
+        mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
+        with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(CommandExecutionError, npm.cache_list)
+
+        mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
+                                       'stdout': ['~/.npm']})
+        with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
+            self.assertEqual(npm.cache_list(), ['~/.npm'])
+
+        mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
+                                       'stdout': ''})
+        with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
+            self.assertEqual(npm.cache_list('coffee-script'), '')
+
+    # 'cache_path' function tests: 1
+
+    @patch('salt.modules.npm._check_valid_version',
+           MagicMock(return_value=True))
+    def test_cache_path(self):
+        '''
+        Test if it prints the NPM cache path.
+        '''
+        mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
+        with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
+            self.assertEqual(npm.cache_path(), 'error')
+
+        mock = MagicMock(return_value={'retcode': 0, 'stderr': 'error',
+                                       'stdout': '/User/salt/.npm'})
+        with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
+            self.assertEqual(npm.cache_path(), '/User/salt/.npm')
+
 
 if __name__ == '__main__':
     from integration import run_tests

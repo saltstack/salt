@@ -27,17 +27,6 @@ class HtpasswdTestCase(TestCase):
     '''
     Test cases for salt.modules.htpasswd
     '''
-    # 'useradd_all' function tests: 1
-
-    @patch('os.path.exists', MagicMock(return_value=True))
-    def test_useradd_all(self):
-        '''
-        Test if it adds an HTTP user using the htpasswd command
-        '''
-        mock = MagicMock(return_value=True)
-        with patch.dict(htpasswd.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(htpasswd.useradd_all('/etc/httpd/htpasswd',
-                                                 'larry', 'badpassword'))
 
     # 'useradd' function tests: 1
 

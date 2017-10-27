@@ -67,6 +67,14 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
 
 # Store a reference to the executing platform
 IS_WINDOWS_PLATFORM = sys.platform.startswith('win')
+if IS_WINDOWS_PLATFORM:
+    IS_SMARTOS_PLATFORM = False
+else:
+    # os.uname() not available on Windows.
+    IS_SMARTOS_PLATFORM = os.uname()[0] == 'SunOS' and os.uname()[3].startswith('joyent_')
+
+# Store a reference wether if we're running under Python 3 and above
+IS_PY3 = sys.version_info > (3,)
 
 # Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
 # Or if setuptools was previously imported (which is the case when using
@@ -144,6 +152,10 @@ def _parse_requirements_file(requirements_file):
                     # In Windows, we're installing M2CryptoWin{32,64} which comes
                     # compiled
                     continue
+            if IS_PY3 and 'futures' in line.lower():
+                # Python 3 already has futures, installing it will only break
+                # the current python installation whenever futures is imported
+                continue
             parsed_requirements.append(line)
     return parsed_requirements
 # <---- Helper Functions ---------------------------------------------------------------------------------------------
@@ -166,17 +178,22 @@ class WriteSaltVersion(Command):
         '''
 
     def run(self):
-        if not os.path.exists(SALT_VERSION_HARDCODED):
+        if not os.path.exists(SALT_VERSION_HARDCODED) or self.distribution.with_salt_version:
             # Write the version file
             if getattr(self.distribution, 'salt_version_hardcoded_path', None) is None:
                 print('This command is not meant to be called on it\'s own')
                 exit(1)
 
+            if not self.distribution.with_salt_version:
+                salt_version = __saltstack_version__
+            else:
+                salt_version = SaltStackVersion.parse(self.distribution.with_salt_version)
+
             # pylint: disable=E0602
             open(self.distribution.salt_version_hardcoded_path, 'w').write(
                 INSTALL_VERSION_TEMPLATE.format(
                     date=DATE,
-                    full_version_info=__saltstack_version__.full_info
+                    full_version_info=salt_version.full_info
                 )
             )
             # pylint: enable=E0602
@@ -210,6 +227,7 @@ class GenerateSaltSyspaths(Command):
                 base_file_roots_dir=self.distribution.salt_base_file_roots_dir,
                 base_pillar_roots_dir=self.distribution.salt_base_pillar_roots_dir,
                 base_master_roots_dir=self.distribution.salt_base_master_roots_dir,
+                base_thorium_roots_dir=self.distribution.salt_base_thorium_roots_dir,
                 logs_dir=self.distribution.salt_logs_dir,
                 pidfile_dir=self.distribution.salt_pidfile_dir,
                 spm_formula_path=self.distribution.salt_spm_formula_dir,
@@ -463,12 +481,20 @@ class DownloadWindowsDlls(Command):
 
                         if req.getcode() == 200:
                             with open(fdest, 'wb') as wfh:
-                                while True:
-                                    chunk = req.read(4096)
-                                    if not chunk:
-                                        break
-                                    wfh.write(chunk)
-                                    wfh.flush()
+                                if IS_PY3:
+                                    while True:
+                                        chunk = req.read(4096)
+                                        if len(chunk) == 0:
+                                            break;
+                                        wfh.write(chunk)
+                                        wfh.flush()
+                                else:
+                                    while True:
+                                        for chunk in req.read(4096):
+                                            if not chunk:
+                                                break
+                                            wfh.write(chunk)
+                                            wfh.flush()
                         else:
                             log.error(
                                 'Failed to download {0}.dll to {1} from {2}'.format(
@@ -667,6 +693,7 @@ SRV_ROOT_DIR= {srv_root_dir!r}
 BASE_FILE_ROOTS_DIR = {base_file_roots_dir!r}
 BASE_PILLAR_ROOTS_DIR = {base_pillar_roots_dir!r}
 BASE_MASTER_ROOTS_DIR = {base_master_roots_dir!r}
+BASE_THORIUM_ROOTS_DIR = {base_thorium_roots_dir!r}
 LOGS_DIR = {logs_dir!r}
 PIDFILE_DIR = {pidfile_dir!r}
 SPM_FORMULA_PATH = {spm_formula_path!r}
@@ -679,6 +706,13 @@ class Build(build):
     def run(self):
         # Run build.run function
         build.run(self)
+        if getattr(self.distribution, 'with_salt_version', False):
+            # Write the hardcoded salt version module salt/_version.py
+            self.distribution.salt_version_hardcoded_path = os.path.join(
+                self.build_lib, 'salt', '_version.py'
+            )
+            self.run_command('write_salt_version')
+
         if getattr(self.distribution, 'running_salt_install', False):
             # If our install attribute is present and set to True, we'll go
             # ahead and write our install time python modules.
@@ -694,87 +728,11 @@ class Build(build):
 
 
 class Install(install):
-    user_options = install.user_options + [
-        ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
-                                  '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq'),
-        ('salt-root-dir=', None,
-         'Salt\'s pre-configured root directory'),
-        ('salt-config-dir=', None,
-         'Salt\'s pre-configured configuration directory'),
-        ('salt-cache-dir=', None,
-         'Salt\'s pre-configured cache directory'),
-        ('salt-sock-dir=', None,
-         'Salt\'s pre-configured socket directory'),
-        ('salt-srv-root-dir=', None,
-         'Salt\'s pre-configured service directory'),
-        ('salt-base-file-roots-dir=', None,
-         'Salt\'s pre-configured file roots directory'),
-        ('salt-base-pillar-roots-dir=', None,
-         'Salt\'s pre-configured pillar roots directory'),
-        ('salt-base-master-roots-dir=', None,
-         'Salt\'s pre-configured master roots directory'),
-        ('salt-logs-dir=', None,
-         'Salt\'s pre-configured logs directory'),
-        ('salt-pidfile-dir=', None,
-         'Salt\'s pre-configured pidfiles directory'),
-    ]
-
     def initialize_options(self):
         install.initialize_options(self)
-        # pylint: disable=undefined-variable
-        if __saltstack_version__.info >= SaltStackVersion.from_name('Boron'):
-            # XXX: Remove the Salt Specific Options In Salt Boron. They are now global options
-            raise DistutilsArgError(
-                'Developers, please remove the salt paths configuration '
-                'setting from the setup\'s install command'
-            )
-        # pylint: enable=undefined-variable
-        self.salt_root_dir = None
-        self.salt_config_dir = None
-        self.salt_cache_dir = None
-        self.salt_sock_dir = None
-        self.salt_srv_root_dir = None
-        self.salt_base_file_roots_dir = None
-        self.salt_base_pillar_roots_dir = None
-        self.salt_base_master_roots_dir = None
-        self.salt_logs_dir = None
-        self.salt_pidfile_dir = None
-        self.salt_transport = None
 
     def finalize_options(self):
         install.finalize_options(self)
-
-        logged_warnings = False
-        for optname in ('root_dir', 'config_dir', 'cache_dir', 'sock_dir',
-                        'srv_root_dir', 'base_file_roots_dir',
-                        'base_pillar_roots_dir', 'base_master_roots_dir',
-                        'logs_dir', 'pidfile_dir'):
-            optvalue = getattr(self, 'salt_{0}'.format(optname))
-            if optvalue is not None:
-                dist_opt_value = getattr(self.distribution, 'salt_{0}'.format(optname))
-                logged_warnings = True
-                log.warn(
-                    'The \'--salt-{0}\' setting is now a global option just pass it '
-                    'right after \'setup.py\'. This install setting will still work '
-                    'until Salt Boron but please migrate to the global setting as '
-                    'soon as possible.'.format(
-                        optname.replace('_', '-')
-                    )
-
-                )
-                if dist_opt_value is not None:
-                    raise DistutilsArgError(
-                        'The \'--salt-{0}\' setting was passed as a global option '
-                        'and as an option to the install command. Please only pass '
-                        'one of them, preferably the global option since the other '
-                        'is now deprecated and will be removed in Salt Boron.'.format(
-                            optname.replace('_', '-')
-                        )
-                    )
-                setattr(self.distribution, 'salt_{0}'.format(optname), optvalue)
-
-        if logged_warnings is True:
-            time.sleep(3)
 
     def run(self):
         # Let's set the running_salt_install attribute so we can add
@@ -819,8 +777,8 @@ class InstallLib(install_lib):
         chmod = []
 
         for idx, inputfile in enumerate(inp):
-            for executeable in executables:
-                if inputfile.endswith(executeable):
+            for executable in executables:
+                if inputfile.endswith(executable):
                     chmod.append(idx)
         for idx in chmod:
             filename = out[idx]
@@ -859,6 +817,7 @@ class SaltDistribution(distutils.dist.Distribution):
         ('ssh-packaging', None, 'Run in SSH packaging mode'),
         ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
                                   '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq')] + [
+        ('with-salt-version=', None, 'Set a fixed version for Salt instead calculating it'),
         # Salt's Paths Configuration Settings
         ('salt-root-dir=', None,
          'Salt\'s pre-configured root directory'),
@@ -901,6 +860,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_sock_dir = None
         self.salt_srv_root_dir = None
         self.salt_base_file_roots_dir = None
+        self.salt_base_thorium_roots_dir = None
         self.salt_base_pillar_roots_dir = None
         self.salt_base_master_roots_dir = None
         self.salt_logs_dir = None
@@ -908,6 +868,9 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_spm_formula_dir = None
         self.salt_spm_pillar_dir = None
         self.salt_spm_reactor_dir = None
+
+        # Salt version
+        self.with_salt_version = None
 
         self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
         self.salt_version = __version__  # pylint: disable=undefined-variable
@@ -1016,19 +979,21 @@ class SaltDistribution(distutils.dist.Distribution):
     def _property_data_files(self):
         # Data files common to all scenarios
         data_files = [
-            ('share/man/man1', ['doc/man/salt-call.1']),
+            ('share/man/man1', ['doc/man/salt-call.1', 'doc/man/salt-run.1']),
             ('share/man/man7', ['doc/man/salt.7'])
         ]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             data_files[0][1].append('doc/man/salt-ssh.1')
             if IS_WINDOWS_PLATFORM:
                 return data_files
-            data_files[0][1].extend(['doc/man/salt-run.1',
-                                     'doc/man/salt-cloud.1'])
+            data_files[0][1].append('doc/man/salt-cloud.1')
+
             return data_files
 
         if IS_WINDOWS_PLATFORM:
             data_files[0][1].extend(['doc/man/salt-cp.1',
+                                     'doc/man/salt-key.1',
+                                     'doc/man/salt-master.1',
                                      'doc/man/salt-minion.1',
                                      'doc/man/salt-proxy.1',
                                      'doc/man/salt-unity.1'])
@@ -1042,8 +1007,8 @@ class SaltDistribution(distutils.dist.Distribution):
                                  'doc/man/salt-master.1',
                                  'doc/man/salt-minion.1',
                                  'doc/man/salt-proxy.1',
-                                 'doc/man/salt-run.1',
                                  'doc/man/spm.1',
+                                 'doc/man/salt.1',
                                  'doc/man/salt-ssh.1',
                                  'doc/man/salt-syndic.1',
                                  'doc/man/salt-unity.1'])
@@ -1071,16 +1036,19 @@ class SaltDistribution(distutils.dist.Distribution):
     @property
     def _property_scripts(self):
         # Scripts common to all scenarios
-        scripts = ['scripts/salt-call']
+        scripts = ['scripts/salt-call', 'scripts/salt-run']
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             scripts.append('scripts/salt-ssh')
             if IS_WINDOWS_PLATFORM:
                 return scripts
-            scripts.extend(['scripts/salt-cloud', 'scripts/salt-run', 'scripts/spm'])
+            scripts.extend(['scripts/salt-cloud', 'scripts/spm'])
             return scripts
 
         if IS_WINDOWS_PLATFORM:
-            scripts.extend(['scripts/salt-cp',
+            scripts.extend(['scripts/salt',
+                            'scripts/salt-cp',
+                            'scripts/salt-key',
+                            'scripts/salt-master',
                             'scripts/salt-minion',
                             'scripts/salt-proxy',
                             'scripts/salt-unity'])
@@ -1094,7 +1062,6 @@ class SaltDistribution(distutils.dist.Distribution):
                         'scripts/salt-key',
                         'scripts/salt-master',
                         'scripts/salt-minion',
-                        'scripts/salt-run',
                         'scripts/salt-ssh',
                         'scripts/salt-syndic',
                         'scripts/salt-unity',
@@ -1105,17 +1072,20 @@ class SaltDistribution(distutils.dist.Distribution):
     @property
     def _property_entry_points(self):
         # console scripts common to all scenarios
-        scripts = ['salt-call = salt.scripts:salt_call']
+        scripts = ['salt-call = salt.scripts:salt_call',
+                   'salt-run = salt.scripts:salt_run']
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             scripts.append('salt-ssh = salt.scripts:salt_ssh')
             if IS_WINDOWS_PLATFORM:
                 return {'console_scripts': scripts}
-            scripts.extend(['salt-cloud = salt.scripts:salt_cloud',
-                            'salt-run = salt.scripts:salt_run'])
+            scripts.append('salt-cloud = salt.scripts:salt_cloud')
             return {'console_scripts': scripts}
 
         if IS_WINDOWS_PLATFORM:
-            scripts.extend(['salt-cp = salt.scripts:salt_cp',
+            scripts.extend(['salt = salt.scripts:salt_main',
+                            'salt-cp = salt.scripts:salt_cp',
+                            'salt-key = salt.scripts:salt_key',
+                            'salt-master = salt.scripts:salt_master',
                             'salt-minion = salt.scripts:salt_minion',
                             'salt-unity = salt.scripts:salt_unity',
                             'spm = salt.scripts:salt_spm'])
@@ -1129,7 +1099,6 @@ class SaltDistribution(distutils.dist.Distribution):
                         'salt-key = salt.scripts:salt_key',
                         'salt-master = salt.scripts:salt_master',
                         'salt-minion = salt.scripts:salt_minion',
-                        'salt-run = salt.scripts:salt_run',
                         'salt-ssh = salt.scripts:salt_ssh',
                         'salt-syndic = salt.scripts:salt_syndic',
                         'salt-unity = salt.scripts:salt_unity',
@@ -1200,6 +1169,17 @@ class SaltDistribution(distutils.dist.Distribution):
                 'site',
                 'psutil',
             ])
+        elif IS_SMARTOS_PLATFORM:
+            # we have them as requirements in pkg/smartos/esky/requirements.txt
+            # all these should be safe to force include
+            freezer_includes.extend([
+                'cherrypy',
+                'dateutils',
+                'pyghmi',
+                'croniter',
+                'mako',
+                'gnupg',
+            ])
         elif sys.platform.startswith('linux'):
             freezer_includes.append('spwd')
             try:
@@ -1249,7 +1229,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if self.salt_transport not in ('zeromq', 'raet', 'both', 'ssh', 'none'):
             raise DistutilsArgError(
                 'The value of --salt-transport needs be \'zeromq\', '
-                '\'raet\', \'both\', \'ssh\' or \'none\' not {0!r}'.format(
+                '\'raet\', \'both\', \'ssh\' or \'none\' not \'{0}\''.format(
                     self.salt_transport
                 )
             )

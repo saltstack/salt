@@ -25,7 +25,8 @@ from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.runners.winrepo import (
     genrepo as _genrepo,
     update_git_repos as _update_git_repos,
-    PER_REMOTE_OVERRIDES
+    PER_REMOTE_OVERRIDES,
+    PER_REMOTE_ONLY
 )
 from salt.ext import six
 try:
@@ -51,7 +52,7 @@ def __virtual__():
         _update_git_repos = \
             salt.utils.namespaced_function(_update_git_repos, globals())
         return __virtualname__
-    return False
+    return (False, 'This module only works on Windows.')
 
 
 def _get_local_repo_dir(saltenv='base'):

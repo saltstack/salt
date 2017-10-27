@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 LAST_STATUS = {}
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''
@@ -45,6 +45,10 @@ def beacon(config):
     `onchangeonly`: when `onchangeonly` is True the beacon will fire
     events only when the service status changes.  Otherwise, it will fire an
     event at each beacon interval.  The default is False.
+
+    `emitatstartup`: when `emitatstartup` is False the beacon will not fire
+    event when the minion is reload. Applicable only when `onchangeonly` is True.
+    The default is True.
 
     `uncleanshutdown`: If `uncleanshutdown` is present it should point to the
     location of a pid file for the service.  Most services will not clean up
@@ -78,16 +82,17 @@ def beacon(config):
     for service in config:
         ret_dict = {}
         ret_dict[service] = {'running': __salt__['service.status'](service)}
+        ret_dict['service_name'] = service
 
         # If no options is given to the service, we fall back to the defaults
         # assign a False value to oncleanshutdown and onchangeonly. Those
         # key:values are then added to the service dictionary.
-        if config[service] is None:
-            defaults = {
-                    'oncleanshutdown': False,
-                    'onchangeonly': False
-                    }
-            config[service] = defaults
+        if 'oncleanshutdown' not in config[service]:
+            config[service]['oncleanshutdown'] = False
+        if 'emitatstartup' not in config[service]:
+            config[service]['emitatstartup'] = True
+        if 'onchangeonly' not in config[service]:
+            config[service]['onchangeonly'] = False
 
         # We only want to report the nature of the shutdown
         # if the current running status is False
@@ -97,7 +102,12 @@ def beacon(config):
             ret_dict[service]['uncleanshutdown'] = True if os.path.exists(filename) else False
         if 'onchangeonly' in config[service] and config[service]['onchangeonly'] is True:
             if service not in LAST_STATUS:
-                LAST_STATUS[service] = ''
+                LAST_STATUS[service] = ret_dict[service]
+                if not config[service]['emitatstartup']:
+                    continue
+                else:
+                    ret.append(ret_dict)
+
             if LAST_STATUS[service] != ret_dict[service]:
                 LAST_STATUS[service] = ret_dict[service]
                 ret.append(ret_dict)

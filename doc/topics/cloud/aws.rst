@@ -78,6 +78,7 @@ parameters are discussed in more detail below.
       # RHEL         -> ec2-user
       # CentOS       -> ec2-user
       # Ubuntu       -> ubuntu
+      # Debian       -> admin
       #
       ssh_username: ec2-user
 
@@ -354,6 +355,35 @@ functionality was added to Salt in the 2015.5.0 release.
       # Pass userdata to the instance to be created
       userdata_file: /etc/salt/my-userdata-file
 
+.. note::
+    From versions 2016.11.0 and 2016.11.3, this file was passed through the
+    master's :conf_master:`renderer` to template it. However, this caused
+    issues with non-YAML data, so templating is no longer performed by default.
+    To template the userdata_file, add a ``userdata_template`` option to the
+    cloud profile:
+
+    .. code-block:: yaml
+
+        my-ec2-config:
+          # Pass userdata to the instance to be created
+          userdata_file: /etc/salt/my-userdata-file
+          userdata_template: jinja
+
+    If no ``userdata_template`` is set in the cloud profile, then the master
+    configuration will be checked for a :conf_master:`userdata_template` value.
+    If this is not set, then no templating will be performed on the
+    userdata_file.
+
+    To disable templating in a cloud profile when a
+    :conf_master:`userdata_template` has been set in the master configuration
+    file, simply set ``userdata_template`` to ``False`` in the cloud profile:
+
+    .. code-block:: yaml
+
+        my-ec2-config:
+          # Pass userdata to the instance to be created
+          userdata_file: /etc/salt/my-userdata-file
+          userdata_template: False
 
 EC2 allows a location to be set for servers to be deployed in. Availability
 zones exist inside regions, and may be added to increase specificity.
@@ -414,6 +444,16 @@ Multiple security groups can also be specified in the same fashion:
       securitygroup:
         - default
         - extra
+
+EC2 instances can be added to an `AWS Placement Group`_ by specifying the
+``placementgroup`` option:
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      placementgroup: my-aws-placement-group
+
+.. _`AWS Placement Group`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-groups.html
 
 Your instances may optionally make use of EC2 Spot Instances. The
 following example will request that spot instances be used and your
@@ -526,6 +566,31 @@ Tags can be set once an instance has been launched.
 .. _`AWS documentation`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html
 .. _`AWS Spot Instances`: http://aws.amazon.com/ec2/purchasing-options/spot-instances/
 
+Setting up a Master inside EC2
+------------------------------
+
+Salt Cloud can configure Salt Masters as well as Minions. Use the ``make_master`` setting to use
+this functionality.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      # Optionally install a Salt Master in addition to the Salt Minion
+      make_master: True
+
+When creating a Salt Master inside EC2 with ``make_master: True``, or when the Salt Master is already
+located and configured inside EC2, by default, minions connect to the master's public IP address during
+Salt Cloud's provisioning process. Depending on how your security groups are defined, the minions
+may or may not be able to communicate with the master. In order to use the master's private IP in EC2
+instead of the public IP, set the ``salt_interface`` to ``private_ips``.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      # Optionally set the IP configuration to private_ips
+      salt_interface: private_ips
+
+
 Modify EC2 Tags
 ===============
 One of the features of EC2 is the ability to tag resources. In fact, under the
@@ -559,22 +624,11 @@ function exists which renames both the instance, and the salt keys.
     salt-cloud -a rename mymachine newname=yourmachine
 
 
-EC2 Termination Protection
-==========================
-EC2 allows the user to enable and disable termination protection on a specific
-instance. An instance with this protection enabled cannot be destroyed.
-
-.. code-block:: bash
-
-    salt-cloud -a enable_term_protect mymachine
-    salt-cloud -a disable_term_protect mymachine
-
-
 Rename on Destroy
 =================
 When instances on EC2 are destroyed, there will be a lag between the time that
 the action is sent, and the time that Amazon cleans up the instance. During
-this time, the instance still retails a Name tag, which will cause a collision
+this time, the instance still retains a Name tag, which will cause a collision
 if the creation of an instance with the same name is attempted before the
 cleanup occurs. In order to avoid such collisions, Salt Cloud can be configured
 to rename instances when they are destroyed. The new name will look something
@@ -946,8 +1000,9 @@ Launching instances into a VPC
 Simple launching into a VPC
 ---------------------------
 
-In the amazon web interface, identify the id of the subnet into which your
-image should be created. Then, edit your cloud.profiles file like so:-
+In the amazon web interface, identify the id or the name of the subnet into
+which your image should be created. Then, edit your cloud.profiles file like
+so:-
 
 .. code-block:: yaml
 
@@ -959,6 +1014,13 @@ image should be created. Then, edit your cloud.profiles file like so:-
       ssh_username: ubuntu
       securitygroupid:
         - sg-XXXXXXXX
+      securitygroupname:
+        - AnotherSecurityGroup
+        - AndThirdSecurityGroup
+
+Note that 'subnetid' takes precedence over 'subnetname', but 'securitygroupid'
+and 'securitygroupname' are merged toghether to generate a single list for
+SecurityGroups of instances.
 
 Specifying interface properties
 -------------------------------
@@ -976,8 +1038,9 @@ the network interfaces of your virtual machines, for example:-
       size: m1.medium
       ssh_username: ubuntu
 
-      # Do not include either 'subnetid' or 'securitygroupid' here if you are
-      # going to manually specify interface configuration
+      # Do not include either 'subnetid', 'subnetname', 'securitygroupid' or
+      # 'securitygroupname' here if you are going to manually specify
+      # interface configuration
       #
       network_interfaces:
         - DeviceIndex: 0
@@ -1015,6 +1078,7 @@ the network interfaces of your virtual machines, for example:-
           # to accept IP packets with destinations other than itself.
           # SourceDestCheck: False
 
-Note that it is an error to assign a 'subnetid' or 'securitygroupid' to a
-profile where the interfaces are manually configured like this. These are both
-really properties of each network interface, not of the machine itself.
+Note that it is an error to assign a 'subnetid', 'subnetname', 'securitygroupid'
+or 'securitygroupname' to a profile where the interfaces are manually configured
+like this. These are both really properties of each network interface, not of
+the machine itself.

@@ -14,23 +14,25 @@ import subprocess
 from salt.ext.six import binary_type, string_types, text_type
 from salt.ext.six.moves import cStringIO, StringIO
 
+HAS_XML = True
 try:
     # Python >2.5
     import xml.etree.cElementTree as ElementTree
-except ImportError:
+except Exception:
     try:
         # Python >2.5
         import xml.etree.ElementTree as ElementTree
-    except ImportError:
+    except Exception:
         try:
             # normal cElementTree install
             import elementtree.cElementTree as ElementTree
-        except ImportError:
+        except Exception:
             try:
                 # normal ElementTree install
                 import elementtree.ElementTree as ElementTree
-            except ImportError:
-                raise
+            except Exception:
+                ElementTree = None
+                HAS_XML = False
 
 
 # True if we are running on Python 3.
@@ -44,14 +46,15 @@ else:
     import exceptions
 
 
-if not hasattr(ElementTree, 'ParseError'):
-    class ParseError(Exception):
-        '''
-        older versions of ElementTree do not have ParseError
-        '''
-        pass
+if HAS_XML:
+    if not hasattr(ElementTree, 'ParseError'):
+        class ParseError(Exception):
+            '''
+            older versions of ElementTree do not have ParseError
+            '''
+            pass
 
-    ElementTree.ParseError = ParseError
+        ElementTree.ParseError = ParseError
 
 
 def text_(s, encoding='latin-1', errors='strict'):

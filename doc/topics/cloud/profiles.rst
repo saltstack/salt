@@ -107,5 +107,5 @@ Larger Example
 
     cent_joyent:
       provider: my-joyent-config
-      image: centos-6
-      size: Small 1GB
+      image: centos-7
+      size: g4-highram-16G

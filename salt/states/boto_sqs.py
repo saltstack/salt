@@ -59,6 +59,10 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 '''
 from __future__ import absolute_import
 import salt.ext.six as six
+import logging
+import json
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -124,7 +128,17 @@ def present(
     if attributes:
         for attr, val in six.iteritems(attributes):
             _val = _attributes.get(attr, None)
-            if str(_val) != str(val):
+            if attr == 'Policy':
+                # Normalize these guys by brute force..
+                if isinstance(_val, six.string_types):
+                    _val = json.loads(_val)
+                if isinstance(val, six.string_types):
+                    val = json.loads(val)
+                if _val != val:
+                    log.debug('Policies differ:\n{0}\n{1}'.format(_val, val))
+                    attrs_to_set[attr] = json.dumps(val, sort_keys=True)
+            elif str(_val) != str(val):
+                log.debug('Attributes differ:\n{0}\n{1}'.format(_val, val))
                 attrs_to_set[attr] = val
     attr_names = ','.join(attrs_to_set)
     if attrs_to_set:

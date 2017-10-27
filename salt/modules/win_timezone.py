@@ -251,6 +251,7 @@ LINTOWIN = {
     'Asia/Jerusalem': 'Israel Standard Time',
     'Asia/Kabul': 'Afghanistan Standard Time',
     'Asia/Karachi': 'Pakistan Standard Time',
+    'Asia/Kathmandu': 'Nepal Standard Time',
     'Asia/Katmandu': 'Nepal Standard Time',
     'Asia/Krasnoyarsk': 'North Asia Standard Time',
     'Asia/Kuala_Lumpur': 'Singapore Standard Time',
@@ -459,7 +460,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and salt.utils.which('tzutil'):
         return __virtualname__
-    return False
+    return (False, "Module win_timezone: tzutil not found or is not on Windows client")
 
 
 def get_zone():

@@ -85,6 +85,29 @@ class StdTest(integration.ModuleCase):
                 continue
             self.assertTrue(ret['minion'])
 
+    def test_batch(self):
+        '''
+        test cmd_batch
+        '''
+        cmd_batch = self.client.cmd_batch(
+            'minion',
+            'test.ping',
+        )
+        for ret in cmd_batch:
+            self.assertTrue(ret['minion'])
+
+    def test_batch_raw(self):
+        '''
+        test cmd_batch with raw option
+        '''
+        cmd_batch = self.client.cmd_batch(
+            'minion',
+            'test.ping',
+            raw=True,
+        )
+        for ret in cmd_batch:
+            self.assertTrue(ret['data']['success'])
+
     def test_full_returns(self):
         '''
         test cmd_iter
@@ -95,27 +118,6 @@ class StdTest(integration.ModuleCase):
                 )
         self.assertIn('minion', ret)
         self.assertEqual({'ret': True, 'success': True}, ret['minion'])
-
-        ret = self.client.cmd_full_return(
-                'minion',
-                'test.pong',
-                )
-        self.assertIn('minion', ret)
-
-        if self.master_opts['transport'] == 'zeromq':
-            self.assertEqual(
-                {
-                    'out': 'nested',
-                    'ret': '\'test.pong\' is not available.',
-                    'success': False
-                },
-                ret['minion']
-            )
-        elif self.master_opts['transport'] == 'raet':
-            self.assertEqual(
-                {'success': False, 'ret': '\'test.pong\' is not available.'},
-                ret['minion']
-            )
 
     def test_disconnected_return(self):
         '''

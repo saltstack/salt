@@ -7,7 +7,7 @@ Module to provide Elasticsearch compatibility to Salt
 
 .. versionadded:: 2015.8.0
 
-:depends:       `elasticsearch-py <http://elasticsearch-py.readthedocs.org/en/latest/>`_
+:depends:       `elasticsearch-py <https://elasticsearch-py.readthedocs.io/en/latest/>`_
 
 :configuration: This module accepts connection configuration details either as
     parameters or as configuration settings in /etc/salt/minion on the relevant
@@ -63,7 +63,7 @@ def __virtual__():
     Only load if elasticsearch libraries exist.
     '''
     if not HAS_ELASTICSEARCH:
-        return False
+        return (False, 'Cannot load module elasticsearch: elasticsearch libraries not found')
     return True
 
 
@@ -84,13 +84,27 @@ def _get_instance(hosts=None, profile=None):
         hosts = _profile.get('host', None)
         if not hosts:
             hosts = _profile.get('hosts', None)
+        use_ssl = _profile.get('use_ssl', False)
+        ca_certs = _profile.get('ca_certs', False)
+        verify_certs = _profile.get('verify_certs', False)
+        username = _profile.get('username', None)
+        password = _profile.get('password', None)
 
     if not hosts:
         hosts = ['127.0.0.1:9200']
     if isinstance(hosts, string_types):
         hosts = [hosts]
     try:
-        es = elasticsearch.Elasticsearch(hosts)
+        if username and password:
+            es = elasticsearch.Elasticsearch(
+                    hosts,
+                    use_ssl=use_ssl,
+                    ca_certs=ca_certs,
+                    verify_certs=verify_certs,
+                    http_auth=(username, password)
+                )
+        else:
+            es = elasticsearch.Elasticsearch(hosts)
         if not es.ping():
             raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}, is it unhealthy?'.format(hosts))
     except elasticsearch.exceptions.ConnectionError:
@@ -201,7 +215,7 @@ def document_delete(index, doc_type, id, hosts=None, profile=None):
     '''
     es = _get_instance(hosts, profile)
     try:
-        if not index_exists(index=index):
+        if not index_exists(index=index, hosts=hosts, profile=profile):
             return True
         else:
             result = es.delete(index=index, doc_type=doc_type, id=id)
@@ -263,7 +277,7 @@ def index_create(index, body=None, hosts=None, profile=None):
     '''
     es = _get_instance(hosts, profile)
     try:
-        if index_exists(index):
+        if index_exists(index, hosts=hosts, profile=profile):
             return True
         else:
             result = es.indices.create(index=index, body=body)  # TODO error handling
@@ -283,7 +297,7 @@ def index_delete(index, hosts=None, profile=None):
     '''
     es = _get_instance(hosts, profile)
     try:
-        if not index_exists(index=index):
+        if not index_exists(index=index, hosts=hosts, profile=profile):
             return True
         else:
             result = es.indices.delete(index=index)
@@ -330,7 +344,7 @@ def index_get(index, hosts=None, profile=None):
     es = _get_instance(hosts, profile)
 
     try:
-        if index_exists(index):
+        if index_exists(index, hosts=hosts, profile=profile):
             ret = es.indices.get(index=index)  # TODO error handling
             return ret
     except elasticsearch.exceptions.NotFoundError:

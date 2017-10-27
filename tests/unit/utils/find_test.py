@@ -557,15 +557,20 @@ class TestFinder(TestCase):
         with salt.utils.fopen(hello_file, 'w') as fp_:
             fp_.write('foo')
 
-        finder = salt.utils.find.Finder({'name': 'test_name'})
-        self.assertEqual(list(finder.find('')), [])
+        finder = salt.utils.find.Finder({})
+        self.assertEqual(list(finder.find(self.tmpdir)), [self.tmpdir, hello_file])
+
+        finder = salt.utils.find.Finder({'mindepth': 1})
+        self.assertEqual(list(finder.find(self.tmpdir)), [hello_file])
+
+        finder = salt.utils.find.Finder({'maxdepth': 0})
+        self.assertEqual(list(finder.find(self.tmpdir)), [self.tmpdir])
 
         finder = salt.utils.find.Finder({'name': 'hello.txt'})
         self.assertEqual(list(finder.find(self.tmpdir)), [hello_file])
 
         finder = salt.utils.find.Finder({'type': 'f', 'print': 'path'})
-        self.assertEqual(list(finder.find(self.tmpdir)),
-            [os.path.join(self.tmpdir, 'hello.txt')])
+        self.assertEqual(list(finder.find(self.tmpdir)), [hello_file])
 
         finder = salt.utils.find.Finder({'size': '+1G', 'print': 'path'})
         self.assertEqual(list(finder.find(self.tmpdir)), [])
@@ -576,6 +581,9 @@ class TestFinder(TestCase):
         self.assertEqual(
             list(finder.find(self.tmpdir)), [[hello_file, 'hello.txt']]
         )
+
+        finder = salt.utils.find.Finder({'name': 'test_name'})
+        self.assertEqual(list(finder.find('')), [])
 
 
 if __name__ == '__main__':

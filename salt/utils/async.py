@@ -7,7 +7,6 @@ from __future__ import absolute_import
 
 import tornado.ioloop
 import tornado.concurrent
-LOOP_CLASS = tornado.ioloop.IOLoop
 # attempt to use zmq-- if we have it otherwise fallback to tornado loop
 try:
     import zmq.eventloop.ioloop
@@ -15,8 +14,10 @@ try:
     if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
         zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
     LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
+    HAS_ZMQ = True
 except ImportError:
-    pass  # salt-ssh doesn't dep zmq
+    LOOP_CLASS = tornado.ioloop.IOLoop
+    HAS_ZMQ = False
 
 import contextlib
 
@@ -52,7 +53,7 @@ class SyncWrapper(object):
         if kwargs is None:
             kwargs = {}
 
-        self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        self.io_loop = LOOP_CLASS()
         kwargs['io_loop'] = self.io_loop
 
         with current_ioloop(self.io_loop):
@@ -97,5 +98,7 @@ class SyncWrapper(object):
             # Other things should be deallocated after the io_loop closes.
             # See Issue #26889.
             del self.async
-        else:
+            del self.io_loop
+        elif hasattr(self, 'io_loop'):
             self.io_loop.close()
+            del self.io_loop

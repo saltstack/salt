@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 The pkgbuild state is the front of Salt package building backend. It
-automatically
+automatically builds DEB and RPM packages from specified sources
 
 .. versionadded:: 2015.8.0
 
@@ -49,7 +49,6 @@ import logging
 import os
 
 # Import salt libs
-import salt.utils
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -88,7 +87,6 @@ def built(name,
           env=None,
           results=None,
           force=False,
-          always=None,
           saltenv='base',
           log_dir='/var/log/salt/pkgbuild'):
     '''
@@ -116,6 +114,7 @@ def built(name,
         Run the spec file through a templating engine
 
         .. versionchanged:: 2015.8.2
+
             This argument is now optional, allowing for no templating engine to
             be used if none is desired.
 
@@ -132,8 +131,8 @@ def built(name,
 
         .. code-block:: yaml
 
-                - env:
-                    DEB_BUILD_OPTIONS: 'nocheck'
+            - env:
+                DEB_BUILD_OPTIONS: 'nocheck'
 
         .. warning::
 
@@ -141,8 +140,7 @@ def built(name,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
             quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            idiosyncrasies can be found :ref:`here <yaml-idiosyncrasies>`.
 
     results
         The names of the expected rpms that will be built
@@ -153,14 +151,6 @@ def built(name,
         nightly package builds.
 
         .. versionadded:: 2015.8.2
-
-    always
-        If ``True``, packages will be built even if they already exist in the
-        ``dest_dir``. This is useful when building a package for continuous or
-        nightly package builds.
-
-        .. deprecated:: 2015.8.2
-            Use ``force`` instead.
 
     saltenv
         The saltenv to use for files downloaded from the salt filesever
@@ -176,14 +166,6 @@ def built(name,
            'changes': {},
            'comment': '',
            'result': True}
-
-    if always is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'The \'always\' argument to the pkgbuild.built state has been '
-            'deprecated, please use \'force\' instead.'
-        )
-        force = always
 
     if not results:
         ret['comment'] = '\'results\' argument is required'
@@ -215,7 +197,14 @@ def built(name,
         ret['result'] = False
         return ret
 
-    ret['changes'] = __salt__['pkgbuild.build'](
+    func = 'pkgbuild.build'
+    if __grains__.get('os_family', False) not in ('RedHat', 'Suse'):
+        for res in results:
+            if res.endswith('.rpm'):
+                func = 'rpmbuild.build'
+                break
+
+    ret['changes'] = __salt__[func](
         runas,
         tgt,
         dest_dir,
@@ -237,46 +226,133 @@ def built(name,
     return ret
 
 
-def repo(name, keyid=None, env=None):
+def repo(name,
+         keyid=None,
+         env=None,
+         use_passphrase=False,
+         gnupghome='/etc/salt/gpgkeys',
+         runas='builder',
+         timeout=15.0):
     '''
-    Make a package repository, the name is directoty to turn into a repo.
-    This state is best used with onchanges linked to your package building
-    states
+    Make a package repository and optionally sign it and packages present
+
+    The name is directory to turn into a repo. This state is best used
+    with onchanges linked to your package building states.
 
     name
         The directory to find packages that will be in the repository
 
     keyid
-        Optional Key ID to use in signing repository
+        .. versionchanged:: 2016.3.0
 
-    env
-        A dictionary of environment variables to be utlilized in creating the repository.
-        Example:
+        Optional Key ID to use in signing packages and repository.
+        Utilizes Public and Private keys associated with keyid which have
+        been loaded into the minion's Pillar data.
+
+        For example, contents from a Pillar data file with named Public
+        and Private keys as follows:
 
         .. code-block:: yaml
 
-                - env:
-                    OPTIONS: 'ask-passphrase'
+            gpg_pkg_priv_key: |
+              -----BEGIN PGP PRIVATE KEY BLOCK-----
+              Version: GnuPG v1
+
+              lQO+BFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+              w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+              .
+              .
+              Ebe+8JCQTwqSXPRTzXmy/b5WXDeM79CkLWvuGpXFor76D+ECMRPv/rawukEcNptn
+              R5OmgHqvydEnO4pWbn8JzQO9YX/Us0SMHBVzLC8eIi5ZIopzalvX
+              =JvW8
+              -----END PGP PRIVATE KEY BLOCK-----
+
+            gpg_pkg_priv_keyname: gpg_pkg_key.pem
+
+            gpg_pkg_pub_key: |
+              -----BEGIN PGP PUBLIC KEY BLOCK-----
+              Version: GnuPG v1
+
+              mQENBFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+              w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+              .
+              .
+              bYP7t5iwJmQzRMyFInYRt77wkJBPCpJc9FPNebL9vlZcN4zv0KQta+4alcWivvoP
+              4QIxE+/+trC6QRw2m2dHk6aAeq/J0Sc7ilZufwnNA71hf9SzRIwcFXMsLx4iLlki
+              inNqW9c=
+              =s1CX
+              -----END PGP PUBLIC KEY BLOCK-----
+
+            gpg_pkg_pub_keyname: gpg_pkg_key.pub
+
+    env
+        .. versionchanged:: 2016.3.0
+
+        A dictionary of environment variables to be utilized in creating the
+        repository. Example:
+
+        .. code-block:: yaml
+
+            - env:
+                OPTIONS: 'ask-passphrase'
 
         .. warning::
 
-            The above illustrates a common PyYAML pitfall, that **yes**,
+            The above illustrates a common ``PyYAML`` pitfall, that **yes**,
             **no**, **on**, **off**, **true**, and **false** are all loaded as
             boolean ``True`` and ``False`` values, and must be enclosed in
-            quotes to be used as strings. More info on this (and other) PyYAML
-            idiosyncrasies can be found :doc:`here
-            </topics/troubleshooting/yaml_idiosyncrasies>`.
+            quotes to be used as strings. More info on this (and other)
+            ``PyYAML`` idiosyncrasies can be found :ref:`here
+            <yaml-idiosyncrasies>`.
 
-            Use of OPTIONS on some platforms, for example: ask-passphrase, will
-            require gpg-agent or similar to cache passphrases.
+            Use of ``OPTIONS`` on some platforms, for example:
+            ``ask-passphrase``, will require ``gpg-agent`` or similar to cache
+            passphrases.
+
+        .. note::
+
+            This parameter is not used for making ``yum`` repositories.
+
+    use_passphrase : False
+        .. versionadded:: 2016.3.0
+
+        Use a passphrase with the signing key presented in ``keyid``.
+        Passphrase is received from Pillar data which could be passed on the
+        command line with ``pillar`` parameter. For example:
+
+        .. code-block:: bash
+
+            pillar='{ "gpg_passphrase" : "my_passphrase" }'
+
+    gnupghome : /etc/salt/gpgkeys
+        .. versionadded:: 2016.3.0
+
+        Location where GPG related files are stored, used with 'keyid'
+
+    runas : builder
+        .. versionadded:: 2016.3.0
+
+        User to create the repository as, and optionally sign packages.
+
+        .. note::
+
+            Ensure the user has correct permissions to any files and
+            directories which are to be utilized.
+
+    timeout : 15.0
+        .. versionadded:: 2016.3.4
+
+        Timeout in seconds to wait for the prompt for inputting the passphrase.
+
     '''
     ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
+
     if __opts__['test'] is True:
         ret['result'] = None
-        ret['comment'] = 'Package repo at {0} will be rebuilt'.format(name)
+        ret['comment'] = 'Package repo metadata at {0} will be refreshed'.format(name)
         return ret
 
     # Need the check for None here, if env is not provided then it falls back
@@ -286,6 +362,25 @@ def repo(name, keyid=None, env=None):
                           'documentation.')
         return ret
 
-    __salt__['pkgbuild.make_repo'](name, keyid, env)
-    ret['changes'] = {'refresh': True}
+    func = 'pkgbuild.make_repo'
+    if __grains__.get('os_family', False) not in ('RedHat', 'Suse'):
+        for file in os.listdir(name):
+            if file.endswith('.rpm'):
+                func = 'rpmbuild.make_repo'
+                break
+
+    res = __salt__[func](name, keyid, env, use_passphrase, gnupghome, runas, timeout)
+
+    if res['retcode'] > 0:
+        ret['result'] = False
+    else:
+        ret['changes'] = {'refresh': True}
+
+    if res['stdout'] and res['stderr']:
+        ret['comment'] = "{0}\n{1}".format(res['stdout'], res['stderr'])
+    elif res['stdout']:
+        ret['comment'] = res['stdout']
+    elif res['stderr']:
+        ret['comment'] = res['stderr']
+
     return ret

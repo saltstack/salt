@@ -96,7 +96,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         self.assertEqual(
             True,
             ret,
-            'Problem while creating db for db name: {0!r}'.format(db_name)
+            'Problem while creating db for db name: \'{0}\''.format(db_name)
         )
         # test db exists
         ret = self.run_function(
@@ -107,7 +107,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         self.assertEqual(
             True,
             ret,
-            'Problem while testing db exists for db name: {0!r}'.format(db_name)
+            'Problem while testing db exists for db name: \'{0}\''.format(db_name)
         )
         # List db names to ensure db is created with the right utf8 string
         ret = self.run_function(
@@ -117,7 +117,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         if not isinstance(ret, list):
             raise AssertionError(
                 ('Unexpected query result while retrieving databases list'
-                 ' {0!r} for {1!r} test').format(
+                 ' \'{0}\' for \'{1}\' test').format(
                          ret,
                          db_name
                     )
@@ -126,7 +126,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
             returning_name,
             ret,
             ('Problem while testing presence of db name in db lists'
-             ' for db name: {0!r} in list {1!r}').format(
+             ' for db name: \'{0}\' in list \'{1}\'').format(
                           db_name,
                           ret
         ))
@@ -157,7 +157,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         self.assertEqual(
             True,
             ret,
-            'Problem while removing db for db name: {0!r}'.format(db_name)
+            'Problem while removing db for db name: \'{0}\''.format(db_name)
         )
 
     @destructiveTest
@@ -421,7 +421,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
             insert_query += "('bar');"
 
             # populate database
-            log.info('Adding table {0!r}'.format(tablename,))
+            log.info('Adding table \'{0}\''.format(tablename,))
             ret = self.run_function(
               'mysql.query',
               database=dbname,
@@ -432,13 +432,13 @@ class MysqlModuleDbTest(integration.ModuleCase,
             if not isinstance(ret, dict) or 'rows affected' not in ret:
                 raise AssertionError(
                     ('Unexpected query result while populating test table'
-                     ' {0!r} : {1!r}').format(
+                     ' \'{0}\' : \'{1}\'').format(
                          tablename,
                          ret,
                     )
                 )
             self.assertEqual(ret['rows affected'], 0)
-            log.info('Populating table {0!r}'.format(tablename,))
+            log.info('Populating table \'{0}\''.format(tablename,))
             ret = self.run_function(
               'mysql.query',
               database=dbname,
@@ -449,13 +449,13 @@ class MysqlModuleDbTest(integration.ModuleCase,
             if not isinstance(ret, dict) or 'rows affected' not in ret:
                 raise AssertionError(
                     ('Unexpected query result while populating test table'
-                     ' {0!r} : {1!r}').format(
+                     ' \'{0}\' : \'{1}\'').format(
                          tablename,
                          ret,
                     )
                 )
             self.assertEqual(ret['rows affected'], 101)
-            log.info('Removing some rows on table{0!r}'.format(tablename,))
+            log.info('Removing some rows on table\'{0}\''.format(tablename,))
             ret = self.run_function(
               'mysql.query',
               database=dbname,
@@ -466,7 +466,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
             if not isinstance(ret, dict) or 'rows affected' not in ret:
                 raise AssertionError(
                     ('Unexpected query result while removing rows on test table'
-                     ' {0!r} : {1!r}').format(
+                     ' \'{0}\' : \'{1}\'').format(
                          tablename,
                          ret,
                     )
@@ -687,7 +687,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             **kwargs
         )
         self.assertEqual(True, ret, ('Calling user_create on'
-            ' user {0!r} did not return True: {1}').format(
+            ' user \'{0}\' did not return True: {1}').format(
             uname,
             repr(ret)
         ))
@@ -700,7 +700,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             **kwargs
         )
         self.assertEqual(False, ret, ('Calling user_create a second time on'
-            ' user {0!r} did not return False: {1}').format(
+            ' user \'{0}\' did not return False: {1}').format(
             uname,
             repr(ret)
         ))
@@ -718,7 +718,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
                 saltenv={"LC_ALL": "en_US.utf8"}
             )
             self.assertEqual(True, ret, ('Calling user_chpass on'
-                ' user {0!r} did not return True: {1}').format(
+                ' user \'{0}\' did not return True: {1}').format(
                 uname,
                 repr(ret)
             ))
@@ -738,9 +738,8 @@ class MysqlModuleUserTest(integration.ModuleCase,
         )
         if not isinstance(ret, dict):
             raise AssertionError(
-                'Unexpected result while retrieving user_info for {0!r}'.format(
-                    user
-                )
+                'Unexpected result while retrieving user_info for '
+                '\'{0}\''.format(user)
             )
         self.assertEqual(ret['Host'], host)
         self.assertEqual(ret['Password'], check_hash)
@@ -757,7 +756,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             **kwargs
         )
         self.assertEqual(True, ret, ('Assertion failed  while removing user'
-            ' {0!r} on host {1!r}: {2}').format(
+            ' \'{0}\' on host \'{1}\': {2}').format(
             user,
             host,
             repr(ret)
@@ -820,7 +819,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
             ' existence failed').format(user1, 'localhost')
         )
 
@@ -869,7 +868,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
             ' failed').format(user2, 'localhost')
         )
         ret = self.run_function(
@@ -882,7 +881,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
             ' without password failed').format(user2, '10.0.0.1')
         )
         ret = self.run_function(
@@ -896,7 +895,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
             ' without password failed').format(user2, '10.0.0.2')
         )
 
@@ -926,7 +925,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_user=self.user,
             connection_pass=self.password
         )
-        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
             ' without empty password failed').format(user3, 'localhost')
         )
         ret = self.run_function(
@@ -937,7 +936,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_user=self.user,
             connection_pass=self.password
         )
-        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
             ' with password failed').format(user3, '%')
         )
 
@@ -964,7 +963,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
             ' with password take from password and not password_hash'
             ' failed').format(user4_utf8, '%')
         )
@@ -989,7 +988,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
             ' with utf8 password failed').format(user5_utf8, 'localhost')
         )
         # for this one we give password in unicode and check it in utf-8
@@ -1014,7 +1013,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user {0!r} on host {1!r}'
+        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
             ' with unicode password failed').format(user6_utf8, '10.0.0.1')
         )
         # Final result should be:
@@ -1107,7 +1106,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         if not isinstance(ret, dict) or 'results' not in ret:
             raise AssertionError(
                 ('Unexpected result while testing connection'
-                ' with user {0!r}: {1}').format(
+                ' with user \'{0}\': {1}').format(
                     user1,
                     repr(ret)
                 )
@@ -1133,7 +1132,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         #if not isinstance(ret, dict) or 'results' not in ret:
         #    raise AssertionError(
         #        ('Unexpected result while testing connection'
-        #        ' with user {0!r}: {1}').format(
+        #        ' with user \'{0}\': {1}').format(
         #            user2,
         #            repr(ret)
         #        )
@@ -1150,7 +1149,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         if not isinstance(ret, dict) or 'results' not in ret:
             raise AssertionError(
                 ('Unexpected result while testing connection'
-                ' with user {0!r}: {1}').format(
+                ' with user \'{0}\': {1}').format(
                     user3,
                     repr(ret)
                 )
@@ -1170,7 +1169,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         #if not isinstance(ret, dict) or 'results' not in ret:
         #    raise AssertionError(
         #        ('Unexpected result while testing connection'
-        #        ' with user {0!r}: {1}').format(
+        #        ' with user \'{0}\': {1}').format(
         #            user4_utf8,
         #            repr(ret)
         #        )
@@ -1189,7 +1188,7 @@ class MysqlModuleUserTest(integration.ModuleCase,
         if not isinstance(ret, dict) or 'results' not in ret:
             raise AssertionError(
                 ('Unexpected result while testing connection'
-                ' with user {0!r}: {1}').format(
+                ' with user \'{0}\': {1}').format(
                     user5_utf8,
                    repr(ret)
                 )
@@ -1363,7 +1362,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             tblname=mysqlmod.quote_identifier(self.table1),
             engine='MYISAM',
         ))
-        log.info('Adding table {0!r}'.format(self.table1,))
+        log.info('Adding table \'{0}\''.format(self.table1,))
         self.run_function(
             'mysql.query',
             database=self.testdb2,
@@ -1377,7 +1376,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             tblname=mysqlmod.quote_identifier(self.table2),
             engine='MYISAM',
         ))
-        log.info('Adding table {0!r}'.format(self.table2,))
+        log.info('Adding table \'{0}\''.format(self.table2,))
         self.run_function(
             'mysql.query',
             database=self.testdb2,
@@ -1459,7 +1458,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             **kwargs
         )
         self.assertEqual(True, ret, ('Calling grant_add on'
-            ' user {0!r} and grants {1!r} did not return True: {2}').format(
+            ' user \'{0}\' and grants \'{1}\' did not return True: {2}').format(
             user,
             grant,
             repr(ret)
@@ -1474,7 +1473,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
             **kwargs
         )
         self.assertEqual(True, ret, ('Calling grant_exists on'
-            ' user {0!r} and grants {1!r} did not return True: {2}').format(
+            ' user \'{0}\' and grants \'{1}\' did not return True: {2}').format(
             user,
             grant,
             repr(ret)

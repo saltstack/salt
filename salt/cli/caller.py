@@ -12,7 +12,6 @@ import sys
 import time
 import logging
 import traceback
-import multiprocessing
 
 # Import salt libs
 import salt
@@ -31,6 +30,7 @@ from salt.utils import print_cli
 from salt.utils import kinds
 from salt.utils import activate_profile
 from salt.utils import output_profile
+from salt.utils.process import MultiprocessingProcess
 from salt.cli import daemons
 
 try:
@@ -75,7 +75,7 @@ class Caller(object):
             ttype = opts['pillar']['master']['transport']
 
         # switch on available ttypes
-        if ttype in ('zeromq', 'tcp'):
+        if ttype in ('zeromq', 'tcp', 'detect'):
             return ZeroMQCaller(opts, **kwargs)
         elif ttype == 'raet':
             return RAETCaller(opts, **kwargs)
@@ -230,7 +230,8 @@ class BaseCaller(object):
             if isinstance(oput, six.string_types):
                 ret['out'] = oput
         is_local = self.opts['local'] or self.opts.get(
-            'file_client', False) == 'local'
+            'file_client', False) == 'local' or self.opts.get(
+            'master_type') == 'disable'
         returners = self.opts.get('return', '').split(',')
         if (not is_local) or returners:
             ret['id'] = self.opts['id']
@@ -247,7 +248,6 @@ class BaseCaller(object):
                 pass
 
         # return the job infos back up to the respective minion's master
-
         if not is_local:
             try:
                 mret = ret.copy()
@@ -331,7 +331,7 @@ class RAETCaller(BaseCaller):
             if (opts.get('__role') ==
                     kinds.APPL_KIND_NAMES[kinds.applKinds.caller]):
                 # spin up and fork minion here
-                self.process = multiprocessing.Process(target=raet_minion_run,
+                self.process = MultiprocessingProcess(target=raet_minion_run,
                                     kwargs={'cleanup_protecteds': [self.stack.ha], })
                 self.process.start()
                 # wait here until '/var/run/salt/minion/alpha_caller.manor.uxd' exists

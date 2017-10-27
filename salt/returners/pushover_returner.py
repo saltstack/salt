@@ -2,7 +2,7 @@
 '''
 Return salt data via pushover (http://www.pushover.net)
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 The following fields can be set in the minion conf file::
 
@@ -48,7 +48,7 @@ PushOver settings may also be configured as::
         retry: 2
 
     pushover_profile:
-        token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        pushover.token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     pushover:
         user: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -67,23 +67,28 @@ PushOver settings may also be configured as::
   To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
 
     salt '*' test.ping --return pushover --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. code-block:: bash
+
+    salt '*' test.ping --return pushover --return_kwargs '{"title": "Salt is awesome!"}'
+
 '''
 from __future__ import absolute_import
 
 # Import Python libs
 import pprint
 import logging
-import urllib
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin  # pylint: disable=import-error,no-name-in-module
-import salt.ext.six.moves.http_client
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Libs
 import salt.returners
-import salt.utils.http
+import salt.utils.pushover
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -143,159 +148,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _query(function,
-           token=None,
-           api_version='1',
-           method='POST',
-           header_dict=None,
-           data=None,
-           query_params=None):
-    '''
-    PushOver object method function to construct and execute on the API URL.
-
-    :param token:       The PushOver api key.
-    :param api_version: The PushOver API version to use, defaults to version 1.
-    :param function:    The PushOver api function to perform.
-    :param method:      The HTTP method, e.g. GET or POST.
-    :param data:        The data to be sent for POST method.
-    :return:            The json response from the API call or False.
-    '''
-    if query_params is None:
-        query_params = {}
-
-    ret = {'message': '',
-           'res': True}
-
-    pushover_functions = {
-        'message': {
-            'request': 'messages.json',
-            'response': 'status',
-        },
-        'validate_user': {
-            'request': 'users/validate.json',
-            'response': 'status',
-        },
-        'validate_sound': {
-            'request': 'sounds.json',
-            'response': 'status',
-        },
-    }
-
-    api_url = 'https://api.pushover.net'
-    base_url = _urljoin(api_url, api_version + '/')
-    path = pushover_functions.get(function).get('request')
-    url = _urljoin(base_url, path, False)
-
-    if not query_params:
-        query_params = {}
-
-    decode = True
-    if method == 'DELETE':
-        decode = False
-
-    result = salt.utils.http.query(
-        url,
-        method,
-        params=query_params,
-        data=data,
-        header_dict=header_dict,
-        decode=decode,
-        decode_type='json',
-        text=True,
-        status=True,
-        cookies=True,
-        persist_session=True,
-        opts=__opts__,
-    )
-
-    if result.get('status', None) == salt.ext.six.moves.http_client.OK:
-        response = pushover_functions.get(function).get('response')
-        if response in result and result[response] == 0:
-            ret['res'] = False
-        ret['message'] = result
-        return ret
-    else:
-        try:
-            if 'response' in result and result[response] == 0:
-                ret['res'] = False
-            ret['message'] = result
-            return ret
-        except ValueError:
-            ret['res'] = False
-            ret['message'] = result
-            return ret
-
-
-def _validate_sound(sound,
-                    token):
-    '''
-    Validate that the sound sent to Pushover exists.
-    :param sound:       The sound that we want to verify
-    :param token:       The PushOver token.
-    '''
-    res = {
-            'message': 'Sound is invalid',
-            'result': False
-           }
-    parameters = dict()
-    parameters['token'] = token
-
-    response = _query(function='validate_sound',
-                      method='GET',
-                      query_params=parameters)
-
-    if response['res']:
-        log.debug('response {0}'.format(response))
-        if 'message' in response:
-            _message = response.get('message', '')
-            if 'status' in _message:
-                if _message.get('dict', {}).get('status', '') == 1:
-                    sounds = _message.get('dict', {}).get('sounds', '')
-                    if sound in sounds:
-                        res['result'] = True
-                        res['message'] = 'Sound is valid.'
-                else:
-                    res['message'] = ''.join(_message.get('dict', {}).get('errors'))
-    return res
-
-
-def _validate_user(user,
-                   device,
-                   token):
-    '''
-    Validate that a Pushover user or group exists.
-    :param user:        The user or group name, either will work.
-    :param device:      The device for the user.
-    :param token:       The PushOver token.
-    '''
-    ret = {
-            'message': 'User key is invalid',
-            'res': False
-           }
-
-    parameters = dict()
-    parameters['user'] = user
-    parameters['token'] = token
-    parameters['device'] = device
-
-    response = _query(function='validate_user',
-                      method='POST',
-                      header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
-                      data=urllib.urlencode(parameters))
-
-    if response['res']:
-        if 'message' in response:
-            _message = response.get('message', '')
-            if 'status' in _message:
-                if _message.get('dict', {}).get('status', None) == 1:
-                    ret['res'] = True
-                    ret['message'] = 'User key is valid.'
-                else:
-                    ret['res'] = False
-                    ret['message'] = ''.join(_message.get('dict', {}).get('errors'))
-    return ret
-
-
 def _post_message(user,
                   device,
                   message,
@@ -318,8 +170,8 @@ def _post_message(user,
     :return:            Boolean if message was sent successfully.
     '''
 
-    user_validate = _validate_user(user, device, token)
-    if not user_validate['res']:
+    user_validate = salt.utils.pushover.validate_user(user, device, token)
+    if not user_validate['result']:
         return user_validate
 
     parameters = dict()
@@ -333,13 +185,15 @@ def _post_message(user,
     parameters['message'] = message
 
     if sound:
-        if _validate_sound(sound, token)['result']:
+        sound_validate = salt.utils.pushover.validate_sound(sound, token)
+        if sound_validate['res']:
             parameters['sound'] = sound
 
-    result = _query(function='message',
-                    method='POST',
-                    header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
-                    data=urllib.urlencode(parameters))
+    result = salt.utils.pushover.query(function='message',
+                                       method='POST',
+                                       header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
+                                       data=_urlencode(parameters),
+                                       opts=__opts__)
 
     return result
 
@@ -391,6 +245,7 @@ def returner(ret):
                            sound=sound,
                            token=token)
 
+    log.debug('result {0}'.format(result))
     if not result['res']:
         log.info('Error: {0}'.format(result['message']))
     return

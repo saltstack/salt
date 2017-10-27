@@ -34,7 +34,7 @@ def __virtual__():
     if salt.utils.which('kadmin'):
         return True
 
-    return False
+    return (False, 'The kerberos execution module not loaded: kadmin not in path')
 
 
 def __execute_kadmin(cmd):
@@ -262,7 +262,7 @@ def create_keytab(name, keytab, enctypes=None):
 
     .. code-block:: bash
 
-        salt 'kdc.example.com' host/host1.example.com host1.example.com.keytab
+        salt 'kdc.example.com' kerberos.create_keytab host/host1.example.com host1.example.com.keytab
     '''
     ret = {}
 

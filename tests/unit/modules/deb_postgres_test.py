@@ -14,6 +14,7 @@ ensure_in_syspath(
     os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../'))
 
 # Import salt libs
+import salt.ext.six as six
 from salt.modules import deb_postgres
 
 deb_postgres.__grains__ = None  # in order to stub it w/patch below
@@ -99,7 +100,11 @@ class PostgresLsClusterTestCase(TestCase):
         cmd = SALT_STUB['cmd.run_all']
         self.assertEqual('/usr/bin/pg_lsclusters --no-header',
                          cmd.call_args[0][0])
-        self.assertIsInstance(return_list, list)
+        if six.PY2:
+            # Python 3 returns iterable views (dict_keys in this case) on
+            # dict.keys() calls instead of lists. We should only perform
+            # this check in Python 2.
+            self.assertIsInstance(return_list, list)
         return_dict = deb_postgres.cluster_list(verbose=True)
         self.assertIsInstance(return_dict, dict)
 

@@ -27,7 +27,9 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
 
     my-openstack-config:
       # The OpenStack identity service url
-      identity_url: https://region-b.geo-1.identity.hpcloudsvc.com:35357/v2.0/
+      identity_url: https://region-b.geo-1.identity.hpcloudsvc.com:35357/v2.0/tokens
+      # The OpenStack Identity Version (default: 2)
+      auth_version: 2
       # The OpenStack compute region
       compute_region: region-b.geo-1
       # The OpenStack compute service name
@@ -66,6 +68,22 @@ For in-house Openstack Essex installation, libcloud needs the service_type :
     identity_url: 'http://control.openstack.example.org:5000/v2.0/'
     compute_name : Compute Service
     service_type : compute
+
+To use identity v3 for authentication, specify the `domain` and `auth_version`
+
+.. code-block:: yaml
+
+    my-openstack-config:
+      identity_url: 'http://control.openstack.example.org:5000/v3/auth/tokens'
+      auth_version: 3
+      compute_name : Compute Service
+      compute_region: East
+      service_type : compute
+      tenant: tenant
+      domain: testing
+      user: daniel
+      password: securepassword
+      driver: openstack
 
 
 Either a password or an API key must also be specified:
@@ -117,6 +135,14 @@ Alternatively, one could use the private IP to connect by specifying:
       ssh_interface: private_ips
 
 
+.. note::
+
+    When using floating ips from networks, if the OpenStack driver is unable to
+    allocate a new ip address for the server, it will check that for
+    unassociated ip addresses in the floating ip pool.  If SaltCloud is running
+    in parallel mode, it is possible that more than one server will attempt to
+    use the same ip address.
+
 '''
 
 # Import python libs
@@ -125,9 +151,11 @@ import os
 import logging
 import socket
 import pprint
+from distutils.version import LooseVersion as _LooseVersion
 
 # Import libcloud
 try:
+    import libcloud
     from libcloud.compute.base import NodeState
     HAS_LIBCLOUD = True
 except ImportError:
@@ -138,6 +166,14 @@ HAS014 = False
 try:
     from libcloud.compute.drivers.openstack import OpenStackNetwork
     from libcloud.compute.drivers.openstack import OpenStack_1_1_FloatingIpPool
+    # This work-around for Issue #32743 is no longer needed for libcloud >= 1.4.0.
+    # However, older versions of libcloud must still be supported with this work-around.
+    # This work-around can be removed when the required minimum version of libcloud is
+    # 2.0.0 (See PR #40837 - which is implemented in Salt Oxygen).
+    if _LooseVersion(libcloud.__version__) < _LooseVersion('1.4.0'):
+        # See https://github.com/saltstack/salt/issues/32743
+        import libcloud.security
+        libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS014 = True
 except Exception:
     pass
@@ -204,9 +240,9 @@ def __virtual__():
         return False
 
     salt.utils.warn_until(
-        'Carbon',
+        'Oxygen',
         'This driver has been deprecated and will be removed in the '
-        'Carbon release of Salt. Please use the nova driver instead.'
+        '{version} release of Salt. Please use the nova driver instead.'
     )
 
     return __virtualname__
@@ -256,6 +292,9 @@ def get_conn():
         'ex_tenant_name': config.get_cloud_config_value(
             'tenant', vm_, __opts__, search_global=False
         ),
+        'ex_domain_name': config.get_cloud_config_value(
+            'domain', vm_, __opts__, default='Default', search_global=False
+        ),
     }
 
     service_type = config.get_cloud_config_value('service_type',
@@ -288,7 +327,10 @@ def get_conn():
     )
 
     if password is not None:
-        authinfo['ex_force_auth_version'] = '2.0_password'
+        if config.get_cloud_config_value('auth_version', vm_, __opts__, search_global=False) == 3:
+            authinfo['ex_force_auth_version'] = '3.x_password'
+        else:
+            authinfo['ex_force_auth_version'] = '2.0_password'
         log.debug('OpenStack authenticating using password')
         if password == 'USE_KEYRING':
             # retrieve password from system keyring
@@ -367,7 +409,7 @@ def ignore_cidr(vm_, ip):
     )
     if cidr != '' and all_matching_cidrs(ip, [cidr]):
         log.warning(
-            'IP {0!r} found within {1!r}; ignoring it.'.format(ip, cidr)
+            'IP \'{0}\' found within \'{1}\'; ignoring it.'.format(ip, cidr)
         )
         return True
 
@@ -499,12 +541,17 @@ def request_instance(vm_=None, call=None):
                 kwargs['ex_files'][src_path] = fp_.read()
 
     userdata_file = config.get_cloud_config_value(
-        'userdata_file', vm_, __opts__, search_global=False
+        'userdata_file', vm_, __opts__, search_global=False, default=None
     )
-
     if userdata_file is not None:
-        with salt.utils.fopen(userdata_file, 'r') as fp:
-            kwargs['ex_userdata'] = fp.read()
+        try:
+            with salt.utils.fopen(userdata_file, 'r') as fp_:
+                kwargs['ex_userdata'] = salt.utils.cloud.userdata_template(
+                    __opts__, vm_, fp_.read()
+                )
+        except Exception as exc:
+            log.exception(
+                'Failed to read userdata from %s: %s', userdata_file, exc)
 
     config_drive = config.get_cloud_config_value(
         'config_drive', vm_, __opts__, default=None, search_global=False
@@ -516,10 +563,15 @@ def request_instance(vm_=None, call=None):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': {'name': kwargs['name'],
-                    'image': kwargs['image'].name,
-                    'size': kwargs['size'].name,
-                    'profile': vm_['profile']}},
+        args={
+            'kwargs': {
+                'name': kwargs['name'],
+                'image': kwargs['image'].name,
+                'size': kwargs['size'].name,
+                'profile': vm_['profile'],
+            }
+        },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -546,6 +598,119 @@ def request_instance(vm_=None, call=None):
 
     vm_['password'] = data.extra.get('password', None)
     return data, vm_
+
+
+def _query_node_data(vm_, data, floating, conn):
+    try:
+        node = show_instance(vm_['name'], 'action')
+        log.debug(
+            'Loaded node data for {0}:\n{1}'.format(
+                vm_['name'],
+                pprint.pformat(node)
+            )
+        )
+    except Exception as err:
+        log.error(
+            'Failed to get nodes list: {0}'.format(
+                err
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        # Trigger a failure in the wait for IP function
+        return False
+
+    running = node['state'] == NodeState.RUNNING
+    if not running:
+        # Still not running, trigger another iteration
+        return
+
+    if rackconnect(vm_) is True:
+        check_libcloud_version((0, 14, 0), why='rackconnect: True')
+        extra = node.get('extra')
+        rc_status = extra.get('metadata', {}).get(
+            'rackconnect_automation_status', '')
+        access_ip = extra.get('access_ip', '')
+
+        if rc_status != 'DEPLOYED':
+            log.debug('Waiting for Rackconnect automation to complete')
+            return
+
+    if managedcloud(vm_) is True:
+        extra = node.get('extra')
+        mc_status = extra.get('metadata', {}).get(
+            'rax_service_level_automation', '')
+
+        if mc_status != 'Complete':
+            log.debug('Waiting for managed cloud automation to complete')
+            return
+
+    public = node['public_ips']
+    if floating:
+        try:
+            name = data.name
+            ip = floating[0].ip_address
+            conn.ex_attach_floating_ip_to_node(data, ip)
+            log.info(
+                'Attaching floating IP \'{0}\' to node \'{1}\''.format(
+                    ip, name
+                )
+            )
+            data.public_ips.append(ip)
+            public = data.public_ips
+        except Exception:
+            # Note(pabelanger): Because we loop, we only want to attach the
+            # floating IP address one. So, expect failures if the IP is
+            # already attached.
+            pass
+
+    result = []
+    private = node['private_ips']
+    if private and not public:
+        log.warning(
+            'Private IPs returned, but not public... Checking for '
+            'misidentified IPs'
+        )
+        for private_ip in private:
+            private_ip = preferred_ip(vm_, [private_ip])
+            if private_ip is False:
+                continue
+            if salt.utils.cloud.is_public_ip(private_ip):
+                log.warning('{0} is a public IP'.format(private_ip))
+                data.public_ips.append(private_ip)
+                log.warning(
+                    'Public IP address was not ready when we last checked.'
+                    ' Appending public IP address now.'
+                )
+                public = data.public_ips
+            else:
+                log.warning('{0} is a private IP'.format(private_ip))
+                ignore_ip = ignore_cidr(vm_, private_ip)
+                if private_ip not in data.private_ips and not ignore_ip:
+                    result.append(private_ip)
+
+    if rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
+        data.public_ips = access_ip
+        return data
+
+    # populate return data with private_ips
+    # when ssh_interface is set to private_ips and public_ips exist
+    if not result and ssh_interface(vm_) == 'private_ips':
+        for private_ip in private:
+            ignore_ip = ignore_cidr(vm_, private_ip)
+            if private_ip not in data.private_ips and not ignore_ip:
+                result.append(private_ip)
+
+    if result:
+        log.debug('result = {0}'.format(result))
+        data.private_ips = result
+        if ssh_interface(vm_) == 'private_ips':
+            return data
+
+    if public:
+        data.public_ips = public
+        if ssh_interface(vm_) != 'private_ips':
+            return data
 
 
 def create(vm_):
@@ -575,7 +740,7 @@ def create(vm_):
         key_filename = os.path.expanduser(key_filename)
         if not os.path.isfile(key_filename):
             raise SaltCloudConfigError(
-                'The defined ssh_key_file {0!r} does not exist'.format(
+                'The defined ssh_key_file \'{0}\' does not exist'.format(
                     key_filename
                 )
             )
@@ -586,11 +751,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -600,7 +766,7 @@ def create(vm_):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
             vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
                     'keysize',
@@ -621,120 +787,10 @@ def create(vm_):
         # Pull the instance ID, valid for both spot and normal instances
         vm_['instance_id'] = data.id
 
-    def __query_node_data(vm_, data, floating):
-        try:
-            node = show_instance(vm_['name'], 'action')
-            log.debug(
-                'Loaded node data for {0}:\n{1}'.format(
-                    vm_['name'],
-                    pprint.pformat(node)
-                )
-            )
-        except Exception as err:
-            log.error(
-                'Failed to get nodes list: {0}'.format(
-                    err
-                ),
-                # Show the traceback if the debug logging level is enabled
-                exc_info_on_loglevel=logging.DEBUG
-            )
-            # Trigger a failure in the wait for IP function
-            return False
-
-        running = node['state'] == NodeState.RUNNING
-        if not running:
-            # Still not running, trigger another iteration
-            return
-
-        if rackconnect(vm_) is True:
-            check_libcloud_version((0, 14, 0), why='rackconnect: True')
-            extra = node.get('extra')
-            rc_status = extra.get('metadata', {}).get(
-                'rackconnect_automation_status', '')
-            access_ip = extra.get('access_ip', '')
-
-            if rc_status != 'DEPLOYED':
-                log.debug('Waiting for Rackconnect automation to complete')
-                return
-
-        if managedcloud(vm_) is True:
-            extra = node.get('extra')
-            mc_status = extra.get('metadata', {}).get(
-                'rax_service_level_automation', '')
-
-            if mc_status != 'Complete':
-                log.debug('Waiting for managed cloud automation to complete')
-                return
-
-        public = node['public_ips']
-        if floating:
-            try:
-                name = data.name
-                ip = floating[0].ip_address
-                conn.ex_attach_floating_ip_to_node(data, ip)
-                log.info(
-                    'Attaching floating IP {0!r} to node {1!r}'.format(
-                        ip, name
-                    )
-                )
-                data.public_ips.append(ip)
-                public = data.public_ips
-            except Exception:
-                # Note(pabelanger): Because we loop, we only want to attach the
-                # floating IP address one. So, expect failures if the IP is
-                # already attached.
-                pass
-
-        result = []
-        private = node['private_ips']
-        if private and not public:
-            log.warn(
-                'Private IPs returned, but not public... Checking for '
-                'misidentified IPs'
-            )
-            for private_ip in private:
-                private_ip = preferred_ip(vm_, [private_ip])
-                if salt.utils.cloud.is_public_ip(private_ip):
-                    log.warn('{0} is a public IP'.format(private_ip))
-                    data.public_ips.append(private_ip)
-                    log.warn(
-                        'Public IP address was not ready when we last checked.'
-                        ' Appending public IP address now.'
-                    )
-                    public = data.public_ips
-                else:
-                    log.warn('{0} is a private IP'.format(private_ip))
-                    ignore_ip = ignore_cidr(vm_, private_ip)
-                    if private_ip not in data.private_ips and not ignore_ip:
-                        result.append(private_ip)
-
-        if rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
-            data.public_ips = access_ip
-            return data
-
-        # populate return data with private_ips
-        # when ssh_interface is set to private_ips and public_ips exist
-        if not result and ssh_interface(vm_) == 'private_ips':
-            for private_ip in private:
-                ignore_ip = ignore_cidr(vm_, private_ip)
-                if private_ip not in data.private_ips and not ignore_ip:
-                    result.append(private_ip)
-
-        if result:
-            log.debug('result = {0}'.format(result))
-            data.private_ips = result
-            if ssh_interface(vm_) == 'private_ips':
-                return data
-
-        if public:
-            data.public_ips = public
-            if ssh_interface(vm_) != 'private_ips':
-                return data
-
     try:
         data = salt.utils.cloud.wait_for_ip(
-            __query_node_data,
-            update_args=(vm_, data, vm_['floating']),
+            _query_node_data,
+            update_args=(vm_, data, vm_['floating'], conn),
             timeout=config.get_cloud_config_value(
                 'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
             interval=config.get_cloud_config_value(
@@ -777,9 +833,9 @@ def create(vm_):
     if hasattr(data, 'extra') and 'password' in data.extra:
         del data.extra['password']
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
@@ -788,11 +844,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
+        args={
             'name': vm_['name'],
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -817,42 +874,42 @@ def _assign_floating_ips(vm_, conn, kwargs):
                     pool = OpenStack_1_1_FloatingIpPool(
                         net['floating'], conn.connection
                     )
-                    for idx in [pool.create_floating_ip()]:
-                        if idx.node_id is None:
-                            floating.append(idx)
+                    try:
+                        floating.append(pool.create_floating_ip())
+                    except Exception as e:
+                        log.debug('Cannot allocate IP from floating pool \'%s\'. Checking for unassociated ips.',
+                                  net['floating'])
+                        for idx in pool.list_floating_ips():
+                            if idx.node_id is None:
+                                floating.append(idx)
+                                break
                     if not floating:
-                        # Note(pabelanger): We have no available floating IPs.
-                        # For now, we raise an exception and exit.
-                        # A future enhancement might be to allow salt-cloud
-                        # to dynamically allocate new address but that might
                         raise SaltCloudSystemExit(
-                            'Floating pool {0!r} does not have any more '
-                            'please create some more or use a different '
-                            'pool.'.format(net['floating'])
+                            'There are no more floating IP addresses '
+                            'available, please create some more'
                         )
         # otherwise, attempt to obtain list without specifying pool
         # this is the same as 'nova floating-ip-list'
         elif ssh_interface(vm_) != 'private_ips':
             try:
                 # This try/except is here because it appears some
-                # *cough* Rackspace *cough*
                 # OpenStack providers return a 404 Not Found for the
                 # floating ip pool URL if there are no pools setup
                 pool = OpenStack_1_1_FloatingIpPool(
                     '', conn.connection
                 )
-                for idx in [pool.create_floating_ip()]:
-                    if idx.node_id is None:
-                        floating.append(idx)
+                try:
+                    floating.append(pool.create_floating_ip())
+                except Exception as e:
+                    log.debug('Cannot allocate IP from the default floating pool. Checking for unassociated ips.')
+                    for idx in pool.list_floating_ips():
+                        if idx.node_id is None:
+                            floating.append(idx)
+                            break
                 if not floating:
-                    # Note(pabelanger): We have no available floating IPs.
-                    # For now, we raise an exception and exit.
-                    # A future enhancement might be to allow salt-cloud to
-                    # dynamically allocate new address but that might be
-                    # tricky to manage.
-                    raise SaltCloudSystemExit(
+                    log.warning(
                         'There are no more floating IP addresses '
-                        'available, please create some more'
+                        'available, please create some more if necessary'
                     )
             except Exception as e:
                 if str(e).startswith('404'):

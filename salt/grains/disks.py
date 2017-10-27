@@ -11,7 +11,6 @@ import re
 
 # Import salt libs
 import salt.utils
-import salt.utils.decorators as decorators
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -29,91 +28,94 @@ def disks():
     Return list of disk devices
     '''
     if salt.utils.is_freebsd():
-        return _freebsd_disks()
+        return _freebsd_geom()
     elif salt.utils.is_linux():
         return _linux_disks()
     else:
         log.trace('Disk grain does not support OS')
 
 
-def _clean_keys(key):
-    key = key.replace(' ', '_')
-    key = key.replace('(', '')
-    key = key.replace(')', '')
-    return key
+class _geomconsts(object):
+    GEOMNAME = 'Geom name'
+    MEDIASIZE = 'Mediasize'
+    SECTORSIZE = 'Sectorsize'
+    STRIPESIZE = 'Stripesize'
+    STRIPEOFFSET = 'Stripeoffset'
+    DESCR = 'descr'  # model
+    LUNID = 'lunid'
+    LUNNAME = 'lunname'
+    IDENT = 'ident'  # serial
+    ROTATIONRATE = 'rotationrate'  # RPM or 0 for non-rotating
+
+    # Preserve the API where possible with Salt < 2016.3
+    _aliases = {
+        DESCR: 'device_model',
+        IDENT: 'serial_number',
+        ROTATIONRATE: 'media_RPM',
+        LUNID: 'WWN',
+    }
+
+    _datatypes = {
+        MEDIASIZE: ('re_int', r'(\d+)'),
+        SECTORSIZE: 'try_int',
+        STRIPESIZE: 'try_int',
+        STRIPEOFFSET: 'try_int',
+        ROTATIONRATE: 'try_int',
+    }
 
 
-class _camconsts(object):
-    PROTOCOL = 'protocol'
-    DEVICE_MODEL = 'device model'
-    FIRMWARE_REVISION = 'firmware revision'
-    SERIAL_NUMBER = 'serial number'
-    WWN = 'WWN'
-    SECTOR_SIZE = 'sector size'
-    MEDIA_RPM = 'media RPM'
-
-_identify_attribs = [_camconsts.__dict__[key] for key in
-                     _camconsts.__dict__ if not key.startswith('__')]
-
-
-@decorators.memoize
-def _freebsd_vbox():
-    # Don't tickle VirtualBox storage emulation bugs
-    camcontrol = salt.utils.which('camcontrol')
-    devlist = __salt__['cmd.run']('{0} devlist'.format(camcontrol))
-    if 'VBOX' in devlist:
-        return True
-    return False
+def _datavalue(datatype, data):
+    if datatype == 'try_int':
+        try:
+            return int(data)
+        except ValueError:
+            return None
+    elif datatype is tuple and datatype[0] == 're_int':
+        search = re.search(datatype[1], data)
+        if search:
+            try:
+                return int(search.group(1))
+            except ValueError:
+                return None
+        return None
+    else:
+        return data
 
 
-def _freebsd_disks():
+_geom_attribs = [_geomconsts.__dict__[key] for key in
+                 _geomconsts.__dict__ if not key.startswith('_')]
+
+
+def _freebsd_geom():
+    geom = salt.utils.which('geom')
     ret = {'disks': {}, 'SSDs': []}
-    sysctl = salt.utils.which('sysctl')
-    devices = __salt__['cmd.run']('{0} -n kern.disks'.format(sysctl))
-    SSD_TOKEN = 'non-rotating'
 
-    for device in devices.split(' '):
-        if device.startswith('cd'):
-            log.debug('Disk grain skipping cd')
-        elif _freebsd_vbox():
-            log.debug('Disk grain skipping CAM identify/inquirty on VBOX')
-            ret['disks'][device] = {}
-        else:
-            cam = _freebsd_camcontrol(device)
-            ret['disks'][device] = cam
-            if cam.get(_clean_keys(_camconsts.MEDIA_RPM)) == SSD_TOKEN:
-                ret['SSDs'].append(device)
+    devices = __salt__['cmd.run']('{0} disk list'.format(geom))
+    devices = devices.split('\n\n')
 
-    return ret
+    def parse_geom_attribs(device):
+        tmp = {}
+        for line in device.split('\n'):
+            for attrib in _geom_attribs:
+                search = re.search(r'{0}:\s(.*)'.format(attrib), line)
+                if search:
+                    value = _datavalue(_geomconsts._datatypes.get(attrib),
+                                       search.group(1))
+                    tmp[attrib] = value
+                    if attrib in _geomconsts._aliases:
+                        tmp[_geomconsts._aliases[attrib]] = value
 
+        name = tmp.pop(_geomconsts.GEOMNAME)
+        if name.startswith('cd'):
+            return
 
-def _freebsd_camcontrol(device):
-    camcontrol = salt.utils.which('camcontrol')
-    ret = {}
+        ret['disks'][name] = tmp
+        if tmp.get(_geomconsts.ROTATIONRATE) == 0:
+            log.trace('Device {0} reports itself as an SSD'.format(device))
+            ret['SSDs'].append(name)
 
-    def parse_identify_attribs(line):
-        for attrib in _identify_attribs:
-            search = re.search(r'^{0}\s+(.*)'.format(attrib), line)
-            if search:
-                ret[_clean_keys(attrib)] = search.group(1)
-
-    identify = __salt__['cmd.run']('{0} identify {1}'.format(camcontrol,
-                                                             device))
-    for line in identify.splitlines():
-        parse_identify_attribs(line)
-
-    def parse_inquiry(inquiry):
-        if not ret.get(_clean_keys(_camconsts.DEVICE_MODEL)):
-            model = re.search(r'\s<(.+?)>', inquiry)
-            if model:
-                ret[_clean_keys(_camconsts.DEVICE_MODEL)] = model.group(1)
-        if not ret.get(_clean_keys(_camconsts.SERIAL_NUMBER)):
-            sn = re.search(r'\sSerial Number\s+(\w+)\s', inquiry)
-            if sn:
-                ret[_clean_keys(_camconsts.SERIAL_NUMBER)] = sn.group(1)
-
-    inquiry = __salt__['cmd.run']('{0} inquiry {1}'.format(camcontrol, device))
-    parse_inquiry(inquiry)
+    for device in devices:
+        parse_geom_attribs(device)
 
     return ret
 

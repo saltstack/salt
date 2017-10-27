@@ -15,6 +15,12 @@ Source: https://bitbucket.org/kwi/py2-ipaddress/
 from itertools import imap as map
 range = xrange
 
+# Except that xrange only supports machine integers, not longs, so...
+def long_range(start, end):
+    while start < end:
+        yield start
+        start += 1
+
 # This backport uses bytearray instead of bytes, as bytes is the same
 # as str in Python 2.7.
 bytes = bytearray
@@ -713,13 +719,13 @@ class _BaseNetwork(_IPAddressBase):
         """
         network = int(self.network_address)
         broadcast = int(self.broadcast_address)
-        for x in range(network + 1, broadcast):
+        for x in long_range(network + 1, broadcast):
             yield self._address_class(x)
 
     def __iter__(self):
         network = int(self.network_address)
         broadcast = int(self.broadcast_address)
-        for x in range(network, broadcast + 1):
+        for x in long_range(network, broadcast + 1):
             yield self._address_class(x)
 
     def __getitem__(self, n):

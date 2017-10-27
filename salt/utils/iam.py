@@ -7,13 +7,12 @@ Connection library for Amazon IAM
 from __future__ import absolute_import
 
 # Import Python libs
-import json
 import logging
 import time
 import pprint
 from salt.ext.six.moves import range
 import salt.ext.six as six
-import salt.utils
+
 try:
     import requests
     HAS_REQUESTS = True  # pylint: disable=W0612
@@ -62,61 +61,3 @@ def _convert_key_to_str(key):
         #  properly with hmac.new (see http://bugs.python.org/issue5285)
         return str(key)
     return key
-
-
-def get_iam_region(version='latest', url='http://169.254.169.254',
-                   timeout=None, num_retries=5):
-    '''
-    Gets instance identity document and returns region
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        '''The \'get_iam_region\' function has been deprecated in favor of
-        \'salt.utils.aws.get_region_from_metadata\'. Please update your code
-        to reflect this.''')
-    instance_identity_url = '{0}/{1}/dynamic/instance-identity/document'.format(url, version)
-
-    region = None
-    try:
-        document = _retry_get_url(instance_identity_url, num_retries, timeout)
-        region = json.loads(document)['region']
-    except (ValueError, TypeError, KeyError):
-        # JSON failed to decode
-        log.error('Failed to read region from instance metadata. Giving up.')
-    return region
-
-
-def get_iam_metadata(version='latest', url='http://169.254.169.254',
-                     timeout=None, num_retries=5):
-    '''
-    Grabs the first IAM role from this instances metadata if it exists.
-    '''
-    salt.utils.warn_until(
-        'Carbon',
-        '''The \'get_iam_metadata\' function has been deprecated in favor of
-        \'salt.utils.aws.creds\'. Please update your code to reflect this.''')
-    iam_url = '{0}/{1}/meta-data/iam/security-credentials/'.format(url, version)
-    roles = _retry_get_url(iam_url, num_retries, timeout).splitlines()
-
-    credentials = {
-                'access_key': None,
-                'secret_key': None,
-                'expires_at': None,
-                'security_token': None
-            }
-
-    try:
-        data = _retry_get_url(iam_url + roles[0], num_retries, timeout)
-        meta = json.loads(data)
-
-    except (ValueError, TypeError, IndexError):
-        # JSON failed to decode, so just pass no credentials back
-        log.error('Failed to read metadata. Giving up on IAM credentials.')
-
-    else:
-        credentials['access_key'] = meta['AccessKeyId']
-        credentials['secret_key'] = _convert_key_to_str(meta['SecretAccessKey'])
-        credentials['expires_at'] = meta['Expiration']
-        credentials['security_token'] = meta['Token']
-
-    return credentials

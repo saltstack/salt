@@ -32,8 +32,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return __virtualname__
-    else:
-        return False
+    return (False, "Module win_groupadd: module only works on Windows systems")
 
 
 def add(name, gid=None, system=False):
@@ -375,3 +374,32 @@ def __fixlocaluser(username):
         username = ('{0}\\{1}').format(__salt__['grains.get']('host'), username)
 
     return username.lower()
+
+
+def list_groups(refresh=False):
+    '''
+    Return a list of groups
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' group.getent
+    '''
+    if 'group.list_groups' in __context__ and not refresh:
+        return __context__['group.getent']
+
+    ret = []
+
+    pythoncom.CoInitialize()
+    nt = win32com.client.Dispatch('AdsNameSpaces')
+
+    results = nt.GetObject('', 'WinNT://.')
+    results.Filter = ['group']
+
+    for result in results:
+        ret.append(result.name)
+
+    __context__['group.list_groups'] = ret
+
+    return ret

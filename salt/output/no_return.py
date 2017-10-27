@@ -53,7 +53,7 @@ class NestDisplay(object):
         return out
 
 
-def output(ret):
+def output(ret, **kwargs):  # pylint: disable=unused-argument
     '''
     Display ret data
     '''

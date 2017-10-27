@@ -13,7 +13,7 @@
 #default_include: minion.d/*.conf
 
 # Backwards compatibility option for proxymodules created before 2015.8.2
-# This setting will default to 'False' in the Boron release
+# This setting will default to 'False' in the 2016.3.0 release
 # Setting this to True adds proxymodules to the __opts__ dictionary.
 # This breaks several Salt features (basically anything that serializes
 # __opts__ over the wire) but retains backwards compatibility.
@@ -22,6 +22,14 @@
 # Set the location of the salt master server. If the master server cannot be
 # resolved, then the minion will fail to start.
 #master: salt
+
+# If a proxymodule has a function called 'grains', then call it during
+# regular grains loading and merge the results with the proxy's grains
+# dictionary.  Otherwise it is assumed that the module calls the grains
+# function in a custom way and returns the data elsewhere
+#
+# Default to False for 2016.3 and 2016.11.  Switch to True for Nitrogen.
+# proxy_merge_grains_in_module: False
 
 # If multiple masters are specified in the 'master' setting, the default behavior
 # is to always try to connect to them in the order they are listed. If random_master is
@@ -75,6 +83,16 @@
 # Where cache data goes.
 # This data may contain sensitive data and should be protected accordingly.
 #cachedir: /var/cache/salt/minion
+
+# Append minion_id to these directories.  Helps with
+# multiple proxies and minions running on the same machine.
+# Allowed elements in the list: pki_dir, cachedir, extension_modules
+# Normally not needed unless running several proxies and/or minions on the same machine
+# Defaults to ['cachedir'] for proxies, [] (empty list) for regular minions
+# append_minionid_config_dirs:
+#   - cachedir
+
+
 
 # Verify and set permissions on configuration directories at startup.
 #verify_env: True
@@ -425,6 +443,9 @@
 # WARNING: While md5 and sha1 are also supported, do not use it due to the high chance
 # of possible collisions and thus security breach.
 #
+# WARNING: While md5 is also supported, do not use it due to the high chance
+# of possible collisions and thus security breach.
+#
 # Warning: Prior to changing this value, the minion should be stopped and all
 # Salt caches should be cleared.
 #hash_type: sha256
@@ -535,7 +556,7 @@
 #log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #
-#log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+#log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This
 # example sets the main salt library at the 'warning' level, but sets

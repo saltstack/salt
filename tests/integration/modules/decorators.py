@@ -19,8 +19,9 @@ class DecoratorTest(integration.ModuleCase):
                     )
                 )
 
-    def not_test_depends(self):
+    def test_depends(self):
         ret = self.run_function('runtests_decorators.depends')
+        self.assertTrue(isinstance(ret, dict))
         self.assertTrue(ret['ret'])
         self.assertTrue(isinstance(ret['time'], float))
 
@@ -46,14 +47,15 @@ class DecoratorTest(integration.ModuleCase):
                     )
                 )
 
-    def not_test_depends_will_fallback(self):
-        ret = self.run_function('runtests_decorators.depends_will_fallback')
+    def test_depends_will_not_fallback(self):
+        ret = self.run_function('runtests_decorators.depends_will_not_fallback')
+        self.assertTrue(isinstance(ret, dict))
         self.assertTrue(ret['ret'])
         self.assertTrue(isinstance(ret['time'], float))
 
-    def test_missing_depends_again(self):
-        self.assertIn(
-                'fallback',
+    def test_missing_depends_will_fallback(self):
+        self.assertListEqual(
+                [False, 'fallback'],
                 self.run_function(
                     'runtests_decorators.missing_depends_will_fallback'
                     )

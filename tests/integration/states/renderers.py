@@ -26,6 +26,14 @@ class TestJinjaRenderer(integration.ModuleCase):
         for state_ret in ret.values():
             self.assertTrue(state_ret['result'])
 
+    def test_salt_contains_function(self):
+        '''
+        Test if we are able to check if a function exists inside the "salt"
+        wrapper (AliasLoader) which is available on Jinja templates.
+        '''
+        ret = self.run_function('state.sls', ['jinja_salt_contains_function'])
+        for state_ret in ret.values():
+            self.assertTrue(state_ret['result'])
 
 if __name__ == '__main__':
     from integration import run_tests

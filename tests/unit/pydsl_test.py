@@ -89,9 +89,18 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
     through setUp/tearDown can create dangerous race conditions!
     '''
 
-    def render_sls(self, content, sls='', env='base', **kws):
+    def render_sls(self, content, sls='', saltenv='base', **kws):
+        if 'env' in kws:
+            salt.utils.warn_until(
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+                )
+            kws.pop('env')
+
         return self.HIGHSTATE.state.rend['pydsl'](
-            StringIO(content), env=env, sls=sls, **kws
+            StringIO(content), saltenv=saltenv, sls=sls, **kws
         )
 
     def test_state_declarations(self):
@@ -289,7 +298,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
+                'The temporary directory \'{0}\' was not created'.format(
                     dirpath
                 )
             )
@@ -350,7 +359,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
+                'The temporary directory \'{0}\' was not created'.format(
                     dirpath
                 )
             )
@@ -382,7 +391,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
+                'The temporary directory \'{0}\' was not created'.format(
                     dirpath
                 )
             )
@@ -414,7 +423,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
+                'The temporary directory \'{0}\' was not created'.format(
                     dirpath
                 )
             )

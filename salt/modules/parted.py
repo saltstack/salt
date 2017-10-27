@@ -49,13 +49,17 @@ def __virtual__():
     These are usually provided by the ``parted`` and ``util-linux`` packages.
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'The parted execution module failed to load '
+                'Windows systems are not supported.')
     if not salt.utils.which('parted'):
-        return False
+        return (False, 'The parted execution module failed to load '
+                'parted binary is not in the path.')
     if not salt.utils.which('lsblk'):
-        return False
+        return (False, 'The parted execution module failed to load '
+                'lsblk binary is not in the path.')
     if not salt.utils.which('partprobe'):
-        return False
+        return (False, 'The parted execution module failed to load '
+                'partprobe binary is not in the path.')
     return __virtualname__
 
 
@@ -212,7 +216,7 @@ def align_check(device, part_type, partition):
             'Invalid partition passed to partition.align_check'
         )
 
-    cmd = 'parted -m -s {0} align-check {1} {2}'.format(
+    cmd = 'parted -m {0} align-check {1} {2}'.format(
         device, part_type, partition
     )
     out = __salt__['cmd.run'](cmd).splitlines()
@@ -373,12 +377,19 @@ def mkfs(device, fs_type):
     _validate_device(device)
 
     if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
+                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ntfs', 'ufs']):
         raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
 
-    mkfs_cmd = 'mkfs.{0}'.format(fs_type)
+    if fs_type == 'NTFS':
+        fs_type = 'ntfs'
+
+    if fs_type == 'linux-swap':
+        mkfs_cmd = 'mkswap'
+    else:
+        mkfs_cmd = 'mkfs.{0}'.format(fs_type)
+
     if not salt.utils.which(mkfs_cmd):
-        return 'Error: {0} is unavailable.'
+        return 'Error: {0} is unavailable.'.format(mkfs_cmd)
     cmd = '{0} {1}'.format(mkfs_cmd, device)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
@@ -397,16 +408,15 @@ def mklabel(device, label_type):
 
         salt '*' partition.mklabel /dev/sda msdos
     '''
-    _validate_device(device)
-
-    if label_type not in set(['aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop', 'mac',
-                             'msdos', 'pc98', 'sun']):
+    if label_type not in set([
+        'aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop', 'mac', 'msdos', 'pc98', 'sun'
+    ]):
         raise CommandExecutionError(
             'Invalid label_type passed to partition.mklabel'
         )
 
-    cmd = 'parted -m -s {0} mklabel {1}'.format(device, label_type)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ('parted', '-m', '-s', device, 'mklabel', label_type)
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out
 
 
@@ -423,37 +433,33 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
         salt '*' partition.mkpart /dev/sda primary fs_type=fat32 start=0 end=639
         salt '*' partition.mkpart /dev/sda primary start=0 end=639
     '''
-    _validate_device(device)
-
-    if start in [None, ''] or end in [None, '']:
-        raise CommandExecutionError(
-            'partition.mkpart requires a start and an end'
-        )
-
     if part_type not in set(['primary', 'logical', 'extended']):
         raise CommandExecutionError(
             'Invalid part_type passed to partition.mkpart'
         )
 
     if fs_type and fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
+                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs', 'zfs']):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpart'
         )
 
-    _validate_partition_boundary(start)
-    _validate_partition_boundary(end)
+    if start is not None and end is not None:
+        _validate_partition_boundary(start)
+        _validate_partition_boundary(end)
+
+    if start is None:
+        start = ''
+
+    if end is None:
+        end = ''
 
     if fs_type:
-        cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
-            device, part_type, fs_type, start, end
-        )
+        cmd = ('parted', '-m', '-s', '--', device, 'mkpart', part_type, fs_type, start, end)
     else:
-        cmd = 'parted -m -s -- {0} mkpart {1} {2} {3}'.format(
-            device, part_type, start, end
-        )
+        cmd = ('parted', '-m', '-s', '--', device, 'mkpart', part_type, start, end)
 
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out
 
 
@@ -611,14 +617,18 @@ def set_(device, minor, flag, state):
     '''
     Changes a flag on the partition with number <minor>.
 
-    A flag can be either "on" or "off". Some or all of these flags will be
-    available, depending on what disk label you are using.
+    A flag can be either "on" or "off" (make sure to use proper quoting, see
+    :ref:`YAML Idiosyncrasies <yaml-idiosyncrasies>`). Some or all of these
+    flags will be available, depending on what disk label you are using.
+
+    Valid flags are: bios_grub, legacy_boot, boot, lba, root, swap, hidden, raid,
+        LVM, PALO, PREP, DIAG
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' partition.set /dev/sda 1 boot on
+        salt '*' partition.set /dev/sda 1 boot '"on"'
     '''
     _validate_device(device)
 
@@ -643,13 +653,14 @@ def set_(device, minor, flag, state):
 
 def toggle(device, partition, flag):
     '''
-    Toggle the state of <flag> on <partition>
+    Toggle the state of <flag> on <partition>. Valid flags are the same as
+        the set command.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' partition.name /dev/sda 1 boot
+        salt '*' partition.toggle /dev/sda 1 boot
     '''
     _validate_device(device)
 

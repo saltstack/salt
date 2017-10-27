@@ -87,7 +87,7 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
     bool) may be used to specify the UsePreviousValue option.
 
     notification_arns (list) – The Simple Notification Service (SNS) topic ARNs to publish stack related events.
-    You can find your SNS topic ARNs using the `SNS console`_ or your Command Line Interface (CLI).
+    You can find your SNS topic ARNs using the `SNS_console`_ or your Command Line Interface (CLI).
 
     disable_rollback (bool) – Indicates whether or not to rollback on failure.
 
@@ -132,7 +132,8 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
     profile (dict) - A dict with region, key and keyid, or a pillar key (string) that contains a dict with region, key
     and keyid.
 
-    .. _ sns_console: https://console.aws.amazon.com/sns
+    .. _`SNS_console`: https://console.aws.amazon.com/sns
+
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -140,10 +141,14 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
     stack_policy_body = _get_template(stack_policy_body, name)
     stack_policy_during_update_body = _get_template(stack_policy_during_update_body, name)
 
+    for i in [template_body, stack_policy_body, stack_policy_during_update_body]:
+        if isinstance(i, dict):
+            return i
+
     _valid = _validate(template_body, template_url, region, key, keyid, profile)
     log.debug('Validate is : {0}.'.format(_valid))
     if _valid is not True:
-        code, message = _get_error(_valid)
+        code, message = _valid
         ret['result'] = False
         ret['comment'] = 'Template could not be validated.\n{0} \n{1}'.format(code, message)
         return ret
@@ -249,7 +254,7 @@ def _get_template(template, name):
 def _validate(template_body=None, template_url=None, region=None, key=None, keyid=None, profile=None):
     # Validates template. returns true if template syntax is correct.
     validate = __salt__['boto_cfn.validate_template'](template_body, template_url, region, key, keyid, profile)
-    log.debug('Validate is result is {0}.'.format(str(validate)))
+    log.debug('Validate result is {0}.'.format(str(validate)))
     if isinstance(validate, str):
         code, message = _get_error(validate)
         log.debug('Validate error is {0} and message is {1}.'.format(code, message))

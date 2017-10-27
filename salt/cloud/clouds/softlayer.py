@@ -257,23 +257,38 @@ def create(vm_):
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
 
+    name = vm_['name']
+    hostname = name
+    domain = config.get_cloud_config_value(
+        'domain', vm_, __opts__, default=None
+    )
+    if domain is None:
+        SaltCloudSystemExit(
+            'A domain name is required for the SoftLayer driver.'
+        )
+
+    if vm_.get('use_fqdn'):
+        name = '.'.join([name, domain])
+        vm_['name'] = name
+
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
-        'salt/cloud/{0}/creating'.format(vm_['name']),
-        {
-            'name': vm_['name'],
+        'salt/cloud/{0}/creating'.format(name),
+        args={
+            'name': name,
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM {0}'.format(name))
     conn = get_conn()
     kwargs = {
-        'hostname': vm_['name'],
-        'domain': vm_['domain'],
+        'hostname': hostname,
+        'domain': domain,
         'startCpus': vm_['cpu_number'],
         'maxMemory': vm_['ram'],
         'hourlyBillingFlag': vm_['hourly_billing'],
@@ -310,7 +325,7 @@ def create(vm_):
                             'The first 5 disks will be applied to the VM, '
                             'but the remaining disks will be ignored.\n'
                             'Please adjust your cloud configuration to only '
-                            'specify a maximum of 5 disks.'.format(vm_['name']))
+                            'specify a maximum of 5 disks.'.format(name))
                 break
 
     elif 'global_identifier' in vm_:
@@ -365,8 +380,9 @@ def create(vm_):
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
-        'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': kwargs},
+        'salt/cloud/{0}/requesting'.format(name),
+        args={'kwargs': kwargs},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -377,7 +393,7 @@ def create(vm_):
             'Error creating {0} on SoftLayer\n\n'
             'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], str(exc)
+                name, str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
@@ -391,7 +407,7 @@ def create(vm_):
     private_wds = config.get_cloud_config_value(
         'private_windows', vm_, __opts__, default=False
     )
-    if private_ssh or private_wds:
+    if private_ssh or private_wds or public_vlan is None:
         ip_type = 'primaryBackendIpAddress'
 
     def wait_for_ip():
@@ -399,8 +415,8 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         nodes = list_nodes_full()
-        if ip_type in nodes[vm_['name']]:
-            return nodes[vm_['name']][ip_type]
+        if ip_type in nodes[hostname]:
+            return nodes[hostname][ip_type]
         time.sleep(1)
         return False
 
@@ -410,7 +426,7 @@ def create(vm_):
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
     if config.get_cloud_config_value('deploy', vm_, __opts__) is not True:
-        return show_instance(vm_['name'], call='action')
+        return show_instance(hostname, call='action')
 
     SSH_PORT = 22
     WINDOWS_DS_PORT = 445
@@ -477,12 +493,13 @@ def create(vm_):
     __utils__['cloud.fire_event'](
         'event',
         'created instance',
-        'salt/cloud/{0}/created'.format(vm_['name']),
-        {
-            'name': vm_['name'],
+        'salt/cloud/{0}/created'.format(name),
+        args={
+            'name': name,
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -502,7 +519,8 @@ def list_nodes_full(mask='mask[id]', call=None):
     conn = get_conn(service='SoftLayer_Account')
     response = conn.getVirtualGuests()
     for node_id in response:
-        ret[node_id['hostname']] = node_id
+        hostname = node_id['hostname'].split('.')[0]
+        ret[hostname] = node_id
     __utils__['cloud.cache_node_list'](ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
 
@@ -582,9 +600,13 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
+
+    # If the VM was created with use_fqdn, the short hostname will be used instead.
+    name = name.split('.')[0]
 
     node = show_instance(name, call='action')
     conn = get_conn()
@@ -594,7 +616,8 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
     if __opts__.get('update_cachedir', False) is True:

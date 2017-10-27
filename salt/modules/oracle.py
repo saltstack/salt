@@ -54,7 +54,10 @@ def __virtual__():
     '''
     Load module only if cx_Oracle installed
     '''
-    return __virtualname__ if HAS_CX_ORACLE else False
+    if HAS_CX_ORACLE:
+        return __virtualname__
+    return (False, 'The oracle execution module not loaded: '
+            'python oracle library not found.')
 
 
 def _cx_oracle_req():

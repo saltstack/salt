@@ -92,17 +92,6 @@ class UtilsTestCase(TestCase):
         self.assertEqual(test_ipv4, utils.ip_bracket(test_ipv4))
         self.assertEqual('[{0}]'.format(test_ipv6), utils.ip_bracket(test_ipv6))
 
-    def test_jid_dir(self):
-        test_jid = 20131219110700123489
-        test_cache_dir = '/tmp/cachdir'
-        test_hash_type = 'md5'
-
-        expected_jid_dir = '/tmp/cachdir/jobs/69/fda308ccfa70d8296345e6509de136'
-
-        ret = utils.jid.jid_dir(test_jid, test_cache_dir, test_hash_type)
-
-        self.assertEqual(ret, expected_jid_dir)
-
     def test_is_jid(self):
         self.assertTrue(utils.jid.is_jid('20131219110700123489'))  # Valid JID
         self.assertFalse(utils.jid.is_jid(20131219110700123489))  # int
@@ -558,9 +547,17 @@ class UtilsTestCase(TestCase):
         for teststr in (r'"\ []{}"',):
             self.assertEqual(teststr, yaml.safe_load(utils.yamlencoding.yaml_dquote(teststr)))
 
+    def test_yaml_dquote_doesNotAddNewLines(self):
+        teststr = '"' * 100
+        self.assertNotIn('\n', utils.yamlencoding.yaml_dquote(teststr))
+
     def test_yaml_squote(self):
         ret = utils.yamlencoding.yaml_squote(r'"')
         self.assertEqual(ret, r"""'"'""")
+
+    def test_yaml_squote_doesNotAddNewLines(self):
+        teststr = "'" * 100
+        self.assertNotIn('\n', utils.yamlencoding.yaml_squote(teststr))
 
     def test_yaml_encode(self):
         for testobj in (None, True, False, '[7, 5]', '"monkey"', 5, 7.5, "2014-06-02 15:30:29.7"):
@@ -771,6 +768,10 @@ class UtilsTestCase(TestCase):
             ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
             self.assertEqual(utils.to_str(ut, 'utf-8'), un)
             self.assertEqual(utils.to_str(bytearray(ut), 'utf-8'), un)
+            # Test situation when a minion returns incorrect utf-8 string because of... million reasons
+            ut2 = b'\x9c'
+            self.assertEqual(utils.to_str(ut2, 'utf-8'), u'\ufffd')
+            self.assertEqual(utils.to_str(bytearray(ut2), 'utf-8'), u'\ufffd')
         else:
             self.assertEqual(utils.to_str('plugh'), 'plugh')
             self.assertEqual(utils.to_str(u'áéíóúý', 'utf-8'), 'áéíóúý')

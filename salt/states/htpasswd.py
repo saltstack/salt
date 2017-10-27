@@ -63,14 +63,14 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
     if grep_ret['retcode'] != 0 or force:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = ('User {0!r} is set to be added to htpasswd '
+            ret['comment'] = ('User \'{0}\' is set to be added to htpasswd '
                               'file').format(name)
             ret['changes'] = {name: True}
             return ret
 
-        useradd_ret = __salt__['webutil.useradd_all'](htpasswd_file, name,
-                                                      password, opts=options,
-                                                      runas=runas)
+        useradd_ret = __salt__['webutil.useradd'](htpasswd_file, name,
+                                                  password, opts=options,
+                                                  runas=runas)
         if useradd_ret['retcode'] == 0:
             ret['result'] = True
             ret['comment'] = useradd_ret['stderr']

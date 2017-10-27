@@ -7,6 +7,15 @@ This state is intended for use from the Salt Master. It provides access to
 sending commands down to minions as well as access to executing master-side
 modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
+    .. versionadded: 2016.11.0
+
+    Support for masterless minions was added to the ``salt.state`` function,
+    so they can run orchestration sls files. This is particularly useful when
+    the rendering of a state is dependent on the execution of another state.
+    Orchestration will render and execute each orchestration block
+    independently, while honoring requisites to ensure the states are applied
+    in the correct order.
+
 .. seealso:: More Orchestrate documentation
 
     * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
@@ -39,6 +48,18 @@ def __virtual__():
     return __virtualname__
 
 
+def _fire_args(tag_data):
+    try:
+        salt.utils.event.fire_args(__opts__,
+                                   __orchestration_jid__,
+                                   tag_data,
+                                   'run')
+    except NameError:
+        log.debug(
+            'Unable to fire args event due to missing __orchestration_jid__'
+        )
+
+
 def state(
         name,
         tgt,
@@ -49,15 +70,18 @@ def state(
         highstate=None,
         sls=None,
         top=None,
-        env=None,
+        saltenv=None,
         test=False,
         pillar=None,
+        pillarenv=None,
         expect_minions=False,
         fail_minions=None,
         allow_fail=0,
         concurrent=False,
         timeout=None,
-        queue=False):
+        batch=None,
+        queue=False,
+        orchestration_jid=None):
     '''
     Invoke a state run on a given target
 
@@ -66,6 +90,11 @@ def state(
 
     tgt
         The target specification for the state run.
+
+        .. versionadded: 2016.11.0
+
+        Masterless support: When running on a masterless minion, the ``tgt``
+        is ignored and will always be the local minion.
 
     tgt_type | expr_form
         The target type to resolve, defaults to glob
@@ -121,6 +150,11 @@ def state(
     queue
         Pass ``queue=true`` through to the state function
 
+    batch
+        Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
+
+        .. versionadded:: 2016.3.0
+
     Examples:
 
     Run a list of sls files via :py:func:`state.sls <salt.state.sls>` on target
@@ -162,17 +196,6 @@ def state(
         state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
         return state_ret
 
-    if env is not None:
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        state_ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
-
     if expr_form and tgt_type:
         state_ret.setdefault('warnings', []).append(
             'Please only use \'tgt_type\' or \'expr_form\' not both. '
@@ -208,7 +231,12 @@ def state(
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
 
-    cmd_kw['kwarg']['saltenv'] = __env__
+    if pillarenv is not None:
+        cmd_kw['kwarg']['pillarenv'] = pillarenv
+
+    if saltenv is not None:
+        cmd_kw['kwarg']['saltenv'] = saltenv
+
     cmd_kw['kwarg']['queue'] = queue
 
     if isinstance(concurrent, bool):
@@ -218,7 +246,31 @@ def state(
         state_ret['result'] = False
         return state_ret
 
-    cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+    if batch is not None:
+        cmd_kw['batch'] = str(batch)
+
+    masterless = __opts__['__role'] == 'minion' and \
+                 __opts__['file_client'] == 'local'
+    if not masterless:
+        _fire_args({'type': 'state', 'tgt': tgt, 'name': name, 'args': cmd_kw})
+        cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+    else:
+        if top:
+            cmd_kw['topfn'] = ''.join(cmd_kw.pop('arg'))
+        elif sls:
+            cmd_kw['mods'] = cmd_kw.pop('arg')
+        cmd_kw.update(cmd_kw.pop('kwarg'))
+        tmp_ret = __salt__[fun](**cmd_kw)
+        cmd_ret = {__opts__['id']: {
+            'ret': tmp_ret,
+            'out': tmp_ret.get('out', 'highstate') if
+                isinstance(tmp_ret, dict) else 'highstate'
+        }}
+
+    try:
+        state_ret['__jid__'] = cmd_ret[next(iter(cmd_ret))]['jid']
+    except (StopIteration, KeyError):
+        pass
 
     changes = {}
     fail = set()
@@ -238,7 +290,7 @@ def state(
 
     for minion, mdata in six.iteritems(cmd_ret):
         if mdata.get('out', '') != 'highstate':
-            log.warning("Output from salt state not highstate")
+            log.warning('Output from salt state not highstate')
 
         m_ret = False
 
@@ -254,7 +306,7 @@ def state(
             except KeyError:
                 m_state = False
             if m_state:
-                m_state = salt.utils.check_state_result(m_ret)
+                m_state = salt.utils.check_state_result(m_ret, recurse=True)
 
         if not m_state:
             if minion not in fail_minions:
@@ -263,9 +315,10 @@ def state(
             continue
         try:
             for state_item in six.itervalues(m_ret):
-                if 'changes' in state_item and state_item['changes']:
-                    changes[minion] = m_ret
-                    break
+                if isinstance(state_item, dict):
+                    if 'changes' in state_item and state_item['changes']:
+                        changes[minion] = m_ret
+                        break
             else:
                 no_change.add(minion)
         except AttributeError:
@@ -314,7 +367,8 @@ def function(
         fail_function=None,
         arg=None,
         kwarg=None,
-        timeout=None):
+        timeout=None,
+        batch=None):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -331,7 +385,7 @@ def function(
         The list of arguments to pass into the function
 
     kwarg
-        The list of keyword arguments to pass into the function
+        The dict (not a list) of keyword arguments to pass into the function
 
     ret
         Optionally set a single or a list of returners to use
@@ -349,14 +403,14 @@ def function(
     ssh
         Set to `True` to use the ssh client instead of the standard salt client
     '''
-    state_ret = {'name': name,
+    func_ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
     if kwarg is None:
         kwarg = {}
     if isinstance(arg, str):
-        state_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
+        func_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
                            'Modifying in place, but please update SLS file '
                            'to remove this warning.']
         arg = arg.split()
@@ -364,7 +418,7 @@ def function(
     cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
 
     if expr_form and tgt_type:
-        state_ret['warnings'] = [
+        func_ret['warnings'] = [
             'Please only use \'tgt_type\' or \'expr_form\' not both. '
             'Preferring \'tgt_type\' over \'expr_form\''
         ]
@@ -374,23 +428,32 @@ def function(
     elif not tgt_type and not expr_form:
         tgt_type = 'glob'
 
+    if batch is not None:
+        cmd_kw['batch'] = str(batch)
+
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
     cmd_kw['_cmd_meta'] = True
     fun = name
     if __opts__['test'] is True:
-        state_ret['comment'] = (
+        func_ret['comment'] = (
                 'Function {0} will be executed on target {1} as test={2}'
                 ).format(fun, tgt, str(False))
-        state_ret['result'] = None
-        return state_ret
+        func_ret['result'] = None
+        return func_ret
     try:
+        _fire_args({'type': 'function', 'tgt': tgt, 'name': name, 'args': cmd_kw})
         cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     except Exception as exc:
-        state_ret['result'] = False
-        state_ret['comment'] = str(exc)
-        return state_ret
+        func_ret['result'] = False
+        func_ret['comment'] = str(exc)
+        return func_ret
+
+    try:
+        func_ret['__jid__'] = cmd_ret[next(iter(cmd_ret))]['jid']
+    except (StopIteration, KeyError):
+        pass
 
     changes = {}
     fail = set()
@@ -401,7 +464,7 @@ def function(
     elif isinstance(fail_minions, string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
-        state_ret.setdefault('warnings', []).append(
+        func_ret.setdefault('warnings', []).append(
             '\'fail_minions\' needs to be a list or a comma separated '
             'string. Ignored.'
         )
@@ -409,7 +472,7 @@ def function(
     for minion, mdata in six.iteritems(cmd_ret):
         m_ret = False
         if mdata.get('retcode'):
-            state_ret['result'] = False
+            func_ret['result'] = False
             fail.add(minion)
         if mdata.get('failed', False):
             m_func = False
@@ -426,22 +489,22 @@ def function(
             continue
         changes[minion] = m_ret
     if not cmd_ret:
-        state_ret['result'] = False
-        state_ret['command'] = 'No minions responded'
+        func_ret['result'] = False
+        func_ret['command'] = 'No minions responded'
     else:
         if changes:
-            state_ret['changes'] = {'out': 'highstate', 'ret': changes}
+            func_ret['changes'] = {'out': 'highstate', 'ret': changes}
         if fail:
-            state_ret['result'] = False
-            state_ret['comment'] = 'Running function {0} failed on minions: {1}'.format(name, ', '.join(fail))
+            func_ret['result'] = False
+            func_ret['comment'] = 'Running function {0} failed on minions: {1}'.format(name, ', '.join(fail))
         else:
-            state_ret['comment'] = 'Function ran successfully.'
+            func_ret['comment'] = 'Function ran successfully.'
         if changes:
-            state_ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
+            func_ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
         if failures:
-            state_ret['comment'] += '\nFailures:\n'
+            func_ret['comment'] += '\nFailures:\n'
             for minion, failure in six.iteritems(failures):
-                state_ret['comment'] += '\n'.join(
+                func_ret['comment'] += '\n'.join(
                         (' ' * 4 + l)
                         for l in salt.output.out_format(
                             {minion: failure},
@@ -449,15 +512,16 @@ def function(
                             __opts__,
                             ).splitlines()
                         )
-                state_ret['comment'] += '\n'
-    return state_ret
+                func_ret['comment'] += '\n'
+    return func_ret
 
 
 def wait_for_event(
         name,
         id_list,
         event_id='id',
-        timeout=300):
+        timeout=300,
+        node='master'):
     '''
     Watch Salt's event bus and block until a condition is met
 
@@ -509,7 +573,7 @@ def wait_for_event(
         return ret
 
     sevent = salt.utils.event.get_event(
-            'master',
+            node,
             __opts__['sock_dir'],
             __opts__['transport'],
             opts=__opts__,
@@ -582,17 +646,50 @@ def runner(name, **kwargs):
           salt.runner:
             - name: manage.up
     '''
-    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    try:
+        jid = __orchestration_jid__
+    except NameError:
+        log.debug(
+            'Unable to fire args event due to missing __orchestration_jid__'
+        )
+        jid = None
+
+    if __opts__.get('test', False):
+        ret = {
+            'name': name,
+            'result': None,
+            'changes': {},
+            'comment': "Runner function '{0}' would be executed.".format(name)
+        }
+        return ret
+
     out = __salt__['saltutil.runner'](name,
+                                      __orchestration_jid__=jid,
                                       __env__=__env__,
+                                      full_return=True,
                                       **kwargs)
 
-    ret['result'] = True
-    ret['comment'] = "Runner function '{0}' executed.".format(name)
+    runner_return = out.get('return')
+    if isinstance(runner_return, dict) and 'Error' in runner_return:
+        out['success'] = False
+    if not out.get('success', True):
+        ret = {
+            'name': name,
+            'result': False,
+            'changes': {},
+            'comment': runner_return if runner_return else "Runner function '{0}' failed without comment.".format(name)
+        }
+    else:
+        ret = {
+            'name': name,
+            'result': True,
+            'changes': runner_return if runner_return else {},
+            'comment': "Runner function '{0}' executed.".format(name)
+        }
 
     ret['__orchestration__'] = True
-    if out:
-        ret['changes'] = out
+    if 'jid' in out:
+        ret['__jid__'] = out['jid']
 
     return ret
 
@@ -616,7 +713,22 @@ def wheel(name, **kwargs):
             - match: frank
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    try:
+        jid = __orchestration_jid__
+    except NameError:
+        log.debug(
+            'Unable to fire args event due to missing __orchestration_jid__'
+        )
+        jid = None
+
+    if __opts__.get('test', False):
+        ret['result'] = None,
+        ret['changes'] = {}
+        ret['comment'] = "Wheel function '{0}' would be executed.".format(name)
+        return ret
+
     out = __salt__['saltutil.wheel'](name,
+                                     __orchestration_jid__=jid,
                                      __env__=__env__,
                                      **kwargs)
 
@@ -624,7 +736,11 @@ def wheel(name, **kwargs):
     ret['comment'] = "Wheel function '{0}' executed.".format(name)
 
     ret['__orchestration__'] = True
-    if out:
-        ret['changes'] = out
+    if 'jid' in out:
+        ret['__jid__'] = out['jid']
+
+    runner_return = out.get('return')
+    if runner_return:
+        ret['changes'] = runner_return
 
     return ret

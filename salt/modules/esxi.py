@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
 '''
 Glues the VMware vSphere Execution Module to the VMware ESXi Proxy Minions to the
-:doc:`esxi proxymodule </ref/proxy/all/salt.proxy.esxi>`.
+:mod:`esxi proxymodule <salt.proxy.esxi>`.
 
 .. versionadded:: 2015.8.4
 
-Depends: :doc:`vSphere Remote Execution Module (salt.modules.vsphere)
-</ref/modules/all/salt.modules.vsphere>`
+Depends: :mod:`vSphere Remote Execution Module (salt.modules.vsphere)
+<salt.modules.vsphere>`
 
 For documentation on commands that you can direct to an ESXi host via proxy,
-look in the documentation for :doc:`salt.modules.vsphere
-</ref/modules/all/salt.modules.vsphere>`.
+look in the documentation for :mod:`salt.modules.vsphere <salt.modules.vsphere>`.
 
 This execution module calls through to a function in the ESXi proxy module
 called ``ch_config``, which looks up the function passed in the ``command``
-parameter in :doc:`salt.modules.vsphere </ref/modules/all/salt.modules.vsphere>`
-and calls it.
+parameter in :mod:`salt.modules.vsphere <salt.modules.vsphere>` and calls it.
 
 To execute commands with an ESXi Proxy Minion using the vSphere Execution Module,
 use the ``esxi.cmd <vsphere-function-name>`` syntax. Both args and kwargs needed
@@ -47,26 +45,12 @@ def __virtual__():
     '''
     if salt.utils.is_proxy():
         return __virtualname__
-    return False
+    return (False, 'The esxi execution module failed to load: '
+            'only available on proxy minions.')
 
 
 def cmd(command, *args, **kwargs):
     proxy_prefix = __opts__['proxy']['proxytype']
     proxy_cmd = proxy_prefix + '.ch_config'
-
-    host = __pillar__['proxy']['host']
-    username, password = __proxy__[proxy_prefix + '.find_credentials'](host)
-
-    kwargs['host'] = host
-    kwargs['username'] = username
-    kwargs['password'] = password
-
-    protocol = __pillar__['proxy'].get('protocol')
-    if protocol:
-        kwargs['protocol'] = protocol
-
-    port = __pillar__['proxy'].get('port')
-    if port:
-        kwargs['port'] = port
 
     return __proxy__[proxy_cmd](command, *args, **kwargs)

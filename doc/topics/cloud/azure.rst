@@ -14,7 +14,7 @@ More information about Azure is located at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* The `Azure <https://pypi.python.org/pypi/azure>`_ Python SDK >= 0.10.2 and < 1.0.0
+* `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure/1.0.2>`_ >= 1.0.2
 * The python-requests library, for Python < 2.7.9.
 * A Microsoft Azure account
 * OpenSSL (to generate the certificates)
@@ -198,7 +198,7 @@ The name of the service in which to create the VM. If this is not specified,
 then a service will be created with the same name as the VM.
 
 virtual_network_name
-------------
+--------------------
 Optional. The name of the virtual network for the VM to join. If this is not
 specified, then no virtual network will be joined.
 
@@ -710,7 +710,7 @@ set in the master's configuration file:
 
 .. code-block:: bash
 
-    requests_lib: True
+    backend: requests
 
 The following functions are available.
 

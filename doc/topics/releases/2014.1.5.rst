@@ -4,8 +4,8 @@ Salt 2014.1.5 Release Notes
 
 :release: 2014-06-11
 
-Version 2014.1.5 is another bugfix release for :doc:`2014.1.0
-</topics/releases/2014.1.0>`.  Changes include:
+Version 2014.1.5 is another bugfix release for :ref:`2014.1.0
+<release-2014-1-0>`.  Changes include:
 
 - Add function for finding cached job on the minion
 - Fix iptables save file location for Debian (:issue:`11730`)
@@ -42,7 +42,7 @@ Version 2014.1.5 is another bugfix release for :doc:`2014.1.0
 - Removed the deprecated external nodes classifier (originally accessible by
   setting a value for external_nodes in the master configuration file).  Note
   that this functionality has been marked deprecated for some time and was
-  replaced by the more general :doc:`master tops </topics/master_tops/index>`
+  replaced by the more general :ref:`master tops <master-tops-system>`
   system.
 - More robust escaping of ldap filter strings.
 - Fix trailing slash in :conf_master:`gitfs_root` causing files not to be

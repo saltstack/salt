@@ -52,7 +52,8 @@ fileperms-default=0644
 fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
 
 # Py3 Modernize PyLint Plugin Settings
-modernize-nofix = libmodernize.fixes.fix_dict_six
+modernize-nofix = libmodernize.fixes.fix_dict_six,
+  saltpylint.py3modernize.fixes.fix_dict_salt_six
 
 # Minimum Python Version To Enforce
 minimum-python-version = 2.6
@@ -71,7 +72,7 @@ confidence=
 # can either give multiple identifiers separated by comma (,) or put this
 # option multiple times (only on the command line, not in the configuration
 # file where it should appear only once).You can also use "--disable=all" to
-# disable everything first and then reenable specific checks. For example, if
+# disable everything first and then re-enable specific checks. For example, if
 # you want to run only the similarities checker, you can use "--disable=all
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
@@ -163,7 +164,10 @@ additional-builtins=__opts__,
   __jid_event__,
   __instance_id__,
   __salt_system_encoding__,
-  __proxy__
+  __proxy__,
+  __serializers__,
+  __reg__,
+  __events__
 
 # List of strings which can identify a callback function by name. A callback
 # name must start or end with one of those strings.
@@ -251,8 +255,8 @@ ignore-imports=no
 
 
 [BASIC]
-# Required attributes for module, separated by a comma
-required-attributes=
+# Required attributes for module, separated by a comma (will be removed in Pylint 2.0)
+#required-attributes=
 
 # List of builtins function names that should not be used, separated by a comma
 bad-functions=map,filter,apply,input
@@ -358,7 +362,8 @@ spelling-store-unknown-words=no
 [CLASSES]
 # List of interface methods to ignore, separated by a comma. This is used for
 # instance to not check methods defines in Zope's Interface base class.
-ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
+# Will be removed in Pylint 2.0
+#ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
 
 # List of method names used to declare (i.e. assign) instance attributes.
 defining-attr-methods=__init__,__new__,setUp

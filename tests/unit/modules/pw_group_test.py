@@ -63,8 +63,10 @@ class PwGroupTestCase(TestCase):
         '''
         Tests for return info on all groups
         '''
-        mock = MagicMock(return_value={'group.getent': 1})
-        with patch.dict(pw_group.__context__, mock):
+        mock_getent = [{'passwd': 'x',
+                        'gid': 0,
+                        'name': 'root'}]
+        with patch.dict(pw_group.__context__, {'group.getent': mock_getent}):
             self.assertDictContainsSubset({'passwd': 'x',
                                            'gid': 0,
                                            'name': 'root'}, pw_group.getent()[0])

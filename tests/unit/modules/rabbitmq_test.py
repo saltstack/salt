@@ -32,15 +32,66 @@ class RabbitmqTestCase(TestCase):
     '''
     Test cases for salt.modules.rabbitmq
     '''
-    # 'list_users' function tests: 1
+    # 'list_users_rabbitmq2' function tests: 1
 
-    def test_list_users(self):
+    def test_list_users_rabbitmq2(self):
         '''
         Test if it return a list of users based off of rabbitmqctl user_list.
         '''
-        mock_run = MagicMock(return_value='Listing users ...\nguest\t[administrator]\n')
+        mock_run = MagicMock(return_value='Listing users ...\nguest\t[administrator, user]\n')
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
-            self.assertDictEqual(rabbitmq.list_users(), {'guest': set(['administrator'])})
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
+
+    # 'list_users_rabbitmq3' function tests: 1
+
+    def test_list_users_rabbitmq3(self):
+        '''
+        Test if it return a list of users based off of rabbitmqctl user_list.
+        '''
+        mock_run = MagicMock(return_value='Listing users ...\nguest\t[administrator user]\n')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
+
+    # 'list_users_rabbitmq4' function tests: 1
+
+    def test_list_users_rabbitmq4(self):
+        '''
+        Test if it return a list of users based off of rabbitmqctl user_list.
+        Output changed in rabbitmq-server version 3.6.10
+        '''
+        mock_run = MagicMock(return_value='Listing users\nguest\t[administrator user]\n')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
+
+    # 'list_users_with_warning_rabbitmq2' function tests: 1
+
+    def test_list_users_with_warning_rabbitmq2(self):
+        '''
+        Test if having a leading WARNING returns the user_list anyway.
+        '''
+        rtn_val = '\n'.join([
+            'WARNING: ignoring /etc/rabbitmq/rabbitmq.conf -- location has moved to /etc/rabbitmq/rabbitmq-env.conf',
+            'Listing users ...',
+            'guest\t[administrator, user]\n',
+        ])
+        mock_run = MagicMock(return_value=rtn_val)
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
+
+    # 'list_users_with_warning_rabbitmq3' function tests: 1
+
+    def test_list_users_with_warning_rabbitmq3(self):
+        '''
+        Test if having a leading WARNING returns the user_list anyway.
+        '''
+        rtn_val = '\n'.join([
+            'WARNING: ignoring /etc/rabbitmq/rabbitmq.conf -- location has moved to /etc/rabbitmq/rabbitmq-env.conf',
+            'Listing users ...',
+            'guest\t[administrator user]\n',
+        ])
+        mock_run = MagicMock(return_value=rtn_val)
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
 
     # 'list_vhosts' function tests: 1
 
@@ -176,6 +227,19 @@ class RabbitmqTestCase(TestCase):
         via rabbitmqctl list_user_permissions.
         '''
         mock_run = MagicMock(return_value='Listing stuff ...\nsaltstack\tsaltstack\n...done')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(rabbitmq.list_user_permissions('myuser'),
+                                 {'saltstack': ['saltstack']})
+
+    # 'list_user_permissions2' function tests: 1
+
+    def test_list_user_permissions2(self):
+        '''
+        Test if it list permissions for a user
+        via rabbitmqctl list_user_permissions.
+        Output changed in rabbitmq-server version 3.6.10
+        '''
+        mock_run = MagicMock(return_value='Listing stuff\nsaltstack\tsaltstack\n...done')
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
             self.assertDictEqual(rabbitmq.list_user_permissions('myuser'),
                                  {'saltstack': ['saltstack']})

@@ -5,15 +5,24 @@ service watcher.
 '''
 from __future__ import absolute_import
 
+# Import python libs
+import re
+
 # Import salt libs
 import salt.utils
+
+# Function alias to make sure not to shadow built-in's
+__func_alias__ = {
+    'id_': 'id',
+    'reload_': 'reload',
+}
 
 
 def __virtual__():
     if salt.utils.which('monit') is not None:
         # The monit binary exists, let the module load
         return True
-    return False
+    return (False, 'The monit execution module cannot be loaded: the monit binary is not in the path.')
 
 
 def start(name):
@@ -115,6 +124,8 @@ def summary(svc_name=''):
                 resource, name, status_ = (
                     parts[0].strip(), parts[1], parts[2].strip()
                 )
+                if svc_name != '' and svc_name != name:
+                    continue
                 if resource not in ret:
                     ret[resource] = {}
                 ret[resource][name] = status_
@@ -149,3 +160,109 @@ def status(svc_name=''):
     else:
         ret = entries.get(svc_name, 'No such service')
     return ret
+
+
+def reload_():
+    '''
+    .. versionadded:: 2016.3.0
+
+    Reload monit configuration
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' monit.reload
+    '''
+    cmd = 'monit reload'
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+
+
+def configtest():
+    '''
+    .. versionadded:: 2016.3.0
+
+    Test monit configuration syntax
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' monit.configtest
+    '''
+    ret = {}
+    cmd = 'monit -t'
+    out = __salt__['cmd.run_all'](cmd)
+
+    if out['retcode'] != 0:
+        ret['comment'] = 'Syntax Error'
+        ret['stderr'] = out['stderr']
+        ret['result'] = False
+        return ret
+
+    ret['comment'] = 'Syntax OK'
+    ret['stdout'] = out['stdout']
+    ret['result'] = True
+    return ret
+
+
+def version():
+    '''
+    .. versionadded:: 2016.3.0
+
+    Return version from monit -V
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' monit.version
+    '''
+    cmd = 'monit -V'
+    out = __salt__['cmd.run'](cmd).splitlines()
+    ret = out[0].split()
+    return ret[-1]
+
+
+def id_(reset=False):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Return monit unique id.
+
+    reset : False
+        Reset current id and generate a new id when it's True.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' monit.id [reset=True]
+    '''
+    if reset:
+        id_pattern = re.compile(r'Monit id (?P<id>[^ ]+)')
+        cmd = 'echo y|monit -r'
+        out = __salt__['cmd.run_all'](cmd, python_shell=True)
+        ret = id_pattern.search(out['stdout']).group('id')
+        return ret if ret else False
+    else:
+        cmd = 'monit -i'
+        out = __salt__['cmd.run'](cmd)
+        ret = out.split(':')[-1].strip()
+    return ret
+
+
+def validate():
+    '''
+    .. versionadded:: 2016.3.0
+
+    Check all services
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' monit.validate
+    '''
+    cmd = 'monit validate'
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)

@@ -105,22 +105,26 @@ def parse_targets(name=None,
     '''
     if '__env__' in kwargs:
         salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'__env__\'. This functionality will be removed in Salt '
-            'Boron.'
-        )
-        # Backwards compatibility
-        saltenv = kwargs['__env__']
+            'Oxygen',
+            'Parameter \'__env__\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('__env__')
 
     if __grains__['os'] == 'MacOS' and sources:
         log.warning('Parameter "sources" ignored on MacOS hosts.')
+
+    version = kwargs.get('version')
 
     if pkgs and sources:
         log.error('Only one of "pkgs" and "sources" can be used.')
         return None, None
 
     elif pkgs:
+        if version is not None:
+            log.warning('\'version\' argument will be ignored for multiple '
+                        'package targets')
         pkgs = _repack_pkgs(pkgs, normalize=normalize)
         if not pkgs:
             return None, None
@@ -128,6 +132,9 @@ def parse_targets(name=None,
             return pkgs, 'repository'
 
     elif sources and __grains__['os'] != 'MacOS':
+        if version is not None:
+            log.warning('\'version\' argument will be ignored for multiple '
+                        'package targets')
         sources = pack_sources(sources, normalize=normalize)
         if not sources:
             return None, None
@@ -154,9 +161,9 @@ def parse_targets(name=None,
         if normalize:
             _normalize_name = \
                 __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
-            packed = dict([(_normalize_name(x), None) for x in name.split(',')])
+            packed = dict([(_normalize_name(x), version) for x in name.split(',')])
         else:
-            packed = dict([(x, None) for x in name.split(',')])
+            packed = dict([(x, version) for x in name.split(',')])
         return packed, 'repository'
 
     else:

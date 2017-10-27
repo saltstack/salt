@@ -17,6 +17,11 @@ import integration
 from salt import client
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError, SaltClientError
 
+if integration.SaltClientTestCaseMixIn().get_config('minion')['transport'] != 'zeromq':
+    NOT_ZMQ = True
+else:
+    NOT_ZMQ = False
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalClientTestCase(TestCase,
@@ -31,7 +36,7 @@ class LocalClientTestCase(TestCase,
         jid_no_minions = {'jid': '1234', 'minions': []}
         valid_pub_data = {'minions': ['m1', 'm2'], 'jid': '1234'}
 
-        self.assertRaises(EauthAuthenticationError, self.client._check_pub_data, None)
+        self.assertRaises(EauthAuthenticationError, self.client._check_pub_data, '')
         self.assertDictEqual({},
             self.client._check_pub_data(just_minions),
             'Did not handle lack of jid correctly')
@@ -51,15 +56,25 @@ class LocalClientTestCase(TestCase,
     def test_cmd_subset(self, cmd_mock):
         with patch('salt.client.LocalClient.cmd_cli') as cmd_cli_mock:
             self.client.cmd_subset('*', 'first.func', sub=1, cli=True)
-            cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), progress=False,
+            try:
+                cmd_cli_mock.assert_called_with(['minion2'], 'first.func', (), progress=False,
                                                 kwarg=None, expr_form='list',
-                                                ret=['first.func', 'second.func'])
-
+                                                ret='')
+            except AssertionError:
+                cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), progress=False,
+                                                kwarg=None, expr_form='list',
+                                                ret='')
             self.client.cmd_subset('*', 'first.func', sub=10, cli=True)
-            cmd_cli_mock.assert_called_with(['minion1', 'minion2'], 'first.func', (), progress=False,
+            try:
+                cmd_cli_mock.assert_called_with(['minion2', 'minion1'], 'first.func', (), progress=False,
                                                 kwarg=None, expr_form='list',
-                                                ret=['first.func', 'second.func'])
+                                                ret='')
+            except AssertionError:
+                cmd_cli_mock.assert_called_with(['minion1', 'minion2'], 'first.func', (), progress=False,
+                                                kwarg=None, expr_form='list',
+                                                ret='')
 
+    @skipIf(NOT_ZMQ, 'This test only works with ZeroMQ')
     def test_pub(self):
         # Make sure we cleanly return if the publisher isn't running
         with patch('os.path.exists', return_value=False):

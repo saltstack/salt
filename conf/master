@@ -45,6 +45,13 @@
 # Directory used to store public key data:
 #pki_dir: /etc/salt/pki/master
 
+# Key cache. Increases master speed for large numbers of accepted
+# keys. Available options: 'sched'. (Updates on a fixed schedule.)
+# Note that enabling this feature means that minions will not be
+# available to target for up to the length of the maintanence loop
+# which by default is 60s.
+#key_cache: ''
+
 # Directory to store job and cache data:
 # This directory may contain sensitive data and should be protected accordingly.
 #
@@ -52,15 +59,14 @@
 
 # Directory for custom modules. This directory can contain subdirectories for
 # each of Salt's module types such as "runners", "output", "wheel", "modules",
-# "states", "returners", etc.
-#extension_modules: <no default>
+# "states", "returners", "engines", "utils", etc.
+#extension_modules: /var/cache/salt/master/extmods
 
 # Directory for custom modules. This directory can contain subdirectories for
 # each of Salt's module types such as "runners", "output", "wheel", "modules",
-# "states", "returners", etc.
+# "states", "returners", "engines", "utils", etc.
 # Like 'extension_modules' but can take an array of paths
-#module_dirs: <no default>
-#   - /var/cache/salt/minion/extmods
+#module_dirs: []
 
 # Verify and set permissions on configuration directories at startup:
 #verify_env: True
@@ -84,6 +90,10 @@
 # Set the default outputter used by the salt command. The default is "nested".
 #output: nested
 
+# To set a list of additional directories to search for salt outputters, set the
+# outputter_dirs option.
+#outputter_dirs: []
+
 # Set the default output file used by the salt command. Default is to output
 # to the CLI and not to a file. Functions the same way as the "--out-file"
 # CLI option, only sets this to a single file for all salt commands.
@@ -91,6 +101,9 @@
 
 # Return minions that timeout when running commands like test.ping
 #show_timeout: True
+
+# Tell the client to display the jid when a job is published.
+#show_jid: False
 
 # By default, output is colored. To disable colored output, set the color value
 # to False.
@@ -120,8 +133,20 @@
 # the jobs system and is not generally recommended.
 #job_cache: True
 
-# Cache minion grains and pillar data in the cachedir.
+# Cache minion grains, pillar and mine data via the cache subsystem in the
+# cachedir or a database.
 #minion_data_cache: True
+
+# Cache subsystem module to use for minion data cache.
+#cache: localfs
+# Enables a fast in-memory cache booster and sets the expiration time.
+#memcache_expire_seconds: 0
+# Set a memcache limit in items (bank + key) per cache storage (driver + driver_opts).
+#memcache_max_items: 1024
+# Each time a cache storage got full cleanup all the expired items not just the oldest one.
+#memcache_full_cleanup: False
+# Enable collecting the memcache stats and log it on `debug` log level.
+#memcache_debug: False
 
 # Store all returns in the given returner.
 # Setting this option requires that any returner-specific configuration also
@@ -136,15 +161,15 @@
 # By default, events are not queued.
 #event_return_queue: 0
 
-# Only return events matching tags in a whitelist,
-# event_return_whitelist:
-#   - salt/master/a_tag
-#   - salt/master/another_tag
+# Only return events matching tags in a whitelist, supports glob matches.
+#event_return_whitelist:
+#  - salt/master/a_tag
+#  - salt/run/*/ret
 
-# Store all event returns _except_ the tags in a blacklist.
-# event_return_blacklist:
-#   - salt/master/not_this_tag
-#   - salt/master/or_this_one
+# Store all event returns **except** the tags in a blacklist, supports globs.
+#event_return_blacklist:
+#  - salt/master/not_this_tag
+#  - salt/wheel/*/ret
 
 # Passing very large events can cause the minion to consume large amounts of
 # memory. This value tunes the maximum size of a message allowed onto the
@@ -174,6 +199,9 @@
 # WARNING: This may have security implications if compromised minions auth with
 # a previous deleted minion ID.
 #preserve_minion_cache: False
+
+# Allow or deny minions from requesting their own key revocation
+#allow_minion_key_revoke: True
 
 # If max_minions is used in large installations, the master might experience
 # high-load situations because of having to check the number of connected
@@ -227,6 +255,9 @@
 # Set the ZeroMQ high water marks
 # http://api.zeromq.org/3-2:zmq-setsockopt
 
+# The listen queue size / backlog
+#zmq_backlog: 1000
+
 # The publisher interface ZeroMQPubServerChannel
 #pub_hwm: 1000
 
@@ -248,6 +279,14 @@
 # ZMQ high-water-mark for EventPublisher pub socket
 #event_publisher_pub_hwm: 10000
 
+# The master may allocate memory per-event and not
+# reclaim it.
+# To set a high-water mark for memory allocation, use
+# ipc_write_buffer to set a high-water mark for message
+# buffering.
+# Value: In bytes. Set to 'dynamic' to have Salt select
+# a value for you. Default is disabled.
+# ipc_write_buffer: 'dynamic'
 
 
 #####        Security settings       #####
@@ -262,7 +301,10 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
-# Time in minutes that a incoming public key with a matching name found in
+# The size of key that should be generated when creating new keys.
+#keysize: 2048
+
+# Time in minutes that an incoming public key with a matching name found in
 # pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
 # are removed when the master checks the minion_autosign directory.
 # 0 equals no timeout
@@ -290,7 +332,7 @@
 # This setting should be treated with care since it opens up execution
 # capabilities to non root users. By default this capability is completely
 # disabled.
-#client_acl:
+#publisher_acl:
 #  larry:
 #    - test.ping
 #    - network.*
@@ -306,14 +348,18 @@
 # system and throw errors if they do not exist.
 #client_acl_verify: True
 #
-#client_acl_blacklist:
+#publisher_acl_blacklist:
 #  users:
 #    - root
 #    - '^(?!sudo_).*$'   #  all non sudo users
 #  modules:
 #    - cmd
+#
+# WARNING: client_acl and client_acl_blacklist options are deprecated and will
+# be removed in the future releases. Use publisher_acl and
+# publisher_acl_blacklist instead.
 
-# Enforce client_acl & client_acl_blacklist when users have sudo
+# Enforce publisher_acl & publisher_acl_blacklist when users have sudo
 # access to the salt command.
 #
 #sudo_acl: False
@@ -327,6 +373,18 @@
 #
 # Time (in seconds) for a newly generated token to live. Default: 12 hours
 #token_expire: 43200
+#
+# Allow eauth users to specify the expiry time of the tokens they generate.
+# A boolean applies to all users or a dictionary of whitelisted eauth backends
+# and usernames may be given.
+# token_expire_user_override:
+#   pam:
+#     - fred
+#     - tom
+#   ldap:
+#     - gary
+#
+#token_expire_user_override: False
 
 # Allow minions to push files to the master. This is disabled by default, for
 # security purposes.
@@ -351,13 +409,36 @@
 # will cause minion to throw an exception and drop the message.
 # sign_pub_messages: False
 
+# Signature verification on messages published from minions
+# This requires that minions cryptographically sign the messages they
+# publish to the master.  If minions are not signing, then log this information
+# at loglevel 'INFO' and drop the message without acting on it.
+# require_minion_sign_messages: False
+
+# The below will drop messages when their signatures do not validate.
+# Note that when this option is False but `require_minion_sign_messages` is True
+# minions MUST sign their messages but the validity of their signatures
+# is ignored.
+# These two config options exist so a Salt infrastructure can be moved
+# to signing minion messages gradually.
+# drop_messages_signature_fail: False
+
+# Use TLS/SSL encrypted connection between master and minion.
+# Can be set to a dictionary containing keyword arguments corresponding to Python's
+# 'ssl.wrap_socket' method.
+# Default is None.
+#ssl:
+#    keyfile: <path_to_keyfile>
+#    certfile: <path_to_certfile>
+#    ssl_version: PROTOCOL_TLSv1_2
+
 #####     Salt-SSH Configuration     #####
 ##########################################
 
 # Pass in an alternative location for the salt-ssh roster file
 #roster_file: /etc/salt/roster
 
-# Define a location for roster files so they can be chosen when using Salt API.
+# Define locations for roster files so they can be chosen when using Salt API.
 # An administrator can place roster files into these locations. Then when
 # calling Salt API, parameter 'roster_file' should contain a relative path to
 # these locations. That is, "roster_file=/foo/roster" will be resolved as
@@ -368,6 +449,27 @@
 # - /etc/salt/roster.d
 # - /opt/salt/some/more/rosters
 
+# The ssh password to log in with.
+#ssh_passwd: ''
+
+#The target system's ssh port number.
+#ssh_port: 22
+
+# Comma-separated list of ports to scan.
+#ssh_scan_ports: 22
+
+# Scanning socket timeout for salt-ssh.
+#ssh_scan_timeout: 0.01
+
+# Boolean to run command via sudo.
+#ssh_sudo: False
+
+# Number of seconds to wait for a response when establishing an SSH connection.
+#ssh_timeout: 60
+
+# The user to log in as.
+#ssh_user: root
+
 # The log file of the salt-ssh command:
 #ssh_log_file: /var/log/salt/ssh
 
@@ -376,6 +478,22 @@
 # overridden on a per-minion basis in the roster (`minion_opts`)
 #ssh_minion_opts:
 #  gpg_keydir: /root/gpg
+
+# Set this to True to default to using ~/.ssh/id_rsa for salt-ssh
+# authentication with minions
+#ssh_use_home_key: False
+
+# Set this to True to default salt-ssh to run with ``-o IdentitiesOnly=yes``.
+# This option is intended for situations where the ssh-agent offers many
+# different identities and allows ssh to ignore those identities and use the
+# only one specified in options.
+#ssh_identities_only: False
+
+# List-only nodegroups for salt-ssh. Each group must be formed as either a
+# comma-separated list, or a YAML list. This option is useful to group minions
+# into easy-to-target groups when using salt-ssh. These groups can then be
+# targeted with the normal -N argument to salt-ssh.
+#ssh_list_nodegroups: {}
 
 #####    Master Module Management    #####
 ##########################################
@@ -445,6 +563,11 @@
 # If set to 'changes', the output will be full unless the state didn't change.
 #state_output: full
 
+# The state_output_diff setting changes whether or not the output from
+# successful states is returned. Useful when even the terse output of these
+# states is cluttering the logs. Set it to True to ignore them.
+#state_output_diff: False
+
 # Automatically aggregate all states that have support for mod_aggregate by
 # setting to 'True'. Or pass a list of state module names to automatically
 # aggregate just those types.
@@ -485,6 +608,10 @@
 #    - /srv/salt
 #
 
+# The master_roots setting configures a master-only copy of the file_roots dictionary,
+# used by the state compiler.
+#master_roots: /srv/salt-master
+
 # When using multiple environments, each with their own top file, the
 # default behaviour is an unordered merge. To prevent top files from
 # being merged together and instead to only use the top file from the
@@ -502,15 +629,15 @@
 #default_top: base
 
 # The hash_type is the hash to use when discovering the hash of a file on
-# the master server. The default is md5 but sha1, sha224, sha256, sha384
-# and sha512 are also supported.
+# the master server. The default is sha256, but md5, sha1, sha224, sha384 and
+# sha512 are also supported.
 #
-# WARNING: While md5 is supported, do not use it due to the high chance
-# of possible collisions and thus security breach.
+# WARNING: While md5 and sha1 are also supported, do not use them due to the
+# high chance of possible collisions and thus security breach.
 #
-# Prior to changing this value, the master should be stopped and all Salt 
+# Prior to changing this value, the master should be stopped and all Salt
 # caches should be cleared.
-#hash_type: md5
+#hash_type: sha256
 
 # The buffer size in the file server can be adjusted here:
 #file_buffer_size: 1048576
@@ -585,20 +712,20 @@
 # Along with gitfs_password, is used to authenticate to HTTPS remotes.
 # gitfs_user: ''
 
-# Along with gitfs_user, is used to authenticate to HTTPS remotes. 
+# Along with gitfs_user, is used to authenticate to HTTPS remotes.
 # This parameter is not required if the repository does not use authentication.
 #gitfs_password: ''
 
-# By default, Salt will not authenticate to an HTTP (non-HTTPS) remote. 
+# By default, Salt will not authenticate to an HTTP (non-HTTPS) remote.
 # This parameter enables authentication over HTTP. Enable this at your own risk.
 #gitfs_insecure_auth: False
 
-# Along with gitfs_privkey (and optionally gitfs_passphrase), is used to 
+# Along with gitfs_privkey (and optionally gitfs_passphrase), is used to
 # authenticate to SSH remotes. This parameter (or its per-remote counterpart)
 # is required for SSH remotes.
 #gitfs_pubkey: ''
 
-# Along with gitfs_pubkey (and optionally gitfs_passphrase), is used to 
+# Along with gitfs_pubkey (and optionally gitfs_passphrase), is used to
 # authenticate to SSH remotes. This parameter (or its per-remote counterpart)
 # is required for SSH remotes.
 #gitfs_privkey: ''
@@ -653,6 +780,11 @@
 # ext_pillar.
 #ext_pillar_first: False
 
+# The external pillars permitted to be used on-demand using pillar.ext
+#on_demand_ext_pillar:
+#  - libvirt
+#  - virtkey
+
 # The pillar_gitfs_ssl_verify option specifies whether to ignore ssl certificate
 # errors when contacting the pillar gitfs backend. You might want to set this to
 # false if you're using a git backend that uses a self-signed certificate but
@@ -673,16 +805,21 @@
 #pillar_safe_render_error: True
 
 # The pillar_source_merging_strategy option allows you to configure merging strategy
-# between different sources. It accepts four values: recurse, aggregate, overwrite,
-# or smart. Recurse will merge recursively mapping of data. Aggregate instructs
-# aggregation of elements between sources that use the #!yamlex renderer. Overwrite
-# will verwrite elements according the order in which they are processed. This is
+# between different sources. It accepts five values: none, recurse, aggregate, overwrite,
+# or smart. None will not do any merging at all. Recurse will merge recursively mapping of data.
+# Aggregate instructs aggregation of elements between sources that use the #!yamlex renderer. Overwrite
+# will overwrite elements according the order in which they are processed. This is
 # behavior of the 2014.1 branch and earlier. Smart guesses the best strategy based
 # on the "renderer" setting and is the default value.
 #pillar_source_merging_strategy: smart
 
 # Recursively merge lists by aggregating them instead of replacing them.
 #pillar_merge_lists: False
+
+# Set this option to 'True' to force a 'KeyError' to be raised whenever an
+# attempt to retrieve a named value from pillar fails. When this option is set
+# to 'False', the failed attempt returns an empty string. Default is 'False'.
+#pillar_raise_on_missing: False
 
 # Git External Pillar (git_pillar) Configuration Options
 #
@@ -701,7 +838,7 @@
 # be used instead
 #git_pillar_branch: master
 
-# Environment to use for git_pillar remotes. This is normally derived from 
+# Environment to use for git_pillar remotes. This is normally derived from
 # the branch/tag (or from a per-remote env parameter), but if set this will
 # override the process of deriving the env from the branch/tag name.
 #git_pillar_env: ''
@@ -711,12 +848,12 @@
 #git_pillar_root: ''
 
 # Specifies whether or not to ignore SSL certificate errors when contacting
-# the remote repository. 
+# the remote repository.
 #git_pillar_ssl_verify: False
 
 # When set to False, if there is an update/checkout lock for a git_pillar
 # remote and the pid written to it is not running on the master, the lock
-# file will be automatically cleared and a new lock will be obtained. 
+# file will be automatically cleared and a new lock will be obtained.
 #git_pillar_global_lock: True
 
 # Git External Pillar Authentication Options
@@ -761,13 +898,13 @@
 # pillar is recompiled and stored.
 #pillar_cache_ttl: 3600
 
-# If an only if a master has set ``pillar_cache: True``, one of several storage providers
-# can be utilized:
+# If and only if a master has set `pillar_cache: True`, one of several storage providers
+# can be utililzed.
 #
-#   disk: The default storage backend. This caches rendered pillars to the master cache.
-#         Rendered pillars are serialized and deserialized as ``msgpack`` structures for
-#         speed. Note that pillars are stored UNENCRYPTED. Ensure that the master cache
-#         has permissions set appropriately (sane defaults are provided).
+# `disk`: The default storage backend. This caches rendered pillars to the master cache.
+#         Rendered pillars are serialized and deserialized as msgpack structures for speed.
+#         Note that pillars are stored UNENCRYPTED. Ensure that the master cache
+#         has permissions set appropriately. (Same defaults are provided.)
 #
 # memory: [EXPERIMENTAL] An optional backend for pillar caches which uses a pure-Python
 #         in-memory data structure for maximal performance. There are several caveats,
@@ -779,6 +916,21 @@
 #         This may represent a substantial security risk.
 #
 #pillar_cache_backend: disk
+
+
+######        Reactor Settings        #####
+###########################################
+# Define a salt reactor. See https://docs.saltstack.com/en/latest/topics/reactor/
+#reactor: []
+
+#Set the TTL for the cache of the reactor configuration.
+#reactor_refresh_interval: 60
+
+#Configure the number of workers for the runner/wheel in the reactor.
+#reactor_worker_threads: 10
+
+#Define the queue size for workers in the reactor.
+#reactor_worker_hwm: 10000
 
 
 #####          Syndic settings       #####
@@ -797,7 +949,7 @@
 
 # If this master will be running a salt syndic daemon, syndic_master tells
 # this master where to receive commands from.
-#syndic_master: masterofmaster
+#syndic_master: masterofmasters
 
 # This is the 'ret_port' of the MasterOfMaster:
 #syndic_master_port: 4506
@@ -805,8 +957,18 @@
 # PID file of the syndic daemon:
 #syndic_pidfile: /var/run/salt-syndic.pid
 
-# LOG file of the syndic daemon:
-#syndic_log_file: syndic.log
+# The log file of the salt-syndic daemon:
+#syndic_log_file: /var/log/salt/syndic
+
+# The behaviour of the multi-syndic when connection to a master of masters failed.
+# Can specify ``random`` (default) or ``ordered``. If set to ``random``, masters
+# will be iterated in random order. If ``ordered`` is specified, the configured
+# order will be used.
+#syndic_failover: random
+
+# The number of seconds for the salt client to wait for additional syndics to
+# check in with their lists of expected minions before giving up.
+#syndic_wait: 5
 
 
 #####      Peer Publish settings     #####
@@ -919,7 +1081,7 @@
 #log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #
-#log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+#log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This
 # example sets the main salt library at the 'warning' level, but sets
@@ -990,6 +1152,9 @@
 ############################################
 # Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
 #event_match_type: startswith
+
+# Save runner returns to the job cache
+#runner_returns: True
 
 # Permanently include any available Python 3rd party modules into Salt Thin
 # when they are generated for Salt-SSH or other purposes.

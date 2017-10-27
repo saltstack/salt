@@ -124,3 +124,7 @@ To match minions using other matchers, use ``expr_form``:
 .. code-block:: bash
 
     # salt-call publish.publish 'webserv* and not G@os:Ubuntu' test.ping expr_form='compound'
+
+.. note::
+    The expr_form argument will be renamed to ``tgt_type`` in the Nitrogen
+    release of Salt.

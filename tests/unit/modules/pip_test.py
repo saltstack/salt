@@ -30,7 +30,6 @@ class PipTestCase(TestCase):
                 expected_cmd,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -62,7 +61,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -75,7 +73,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -99,7 +96,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -112,7 +108,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -125,12 +120,15 @@ class PipTestCase(TestCase):
                 ['pip', 'install', pkgs[0], '--editable', editables[0]],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
 
+    @patch.object(pip, 'version', MagicMock(return_value='1.4'))
     def test_issue5940_install_multiple_pip_mirrors(self):
+        '''
+        test multiple pip mirrors.  This test only works with pip < 7.0.0
+        '''
         mirrors = [
             'http://g.pypi.python.org',
             'http://c.pypi.python.org',
@@ -149,7 +147,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -162,7 +159,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -175,7 +171,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--use-mirrors', '--mirrors', mirrors[0]],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -201,7 +196,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -214,7 +208,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -227,7 +220,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--find-links', find_links[0], pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -250,7 +242,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -288,7 +279,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -312,12 +302,11 @@ class PipTestCase(TestCase):
                 env={'VIRTUAL_ENV': '/test_env'},
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
 
-    @patch('os.path')
+    @patch('os.access')
     def test_install_log_argument_in_resulting_command(self, mock_path):
         pkg = 'pep8'
         log_path = '/tmp/pip-install.log'
@@ -328,12 +317,15 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--log', log_path, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
 
+    @patch('os.path')
+    def test_non_writeable_log(self, mock_path):
         # Let's fake a non-writable log file
+        pkg = 'pep8'
+        log_path = '/tmp/pip-install.log'
         mock_path.exists.side_effect = IOError('Fooo!')
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
@@ -355,7 +347,6 @@ class PipTestCase(TestCase):
                 expected_prefix + [10, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -368,7 +359,6 @@ class PipTestCase(TestCase):
                 expected_prefix + ['10', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -393,7 +383,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--index-url', index_url, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -408,7 +397,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--extra-index-url', extra_index_url, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -422,7 +410,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--no-index', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -437,7 +424,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--build', build, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -452,7 +438,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--target', target, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -467,7 +452,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--download', download, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -481,25 +465,42 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--no-download', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
 
-    def test_install_download_cache_argument_in_resulting_command(self):
+    def test_install_download_cache_dir_arguments_in_resulting_command(self):
         pkg = 'pep8'
+        cache_dir_arg_mapping = {
+            '1.5.6': '--download-cache',
+            '6.0': '--cache-dir',
+        }
         download_cache = '/tmp/foo'
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(pkg, download_cache='/tmp/foo')
-            mock.assert_called_once_with(
-                ['pip', 'install', '--download-cache', download_cache, pkg],
-                saltenv='base',
-                runas=None,
-                cwd=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            for pip_version, cmd_arg in cache_dir_arg_mapping.items():
+                with patch('salt.modules.pip.version',
+                           MagicMock(return_value=pip_version)):
+                    # test `download_cache` kwarg
+                    pip.install(pkg, download_cache='/tmp/foo')
+                    mock.assert_called_with(
+                        ['pip', 'install', cmd_arg, download_cache, pkg],
+                        saltenv='base',
+                        runas=None,
+                        use_vt=False,
+                        python_shell=False,
+                    )
+
+                    # test `cache_dir` kwarg
+                    pip.install(pkg, cache_dir='/tmp/foo')
+                    mock.assert_called_with(
+                        ['pip', 'install', cmd_arg, download_cache, pkg],
+                        saltenv='base',
+                        runas=None,
+                        use_vt=False,
+                        python_shell=False,
+                    )
 
     def test_install_source_argument_in_resulting_command(self):
         pkg = 'pep8'
@@ -511,7 +512,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--source', source, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -526,7 +526,6 @@ class PipTestCase(TestCase):
                     ['pip', 'install', '--exists-action', action, pkg],
                     saltenv='base',
                     runas=None,
-                    cwd=None,
                     use_vt=False,
                     python_shell=False,
                 )
@@ -561,7 +560,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -574,7 +572,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -588,7 +585,6 @@ class PipTestCase(TestCase):
                  install_options[0], pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -613,7 +609,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -626,7 +621,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -639,7 +633,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--global-option', global_options[0], pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -653,7 +646,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--upgrade', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -667,7 +659,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--force-reinstall', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -681,7 +672,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--ignore-installed', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -695,7 +685,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--no-deps', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -709,7 +698,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--no-install', pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -724,7 +712,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--proxy', proxy, pkg],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -751,7 +738,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -765,7 +751,6 @@ class PipTestCase(TestCase):
                 expected,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -779,7 +764,6 @@ class PipTestCase(TestCase):
                 ['pip', 'install', '--requirement', cached_reqs[0]],
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -804,9 +788,9 @@ class PipTestCase(TestCase):
             pip.uninstall(requirements=requirements)
             mock.assert_called_once_with(
                 expected,
+                cwd=None,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -818,9 +802,9 @@ class PipTestCase(TestCase):
             pip.uninstall(requirements=','.join(requirements))
             mock.assert_called_once_with(
                 expected,
+                cwd=None,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -832,9 +816,9 @@ class PipTestCase(TestCase):
             pip.uninstall(requirements=requirements[0])
             mock.assert_called_once_with(
                 ['pip', 'uninstall', '-y', '--requirement', cached_reqs[0]],
+                cwd=None,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -848,8 +832,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 ['pip', 'uninstall', '-y', '--proxy', proxy, pkg],
                 saltenv='base',
-                runas=None,
                 cwd=None,
+                runas=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -864,8 +848,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 ['pip', 'uninstall', '-y', '--log', log_path, pkg],
                 saltenv='base',
-                runas=None,
                 cwd=None,
+                runas=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -890,9 +874,9 @@ class PipTestCase(TestCase):
             pip.uninstall(pkg, timeout=10)
             mock.assert_called_once_with(
                 expected_prefix + [10, pkg],
+                cwd=None,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -903,9 +887,9 @@ class PipTestCase(TestCase):
             pip.uninstall(pkg, timeout='10')
             mock.assert_called_once_with(
                 expected_prefix + ['10', pkg],
+                cwd=None,
                 saltenv='base',
                 runas=None,
-                cwd=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -935,23 +919,66 @@ class PipTestCase(TestCase):
             }
         )
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            ret = pip.freeze()
-            mock.assert_called_once_with(
-                ['pip', 'freeze'],
-                runas=None,
-                cwd=None,
-                use_vt=False,
-                python_shell=False,
-            )
-            self.assertEqual(ret, eggs)
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                ret = pip.freeze()
+                mock.assert_called_once_with(
+                    ['pip', 'freeze'],
+                    cwd=None,
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
+                self.assertEqual(ret, eggs)
 
         # Non zero returncode raises exception?
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'CABOOOOMMM!'})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip.freeze,
-            )
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                self.assertRaises(
+                    CommandExecutionError,
+                    pip.freeze,
+                )
+
+    def test_freeze_command_with_all(self):
+        eggs = [
+            'M2Crypto==0.21.1',
+            '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
+            'bbfreeze==1.1.0',
+            'bbfreeze-loader==1.1.0',
+            'pip==0.9.1',
+            'pycrypto==2.6',
+            'setuptools==20.10.1'
+        ]
+        mock = MagicMock(
+            return_value={
+                'retcode': 0,
+                'stdout': '\n'.join(eggs)
+            }
+        )
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='9.0.1')):
+                ret = pip.freeze()
+                mock.assert_called_once_with(
+                    ['pip', 'freeze', '--all'],
+                    cwd=None,
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
+                self.assertEqual(ret, eggs)
+
+        # Non zero returncode raises exception?
+        mock = MagicMock(return_value={'retcode': 1, 'stderr': 'CABOOOOMMM!'})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='9.0.1')):
+                self.assertRaises(
+                    CommandExecutionError,
+                    pip.freeze,
+                )
 
     def test_list_command(self):
         eggs = [
@@ -969,9 +996,10 @@ class PipTestCase(TestCase):
                 ret = pip.list_()
                 mock.assert_called_with(
                     ['pip', 'freeze'],
-                    runas=None,
                     cwd=None,
+                    runas=None,
                     python_shell=False,
+                    use_vt=False,
                 )
                 self.assertEqual(
                     ret, {
@@ -981,6 +1009,54 @@ class PipTestCase(TestCase):
                         'bbfreeze': '1.1.0',
                         'pip': mock_version,
                         'pycrypto': '2.6'
+                    }
+                )
+
+        # Non zero returncode raises exception?
+        mock = MagicMock(return_value={'retcode': 1, 'stderr': 'CABOOOOMMM!'})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                self.assertRaises(
+                    CommandExecutionError,
+                    pip.list_,
+                )
+
+    def test_list_command_with_all(self):
+        eggs = [
+            'M2Crypto==0.21.1',
+            '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
+            'bbfreeze==1.1.0',
+            'bbfreeze-loader==1.1.0',
+            'pip==9.0.1',
+            'pycrypto==2.6',
+            'setuptools==20.10.1'
+        ]
+        # N.B.: this is deliberately different from the "output" of pip freeze.
+        # This is to demonstrate that the version reported comes from freeze
+        # instead of from the pip.version function.
+        mock_version = '9.0.0'
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': '\n'.join(eggs)})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value=mock_version)):
+                ret = pip.list_()
+                mock.assert_called_with(
+                    ['pip', 'freeze', '--all'],
+                    cwd=None,
+                    runas=None,
+                    python_shell=False,
+                    use_vt=False,
+                )
+                self.assertEqual(
+                    ret, {
+                        'SaltTesting-dev': 'git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8',
+                        'M2Crypto': '0.21.1',
+                        'bbfreeze-loader': '1.1.0',
+                        'bbfreeze': '1.1.0',
+                        'pip': '9.0.1',
+                        'pycrypto': '2.6',
+                        'setuptools': '20.10.1'
                     }
                 )
 
@@ -1009,19 +1085,22 @@ class PipTestCase(TestCase):
             }
         )
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            ret = pip.list_(prefix='bb')
-            mock.assert_called_with(
-                ['pip', 'freeze'],
-                runas=None,
-                cwd=None,
-                python_shell=False,
-            )
-            self.assertEqual(
-                ret, {
-                    'bbfreeze-loader': '1.1.0',
-                    'bbfreeze': '1.1.0',
-                }
-            )
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                ret = pip.list_(prefix='bb')
+                mock.assert_called_with(
+                    ['pip', 'freeze'],
+                    cwd=None,
+                    runas=None,
+                    python_shell=False,
+                    use_vt=False,
+                )
+                self.assertEqual(
+                    ret, {
+                        'bbfreeze-loader': '1.1.0',
+                        'bbfreeze': '1.1.0',
+                    }
+                )
 
     def test_install_pre_argument_in_resulting_command(self):
         pkg = 'pep8'
@@ -1039,7 +1118,6 @@ class PipTestCase(TestCase):
                     ['pip', 'install', pkg],
                     saltenv='base',
                     runas=None,
-                    cwd=None,
                     use_vt=False,
                     python_shell=False,
                 )
@@ -1055,7 +1133,6 @@ class PipTestCase(TestCase):
                     ['pip', 'install', '--pre', pkg],
                     saltenv='base',
                     runas=None,
-                    cwd=None,
                     use_vt=False,
                     python_shell=False,
                 )

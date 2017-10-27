@@ -12,7 +12,9 @@ automatically installed salt-cloud for you. Use your distribution's package
 manager to install the ``salt-cloud`` package from the same repo that you
 used to install Salt.  These repos will automatically be setup by Salt Bootstrap.
 
-If there is no salt-cloud package, install with ``pip install salt-cloud``.
+Alternatively, the ``-L`` option can be passed to the `Salt Bootstrap`_ script when
+installing Salt. The ``-L`` option will install ``salt-cloud`` and the required
+``libcloud`` package.
 
 .. _`Salt Bootstrap`: https://github.com/saltstack/salt-bootstrap
 

@@ -20,6 +20,13 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.modules import win_service
 
+# Import 3rd Party Libs
+try:
+    WINAPI = True
+    import win32serviceutil
+except ImportError:
+    WINAPI = False
+
 win_service.__salt__ = {}
 
 
@@ -32,21 +39,31 @@ class WinServiceTestCase(TestCase):
         '''
             Test to return the enabled services
         '''
-        mock = MagicMock(return_value=['c', 'a', 'b'])
-        with patch.object(win_service, 'get_all', mock):
-            mock = MagicMock(side_effect=[True, False, True])
-            with patch.object(win_service, 'enabled', mock):
-                self.assertListEqual(win_service.get_enabled(), ['b', 'c'])
+        mock = MagicMock(return_value=[{'ServiceName': 'spongebob'},
+                                       {'ServiceName': 'squarepants'},
+                                       {'ServiceName': 'patrick'}])
+        with patch.object(win_service, '_get_services', mock):
+            mock_info = MagicMock(side_effect=[{'StartType': 'Auto'},
+                                               {'StartType': 'Manual'},
+                                               {'StartType': 'Disabled'}])
+            with patch.object(win_service, 'info', mock_info):
+                self.assertListEqual(win_service.get_enabled(),
+                                     ['spongebob'])
 
     def test_get_disabled(self):
         '''
             Test to return the disabled services
         '''
-        mock = MagicMock(return_value=['c', 'a', 'b'])
-        with patch.object(win_service, 'get_all', mock):
-            mock = MagicMock(side_effect=[True, False, True])
-            with patch.object(win_service, 'disabled', mock):
-                self.assertListEqual(win_service.get_disabled(), ['b', 'c'])
+        mock = MagicMock(return_value=[{'ServiceName': 'spongebob'},
+                                       {'ServiceName': 'squarepants'},
+                                       {'ServiceName': 'patrick'}])
+        with patch.object(win_service, '_get_services', mock):
+            mock_info = MagicMock(side_effect=[{'StartType': 'Auto'},
+                                               {'StartType': 'Manual'},
+                                               {'StartType': 'Disabled'}])
+            with patch.object(win_service, 'info', mock_info):
+                self.assertListEqual(win_service.get_disabled(),
+                                     ['patrick', 'squarepants'])
 
     def test_available(self):
         '''
@@ -69,51 +86,71 @@ class WinServiceTestCase(TestCase):
         '''
             Test to return all installed services
         '''
-        mock = MagicMock(return_value="")
-        with patch.dict(win_service.__salt__, {'cmd.run': mock}):
-            self.assertListEqual(win_service.get_all(), [])
+        mock = MagicMock(return_value=[{'ServiceName': 'spongebob'},
+                                       {'ServiceName': 'squarepants'},
+                                       {'ServiceName': 'patrick'}])
+        with patch.object(win_service, '_get_services', mock):
+            self.assertListEqual(win_service.get_all(),
+                                 ['patrick', 'spongebob', 'squarepants'])
 
     def test_get_service_name(self):
         '''
             Test to the Display Name is what is displayed
             in Windows when services.msc is executed.
         '''
-        ret = ['Service Names and Display Names mismatch',
-               {'salt DISPLAY_NAME:salt': 'salt DISPLAY_NAME:salt'}]
-        mock = MagicMock(side_effect=['SERVICE_NAME:salt',
-                                      'SERVICE_NAME:salt DISPLAY_NAME:salt',
-                                      'SERVICE_NAME:salt DISPLAY_NAME:salt'])
-        with patch.dict(win_service.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_service.get_service_name(), ret[0])
+        mock = MagicMock(return_value=[{'ServiceName': 'spongebob',
+                                        'DisplayName': 'Sponge Bob'},
+                                       {'ServiceName': 'squarepants',
+                                        'DisplayName': 'Square Pants'},
+                                       {'ServiceName': 'patrick',
+                                        'DisplayName': 'Patrick the Starfish'}])
+        with patch.object(win_service, '_get_services', mock):
+            self.assertDictEqual(win_service.get_service_name(),
+                                 {'Patrick the Starfish': 'patrick',
+                                  'Sponge Bob': 'spongebob',
+                                  'Square Pants': 'squarepants'})
+            self.assertDictEqual(win_service.get_service_name('patrick'),
+                                 {'Patrick the Starfish': 'patrick'})
 
-            self.assertDictEqual(win_service.get_service_name(), ret[1])
-
-            self.assertDictEqual(win_service.get_service_name("salt"), {})
-
+    @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_start(self):
         '''
             Test to start the specified service
         '''
-        mock = MagicMock(return_value=False)
-        with patch.dict(win_service.__salt__, {'cmd.retcode': mock}):
-            self.assertTrue(win_service.start("salt"))
+        mock_true = MagicMock(return_value=True)
+        mock_false = MagicMock(return_value=False)
+        mock_info = MagicMock(side_effect=[{'Status': 'Stopped'},
+                                           {'Status': 'Start Pending'},
+                                           {'Status': 'Running'}])
 
+        with patch.object(win_service, 'status', mock_true):
+            self.assertTrue(win_service.start('spongebob'))
+
+        with patch.object(win_service, 'status', mock_false):
+            with patch.object(win32serviceutil, 'StartService', mock_true):
+                with patch.object(win_service, 'info', mock_info):
+                    with patch.object(win_service, 'status', mock_true):
+                        self.assertTrue(win_service.start('spongebob'))
+
+    @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_stop(self):
         '''
             Test to stop the specified service
         '''
-        win_service.SERVICE_STOP_POLL_MAX_ATTEMPTS = 1
-        win_service.SERVICE_STOP_DELAY_SECONDS = 1
-        mock = MagicMock(side_effect=[['service was stopped'], ["salt"],
-                                      ["salt"]])
-        with patch.dict(win_service.__salt__, {'cmd.run': mock}):
-            self.assertTrue(win_service.stop("salt"))
+        mock_true = MagicMock(return_value=True)
+        mock_false = MagicMock(return_value=False)
+        mock_info = MagicMock(side_effect=[{'Status': 'Running'},
+                                           {'Status': 'Stop Pending'},
+                                           {'Status': 'Stopped'}])
 
-            mock = MagicMock(side_effect=[False, True])
-            with patch.object(win_service, 'status', mock):
-                self.assertTrue(win_service.stop("salt"))
+        with patch.object(win_service, 'status', mock_false):
+            self.assertTrue(win_service.stop('spongebob'))
 
-                self.assertFalse(win_service.stop("salt"))
+        with patch.object(win_service, 'status', mock_true):
+            with patch.object(win32serviceutil, 'StopService', mock_true):
+                with patch.object(win_service, 'info', mock_info):
+                    with patch.object(win_service, 'status', mock_false):
+                        self.assertTrue(win_service.stop('spongebob'))
 
     def test_restart(self):
         '''
@@ -151,63 +188,66 @@ class WinServiceTestCase(TestCase):
         '''
             Test to return the status for a service
         '''
-        mock = MagicMock(side_effect=["RUNNING", "STOP_PENDING", ""])
-        with patch.dict(win_service.__salt__, {'cmd.run': mock}):
-            self.assertTrue(win_service.status("salt"))
+        mock_info = MagicMock(side_effect=[{'Status': 'Running'},
+                                           {'Status': 'Stop Pending'},
+                                           {'Status': 'Stopped'}])
 
-            self.assertTrue(win_service.status("salt"))
-
-            self.assertFalse(win_service.status("salt"))
+        with patch.object(win_service, 'info', mock_info):
+            self.assertTrue(win_service.status('spongebob'))
+            self.assertTrue(win_service.status('patrick'))
+            self.assertFalse(win_service.status('squidward'))
 
     def test_getsid(self):
         '''
             Test to return the sid for this windows service
         '''
-        mock = MagicMock(side_effect=["SERVICE SID:S-1-5-80-1956725871-603941828-2318551034-3950094706-3826225633", "SERVICE SID"])
-        with patch.dict(win_service.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_service.getsid("salt"), 'S-1-5-80-1956725871-603941828-2318551034-3950094706-3826225633')
-
-            self.assertEqual(win_service.getsid("salt"), None)
+        mock_info = MagicMock(side_effect=[{'sid': 'S-1-5-80-1956725871...'},
+                                           {'sid': None}])
+        with patch.object(win_service, 'info', mock_info):
+            self.assertEqual(win_service.getsid('spongebob'),
+                             'S-1-5-80-1956725871...')
+            self.assertEqual(win_service.getsid('plankton'), None)
 
     def test_enable(self):
         '''
             Test to enable the named service to start at boot
         '''
-        mock = MagicMock(return_value=False)
-        with patch.dict(win_service.__salt__, {'cmd.retcode': mock}):
-            self.assertTrue(win_service.enable("salt"))
+        mock_modify = MagicMock(return_value=True)
+        mock_info = MagicMock(return_value={'StartType': 'Auto'})
+        with patch.object(win_service, 'modify', mock_modify):
+            with patch.object(win_service, 'info', mock_info):
+                self.assertTrue(win_service.enable('spongebob'))
 
     def test_disable(self):
         '''
             Test to disable the named service to start at boot
         '''
-        mock = MagicMock(return_value=False)
-        with patch.dict(win_service.__salt__, {'cmd.retcode': mock}):
-            self.assertTrue(win_service.disable("salt"))
+        mock_modify = MagicMock(return_value=True)
+        mock_info = MagicMock(return_value={'StartType': 'Disabled'})
+        with patch.object(win_service, 'modify', mock_modify):
+            with patch.object(win_service, 'info', mock_info):
+                self.assertTrue(win_service.disable('spongebob'))
 
     def test_enabled(self):
         '''
             Test to check to see if the named
             service is enabled to start on boot
         '''
-        mock = MagicMock(side_effect=["AUTO_START", ""])
-        with patch.dict(win_service.__salt__, {'cmd.run': mock}):
-            self.assertTrue(win_service.enabled("salt"))
-
-            self.assertFalse(win_service.enabled("salt"))
+        mock = MagicMock(side_effect=[{'StartType': 'Auto'},
+                                      {'StartType': 'Disabled'}])
+        with patch.object(win_service, 'info', mock):
+            self.assertTrue(win_service.enabled('spongebob'))
+            self.assertFalse(win_service.enabled('squarepants'))
 
     def test_disabled(self):
         '''
             Test to check to see if the named
             service is disabled to start on boot
         '''
-        mock = MagicMock(side_effect=["DEMAND_START", "DISABLED", ""])
-        with patch.dict(win_service.__salt__, {'cmd.run': mock}):
-            self.assertTrue(win_service.disabled("salt"))
-
-            self.assertTrue(win_service.disabled("salt"))
-
-            self.assertFalse(win_service.disabled("salt"))
+        mock = MagicMock(side_effect=[False, True])
+        with patch.object(win_service, 'enabled', mock):
+            self.assertTrue(win_service.disabled('spongebob'))
+            self.assertFalse(win_service.disabled('squarepants'))
 
 
 if __name__ == '__main__':

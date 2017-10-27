@@ -101,7 +101,7 @@ Here are the options to configure your containers:
     dnsservers
         List of DNS servers to use. This is optional.
     minion
-        minion configuration (see :doc:`Minion Configuration in Salt Cloud </topics/cloud/config>`)
+        minion configuration (see :ref:`Minion Configuration in Salt Cloud <salt-cloud-config>`)
     bootstrap_delay
         specify the time to wait (in seconds) between container creation
         and salt bootstrap execution. It is useful to ensure that all essential services

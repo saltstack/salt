@@ -64,7 +64,7 @@ def _get_instance(names):
     return instance
 
 
-def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
+def present(name, cloud_provider, onlyif=None, unless=None, opts=None, **kwargs):
     '''
     Spin up a single instance on a cloud provider, using salt-cloud. This state
     does not take a profile argument; rather, it takes the arguments that would
@@ -87,6 +87,9 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
 
     unless
         Do not run the state at least unless succeed
+
+    opts
+        Any extra opts that need to be used
     '''
     ret = {'name': name,
            'changes': {},
@@ -120,7 +123,7 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
 
-    info = __salt__['cloud.create'](cloud_provider, name, **kwargs)
+    info = __salt__['cloud.create'](cloud_provider, name, opts=opts, **kwargs)
     if info and 'Error' not in info:
         ret['changes'] = info
         ret['result'] = True
@@ -214,7 +217,7 @@ def absent(name, onlyif=None, unless=None):
     return ret
 
 
-def profile(name, profile, onlyif=None, unless=None, **kwargs):
+def profile(name, profile, onlyif=None, unless=None, opts=None, **kwargs):
     '''
     Create a single instance on a cloud provider, using a salt-cloud profile.
 
@@ -239,6 +242,8 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
     kwargs
         Any profile override or addition
 
+    opts
+        Any extra opts that need to be used
     '''
     ret = {'name': name,
            'changes': {},
@@ -269,7 +274,7 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
 
-    info = __salt__['cloud.profile'](profile, name, vm_overrides=kwargs)
+    info = __salt__['cloud.profile'](profile, name, vm_overrides=kwargs, opts=opts)
 
     # get either {Error: ''} or {namestring: {Error: ''}}
     # which is what we can get from providers returns

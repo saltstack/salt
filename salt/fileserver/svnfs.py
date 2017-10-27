@@ -2,7 +2,7 @@
 '''
 Subversion Fileserver Backend
 
-After enabling this backend, branches, and tags in a remote subversion
+After enabling this backend, branches and tags in a remote subversion
 repository are exposed to salt as different environments. To enable this
 backend, add ``svn`` to the :conf_master:`fileserver_backend` option in the
 Master config file.
@@ -79,8 +79,8 @@ def __virtual__():
     for param in ('svnfs_trunk', 'svnfs_branches', 'svnfs_tags'):
         if os.path.isabs(__opts__[param]):
             errors.append(
-                'Master configuration parameter {0!r} (value: {1}) cannot be '
-                'an absolute path'.format(param, __opts__[param])
+                'Master configuration parameter \'{0}\' (value: {1}) cannot '
+                'be an absolute path'.format(param, __opts__[param])
             )
     if errors:
         for error in errors:
@@ -151,7 +151,7 @@ def init():
             for param in (x for x in per_remote_conf
                           if x not in PER_REMOTE_OVERRIDES):
                 log.error(
-                    'Invalid configuration parameter {0!r} for remote {1}. '
+                    'Invalid configuration parameter \'{0}\' for remote {1}. '
                     'Valid parameters are: {2}. See the documentation for '
                     'further information.'.format(
                         param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
@@ -194,7 +194,7 @@ def init():
                 new_remote = True
             except pysvn._pysvn.ClientError as exc:
                 log.error(
-                    'Failed to initialize svnfs remote {0!r}: {1}'
+                    'Failed to initialize svnfs remote \'{0}\': {1}'
                     .format(repo_url, exc)
                 )
                 _failhard()
@@ -505,7 +505,7 @@ def envs(ignore_cache=False):
             ret.add('base')
         else:
             log.error(
-                'svnfs trunk path {0!r} does not exist in repo {1}, no base '
+                'svnfs trunk path \'{0}\' does not exist in repo {1}, no base '
                 'environment will be provided by this remote'
                 .format(repo['trunk'], repo['url'])
             )
@@ -515,7 +515,7 @@ def envs(ignore_cache=False):
             ret.update(os.listdir(branches))
         else:
             log.error(
-                'svnfs branches path {0!r} does not exist in repo {1}'
+                'svnfs branches path \'{0}\' does not exist in repo {1}'
                 .format(repo['branches'], repo['url'])
             )
 
@@ -524,7 +524,7 @@ def envs(ignore_cache=False):
             ret.update(os.listdir(tags))
         else:
             log.error(
-                'svnfs tags path {0!r} does not exist in repo {1}'
+                'svnfs tags path \'{0}\' does not exist in repo {1}'
                 .format(repo['tags'], repo['url'])
             )
     return [x for x in sorted(ret) if _env_is_exposed(x)]
@@ -583,6 +583,22 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
         if os.path.isfile(full):
             fnd['rel'] = path
             fnd['path'] = full
+            try:
+                # Converting the stat result to a list, the elements of the
+                # list correspond to the following stat_result params:
+                # 0 => st_mode=33188
+                # 1 => st_ino=10227377
+                # 2 => st_dev=65026
+                # 3 => st_nlink=1
+                # 4 => st_uid=1000
+                # 5 => st_gid=1000
+                # 6 => st_size=1056233
+                # 7 => st_atime=1468284229
+                # 8 => st_mtime=1456338235
+                # 9 => st_ctime=1456338235
+                fnd['stat'] = list(os.stat(full))
+            except Exception:
+                pass
             return fnd
     return fnd
 
@@ -593,11 +609,12 @@ def serve_file(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     ret = {'data': '',
            'dest': ''}
@@ -623,11 +640,12 @@ def file_hash(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     if not all(x in load for x in ('path', 'saltenv')):
         return ''
@@ -676,15 +694,16 @@ def file_hash(load, fnd):
 
 def _file_lists(load, form):
     '''
-    Return a dict containing the file lists for files, dirs, emtydirs and symlinks
+    Return a dict containing the file lists for files, dirs, emptydirs and symlinks
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     if 'saltenv' not in load or load['saltenv'] not in envs():
         return []

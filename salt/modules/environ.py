@@ -5,6 +5,9 @@ of the current salt process.
 '''
 from __future__ import absolute_import
 
+# Import salt libs
+import salt.utils as utils
+
 # Import python libs
 import os
 import logging
@@ -22,7 +25,7 @@ def __virtual__():
     return True
 
 
-def setval(key, val, false_unsets=False):
+def setval(key, val, false_unsets=False, permanent=False):
     '''
     Set a single salt process environment variable. Returns True
     on success.
@@ -41,6 +44,13 @@ def setval(key, val, false_unsets=False):
         value will be set to an empty string.
         Default: False.
 
+    permanent
+        On Windows minions this will set the environment variable in the
+        registry so that it is always added as a environment variable when
+        applications open. If you want to set the variable to HKLM instead of
+        HKCU just pass in "HKLM" for this parameter. On all other minion types
+        this will be ignored. Note: This will only take affect on applications
+        opened after this has been set.
 
     CLI Example:
 
@@ -48,21 +58,33 @@ def setval(key, val, false_unsets=False):
 
         salt '*' environ.setval foo bar
         salt '*' environ.setval baz val=False false_unsets=True
+        salt '*' environ.setval baz bar permanent=True
+        salt '*' environ.setval baz bar permanent=HKLM
     '''
+    is_windows = utils.is_windows()
+    if is_windows:
+        permanent_hive = 'HKCU'
+        permanent_key = 'Environment'
+        if permanent == 'HKLM':
+            permanent_hive = 'HKLM'
+            permanent_key = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+
     if not isinstance(key, six.string_types):
         log.debug(
-            '{0}: "key" argument is not a string type: {1!r}'
+            '{0}: \'key\' argument is not a string type: \'{1}\''
             .format(__name__, key)
         )
     if val is False:
         if false_unsets is True:
             try:
                 os.environ.pop(key, None)
+                if permanent and is_windows:
+                    __salt__['reg.delete_value'](permanent_hive, permanent_key, key)
                 return None
             except Exception as exc:
                 log.error(
                     '{0}: Exception occurred when unsetting '
-                    'environ key "{1!r}": {2!r}'
+                    'environ key \'{1}\': \'{2}\''
                     .format(__name__, key, exc)
                 )
                 return False
@@ -71,24 +93,26 @@ def setval(key, val, false_unsets=False):
     if isinstance(val, six.string_types):
         try:
             os.environ[key] = val
+            if permanent and is_windows:
+                __salt__['reg.set_value'](permanent_hive, permanent_key, key, val)
             return os.environ[key]
         except Exception as exc:
             log.error(
                 '{0}: Exception occurred when setting'
-                'environ key "{1!r}": {2!r}'
+                'environ key \'{1}\': \'{2}\''
                 .format(__name__, key, exc)
             )
             return False
     else:
         log.debug(
-            '{0}: "val" argument for key "{1!r}" is not a string '
-            'or False: {2!r}'
+            '{0}: \'val\' argument for key \'{1}\' is not a string '
+            'or False: \'{2}\''
             .format(__name__, key, val)
         )
         return False
 
 
-def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
+def setenv(environ, false_unsets=False, clear_all=False, update_minion=False, permanent=False):
     '''
     Set multiple salt process environment variables from a dict.
     Returns a dict.
@@ -119,6 +143,14 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
         current salt subprocess.
         Default: False
 
+    permanent
+        On Windows minions this will set the environment variable in the
+        registry so that it is always added as a environment variable when
+        applications open. If you want to set the variable to HKLM instead of
+        HKCU just pass in "HKLM" for this parameter. On all other minion types
+        this will be ignored. Note: This will only take affect on applications
+        opened after this has been set.
+
 
     CLI Example:
 
@@ -130,7 +162,7 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
     ret = {}
     if not isinstance(environ, dict):
         log.debug(
-            '{0}: "environ" argument is not a dict: {1!r}'
+            '{0}: \'environ\' argument is not a dict: \'{1}\''
             .format(__name__, environ)
         )
         return False
@@ -138,16 +170,16 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
         # Unset any keys not defined in 'environ' dict supplied by user
         to_unset = [key for key in os.environ if key not in environ]
         for key in to_unset:
-            ret[key] = setval(key, False, false_unsets)
+            ret[key] = setval(key, False, false_unsets, permanent=permanent)
     for key, val in six.iteritems(environ):
         if isinstance(val, six.string_types):
-            ret[key] = setval(key, val)
+            ret[key] = setval(key, val, permanent=permanent)
         elif val is False:
-            ret[key] = setval(key, val, false_unsets)
+            ret[key] = setval(key, val, false_unsets, permanent=permanent)
         else:
             log.debug(
-                '{0}: "val" argument for key "{1!r}" is not a string '
-                'or False: {2!r}'
+                '{0}: \'val\' argument for key \'{1}\' is not a string '
+                'or False: \'{2}\''
                 .format(__name__, key, val)
             )
             return False
@@ -155,7 +187,8 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
     if update_minion is True:
         __salt__['event.fire']({'environ': environ,
                                 'false_unsets': false_unsets,
-                                'clear_all': clear_all
+                                'clear_all': clear_all,
+                                'permanent': permanent
                                 },
                                'environ_setenv')
     return ret
@@ -182,7 +215,7 @@ def get(key, default=''):
     '''
     if not isinstance(key, six.string_types):
         log.debug(
-            '{0}: "key" argument is not a string type: {1!r}'
+            '{0}: \'key\' argument is not a string type: \'{1}\''
             .format(__name__, key)
         )
         return False
@@ -210,7 +243,7 @@ def has_value(key, value=None):
     '''
     if not isinstance(key, six.string_types):
         log.debug(
-            '{0}: "key" argument is not a string type: {1!r}'
+            '{0}: \'key\' argument is not a string type: \'{1}\''
             .format(__name__, key)
         )
         return False
@@ -254,7 +287,7 @@ def item(keys, default=''):
         key_list = keys
     else:
         log.debug(
-            '{0}: "keys" argument is not a string or list type: {1!r}'
+            '{0}: \'keys\' argument is not a string or list type: \'{1}\''
             .format(__name__, keys)
         )
     for key in key_list:

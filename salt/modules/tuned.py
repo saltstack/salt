@@ -29,7 +29,7 @@ def __virtual__():
     '''
     tuned_adm = salt.utils.which('tuned-adm')
     if not tuned_adm:
-        return False
+        return (False, 'The tuned execution module failed to load: the tuned-adm binary is not in the path.')
     return __virtualname__
 
 
@@ -45,9 +45,13 @@ def list_():
     '''
 
     result = __salt__['cmd.run']('tuned-adm list').splitlines()
+    # Remove "Available profiles:"
     result.pop(0)
+    # Remove "Current active profile:.*"
     result.pop()
-    result = [i.lstrip('- ') for i in result]
+    # Output can be : " - <profile name> - <description>" (v2.7.1)
+    # or " - <profile name> " (v2.4.1)
+    result = [i.split('- ')[1].strip() for i in result]
     return result
 
 

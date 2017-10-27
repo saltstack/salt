@@ -9,7 +9,7 @@
         </allowed-os-versions>
     </volume-check>
     <options rootVolumeOnly="true"
-             hostArchitectures="x86_64" />
+             hostArchitectures="@CPUARCH@" />
     <domains enable_localSystem="true" />
     <!-- Define background image -->
     <background file="saltstack.png"
@@ -25,7 +25,7 @@
     <!-- List all component packages -->
     <pkg-ref id="com.saltstack.salt"
              version="@VERSION@"
-             auth="root">salt-src-@VERSION@.pkg</pkg-ref>
+             auth="root">salt-src-@VERSION@-@CPUARCH@.pkg</pkg-ref>
     <!-- List them again here. They can now be organized
          as a hierarchy if you want. -->
     <choices-outline>

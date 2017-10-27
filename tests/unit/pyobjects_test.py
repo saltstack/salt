@@ -126,11 +126,11 @@ Pkg.removed("samba-imported", names=[Other.server, Other.client])
 
 random_password_template = '''#!pyobjects
 import random, string
-password = ''.join(random.SystemRandom().choice(
-        string.ascii_letters + string.digits) for _ in range(20))
+password = ''.join([random.SystemRandom().choice(
+        string.ascii_letters + string.digits) for _ in range(20)])
 '''
 
-random_password_import_template = '''#!pyobjecs
+random_password_import_template = '''#!pyobjects
 from salt://password.sls import password
 '''
 
@@ -289,7 +289,9 @@ class RendererMixin(object):
         state = salt.state.State(self.config)
         return compile_template(full_path,
                                 state.rend,
-                                state.opts['renderer'])
+                                state.opts['renderer'],
+                                state.opts['renderer_blacklist'],
+                                state.opts['renderer_whitelist'])
 
 
 class RendererTests(RendererMixin, StateTests):

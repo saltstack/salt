@@ -1,3 +1,6 @@
+.. _yaml:
+
+==================
 Understanding YAML
 ==================
 
@@ -75,7 +78,7 @@ And in Python:
     }
 
 Rule Three: Dashes
--------------------
+------------------
 
 To represent lists of items, a single dash followed by a space is used. Multiple
 items are a part of the same list as a function of their having the same level of indentation.
@@ -108,3 +111,8 @@ One easy way to learn more about how YAML gets rendered into Python data structu
 to use an online YAML parser to see the Python output.
 
 One excellent choice for experimenting with YAML parsing is: http://yaml-online-parser.appspot.com/
+
+Templating
+----------
+Jinja statements and expressions are allowed by default in SLS files. See
+:ref:`Understanding Jinja <understanding-jinja>`.

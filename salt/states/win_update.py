@@ -46,6 +46,7 @@ features/states of updates available for configuring:
 
 The following example installs all driver updates that don't require a reboot:
 .. code-block:: yaml
+
     gryffindor:
       win_update.installed:
         - skips:
@@ -56,6 +57,7 @@ The following example installs all driver updates that don't require a reboot:
 To just update your windows machine, add this your sls:
 
 .. code-block:: yaml
+
     updates:
       win_update.installed
 '''
@@ -173,14 +175,14 @@ class PyWinUpdater(object):
         try:
             for update in self.search_results.Updates:
                 if update.InstallationBehavior.CanRequestUserInput:
-                    log.debug('Skipped update {0}'.format(update))
+                    log.debug(u'Skipped update {0}'.format(update.title))
                     continue
                 for category in update.Categories:
                     if self.skipDownloaded and update.IsDownloaded:
                         continue
                     if self.categories is None or category.Name in self.categories:
                         self.download_collection.Add(update)
-                        log.debug('added update {0}'.format(update))
+                        log.debug(u'added update {0}'.format(update.title))
             self.foundCategories = _gather_update_categories(self.download_collection)
             return True
         except Exception as exc:
@@ -247,6 +249,16 @@ class PyWinUpdater(object):
             log.debug('Updates prepared. beginning installation')
         except Exception as exc:
             log.info('Preparing install list failed: {0}'.format(exc))
+            return exc
+
+        # accept eula if not accepted
+        try:
+            for update in self.search_results.Updates:
+                if not update.EulaAccepted:
+                    log.debug(u'Accepting EULA: {0}'.format(update.Title))
+                    update.AcceptEula()
+        except Exception as exc:
+            log.info('Accepting Eula failed: {0}'.format(exc))
             return exc
 
         if self.install_collection.Count != 0:
@@ -351,7 +363,7 @@ def _search(win_updater, retries=5):
                 return (comment, True, retries)
             passed = False
     if clean:
-        comment += 'Search was done with out an error.\n'
+        comment += 'Search was done without error.\n'
     return (comment, True, retries)
 
 

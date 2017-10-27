@@ -33,7 +33,8 @@ def __virtual__():
     for _os in supported_os_tool:
         if cur_os == _os and salt.utils.which(supported_os_tool[cur_os]):
             return True
-    return False
+    return (False, 'The bridge execution module failed to load: requires one of the following tool/os'
+        ' combinations: ifconfig on FreeBSD/OpenBSD, brctl on Linux or brconfig on NetBSD.')
 
 
 def _tool_path(ostool):

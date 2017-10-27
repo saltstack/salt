@@ -34,7 +34,7 @@ def __virtual__():
     '''
     if salt.utils.which('postfix'):
         return True
-    return False
+    return (False, 'postfix execution module not loaded: postfix not installed.')
 
 
 def _parse_master(path=MASTER_CF):

@@ -6,8 +6,9 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import threading
 import time
+import threading
+import platform
 
 import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
@@ -18,13 +19,17 @@ from tornado.testing import AsyncTestCase
 import tornado.gen
 
 import salt.config
+import salt.ext.six as six
 import salt.utils
 import salt.transport.server
 import salt.transport.client
 import salt.exceptions
+from salt.ext.six.moves import range
+from salt.transport.zeromq import AsyncReqMessageClientPool
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
+from salttesting.mock import MagicMock, patch
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 
@@ -33,6 +38,10 @@ import integration
 # Import Salt libs
 from unit.transport.req_test import ReqChannelMixin
 from unit.transport.pub_test import PubChannelMixin
+
+ON_SUSE = False
+if 'SuSE' in platform.dist():
+    ON_SUSE = True
 
 
 # TODO: move to a library?
@@ -46,6 +55,8 @@ class BaseZMQReqCase(TestCase):
     '''
     @classmethod
     def setUpClass(cls):
+        if not hasattr(cls, '_handle_payload'):
+            return
         cls.master_opts = salt.config.master_config(get_config_file_path('master'))
         cls.master_opts.update({
             'transport': 'zeromq',
@@ -75,10 +86,22 @@ class BaseZMQReqCase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        if not hasattr(cls, '_handle_payload'):
+            return
+        # Attempting to kill the children hangs the test suite.
+        # Let the test suite handle this instead.
         cls.process_manager.kill_children()
         time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
         cls.io_loop.stop()
         cls.server_channel.close()
+        del cls.server_channel
+
+    @classmethod
+    def _handle_payload(cls, payload):
+        '''
+        TODO: something besides echo
+        '''
+        return payload, {'fun': 'send_clear'}
 
 
 class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
@@ -97,6 +120,8 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
+@skipIf(True, 'Skipping flaky test until Jenkins is moved to C7.')
+@skipIf(ON_SUSE, 'Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed')
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     def setUp(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
@@ -111,10 +136,19 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
+    #
+    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    #
+    # WARNING: This test will fail randomly on any system with > 1 CPU core!!!
+    #
+    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     def test_badload(self):
         '''
         Test a variety of bad requests, make sure that we get some sort of error
         '''
+        # TODO: This test should be re-enabled when Jenkins moves to C7.
+        # Once the version of salt-testing is increased to something newer than the September
+        # release of salt-testing, the @flaky decorator should be applied to this test.
         msgs = ['', [], tuple()]
         for msg in msgs:
             with self.assertRaises(salt.exceptions.AuthenticationError):
@@ -176,7 +210,7 @@ class BaseZMQPubCase(AsyncTestCase):
     def tearDown(self):
         super(BaseZMQPubCase, self).tearDown()
         failures = []
-        for k, v in self.io_loop._handlers.iteritems():
+        for k, v in six.iteritems(self.io_loop._handlers):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         if len(failures) > 0:
@@ -190,6 +224,37 @@ class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin):
     '''
     def get_new_ioloop(self):
         return zmq.eventloop.ioloop.ZMQIOLoop()
+
+
+class AsyncReqMessageClientPoolTest(TestCase):
+    def setUp(self):
+        super(AsyncReqMessageClientPoolTest, self).setUp()
+        sock_pool_size = 5
+        with patch('salt.transport.zeromq.AsyncReqMessageClient.__init__', MagicMock(return_value=None)):
+            self.message_client_pool = AsyncReqMessageClientPool({'sock_pool_size': sock_pool_size},
+                                                                 args=({}, ''))
+        self.original_message_clients = self.message_client_pool.message_clients
+        self.message_client_pool.message_clients = [MagicMock() for _ in range(sock_pool_size)]
+
+    def tearDown(self):
+        with patch('salt.transport.zeromq.AsyncReqMessageClient.destroy', MagicMock(return_value=None)):
+            del self.original_message_clients
+        super(AsyncReqMessageClientPoolTest, self).tearDown()
+
+    def test_send(self):
+        for message_client_mock in self.message_client_pool.message_clients:
+            message_client_mock.send_queue = [0, 0, 0]
+            message_client_mock.send.return_value = []
+
+        self.assertEqual([], self.message_client_pool.send())
+
+        self.message_client_pool.message_clients[2].send_queue = [0]
+        self.message_client_pool.message_clients[2].send.return_value = [1]
+        self.assertEqual([1], self.message_client_pool.send())
+
+    def test_destroy(self):
+        self.message_client_pool.destroy()
+        self.assertEqual([], self.message_client_pool.message_clients)
 
 
 if __name__ == '__main__':

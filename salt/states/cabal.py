@@ -39,7 +39,7 @@ def __virtual__():
 
 def _parse_pkg_string(pkg):
     '''
-    Parse pkg string and return a tuple of packge name, separator, and
+    Parse pkg string and return a tuple of package name, separator, and
     package version.
 
     Cabal support install package with following format:
@@ -100,7 +100,7 @@ def installed(name,
             user=user, installed=True, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error looking up  {0!r}: {1}'.format(name, err)
+        ret['comment'] = 'Error looking up \'{0}\': {1}'.format(name, err)
         return ret
 
     pkgs_satisfied = []
@@ -127,12 +127,12 @@ def installed(name,
 
         if pkgs_to_install:
             comment_msg.append(
-                'Packages(s) {0!r} are set to be installed'.format(
+                'Packages(s) \'{0}\' are set to be installed'.format(
                     ', '.join(pkgs_to_install)))
 
         if pkgs_satisfied:
             comment_msg.append(
-                'Packages(s) {0!r} satisfied by {1}'.format(
+                'Packages(s) \'{0}\' satisfied by {1}'.format(
                     ', '.join(pkg_list), ', '.join(pkgs_satisfied)))
 
         ret['comment'] = '. '.join(comment_msg)
@@ -140,7 +140,7 @@ def installed(name,
 
     if not pkgs_to_install:
         ret['result'] = True
-        ret['comment'] = ('Packages(s) {0!r} satisfied by {1}'.format(
+        ret['comment'] = ('Packages(s) \'{0}\' satisfied by {1}'.format(
             ', '.join(pkg_list), ', '.join(pkgs_satisfied)))
 
         return ret
@@ -152,18 +152,18 @@ def installed(name,
                                          env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error installing {0!r}: {1}'.format(
+        ret['comment'] = 'Error installing \'{0}\': {1}'.format(
             ', '.join(pkg_list), err)
         return ret
 
     if call and isinstance(call, dict):
         ret['result'] = True
         ret['changes'] = {'old': [], 'new': pkgs_to_install}
-        ret['comment'] = 'Packages(s) {0!r} successfully installed'.format(
+        ret['comment'] = 'Packages(s) \'{0}\' successfully installed'.format(
             ', '.join(pkgs_to_install))
     else:
         ret['result'] = False
-        ret['comment'] = 'Could not install packages(s) {0!r}'.format(
+        ret['comment'] = 'Could not install packages(s) \'{0}\''.format(
             ', '.join(pkg_list))
 
     return ret
@@ -183,24 +183,24 @@ def removed(name,
             user=user, installed=True, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error looking up  {0!r}: {1}'.format(name, err)
+        ret['comment'] = 'Error looking up \'{0}\': {1}'.format(name, err)
 
     if name not in installed_pkgs:
         ret['result'] = True
-        ret['comment'] = 'Package {0!r} is not installed'.format(name)
+        ret['comment'] = 'Package \'{0}\' is not installed'.format(name)
         return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Package {0!r} is set to be removed'.format(name)
+        ret['comment'] = 'Package \'{0}\' is set to be removed'.format(name)
         return ret
 
     if __salt__['cabal.uninstall'](pkg=name, user=user, env=env):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
-        ret['comment'] = 'Package {0!r} was successfully removed'.format(name)
+        ret['comment'] = 'Package \'{0}\' was successfully removed'.format(name)
     else:
         ret['result'] = False
-        ret['comment'] = 'Error removing package {0!r}'.format(name)
+        ret['comment'] = 'Error removing package \'{0}\''.format(name)
 
     return ret

@@ -31,22 +31,8 @@ def __virtual__():
     Only run on Linux systems
     '''
     if __grains__['kernel'] != 'Linux':
-        return False
+        return (False, 'The linux_sysctl execution module cannot be loaded: only available on Linux systems.')
     return __virtualname__
-
-
-def _check_systemd_salt_config():
-    conf = '/etc/sysctl.d/99-salt.conf'
-    if not os.path.exists(conf):
-        sysctl_dir = os.path.split(conf)[0]
-        if not os.path.exists(sysctl_dir):
-            os.makedirs(sysctl_dir)
-        try:
-            salt.utils.fopen(conf, 'w').close()
-        except (IOError, OSError):
-            msg = 'Could not create file: {0}'
-            raise CommandExecutionError(msg.format(conf))
-    return conf
 
 
 def default_config():
@@ -64,7 +50,7 @@ def default_config():
     '''
     if salt.utils.systemd.booted(__context__) \
             and salt.utils.systemd.version(__context__) >= 207:
-        return _check_systemd_salt_config()
+        return '/etc/sysctl.d/99-salt.conf'
     return '/etc/sysctl.conf'
 
 
@@ -180,6 +166,9 @@ def persist(name, value, config=None):
     edited = False
     # If the sysctl.conf is not present, add it
     if not os.path.isfile(config):
+        sysctl_dir = os.path.dirname(config)
+        if not os.path.exists(sysctl_dir):
+            os.makedirs(sysctl_dir)
         try:
             with salt.utils.fopen(config, 'w+') as _fh:
                 _fh.write('#\n# Kernel sysctl configuration\n#\n')
@@ -232,7 +221,12 @@ def persist(name, value, config=None):
                     if str(running[name]) != str(value):
                         assign(name, value)
                         return 'Updated'
-                return 'Already set'
+                    else:
+                        return 'Already set'
+                # It is missing from the running config. We can not set it.
+                else:
+                    raise CommandExecutionError('sysctl {0} does not exist'.format(name))
+
             nlines.append('{0} = {1}\n'.format(name, value))
             edited = True
             continue

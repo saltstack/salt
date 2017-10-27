@@ -3,7 +3,7 @@
 Connection module for Amazon SNS
 
 :configuration: This module accepts explicit sns credentials but can also
-    utilize IAM roles assigned to the instance trough Instance Profiles. Dynamic
+    utilize IAM roles assigned to the instance through Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
     configuration is necessary. More Information available at:
 
@@ -65,7 +65,7 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_sns module could not be loaded: boto libraries not found')
     __utils__['boto.assign_funcs'](__name__, 'sns', pack=__salt__)
     return True
 
@@ -178,6 +178,34 @@ def subscribe(topic, protocol, endpoint, region=None, key=None, keyid=None, prof
     return True
 
 
+def unsubscribe(topic, subscription_arn, region=None, key=None, keyid=None, profile=None):
+    '''
+    Unsubscribe a specific SubscriptionArn of a topic.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_sns.unsubscribe my_topic my_subscription_arn region=us-east-1
+
+    .. versionadded:: 2016.11.0
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if subscription_arn.startswith('arn:aws:sns:') is False:
+        return False
+
+    try:
+        conn.unsubscribe(subscription_arn)
+        log.info('Unsubscribe {0} to {1} topic'.format(subscription_arn, topic))
+    except Exception as e:
+        log.error('Unsubscribe Error: {0}'.format(e))
+        return False
+    else:
+        __context__.pop(_subscriptions_cache_key(topic), None)
+        return True
+
+
 def get_arn(name, region=None, key=None, keyid=None, profile=None):
     '''
     Returns the full ARN for a given topic name.
@@ -199,6 +227,9 @@ def get_arn(name, region=None, key=None, keyid=None, profile=None):
 def _get_region(region=None, profile=None):
     if profile and 'region' in profile:
         return profile['region']
+    if not region and __salt__['config.option'](profile):
+        _profile = __salt__['config.option'](profile)
+        region = _profile.get('region', None)
     if not region and __salt__['config.option']('sns.region'):
         region = __salt__['config.option']('sns.region')
     if not region:

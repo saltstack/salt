@@ -6,10 +6,9 @@ import logging
 
 # Import Salt libs
 import salt.minion
-import salt.utils.verify
 import salt.utils.jid
-from salt.utils.event import tagify
-
+import salt.utils.event
+import salt.utils.verify
 
 log = logging.getLogger(__name__)
 
@@ -64,12 +63,18 @@ def store_job(opts, load, event=None, mminion=None):
     if event:
         # If the return data is invalid, just ignore it
         log.info('Got return from {id} for job {jid}'.format(**load))
-        event.fire_event(load, tagify([load['jid'], 'ret', load['id']], 'job'))
+        event.fire_event(load,
+                         salt.utils.event.tagify([load['jid'], 'ret', load['id']], 'job'))
         event.fire_ret_load(load)
 
     # if you have a job_cache, or an ext_job_cache, don't write to
     # the regular master cache
     if not opts['job_cache'] or opts.get('ext_job_cache'):
+        return
+
+    # do not cache job results if explicitly requested
+    if load.get('jid') == 'nocache':
+        log.debug('Ignoring job return with jid for caching {jid} from {id}'.format(**load))
         return
 
     # otherwise, write to the master cache

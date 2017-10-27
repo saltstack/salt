@@ -29,12 +29,18 @@ import salt.exceptions
 # Setup the logger
 log = logger.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'bigip'
+
 
 def __virtual__():
     '''
     Only return if requests is installed
     '''
-    return 'bigip' if HAS_LIBS else False
+    if HAS_LIBS:
+        return __virtualname__
+    return (False, 'The bigip execution module cannot be loaded: '
+            'python requests library not available.')
 
 
 BIG_IP_URL_BASE = 'https://{host}/mgmt/tm'

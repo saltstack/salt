@@ -16,23 +16,13 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or ``/etc/salt/c
       apikey: f4ZsmwtB1c7f85Jdu43RgXVDFlNjuJaeIYV8QMftTqKScEB2vSosFSr...
       password: F00barbaz
       driver: linode
-      ssh_key_file: /tmp/salt-cloud_pubkey
-      ssh_pubkey: ssh-rsa AAAAB3NzaC1yc2EA...
 
     linode-profile:
       provider: my-linode-provider
       size: Linode 1024
       image: CentOS 7
       location: London, England, UK
-      private_ip: true
 
-To clone, add a profile with a ``clonefrom`` key, and a ``script_args: -C``. ``clonefrom`` should be the name of
-the VM (*linode*) that is the source for the clone. ``script_args: -C`` passes a -C to the
-bootstrap script, which only configures the minion and doesn't try to install a new copy of salt-minion. This way the
-minion gets new keys and the keys get pre-seeded on the master, and the /etc/salt/minion file has the right
-'id:' declaration.
-
-Cloning requires a post 2015-02-01 salt-bootstrap.
 '''
 
 # Import Python Libs
@@ -360,11 +350,12 @@ def create(vm_):
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(name),
-        {
+        args={
             'name': name,
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -447,14 +438,24 @@ def create(vm_):
             )
             return False
 
+    if 'ERRORARRAY' in result:
+        for error_data in result['ERRORARRAY']:
+            log.error('Error creating {0} on Linode\n\n'
+                    'The Linode API returned the following: {1}\n'.format(
+                        name,
+                        error_data['ERRORMESSAGE']
+                        )
+                    )
+            return False
+
     __utils__['cloud.fire_event'](
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(name),
-        {'kwargs': kwargs},
+        args={'kwargs': kwargs},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
-
     node_id = _clean_data(result)['LinodeID']
     data['id'] = node_id
 
@@ -470,8 +471,18 @@ def create(vm_):
     log.debug('Set name for {0} - was linode{1}.'.format(name, node_id))
 
     # Add private IP address if requested
-    if get_private_ip(vm_):
-        create_private_ip(vm_, node_id)
+    private_ip_assignment = get_private_ip(vm_)
+    if private_ip_assignment:
+        create_private_ip(node_id)
+
+    # Define which ssh_interface to use
+    ssh_interface = _get_ssh_interface(vm_)
+
+    # If ssh_interface is set to use private_ips, but assign_private_ip
+    # wasn't set to True, let's help out and create a private ip.
+    if ssh_interface == 'private_ips' and private_ip_assignment is False:
+        create_private_ip(node_id)
+        private_ip_assignment = True
 
     if cloning:
         config_id = get_config_id(kwargs={'linode_id': node_id})['config_id']
@@ -503,7 +514,11 @@ def create(vm_):
     data['private_ips'] = ips['private_ips']
     data['public_ips'] = ips['public_ips']
 
-    vm_['ssh_host'] = data['public_ips'][0]
+    # Pass the correct IP address to the bootstrap ssh_host key
+    if ssh_interface == 'private_ips':
+        vm_['ssh_host'] = data['private_ips'][0]
+    else:
+        vm_['ssh_host'] = data['public_ips'][0]
 
     # If a password wasn't supplied in the profile or provider config, set it now.
     vm_['password'] = get_password(vm_)
@@ -513,9 +528,9 @@ def create(vm_):
 
     ret.update(data)
 
-    log.info('Created Cloud VM {0!r}'.format(name))
+    log.info('Created Cloud VM \'{0}\''.format(name))
     log.debug(
-        '{0!r} VM creation details:\n{1}'.format(
+        '\'{0}\' VM creation details:\n{1}'.format(
             name, pprint.pformat(data)
         )
     )
@@ -524,11 +539,12 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(name),
-        {
+        args={
             'name': name,
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -551,6 +567,11 @@ def create_config(kwargs=None, call=None):
     swap_disk_id
         The Swap Disk ID to be used for this config.
 
+    data_disk_id
+        The Data Disk ID to be used for this config.
+
+    .. versionadded:: 2016.3.0
+
     kernel_id
         The ID of the kernel to use for this configuration profile.
     '''
@@ -566,6 +587,7 @@ def create_config(kwargs=None, call=None):
     linode_id = kwargs.get('linode_id', None)
     root_disk_id = kwargs.get('root_disk_id', None)
     swap_disk_id = kwargs.get('swap_disk_id', None)
+    data_disk_id = kwargs.get('data_disk_id', None)
     kernel_id = kwargs.get('kernel_id', None)
 
     if kernel_id is None:
@@ -580,11 +602,15 @@ def create_config(kwargs=None, call=None):
                 '\'root_disk_id\', and \'swap_disk_id\'.'
             )
 
+    disklist = '{0},{1}'.format(root_disk_id, swap_disk_id)
+    if data_disk_id is not None:
+        disklist = '{0},{1},{2}'.format(root_disk_id, swap_disk_id, data_disk_id)
+
     config_args = {'LinodeID': linode_id,
                    'KernelID': kernel_id,
                    'Label': name,
-                   'DiskList': '{0},{1}'.format(root_disk_id, swap_disk_id)
-                   }
+                   'DiskList': disklist
+                  }
 
     result = _query('linode', 'config.create', args=config_args)
 
@@ -654,19 +680,44 @@ def create_swap_disk(vm_, linode_id, swap_size=None):
                    'Label': vm_['name'],
                    'Type': 'swap',
                    'Size': swap_size
-                   })
+                  })
 
     result = _query('linode', 'disk.create', args=kwargs)
 
     return _clean_data(result)
 
 
-def create_private_ip(vm_, linode_id):
+def create_data_disk(vm_=None, linode_id=None, data_size=None):
     r'''
-    Creates a private IP for the specified Linode.
+    Create a data disk for the linode (type is hardcoded to ext4 at the moment)
+
+    .. versionadded:: 2016.3.0
 
     vm\_
-        The VM profile to create the swap disk for.
+        The VM profile to create the data disk for.
+
+    linode_id
+        The ID of the Linode to create the data disk for.
+
+    data_size
+        The size of the disk, in MB.
+
+    '''
+    kwargs = {}
+
+    kwargs.update({'LinodeID': linode_id,
+                   'Label': vm_['name']+"_data",
+                   'Type': 'ext4',
+                   'Size': data_size
+                  })
+
+    result = _query('linode', 'disk.create', args=kwargs)
+    return _clean_data(result)
+
+
+def create_private_ip(linode_id):
+    r'''
+    Creates a private IP for the specified Linode.
 
     linode_id
         The ID of the Linode to create the IP address for.
@@ -700,7 +751,8 @@ def destroy(name, call=None):
         'event',
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -712,7 +764,8 @@ def destroy(name, call=None):
         'event',
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
-        {'name': name},
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
 
@@ -791,6 +844,19 @@ def get_disk_size(vm_, swap, linode_id):
     )
 
 
+def get_data_disk_size(vm_, swap, linode_id):
+    '''
+    Return the size of of the data disk in MB
+
+    .. versionadded:: 2016.3.0
+    '''
+    disk_size = get_linode(kwargs={'linode_id': linode_id})['TOTALHD']
+    root_disk_size = config.get_cloud_config_value(
+        'disk_size', vm_, __opts__, default=disk_size - swap
+    )
+    return disk_size - root_disk_size - swap
+
+
 def get_distribution_id(vm_):
     r'''
     Returns the distribution ID for a VM
@@ -811,9 +877,11 @@ def get_distribution_id(vm_):
     if not distro_id:
         raise SaltCloudNotFound(
             'The DistributionID for the \'{0}\' profile could not be found.\n'
-            'The \'{1}\' instance could not be provisioned.'.format(
+            'The \'{1}\' instance could not be provisioned. The following distributions '
+            'are available:\n{2}'.format(
                 vm_image_name,
-                vm_['name']
+                vm_['name'],
+                pprint.pprint(sorted([distro['LABEL'].encode(__salt_system_encoding__) for distro in distributions]))
             )
         )
 
@@ -974,7 +1042,18 @@ def get_private_ip(vm_):
     Return True if a private ip address is requested
     '''
     return config.get_cloud_config_value(
-        'private_ip', vm_, __opts__, default=False
+        'assign_private_ip', vm_, __opts__, default=False
+    )
+
+
+def get_data_disk(vm_):
+    '''
+    Return True if a data disk is requested
+
+    .. versionadded:: 2016.3.0
+    '''
+    return config.get_cloud_config_value(
+        'allocate_data_disk', vm_, __opts__, default=False
     )
 
 
@@ -1541,7 +1620,7 @@ def _get_status_descr_by_id(status_id):
     status_id
         linode VM status ID
     '''
-    for status_name, status_data in LINODE_STATUS.iteritems():
+    for status_name, status_data in six.iteritems(LINODE_STATUS):
         if status_data['code'] == int(status_id):
             return status_data['descr']
     return LINODE_STATUS.get(status_id, None)
@@ -1585,3 +1664,14 @@ def _validate_name(name):
         )
 
     return ret
+
+
+def _get_ssh_interface(vm_):
+    '''
+    Return the ssh_interface type to connect to. Either 'public_ips' (default)
+    or 'private_ips'.
+    '''
+    return config.get_cloud_config_value(
+        'ssh_interface', vm_, __opts__, default='public_ips',
+        search_global=False
+    )

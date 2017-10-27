@@ -24,7 +24,7 @@ def __virtual__():
     '''
     if salt.utils.which('sysrc') is not None:
         return True
-    return False
+    return (False, 'The sysrc execution module failed to load: the sysrc binary is not in the path.')
 
 
 def get(**kwargs):
@@ -93,6 +93,20 @@ def set_(name, value, **kwargs):
     if 'jail' in kwargs:
         cmd += ' -j '+kwargs['jail']
 
+    # This is here because the YAML parser likes to convert the string literals
+    # YES, NO, Yes, No, True, False, etc. to boolean types.  However, in this case,
+    # we will check to see if that happened and replace it with "YES" or "NO" because
+    # those items are accepted in sysrc.
+    if type(value) == bool:
+        if value:
+            value = "YES"
+        else:
+            value = "NO"
+
+    # This is here for the same reason, except for numbers
+    if type(value) == int:
+        value = str(value)
+
     cmd += ' '+name+"=\""+value+"\""
 
     sysrcs = __salt__['cmd.run'](cmd)
@@ -105,9 +119,6 @@ def set_(name, value, **kwargs):
         newval = sysrc.split(': ')[2].split(" -> ")[1]
         if rcfile not in ret:
             ret[rcfile] = {}
-        #ret[rcfile][var] = {}
-        #ret[rcfile][var]['old'] = oldval
-        #ret[rcfile][var]['new'] = newval
         ret[rcfile][var] = newval
     return ret
 

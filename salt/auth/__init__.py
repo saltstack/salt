@@ -18,6 +18,7 @@ from __future__ import absolute_import
 # Import python libs
 from __future__ import print_function
 import os
+import collections
 import hashlib
 import time
 import logging
@@ -30,6 +31,7 @@ import salt.config
 import salt.loader
 import salt.transport.client
 import salt.utils
+import salt.utils.files
 import salt.utils.minions
 import salt.payload
 
@@ -137,12 +139,31 @@ class LoadAuth(object):
         except Exception:
             return None
 
+    def _allow_custom_expire(self, load):
+        '''
+        Return bool if requesting user is allowed to set custom expire
+        '''
+        expire_override = self.opts.get('token_expire_user_override', False)
+
+        if expire_override is True:
+            return True
+
+        if isinstance(expire_override, collections.Mapping):
+            expire_whitelist = expire_override.get(load['eauth'], [])
+            if isinstance(expire_whitelist, collections.Iterable):
+                if load.get('username') in expire_whitelist:
+                    return True
+
+        return False
+
     def mk_token(self, load):
         '''
         Run time_auth and create a token. Return False or the token
         '''
-        ret = self.time_auth(load)
-        if ret is False:
+        auth_ret = self.time_auth(load)
+        if not isinstance(auth_ret, list) and not isinstance(auth_ret, bool):
+            auth_ret = False
+        if auth_ret is False:
             return {}
         fstr = '{0}.auth'.format(load['eauth'])
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
@@ -154,17 +175,32 @@ class LoadAuth(object):
         fcall = salt.utils.format_call(self.auth[fstr],
                                        load,
                                        expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+
+        if self._allow_custom_expire(load):
+            token_expire = load.pop('token_expire', self.opts['token_expire'])
+        else:
+            _ = load.pop('token_expire', None)
+            token_expire = self.opts['token_expire']
+
         tdata = {'start': time.time(),
-                 'expire': time.time() + self.opts['token_expire'],
+                 'expire': time.time() + token_expire,
                  'name': fcall['args'][0],
                  'eauth': load['eauth'],
                  'token': tok}
 
+        if auth_ret is not True:
+            tdata['auth_list'] = auth_ret
+
         if 'groups' in load:
             tdata['groups'] = load['groups']
 
-        with salt.utils.fopen(t_path, 'w+b') as fp_:
-            fp_.write(self.serial.dumps(tdata))
+        try:
+            with salt.utils.files.set_umask(0o177):
+                with salt.utils.fopen(t_path, 'w+b') as fp_:
+                    fp_.write(self.serial.dumps(tdata))
+        except (IOError, OSError):
+            log.warning('Authentication failure: can not write token file "{0}".'.format(t_path))
+            return {}
         return tdata
 
     def get_tok(self, tok):
@@ -209,6 +245,43 @@ class Authorize(object):
     def auth_data(self):
         '''
         Gather and create the authorization data sets
+
+        We're looking at several constructs here.
+
+        Standard eauth: allow jsmith to auth via pam, and execute any command
+        on server web1
+        external_auth:
+          pam:
+            jsmith:
+              - web1:
+                - .*
+
+        Django eauth: Import the django library, dynamically load the Django
+        model called 'model'.  That model returns a data structure that
+        matches the above for standard eauth.  This is what determines
+        who can do what to which machines
+
+        django:
+          ^model:
+            <stuff returned from django>
+
+        Active Directory Extended:
+
+        Users in the AD group 'webadmins' can run any command on server1
+        Users in the AD group 'webadmins' can run test.ping and service.restart
+        on machines that have a computer object in the AD 'webservers' OU
+        Users in the AD group 'webadmins' can run commands defined in the
+        custom attribute (custom attribute not implemented yet, this is for
+        future use)
+          ldap:
+             webadmins%:  <all users in the AD 'webadmins' group>
+               - server1:
+                   - .*
+               - ldap(OU=webservers,dc=int,dc=bigcompany,dc=com):
+                  - test.ping
+                  - service.restart
+               - ldap(OU=Domain Controllers,dc=int,dc=bigcompany,dc=com):
+                 - allowed_fn_list_attribute^
         '''
         auth_data = self.opts['external_auth']
         merge_lists = self.opts['pillar_merge_lists']
@@ -219,6 +292,10 @@ class Authorize(object):
                                                     auth_from_django,
                                                     strategy='list',
                                                     merge_lists=merge_lists)
+
+        if 'ldap' in auth_data and __opts__.get('auth.ldap.activedirectory', False):
+            auth_data['ldap'] = salt.auth.ldap.expand_ldap_entries(auth_data['ldap'])
+            log.debug(auth_data['ldap'])
 
         #for auth_back in self.opts.get('external_auth_sources', []):
         #    fstr = '{0}.perms'.format(auth_back)
@@ -285,6 +362,7 @@ class Authorize(object):
                 form,
                 sub_auth[name] if name in sub_auth else sub_auth['*'],
                 load.get('fun', None),
+                load.get('arg', None),
                 load.get('tgt', None),
                 load.get('tgt_type', 'glob'))
         if not good:
@@ -385,6 +463,10 @@ class Resolver(object):
             else:
                 ret[kwarg] = input('{0} [{1}]: '.format(kwarg, default))
 
+        # Use current user if empty
+        if 'username' in ret and not ret['username']:
+            ret['username'] = salt.utils.get_user()
+
         return ret
 
     def token_cli(self, eauth, load):
@@ -397,14 +479,12 @@ class Resolver(object):
         tdata = self._send_token_request(load)
         if 'token' not in tdata:
             return tdata
-        oldmask = os.umask(0o177)
         try:
-            with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
-                fp_.write(tdata['token'])
+            with salt.utils.files.set_umask(0o177):
+                with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
+                    fp_.write(tdata['token'])
         except (IOError, OSError):
             pass
-        finally:
-            os.umask(oldmask)
         return tdata
 
     def mk_token(self, load):

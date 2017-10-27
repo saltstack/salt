@@ -65,7 +65,7 @@ def __virtual__():
     '''
     if HAS_LIBS:
         return __virtualname__
-    return False
+    return (False, 'This module is only loaded if smtplib is available')
 
 
 def send_msg(recipient,

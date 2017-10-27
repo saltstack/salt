@@ -27,6 +27,12 @@ import salt.utils.sdb as sdb
 # Import 3rd-party libs
 import salt.ext.six as six
 
+if salt.utils.is_windows():
+    _HOSTS_FILE = os.path.join(
+        os.environ['SystemRoot'], 'System32', 'drivers', 'etc', 'hosts')
+else:
+    _HOSTS_FILE = os.path.join(os.sep, 'etc', 'hosts')
+
 log = logging.getLogger(__name__)
 
 __proxyenabled__ = ['*']
@@ -65,7 +71,7 @@ DEFAULTS = {'mongo.db': 'salt',
             'ldap.attrs': None,
             'ldap.binddn': '',
             'ldap.bindpw': '',
-            'hosts.file': '/etc/hosts',
+            'hosts.file': _HOSTS_FILE,
             'aliases.file': '/etc/aliases',
             'virt.images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images'),
             'virt.tunnel': False,
@@ -97,17 +103,10 @@ def manage_mode(mode):
 
         salt '*' config.manage_mode
     '''
-    if mode is None:
-        return None
-    if not isinstance(mode, six.string_types):
-        # Make it a string in case it's not
-        mode = str(mode)
-    # Strip any quotes and initial 0, though zero-pad it up to 4
-    ret = mode.strip('"').strip('\'').lstrip('0').zfill(4)
-    if ret[0] != '0':
-        # Always include a leading zero
-        return '0{0}'.format(ret)
-    return ret
+    # config.manage_mode should no longer be invoked from the __salt__ dunder
+    # in Salt code, this function is only being left here for backwards
+    # compatibility.
+    return salt.utils.normalize_mode(mode)
 
 
 def valid_fileproto(uri):
@@ -207,7 +206,9 @@ def merge(value,
                 ret = list(ret) + list(tmp)
     if ret is None and value in DEFAULTS:
         return DEFAULTS[value]
-    return ret or default
+    if ret is None:
+        return default
+    return ret
 
 
 def get(key, default='', delimiter=':', merge=None):

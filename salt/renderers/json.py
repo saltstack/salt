@@ -6,7 +6,8 @@ JSON Renderer for Salt
 from __future__ import absolute_import
 
 # Import python libs
-import json
+import salt.utils
+json = salt.utils.import_json()
 
 # Import salt libs
 from salt.ext.six import string_types

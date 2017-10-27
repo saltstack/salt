@@ -66,6 +66,8 @@ if HAS_GNUPG:
     def test_returner(self, mocked_smtplib, *args):
         with patch.dict(smtp.__opts__, {'extension_modules': '',
                                         'renderer': 'jinja|yaml',
+                                        'renderer_blacklist': [],
+                                        'renderer_whitelist': [],
                                         'file_roots': [],
                                         'pillar_roots': [],
                                         'cachedir': '/'}):
@@ -76,6 +78,8 @@ else:
     def test_returner(self, mocked_smtplib, *args):
         with patch.dict(smtp.__opts__, {'extension_modules': '',
                                         'renderer': 'jinja|yaml',
+                                        'renderer_blacklist': [],
+                                        'renderer_whitelist': [],
                                         'file_roots': [],
                                         'pillar_roots': [],
                                         'cachedir': '/'}):

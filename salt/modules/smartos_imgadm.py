@@ -71,7 +71,12 @@ def __virtual__():
     '''
     if salt.utils.is_smartos_globalzone() and _check_imgadm():
         return __virtualname__
-    return False
+    return (
+        False,
+        '{0} module can only be loaded on SmartOS computed nodes'.format(
+            __virtualname__
+        )
+    )
 
 
 def version():
@@ -97,7 +102,7 @@ def update_installed(uuid=''):
     Gather info on unknown image(s) (locally installed)
 
     uuid : string
-        Specifies uuid of image
+        optional uuid of image
 
     CLI Example:
 
@@ -117,9 +122,9 @@ def avail(search=None, verbose=False):
     Return a list of available images
 
     search : string
-        Specifies search keyword
+        search keyword
     verbose : boolean (False)
-        Specifies verbose output
+        toggle verbose output
 
     CLI Example:
 
@@ -154,7 +159,7 @@ def list_installed(verbose=False):
     Return a list of installed images
 
     verbose : boolean (False)
-        Specifies verbose output
+        toggle verbose output
 
     CLI Example:
 
@@ -178,9 +183,12 @@ def list_installed(verbose=False):
     return result
 
 
-def show(uuid=None):
+def show(uuid):
     '''
     Show manifest of a given image
+
+    uuid : string
+        uuid of image
 
     CLI Example:
 
@@ -189,9 +197,6 @@ def show(uuid=None):
         salt '*' imgadm.show e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    if not uuid:
-        ret['Error'] = 'UUID parameter is mandatory'
-        return ret
     imgadm = _check_imgadm()
     cmd = '{0} show {1}'.format(imgadm, uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -203,9 +208,12 @@ def show(uuid=None):
     return ret
 
 
-def get(uuid=None):
+def get(uuid):
     '''
     Return info on an installed image
+
+    uuid : string
+        uuid of image
 
     CLI Example:
 
@@ -214,9 +222,6 @@ def get(uuid=None):
         salt '*' imgadm.get e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    if not uuid:
-        ret['Error'] = 'UUID parameter is mandatory'
-        return ret
     imgadm = _check_imgadm()
     cmd = '{0} get {1}'.format(imgadm, uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -228,14 +233,14 @@ def get(uuid=None):
     return ret
 
 
-def import_image(uuid=None, verbose=False):
+def import_image(uuid, verbose=False):
     '''
     Import an image from the repository
 
     uuid : string
-        Specifies uuid to import
+        uuid to import
     verbose : boolean (False)
-        Specifies verbose output
+        toggle verbose output
 
     CLI Example:
 
@@ -244,9 +249,6 @@ def import_image(uuid=None, verbose=False):
         salt '*' imgadm.import e42f8c84-bbea-11e2-b920-078fab2aab1f [verbose=True]
     '''
     ret = {}
-    if not uuid:
-        ret['Error'] = 'UUID parameter is mandatory'
-        return ret
     imgadm = _check_imgadm()
     cmd = '{0} import {1}'.format(imgadm, uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -258,7 +260,7 @@ def import_image(uuid=None, verbose=False):
     return {uuid: _parse_image_meta(get(uuid), verbose)}
 
 
-def delete(uuid=None):
+def delete(uuid):
     '''
     Remove an installed image
 
@@ -272,9 +274,6 @@ def delete(uuid=None):
         salt '*' imgadm.delete e42f8c84-bbea-11e2-b920-078fab2aab1f
     '''
     ret = {}
-    if not uuid:
-        ret['Error'] = 'UUID parameter is mandatory'
-        return ret
     imgadm = _check_imgadm()
     cmd = '{0} delete {1}'.format(imgadm, uuid)
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -296,7 +295,7 @@ def vacuum(verbose=False):
     Remove unused images
 
     verbose : boolean (False)
-        Specifies verbose output
+        toggle verbose output
 
     CLI Example:
 

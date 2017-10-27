@@ -159,9 +159,12 @@ from __future__ import absolute_import
 import logging
 import os
 
-log = logging.getLogger(__name__)
-
+# Import Salt lobs
+import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -468,7 +471,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
                     target_power_states[key] = 'powerup'
                 if current_power_states[key] != -1 and current_power_states[key]:
                     target_power_states[key] = 'powercycle'
-        for k, v in target_power_states.iteritems():
+        for k, v in six.iteritems(target_power_states):
             old = {k: current_power_states[k]}
             new = {k: v}
             if ret['changes'].get('Blade Power States') is None:
@@ -528,7 +531,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
             slot_names = True
 
     powerchange_all_ok = True
-    for k, v in target_power_states.iteritems():
+    for k, v in six.iteritems(target_power_states):
         powerchange_ok = __salt__[chassis_cmd]('server_power', v, module=k)
         if not powerchange_ok:
             powerchange_all_ok = False

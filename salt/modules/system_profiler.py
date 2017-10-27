@@ -2,7 +2,7 @@
 '''
 System Profiler Module
 
-Interface with Mac OSX's command-line System Profiler utility to get
+Interface with macOS's command-line System Profiler utility to get
 information about package receipts and installed applications.
 
 .. versionadded:: 2015.5.0
@@ -27,8 +27,8 @@ def __virtual__():
 
     if PROFILER_BINARY:
         return True
-    else:
-        return False
+    return (False, 'The system_profiler execution module cannot be loaded: '
+            'system_profiler unavailable.')
 
 
 def _call_system_profiler(datatype):

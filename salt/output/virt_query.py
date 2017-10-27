@@ -14,7 +14,7 @@ from __future__ import absolute_import
 import salt.ext.six as six
 
 
-def output(data):
+def output(data, **kwargs):  # pylint: disable=unused-argument
     '''
     Display output for the salt-run virt.query function
     '''

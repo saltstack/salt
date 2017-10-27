@@ -84,11 +84,12 @@ class DiskTestCase(TestCase):
         mock_fs = '/'
         mock_ret = {'name': mock_fs,
                     'result': False,
-                    'comment': 'maximum must be an integer ',
+                    'comment': '',
                     'changes': {},
                     'data': {}}
 
         with patch.dict(disk.__salt__, self.__salt__):
+            mock_ret['comment'] = 'maximum must be an integer '
             ret = disk.status(mock_fs, maximum=r'e^{i\pi}')
             self.assertEqual(ret, mock_ret)
 
@@ -104,11 +105,12 @@ class DiskTestCase(TestCase):
         mock_fs = '/'
         mock_ret = {'name': mock_fs,
                     'result': False,
-                    'comment': 'maximum must be in the range [0, 100] ',
+                    'comment': '',
                     'changes': {},
                     'data': {}}
 
         with patch.dict(disk.__salt__, self.__salt__):
+            mock_ret['comment'] = 'maximum must be in the range [0, 100] '
             ret = disk.status(mock_fs, maximum='-1')
             self.assertEqual(ret, mock_ret)
 
@@ -124,7 +126,7 @@ class DiskTestCase(TestCase):
         mock_fs = '/'
         mock_ret = {'name': mock_fs,
                     'result': False,
-                    'comment': 'Min must be less than max ',
+                    'comment': 'minimum must be less than maximum ',
                     'changes': {},
                     'data': {}}
 
@@ -147,7 +149,7 @@ class DiskTestCase(TestCase):
                     'data': self.mock_data[mock_fs]}
 
         with patch.dict(disk.__salt__, self.__salt__):
-            mock_ret['comment'] = 'Disk used space is below minimum of {0}% at {1}%'.format(
+            mock_ret['comment'] = 'Disk used space is below minimum of {0} % at {1} %'.format(
                                        mock_min,
                                        mock_used
                                    )
@@ -155,11 +157,41 @@ class DiskTestCase(TestCase):
             self.assertEqual(ret, mock_ret)
 
         with patch.dict(disk.__salt__, self.__salt__):
-            mock_ret['comment'] = 'Disk used space is above maximum of {0}% at {1}%'.format(
+            mock_ret['comment'] = 'Disk used space is above maximum of {0} % at {1} %'.format(
                                        mock_max,
                                        mock_used
                                    )
             ret = disk.status(mock_fs, maximum=mock_max)
+            self.assertEqual(ret, mock_ret)
+
+    def test_status_strip(self):
+        '''
+        Test disk.status appropriately strips unit info from numbers
+        '''
+        mock_fs = '/'
+        mock_ret = {'name': mock_fs,
+                    'result': True,
+                    'comment': 'Disk used space in acceptable range',
+                    'changes': {},
+                    'data': self.mock_data[mock_fs]}
+
+        with patch.dict(disk.__salt__, self.__salt__):
+            ret = disk.status(mock_fs, minimum='0%')
+            self.assertEqual(ret, mock_ret)
+
+            ret = disk.status(mock_fs, minimum='0 %')
+            self.assertEqual(ret, mock_ret)
+
+            ret = disk.status(mock_fs, maximum='100%')
+            self.assertEqual(ret, mock_ret)
+
+            ret = disk.status(mock_fs, minimum='1024K', absolute=True)
+            self.assertEqual(ret, mock_ret)
+
+            ret = disk.status(mock_fs, minimum='1024KB', absolute=True)
+            self.assertEqual(ret, mock_ret)
+
+            ret = disk.status(mock_fs, maximum='4194304 KB', absolute=True)
             self.assertEqual(ret, mock_ret)
 
     def test_status(self):
@@ -171,7 +203,7 @@ class DiskTestCase(TestCase):
         mock_fs = '/'
         mock_ret = {'name': mock_fs,
                     'result': True,
-                    'comment': 'Disk in acceptable range',
+                    'comment': 'Disk used space in acceptable range',
                     'changes': {},
                     'data': self.mock_data[mock_fs]}
 
@@ -182,6 +214,39 @@ class DiskTestCase(TestCase):
         with patch.dict(disk.__salt__, self.__salt__):
             ret = disk.status(mock_fs, maximum=mock_max)
             self.assertEqual(ret, mock_ret)
+
+        # Reset mock because it's an iterator to run the tests with the
+        # absolute flag
+        ret = {'name': mock_fs,
+               'result': False,
+               'comment': '',
+               'changes': {},
+               'data': {}}
+
+        mock = MagicMock(side_effect=[[], [mock_fs], {mock_fs: {'capacity': '8 %', 'used': '8'}},
+            {mock_fs: {'capacity': '22 %', 'used': '22'}},
+            {mock_fs: {'capacity': '15 %', 'used': '15'}}])
+        with patch.dict(disk.__salt__, {'disk.usage': mock}):
+            comt = ('Named disk mount not present ')
+            ret.update({'comment': comt})
+            self.assertDictEqual(disk.status(mock_fs), ret)
+
+            comt = ('minimum must be less than maximum ')
+            ret.update({'comment': comt})
+            self.assertDictEqual(disk.status(mock_fs, '10', '20', absolute=True), ret)
+
+            comt = ('Disk used space is below minimum of 10 KB at 8 KB')
+            ret.update({'comment': comt, 'data': {'capacity': '8 %', 'used': '8'}})
+            self.assertDictEqual(disk.status(mock_fs, '20', '10', absolute=True), ret)
+
+            comt = ('Disk used space is above maximum of 20 KB at 22 KB')
+            ret.update({'comment': comt, 'data': {'capacity': '22 %', 'used': '22'}})
+            self.assertDictEqual(disk.status(mock_fs, '20', '10', absolute=True), ret)
+
+            comt = ('Disk used space in acceptable range')
+            ret.update({'comment': comt, 'result': True,
+                'data': {'capacity': '15 %', 'used': '15'}})
+            self.assertDictEqual(disk.status(mock_fs, '20', '10', absolute=True), ret)
 
 
 if __name__ == '__main__':

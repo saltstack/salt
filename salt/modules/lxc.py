@@ -22,7 +22,7 @@ import time
 import shutil
 import re
 import random
-import distutils.version
+import distutils.version  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt
@@ -81,7 +81,7 @@ def __virtual__():
     #     return 'lxc'
     # return False
     #
-    return False
+    return (False, 'The lxc execution module cannot be loaded: the lxc-start binary is not in the path.')
 
 
 def get_root_path(path):
@@ -117,7 +117,7 @@ def version():
     '''
     k = 'lxc.version'
     if not __context__.get(k, None):
-        cversion = __salt__['cmd.run_all']('lxc-ls --version')
+        cversion = __salt__['cmd.run_all']('lxc-info --version')
         if not cversion['retcode']:
             ver = distutils.version.LooseVersion(cversion['stdout'])
             if ver < distutils.version.LooseVersion('1.0'):
@@ -490,7 +490,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     # via the legacy salt cloud configuration style.
     # On other cases, we should rely on settings provided by the new
     # salt lxc network profile style configuration which can
-    # be also be overriden or a per interface basis via the nic_opts dict.
+    # be also be overridden or a per interface basis via the nic_opts dict.
     if bridge:
         eth0['link'] = bridge
     if gateway:
@@ -540,10 +540,10 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     return lxc_init_interface
 
 
-def _get_profile(key, old_key, name, **kwargs):
+def _get_profile(key, name, **kwargs):
     if isinstance(name, dict):
         profilename = name.pop('name', None)
-        return _get_profile(key, old_key, profilename, **name)
+        return _get_profile(key, profilename, **name)
 
     if name is None:
         profile_match = {}
@@ -555,20 +555,9 @@ def _get_profile(key, old_key, name, **kwargs):
                 merge='recurse'
             )
         if profile_match is None:
-            # Try legacy profile location
-            profile_match = \
-                __salt__['config.get'](
-                    'lxc.{1}:{0}'.format(name, old_key), None)
-            if profile_match is not None:
-                salt.utils.warn_until(
-                    'Boron',
-                    'lxc.{1} has been deprecated, please configure LXC '
-                    'container profiles under lxc.{0} instead'.format(
-                        key, old_key))
-            else:
-                # No matching profile, make the profile an empty dict so that
-                # overrides can be applied below.
-                profile_match = {}
+            # No matching profile, make the profile an empty dict so that
+            # overrides can be applied below.
+            profile_match = {}
 
     if not isinstance(profile_match, dict):
         raise CommandExecutionError('lxc.{0} must be a dictionary'.format(key))
@@ -619,7 +608,7 @@ def get_container_profile(name=None, **kwargs):
         salt-call lxc.get_container_profile centos
         salt-call lxc.get_container_profile ubuntu template=ubuntu backing=overlayfs
     '''
-    profile = _get_profile('container_profile', 'profile', name, **kwargs)
+    profile = _get_profile('container_profile', name, **kwargs)
     return profile
 
 
@@ -679,7 +668,7 @@ def get_network_profile(name=None, **kwargs):
         salt-call lxc.get_network_profile default
     '''
 
-    profile = _get_profile('network_profile', 'nic', name, **kwargs)
+    profile = _get_profile('network_profile', name, **kwargs)
     return profile
 
 
@@ -879,6 +868,10 @@ def _network_conf(conf_tuples=None, **kwargs):
 def _get_lxc_default_data(**kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = {}
+    for k in ['utsname', 'rootfs']:
+        val = kwargs.get(k, None)
+        if val is not None:
+            ret['lxc.{0}'.format(k)] = val
     autostart = kwargs.get('autostart')
     # autostart can have made in kwargs, but with the None
     # value which is invalid, we need an explicit boolean
@@ -1126,7 +1119,6 @@ def init(name,
          memory=None,
          profile=None,
          network_profile=None,
-         nic=_marker,
          nic_opts=None,
          cpu=None,
          autostart=True,
@@ -1193,10 +1185,6 @@ def init(name,
         Network profile to use for the container
 
         .. versionadded:: 2015.5.0
-
-    nic
-        .. deprecated:: 2015.5.0
-            Use ``network_profile`` instead
 
     nic_opts
         Extra options for network interfaces, will override
@@ -1267,10 +1255,6 @@ def init(name,
 
         .. versionadded:: 2015.8.0
 
-    clone
-        .. deprecated:: 2015.5.0
-            Use ``clone_from`` instead
-
     clone_from
         Original from which to use a clone operation to create the container.
         Default: ``None``
@@ -1320,28 +1304,10 @@ def init(name,
            'changes': {}}
 
     profile = get_container_profile(copy.deepcopy(profile))
-    if bool(nic) and nic is not _marker:
-        salt.utils.warn_until(
-            'Boron',
-            'The \'nic\' argument to \'lxc.init\' has been deprecated, '
-            'please use \'network_profile\' instead.'
-        )
-        network_profile = nic
     if not network_profile:
         network_profile = profile.get('network_profile')
     if not network_profile:
         network_profile = DEFAULT_NIC
-
-    try:
-        kwargs['clone_from'] = kwargs.pop('clone')
-    except KeyError:
-        pass
-    else:
-        salt.utils.warn_until(
-            'Boron',
-            'The \'clone\' argument to \'lxc.init\' has been deprecated, '
-            'please use \'clone_from\' instead.'
-        )
 
     # Changes is a pointer to changes_dict['init']. This method is used so that
     # we can have a list of changes as they are made, providing an ordered list
@@ -1379,19 +1345,12 @@ def init(name,
     salt_config = _get_salt_config(config, **kwargs)
     approve_key = select('approve_key', True)
     clone_from = select('clone_from')
-    if password and password_encrypted is None:
-        salt.utils.warn_until(
-            'Boron',
-            'Starting with the Boron release, passwords passed to the '
-            '\'lxc.init\' function will be assumed to be hashed, unless '
-            'password_encrypted=False. Please keep this in mind.'
-        )
-        password_encrypted = False
 
     # If using a volume group then set up to make snapshot cow clones
     if vgname and not clone_from:
         try:
-            clone_from = _get_base(vgname=vgname, profile=profile, **kwargs)
+            kwargs['vgname'] = vgname
+            clone_from = _get_base(profile=profile, **kwargs)
         except (SaltInvocationError, CommandExecutionError) as exc:
             ret['comment'] = exc.strerror
             if changes:
@@ -1877,10 +1836,16 @@ def create(name,
     lvname
         Name of the LVM logical volume in which to create the volume for this
         container. Only applicable if ``backing=lvm``.
+
     nic_opts
         give extra opts overriding network profile values
+
     path
         parent path for the container creation (default: /var/lib/lxc)
+
+    zfsroot
+        Name of the ZFS root in which to create the volume for this container.
+        Only applicable if ``backing=zfs``. (default: tank/lxc)
 
         .. versionadded:: 2015.8.0
     '''
@@ -1930,6 +1895,7 @@ def create(name,
     lvname = select('lvname')
     fstype = select('fstype')
     size = select('size', '1G')
+    zfsroot = select('zfsroot')
     if backing in ('dir', 'overlayfs', 'btrfs', 'zfs'):
         fstype = None
         size = None
@@ -1956,6 +1922,9 @@ def create(name,
     if backing:
         backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
+        if backing in ('zfs',):
+            if zfsroot:
+                cmd += ' --zfsroot {0}'.format(zfsroot)
         if backing in ('lvm',):
             if lvname:
                 cmd += ' --lvname {0}'.format(lvname)
@@ -2083,18 +2052,25 @@ def clone(name,
     size = select('size', '1G')
     if backing in ('dir', 'overlayfs', 'btrfs'):
         size = None
-    cmd = 'lxc-clone'
+    # LXC commands and options changed in 2.0 - CF issue #34086 for details
+    if version() >= distutils.version.LooseVersion('2.0'):
+        # https://linuxcontainers.org/lxc/manpages//man1/lxc-copy.1.html
+        cmd = 'lxc-copy'
+        cmd += ' {0} -n {1} -N {2}'.format(snapshot, orig, name)
+    else:
+        # https://linuxcontainers.org/lxc/manpages//man1/lxc-clone.1.html
+        cmd = 'lxc-clone'
+        cmd += ' {0} -o {1} -n {2}'.format(snapshot, orig, name)
     if path:
         cmd += ' -P {0}'.format(pipes.quote(path))
         if not os.path.exists(path):
             os.makedirs(path)
-    cmd += ' {0} -o {1} -n {2}'.format(snapshot, orig, name)
     if backing:
         backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
         if backing not in ('dir', 'overlayfs'):
             if size:
-                cmd += ' --fssize {0}'.format(size)
+                cmd += ' -L {0}'.format(size)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     # please do not merge extra conflicting stuff
     # inside those two line (ret =, return)
@@ -2387,12 +2363,6 @@ def start(name, **kwargs):
     '''
     Start the named container
 
-    restart : False
-        .. deprecated:: 2015.5.0
-            Use :mod:`lxc.restart <salt.modules.lxc.restart>`
-
-        Restart the container if it is already running
-
     path
         path to the container parent directory
         default: /var/lib/lxc (system)
@@ -2427,13 +2397,6 @@ def start(name, **kwargs):
         cmd += ' -f {0}'.format(pipes.quote(lxc_config))
     cmd += ' -d'
     _ensure_exists(name, path=path)
-    if kwargs.get('restart', False):
-        salt.utils.warn_until(
-            'Boron',
-            'The \'restart\' argument to \'lxc.start\' has been deprecated, '
-            'please use \'lxc.restart\' instead.'
-        )
-        return restart(name, path=path)
     if state(name, path=path) == 'frozen':
         raise CommandExecutionError(
             'Container \'{0}\' is frozen, use lxc.unfreeze'.format(name)
@@ -3701,59 +3664,6 @@ def _run(name,
         return ret[output]
 
 
-def run_cmd(name,
-            cmd,
-            no_start=False,
-            preserve_state=True,
-            stdin=None,
-            stdout=True,
-            stderr=False,
-            python_shell=True,
-            path=None,
-            output_loglevel='debug',
-            use_vt=False,
-            ignore_retcode=False,
-            chroot_fallback=False,
-            keep_env='http_proxy,https_proxy,no_proxy'):
-    '''
-
-    path
-        path to the container parent
-        default: /var/lib/lxc (system default)
-
-        .. versionadded:: 2015.8.0
-
-    .. deprecated:: 2015.5.0
-        Use :mod:`lxc.run <salt.modules.lxc.run>` instead
-    '''
-    salt.utils.warn_until(
-        'Boron',
-        'lxc.run_cmd has been deprecated, please use one of the lxc.run '
-        'functions (or lxc.retcode). See the documentation for more '
-        'information.'
-    )
-    if stdout and stderr:
-        output = 'all'
-    elif stdout:
-        output = 'stdout'
-    elif stderr:
-        output = 'stderr'
-    else:
-        output = 'retcode'
-    return _run(name,
-                cmd,
-                output=output,
-                no_start=no_start,
-                preserve_state=preserve_state,
-                stdin=stdin,
-                python_shell=python_shell,
-                path=path,
-                output_loglevel=output_loglevel,
-                use_vt=use_vt,
-                ignore_retcode=ignore_retcode,
-                keep_env=keep_env)
-
-
 def run(name,
         cmd,
         no_start=False,
@@ -4549,6 +4459,8 @@ def reconfigure(name,
                 bridge=None,
                 gateway=None,
                 autostart=None,
+                utsname=None,
+                rootfs=None,
                 path=None,
                 **kwargs):
     '''
@@ -4558,6 +4470,16 @@ def reconfigure(name,
 
     name
         Name of the container.
+    utsname
+        utsname of the container.
+
+        .. versionadded:: 2016.3.0
+
+    rootfs
+        rootfs of the container.
+
+        .. versionadded:: 2016.3.0
+
     cpu
         Select a random number of cpu cores and assign it to the cpuset, if the
         cpuset option is set then this option will be ignored
@@ -4624,9 +4546,13 @@ def reconfigure(name,
         autostart = select('autostart', autostart)
     else:
         autostart = 'keep'
+    if not utsname:
+        utsname = select('utsname', utsname)
     if os.path.exists(path):
         old_chunks = read_conf(path, out_format='commented')
         make_kw = salt.utils.odict.OrderedDict([
+            ('utsname', utsname),
+            ('rootfs', rootfs),
             ('autostart', autostart),
             ('cpu', cpu),
             ('gateway', gateway),

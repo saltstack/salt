@@ -371,7 +371,6 @@ both.
       compute_name: cloudServersOpenStack
       protocol: ipv4
       compute_region: DFW
-      protocol: ipv4
       user: myuser
       tenant: 5555555
       password: mypass

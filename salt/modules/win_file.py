@@ -27,6 +27,7 @@ import hashlib  # do not remove, used in imported file.py functions
 import errno  # do not remove, used in imported file.py functions
 import shutil  # do not remove, used in imported file.py functions
 import re  # do not remove, used in imported file.py functions
+import string  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
@@ -55,15 +56,19 @@ import salt.utils
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs_, makedirs_perms,
         check_managed, check_managed_changes, check_perms, source_list,
-        touch, append, contains, contains_regex, contains_regex_multiline,
+        touch, append, contains, contains_regex, get_source_sum,
         contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
-        get_hash, manage_file, file_exists, get_diff, list_backups,
-        __clean_tmp, check_file_meta, _binary_replace, restore_backup,
+        get_hash, manage_file, file_exists, get_diff, line, list_backups,
+        __clean_tmp, check_file_meta, _binary_replace,
+        _splitlines_preserving_trailing_newline, restore_backup,
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
-        lstat, path_exists_glob, write, pardir, join, HASHES, comment,
-        uncomment, _add_flags, comment_line, apply_template_on_contents)
+        lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
+        comment, uncomment, _add_flags, comment_line, _regex_to_static,
+        _get_line_indent, apply_template_on_contents, dirname, basename,
+        list_backups_dir)
+from salt.modules.file import normpath as normpath_
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -83,19 +88,24 @@ def __virtual__():
             global source_list, mkdir, __clean_tmp, makedirs_, file_exists
             global check_managed, check_managed_changes, check_file_meta
             global append, _error, directory_exists, touch, contains
-            global contains_regex, contains_regex_multiline, contains_glob
+            global contains_regex, contains_glob, get_source_sum
             global find, psed, get_sum, check_hash, get_hash, delete_backup
-            global get_diff, _get_flags, extract_hash, comment_line
+            global get_diff, line, _get_flags, extract_hash, comment_line
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
+            global _splitlines_preserving_trailing_newline
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
+            global _regex_to_static, _get_line_indent, dirname, basename
+            global list_backups_dir, normpath_
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
             _get_flags = _namespaced_function(_get_flags, globals())
             _binary_replace = _namespaced_function(_binary_replace, globals())
+            _splitlines_preserving_trailing_newline = _namespaced_function(
+                _splitlines_preserving_trailing_newline, globals())
             _error = _namespaced_function(_error, globals())
             _get_bkroot = _namespaced_function(_get_bkroot, globals())
             list_backups = _namespaced_function(list_backups, globals())
@@ -119,14 +129,15 @@ def __virtual__():
             touch = _namespaced_function(touch, globals())
             contains = _namespaced_function(contains, globals())
             contains_regex = _namespaced_function(contains_regex, globals())
-            contains_regex_multiline = _namespaced_function(contains_regex_multiline, globals())
             contains_glob = _namespaced_function(contains_glob, globals())
+            get_source_sum = _namespaced_function(get_source_sum, globals())
             find = _namespaced_function(find, globals())
             psed = _namespaced_function(psed, globals())
             get_sum = _namespaced_function(get_sum, globals())
             check_hash = _namespaced_function(check_hash, globals())
             get_hash = _namespaced_function(get_hash, globals())
             get_diff = _namespaced_function(get_diff, globals())
+            line = _namespaced_function(line, globals())
             access = _namespaced_function(access, globals())
             copy = _namespaced_function(copy, globals())
             readdir = _namespaced_function(readdir, globals())
@@ -145,12 +156,18 @@ def __virtual__():
             comment = _namespaced_function(comment, globals())
             uncomment = _namespaced_function(uncomment, globals())
             comment_line = _namespaced_function(comment_line, globals())
+            _regex_to_static = _namespaced_function(_regex_to_static, globals())
+            _get_line_indent = _namespaced_function(_get_line_indent, globals())
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
             _add_flags = _namespaced_function(_add_flags, globals())
             apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
+            dirname = _namespaced_function(dirname, globals())
+            basename = _namespaced_function(basename, globals())
+            list_backups_dir = _namespaced_function(list_backups_dir, globals())
+            normpath_ = _namespaced_function(normpath_, globals())
 
             return __virtualname__
-    return False
+    return (False, "Module win_file: module only works on Windows systems")
 
 __outputter__ = {
     'touch': 'txt',
@@ -158,7 +175,8 @@ __outputter__ = {
 }
 
 __func_alias__ = {
-    'makedirs_': 'makedirs'
+    'makedirs_': 'makedirs',
+    'normpath_': 'normpath',
 }
 
 
@@ -1102,7 +1120,7 @@ def remove(path, force=False):
             # Reset attributes to the original if delete fails.
             win32api.SetFileAttributes(path, file_attributes)
         raise CommandExecutionError(
-            'Could not remove {0!r}: {1}'.format(path, exc)
+            'Could not remove \'{0}\': {1}'.format(path, exc)
         )
 
     return True
@@ -1147,7 +1165,11 @@ def symlink(src, link):
         return True
     except pywinerror as exc:
         raise CommandExecutionError(
-            'Could not create {0!r} - [{1}] {2}'.format(link, exc.winerror, exc.strerror)
+            'Could not create \'{0}\' - [{1}] {2}'.format(
+                link,
+                exc.winerror,
+                exc.strerror
+            )
         )
 
 
@@ -1171,7 +1193,7 @@ def _is_reparse_point(path):
 
 def is_link(path):
     '''
-    Return the path that a symlink points to
+    Check if the path is a symlink
 
     This is only supported on Windows Vista or later.
 

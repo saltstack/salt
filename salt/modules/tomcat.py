@@ -72,13 +72,14 @@ import logging
 
 # Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
+from salt.ext.six import string_types as _string_types
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext.six.moves.urllib.request import (
-        urlopen as _urlopen,
-        HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
-        HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
-        build_opener as _build_opener,
-        install_opener as _install_opener
+    urlopen as _urlopen,
+    HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
+    HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
+    build_opener as _build_opener,
+    install_opener as _install_opener
 )
 # pylint: enable=no-name-in-module,import-error
 
@@ -111,7 +112,8 @@ def __virtual__():
     '''
     if __catalina_home() or _auth('dummy'):
         return 'tomcat'
-    return False
+    return (False,
+            'Tomcat execution module not loaded: neither Tomcat installed locally nor tomcat-manager credentials set in grains/pillar/config.')
 
 
 def __catalina_home():
@@ -168,14 +170,14 @@ def _auth(uri):
 
     basic = _HTTPBasicAuthHandler()
     basic.add_password(realm='Tomcat Manager Application', uri=uri,
-            user=user, passwd=password)
+                       user=user, passwd=password)
     digest = _HTTPDigestAuthHandler()
     digest.add_password(realm='Tomcat Manager Application', uri=uri,
-            user=user, passwd=password)
+                        user=user, passwd=password)
     return _build_opener(basic, digest)
 
 
-def _extract_war_version(war):
+def extract_war_version(war):
     '''
     Extract the version from the war file name.  There does not seem to be a
     standard for encoding the version into the `war file name
@@ -186,12 +188,12 @@ def _extract_war_version(war):
     .. code-block::
 
         /path/salt-2015.8.6.war -> 2015.8.6
-        /path/V6R2013xD5.war -> V6R2013xD5
+        /path/V6R2013xD5.war -> None
     '''
     basename = os.path.basename(war)
     war_package = os.path.splitext(basename)[0]  # remove '.war'
     version = re.findall("-([\\d.-]+)$", war_package)  # try semver
-    return version[0] if version and len(version) == 1 else war_package  # default to whole name
+    return version[0] if version and len(version) == 1 else None  # default to none
 
 
 def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
@@ -291,7 +293,7 @@ def leaks(url='http://localhost:8080/manager', timeout=180):
     '''
 
     return _wget('findleaks', {'statusLine': 'true'},
-        url, timeout=timeout)['msg']
+                 url, timeout=timeout)['msg']
 
 
 def status(url='http://localhost:8080/manager', timeout=180):
@@ -524,9 +526,8 @@ def deploy_war(war,
                url='http://localhost:8080/manager',
                saltenv='base',
                timeout=180,
-               env=None,
                temp_war_location=None,
-               version=''):
+               version=True):
     '''
     Deploy a WAR file
 
@@ -577,15 +578,6 @@ def deploy_war(war,
         salt '*' tomcat.deploy_war /tmp/application.war /api no
         salt '*' tomcat.deploy_war /tmp/application.war /api yes http://localhost:8080/manager
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     # Decide the location to copy the war for the deployment
     tfile = 'salt.{0}'.format(os.path.basename(war))
     if temp_war_location is not None:
@@ -613,8 +605,17 @@ def deploy_war(war,
     opts = {
         'war': 'file:{0}'.format(tfile),
         'path': context,
-        'version': version or _extract_war_version(war),
     }
+
+    # If parallel versions are desired or not disabled
+    if version:
+        # Set it to defined version or attempt extract
+        version = extract_war_version(war) if version is True else version
+
+        if isinstance(version, _string_types):
+            # Only pass version to Tomcat if not undefined
+            opts['version'] = version
+
     if force == 'yes':
         opts['update'] = 'true'
 
@@ -650,7 +651,7 @@ def passwd(passwd,
     digest = hasattr(hashlib, alg) and getattr(hashlib, alg) or None
     if digest:
         if realm:
-            digest.update('{0}:{1}:{2}'.format(user, realm, passwd,))
+            digest.update('{0}:{1}:{2}'.format(user, realm, passwd, ))
         else:
             digest.update(passwd)
 

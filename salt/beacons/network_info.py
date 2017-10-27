@@ -45,7 +45,7 @@ def __virtual__():
     return __virtualname__
 
 
-def validate(config):
+def __validate__(config):
     '''
     Validate the beacon configuration
     '''
@@ -98,7 +98,7 @@ def beacon(config):
                 - dropout: 100
 
     Emit beacon when any values are greater
-    than to configured values.
+    than configured values.
 
     .. code-block:: yaml
 

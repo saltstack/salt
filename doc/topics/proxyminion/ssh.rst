@@ -1,3 +1,5 @@
+.. _proxy-minion-ssh-end-to-end-example:
+
 ========================================
 Salt Proxy Minion SSH End-to-End Example
 ========================================
@@ -18,7 +20,6 @@ Now, configure your salt-proxy.
 .. code-block:: yaml
 
    master: localhost
-   add_proxymodule_to_opts: False
    multiprocessing: False
 
 2. On your salt-master, ensure that pillar is configured properly.  Select an ID

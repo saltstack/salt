@@ -28,6 +28,11 @@ class StateModuleTest(integration.ModuleCase,
 
     maxDiff = None
 
+    @classmethod
+    def setUpClass(cls):
+        mod_case = integration.ModuleCase()
+        mod_case.run_function('saltutil.sync_all')
+
     def test_show_highstate(self):
         '''
         state.show_highstate
@@ -112,9 +117,19 @@ class StateModuleTest(integration.ModuleCase,
         '''
         self._remove_request_cache_file()
 
-        self.run_function('state.request', mods='modules.state.requested')
+        if salt.utils.is_windows():
+            self.run_function('state.request', mods='modules.state.requested_win')
+        else:
+            self.run_function('state.request', mods='modules.state.requested')
+
         ret = self.run_function('state.run_request')
-        result = ret['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
+
+        if salt.utils.is_windows():
+            key = 'cmd_|-count_root_dir_contents_|-Get-ChildItem C:\\\\ | Measure-Object | %{$_.Count}_|-run'
+        else:
+            key = 'cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run'
+
+        result = ret[key]['result']
         self.assertTrue(result)
 
     def test_run_request_failed_no_request_staged(self):
@@ -146,18 +161,32 @@ class StateModuleTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
 
         with salt.utils.fopen(testfile, 'r') as fp_:
-            contents = fp_.read()
-        self.assertMultiLineEqual(textwrap.dedent('''\
+            testfile_contents = fp_.read()
+
+        contents = textwrap.dedent('''\
             # set variable identifying the chroot you work in (used in the prompt below)
             if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
                 debian_chroot=$(cat /etc/debian_chroot)
             fi
+            ''')
 
+        if not salt.utils.is_windows():
+            contents += os.linesep
+
+        contents += textwrap.dedent('''\
             # enable bash completion in interactive shells
             if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
                 . /etc/bash_completion
             fi
-            '''), contents)
+            ''')
+
+        if salt.utils.is_windows():
+            new_contents = contents.splitlines()
+            contents = os.linesep.join(new_contents)
+            contents += os.linesep
+
+        self.assertMultiLineEqual(
+                contents, testfile_contents)
 
         # Re-append switching order
         ret = self.run_function('state.sls', mods='testappend.step-2')
@@ -167,18 +196,9 @@ class StateModuleTest(integration.ModuleCase,
         self.assertSaltTrueReturn(ret)
 
         with salt.utils.fopen(testfile, 'r') as fp_:
-            contents = fp_.read()
-        self.assertMultiLineEqual(textwrap.dedent('''\
-            # set variable identifying the chroot you work in (used in the prompt below)
-            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-                debian_chroot=$(cat /etc/debian_chroot)
-            fi
+            testfile_contents = fp_.read()
 
-            # enable bash completion in interactive shells
-            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-                . /etc/bash_completion
-            fi
-            '''), contents)
+        self.assertMultiLineEqual(contents, testfile_contents)
 
     def test_issue_1876_syntax_error(self):
         '''
@@ -197,7 +217,7 @@ class StateModuleTest(integration.ModuleCase,
         testfile = os.path.join(integration.TMP, 'issue-1876')
         sls = self.run_function('state.sls', mods='issue-1876')
         self.assertIn(
-            'ID {0!r} in SLS \'issue-1876\' contains multiple state '
+            'ID \'{0}\' in SLS \'issue-1876\' contains multiple state '
             'declarations of the same type'.format(testfile),
             sls
         )
@@ -213,6 +233,12 @@ class StateModuleTest(integration.ModuleCase,
                 . /etc/bash_completion
             fi
             ''')
+
+        if salt.utils.is_windows():
+            new_contents = expected.splitlines()
+            expected = os.linesep.join(new_contents)
+            expected += os.linesep
+
         testfile = os.path.join(integration.TMP, 'issue-1879')
         # Delete if exiting
         if os.path.isfile(testfile):
@@ -669,13 +695,6 @@ class StateModuleTest(integration.ModuleCase,
         #ret = self.run_function('state.sls', mods='requisites.fullsls_prereq')
         #self.assertEqual(['sls command can only be used with require requisite'], ret)
 
-    def test_requisites_full_sls_import(self):
-        '''
-        Test full sls requisite with nothing but an import
-        '''
-        ret = self.run_function('state.sls', mods='requisites.fullsls_require_import')
-        self.assertSaltTrueReturn(ret)
-
     def test_requisites_prereq_simple_ordering_and_errors(self):
         '''
         Call sls file containing several prereq_in and prereq.
@@ -976,6 +995,21 @@ class StateModuleTest(integration.ModuleCase,
         expected_result = 'State was not run because onfail req did not change'
         self.assertIn(expected_result, test_data)
 
+    def test_multiple_onfail_requisite(self):
+        '''
+        test to ensure state is run even if only one
+        of the onfails fails. This is a test for the issue:
+        https://github.com/saltstack/salt/issues/22370
+        '''
+
+        state_run = self.run_function('state.sls', mods='requisites.onfail_multiple')
+
+        retcode = state_run['cmd_|-c_|-echo itworked_|-run']['changes']['retcode']
+        self.assertEqual(retcode, 0)
+
+        stdout = state_run['cmd_|-c_|-echo itworked_|-run']['changes']['stdout']
+        self.assertEqual(stdout, 'itworked')
+
     def test_onfail_in_requisite(self):
         '''
         Tests a simple state using the onfail_in requisite
@@ -1070,6 +1104,27 @@ class StateModuleTest(integration.ModuleCase,
         self.assertIn(bar_state, state_run)
         self.assertEqual(state_run[bar_state]['comment'],
                          'Command "echo bar" run')
+
+    def test_issue_38683_require_order_failhard_combination(self):
+        '''
+        This tests the case where require, order, and failhard are all used together in a state definition.
+
+        Previously, the order option, which used in tandem with require and failhard, would cause the state
+        compiler to stacktrace. This exposed a logic error in the ``check_failhard`` function of the state
+        compiler. With the logic error resolved, this test should now pass.
+
+        See https://github.com/saltstack/salt/issues/38683 for more information.
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='requisites.require_order_failhard_combo'
+        )
+        state_id = 'test_|-b_|-b_|-fail_with_changes'
+
+        self.assertIn(state_id, state_run)
+        self.assertEqual(state_run[state_id]['comment'], 'Failure!')
+        self.assertFalse(state_run[state_id]['result'])
+
 
 if __name__ == '__main__':
     from integration import run_tests

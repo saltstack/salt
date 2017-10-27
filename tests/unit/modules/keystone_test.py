@@ -84,7 +84,7 @@ class MockEndpoints(object):
     """
     def __init__(self):
         self.id = '007'
-        self.region = 'region'
+        self.region = 'RegionOne'
         self.adminurl = 'adminurl'
         self.internalurl = 'internalurl'
         self.publicurl = 'publicurl'
@@ -507,20 +507,26 @@ class KeystoneTestCase(TestCase):
         '''
         Test if it return a specific endpoint (keystone endpoint-get)
         '''
-        self.assertDictEqual(keystone.endpoint_get('nova', profile='openstack'),
+        self.assertDictEqual(keystone.endpoint_get('nova',
+                                                   'RegionOne',
+                                                   profile='openstack'),
                              {'Error': 'Could not find the specified service'})
 
         ret = {'Error': 'Could not find endpoint for the specified service'}
         MockServices.flag = 1
         self.assertDictEqual(keystone.endpoint_get('iptables',
+                                                   'RegionOne',
                                                    profile='openstack'), ret)
 
         MockServices.flag = 0
         self.assertDictEqual(keystone.endpoint_get('iptables',
+                                                   'RegionOne',
                                                    profile='openstack'),
-                             {'adminurl': 'adminurl', 'id': '007',
+                             {'adminurl': 'adminurl',
+                              'id': '007',
                               'internalurl': 'internalurl',
-                              'publicurl': 'publicurl', 'region': 'region',
+                              'publicurl': 'publicurl',
+                              'region': 'RegionOne',
                               'service_id': '117'})
 
     # 'endpoint_list' function tests: 1
@@ -531,10 +537,12 @@ class KeystoneTestCase(TestCase):
         (keystone endpoints-list)
         '''
         self.assertDictEqual(keystone.endpoint_list(profile='openstack1'),
-                             {'007': {'adminurl': 'adminurl', 'id': '007',
+                             {'007': {'adminurl': 'adminurl',
+                                      'id': '007',
                                       'internalurl': 'internalurl',
                                       'publicurl': 'publicurl',
-                                      'region': 'region', 'service_id': '117'}})
+                                      'region': 'RegionOne',
+                                      'service_id': '117'}})
 
     # 'endpoint_create' function tests: 1
 
@@ -549,10 +557,13 @@ class KeystoneTestCase(TestCase):
         self.assertDictEqual(keystone.endpoint_create('iptables',
                                                       'http://public/url',
                                                       'http://internal/url',
-                                                      'http://adminurl/url'),
-                             {'adminurl': 'adminurl', 'id': '007',
+                                                      'http://adminurl/url',
+                                                      'RegionOne'),
+                             {'adminurl': 'adminurl',
+                              'id': '007',
                               'internalurl': 'internalurl',
-                              'publicurl': 'publicurl', 'region': 'region',
+                              'publicurl': 'publicurl',
+                              'region': 'RegionOne',
                               'service_id': '117'})
 
     # 'endpoint_delete' function tests: 1
@@ -562,11 +573,11 @@ class KeystoneTestCase(TestCase):
         Test if it delete an endpoint for an Openstack service
         '''
         ret = {'Error': 'Could not find any endpoints for the service'}
-        self.assertDictEqual(keystone.endpoint_delete('nova'), ret)
+        self.assertDictEqual(keystone.endpoint_delete('nova', 'RegionOne'), ret)
 
         with patch.object(keystone, 'endpoint_get',
                           MagicMock(side_effect=[{'id': '117'}, None])):
-            self.assertTrue(keystone.endpoint_delete('iptables'))
+            self.assertTrue(keystone.endpoint_delete('iptables', 'RegionOne'))
 
     # 'role_create' function tests: 1
 
@@ -611,7 +622,8 @@ class KeystoneTestCase(TestCase):
         Test if it return a list of available roles (keystone role-list)
         '''
         self.assertDictEqual(keystone.role_list(),
-                             {'nova': {'id': '113', 'name': 'nova'}})
+                             {'nova': {'id': '113', 'name': 'nova', 'tenant_id':
+                              'a1a1', 'user_id': '446'}})
 
     # 'service_create' function tests: 1
 
@@ -740,9 +752,12 @@ class KeystoneTestCase(TestCase):
         Test if it return a list of available users (keystone user-list)
         '''
         self.assertDictEqual(keystone.user_list(),
-                             {'nova': {'email': 'salt@saltstack.com',
-                                       'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                             {'nova': {'name': 'nova',
+                                       'tenant_id': 'a1a1',
+                                       'enabled': 'True',
+                                       'id': '446',
+                                       'password': 'salt',
+                                       'email': 'salt@saltstack.com'}})
 
     # 'user_get' function tests: 1
 
@@ -754,9 +769,10 @@ class KeystoneTestCase(TestCase):
                              {'Error': 'Unable to resolve user id'})
 
         self.assertDictEqual(keystone.user_get(user_id='446'),
-                             {'nova': {'email': 'salt@saltstack.com',
-                                       'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                             {'nova': {'name': 'nova', 'tenant_id': 'a1a1',
+                                       'enabled': 'True', 'id': '446',
+                                       'password': 'salt',
+                                       'email': 'salt@saltstack.com'}})
     # 'user_create' function tests: 1
 
     def test_user_create(self, mock):
@@ -766,9 +782,10 @@ class KeystoneTestCase(TestCase):
         self.assertDictEqual(keystone.user_create(name='nova', password='salt',
                                                   email='salt@saltstack.com',
                                                   tenant_id='a1a1'),
-                             {'nova': {'email': 'salt@saltstack.com',
-                                       'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                             {'nova': {'name': 'nova', 'tenant_id': 'a1a1',
+                                       'enabled': 'True', 'id': '446',
+                                       'password': 'salt',
+                                       'email': 'salt@saltstack.com'}})
 
     # 'user_delete' function tests: 1
 
@@ -832,7 +849,7 @@ class KeystoneTestCase(TestCase):
         '''
         self.assertEqual(keystone.user_role_add(user='nova', tenant='nova',
                                                 role='nova'),
-                         '"nova" role added for user "nova" for "nova" tenant')
+                         '"nova" role added for user "nova" for "nova" tenant/project')
 
         MockRoles.flag = 1
         self.assertDictEqual(keystone.user_role_add(user='nova', tenant='nova',
@@ -841,7 +858,7 @@ class KeystoneTestCase(TestCase):
 
         MockTenants.flag = 1
         self.assertDictEqual(keystone.user_role_add(user='nova', tenant='nova'),
-                             {'Error': 'Unable to resolve tenant id'})
+                             {'Error': 'Unable to resolve tenant/project id'})
 
         MockUsers.flag = 1
         self.assertDictEqual(keystone.user_role_add(user='nova'),
@@ -861,7 +878,7 @@ class KeystoneTestCase(TestCase):
         MockTenants.flag = 1
         self.assertDictEqual(keystone.user_role_remove(user='nova',
                                                        tenant='nova'),
-                             {'Error': 'Unable to resolve tenant id'})
+                             {'Error': 'Unable to resolve tenant/project id'})
 
         MockTenants.flag = 0
         MockRoles.flag = 1
@@ -883,7 +900,7 @@ class KeystoneTestCase(TestCase):
         (keystone user-roles-list)
         '''
         self.assertDictEqual(keystone.user_role_list(user='nova'),
-                             {'Error': 'Unable to resolve user or tenant id'})
+                             {'Error': 'Unable to resolve user or tenant/project id'})
 
         self.assertDictEqual(keystone.user_role_list(user_name='nova',
                                                      tenant_name='nova'),

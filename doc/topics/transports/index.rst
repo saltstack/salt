@@ -26,7 +26,7 @@ primarily used for fetching files and returning job returns. The req channels
 have two basic interfaces when talking to the master. ``send`` is the basic
 method that guarantees the message is encrypted at least so that only minions
 attached to the same master can read it-- but no guarantee of minion-master
-confidentiality, wheras the ``crypted_transfer_decode_dictentry`` method does
+confidentiality, whereas the ``crypted_transfer_decode_dictentry`` method does
 guarantee minion-master confidentiality.
 
 

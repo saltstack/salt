@@ -135,7 +135,7 @@ def vg_present(name, devices=None, **kwargs):
                     ret['comment'] = '{0}\n{1}'.format(
                         ret['comment'],
                         '{0} is part of Volume Group'.format(device))
-                elif pvs[realdev]['Volume Group Name'] == '#orphans_lvm2':
+                elif pvs[realdev]['Volume Group Name'] in ['', '#orphans_lvm2']:
                     __salt__['lvm.vgextend'](name, device)
                     pvs = __salt__['lvm.pvdisplay'](realdev, real=True)
                     if pvs[realdev]['Volume Group Name'] == name:
@@ -209,6 +209,8 @@ def lv_present(name,
                extents=None,
                snapshot=None,
                pv='',
+               thinvolume=False,
+               thinpool=False,
                **kwargs):
     '''
     Create a new logical volume
@@ -234,6 +236,14 @@ def lv_present(name,
     kwargs
         Any supported options to lvcreate. See
         :mod:`linux_lvm <salt.modules.linux_lvm>` for more details.
+
+    .. versionadded:: to_complete
+
+    thinvolume
+        Logical volume is thinly provisioned
+
+    thinpool
+        Logical volume is a thin pool
     '''
     ret = {'changes': {},
            'comment': '',
@@ -246,7 +256,10 @@ def lv_present(name,
         _snapshot = name
         name = snapshot
 
-    lvpath = '/dev/{0}/{1}'.format(vgname, name)
+    if thinvolume:
+        lvpath = '/dev/{0}/{1}'.format(vgname.split('/')[0], name)
+    else:
+        lvpath = '/dev/{0}/{1}'.format(vgname, name)
 
     if __salt__['lvm.lvdisplay'](lvpath):
         ret['comment'] = 'Logical Volume {0} already present'.format(name)
@@ -261,6 +274,8 @@ def lv_present(name,
                                            extents=extents,
                                            snapshot=_snapshot,
                                            pv=pv,
+                                           thinvolume=thinvolume,
+                                           thinpool=thinpool,
                                            **kwargs)
 
         if __salt__['lvm.lvdisplay'](lvpath):

@@ -29,15 +29,35 @@ systemd.__salt__ = {}
 systemd.__context__ = {}
 
 _SYSTEMCTL_STATUS = {
-    'sshd.service': '''\
+    'sshd.service': {
+        'stdout': '''\
 * sshd.service - OpenSSH Daemon
    Loaded: loaded (/usr/lib/systemd/system/sshd.service; disabled; vendor preset: disabled)
    Active: inactive (dead)''',
+        'stderr': '',
+        'retcode': 3,
+        'pid': 12345,
+    },
 
-    'foo.service': '''\
+    'foo.service': {
+        'stdout': '''\
 * foo.service
    Loaded: not-found (Reason: No such file or directory)
-   Active: inactive (dead)'''
+   Active: inactive (dead)''',
+        'stderr': '',
+        'retcode': 3,
+        'pid': 12345,
+    },
+}
+
+# This reflects systemd >= 231 behavior
+_SYSTEMCTL_STATUS_GTE_231 = {
+    'bar.service': {
+        'stdout': 'Unit bar.service could not be found.',
+        'stderr': '',
+        'retcode': 4,
+        'pid': 12345,
+    },
 }
 
 _LIST_UNIT_FILES = '''\
@@ -52,7 +72,7 @@ timer3.timer                               static'''
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SystemdTestCase(TestCase):
     '''
-        Test case for salt.modules.systemd
+    Test case for salt.modules.systemd
     '''
     def test_systemctl_reload(self):
         '''
@@ -148,8 +168,8 @@ class SystemdTestCase(TestCase):
         '''
         listdir_mock = MagicMock(side_effect=[
             ['foo.service', 'multi-user.target.wants', 'mytimer.timer'],
+            [],
             ['foo.service', 'multi-user.target.wants', 'bar.service'],
-            ['mysql', 'nginx', 'README'],
             ['mysql', 'nginx', 'README']
         ])
         access_mock = MagicMock(
@@ -170,35 +190,76 @@ class SystemdTestCase(TestCase):
         Test to check that the given service is available
         '''
         mock = MagicMock(side_effect=lambda x: _SYSTEMCTL_STATUS[x])
-        with patch.object(systemd, '_systemctl_status', mock):
-            self.assertTrue(systemd.available('sshd.service'))
-            self.assertFalse(systemd.available('foo.service'))
+
+        # systemd < 231
+        with patch.dict(systemd.__context__, {'salt.utils.systemd.version': 230}):
+            with patch.object(systemd, '_systemctl_status', mock):
+                self.assertTrue(systemd.available('sshd.service'))
+                self.assertFalse(systemd.available('foo.service'))
+
+        # systemd >= 231
+        with patch.dict(systemd.__context__, {'salt.utils.systemd.version': 231}):
+            with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
+                with patch.object(systemd, '_systemctl_status', mock):
+                    self.assertTrue(systemd.available('sshd.service'))
+                    self.assertFalse(systemd.available('bar.service'))
+
+        # systemd < 231 with retcode/output changes backported (e.g. RHEL 7.3)
+        with patch.dict(systemd.__context__, {'salt.utils.systemd.version': 219}):
+            with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
+                with patch.object(systemd, '_systemctl_status', mock):
+                    self.assertTrue(systemd.available('sshd.service'))
+                    self.assertFalse(systemd.available('bar.service'))
 
     def test_missing(self):
         '''
             Test to the inverse of service.available.
         '''
         mock = MagicMock(side_effect=lambda x: _SYSTEMCTL_STATUS[x])
-        with patch.object(systemd, '_systemctl_status', mock):
-            self.assertFalse(systemd.missing('sshd.service'))
-            self.assertTrue(systemd.missing('foo.service'))
+
+        # systemd < 231
+        with patch.dict(systemd.__context__, {'salt.utils.systemd.version': 230}):
+            with patch.object(systemd, '_systemctl_status', mock):
+                self.assertFalse(systemd.missing('sshd.service'))
+                self.assertTrue(systemd.missing('foo.service'))
+
+        # systemd >= 231
+        with patch.dict(systemd.__context__, {'salt.utils.systemd.version': 231}):
+            with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
+                with patch.object(systemd, '_systemctl_status', mock):
+                    self.assertFalse(systemd.missing('sshd.service'))
+                    self.assertTrue(systemd.missing('bar.service'))
+
+        # systemd < 231 with retcode/output changes backported (e.g. RHEL 7.3)
+        with patch.dict(systemd.__context__, {'salt.utils.systemd.version': 219}):
+            with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
+                with patch.object(systemd, '_systemctl_status', mock):
+                    self.assertFalse(systemd.missing('sshd.service'))
+                    self.assertTrue(systemd.missing('bar.service'))
 
     def test_show(self):
         '''
-            Test to show properties of one or more units/jobs or the manager
+        Test to show properties of one or more units/jobs or the manager
         '''
-        mock = MagicMock(return_value="a = b , c = d")
+        show_output = 'a=b\nc=d\ne={ f=g ; h=i }\nWants=foo.service bar.service\n'
+        mock = MagicMock(return_value=show_output)
         with patch.dict(systemd.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(systemd.show("sshd"), {'a ': ' b , c = d'})
+            self.assertDictEqual(
+                systemd.show('sshd'),
+                {'a': 'b',
+                 'c': 'd',
+                 'e': {'f': 'g', 'h': 'i'},
+                 'Wants': ['foo.service', 'bar.service']}
+            )
 
     def test_execs(self):
         '''
-            Test to return a list of all files specified as ``ExecStart``
-            for all services
+        Test to return a list of all files specified as ``ExecStart`` for all
+        services
         '''
-        mock = MagicMock(return_value=["a", "b"])
+        mock = MagicMock(return_value=['a', 'b'])
         with patch.object(systemd, 'get_all', mock):
-            mock = MagicMock(return_value={"ExecStart": {"path": "c"}})
+            mock = MagicMock(return_value={'ExecStart': {'path': 'c'}})
             with patch.object(systemd, 'show', mock):
                 self.assertDictEqual(systemd.execs(), {'a': 'c', 'b': 'c'})
 
@@ -452,6 +513,9 @@ class SystemdScopeTestCase(TestCase):
 
     def test_enable(self):
         self._change_state('enable')
+
+    def test_disable(self):
+        self._change_state('disable')
 
     def test_mask(self):
         self._mask_unmask('mask', False)

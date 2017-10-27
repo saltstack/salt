@@ -37,39 +37,37 @@ class SelinuxTestCase(TestCase):
         Test to verifies the mode SELinux is running in,
         can be set to enforcing or permissive.
         '''
-        ret = {'name': '',
+        ret = {'name': 'unknown',
                'changes': {},
                'result': False,
-               'comment': ''}
-
-        comt = ('unknown is not an accepted mode')
-        ret.update({'name': 'unknown', 'comment': comt})
+               'comment': 'unknown is not an accepted mode'}
         self.assertDictEqual(selinux.mode('unknown'), ret)
 
         mock_en = MagicMock(return_value='Enforcing')
         mock_pr = MagicMock(side_effect=['Permissive', 'Enforcing'])
         with patch.dict(selinux.__salt__,
                         {'selinux.getenforce': mock_en,
+                         'selinux.getconfig': mock_en,
                          'selinux.setenforce': mock_pr}):
             comt = ('SELinux is already in Enforcing mode')
-            ret.update({'name': 'Enforcing', 'comment': comt, 'result': True})
+            ret = {'name': 'Enforcing', 'comment': comt, 'result': True, 'changes': {}}
             self.assertDictEqual(selinux.mode('Enforcing'), ret)
 
             with patch.dict(selinux.__opts__, {'test': True}):
                 comt = ('SELinux mode is set to be changed to Permissive')
-                ret.update({'name': 'Permissive', 'comment': comt,
-                            'result': None})
+                ret = {'name': 'Permissive', 'comment': comt,
+                       'result': None, 'changes': {'new': 'Permissive', 'old': 'Enforcing'}}
                 self.assertDictEqual(selinux.mode('Permissive'), ret)
 
             with patch.dict(selinux.__opts__, {'test': False}):
                 comt = ('SELinux has been set to Permissive mode')
-                ret.update({'name': 'Permissive', 'comment': comt,
-                            'result': True})
+                ret = {'name': 'Permissive', 'comment': comt,
+                       'result': True, 'changes': {'new': 'Permissive', 'old': 'Enforcing'}}
                 self.assertDictEqual(selinux.mode('Permissive'), ret)
 
                 comt = ('Failed to set SELinux to Permissive mode')
                 ret.update({'name': 'Permissive', 'comment': comt,
-                            'result': False})
+                            'result': False, 'changes': {}})
                 self.assertDictEqual(selinux.mode('Permissive'), ret)
 
     # 'boolean' function tests: 1

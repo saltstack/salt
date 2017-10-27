@@ -33,65 +33,27 @@ class DataModuleTest(integration.ModuleCase):
 
     def test_get_update(self):
         '''
-        data.getval
+        data.get
         data.update
-        data.getvals
         '''
         self._clear_db()
-        self.assertTrue(
-                self.run_function(
-                    'data.update',
-                    ['spam', 'eggs']
-                    )
-                )
-        self.assertEqual(
-                self.run_function(
-                    'data.getval',
-                    ['spam']
-                    ),
-                'eggs'
-                )
-        self.assertTrue(
-                self.run_function(
-                    'data.update',
-                    ['unladen', 'swallow']
-                    )
-                )
-        self.assertEqual(
-                self.run_function(
-                    'data.getvals',
-                    ['spam', 'unladen']
-                    ),
-                ['eggs', 'swallow']
-                )
+        self.assertTrue(self.run_function('data.update', ['spam', 'eggs']))
+        self.assertEqual(self.run_function('data.get', ['spam']), 'eggs')
+
+        self.assertTrue(self.run_function('data.update', ['unladen', 'swallow']))
+        self.assertEqual(self.run_function('data.get', ['["spam", "unladen"]']), ['eggs', 'swallow'])
         self._clear_db()
 
     def test_cas_update(self):
         '''
         data.update
         data.cas
-        data.getval
+        data.get
         '''
         self._clear_db()
-        self.assertTrue(
-                self.run_function(
-                    'data.update',
-                    ['spam', 'eggs']
-                    )
-                )
-        self.assertTrue(
-                self.run_function(
-                    'data.cas',
-                    ['spam', 'green', 'eggs']
-                    )
-                )
-        self.assertEqual(
-                self.run_function(
-                    'data.getval',
-                    ['spam']
-                    ),
-                'green'
-                )
+        self.assertTrue(self.run_function('data.update', ['spam', 'eggs']))
+        self.assertTrue(self.run_function('data.cas', ['spam', 'green', 'eggs']))
+        self.assertEqual(self.run_function('data.get', ['spam']), 'green')
 
 if __name__ == '__main__':
     from integration import run_tests

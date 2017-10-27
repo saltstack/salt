@@ -78,7 +78,7 @@ def exists(name, index=None):
 
         'C:\\sysinternals':
           win_path.exists:
-            index: 0
+            - index: 0
     '''
     ret = {'name': name,
            'result': True,

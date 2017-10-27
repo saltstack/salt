@@ -5,7 +5,7 @@ Connection module for Amazon Security Groups
 .. versionadded:: 2014.7.0
 
 :configuration: This module accepts explicit ec2 credentials but can
-    also utilize IAM roles assigned to the instance trough Instance Profiles.
+    also utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
     further configuration is necessary. More Information available at:
 
@@ -67,6 +67,7 @@ except ImportError:
     HAS_BOTO = False
 
 import salt.utils.odict as odict
+from salt.exceptions import SaltInvocationError
 
 
 def __virtual__():
@@ -81,9 +82,9 @@ def __virtual__():
     # a groupId attribute when a GroupOrCIDR object authorizes an IP range
     # Support for Boto < 2.4.0 can be added if needed
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_secgroup module could not be loaded: boto libraries not found')
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return False
+        return (False, 'The boto_secgroup module could not be loaded: boto library v2.4.0 not found')
     else:
         __utils__['boto.assign_funcs'](__name__, 'ec2', pack=__salt__)
         return True
@@ -100,14 +101,17 @@ def exists(name=None, region=None, key=None, keyid=None, profile=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    group = _get_group(conn, name, vpc_id, vpc_name, group_id, region, key, keyid, profile)
+    group = _get_group(conn, name=name, vpc_id=vpc_id, vpc_name=vpc_name,
+                       group_id=group_id, region=region, key=key, keyid=keyid,
+                       profile=profile)
     if group:
         return True
     else:
         return False
 
 
-def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
+def _check_vpc(vpc_id=None, vpc_name=None, region=None, key=None, keyid=None,
+               profile=None):
     data = __salt__['boto_vpc.get_id'](name=vpc_name, region=region,
                                        key=key, keyid=keyid, profile=profile)
     try:
@@ -153,14 +157,13 @@ def _get_group(conn=None, name=None, vpc_id=None, vpc_name=None, group_id=None,
     if vpc_name and vpc_id:
         raise SaltInvocationError('The params \'vpc_id\' and \'vpc_name\' '
                                   'are mutually exclusive.')
-
-    if not vpc_id and vpc_name:
+    if vpc_name:
         try:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+            vpc_id = _check_vpc(vpc_id=vpc_id, vpc_name=vpc_name, region=region,
+                                key=key, keyid=keyid, profile=profile)
         except boto.exception.BotoServerError as e:
             log.debug(e)
             return None
-
     if name:
         if vpc_id is None:
             log.debug('getting group for {0}'.format(name))
@@ -240,6 +243,68 @@ def _parse_rules(sg, rules):
     return _rules
 
 
+def get_all_security_groups(groupnames=None, group_ids=None, filters=None,
+                            region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a list of all Security Groups matching the given criteria and filters.
+
+    Note that the 'groupnames' argument only functions correctly for EC2 Classic
+    and default VPC Security Groups.  To find groups by name in other VPCs you'll
+    want to use the 'group-name' filter instead.
+
+    Valid keys for the filters argument are:
+        description - The description of the security group.
+        egress.ip-permission.prefix-list-id - The ID (prefix) of the AWS service to which the security group allows access.
+        group-id - The ID of the security group.
+        group-name - The name of the security group.
+        ip-permission.cidr - A CIDR range that has been granted permission.
+        ip-permission.from-port - The start of port range for the TCP and UDP protocols, or an ICMP type number.
+        ip-permission.group-id - The ID of a security group that has been granted permission.
+        ip-permission.group-name - The name of a security group that has been granted permission.
+        ip-permission.protocol - The IP protocol for the permission (tcp | udp | icmp or a protocol number).
+        ip-permission.to-port - The end of port range for the TCP and UDP protocols, or an ICMP code.
+        ip-permission.user-id - The ID of an AWS account that has been granted permission.
+        owner-id - The AWS account ID of the owner of the security group.
+        tag-key - The key of a tag assigned to the security group.
+        tag-value - The value of a tag assigned to the security group.
+        vpc-id - The ID of the VPC specified when the security group was created.
+
+    CLI example::
+
+        salt myminion boto_secgroup.get_all_security_groups filters='{group-name: mygroup}'
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if isinstance(groupnames, str):
+        groupnames = [groupnames]
+    if isinstance(group_ids, str):
+        groupnames = [group_ids]
+
+    interesting = ['description', 'id', 'instances', 'name', 'owner_id',
+                   'region', 'rules', 'rules_egress', 'tags', 'vpc_id']
+    ret = []
+    try:
+        r = conn.get_all_security_groups(groupnames=groupnames,
+                                         group_ids=group_ids,
+                                         filters=filters)
+        for g in r:
+            n = {}
+            for a in interesting:
+                v = getattr(g, a, None)
+                if a == 'region':
+                    v = v.name
+                elif a in ('rules', 'rules_egress'):
+                    v = _parse_rules(g, v)
+                elif a == 'instances':
+                    v = [i.id for i in v()]
+                n[a] = v
+            ret += [n]
+        return ret
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return []
+
+
 def get_group_id(name, vpc_id=None, vpc_name=None, region=None, key=None,
                  keyid=None, profile=None):
     '''
@@ -259,7 +324,7 @@ def get_group_id(name, vpc_id=None, vpc_name=None, region=None, key=None,
         return False
 
 
-def convert_to_group_ids(groups, vpc_id, vpc_name=None, region=None, key=None,
+def convert_to_group_ids(groups, vpc_id=None, vpc_name=None, region=None, key=None,
                          keyid=None, profile=None):
     '''
     Given a list of security groups and a vpc_id, convert_to_group_ids will
@@ -273,17 +338,20 @@ def convert_to_group_ids(groups, vpc_id, vpc_name=None, region=None, key=None,
     group_ids = []
     for group in groups:
         if re.match('sg-.*', group):
-            log.debug('group {0} is a group id. get_group_id not called.'
-                      .format(group))
+            log.debug('group {0} is a group id. get_group_id not called.'.format(group))
             group_ids.append(group)
         else:
             log.debug('calling boto_secgroup.get_group_id for'
                       ' group name {0}'.format(group))
-            group_id = get_group_id(group, vpc_id, vpc_name, region, key, keyid, profile)
-            log.debug('group name {0} has group id {1}'.format(
-                group, group_id)
-            )
-            group_ids.append(str(group_id))
+            group_id = get_group_id(name=group, vpc_id=vpc_id,
+                                    vpc_name=vpc_name, region=region,
+                                    key=key, keyid=keyid, profile=profile)
+            if not group_id:
+                log.warning('group name {0} did not resolve to a group ID'.format(group))
+            else:
+                log.debug('group name {0} has group id {1}'.format(group, group_id))
+                group_ids.append(str(group_id))
+
     log.debug('security group contents {0} post-conversion'.format(group_ids))
     return group_ids
 
@@ -299,7 +367,9 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    sg = _get_group(conn, name, vpc_id, vpc_name, group_id, region, key, keyid, profile)
+    sg = _get_group(conn, name=name, vpc_id=vpc_id, vpc_name=vpc_name,
+                    group_id=group_id, region=region, key=key, keyid=keyid,
+                    profile=profile)
     if sg:
         ret = odict.OrderedDict()
         ret['name'] = sg.name
@@ -308,7 +378,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
         ret['group_id'] = sg.id
         ret['owner_id'] = sg.owner_id
         ret['description'] = sg.description
-        # TODO: add support for tags
+        ret['tags'] = sg.tags
         _rules = _parse_rules(sg, sg.rules)
         _rules_egress = _parse_rules(sg, sg.rules_egress)
         ret['rules'] = _split_rules(_rules)
@@ -331,7 +401,8 @@ def create(name, description, vpc_id=None, vpc_name=None, region=None, key=None,
 
     if not vpc_id and vpc_name:
         try:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+            vpc_id = _check_vpc(vpc_id=vpc_id, vpc_name=vpc_name, region=region,
+                                key=key, keyid=keyid, profile=profile)
         except boto.exception.BotoServerError as e:
             log.debug(e)
             return False
@@ -357,7 +428,9 @@ def delete(name=None, group_id=None, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    group = _get_group(conn, name, vpc_id, vpc_name, group_id, region, key, keyid, profile)
+    group = _get_group(conn, name=name, vpc_id=vpc_id, vpc_name=vpc_name,
+                       group_id=group_id, region=region, key=key, keyid=keyid,
+                       profile=profile)
     if group:
         deleted = conn.delete_security_group(group_id=group.id)
         if deleted:
@@ -387,7 +460,9 @@ def authorize(name=None, source_group_name=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    group = _get_group(conn, name, vpc_id, vpc_name, group_id, region, key, keyid, profile)
+    group = _get_group(conn, name=name, vpc_id=vpc_id, vpc_name=vpc_name,
+                       group_id=group_id, region=region, key=key, keyid=keyid,
+                       profile=profile)
     if group:
         try:
             added = None
@@ -437,7 +512,9 @@ def revoke(name=None, source_group_name=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    group = _get_group(conn, name, vpc_id, vpc_name, group_id, region, key, keyid, profile)
+    group = _get_group(conn, name=name, vpc_id=vpc_id, vpc_name=vpc_name,
+                       group_id=group_id, region=region, key=key, keyid=keyid,
+                       profile=profile)
     if group:
         try:
             revoked = None
@@ -472,3 +549,173 @@ def revoke(name=None, source_group_name=None,
     else:
         log.error('Failed to remove rule from security group.')
         return False
+
+
+def _find_vpcs(vpc_id=None, vpc_name=None, cidr=None, tags=None,
+               region=None, key=None, keyid=None, profile=None):
+    '''
+    Given VPC properties, find and return matching VPC ids.
+    Borrowed from boto_vpc; these could be refactored into a common library
+    '''
+    if all((vpc_id, vpc_name)):
+        raise SaltInvocationError('Only one of vpc_name or vpc_id may be '
+                                  'provided.')
+
+    if not any((vpc_id, vpc_name, tags, cidr)):
+        raise SaltInvocationError('At least one of the following must be '
+                                  'provided: vpc_id, vpc_name, cidr or tags.')
+
+    local_get_conn = __utils__['boto.get_connection_func']('vpc')
+    conn = local_get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    filter_parameters = {'filters': {}}
+
+    if vpc_id:
+        filter_parameters['vpc_ids'] = [vpc_id]
+
+    if cidr:
+        filter_parameters['filters']['cidr'] = cidr
+
+    if vpc_name:
+        filter_parameters['filters']['tag:Name'] = vpc_name
+
+    if tags:
+        for tag_name, tag_value in six.iteritems(tags):
+            filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+    vpcs = conn.get_all_vpcs(**filter_parameters)
+    log.debug('The filters criteria {0} matched the following VPCs:{1}'.format(filter_parameters, vpcs))
+
+    if vpcs:
+        return [vpc.id for vpc in vpcs]
+    else:
+        return []
+
+
+def set_tags(tags,
+             name=None,
+             group_id=None,
+             vpc_name=None,
+             vpc_id=None,
+             region=None,
+             key=None,
+             keyid=None,
+             profile=None):
+    '''
+    sets tags on a security group
+
+    .. versionadded:: 2016.3.0
+
+    tags
+        a dict of key:value pair of tags to set on the security group
+
+    name
+        the name of the security group
+
+    group_id
+        the group id of the security group (in lie of a name/vpc combo)
+
+    vpc_name
+        the name of the vpc to search the named group for
+
+    vpc_id
+        the id of the vpc, in lieu of the vpc_name
+
+    region
+        the amazon region
+
+    key
+        amazon key
+
+    keyid
+        amazon keyid
+
+    profile
+        amazon profile
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt myminion boto_secgroup.set_tags "{'TAG1': 'Value1', 'TAG2': 'Value2'}" security_group_name vpc_id=vpc-13435 profile=my_aws_profile
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    secgrp = _get_group(conn, name=name, vpc_id=vpc_id, vpc_name=vpc_name,
+                        group_id=group_id, region=region, key=key, keyid=keyid,
+                        profile=profile)
+
+    if secgrp:
+        if isinstance(tags, dict):
+            secgrp.add_tags(tags)
+        else:
+            msg = 'Tags must be a dict of tagname:tagvalue'
+            raise SaltInvocationError(msg)
+    else:
+        msg = 'The security group could not be found'
+        raise SaltInvocationError(msg)
+    return True
+
+
+def delete_tags(tags,
+                name=None,
+                group_id=None,
+                vpc_name=None,
+                vpc_id=None,
+                region=None,
+                key=None,
+                keyid=None,
+                profile=None):
+    '''
+    deletes tags from a security group
+
+    .. versionadded:: 2016.3.0
+
+    tags
+        a list of tags to remove
+
+    name
+        the name of the security group
+
+    group_id
+        the group id of the security group (in lie of a name/vpc combo)
+
+    vpc_name
+        the name of the vpc to search the named group for
+
+    vpc_id
+        the id of the vpc, in lieu of the vpc_name
+
+    region
+        the amazon region
+
+    key
+        amazon key
+
+    keyid
+        amazon keyid
+
+    profile
+        amazon profile
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt myminion boto_secgroup.delete_tags ['TAG_TO_DELETE1','TAG_TO_DELETE2'] security_group_name vpc_id=vpc-13435 profile=my_aws_profile
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    secgrp = _get_group(conn, name=name, vpc_id=vpc_id, vpc_name=vpc_name,
+                        group_id=group_id, region=region, key=key, keyid=keyid,
+                        profile=profile)
+    if secgrp:
+        if isinstance(tags, list):
+            tags_to_remove = {}
+            for tag in tags:
+                tags_to_remove[tag] = None
+            secgrp.remove_tags(tags_to_remove)
+        else:
+            msg = 'Tags must be a list of tagnames to remove from the security group'
+            raise SaltInvocationError(msg)
+    else:
+        msg = 'The security group could not be found'
+        raise SaltInvocationError(msg)
+    return True

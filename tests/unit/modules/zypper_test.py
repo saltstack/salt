@@ -5,9 +5,11 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
+from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     Mock,
     MagicMock,
@@ -16,15 +18,14 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
-from salt.exceptions import CommandExecutionError
-
-import os
-from salt.ext.six.moves import configparser
-import StringIO
-
-from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
+
+# Import Salt libs
+from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves import configparser
+import salt.ext.six as six
+import salt.utils.pkg
 
 
 class ZyppCallMock(object):
@@ -52,6 +53,7 @@ from salt.modules import zypper
 zypper.__salt__ = dict()
 zypper.__grains__ = dict()
 zypper.__context__ = dict()
+zypper.__opts__ = dict()
 zypper.rpm = None
 
 
@@ -225,7 +227,10 @@ class ZypperTestCase(TestCase):
                 self.assertEqual(len(products), 7)
                 self.assertIn(test_data['vendor'], [product['vendor'] for product in products])
                 for kwd in ['name', 'isbase', 'installed', 'release', 'productline', 'eol_t', 'registerrelease']:
-                    self.assertEqual(test_data[kwd], sorted([prod.get(kwd) for prod in products]))
+                    if six.PY3:
+                        self.assertCountEqual(test_data[kwd], [prod.get(kwd) for prod in products])
+                    else:
+                        self.assertEqual(test_data[kwd], sorted([prod.get(kwd) for prod in products]))
 
     def test_refresh_db(self):
         '''
@@ -246,10 +251,11 @@ class ZypperTestCase(TestCase):
         }
 
         with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=run_out)}):
-            result = zypper.refresh_db()
-            self.assertEqual(result.get("openSUSE-Leap-42.1-LATEST"), False)
-            self.assertEqual(result.get("openSUSE-Leap-42.1-Update"), False)
-            self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
+            with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
+                result = zypper.refresh_db()
+                self.assertEqual(result.get("openSUSE-Leap-42.1-LATEST"), False)
+                self.assertEqual(result.get("openSUSE-Leap-42.1-Update"), False)
+                self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
 
     def test_info_installed(self):
         '''
@@ -294,6 +300,17 @@ class ZypperTestCase(TestCase):
                 if pn_key == 'source_rpm':
                     continue
                 self.assertEqual(installed['virgo-dummy'][pn_key], pn_val)
+
+    def test_info_installed_with_non_ascii_char(self):
+        '''
+        Test the return information of the named package(s), installed on the system whith non-ascii chars
+
+        :return:
+        '''
+        run_out = {'vīrgô': {'description': 'vīrgô d€šçripţiǫñ'}}
+        with patch.dict(zypper.__salt__, {'lowpkg.info': MagicMock(return_value=run_out)}):
+            installed = zypper.info_installed()
+            self.assertEqual(installed['vīrgô']['description'], 'vīrgô d€šçripţiǫñ')
 
     def test_info_available(self):
         '''
@@ -342,28 +359,50 @@ class ZypperTestCase(TestCase):
         with patch('salt.modules.zypper.__zypper__.noraise.call', MagicMock()) as zypper_mock:
             with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
                 ret = zypper.upgrade()
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], {"vim": {"old": "1.1", "new": "1.2"}})
+                self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
+                zypper_mock.assert_any_call('update', '--auto-agree-with-licenses')
+
+            with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1,1.2"}])):
+                ret = zypper.upgrade()
+                self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
                 zypper_mock.assert_any_call('update', '--auto-agree-with-licenses')
 
             with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
                 ret = zypper.upgrade(dist_upgrade=True)
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], {"vim": {"old": "1.1", "new": "1.2"}})
+                self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
                 zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses')
 
             with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}])):
                 ret = zypper.upgrade(dist_upgrade=True, dryrun=True)
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], {})
                 zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run')
                 zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run', '--debug-solver')
 
+            with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}])):
+                ret = zypper.upgrade(dist_upgrade=True, dryrun=True, fromrepo=["Dummy", "Dummy2"], novendorchange=True)
+                zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run', '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change')
+                zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run', '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change', '--debug-solver')
+
             with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
                 ret = zypper.upgrade(dist_upgrade=True, fromrepo=["Dummy", "Dummy2"], novendorchange=True)
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], {"vim": {"old": "1.1", "new": "1.2"}})
+                self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
                 zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change')
+
+    @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
+    @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
+    @patch.dict('salt.modules.zypper.__grains__', {'osrelease_info': [12, 1]})
+    def test_upgrade_kernel(self):
+        '''
+        Test kernel package upgrade success.
+
+        :return:
+        '''
+
+        with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=(['kernel-default'], None))}):
+            with patch('salt.modules.zypper.__zypper__.noraise.call', MagicMock()):
+                with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[
+                    {"kernel-default": "3.12.49-11.1"}, {"kernel-default": "3.12.49-11.1,3.12.51-60.20.2"}])):
+                    ret = zypper.install('kernel-default', '--auto-agree-with-licenses')
+                    self.assertDictEqual(ret, {"kernel-default": {"old": "3.12.49-11.1", "new": "3.12.51-60.20.2"}})
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
     @patch('salt.modules.zypper._systemd_scope', MagicMock(return_value=False))
@@ -384,9 +423,10 @@ Repository 'DUMMY' not found by its alias, number, or URI.
 
         class FailingZypperDummy(object):
             def __init__(self):
-                self.stdout = MagicMock(return_value=zypper_out)
-                self.stderr = MagicMock(return_value="")
-                self.exit_code = MagicMock(return_value=555)
+                self.stdout = zypper_out
+                self.stderr = ""
+                self.pid = 1234
+                self.exit_code = 555
                 self.noraise = MagicMock()
                 self.SUCCESS_EXIT_CODES = [0]
 
@@ -396,10 +436,10 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with patch('salt.modules.zypper.__zypper__', FailingZypperDummy()) as zypper_mock:
             zypper_mock.noraise.call = MagicMock()
             with patch('salt.modules.zypper.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}])):
-                ret = zypper.upgrade(dist_upgrade=True, fromrepo=["DUMMY"])
-                self.assertFalse(ret['result'])
-                self.assertEqual(ret['comment'], zypper_out.strip())
-                self.assertDictEqual(ret['changes'], {})
+                with self.assertRaises(CommandExecutionError) as cmd_exc:
+                    ret = zypper.upgrade(dist_upgrade=True, fromrepo=["DUMMY"])
+                self.assertEqual(cmd_exc.exception.info['changes'], {})
+                self.assertEqual(cmd_exc.exception.info['result']['stdout'], zypper_out)
                 zypper_mock.noraise.call.assert_called_with('dist-upgrade', '--auto-agree-with-licenses', '--from', 'DUMMY')
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
@@ -526,7 +566,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         '''
         repos_cfg = configparser.ConfigParser()
         for cfg in ['zypper-repo-1.cfg', 'zypper-repo-2.cfg']:
-            repos_cfg.readfp(StringIO.StringIO(get_test_data(cfg)))
+            repos_cfg.readfp(six.moves.StringIO(get_test_data(cfg)))
 
         for alias in repos_cfg.sections():
             r_info = zypper._get_repo_info(alias, repos_cfg=repos_cfg)

@@ -41,3 +41,18 @@ def set_(uri, value):
         salt '*' sdb.set sdb://mymemcached/foo bar
     '''
     return salt.utils.sdb.sdb_set(uri, value, __opts__)
+
+
+def delete(uri):
+    '''
+    Delete a value from a db, using a uri in the form of ``sdb://<profile>/<key>``.
+    If the uri provided does not start with ``sdb://`` or the value is not
+    successfully deleted, return ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sdb.delete sdb://mymemcached/foo
+    '''
+    return salt.utils.sdb.sdb_delete(uri, __opts__)

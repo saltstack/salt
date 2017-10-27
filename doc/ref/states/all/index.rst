@@ -1,8 +1,8 @@
 .. _all-salt.states:
 
-==================================
-Full list of builtin state modules
-==================================
+=============
+state modules
+=============
 
 .. currentmodule:: salt.states
 
@@ -10,10 +10,13 @@ Full list of builtin state modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    acme
     alias
     alternatives
     apache
+    apache_conf
     apache_module
+    apache_site
     aptpkg
     archive
     artifactory
@@ -23,30 +26,44 @@ Full list of builtin state modules
     beacon
     bigip
     blockdev
+    boto_apigateway
     boto_asg
     boto_cfn
+    boto_cloudtrail
     boto_cloudwatch_alarm
+    boto_cloudwatch_event
+    boto_cognitoidentity
+    boto_datapipeline
     boto_dynamodb
     boto_ec2
     boto_elasticache
+    boto_elasticsearch_domain
     boto_elb
     boto_iam
     boto_iam_role
+    boto_iot
     boto_kms
+    boto_lambda
     boto_lc
     boto_rds
     boto_route53
+    boto_s3_bucket
     boto_secgroup
     boto_sns
     boto_sqs
     boto_vpc
     bower
     cabal
+    ceph
     chef
+    chocolatey
+    chronos_job
+    cisconso
     cloud
     cmd
     composer
     cron
+    csf
     cyg
     ddns
     debconfmod
@@ -60,16 +77,22 @@ Full list of builtin state modules
     environ
     eselect
     etcd_mod
+    ethtool
     esxi
     event
     file
+    firewall
     firewalld
     gem
     git
+    github
     glance
     glusterfs
     gnomedesktop
+    gpg
     grafana
+    grafana_dashboard
+    grafana_datasource
     grains
     group
     hg
@@ -79,25 +102,39 @@ Full list of builtin state modules
     http
     ifttt
     incron
+    influxdb08_database
+    influxdb08_user
     influxdb_database
     influxdb_user
+    infoblox
     ini_manage
     ipmi
     ipset
     iptables
     jboss7
+    jenkins
+    junos
+    k8s
+    kapacitor
     keyboard
     keystone
     kmod
     layman
-    libvirt
+    ldap
+    libcloud_dns
     linux_acl
     locale
     lvm
     lvs_server
     lvs_service
     lxc
+    mac_assistive
+    mac_defaults
+    mac_keychain
+    mac_package
+    mac_xattr
     makeconf
+    marathon_app
     mdadm
     memcached
     modjk
@@ -111,16 +148,23 @@ Full list of builtin state modules
     mysql_grants
     mysql_query
     mysql_user
+    netntp
+    netsnmp
+    netusers
     network
     nftables
     npm
     ntp
+    nxos
     openstack_config
+    openvswitch_bridge
+    openvswitch_port
     pagerduty
     pagerduty_escalation_policy
     pagerduty_schedule
     pagerduty_service
     pagerduty_user
+    pcs
     pecl
     pip_state
     pkg
@@ -129,14 +173,20 @@ Full list of builtin state modules
     pkgrepo
     portage_config
     ports
+    postgres_cluster
     postgres_database
     postgres_extension
     postgres_group
+    postgres_initdb
+    postgres_language
+    postgres_privileges
     postgres_schema
     postgres_tablespace
     postgres_user
     powerpath
+    probes
     process
+    proxy
     pushover
     pyenv
     pyrax_queues
@@ -150,15 +200,21 @@ Full list of builtin state modules
     rdp
     redismod
     reg
+    rsync
     rvm
+    salt_proxy
     saltmod
     schedule
     selinux
     serverdensity_device
     service
     slack
+    smartos
     smtp
+    snapper
+    splunk
     splunk_search
+    sqlite3
     ssh_auth
     ssh_known_hosts
     stateconf
@@ -169,7 +225,9 @@ Full list of builtin state modules
     sysctl
     syslog_ng
     sysrc
+    telemetry_alert
     test
+    testinframod
     timezone
     tls
     tomcat
@@ -179,18 +237,34 @@ Full list of builtin state modules
     user
     vbox_guest
     victorops
+    virt
     virtualenv_mod
+    win_certutil
     win_dacl
+    win_dism
     win_dns_client
     win_firewall
+    win_iis
+    win_lgpo
+    win_license
     win_network
     win_path
+    win_pki
     win_powercfg
     win_servermanager
+    win_smtp_server
+    win_snmp
     win_system
     win_update
     winrepo
     x509
     xmpp
+    zabbix_host
+    zabbix_hostgroup
+    zabbix_user
+    zabbix_usergroup
     zcbuildout
+    zenoss
     zk_concurrency
+    zfs
+    zpool

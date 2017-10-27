@@ -13,6 +13,7 @@ import itertools
 import salt.runner
 import salt.utils
 import salt.config
+import salt.syspaths
 
 
 def __virtual__():

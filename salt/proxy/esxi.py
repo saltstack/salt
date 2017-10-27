@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Proxy Minion interface module for managing VMWare ESXi hosts.
+Proxy Minion interface module for managing VMware ESXi hosts.
 
 .. versionadded:: 2015.8.4
 
@@ -17,7 +17,7 @@ a minion process that "proxies" communication from the Salt Master. The master
 does not know nor care that the target is not a "real" Salt Minion.
 
 More in-depth conceptual reading on Proxy Minions can be found in the
-:doc:`Proxy Minion </topics/proxyminion/index>` section of Salt's
+:ref:`Proxy Minion <proxy-minion>` section of Salt's
 documentation.
 
 
@@ -130,9 +130,9 @@ one password in this list is required.
 The proxy integration will try the passwords listed in order. It is
 configured this way so you can have a regular password and the password you
 may be updating for an ESXi host either via the
-:doc:`vsphere.update_host_password </ref/modules/all/salt.modules.vsphere>`
+:mod:`vsphere.update_host_password <salt.modules.vsphere.update_host_password>`
 execution module function or via the
-:doc:`esxi.password_present </ref/modules/all/salt.states.esxi>` state
+:mod:`esxi.password_present <salt.states.esxi.password_present>` state
 function. This way, after the password is changed, you should not need to
 restart the proxy minion--it should just pick up the the new password
 provided in the list. You can then change pillar at will to move that
@@ -225,7 +225,7 @@ Note that you don't need to provide credentials or an ip/hostname. Salt
 knows to use the credentials you stored in Pillar.
 
 It's important to understand how this particular proxy works.
-:doc:`Salt.modules.vsphere </ref/modules/all/salt.modules.vsphere>` is a
+:mod:`Salt.modules.vsphere <salt.modules.vsphere>` is a
 standard Salt execution module. If you pull up the docs for it you'll see
 that almost every function in the module takes credentials and a target
 host. When credentials and a host aren't passed, Salt runs commands
@@ -243,15 +243,15 @@ Proxy Minion.
 
 Because of the presence of the shim, to lookup documentation for what
 functions you can use to interface with the ESXi host, you'll want to
-look in :doc:`salt.modules.vsphere </ref/modules/all/salt.modules.vsphere>`
-instead of :doc:`salt.modules.esxi </ref/modules/all/salt.modules.esxi>`.
+look in :mod:`salt.modules.vsphere <salt.modules.vsphere>`
+instead of :mod:`salt.modules.esxi <salt.modules.esxi>`.
 
 
 States
 ------
 
 Associated states are thoroughly documented in
-:doc:`salt.states.esxi </ref/states/all/salt.states.esxi>`. Look there
+:mod:`salt.states.esxi <salt.states.esxi>`. Look there
 to find an example structure for Pillar as well as an example ``.sls`` file
 for standing up an ESXi host from scratch.
 
@@ -319,8 +319,8 @@ def init(opts):
     DETAILS['host'] = host
     DETAILS['username'] = username
     DETAILS['password'] = password
-    DETAILS['protocol'] = opts['proxy'].get('protocol')
-    DETAILS['port'] = opts['proxy'].get('port')
+    DETAILS['protocol'] = opts['proxy'].get('protocol', 'https')
+    DETAILS['port'] = opts['proxy'].get('port', '443')
 
 
 def grains():
@@ -353,7 +353,7 @@ def ping():
 
         salt esxi-host test.ping
     '''
-    find_credentials(DETAILS['host'])
+    # find_credentials(DETAILS['host'])
     try:
         __salt__['vsphere.system_info'](host=DETAILS['host'],
                                         username=DETAILS['username'],
@@ -376,9 +376,9 @@ def shutdown():
 def ch_config(cmd, *args, **kwargs):
     '''
     This function is called by the
-    :doc:`salt.modules.esxi.cmd </ref/modules/all/salt.modules.esxi>` shim.
+    :mod:`salt.modules.esxi.cmd <salt.modules.esxi.cmd>` shim.
     It then calls whatever is passed in ``cmd`` inside the
-    :doc:`salt.modules.vsphere </ref/modules/all/salt.modules.vsphere>` module.
+    :mod:`salt.modules.vsphere <salt.modules.vsphere>` module.
     Passes the return through from the vsphere module.
 
     cmd
@@ -395,6 +395,12 @@ def ch_config(cmd, *args, **kwargs):
     for k in kwargs.keys():
         if k.startswith('__pub_'):
             kwargs.pop(k)
+
+    kwargs['host'] = DETAILS['host']
+    kwargs['username'] = DETAILS['username']
+    kwargs['password'] = DETAILS['password']
+    kwargs['port'] = DETAILS['port']
+    kwargs['protocol'] = DETAILS['protocol']
 
     if 'vsphere.' + cmd not in __salt__:
         return {'retcode': -1, 'message': 'vsphere.' + cmd + ' is not available.'}

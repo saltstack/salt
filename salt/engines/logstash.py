@@ -8,6 +8,9 @@ them onto a logstash endpoint.
 :configuration:
 
     Example configuration
+
+    .. code-block:: yaml
+
         engines:
           - logstash:
             host: log.my_network.com
@@ -19,7 +22,6 @@ them onto a logstash endpoint.
 # Import python libraries
 from __future__ import absolute_import
 import logging
-import json
 
 # Import salt libs
 import salt.utils.event
@@ -66,4 +68,4 @@ def start(host, port=5959, tag='salt/engine/logstash'):
     while True:
         event = event_bus.get_event()
         if event:
-            logstash_logger.info(tag, extra=json.dumps(event))
+            logstash_logger.info(tag, extra=event)

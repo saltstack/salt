@@ -27,8 +27,13 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
     on a manual merge (helpful for non-dict types like FunctionWrapper)
 
     If merge_lists=True, will aggregate list object types instead of replace.
-    This behavior is only activated when recursive_update=True. By default
-    merge_lists=False.
+    The list in ``upd`` is added to the list in ``dest``, so the resulting list
+    is ``dest[key] + upd[key]``. This behavior is only activated when
+    recursive_update=True. By default merge_lists=False.
+
+    .. versionchanged: 2016.11.6
+        When merging lists, duplicate values are removed. Values already
+        present in the ``dest`` list are not added from the ``upd`` list.
     '''
     if (not isinstance(dest, collections.Mapping)) \
             or (not isinstance(upd, collections.Mapping)):
@@ -50,7 +55,9 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
             elif isinstance(dest_subkey, list) \
                      and isinstance(val, list):
                 if merge_lists:
-                    dest[key] = dest.get(key, []) + val
+                    merged = copy.deepcopy(dest_subkey)
+                    merged.extend([x for x in val if x not in merged])
+                    dest[key] = merged
                 else:
                     dest[key] = upd[key]
             else:
@@ -109,6 +116,10 @@ def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
         merged = merge_aggregate(obj_a, obj_b)
     elif strategy == 'overwrite':
         merged = merge_overwrite(obj_a, obj_b, merge_lists)
+    elif strategy == 'none':
+        # If we do not want to merge, there is only one pillar passed, so we can safely use the default recurse,
+        # we just do not want to log an error
+        merged = merge_recurse(obj_a, obj_b)
     else:
         log.warning('Unknown merging strategy \'{0}\', '
                     'fallback to recurse'.format(strategy))

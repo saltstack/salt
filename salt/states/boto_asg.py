@@ -11,7 +11,7 @@ services, and so may incur charges.
 This module uses boto, which can be installed via package, or pip.
 
 This module accepts explicit autoscale credentials but can also utilize
-IAM roles assigned to the instance trough Instance Profiles. Dynamic
+IAM roles assigned to the instance through Instance Profiles. Dynamic
 credentials are then automatically obtained from AWS API and no further
 configuration is necessary. More Information available at:
 
@@ -196,13 +196,13 @@ Overriding the alarm values on the resource:
 from __future__ import absolute_import
 import hashlib
 import logging
+import copy
 
 # Import Salt libs
 import salt.utils.dictupdate as dictupdate
-
-# Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -228,11 +228,15 @@ def present(
         health_check_period=None,
         placement_group=None,
         vpc_zone_identifier=None,
+        subnet_names=None,
         tags=None,
         termination_policies=None,
+        termination_policies_from_pillar='boto_asg_termination_policies',
         suspended_processes=None,
         scaling_policies=None,
-        scaling_policies_from_pillar="boto_asg_scaling_policies",
+        scaling_policies_from_pillar='boto_asg_scaling_policies',
+        scheduled_actions=None,
+        scheduled_actions_from_pillar='boto_asg_scheduled_actions',
         alarms=None,
         alarms_from_pillar='boto_asg_alarms',
         region=None,
@@ -240,9 +244,9 @@ def present(
         keyid=None,
         profile=None,
         notification_arn=None,
-        notification_arn_from_pillar="boto_asg_notification_arn",
+        notification_arn_from_pillar='boto_asg_notification_arn',
         notification_types=None,
-        notification_types_from_pillar="boto_asg_notification_types"):
+        notification_types_from_pillar='boto_asg_notification_types'):
     '''
     Ensure the autoscale group exists.
 
@@ -261,6 +265,24 @@ def present(
         that launch config.  The launch config name will be the
         ``launch_config_name`` followed by a hyphen followed by a hash
         of the ``launch_config`` dict contents.
+        Example:
+
+        .. code-block:: yaml
+
+            my_asg:
+              boto_asg.present:
+              - launch_config:
+                - ebs_optimized: false
+                - instance_profile_name: my_iam_profile
+                - kernel_id: ''
+                - ramdisk_id: ''
+                - key_name: my_ssh_key
+                - image_name: aws2015091-hvm
+                - instance_type: c3.xlarge
+                - instance_monitoring: false
+                - security_groups:
+                  - my_sec_group_01
+                  - my_sec_group_02
 
     availability_zones
         List of availability zones for the group.
@@ -297,6 +319,10 @@ def present(
     vpc_zone_identifier
         A list of the subnet identifiers of the Virtual Private Cloud.
 
+    subnet_names
+        For VPC, a list of subnet names (NOT subnet IDs) to deploy into.
+        Exclusive with vpc_zone_identifier.
+
     tags
         A list of tags. Example:
 
@@ -317,17 +343,43 @@ def present(
 
         If no value is specified, the ``Default`` value is used.
 
+    termination_policies_from_pillar:
+        name of pillar dict that contains termination policy settings.   Termination policies
+        defined for this specific state will override those from pillar.
+
     suspended_processes
         List of processes to be suspended. see
         http://docs.aws.amazon.com/AutoScaling/latest/DeveloperGuide/US_SuspendResume.html
 
     scaling_policies
         List of scaling policies.  Each policy is a dict of key-values described by
-        http://boto.readthedocs.org/en/latest/ref/autoscale.html#boto.ec2.autoscale.policy.ScalingPolicy
+        https://boto.readthedocs.io/en/latest/ref/autoscale.html#boto.ec2.autoscale.policy.ScalingPolicy
 
     scaling_policies_from_pillar:
         name of pillar dict that contains scaling policy settings.   Scaling policies defined for
         this specific state will override those from pillar.
+
+    scheduled_actions:
+        a dictionary of scheduled actions. Each key is the name of scheduled action and each value
+        is dictionary of options. For example:
+
+        .. code-block:: yaml
+
+            - scheduled_actions:
+                scale_up_at_10:
+                    desired_capacity: 4
+                    min_size: 3
+                    max_size: 5
+                    recurrence: "0 9 * * 1-5"
+                scale_down_at_7:
+                    desired_capacity: 1
+                    min_size: 1
+                    max_size: 1
+                    recurrence: "0 19 * * 1-5"
+
+    scheduled_actions_from_pillar:
+        name of pillar dict that contains scheduled_actions settings. Scheduled actions
+        for this specific state will override those from pillar.
 
     alarms:
         a dictionary of name->boto_cloudwatch_alarm sections to be associated with this ASG.
@@ -336,6 +388,12 @@ def present(
 
         See the :mod:`salt.states.boto_cloudwatch_alarm` state for information
         about these attributes.
+
+        If any alarm actions include  ":self:" this will be replaced with the asg name.
+        For example, alarm_actions reading "['scaling_policy:self:ScaleUp']" will
+        map to the arn for this asg's scaling policy named "ScaleUp".
+        In addition, any alarms that have only scaling_policy as actions will be ignored if
+        min_size is equal to max_size for this ASG.
 
     alarms_from_pillar:
         name of pillar dict that contains alarm settings.   Alarms defined for this specific
@@ -377,7 +435,24 @@ def present(
         ``notification_types`` defined for this specific state will override those
         from the pillar.
     '''
+    if vpc_zone_identifier and subnet_names:
+        raise SaltInvocationError('vpc_zone_identifier and subnet_names are '
+                                  'mutually exclusive options.')
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if subnet_names:
+        vpc_zone_identifier = []
+        for i in subnet_names:
+            r = __salt__['boto_vpc.get_resource_id']('subnet', name=i, region=region,
+                                                     key=key, keyid=keyid, profile=profile)
+            if 'error' in r:
+                ret['comment'] = 'Error looking up subnet ids: {0}'.format(r['error'])
+                ret['result'] = False
+                return ret
+            if 'id' not in r:
+                ret['comment'] = 'Subnet {0} does not exist.'.format(i)
+                ret['result'] = False
+                return ret
+            vpc_zone_identifier.append(r['id'])
     if vpc_zone_identifier:
         vpc_id = __salt__['boto_vpc.get_subnet_association'](
             vpc_zone_identifier,
@@ -406,6 +481,19 @@ def present(
             'profile': profile
         }
 
+        for index, item in enumerate(launch_config):
+            if 'image_name' in item:
+                image_name = item['image_name']
+                iargs = {'ami_name': image_name, 'region': region, 'key': key,
+                         'keyid': keyid, 'profile': profile}
+                image_ids = __salt__['boto_ec2.find_images'](**iargs)
+                if len(image_ids):
+                    launch_config[index]['image_id'] = image_ids[0]
+                else:
+                    launch_config[index]['image_id'] = image_name
+                del launch_config[index]['image_name']
+                break
+
         if vpc_id:
             log.debug('Auto Scaling Group {0} is a associated with a vpc')
             # locate the security groups attribute of a launch config
@@ -416,16 +504,16 @@ def present(
                     break
             # if security groups exist within launch_config then convert
             # to group ids
-            if sg_index:
+            if sg_index is not None:
                 log.debug('security group associations found in launch config')
                 _group_ids = __salt__['boto_secgroup.convert_to_group_ids'](
-                    launch_config[sg_index]['security_groups'], vpc_id, region,
-                    key, keyid, profile
+                    launch_config[sg_index]['security_groups'], vpc_id=vpc_id,
+                    region=region, key=key, keyid=keyid, profile=profile
                 )
                 launch_config[sg_index]['security_groups'] = _group_ids
 
-        for cfg in launch_config:
-            args.update(cfg)
+        for d in launch_config:
+            args.update(d)
         if not __opts__['test']:
             lc_ret = __states__['boto_lc.present'](**args)
             if lc_ret['result'] is True and lc_ret['changes']:
@@ -434,6 +522,18 @@ def present(
                 ret['changes']['launch_config'] = lc_ret['changes']
 
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
+    termination_policies = _determine_termination_policies(
+        termination_policies,
+        termination_policies_from_pillar
+    )
+    scaling_policies = _determine_scaling_policies(
+        scaling_policies,
+        scaling_policies_from_pillar
+    )
+    scheduled_actions = _determine_scheduled_actions(
+        scheduled_actions,
+        scheduled_actions_from_pillar
+    )
     if asg is None:
         ret['result'] = False
         ret['comment'] = 'Failed to check autoscale group existence.'
@@ -449,10 +549,6 @@ def present(
             notification_types,
             notification_types_from_pillar
         )
-        scaling_policies = _determine_scaling_policies(
-            scaling_policies,
-            scaling_policies_from_pillar
-        )
         created = __salt__['boto_asg.create'](name, launch_config_name,
                                               availability_zones, min_size,
                                               max_size, desired_capacity,
@@ -463,8 +559,9 @@ def present(
                                               vpc_zone_identifier, tags,
                                               termination_policies,
                                               suspended_processes,
-                                              scaling_policies, region,
-                                              notification_arn, notification_types,
+                                              scaling_policies, scheduled_actions,
+                                              region, notification_arn,
+                                              notification_types,
                                               key, keyid, profile)
         if created:
             ret['changes']['old'] = None
@@ -482,6 +579,10 @@ def present(
             for policy in scaling_policies:
                 if 'min_adjustment_step' not in policy:
                     policy['min_adjustment_step'] = None
+        if scheduled_actions:
+            for s_name, action in six.iteritems(scheduled_actions):
+                if 'end_time' not in action:
+                    action['end_time'] = None
         config = {
             'launch_config_name': launch_config_name,
             'availability_zones': availability_zones,
@@ -496,13 +597,26 @@ def present(
             'termination_policies': termination_policies,
             'suspended_processes': suspended_processes,
             'scaling_policies': scaling_policies,
+            'scheduled_actions': scheduled_actions
         }
+        #ensure that we reset termination_policies to default if none are specified
+        if not termination_policies:
+            config['termination_policies'] = ['Default']
         if suspended_processes is None:
             config['suspended_processes'] = []
         # ensure that we delete scaling_policies if none are specified
         if scaling_policies is None:
             config['scaling_policies'] = []
-        # note: do not loop using 'key, value' - this can modify the value of
+        # ensure that we delete scheduled_actions if none are specified
+        if scheduled_actions is None:
+            config['scheduled_actions'] = {}
+        # allow defaults on start_time
+        for s_name, action in six.iteritems(scheduled_actions):
+            if 'start_time' not in action:
+                asg_action = asg['scheduled_actions'].get(s_name, {})
+                if 'start_time' in asg_action:
+                    del asg_action['start_time']
+        # note: do not loop using "key, value" - this can modify the value of
         # the aws access key
         for asg_property, value in six.iteritems(config):
             # Only modify values being specified; introspection is difficult
@@ -530,10 +644,6 @@ def present(
                 notification_types,
                 notification_types_from_pillar
             )
-            scaling_policies = _determine_scaling_policies(
-                scaling_policies,
-                scaling_policies_from_pillar
-            )
             updated, msg = __salt__['boto_asg.update'](
                 name,
                 launch_config_name,
@@ -551,15 +661,23 @@ def present(
                 termination_policies=termination_policies,
                 suspended_processes=suspended_processes,
                 scaling_policies=scaling_policies,
+                scheduled_actions=scheduled_actions,
+                region=region,
                 notification_arn=notification_arn,
                 notification_types=notification_types,
-                region=region,
                 key=key,
                 keyid=keyid,
-                profile=profile)
+                profile=profile
+            )
             if asg['launch_config_name'] != launch_config_name:
                 # delete the old launch_config_name
-                deleted = __salt__['boto_asg.delete_launch_configuration'](asg['launch_config_name'], region, key, keyid, profile)
+                deleted = __salt__['boto_asg.delete_launch_configuration'](
+                    asg['launch_config_name'],
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile
+                )
                 if deleted:
                     if 'launch_config' not in ret['changes']:
                         ret['changes']['launch_config'] = {}
@@ -576,7 +694,10 @@ def present(
         else:
             ret['comment'] = 'Autoscale group present.'
     # add in alarms
-    _ret = _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile)
+    _ret = _alarms_present(
+        name, min_size == max_size, alarms, alarms_from_pillar, region, key,
+        keyid, profile
+    )
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -584,34 +705,70 @@ def present(
     return ret
 
 
+def _determine_termination_policies(termination_policies, termination_policies_from_pillar):
+    '''
+    helper method for present.  ensure that termination_policies are set
+    '''
+    pillar_termination_policies = copy.deepcopy(
+        __salt__['config.option'](termination_policies_from_pillar, [])
+    )
+    if not termination_policies and len(pillar_termination_policies) > 0:
+        termination_policies = pillar_termination_policies
+    return termination_policies
+
+
 def _determine_scaling_policies(scaling_policies, scaling_policies_from_pillar):
-    '''helper method for present.  ensure that scaling_policies are set'''
-    pillar_scaling_policies = __salt__['config.option'](scaling_policies_from_pillar, {})
+    '''
+    helper method for present.  ensure that scaling_policies are set
+    '''
+    pillar_scaling_policies = copy.deepcopy(
+        __salt__['config.option'](scaling_policies_from_pillar, {})
+    )
     if not scaling_policies and len(pillar_scaling_policies) > 0:
         scaling_policies = pillar_scaling_policies
     return scaling_policies
 
 
-def _determine_notification_info(
-    notification_arn,
-    notification_arn_from_pillar,
-    notification_types,
-    notification_types_from_pillar):
-    '''helper method for present.  ensure that notification_configs are set'''
-    pillar_arn_list = __salt__['config.option'](notification_arn_from_pillar, {})
+def _determine_scheduled_actions(scheduled_actions, scheduled_actions_from_pillar):
+    '''
+    helper method for present,  ensure scheduled actions are setup
+    '''
+    tmp = copy.deepcopy(
+        __salt__['config.option'](scheduled_actions_from_pillar, {})
+    )
+    # merge with data from state
+    if scheduled_actions:
+        tmp = dictupdate.update(tmp, scheduled_actions)
+    return tmp
+
+
+def _determine_notification_info(notification_arn,
+                                 notification_arn_from_pillar,
+                                 notification_types,
+                                 notification_types_from_pillar):
+    '''
+    helper method for present.  ensure that notification_configs are set
+    '''
+    pillar_arn_list = copy.deepcopy(
+        __salt__['config.option'](notification_arn_from_pillar, {})
+    )
     pillar_arn = None
     if len(pillar_arn_list) > 0:
         pillar_arn = pillar_arn_list[0]
-    pillar_notification_types = __salt__['config.option'](notification_types_from_pillar, {})
+    pillar_notification_types = copy.deepcopy(
+        __salt__['config.option'](notification_types_from_pillar, {})
+    )
     arn = notification_arn if notification_arn else pillar_arn
     types = notification_types if notification_types else pillar_notification_types
     return (arn, types)
 
 
-def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile):
-    '''helper method for present.  ensure that cloudwatch_alarms are set'''
+def _alarms_present(name, min_size_equals_max_size, alarms, alarms_from_pillar, region, key, keyid, profile):
+    '''
+    helper method for present.  ensure that cloudwatch_alarms are set
+    '''
     # load data from alarms_from_pillar
-    tmp = __salt__['config.option'](alarms_from_pillar, {})
+    tmp = copy.deepcopy(__salt__['config.option'](alarms_from_pillar, {}))
     # merge with data from alarms
     if alarms:
         tmp = dictupdate.update(tmp, alarms)
@@ -624,6 +781,21 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
         # add dimension attribute
         if 'dimensions' not in info['attributes']:
             info['attributes']['dimensions'] = {'AutoScalingGroupName': [name]}
+        scaling_policy_actions_only = True
+        # replace ":self:" with our name
+        for action_type in ['alarm_actions', 'insufficient_data_actions', 'ok_actions']:
+            if action_type in info['attributes']:
+                new_actions = []
+                for action in info['attributes'][action_type]:
+                    if 'scaling_policy' not in action:
+                        scaling_policy_actions_only = False
+                    if ':self:' in action:
+                        action = action.replace(':self:', ':{0}:'.format(name))
+                    new_actions.append(action)
+                info['attributes'][action_type] = new_actions
+        # skip alarms that only have actions for scaling policy, if min_size == max_size for this ASG
+        if scaling_policy_actions_only and min_size_equals_max_size:
+            continue
         # set alarm
         kwargs = {
             'name': info['name'],
@@ -675,7 +847,8 @@ def absent(
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None,
+        remove_lc=False):
     '''
     Ensure the named autoscale group is deleted.
 
@@ -684,6 +857,9 @@ def absent(
 
     force
         Force deletion of autoscale group.
+
+    remove_lc
+        Delete the launch config as well.
 
     region
         The region to connect to.
@@ -707,10 +883,26 @@ def absent(
         if __opts__['test']:
             ret['comment'] = 'Autoscale group set to be deleted.'
             ret['result'] = None
+            if remove_lc:
+                msg = 'Launch configuration {0} is set to be deleted.'.format(asg['launch_config_name'])
+                ret['comment'] = ' '.join([ret['comment'], msg])
             return ret
         deleted = __salt__['boto_asg.delete'](name, force, region, key, keyid,
                                               profile)
         if deleted:
+            if remove_lc:
+                lc_deleted = __salt__['boto_asg.delete_launch_configuration'](asg['launch_config_name'],
+                                                                              region,
+                                                                              key,
+                                                                              keyid,
+                                                                              profile)
+                if lc_deleted:
+                    if 'launch_config' not in ret['changes']:
+                        ret['changes']['launch_config'] = {}
+                    ret['changes']['launch_config']['deleted'] = asg['launch_config_name']
+                else:
+                    ret['result'] = False
+                    ret['comment'] = ' '.join([ret['comment'], 'Failed to delete launch configuration.'])
             ret['changes']['old'] = asg
             ret['changes']['new'] = None
             ret['comment'] = 'Deleted autoscale group.'

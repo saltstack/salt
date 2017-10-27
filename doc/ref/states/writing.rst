@@ -151,6 +151,14 @@ A State Module must return a dict containing the following keys/values:
 
 - **comment:** A string containing a summary of the result.
 
+The return data can also, include the **pchanges** key, this stands for
+`predictive changes`. The **pchanges** key informs the State system what
+changes are predicted to occur.
+
+.. note::
+
+    States should not return data which cannot be serialized such as frozensets.
+
 Test State
 ==========
 
@@ -261,6 +269,20 @@ logs. The following code snippet demonstrates writing log messages:
     log.error('It Is Busted')
 
 
+Strings and Unicode
+===================
+
+A state module author should always assume that strings fed to the module
+have already decoded from strings into Unicode. In Python 2, these will
+be of type 'Unicode' and in Python 3 they will be of type ``str``. Calling
+from a state to other Salt sub-systems, such as execution modules should
+pass Unicode (or bytes if passing binary data). In the rare event that a state needs to write directly
+to disk, Unicode should be encoded to a string immediately before writing
+to disk. An author may use ``__salt_system_encoding__`` to learn what the
+encoding type of the system is. For example,
+`'my_string'.encode(__salt_system_encoding__')`.
+
+
 Full State Module Example
 =========================
 
@@ -313,7 +335,13 @@ Example state module
         bar : True
             An argument with a default value
         '''
-        ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+        ret = {
+            'name': name,
+            'changes': {},
+            'result': False,
+            'comment': '',
+            'pchanges': {},
+            }
 
         # Start with basic error-checking. Do all the passed parameters make sense
         # and agree with each-other?
@@ -333,7 +361,7 @@ Example state module
         # in ``test=true`` mode.
         if __opts__['test'] == True:
             ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
-            ret['changes'] = {
+            ret['pchanges'] = {
                 'old': current_state,
                 'new': 'Description, diff, whatever of the new state',
             }

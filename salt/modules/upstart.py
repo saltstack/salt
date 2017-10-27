@@ -72,7 +72,7 @@ def __virtual__():
     '''
     # Disable on these platforms, specific service modules exist:
     if salt.utils.systemd.booted(__context__):
-        return False
+        return (False, 'The upstart execution module failed to load: this system was booted with systemd.')
     elif __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS', 'Mint'):
         return __virtualname__
     elif __grains__['os'] in ('Debian', 'Raspbian'):
@@ -81,7 +81,8 @@ def __virtual__():
             initctl_version = salt.modules.cmdmod._run_quiet(debian_initctl + ' version')
             if 'upstart' in initctl_version:
                 return __virtualname__
-    return False
+    return (False, 'The upstart execution module failed to load: '
+        ' the system must be Ubuntu-based, or Debian-based with upstart support.')
 
 
 def _find_utmp():

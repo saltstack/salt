@@ -25,7 +25,6 @@ servers quickly through a simple and manageable interface.
 
 Simplicity
 ==========
-
 Providing versatility between massive scale deployments and smaller systems may seem
 daunting, but Salt is very simple to set up and maintain, regardless of the
 size of the project. The architecture of Salt is designed to work with any
@@ -37,7 +36,6 @@ modification, Salt can be fine tuned to meet specific needs.
 
 Parallel execution
 ==================
-
 The core functions of Salt:
 
 * enable commands to remote systems to be called in parallel rather than serially
@@ -49,9 +47,8 @@ Salt also introduces more granular controls to the realm of remote
 execution, allowing systems to be targeted not just by hostname, but
 also by system properties.
 
-Building on proven technology
-=============================
-
+Builds on proven technology
+===========================
 Salt takes advantage of a number of technologies and techniques. The
 networking layer is built with the excellent `ZeroMQ`_ networking
 library, so the Salt daemon includes a viable and transparent AMQ
@@ -67,7 +64,6 @@ network traffic.
 
 Python client interface
 =======================
-
 In order to allow for simple expansion, Salt execution routines can be written
 as plain Python modules. The data collected from Salt executions can be sent
 back to the master server, or to any arbitrary program. Salt can be called from
@@ -77,7 +73,6 @@ application.
 
 Fast, flexible, scalable
 ========================
-
 The result is a system that can execute commands at high speed on
 target server groups ranging from one to very many servers. Salt is
 very fast, easy to set up, amazingly malleable and provides a single
@@ -89,7 +84,6 @@ versatile as it is practical, suitable for any network.
 
 Open
 ====
-
 Salt is developed under the `Apache 2.0 license`_, and can be used for
 open and proprietary projects. Please submit your expansions back to
 the Salt project so that we can all benefit together as Salt grows.
@@ -114,37 +108,29 @@ Join the `salt-users mailing list`_. It is the best place to ask questions
 about Salt and see whats going on with Salt development! The Salt mailing list
 is hosted by Google Groups. It is open to new members.
 
-https://groups.google.com/forum/#!forum/salt-users
-
 .. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
-There is also a low-traffic list used to announce new releases
-called `salt-announce`_
-
-https://groups.google.com/forum/#!forum/salt-announce
-
-.. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 
 IRC
 ===
 
-The ``#salt`` IRC channel is hosted on the popular `Freenode`__ network. You
-can use the `Freenode webchat client`__ right from your browser.
+The ``#salt`` IRC channel is hosted on the popular `Freenode`_ network. You
+can use the `Freenode webchat client`_ right from your browser.
 
-`Logs of the IRC channel activity`__ are being collected courtesy of Moritz Lenz.
+`Logs of the IRC channel activity`_ are being collected courtesy of Moritz Lenz.
 
-.. __: http://freenode.net/irc_servers.shtml
-.. __: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
-.. __: http://irclog.perlgeek.de/salt/
+.. _Freenode:: http://freenode.net/irc_servers.shtml
+.. _Freenode webchat client:: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
+.. _Logs of the IRC channel activity:: http://irclog.perlgeek.de/salt/
 
 If you wish to discuss the development of Salt itself join us in
 ``#salt-devel``.
 
 
-Follow on GitHub
+Follow on Github
 ================
 
-The Salt code is developed via GitHub. Follow Salt for constant updates on what
+The Salt code is developed via Github. Follow Salt for constant updates on what
 is happening in Salt development:
 
 |saltrepo|
@@ -159,15 +145,10 @@ http://www.saltstack.com/blog/
 
 .. _`blog`: http://www.saltstack.com/blog/
 
-Thomas Hatch also shares news and thoughts on Salt and related projects in his personal blog `The Red45`_:
-
-http://red45.wordpress.com/
-
-.. _`The Red45`: http://red45.wordpress.com/
-
 
 Example Salt States
 ===================
+
 The official ``salt-states`` repository is:
 https://github.com/saltstack/salt-states
 
@@ -175,6 +156,7 @@ A few examples of salt states from the community:
 
 * https://github.com/blast-hardcheese/blast-salt-states
 * https://github.com/kevingranade/kevingranade-salt-state
+* https://github.com/uggedal/states
 * https://github.com/mattmcclean/salt-openstack/tree/master/salt
 * https://github.com/rentalita/ubuntu-setup/
 * https://github.com/brutasse/states
@@ -201,8 +183,8 @@ Hack the Source
 ===============
 
 If you want to get involved with the development of source code or the
-documentation efforts, please review the :doc:`hacking section
-<development/hacking>`!
-
+documentation efforts, please review the :ref:`contributing documentation
+<contributing>`!
 
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
+

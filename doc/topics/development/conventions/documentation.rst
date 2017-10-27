@@ -139,7 +139,7 @@ For changes to a function:
         '''
         Upper-case the given value
 
-        .. versionchanged:: Boron
+        .. versionchanged:: 2016.3.0
             Added a flag to also strip whitespace from the string.
 
         <...snip...>

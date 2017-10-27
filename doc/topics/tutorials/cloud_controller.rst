@@ -1,3 +1,5 @@
+.. _cloud-controller:
+
 ==========================
 Salt as a Cloud Controller
 ==========================
@@ -7,13 +9,17 @@ private cloud vms to be managed directly with Salt. This system is generally
 referred to as :strong:`Salt Virt`.
 
 The Salt Virt system already exists and is installed within Salt itself, this
-means that beside setting up Salt, no additional salt code needs to be
+means that besides setting up Salt, no additional salt code needs to be
 deployed.
 
+.. note::
+
+    The ``libvirt`` python module and the ``certtool`` binary are required.
+
 The main goal of Salt Virt is to facilitate a very fast and simple cloud. The
-cloud that can scale and fully featured. Salt Virt comes with the
+cloud that can scale and is fully featured. Salt Virt comes with the
 ability to set up and manage complex virtual machine networking, powerful
-image, and disk management, as well as virtual machine migration with and without
+image and disk management, as well as virtual machine migration with and without
 shared storage.
 
 This means that Salt Virt can be used to create a cloud from a blade center
@@ -59,7 +65,7 @@ to set up the libvirt pki keys.
         - contents: 'LIBVIRTD_ARGS="--listen"'
         - require:
           - pkg: libvirt
-      libvirt.keys:
+      virt.keys:
         - require:
           - pkg: libvirt
       service.running:
@@ -118,7 +124,7 @@ on the hypervisor and is bridged to an active network device.
     To use more advanced networking in Salt Virt, read the `Salt Virt
     Networking` document:
 
-    :doc:`Salt Virt Networking </topics/virt/nic>`
+    :ref:`Salt Virt Networking <vm-nic-profiles>`
 
 Libvirt State
 -------------
@@ -139,7 +145,7 @@ date:
 .. code-block:: yaml
 
     libvirt_keys:
-      libvirt.keys
+      virt.keys
 
 Getting Virtual Machine Images Ready
 ====================================
@@ -153,6 +159,9 @@ the installer, but this process is not recommended since it is very manual and
 prone to errors.
 
 Virtual Machine generation applications are available for many platforms:
+
+kiwi: (openSUSE, SLES, RHEL, CentOS)
+  https://suse.github.io/kiwi/
 
 vm-builder:
   https://wiki.debian.org/VMBuilder
@@ -184,6 +193,18 @@ Fedora Linux
 
 Images for Fedora Linux can be found here:
 http://fedoraproject.org/en/get-fedora#clouds
+
+openSUSE
+~~~~~~~~
+
+http://download.opensuse.org/repositories/openSUSE:/Leap:/42.1:/Images/images
+
+(look for JeOS-for-kvm-and-xen variant)
+
+SUSE
+~~~~
+
+https://www.suse.com/products/server/jeos
 
 Ubuntu Linux
 ~~~~~~~~~~~~
@@ -262,7 +283,7 @@ opened on hypervisors:
 
     More in-depth information regarding distribution specific firewall settings can read in:
 
-    :doc:`Opening the Firewall up for Salt </topics/tutorials/firewall>`
+    :ref:`Opening the Firewall up for Salt <firewall>`
 
 Salt also needs an additional flag to be turned on as well. The ``virt.tunnel``
 option needs to be turned on. This flag tells Salt to run migrations securely

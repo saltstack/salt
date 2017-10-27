@@ -28,6 +28,12 @@ STUB_CRON_TIMESTAMP = {'minute': '1',
 
 STUB_SIMPLE_RAW_CRON = '5 0 * * * /tmp/no_script.sh'
 STUB_SIMPLE_CRON_DICT = {'pre': ['5 0 * * * /tmp/no_script.sh'], 'crons': [], 'env': [], 'special': []}
+STUB_CRON_SPACES = """
+# Lines below here are managed by Salt, do not edit
+TEST_VAR="a string with plenty of spaces"
+# SALT_CRON_IDENTIFIER:echo "must  be  double  spaced"
+11 * * * * echo "must  be  double  spaced"
+"""
 
 __grains__ = {}
 L = '# Lines below here are managed by Salt, do not edit\n'
@@ -161,7 +167,7 @@ class CronTestCase(TestCase):
             'salt.modules.cron.raw_cron',
             new=MagicMock(side_effect=get_crontab)
         ):
-            set_crontab(L + '* * * * * ls\n')
+            set_crontab(L + '* * * * * ls\n\n')
             cron.set_job(
                 user='root',
                 minute='*',
@@ -179,6 +185,7 @@ class CronTestCase(TestCase):
                 c1,
                 '# Lines below here are managed by Salt, do not edit\n'
                 '* * * * * ls\n'
+                '\n'
             )
             cron.set_job(
                 user='root',
@@ -297,50 +304,50 @@ class CronTestCase(TestCase):
                 'crons': [
                     {'cmd': 'ls', 'comment': 'uoo', 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
-                     'minute': '*', 'month': '*'},
+                     'minute': '*', 'month': '*', 'commented': False},
                     {'cmd': 'too', 'comment': 'uuoo', 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
-                     'minute': '*', 'month': '*'},
+                     'minute': '*', 'month': '*', 'commented': False},
                     {'cmd': 'zoo', 'comment': 'uuuoo', 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
-                     'minute': '*', 'month': '*'},
+                     'minute': '*', 'month': '*', 'commented': False},
                     {'cmd': 'yoo', 'comment': '', 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
-                     'minute': '*', 'month': '*'},
+                     'minute': '*', 'month': '*', 'commented': False},
                     {'cmd': 'xoo', 'comment': '', 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
-                     'minute': '*', 'month': '*'},
+                     'minute': '*', 'month': '*', 'commented': False},
                     {'cmd': 'samecmd', 'comment': '', 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
-                     'minute': '*', 'month': '*'},
+                     'minute': '*', 'month': '*', 'commented': False},
                     {'cmd': 'samecmd', 'comment': None, 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': None,
-                     'minute': '*', 'month': '*'},
+                     'minute': '*', 'month': '*', 'commented': False},
                     {'cmd': 'otheridcmd', 'comment': None, 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': None,
-                     'minute': '*', 'month': '*'},
+                     'minute': '*', 'month': '*', 'commented': False},
                     {'cmd': 'otheridcmd', 'comment': None, 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': None,
-                     'minute': '*', 'month': '*'},
+                     'minute': '*', 'month': '*', 'commented': False},
                     {'cmd': 'samecmd1', 'comment': '', 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': 'NO ID SET',
-                     'minute': '0', 'month': '*'},
+                     'minute': '0', 'month': '*', 'commented': False},
                     {'cmd': 'samecmd1', 'comment': None, 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': None,
-                     'minute': '1', 'month': '*'},
+                     'minute': '1', 'month': '*', 'commented': False},
                     {'cmd': 'otheridcmd1', 'comment': None, 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': None,
-                     'minute': '0', 'month': '*'},
+                     'minute': '0', 'month': '*', 'commented': False},
                     {'cmd': 'otheridcmd1', 'comment': None, 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': None,
-                     'minute': '1', 'month': '*'},
+                     'minute': '1', 'month': '*', 'commented': False},
                     {'cmd': 'otheridcmd1', 'comment': '', 'daymonth': '*',
                      'dayweek': '*', 'hour': '*', 'identifier': '1',
-                     'minute': '0', 'month': '*'},
+                     'minute': '0', 'month': '*', 'commented': False},
                     {'cmd': 'otheridcmd1',
                      'comment': '', 'daymonth': '*', 'dayweek': '*',
                      'hour': '*', 'identifier': '2', 'minute': '0',
-                     'month': '*'}
+                     'month': '*', 'commented': False}
                 ],
                 'env': [],
                 'pre': [],
@@ -480,14 +487,82 @@ class CronTestCase(TestCase):
                     get_crontab(),
                     inc_tests[idx], (
                         "idx {0}\n'{1}'\n != \n'{2}'\n\n\n"
-                        "{1!r} != {2!r}"
+                        "\'{1}\' != \'{2}\'"
                     ).format(
                         idx, get_crontab(), inc_tests[idx]))
+
+    @patch('salt.modules.cron._write_cron_lines',
+           new=MagicMock(side_effect=write_crontab))
+    def test_list_tab_commented_cron_jobs(self):
+        '''
+        handle commented cron jobs
+        https://github.com/saltstack/salt/issues/29082
+        '''
+        self.maxDiff = None
+        with patch(
+            'salt.modules.cron.raw_cron',
+            new=MagicMock(side_effect=get_crontab)
+        ):
+            set_crontab(
+                '# An unmanaged commented cron job\n'
+                '#0 * * * * /bin/true\n'
+                '# Lines below here are managed by Salt, do not edit\n'
+                '# cron_1 SALT_CRON_IDENTIFIER:cron_1\n#DISABLED#0 * * * * my_cmd_1\n'
+                '# cron_2 SALT_CRON_IDENTIFIER:cron_2\n#DISABLED#* * * * * my_cmd_2\n'
+                '# cron_3 SALT_CRON_IDENTIFIER:cron_3\n'
+                '#DISABLED#but it is a comment line'
+                '#DISABLED#0 * * * * my_cmd_3\n'
+                '# cron_4 SALT_CRON_IDENTIFIER:cron_4\n0 * * * * my_cmd_4\n'
+            )
+            crons1 = cron.list_tab('root')
+            self.assertEqual(crons1, {
+                'crons': [
+                    {'cmd': 'my_cmd_1', 'comment': 'cron_1', 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': 'cron_1',
+                     'minute': '0', 'month': '*', 'commented': True},
+                    {'cmd': 'my_cmd_2', 'comment': 'cron_2', 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': 'cron_2',
+                     'minute': '*', 'month': '*', 'commented': True},
+                    {'cmd': 'line#DISABLED#0 * * * * my_cmd_3',
+                     'comment': 'cron_3', 'daymonth': 'is',
+                     'dayweek': 'comment', 'hour': 'it', 'identifier': 'cron_3',
+                     'minute': 'but', 'month': 'a', 'commented': True},
+                    {'cmd': 'my_cmd_4', 'comment': 'cron_4', 'daymonth': '*',
+                     'dayweek': '*', 'hour': '*', 'identifier': 'cron_4',
+                     'minute': '0', 'month': '*', 'commented': False},
+                ],
+                'env': [],
+                'pre': ['# An unmanaged commented cron job', '#0 * * * * /bin/true'],
+                'special': []})
+
+    @patch('salt.modules.cron.raw_cron', new=MagicMock(return_value=STUB_CRON_SPACES))
+    def test_cron_extra_spaces(self):
+        '''
+        Issue #38449
+        '''
+        self.maxDiff = None
+        with patch.dict(cron.__grains__, {'os': None}):
+            ret = cron.list_tab('root')
+            eret = {'crons': [{'cmd': 'echo "must  be  double  spaced"',
+                               'comment': '',
+                               'commented': False,
+                               'daymonth': '*',
+                               'dayweek': '*',
+                               'hour': '*',
+                               'identifier': 'echo "must  be  double  spaced"',
+                               'minute': '11',
+                               'month': '*'}],
+                    'env': [{'name': 'TEST_VAR', 'value': '"a string with plenty of spaces"'}],
+                    'pre': [''],
+                    'special': []}
+            self.assertEqual(eret, ret)
 
     @patch('salt.modules.cron.raw_cron',
            new=MagicMock(side_effect=[
                (L + '\n'),
                (L + '* * * * * ls\nn'),
+               (L + '# commented\n'
+                '#DISABLED#* * * * * ls\n'),
                (L + '# foo\n'
                 '* * * * * ls\n'),
                (L + '# foo {0}:blah\n'.format(
@@ -501,12 +576,14 @@ class CronTestCase(TestCase):
             crons2 = cron.list_tab('root')
             crons3 = cron.list_tab('root')
             crons4 = cron.list_tab('root')
+            crons5 = cron.list_tab('root')
             self.assertEqual(
                 crons1,
                 {'pre': [], 'crons': [], 'env': [], 'special': []})
             self.assertEqual(
                 crons2['crons'][0],
                 {'comment': None,
+                 'commented': False,
                  'dayweek': '*',
                  'hour': '*',
                  'identifier': None,
@@ -516,7 +593,8 @@ class CronTestCase(TestCase):
                  'month': '*'})
             self.assertEqual(
                 crons3['crons'][0],
-                {'comment': 'foo',
+                {'comment': 'commented',
+                 'commented': True,
                  'dayweek': '*',
                  'hour': '*',
                  'identifier': None,
@@ -527,6 +605,18 @@ class CronTestCase(TestCase):
             self.assertEqual(
                 crons4['crons'][0],
                 {'comment': 'foo',
+                 'commented': False,
+                 'dayweek': '*',
+                 'hour': '*',
+                 'identifier': None,
+                 'cmd': 'ls',
+                 'daymonth': '*',
+                 'minute': '*',
+                 'month': '*'})
+            self.assertEqual(
+                crons5['crons'][0],
+                {'comment': 'foo',
+                 'commented': False,
                  'dayweek': '*',
                  'hour': '*',
                  'identifier': 'blah',

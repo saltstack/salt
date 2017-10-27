@@ -1,14 +1,16 @@
-.. _all-salt_modules:
+.. _all-salt.modules:
 
-======================================
-Full list of builtin execution modules
-======================================
+=================
+execution modules
+=================
 
 .. admonition:: Virtual modules
 
     .. toctree::
 
+        salt.modules.group
         salt.modules.pkg
+        salt.modules.user
 
 .. currentmodule:: salt.modules
 
@@ -16,9 +18,12 @@ Full list of builtin execution modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    acme
     aliases
     alternatives
     apache
+    apcups
+    apf
     aptpkg
     archive
     artifactory
@@ -26,36 +31,49 @@ Full list of builtin execution modules
     augeas_cfg
     aws_sqs
     bamboohr
+    bcache
     beacons
     bigip
     blockdev
     bluez
+    boto_apigateway
     boto_asg
     boto_cfn
+    boto_cloudtrail
     boto_cloudwatch
+    boto_cloudwatch_event
+    boto_cognitoidentity
+    boto_datapipeline
     boto_dynamodb
     boto_ec2
     boto_elasticache
+    boto_elasticsearch_domain
     boto_elb
     boto_iam
+    boto_iot
     boto_kms
+    boto_lambda
     boto_rds
     boto_route53
+    boto_s3_bucket
     boto_secgroup
     boto_sns
     boto_sqs
     boto_vpc
     bower
-    brew
     bridge
     bsd_shadow
     btrfs
     cabal
     cassandra
     cassandra_cql
+    celery
+    ceph
     chassis
     chef
     chocolatey
+    chronos
+    cisconso
     cloud
     cmdmod
     composer
@@ -65,10 +83,10 @@ Full list of builtin execution modules
     cp
     cpan
     cron
+    csf
     cyg
+    cytest
     daemontools
-    darwin_pkgutil
-    darwin_sysctl
     data
     ddns
     deb_apache
@@ -84,6 +102,7 @@ Full list of builtin execution modules
     djangomod
     dnsmasq
     dnsutil
+    dockercompose
     dockerio
     dockerng
     dpkg
@@ -97,6 +116,7 @@ Full list of builtin execution modules
     eselect
     esxi
     etcd_mod
+    ethtool
     event
     extfs
     file
@@ -112,12 +132,12 @@ Full list of builtin execution modules
     gentoo_service
     gentoolkitmod
     git
+    github
     glance
     glusterfs
     gnomedesktop
     gpg
     grains
-    group
     groupadd
     grub_legacy
     guestfs
@@ -134,15 +154,29 @@ Full list of builtin execution modules
     img
     incron
     influx
+    influx08
+    infoblox
     ini_manage
     inspectlib
+    inspectlib.collector
+    inspectlib.dbhandle
+    inspectlib.entities
+    inspectlib.exceptions
+    inspectlib.fsdb
+    inspectlib.kiwiproc
+    inspectlib.query
+    inspector
     introspect
     ipmi
     ipset
     iptables
+    iwtools
     jboss7
     jboss7_cli
+    jenkins
     junos
+    k8s
+    kapacitor
     kerberos
     key
     keyboard
@@ -150,8 +184,10 @@ Full list of builtin execution modules
     kmod
     launchctl
     layman
+    ldap3
     ldapmod
     linux_acl
+    linux_ip
     linux_lvm
     linux_sysctl
     localemod
@@ -160,14 +196,32 @@ Full list of builtin execution modules
     logrotate
     lvs
     lxc
+    mac_assistive
+    mac_brew
+    mac_defaults
+    mac_desktop
     mac_group
+    mac_keychain
+    mac_package
+    mac_pkgutil
+    mac_ports
+    mac_power
+    mac_service
+    mac_shadow
+    mac_softwareupdate
+    mac_sysctl
+    mac_system
+    mac_timezone
     mac_user
-    macports
+    mac_xattr
     makeconf
+    marathon
     match
     mdadm
+    mdata
     memcached
     mine
+    minion
     mod_random
     modjk
     mongodb
@@ -180,6 +234,14 @@ Full list of builtin execution modules
     nacl
     nagios
     nagios_rpc
+    napalm_bgp
+    napalm_network
+    napalm_ntp
+    napalm_probes
+    napalm_route
+    napalm_snmp
+    napalm_users
+    netaddress
     netbsd_sysctl
     netbsdservice
     netscaler
@@ -188,25 +250,30 @@ Full list of builtin execution modules
     nfs3
     nftables
     nginx
-    node
     nova
     npm
     nspawn
+    nxos
     omapi
     openbsd_sysctl
     openbsdpkg
     openbsdrcctl
     openbsdservice
     openstack_config
+    openstack_mng
+    openvswitch
+    opkg
     oracle
     osquery
-    osxdesktop
     pacman
     pagerduty
     pagerduty_util
     pam
+    parallels
     parted
+    pcs
     pecl
+    philips_hue
     pillar
     pip
     pkg_resource
@@ -218,9 +285,11 @@ Full list of builtin execution modules
     postgres
     poudriere
     powerpath
+    proxy
     ps
     publish
     puppet
+    pushbullet
     pushover_notify
     pw_group
     pw_user
@@ -237,7 +306,9 @@ Full list of builtin execution modules
     redismod
     reg
     rest_package
+    rest_sample_utils
     rest_service
+    restartcheck
     ret
     rh_ip
     rh_service
@@ -248,6 +319,8 @@ Full list of builtin execution modules
     runit
     rvm
     s3
+    s6
+    salt_proxy
     saltcloudmod
     saltutil
     schedule
@@ -258,42 +331,50 @@ Full list of builtin execution modules
     sensors
     serverdensity_device
     service
+    servicenow
     shadow
     slack_notify
     slsutil
     smartos_imgadm
+    smartos_nictagadm
     smartos_virt
     smartos_vmadm
     smbios
     smf
     smtp
-    softwareupdate
+    solaris_fmadm
     solaris_group
     solaris_shadow
+    solaris_system
     solaris_user
     solarisips
     solarispkg
     solr
-    splay
+    splunk
     splunk_search
     sqlite3
     ssh
+    ssh_package
+    ssh_service
+    snapper
     state
     status
     stormpath
-    sudo
     supervisord
     svn
     swift
     sysbench
+    sysfs
     syslog_ng
     sysmod
     sysrc
     system
     system_profiler
     systemd
+    telemetry
     temp
     test
+    testinframod
     test_virtual
     timezone
     tls
@@ -304,44 +385,58 @@ Full list of builtin execution modules
     udev
     upstart
     uptime
-    user
     useradd
     uwsgi
     varnish
     vbox_guest
+    vboxmanage
     victorops
     virt
     virtualenv_mod
     vsphere
     win_autoruns
+    win_certutil
     win_dacl
     win_disk
+    win_dism
     win_dns_client
+    win_dsc
     win_file
     win_firewall
     win_groupadd
+    win_iis
     win_ip
+    win_lgpo
+    win_license
     win_network
     win_ntp
     win_path
     win_pkg
+    win_pki
     win_powercfg
+    win_psget
     win_repo
     win_servermanager
     win_service
     win_shadow
+    win_smtp_server
+    win_snmp
     win_status
     win_system
+    win_task
     win_timezone
     win_update
     win_useradd
     win_wua
     x509
     xapi
+    xbpspkg
     xfs
     xmpp
     yumpkg
+    zabbix
     zcbuildout
+    zenoss
     zfs
     zk_concurrency
     znc

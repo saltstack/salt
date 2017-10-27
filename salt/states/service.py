@@ -54,7 +54,7 @@ service, then set the reload value to True:
 .. note::
 
     More details regarding ``watch`` can be found in the
-    :doc:`Requisites </ref/states/requisites>` documentation.
+    :ref:`Requisites <requisites>` documentation.
 
 '''
 
@@ -64,6 +64,7 @@ import time
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
+import salt.utils
 
 __virtualname__ = 'service'
 
@@ -316,7 +317,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ``watch`` can be used with service.running to restart a service when
          another state changes ( example: a file.managed state that creates the
          service's config file ). More details regarding ``watch`` can be found
-         in the :doc:`Requisites </ref/states/requisites>` documentation.
+         in the :ref:`Requisites <requisites>` documentation.
     '''
     ret = {'name': name,
            'changes': {},
@@ -359,6 +360,10 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret['comment'] = 'Service {0} is set to start'.format(name)
         return ret
 
+    if salt.utils.is_windows():
+        if enable is True:
+            ret.update(_enable(name, False, result=False, **kwargs))
+
     func_ret = __salt__['service.start'](name)
 
     if not func_ret:
@@ -374,7 +379,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         time.sleep(init_delay)
 
     # only force a change state if we have explicitly detected them
-    after_toggle_status = __salt__['service.status'](name)
+    after_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:
         after_toggle_enable_status = __salt__['service.enabled'](name)
     else:
@@ -389,6 +394,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret['comment'] = 'Started Service {0}'.format(name)
     else:
         ret['comment'] = 'Service {0} failed to start'.format(name)
+        ret['result'] = False
 
     if enable is True:
         ret.update(_enable(name, after_toggle_status, result=after_toggle_status, **kwargs))
@@ -431,6 +437,9 @@ def dead(name, enable=None, sig=None, **kwargs):
     # Check if the service is available
     try:
         if not _available(name, ret):
+            # A non-available service is OK here, don't let the state fail
+            # because of it.
+            ret['result'] = True
             return ret
     except CommandExecutionError as exc:
         ret['result'] = False

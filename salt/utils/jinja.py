@@ -54,17 +54,8 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
-    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None,
+    def __init__(self, opts, saltenv='base', encoding='utf-8',
                  pillar_rend=False):
-        if env is not None:
-            salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
-            )
-            # Backwards compatibility
-            saltenv = env
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
@@ -72,7 +63,7 @@ class SaltCacheLoader(BaseLoader):
             self.searchpath = opts['file_roots'][saltenv]
         else:
             self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
-        log.debug('Jinja search path: {0!r}'.format(self.searchpath))
+        log.debug('Jinja search path: %s', self.searchpath)
         self._file_client = None
         self.cached = []
         self.pillar_rend = pillar_rend
@@ -116,7 +107,7 @@ class SaltCacheLoader(BaseLoader):
             tpldir = path.dirname(template).replace('\\', '/')
             tpldata = {
                 'tplfile': template,
-                'tpldir': tpldir,
+                'tpldir': '.' if tpldir == '' else tpldir,
                 'tpldot': tpldir.replace('/', '.'),
             }
             environment.globals.update(tpldata)
@@ -163,16 +154,18 @@ class PrintableDict(OrderedDict):
         for key, value in six.iteritems(self):
             if isinstance(value, six.string_types):
                 # keeps quotes around strings
-                output.append('{0!r}: {1!r}'.format(key, value))
+                output.append('{0!r}: {1!r}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
             else:
                 # let default output
-                output.append('{0!r}: {1!s}'.format(key, value))
+                output.append('{0!r}: {1!s}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
         return '{' + ', '.join(output) + '}'
 
     def __repr__(self):  # pylint: disable=W0221
         output = []
         for key, value in six.iteritems(self):
-            output.append('{0!r}: {1!r}'.format(key, value))
+            # Raw string formatter required here because this is a repr
+            # function.
+            output.append('{0!r}: {1!r}'.format(key, value))  # pylint: disable=repr-flag-used-in-string
         return '{' + ', '.join(output) + '}'
 
 
@@ -279,7 +272,7 @@ class SerializerExtension(Extension, object):
 
     **Load tags**
 
-    Salt implements ``import_yaml`` and ``import_json`` tags. They work like
+    Salt implements ``load_yaml`` and ``load_json`` tags. They work like
     the `import tag`_, except that the document is also deserialized.
 
     Syntaxes are ``{% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}``

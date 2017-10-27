@@ -73,9 +73,12 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 
 # Import Python Libs
 from __future__ import absolute_import
+import json
 
 # Import Salt Libs
-from salt.utils import SaltInvocationError
+from salt.utils import SaltInvocationError, exactly_one
+import logging
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -83,6 +86,10 @@ def __virtual__():
     Only load if boto is available.
     '''
     return 'boto_route53' if 'boto_route53.get_record' in __salt__ else False
+
+
+def rr_present(*args, **kwargs):
+    return present(*args, **kwargs)
 
 
 def present(
@@ -106,7 +113,9 @@ def present(
         Name of the record.
 
     value
-        Value of the record.
+        Value of the record.  As a special case, you can pass in:
+            private:<Name tag> to have the function autodetermine the private IP
+            public:<Name tag> to have the function autodetermine the public IP
 
     zone
         The zone to create the record in.
@@ -149,12 +158,45 @@ def present(
     # So it will work with subsequent boto module calls and string functions
     if isinstance(value, list):
         value = ','.join(value)
+    elif value.startswith('private:') or value.startswith('public:'):
+        name_tag = value.split(':', 1)[1]
+        in_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+        r = __salt__['boto_ec2.find_instances'](name=name_tag,
+                                                return_objs=True,
+                                                in_states=in_states,
+                                                profile=profile)
+        if len(r) < 1:
+            msg = 'Error: instance with Name tag {0} not found'.format(name_tag)
+            ret['comment'] = msg
+            ret['result'] = False
+            return ret
+        if len(r) > 1:
+            msg = 'Error: Name tag {0} matched more than one instance'
+            ret['comment'] = msg.format(name_tag)
+            ret['result'] = False
+            return ret
+        instance = r[0]
+        private_ip = getattr(instance, 'private_ip_address', None)
+        public_ip = getattr(instance, 'ip_address', None)
+        if value.startswith('private:'):
+            value = private_ip
+            log.info('Found private IP {0} for instance {1}'.format(private_ip,
+                                                                    name_tag))
+        else:
+            if public_ip is None:
+                msg = 'Error: No Public IP assigned to instance with Name {0}'
+                ret['comment'] = msg.format(name_tag)
+                ret['result'] = False
+                return ret
+            value = public_ip
+            log.info('Found public IP {0} for instance {1}'.format(public_ip,
+                                                                    name_tag))
 
     try:
         record = __salt__['boto_route53.get_record'](name, zone, record_type,
                                                      False, region, key, keyid,
                                                      profile, split_dns,
-                                                     private_zone)
+                                                     private_zone, identifier)
     except SaltInvocationError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         ret['result'] = False
@@ -175,7 +217,8 @@ def present(
             ret['changes']['new'] = {'name': name,
                                      'value': value,
                                      'record_type': record_type,
-                                     'ttl': ttl}
+                                     'ttl': ttl,
+                                     'identifier': identifier}
             ret['comment'] = 'Added {0} Route53 record.'.format(name)
         else:
             ret['result'] = False
@@ -217,7 +260,8 @@ def present(
                 ret['changes']['new'] = {'name': name,
                                          'value': value,
                                          'record_type': record_type,
-                                         'ttl': ttl}
+                                         'ttl': ttl,
+                                         'identifier': identifier}
                 ret['comment'] = 'Updated {0} Route53 record.'.format(name)
             else:
                 ret['result'] = False
@@ -226,6 +270,10 @@ def present(
         else:
             ret['comment'] = '{0} exists.'.format(name)
     return ret
+
+
+def rr_absent(*args, **kwargs):
+    return absent(*args, **kwargs)
 
 
 def absent(
@@ -283,7 +331,7 @@ def absent(
     record = __salt__['boto_route53.get_record'](name, zone, record_type,
                                                  False, region, key, keyid,
                                                  profile, split_dns,
-                                                 private_zone)
+                                                 private_zone, identifier)
     if record:
         if __opts__['test']:
             msg = 'Route53 record {0} set to be deleted.'.format(name)
@@ -308,4 +356,186 @@ def absent(
             ret['comment'] = msg
     else:
         ret['comment'] = '{0} does not exist.'.format(name)
+    return ret
+
+
+def hosted_zone_present(name, domain_name=None, private_zone=False, comment='',
+                        vpc_id=None, vpc_name=None, vpc_region=None,
+                        region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure a hosted zone exists with the given attributes.  Note that most
+    things cannot be modified once a zone is created - it must be deleted and
+    re-spun to update these attributes:
+        - private_zone (AWS API limitation).
+        - comment (the appropriate call exists in the AWS API and in boto3, but
+                   has not, as of this writing, been added to boto2).
+        - vpc_id (same story - we really need to rewrite this module with boto3)
+        - vpc_name (really just a pointer to vpc_id anyway).
+        - vpc_region (again, supported in boto3 but not boto2).
+
+    name
+        The name of the state definition.  This will be used as the 'caller_ref'
+        param if/when creating the hosted zone.
+
+    domain_name
+        The name of the domain. This should be a fully-specified domain, and
+        should terminate with a period. This is the name you have registered
+        with your DNS registrar. It is also the name you will delegate from your
+        registrar to the Amazon Route 53 delegation servers returned in response
+        to this request.  Defaults to the value of name if not provided.
+
+    comment
+        Any comments you want to include about the hosted zone.
+
+    private_zone
+        Set True if creating a private hosted zone.
+
+    vpc_id
+        When creating a private hosted zone, either the VPC ID or VPC Name to
+        associate with is required.  Exclusive with vpe_name.  Ignored if passed
+        for a non-private zone.
+
+    vpc_name
+        When creating a private hosted zone, either the VPC ID or VPC Name to
+        associate with is required.  Exclusive with vpe_id.  Ignored if passed
+        for a non-private zone.
+
+    vpc_region
+        When creating a private hosted zone, the region of the associated VPC is
+        required.  If not provided, an effort will be made to determine it from
+        vpc_id or vpc_name, if possible.  If this fails, you'll need to provide
+        an explicit value for this option.  Ignored if passed for a non-private
+        zone.
+    '''
+    domain_name = domain_name if domain_name else name
+
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    # First translaste vpc_name into a vpc_id if possible
+    if private_zone:
+        if not exactly_one((vpc_name, vpc_id)):
+            raise SaltInvocationError('Either vpc_name or vpc_id is required '
+                                      'when creating a private zone.')
+        vpcs = __salt__['boto_vpc.describe_vpcs'](
+                vpc_id=vpc_id, name=vpc_name, region=region, key=key,
+                keyid=keyid, profile=profile).get('vpcs', [])
+        if vpc_region and vpcs:
+            vpcs = [v for v in vpcs if v['region'] == vpc_region]
+        if not vpcs:
+            msg = ('Private zone requested but a VPC matching given criteria '
+                    'not found.')
+            log.error(msg)
+            ret['result'] = False
+            ret['comment'] = msg
+            return ret
+        if len(vpcs) > 1:
+            msg = ('Private zone requested but multiple VPCs matching given '
+                   'criteria found: {0}.'.format([v['id'] for v in vpcs]))
+            log.error(msg)
+            return None
+        vpc = vpcs[0]
+        if vpc_name:
+            vpc_id = vpc['id']
+        if not vpc_region:
+            vpc_region = vpc['region']
+
+    # Next, see if it (or they) exist at all, anywhere?
+    deets = __salt__['boto_route53.describe_hosted_zones'](
+          domain_name=domain_name, region=region, key=key, keyid=keyid,
+          profile=profile)
+
+    create = False
+    if not deets:
+        create = True
+    else:  # Something exists - now does it match our criteria?
+        if (json.loads(deets['HostedZone']['Config']['PrivateZone']) !=
+                private_zone):
+            create = True
+        else:
+            if private_zone:
+                for v, d in deets.get('VPCs', {}).items():
+                    if (d['VPCId'] == vpc_id
+                            and d['VPCRegion'] == vpc_region):
+                        create = False
+                        break
+                    else:
+                        create = True
+        if not create:
+            ret['comment'] = 'Hostd Zone {0} already in desired state'.format(
+                    domain_name)
+        else:
+            # Until we get modifies in place with boto3, the best option is to
+            # attempt creation and let route53 tell us if we're stepping on
+            # toes.  We can't just fail, because some scenarios (think split
+            # horizon DNS) require zones with identical names but different
+            # settings...
+            log.info('A Hosted Zone with name {0} already exists, but with '
+                     'different settings.  Will attempt to create the one '
+                     'requested on the assumption this is what is desired.  '
+                     'This may fail...'.format(domain_name))
+
+    if create:
+        if __opts__['test']:
+            ret['comment'] = 'Route53 Hosted Zone {0} set to be added.'.format(
+                    domain_name)
+            ret['result'] = None
+            return ret
+        res = __salt__['boto_route53.create_hosted_zone'](domain_name=domain_name,
+                caller_ref=name, comment=comment, private_zone=private_zone,
+                vpc_id=vpc_id, vpc_region=vpc_region, region=region, key=key,
+                keyid=keyid, profile=profile)
+        if res:
+            msg = 'Hosted Zone {0} successfully created'.format(domain_name)
+            log.info(msg)
+            ret['comment'] = msg
+            ret['changes']['old'] = None
+            ret['changes']['new'] = res
+        else:
+            ret['comment'] = 'Creating Hosted Zone {0} failed'.format(
+                    domain_name)
+            ret['result'] = False
+
+    return ret
+
+
+def hosted_zone_absent(name, domain_name=None, region=None, key=None,
+                       keyid=None, profile=None):
+    '''
+    Ensure the Route53 Hostes Zone described is absent
+
+    name
+        The name of the state definition.
+
+    domain_name
+        The FQDN (including final period) of the zone you wish absent.  If not
+        provided, the value of name will be used.
+
+    '''
+    domain_name = domain_name if domain_name else name
+
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    deets = __salt__['boto_route53.describe_hosted_zones'](
+          domain_name=domain_name, region=region, key=key, keyid=keyid,
+          profile=profile)
+    if not deets:
+        ret['comment'] = 'Hosted Zone {0} already absent'.format(domain_name)
+        log.info(ret['comment'])
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Route53 Hosted Zone {0} set to be deleted.'.format(
+                domain_name)
+        ret['result'] = None
+        return ret
+    # Not entirely comfortable with this - no safety checks around pub/priv, VPCs
+    # or anything else.  But this is all the module function exposes, so hmph.
+    # Inclined to put it on the "wait 'til we port to boto3" pile in any case :)
+    if __salt__['boto_route53.delete_zone'](
+            zone=domain_name, region=region, key=key, keyid=keyid,
+            profile=profile):
+        ret['comment'] = 'Route53 Hosted Zone {0} deleted'.format(domain_name)
+        log.info(ret['comment'])
+        ret['changes']['old'] = deets
+        ret['changes']['new'] = None
+
     return ret

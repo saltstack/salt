@@ -22,6 +22,23 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 TEMPFILE_PREFIX = '__salt.tmp.'
+REMOTE_PROTOS = ('http', 'https', 'ftp', 'swift', 's3')
+VALID_PROTOS = ('salt', 'file') + REMOTE_PROTOS
+
+
+def guess_archive_type(name):
+    '''
+    Guess an archive type (tar, zip, or rar) by its file extension
+    '''
+    name = name.lower()
+    for ending in ('tar', 'tar.gz', 'tar.bz2', 'tar.xz', 'tgz', 'tbz2', 'txz',
+                   'tar.lzma', 'tlz'):
+        if name.endswith('.' + ending):
+            return 'tar'
+    for ending in ('zip', 'rar'):
+        if name.endswith('.' + ending):
+            return ending
+    return None
 
 
 def recursive_copy(source, dest):
@@ -217,3 +234,19 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         if obtained_lock:
             os.remove(lock_fn)
             log.trace('Write lock for %s (%s) released', path, lock_fn)
+
+
+@contextlib.contextmanager
+def set_umask(mask):
+    '''
+    Temporarily set the umask and restore once the contextmanager exits
+    '''
+    if salt.utils.is_windows():
+        # Don't attempt on Windows
+        yield
+    else:
+        try:
+            orig_mask = os.umask(mask)
+            yield
+        finally:
+            os.umask(orig_mask)

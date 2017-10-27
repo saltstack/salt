@@ -28,7 +28,9 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres.user_exists' in __salt__
+    if 'postgres.user_exists' not in __salt__:
+        return (False, 'Unable to load postgres module.  Make sure `postgres.bins_dir` is set.')
+    return True
 
 
 def present(name,
@@ -41,6 +43,7 @@ def present(name,
             inherit=None,
             login=None,
             password=None,
+            default_password=None,
             refresh_password=None,
             groups=None,
             user=None,
@@ -92,6 +95,11 @@ def present(name,
         encrypted to the previous
         format if it is not already done.
 
+    default_passwoord
+        The password used only when creating the user, unless password is set.
+
+        .. versionadded:: 2016.3.0
+
     refresh_password
         Password refresh flag
 
@@ -138,6 +146,11 @@ def present(name,
     password = postgres._maybe_encrypt_password(name,
                                                 password,
                                                 encrypted=encrypted)
+
+    if default_password is not None:
+        default_password = postgres._maybe_encrypt_password(name,
+                                                            default_password,
+                                                            encrypted=encrypted)
 
     db_args = {
         'maintenance_db': maintenance_db,
@@ -194,6 +207,9 @@ def present(name,
                 missing_groups = [a for a in lgroups if a not in user_groups]
                 if missing_groups:
                     update['groups'] = missing_groups
+
+    if mode == 'create' and password is None:
+        password = default_password
 
     if mode == 'create' or (mode == 'update' and update):
         if __opts__['test']:

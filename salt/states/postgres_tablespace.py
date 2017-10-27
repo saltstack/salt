@@ -30,7 +30,9 @@ def __virtual__():
     '''
     Only load if the postgres module is present and is new enough (has ts funcs)
     '''
-    return 'postgres.tablespace_exists' in __salt__
+    if 'postgres.tablespace_exists' not in __salt__:
+        return (False, 'Unable to load postgres module.  Make sure `postgres.bins_dir` is set.')
+    return True
 
 
 def present(name,

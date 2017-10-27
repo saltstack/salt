@@ -9,6 +9,7 @@ Module for managing Windows Updates using the Windows Update Agent.
         - pythoncom
 """
 from __future__ import absolute_import
+from __future__ import unicode_literals
 
 # Import Python libs
 import logging
@@ -38,7 +39,7 @@ def __virtual__():
     """
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return True
-    return False
+    return (False, "Module win_wua: module has failed dependencies or is not on Windows client")
 
 
 def _wua_search(skip_hidden=True,
@@ -637,20 +638,20 @@ def download_updates(guid=None):
         ret['Updates'][update.Identity.UpdateID]['Title'] = update.Title
         if update.IsInstalled:
             log.debug('Already Installed: {0}'.format(update.Identity.UpdateID))
-            log.debug('\tTitle: {0}'.format(update.Title))
+            log.debug(u'\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyInstalled'] = True
         # Make sure the EULA has been accepted
         if not update.EulaAccepted:
-            log.debug('Accepting EULA: {0}'.format(update.Title))
-            update.AcceptEula  # pylint: disable=W0104
+            log.debug(u'Accepting EULA: {0}'.format(update.Title))
+            update.AcceptEula()  # pylint: disable=W0104
         # Add to the list of updates that need to be downloaded
         if update.IsDownloaded:
             log.debug('Already Downloaded: {0}'.format(update.Identity.UpdateID))
-            log.debug('\tTitle: {0}'.format(update.Title))
+            log.debug(u'\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyDownloaded'] = True
         else:
             log.debug('To Be Downloaded: {0}'.format(update.Identity.UpdateID))
-            log.debug('\tTitle: {0}'.format(update.Title))
+            log.debug(u'\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyDownloaded'] = False
             wua_download_list.Add(update)
 
@@ -808,20 +809,20 @@ def install_updates(guid=None):
         ret['Updates'][update.Identity.UpdateID]['Title'] = update.Title
         if update.IsInstalled:
             log.debug('Already Installed: {0}'.format(update.Identity.UpdateID))
-            log.debug('\tTitle: {0}'.format(update.Title))
+            log.debug(u'\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyInstalled'] = True
         # Make sure the EULA has been accepted
         if not update.EulaAccepted:
-            log.debug('Accepting EULA: {0}'.format(update.Title))
-            update.AcceptEula  # pylint: disable=W0104
+            log.debug(u'Accepting EULA: {0}'.format(update.Title))
+            update.AcceptEula()  # pylint: disable=W0104
         # Add to the list of updates that need to be downloaded
         if update.IsDownloaded:
             log.debug('Already Downloaded: {0}'.format(update.Identity.UpdateID))
-            log.debug('\tTitle: {0}'.format(update.Title))
+            log.debug(u'\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyDownloaded'] = True
         else:
             log.debug('To Be Downloaded: {0}'.format(update.Identity.UpdateID))
-            log.debug('\tTitle: {0}'.format(update.Title))
+            log.debug(u'\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyDownloaded'] = False
             wua_download_list.Add(update)
 
@@ -865,7 +866,7 @@ def install_updates(guid=None):
     for update in wua_search_result.Updates:
         # Make sure the update has actually been downloaded
         if update.IsDownloaded:
-            log.debug('To be installed: {0}'.format(update.Title))
+            log.debug(u'To be installed: {0}'.format(update.Title))
             wua_install_list.Add(update)
 
     if wua_install_list.Count == 0:
@@ -944,42 +945,60 @@ def set_wu_settings(level=None,
     Change Windows Update settings. If no parameters are passed, the current
     value will be returned.
 
+    Supported:
+        - Windows Vista / Server 2008
+        - Windows 7 / Server 2008R2
+        - Windows 8 / Server 2012
+        - Windows 8.1 / Server 2012R2
+
+    .. note:
+        Microsoft began using the Unified Update Platform (UUP) starting with
+        Windows 10 / Server 2016. The Windows Update settings have changed and
+        the ability to 'Save' Windows Update settings has been removed. Windows
+        Update settings are read-only. See MSDN documentation:
+        https://msdn.microsoft.com/en-us/library/aa385829(v=vs.85).aspx
+
     :param int level:
         Number from 1 to 4 indicating the update level:
             1. Never check for updates
             2. Check for updates but let me choose whether to download and install them
             3. Download updates but let me choose whether to install them
             4. Install updates automatically
+
     :param bool recommended:
         Boolean value that indicates whether to include optional or recommended
         updates when a search for updates and installation of updates is
         performed.
+
     :param bool featured:
         Boolean value that indicates whether to display notifications for
         featured updates.
+
     :param bool elevated:
         Boolean value that indicates whether non-administrators can perform some
         update-related actions without administrator approval.
+
     :param bool msupdate:
         Boolean value that indicates whether to turn on Microsoft Update for
         other Microsoft products
+
     :param str day:
         Days of the week on which Automatic Updates installs or uninstalls
         updates.
         Accepted values:
-        - Everyday
-        - Monday
-        - Tuesday
-        - Wednesday
-        - Thursday
-        - Friday
-        - Saturday
+            - Everyday
+            - Monday
+            - Tuesday
+            - Wednesday
+            - Thursday
+            - Friday
+            - Saturday
+
     :param str time:
         Time at which Automatic Updates installs or uninstalls updates. Must be
         in the ##:## 24hr format, eg. 3:00 PM would be 15:00
 
-    :return:
-    Returns a dictionary containing the results.
+    :return: Returns a dictionary containing the results.
 
     CLI Examples:
 
@@ -988,8 +1007,28 @@ def set_wu_settings(level=None,
         salt '*' win_wua.set_wu_settings level=4 recommended=True featured=False
 
     """
-    ret = {}
-    ret['Success'] = True
+    # The AutomaticUpdateSettings.Save() method used in this function does not
+    # work on Windows 10 / Server 2016. It is called in throughout this function
+    # like this:
+    #
+    #     obj_au = win32com.client.Dispatch('Microsoft.Update.AutoUpdate')
+    #     obj_au_settings = obj_au.Settings
+    #     obj_au_settings.Save()
+    #
+    # The `Save()` method reports success but doesn't actually change anything.
+    # Windows Update settings are read-only in Windows 10 / Server 2016. There's
+    # a little blurb on MSDN that mentions this, but gives no alternative for
+    # changing these settings in Windows 10 / Server 2016.
+    #
+    # https://msdn.microsoft.com/en-us/library/aa385829(v=vs.85).aspx
+    #
+    # Apparently the Windows Update framework in Windows Vista - Windows 8.1 has
+    # been changed quite a bit in Windows 10 / Server 2016. It is now called the
+    # Unified Update Platform (UUP). I haven't found an API or a Powershell
+    # commandlet for working with the the UUP. Perhaps there will be something
+    # forthcoming. The `win_lgpo` module might be an option for changing the
+    # Windows Update settings using local group policy.
+    ret = {'Success': True}
 
     # Initialize the PyCom system
     pythoncom.CoInitialize()

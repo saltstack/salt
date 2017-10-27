@@ -19,11 +19,11 @@ Management of the Salt scheduler
         - function: test.ping
         - seconds: 15
         - splay:
-            - start: 10
-            - end: 20
+            start: 10
+            end: 20
 
-    This will schedule the command: test.ping every 3600 seconds
-    (every hour) splaying the time between 10 and 20 seconds
+    This will schedule the command: test.ping every 15 seconds
+    splaying the time between 10 and 20 seconds
 
     job1:
       schedule.present:
@@ -71,6 +71,8 @@ Management of the Salt scheduler
             - Friday 5:00pm
         - returner: xmpp
         - return_config: xmpp_state_run
+        - return_kwargs:
+            recipient: user@domain.com
 
     This will schedule the command: state.sls httpd test=True at 5pm on Monday,
     Wednesday and Friday, and 3pm on Tuesday and Thursday.  Using the xmpp returner
@@ -114,6 +116,10 @@ def present(name,
         This will schedule the job at the specified time(s)
         using the crontab format.
         Requires python-croniter.
+
+    run_on_start
+        Whether the job will run when Salt minion start.  Value should be
+        a boolean.
 
     function
         The function that should be executed by the scheduled job.
@@ -165,6 +171,10 @@ def present(name,
 
     return_config
         The alternative configuration to use for returner configuration options.
+
+    return_kwargs
+        Any individual returner configuration items to override.  Should be passed
+        as a dictionary.
 
     persist
         Whether the job should persist between minion restarts, defaults to True.

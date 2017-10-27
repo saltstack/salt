@@ -8,7 +8,7 @@ Salt's Test Suite: An Introduction
 
     This tutorial makes a couple of assumptions. The first assumption is that
     you have a basic knowledge of Salt. To get up to speed, check out the
-    :ref:`Salt Walkthrough </topics/tutorials/walkthrough>`.
+    :ref:`Salt Walkthrough <tutorial-salt-walk-through>`.
 
     The second assumption is that your Salt development environment is already
     configured and that you have a basic understanding of contributing to the
@@ -41,6 +41,28 @@ depending on your relevant version of Python:
 
     pip install -r requirements/dev_python26.txt
     pip install -r requirements/dev_python27.txt
+
+To be able to run integration tests which utilizes ZeroMQ transport, you also
+need to install additional requirements for it. Make sure you have installed
+the C/C++ compiler and development libraries and header files needed for your
+Python version.
+
+This is an example for RedHat-based operating systems:
+
+.. code-block:: bash
+
+    yum install gcc gcc-c++ python-devel
+    pip install -r requirements/zeromq.txt
+
+On Debian, Ubuntu or their derivatives run the following commands:
+
+.. code-block:: bash
+
+    apt-get install build-essential python-dev
+    pip install -r requirements/zeromq.txt
+
+This will install the latest ``pycrypto`` and ``pyzmq`` (with bundled
+``libzmq``) Python modules required for running integration tests suite.
 
 
 Test Directory Structure
@@ -429,6 +451,26 @@ in the following docs:
     where you have mocked so much of the original function that the test
     results in only asserting against the data you have provided. This results
     in a poor and fragile unit test.
+
+
+Checking for Log Messages
+=========================
+
+To test to see if a given log message has been emitted, the following pattern
+can be used
+
+.. code-block:: python
+
+    # Import logging handler
+    from salttesting.helpers import TestsLoggingHandler
+
+    # .. inside test
+    with TestsLoggingHandler() as handler:
+        for message in handler.messages:
+            if message.startswith('ERROR: This is the error message we seek'):
+                break
+            else:
+                raise AssertionError('Did not find error message')
 
 
 Automated Test Runs

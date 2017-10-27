@@ -3,6 +3,7 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import uuid
 import hashlib
 import tempfile
 
@@ -11,6 +12,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
+import salt.ext.six as six
 import integration
 import salt.utils
 
@@ -60,7 +62,10 @@ class CPModuleTest(integration.ModuleCase):
         tgt = os.path.join(integration.TMP, 'file.big')
         src = os.path.join(integration.FILES, 'file/base/file.big')
         with salt.utils.fopen(src, 'r') as fp_:
-            hash = hashlib.md5(fp_.read()).hexdigest()
+            data = fp_.read()
+            if six.PY3:
+                data = salt.utils.to_bytes(data)
+            hash_str = hashlib.md5(data).hexdigest()
 
         self.run_function(
             'cp.get_file',
@@ -74,7 +79,7 @@ class CPModuleTest(integration.ModuleCase):
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
-            self.assertEqual(hash, hashlib.md5(data).hexdigest())
+            self.assertEqual(hash_str, hashlib.md5(data).hexdigest())
 
     def test_get_file_makedirs(self):
         '''
@@ -144,6 +149,8 @@ class CPModuleTest(integration.ModuleCase):
         self.assertIn('empty', os.listdir(os.path.join(tgt, 'grail')))
         self.assertIn('scene', os.listdir(os.path.join(tgt, 'grail', '36')))
 
+    # cp.get_url tests
+
     def test_get_url(self):
         '''
         cp.get_url with salt:// source given
@@ -155,6 +162,24 @@ class CPModuleTest(integration.ModuleCase):
                 'salt://grail/scene33',
                 tgt,
             ])
+        with salt.utils.fopen(tgt, 'r') as scene:
+            data = scene.read()
+            self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
+            self.assertNotIn('bacon', data)
+
+    def test_get_url_makedirs(self):
+        '''
+        cp.get_url
+        '''
+        tgt = os.path.join(integration.TMP, 'make/dirs/scene33')
+        self.run_function(
+               'cp.get_url',
+                [
+                    'salt://grail/scene33',
+                    tgt,
+                ],
+                makedirs=True
+            )
         with salt.utils.fopen(tgt, 'r') as scene:
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
@@ -282,6 +307,62 @@ class CPModuleTest(integration.ModuleCase):
         self.assertIn('KNIGHT:  They\'re nervous, sire.', ret)
         self.assertNotIn('bacon', ret)
 
+    # cp.get_file_str tests
+
+    def test_get_file_str_salt(self):
+        '''
+        cp.get_file_str with salt:// source given
+        '''
+        src = 'salt://grail/scene33'
+        ret = self.run_function(
+            'cp.get_file_str',
+            [
+                src,
+            ])
+        self.assertIn('KNIGHT:  They\'re nervous, sire.', ret)
+
+    def test_get_file_str_nonexistent_source(self):
+        '''
+        cp.get_file_str with nonexistent salt:// source given
+        '''
+        src = 'salt://grail/nonexistent_scene'
+        ret = self.run_function(
+            'cp.get_file_str',
+            [
+                src,
+            ])
+        self.assertEqual(ret, False)
+
+    def test_get_file_str_https(self):
+        '''
+        cp.get_file_str with https:// source given
+        '''
+        src = 'https://repo.saltstack.com/index.html'
+        ret = self.run_function(
+            'cp.get_file_str',
+            [
+                src,
+            ])
+        self.assertIn('Bootstrap', ret)
+        self.assertIn('Debian', ret)
+        self.assertIn('Windows', ret)
+        self.assertNotIn('AYBABTU', ret)
+
+    def test_get_file_str_local(self):
+        '''
+        cp.get_file_str with file:// source given
+        '''
+        src = os.path.join('file://', integration.FILES, 'file/base/file.big')
+        ret = self.run_function(
+            'cp.get_file_str',
+            [
+                src,
+            ])
+        self.assertIn('KNIGHT:  They\'re nervous, sire.', ret)
+        self.assertNotIn('bacon', ret)
+
+    # caching tests
+
     def test_cache_file(self):
         '''
         cp.cache_file
@@ -355,8 +436,11 @@ class CPModuleTest(integration.ModuleCase):
                 ])
         ret = self.run_function('cp.list_minion')
         found = False
+        search = 'grail/scene33'
+        if salt.utils.is_windows():
+            search = r'grail\scene33'
         for path in ret:
-            if 'grail/scene33' in path:
+            if search in path:
                 found = True
         self.assertTrue(found)
 
@@ -386,7 +470,7 @@ class CPModuleTest(integration.ModuleCase):
         '''
         cp.hash_file
         '''
-        md5_hash = self.run_function(
+        sha256_hash = self.run_function(
                 'cp.hash_file',
                 [
                     'salt://grail/scene33',
@@ -397,10 +481,11 @@ class CPModuleTest(integration.ModuleCase):
                     'salt://grail/scene33',
                 ])
         with salt.utils.fopen(path, 'r') as fn_:
+            data = fn_.read()
+            if six.PY3:
+                data = salt.utils.to_bytes(data)
             self.assertEqual(
-                    md5_hash['hsum'],
-                    hashlib.md5(fn_.read()).hexdigest()
-                    )
+                sha256_hash['hsum'], hashlib.sha256(data).hexdigest())
 
     def test_get_file_from_env_predefined(self):
         '''
@@ -428,7 +513,8 @@ class CPModuleTest(integration.ModuleCase):
             os.unlink(tgt)
 
     def test_push(self):
-        log_to_xfer = os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
+        log_to_xfer = os.path.join(tempfile.gettempdir(), uuid.uuid4().hex)
+        open(log_to_xfer, 'w').close()
         try:
             self.run_function('cp.push', log_to_xfer)
             tgt_cache_file = os.path.join(
@@ -439,7 +525,7 @@ class CPModuleTest(integration.ModuleCase):
                 'minion',
                 'files',
                 tempfile.gettempdir(),
-                'salt-runtests.log')
+                log_to_xfer)
             self.assertTrue(os.path.isfile(tgt_cache_file), 'File was not cached on the master')
         finally:
             os.unlink(tgt_cache_file)

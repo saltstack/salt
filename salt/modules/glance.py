@@ -91,7 +91,7 @@ def __virtual__():
     '''
     if HAS_GLANCE:
         return 'glance'
-    return False
+    return (False, 'The glance execution module cannot be loaded: the glanceclient python library is not available.')
 
 
 __opts__ = {}
@@ -162,7 +162,6 @@ def _auth(profile=None, api_version=2, **connection_args):
         log.debug('Calling keystoneclient.v2_0.client.Client(' +
             '{0}, **{1})'.format(ks_endpoint, kwargs))
         keystone = kstone.Client(**kwargs)
-        log.debug(help(keystone.get_token))
         kwargs['token'] = keystone.get_token(keystone.session)
         # This doesn't realy prevent the password to show up
         # in the minion log as keystoneclient.session is
@@ -250,9 +249,9 @@ def image_create(name, location=None, profile=None, visibility=None,
                'raw', 'qcow2', 'vdi', 'iso']
     # 'location' and 'visibility' are the parameters used in
     # Glance API v2. For now we have to use v1 for now (see below)
-    # but this modules interface will change in Carbon.
+    # but this modules interface will change in Nitrogen.
     if copy_from is not None or is_public is not None:
-        warn_until('Carbon', 'The parameters \'copy_from\' and '
+        warn_until('Nitrogen', 'The parameters \'copy_from\' and '
             '\'is_public\' are deprecated and will be removed. '
             'Use \'location\' and \'visibility\' instead.')
     if is_public is not None and visibility is not None:
@@ -380,9 +379,9 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
         image.name, pformat(image)))
     ret_details = {}
     # I may want to use this code on Beryllium
-    # until we got Boron packages for Ubuntu
-    # so please keep this code until Carbon!
-    warn_until('Carbon', 'Starting with \'Boron\' image_show() '
+    # until we got 2016.3.0 packages for Ubuntu
+    # so please keep this code until Nitrogen!
+    warn_until('Nitrogen', 'Starting with \'2016.3.0\' image_show() '
             'will stop wrapping the returned image in another '
             'dictionary.')
     if CUR_VER < BORON:
@@ -414,9 +413,9 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
     #    return False
     #
     # I may want to use this code on Beryllium
-    # until we got Boron packages for Ubuntu
-    # so please keep this code until Carbon!
-    warn_until('Carbon', 'Starting in \'Boron\' image_list() '
+    # until we got 2016.3.0 packages for Ubuntu
+    # so please keep this code until Nitrogen!
+    warn_until('Nitrogen', 'Starting in \'2016.3.0\' image_list() '
         'will return a list of images instead of a dictionary '
         'keyed with the images\' names.')
     if CUR_VER < BORON:
@@ -508,9 +507,9 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
     g_client = _auth(profile)
     updated = g_client.images.update(image['id'], **to_update)
     # I may want to use this code on Beryllium
-    # until we got Boron packages for Ubuntu
-    # so please keep this code until Carbon!
-    warn_until('Carbon', 'Starting with \'Boron\' image_update() '
+    # until we got 2016.3.0 packages for Ubuntu
+    # so please keep this code until Nitrogen!
+    warn_until('Nitrogen', 'Starting with \'2016.3.0\' image_update() '
             'will stop wrapping the returned, updated image in '
             'another dictionary.')
     if CUR_VER < BORON:

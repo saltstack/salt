@@ -1,5 +1,7 @@
 :orphan:
 
+.. _version-numbers:
+
 ===============
 Version Numbers
 ===============
@@ -30,6 +32,7 @@ Assigned codenames:
 - Boron: ``2016.3.0``
 - Carbon: ``2016.11.0``
 - Nitrogen: ``TBD``
+- Oxygen: ``TBD``
 
 Example
 -------

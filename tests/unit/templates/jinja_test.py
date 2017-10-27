@@ -16,6 +16,8 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
+import salt.config
+import salt.ext.six as six
 import salt.loader
 import salt.utils
 from salt.exceptions import SaltRenderError
@@ -348,7 +350,9 @@ class TestGetTemplate(TestCase):
         fn = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
         out = JINJA(fn, opts=self.local_opts, saltenv='test')
         with salt.utils.fopen(out['data']) as fp:
-            result = fp.read().decode('utf-8')
+            result = fp.read()
+            if six.PY2:
+                result = result.decode('utf-8')
             self.assertEqual(u'Assunção\n', result)
 
     def test_get_context_has_enough_context(self):
@@ -392,6 +396,7 @@ class TestGetTemplate(TestCase):
             dict(opts=self.local_opts, saltenv='test')
         )
 
+    @skipIf(six.PY3, 'Not applicable to Python 3: skipping.')
     def test_render_with_unicode_syntax_error(self):
         encoding = builtins.__salt_system_encoding__
         builtins.__salt_system_encoding__ = 'utf-8'
@@ -471,7 +476,14 @@ class TestCustomExtensions(TestCase):
             "foo": True,
             "bar": 42,
             "baz": [1, 2, 3],
-            "qux": 2.0
+            "qux": 2.0,
+            "spam": OrderedDict([
+                ('foo', OrderedDict([
+                    ('bar', 'baz'),
+                    ('qux', 42)
+                ])
+                )
+            ])
         }
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
@@ -482,6 +494,12 @@ class TestCustomExtensions(TestCase):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
         self.assertEqual(dataset, rendered)
+
+    def test_serialize_yaml_unicode(self):
+        dataset = u"str value"
+        env = Environment(extensions=[SerializerExtension])
+        rendered = env.from_string('{{ dataset|yaml }}').render(dataset=dataset)
+        self.assertEqual("!!python/unicode str value", rendered)
 
     def test_serialize_python(self):
         dataset = {

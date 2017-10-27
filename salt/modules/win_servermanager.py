@@ -2,11 +2,13 @@
 '''
 Manage Windows features via the ServerManager powershell module
 '''
-from __future__ import absolute_import
-import logging
-import json
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import
+import ast
+import json
+import logging
+
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -14,6 +16,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.powershell
 
 log = logging.getLogger(__name__)
 
@@ -24,32 +27,31 @@ def __virtual__():
     '''
     Load only on windows with servermanager module
     '''
+    def _module_present():
+        '''
+        Check for the presence of the ServerManager module.
+        '''
+        cmd = r"[Bool] (Get-Module -ListAvailable | Where-Object { $_.Name -eq 'ServerManager' })"
+        cmd_ret = __salt__['cmd.run_all'](cmd, shell='powershell', python_shell=True)
+
+        if cmd_ret['retcode'] == 0:
+            return ast.literal_eval(cmd_ret['stdout'])
+        return False
+
     if not salt.utils.is_windows():
-        return False, 'Failed to load win_servermanager module: ' \
-                      'Only available on Windows systems.'
+        return False
 
     if salt.utils.version_cmp(__grains__['osversion'], '6.1.7600') == -1:
         return False, 'Failed to load win_servermanager module: ' \
                       'Requires Remote Server Administration Tools which ' \
                       'is only available on Windows 2008 R2 and later.'
 
-    if not _check_server_manager():
+    if not salt.utils.powershell.module_exists('ServerManager'):
         return False, 'Failed to load win_servermanager module: ' \
                       'ServerManager module not available. ' \
                       'May need to install Remote Server Administration Tools.'
 
     return __virtualname__
-
-
-def _check_server_manager():
-    '''
-    See if ServerManager module will import
-
-    Returns: True if import is successful, otherwise returns False
-    '''
-    return not __salt__['cmd.retcode']('Import-Module ServerManager',
-                                       shell='powershell',
-                                       python_shell=True)
 
 
 def _pshell_json(cmd, cwd=None):
@@ -117,7 +119,7 @@ def list_installed():
     return ret
 
 
-def install(feature, recurse=False, source=None, restart=False, exclude=None):
+def install(feature, recurse=False, restart=False, source=None, exclude=None):
     '''
     Install a feature
 
@@ -148,6 +150,8 @@ def install(feature, recurse=False, source=None, restart=False, exclude=None):
             command, the feature will be installed with other sub-features and
             will then be removed.
 
+    :param bool restart: Restarts the computer when installation is complete, if required by the role feature installed.
+
     :return: A dictionary containing the results of the install
     :rtype: dict
 
@@ -159,9 +163,15 @@ def install(feature, recurse=False, source=None, restart=False, exclude=None):
         salt '*' win_servermanager.install SNMP-Service True
         salt '*' win_servermanager.install TFTP-Client source=d:\\side-by-side
     '''
-    mgmt_tools = ''
+
+    # Use Install-WindowsFeature on Windows 8 (osversion 6.2) and later minions. Includes Windows 2012+.
+    # Default to Add-WindowsFeature for earlier releases of Windows.
+    # The newer command makes management tools optional so add them for partity with old behavior.
+    command = 'Add-WindowsFeature'
+    management_tools = ''
     if salt.utils.version_cmp(__grains__['osversion'], '6.2') >= 0:
-        mgmt_tools = '-IncludeManagementTools'
+        command = 'Install-WindowsFeature'
+        management_tools = '-IncludeManagementTools'
 
     sub = ''
     if recurse:
@@ -175,10 +185,14 @@ def install(feature, recurse=False, source=None, restart=False, exclude=None):
     if source is not None:
         src = '-Source {0}'.format(source)
 
-    cmd = 'Add-WindowsFeature -Name {0} {1} {2} {3} {4} ' \
+    cmd = '{0} -Name {1} {2} {3} {4} {5} ' \
           '-ErrorAction SilentlyContinue ' \
-          '-WarningAction SilentlyContinue'\
-          .format(_cmd_quote(feature), mgmt_tools, sub, src, rst)
+          '-WarningAction SilentlyContinue'.format(command,
+                                                   _cmd_quote(feature),
+                                                   sub,
+                                                   src,
+                                                   rst,
+                                                   management_tools)
     out = _pshell_json(cmd)
 
     if exclude is not None:

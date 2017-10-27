@@ -4,8 +4,9 @@ Salt 2014.7.2 Release Notes
 
 :release: 2015-02-09
 
-Version 2014.7.2 is a bugfix release for :doc:`2014.7.0
-</topics/releases/2014.7.0>`.  The changes include:
+Version 2014.7.2 is a bugfix release for :ref:`2014.7.0 <release-2014-7-0>`.
+
+The changes include:
 
 - Fix erroneous warnings for systemd service enabled check (:issue:`19606`)
 - Fix FreeBSD kernel module loading, listing, and persistence
