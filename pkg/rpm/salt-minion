@@ -72,7 +72,7 @@ _get_pid() {
 
 
 _is_running() {
-    [ -n "$(_get_pid)" ]
+    [ -n "$(_get_pid)" ] && ps wwwaxu | grep '[s]alt-minion' | awk '{print $2}' | grep -qi "\b$(_get_pid)\b"
 }
 
 
@@ -217,7 +217,7 @@ status() {
     local retval=0
     local pid="$(_get_pid)"
 
-    if [ -n "$pid" ]; then
+    if _is_running; then
         # Unquote $pid here to display multiple PIDs in one line
         echo "$SERVICE:$MINION_USER:$MINION_ID is running:" $pid
     else
