@@ -1,6 +1,6 @@
 ---
 <% vagrant = system('which vagrant 2>/dev/null >/dev/null') %>
-<% version = '2016.11.8' %>
+<% version = '2017.7.2' %>
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
 
@@ -162,6 +162,18 @@ suites:
         jenkins.sls:
           testing_dir: /tmp/kitchen/testing
           clone_repo: false
+          salttesting_namespec: salttesting==2017.6.1
+  - name: py3
+    provisioner:
+      pillars:
+        top.sls:
+          base:
+            "*":
+              - jenkins
+        jenkins.sls:
+          testing_dir: /tmp/kitchen/testing
+          clone_repo: false
+          py3: true
           salttesting_namespec: salttesting==2017.6.1
 verifier:
   name: shell
