@@ -22,6 +22,7 @@ import time
 import stat
 import errno
 import signal
+import textwrap
 import logging
 import tempfile
 import subprocess
@@ -564,10 +565,60 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                timeout=timeout)
 
 
+class SPMTestUserInterface(object):
+    '''
+    Test user interface to SPMClient
+    '''
+    def __init__(self):
+        self._status = []
+        self._confirm = []
+        self._error = []
+
+    def status(self, msg):
+        self._status.append(msg)
+
+    def confirm(self, action):
+        self._confirm.append(action)
+
+    def error(self, msg):
+        self._error.append(msg)
+
+
 class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
     Class for handling spm commands
     '''
+
+    def _spm_build_files(self, config):
+        self.formula_dir = os.path.join(' '.join(config['file_roots']['base']), 'formulas')
+        self.formula_sls_dir = os.path.join(self.formula_dir, 'apache')
+        self.formula_sls = os.path.join(self.formula_sls_dir, 'apache.sls')
+        self.formula_file = os.path.join(self.formula_dir, 'FORMULA')
+
+        dirs = [self.formula_dir, self.formula_sls_dir]
+        for f_dir in dirs:
+            os.makedirs(f_dir)
+
+        # Late import
+        import salt.utils.files
+
+        with salt.utils.files.fopen(self.formula_sls, 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     install-apache:
+                       pkg.installed:
+                         - name: apache2
+                     '''))
+
+        with salt.utils.files.fopen(self.formula_file, 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     name: apache
+                     os: RedHat, Debian, Ubuntu, Suse, FreeBSD
+                     os_family: RedHat, Debian, Suse, FreeBSD
+                     version: 201506
+                     release: 2
+                     summary: Formula for installing Apache
+                     description: Formula for installing Apache
+                     '''))
 
     def _spm_config(self):
         self._tmp_spm = tempfile.mkdtemp()
@@ -595,16 +646,37 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
         })
         return config
 
+    def _spm_create_update_repo(self, config):
+
+        build_spm = self.run_spm('build', self.config, self.formula_dir)
+
+        c_repo = self.run_spm('create_repo', self.config,
+                              self.config['spm_build_dir'])
+
+        repo_conf_dir = self.config['spm_repos_config'] + '.d'
+        os.makedirs(repo_conf_dir)
+
+        # Late import
+        import salt.utils.files
+
+        with salt.utils.files.fopen(os.path.join(repo_conf_dir, 'spm.repo'), 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     local_repo:
+                       url: file://{0}
+                     '''.format(self.config['spm_build_dir'])))
+
+        u_repo = self.run_spm('update_repo', self.config)
+
     def _spm_client(self, config):
         import salt.spm
-        ui = salt.spm.SPMCmdlineInterface()
-        client = salt.spm.SPMClient(ui, config)
+        self.ui = SPMTestUserInterface()
+        client = salt.spm.SPMClient(self.ui, config)
         return client
 
-    def run_spm(self, cmd, config, arg=()):
+    def run_spm(self, cmd, config, arg=None):
         client = self._spm_client(config)
         spm_cmd = client.run([cmd, arg])
-        return spm_cmd
+        return self.ui._status
 
 
 class ModuleCase(TestCase, SaltClientTestCaseMixin):
