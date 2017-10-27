@@ -12,6 +12,7 @@ Salt Table of Contents
     topics/using_salt
     topics/execution/index
     topics/states/index
+    topics/guards/index
     topics/utils/index
     topics/event/index
     topics/orchestrate/index

@@ -155,6 +155,16 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     return ''
 
 
+def _indent(text, prefix):
+    '''
+    Custom version of textwrap.indent, which is only available on Python >=3.3
+    '''
+    return ''.join(
+        prefix + line if line.strip() else line
+        for line in text.splitlines(True)
+    )
+
+
 def _format_host(host, data):
     host = sdecode(host)
 
@@ -184,8 +194,8 @@ def _format_host(host, data):
         for err in data:
             if strip_colors:
                 err = salt.output.strip_esc_sequence(sdecode(err))
-            hstrs.append((u'{0}----------\n    {1}{2[ENDC]}'
-                          .format(hcolor, err, colors)))
+            msg = u'{0}----------\n{1}{2[ENDC]}'
+            hstrs.append(msg.format(hcolor, _indent(err, u'    '), colors))
     if isinstance(data, dict):
         # Verify that the needed data is present
         data_tmp = {}

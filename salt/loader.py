@@ -980,6 +980,18 @@ def cache(opts, serial):
     )
 
 
+def guards(opts):
+    '''
+    Returns the guard modules
+    '''
+    return LazyLoader(
+        _module_dirs(opts, u'guards', u'guard'),
+        opts,
+        tag=u'guard',
+        pack={},
+    )
+
+
 def _generate_module(name):
     if name in sys.modules:
         return
