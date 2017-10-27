@@ -31,10 +31,10 @@ class SSHStateTest(SSHCase):
         '''
         test state.apply with salt-ssh
         '''
-        ret = self.run_function('state.apply', ['ssh_state_tests'])
+        ret = self.run_function('state.apply', [SSH_SLS])
         self._check_dict_ret(ret=ret, val='__sls__', exp_ret=SSH_SLS)
 
-        check_file = self.run_function('file.file_exists', ['/tmp/test'], wipe=False)
+        check_file = self.run_function('file.file_exists', ['/tmp/test'])
         self.assertTrue(check_file)
 
     def test_state_request_check_clear(self):
@@ -53,7 +53,7 @@ class SSHStateTest(SSHCase):
     def test_state_run_request(self):
         '''
         test state.request system with salt-ssh
-        while also checking and clearing request
+        while also running the request later
         '''
         request = self.run_function('state.request', [SSH_SLS], wipe=False)
         self._check_dict_ret(ret=request, val='__sls__', exp_ret=SSH_SLS)
