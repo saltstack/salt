@@ -5,7 +5,6 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 
 # Import Salt libs
