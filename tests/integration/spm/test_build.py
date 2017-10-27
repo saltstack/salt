@@ -7,6 +7,9 @@ from __future__ import absolute_import
 import os
 import shutil
 
+# Import Salt libs
+import salt.utils
+
 # Import Salt Testing libs
 from tests.support.case import SPMCase, ModuleCase
 from tests.support.helpers import destructiveTest
