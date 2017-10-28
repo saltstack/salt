@@ -1856,10 +1856,8 @@ def line(path, content, match=None, mode=None, location=None,
     if changed:
         if show_changes:
             with salt.utils.fopen(path, 'r') as fp_:
-                path_content = _splitlines_preserving_trailing_newline(
-                    fp_.read())
-            changes_diff = ''.join(difflib.unified_diff(
-                path_content, _splitlines_preserving_trailing_newline(body)))
+                path_content = fp_.read().splitlines(True)
+            changes_diff = ''.join(difflib.unified_diff(path_content, body.splitlines(True)))
         if __opts__['test'] is False:
             fh_ = None
             try:
