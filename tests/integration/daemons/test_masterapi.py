@@ -53,7 +53,7 @@ class AutosignGrainsTest(ShellCase):
             autosign_file_path
         )
         os.chmod(autosign_file_path, autosign_file_permissions)
-        
+
         self.run_call('test.ping -l quiet')  # get minon to authenticate itself again
 
         if os.path.isdir(self.autosign_grains_dir):
