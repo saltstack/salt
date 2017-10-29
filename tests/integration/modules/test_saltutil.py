@@ -5,10 +5,16 @@ Integration tests for the saltutil module.
 
 # Import Python libs
 from __future__ import absolute_import
+import os
 import time
+import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.paths import TMP_PILLAR_TREE
+
+# Import Salt Libs
+import salt.utils
 
 
 class SaltUtilModuleTest(ModuleCase):
@@ -153,3 +159,38 @@ class SaltUtilSyncModuleTest(ModuleCase):
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['runtests_decorators']},
                                 extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
+
+
+class SaltUtilSyncPillarTest(ModuleCase):
+    '''
+    Testcase for the saltutil sync pillar module
+    '''
+
+    def test_pillar_refresh(self):
+        '''
+        test pillar refresh module
+        '''
+        pillar_key = 'itworked'
+
+        pre_pillar = self.run_function('pillar.raw')
+        self.assertNotIn(pillar_key, pre_pillar.get(pillar_key, 'didnotwork'))
+
+        with salt.utils.fopen(os.path.join(TMP_PILLAR_TREE, 'add_pillar.sls'), 'w') as fp:
+            fp.write('{0}: itworked'.format(pillar_key))
+
+        with salt.utils.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     base:
+                       '*':
+                         - add_pillar
+                     '''))
+
+        pillar_refresh = self.run_function('saltutil.refresh_pillar')
+        wait = self.run_function('test.sleep', [1])
+
+        post_pillar = self.run_function('pillar.raw')
+        self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))
+
+    def tearDown(self):
+        for filename in os.listdir(TMP_PILLAR_TREE):
+            os.remove(os.path.join(TMP_PILLAR_TREE, filename))
