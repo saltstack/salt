@@ -965,8 +965,6 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     def test_line_insert_start(self):
         '''
         Test for file.line for insertion at the beginning of the file
-
-        See issue #38670
         :return:
         '''
         cfg_content = 'everything: fantastic'
