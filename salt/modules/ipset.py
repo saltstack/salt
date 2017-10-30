@@ -585,7 +585,8 @@ def _parse_members(settype, members):
 def _parse_member(settype, member, strict=False):
     subtypes = settype.split(':')[1].split(',')
 
-    parts = member.split(' ')
+    all_parts = member.split(' ',1)
+    parts = all_parts[0].split(',')
 
     parsed_member = []
     for i in range(len(subtypes)):
@@ -610,8 +611,8 @@ def _parse_member(settype, member, strict=False):
 
         parsed_member.append(part)
 
-    if len(parts) > len(subtypes):
-        parsed_member.append(' '.join(parts[len(subtypes):]))
+    if len(all_parts) > 1:
+        parsed_member.append(all_parts[1])
 
     return parsed_member
 
