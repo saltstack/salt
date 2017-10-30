@@ -19,7 +19,7 @@ Salt SSH allows for salt routines to be executed using only SSH for transport
 Options
 =======
 
-.. program:: salt
+.. program:: salt-ssh
 
 .. include:: _includes/common-options.rst
 
@@ -77,7 +77,7 @@ Options
 
 .. option:: -s, --static
 
-   Return the data from minions as a group after they all
+   Return the data from minions as a group after they all return.
 
 .. option:: -w, --wipe
 
