@@ -859,6 +859,18 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 filemod.line('foo', content='test content', mode='insert')
             assert '"location" or "before/after"' in str(cmd_err)
 
+    def test_util_starts_till(self):
+        '''
+        Test for file._starts_till function.
+
+        :return:
+        '''
+        src = '<here is something>'
+        assert 1 == filemod._starts_till(src=src, probe='<here quite something else>')
+        assert 0 == filemod._starts_till(src=src, probe='<here is something>')
+        assert -1 == filemod._starts_till(src=src, probe='<and here is something>')
+
+
 
 class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
