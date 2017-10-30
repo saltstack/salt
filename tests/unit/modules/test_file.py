@@ -873,9 +873,9 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.stat', MagicMock())
-    def test_line_insert_after(self):
+    def test_line_insert_after_no_pattern(self):
         '''
-        Test for file.line for insertion after specific line.
+        Test for file.line for insertion after specific line, using no pattern.
 
         See issue #38670
         :return:
