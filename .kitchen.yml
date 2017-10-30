@@ -32,7 +32,7 @@ provisioner:
   require_chef: false
   remote_states:
     name: git://github.com/gtmanfred/salt-jenkins.git
-    branch: 2016.11
+    branch: 2017.7
     repo: git
     testingdir: /testing
   salt_copy_filter:
