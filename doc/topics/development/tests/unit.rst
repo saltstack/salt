@@ -95,19 +95,19 @@ globally available or passed in through function arguments, file data, etc.
 Mocking Loader Modules
 ----------------------
 
-Salt loader modules use a series of globally available dunder variables, 
-``__salt__``, ``__opts__``, ``__pillar__``, etc. To facilitate testing these 
-modules a mixin class was created, ``LoaderModuleMockMixin`` which can be found 
-in ``tests/support/mixins.py``. The reason for the exitance of this class is 
-because, historycally, and because it was easier, one would add these dunder 
-variables directly on the imported module. This however, introduces unexpected 
-behavior when running the full test suite since those attributes would not be 
-removed once we were done testing the module and would therefor leak to other 
-modules being tested with unpredictable results. This is the kind of work that 
-should be defered to mock, and that's exactly what this mixin class does.
+Salt loader modules use a series of globally available dunder variables,
+``__salt__``, ``__opts__``, ``__pillar__``, etc. To facilitate testing these
+modules a mixin class was created, ``LoaderModuleMockMixin`` which can be found
+in ``tests/support/mixins.py``. The reason for the existance of this class is
+because historiclly and because it was easier, one would add these dunder
+variables directly on the imported module. This however, introduces unexpected
+behavior when running the full test suite since those attributes would not be
+removed once we were done testing the module and would therefore leak to other
+modules being tested with unpredictable results. This is the kind of work that
+should be deferred to mock, and that's exactly what this mixin class does.
 
-As an example, if one needs to specify some options which should be available 
-to the module being tests one should do:
+As an example, if one needs to specify some options which should be available
+to the module being tested one should do:
 
 .. code-block:: python
 
@@ -122,7 +122,7 @@ to the module being tests one should do:
                }
            }
 
-Consider this more extensive example from 
+Consider this more extensive example from
 ``tests/unit/modules/test_libcloud_dns.py``:
 
 .. code-block:: python
@@ -173,10 +173,10 @@ Consider this more extensive example from
            return {libcloud_dns: module_globals}
 
 
-What happens on the above example is that, we mock a call to 
-`__salt__['config.option']` to return the configuration needed for the 
-execution of the tests. Additionally, if the ``libcloud`` library is not 
-available, since that's not actually part of whats being tested, we mocked that 
+What happens in the above example is we mock a call to
+`__salt__['config.option']` to return the configuration needed for the
+execution of the tests. Additionally, if the ``libcloud`` library is not
+available, since that's not actually part of what's being tested, we mocked that
 import by patching ``sys.modules`` when tests are running.
 
 
@@ -245,7 +245,7 @@ To understand how one might integrate Mock into writing a unit test for Salt,
 let's imagine a scenario in which we're testing an execution module that's
 designed to operate on a database. Furthermore, let's imagine two separate
 methods, here presented in pseduo-code in an imaginary execution module called
-'db.py.
+'db.py'.
 
 .. code-block:: python
 
