@@ -860,10 +860,10 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(pytest is None, 'PyTest required for this test')
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
-    def test_line_modecheck(self):
+    def test_line_modecheck_failure(self):
         '''
-        Test for file.line ``mode=insert``.
-        Issue #38670
+        Test for file.line for empty or wrong mode.
+        Calls unknown or empty mode and expects failure.
         :return:
         '''
         for mode, err_msg in [(None, 'How to process the file'), ('nonsense', 'Unknown mode')]:
