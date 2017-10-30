@@ -5,7 +5,7 @@
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
 
 <% if File.exists?(driverfile) %>
-<%= File.read(driverfile) %>
+<%= ERB.new(File.read(driverfile)).result(binding) %>
 <% else %>
 driver:
   name: docker
@@ -51,7 +51,7 @@ provisioner:
         - git.salt
         - kitchen
 <% if File.exists?(platformsfile) %>
-<%= File.read(platformsfile) %>
+<%= ERB.new(File.read(platformsfile)).result(binding) %>
 <% else %>
 platforms:
   - name: fedora
