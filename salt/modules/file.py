@@ -1930,8 +1930,47 @@ def line(path, content=None, match=None, mode=None, location=None,
         after = after and after.strip()
         before = before and before.strip()
 
-        if location:
-            found = False
+        if before and after:
+            _assert_occurrence(body, before, 'before')
+            _assert_occurrence(body, after, 'after')
+
+            a_idx = b_idx = -1
+            idx = 0
+            body = body.split(os.linesep)
+            for _line in body:
+                idx += 1
+                if _line.find(before) > -1 and b_idx < 0:
+                    b_idx = idx
+                if _line.find(after) > -1 and a_idx < 0:
+                    a_idx = idx
+
+            # Add
+            if not b_idx - a_idx - 1:
+                body = body[:a_idx] + [content] + body[b_idx - 1:]
+            elif b_idx - a_idx - 1 == 1:
+                if _starts_till(body[a_idx:b_idx - 1][0], content) > -1:
+                    body[a_idx] = _get_line_indent(body[a_idx - 1], content, indent)
+            else:
+                raise CommandExecutionError('Found more than one line between boundaries "before" and "after".')
+            body = os.linesep.join(body)
+
+        elif before and not after:
+            _assert_occurrence(body, before, 'before')
+            body = body.split(os.linesep)
+            out = []
+            for idx in range(len(body)):
+                if body[idx].find(before) > -1:
+                    prev = (idx > 0 and idx or 1) - 1
+                    out.append(_get_line_indent(body[idx], content, indent))
+                    if _starts_till(out[prev], content) > -1:
+                        del out[prev]
+                out.append(body[idx])
+            body = os.linesep.join(out)
+
+        elif not before and after:
+            _assert_occurrence(body, after, 'after')
+            body = body.split(os.linesep)
+            skip = None
             out = []
             if body:
                 for file_line in body.split(os.linesep):
