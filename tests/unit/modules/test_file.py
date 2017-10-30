@@ -743,67 +743,30 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             saltenv='base')
         self.assertEqual(ret, 'This is a templated file.')
 
-    def test_line_ensure_location_start(self):
-        '''
-        Check that file.line uses ``location=start`` if a
-        match is not found and replaces content if it is.
-        '''
-        # File DOESN'T contain the match
-        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            tfile.write(salt.utils.to_bytes('first=foo' + os.linesep))
-            tfile.flush()
-        filemod.line(tfile.name,
-                     content='second=bar',
-                     match='second=',
-                     mode='ensure',
-                     location='start')
-        expected = os.linesep.join(['second=bar', 'first=foo']) + os.linesep
-        with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
 
-        # File DOES contain the match
-        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            tfile.write(salt.utils.to_bytes(os.linesep.join(['first=foo', 'second=foo']) + os.linesep))
-            tfile.flush()
-        filemod.line(tfile.name,
-                     content='second=bar',
-                     match='second=',
-                     mode='ensure',
-                     location='start')
-        expected = os.linesep.join(['first=foo', 'second=bar']) + os.linesep
-        with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
-
-    def test_line_ensure_location_end(self):
-        '''
-        Check that file.line uses ``location=end`` if a
-        match is not found and replaces content if it is.
-        '''
-        # File DOESN'T contain the match
-        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            tfile.write(salt.utils.to_bytes('first=foo'))
-            tfile.flush()
-        filemod.line(tfile.name,
-                     content='second=bar',
-                     match='second=',
-                     mode='ensure',
-                     location='end')
-        expected = os.linesep.join(['first=foo', 'second=bar'])
-        with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
-
-        # File DOES contain the match
-        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            tfile.write(salt.utils.to_bytes(os.linesep.join(['second=foo', 'first=foo']) + os.linesep))
-            tfile.flush()
-        filemod.line(tfile.name,
-                     content='second=bar',
-                     match='second=',
-                     mode='ensure',
-                     location='end')
-        expected = os.linesep.join(['second=bar', 'first=foo']) + os.linesep
-        with salt.utils.files.fopen(tfile.name) as tfile2:
-            self.assertEqual(tfile2.read(), expected)
+@skipIf(pytest is None, 'PyTest required for this test')
+class FilemodLineTests(TestCase, LoaderModuleMockMixin):
+    '''
+    Unit tests for file.line
+    '''
+    def setup_loader_modules(self):
+        return {
+            filemod: {
+                '__salt__': {
+                    'config.manage_mode': configmod.manage_mode,
+                    'cmd.run': cmdmod.run,
+                    'cmd.run_all': cmdmod.run_all
+                },
+                '__opts__': {
+                    'test': False,
+                    'file_roots': {'base': 'tmp'},
+                    'pillar_roots': {'base': 'tmp'},
+                    'cachedir': 'tmp',
+                    'grains': {},
+                },
+                '__grains__': {'kernel': 'Linux'}
+            }
+        }
 
     def test_replace_line_in_empty_file(self):
         '''
@@ -857,7 +820,6 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         empty_file.close()
         os.remove(empty_file.name)
 
-    @skipIf(pytest is None, 'PyTest required for this test')
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
     def test_line_modecheck_failure(self):
@@ -871,7 +833,6 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 filemod.line('foo', mode=mode)
             assert err_msg in str(cmd_err)
 
-    @skipIf(pytest is None, 'PyTest required for this test')
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
     def test_line_no_content(self):
