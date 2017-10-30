@@ -870,7 +870,26 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         assert 0 == filemod._starts_till(src=src, probe='here is something')
         assert -1 == filemod._starts_till(src=src, probe='and here is something')
 
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
+    def test_line_insert_after(self):
+        '''
+        Test for file.line for insertion after specific line.
 
+        See issue #38670
+        :return:
+        '''
+        file_content = 'file_roots:\n  base:\n    - /srv/salt'.strip()
+        file_modified = 'file_roots:\n  base:\n    - /srv/salt\n    - /srv/custom'
+        cfg_content = '- /srv/custom'
+        files_fopen = mock_open(read_data=file_content)
+        with patch('salt.utils.files.fopen', files_fopen):
+            atomic_opener = mock_open()
+            with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
+                filemod.line('foo', content=cfg_content, after='- /srv/salt', mode='insert')
+            assert 1 == len(atomic_opener().write.call_args_list)
+            assert file_modified == atomic_opener().write.call_args_list[0][0][0]
 
 class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
