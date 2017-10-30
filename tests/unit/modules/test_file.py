@@ -880,7 +880,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         See issue #38670
         :return:
         '''
-        file_content = 'file_roots:\n  base:\n    - /srv/salt'.strip()
+        file_content = 'file_roots:\n  base:\n    - /srv/salt'
         file_modified = 'file_roots:\n  base:\n    - /srv/salt\n    - /srv/custom'
         cfg_content = '- /srv/custom'
         files_fopen = mock_open(read_data=file_content)
