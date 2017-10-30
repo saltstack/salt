@@ -1000,6 +1000,25 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.stat', MagicMock())
+    def test_line_insert_ensure_before(self):
+        '''
+        Test for file.line for insertion ensuring the line is before
+        :return:
+        '''
+        cfg_content = '/etc/init.d/someservice restart'
+        file_content = '#!/bin/bash\n\nexit 0'
+        file_modified = '#!/bin/bash\n\n{0}\nexit 0'.format(cfg_content)
+        files_fopen = mock_open(read_data=file_content)
+        with patch('salt.utils.files.fopen', files_fopen):
+            atomic_opener = mock_open()
+            with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
+                filemod.line('foo', content=cfg_content, before='exit 0', mode='ensure')
+            assert 1 == len(atomic_opener().write.call_args_list)
+            assert file_modified == atomic_opener().write.call_args_list[0][0][0]
+
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
     def test_line_delete(self):
         '''
         Test for file.line for deletion of specific line
