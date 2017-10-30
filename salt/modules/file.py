@@ -1849,10 +1849,10 @@ def line(path, content=None, match=None, mode=None, location=None,
 
     # We've set the content to be empty in the function params but we want to make sure
     # it gets passed when needed. Feature #37092
-    modeswithemptycontent = ['delete']
-    if mode not in modeswithemptycontent and content is None:
-        raise CommandExecutionError('Content can only be empty if mode is {0}'.format(modeswithemptycontent))
-    del modeswithemptycontent
+    empty_content_modes = ['delete']
+    if mode not in empty_content_modes and content is None:
+        raise CommandExecutionError('Content can only be empty if mode is "{0}"'.format(', '.join(empty_content_modes)))
+    del empty_content_modes
 
     # Before/after has privilege. If nothing defined, match is used by content.
     if before is None and after is None and not match:
