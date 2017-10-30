@@ -1645,12 +1645,12 @@ def _mkstemp_copy(path,
 
 def _starts_till(src, probe, strip_comments=True):
     '''
-    Returns True if src and probe at least begins till some point.
+    Returns True if src and probe at least matches at the beginning till some point.
     '''
     def _strip_comments(txt):
         '''
         Strip possible comments.
-        Usually commends are one or two symbols
+        Usually comments are one or two symbols at the beginning of the line, separated with space
         '''
         buff = txt.split(" ", 1)
         return len(buff) == 2 and len(buff[0]) < 2 and buff[1] or txt
