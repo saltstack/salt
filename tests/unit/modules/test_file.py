@@ -901,10 +901,11 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         See issue #38670
         :return:
         '''
-        file_content = 'file_roots:\n  base:\n    - /srv/salt'.strip()
-        file_modified = 'file_roots:\n  custom:\n    - /srv/custom\n  base:\n    - /srv/salt'
+        file_content = 'file_boots:\n  - /rusty\nfile_roots:\n  base:\n    - /srv/salt\n    - /srv/sugar'
+        file_modified = 'file_boots:\n  - /rusty\nfile_roots:\n  custom:\n    ' \
+                        '- /srv/custom\n  base:\n    - /srv/salt\n    - /srv/sugar'
         cfg_content = '  custom:\n    - /srv/custom'
-        for after_line in ['file_*', '.*roots']:
+        for after_line in ['file_r.*', '.*roots']:
             files_fopen = mock_open(read_data=file_content)
             with patch('salt.utils.files.fopen', files_fopen):
                 atomic_opener = mock_open()
