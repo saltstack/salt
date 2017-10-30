@@ -917,7 +917,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.stat', MagicMock())
-    def test_line_insert_before_no_pattern(self):
+    def test_line_insert_before(self):
         '''
         Test for file.line for insertion before specific line, using pattern and no patterns.
 
