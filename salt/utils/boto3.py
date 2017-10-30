@@ -43,7 +43,7 @@ from functools import partial
 
 # Import salt libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.exceptions import SaltInvocationError, CommandExecutionError  # pylint: disable=unused-import
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
 import salt.utils.stringutils
@@ -129,7 +129,7 @@ def _get_profile(service, region=None, key=None, keyid=None, profile=None,
             hash_string = salt.utils.stringutils.to_bytes(hash_string)
         cxkey = label + hashlib.md5(hash_string).hexdigest()
     elif aws_session_token:
-        hash_string = region + aws_session_key
+        hash_string = region + aws_session_token
         if six.PY3:
             hash_string = salt.utils.to_bytes(hash_string)
         cxkey = label + hashlib.md5(hash_string).hexdigest()
@@ -311,7 +311,6 @@ def assign_funcs(modname, service, module=None,
     mod = sys.modules[modname]
     setattr(mod, get_conn_funcname, get_connection_func(service, module=module))
     setattr(mod, cache_id_funcname, cache_id_func(service))
-
     # TODO: Remove this and import salt.utils.exactly_one into boto_* modules instead
     # Leaving this way for now so boto3 modules can be back ported
     if exactly_one_funcname is not None:
