@@ -1922,7 +1922,7 @@ def line(path, content=None, match=None, mode=None, location=None,
 
         else:
             if location == 'start':
-                body = ''.join([content, body])
+                body = os.linesep.join([content, body])
             elif location == 'end':
                 body = ''.join([body, _get_line_indent(body[-1], content, indent) if body else content])
 
