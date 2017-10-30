@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Manage wordpress plugins
+This state module is used to manage Wordpress installations
+
+:depends: wp binary from http://wp-cli.org/
 '''
 
 
@@ -8,7 +10,42 @@ def __virtual__():
     return 'wordpress.show_plugin' in __salt__
 
 
-def installed(name, path, user, admin_user, admin_password, admin_email, title, url):
+def installed(name, user, admin_user, admin_password, admin_email, title, url):
+    '''
+    Run the initial setup of wordpress
+
+    name
+        path to the wordpress installation
+
+    user
+        user that owns the files for the wordpress installation
+
+    admin_user
+        username for wordpress website administrator user
+
+    admin_password
+        password for wordpress website administrator user
+
+    admin_email
+        email for wordpress website administrator user
+
+    title
+        title for the wordpress website
+
+    url
+        url for the wordpress website
+
+    .. code-block:: yaml
+
+        /var/www/html:
+          wordpress.installed:
+            - title: Daniel's Awesome Blog
+            - user: apache
+            - admin_user: dwallace
+            - admin_email: dwallace@example.com
+            - admin_password: password123
+            - url: https://blog.dwallace.com
+    '''
     ret = {'name': name,
            'changes': {},
            'comment': '',
@@ -25,7 +62,7 @@ def installed(name, path, user, admin_user, admin_password, admin_email, title, 
         ret['comment'] = 'Wordpress will be installed: {0}'.format(name)
         return ret
 
-    resp = __salt__['wordpress.install'](path, user, admin_user, admin_password, admin_email, title, url)
+    resp = __salt__['wordpress.install'](name, user, admin_user, admin_password, admin_email, title, url)
     if resp:
         ret['result'] = True
         ret['comment'] = 'Wordpress Installed: {0}'.format(name)
@@ -39,6 +76,25 @@ def installed(name, path, user, admin_user, admin_password, admin_email, title, 
 
 
 def activated(name, path, user):
+    '''
+    Activate wordpress plugins
+
+    name
+        name of plugin to activate
+
+    path
+        path to wordpress installation
+
+    user
+        user who should own the files in the wordpress installation
+
+    .. code-block:: yaml
+
+        HyperDB:
+          wordpress.activated:
+            - path: /var/www/html
+            - user: apache
+    '''
     ret = {'name': name,
            'changes': {},
            'comment': '',
@@ -77,6 +133,25 @@ def activated(name, path, user):
 
 
 def deactivated(name, path, user):
+    '''
+    Deactivate wordpress plugins
+
+    name
+        name of plugin to deactivate
+
+    path
+        path to wordpress installation
+
+    user
+        user who should own the files in the wordpress installation
+
+    .. code-block:: yaml
+
+        HyperDB:
+          wordpress.deactivated:
+            - path: /var/www/html
+            - user: apache
+    '''
     ret = {'name': name,
            'changes': {},
            'comment': '',
