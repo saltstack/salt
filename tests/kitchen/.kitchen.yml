@@ -12,9 +12,7 @@ provisioner:
   name: salt_solo
   salt_install: pip
   pip_pkg: <%= ENV['SALT_SDIST_PATH'] || 'salt' %>
-  pip_index_url: https://pypi.c7.saltstack.net/simple
-  pip_extra_index_url:
-    - https://pypi.python.org/simple
+  pip_index_url: <%= ENV['SALT_INDEX_URL'] || 'https://pypi.python.org/simple' %>
   require_chef: false
   formula: states
 <% if File.exists?('provisioner.yml') %>
