@@ -11,7 +11,7 @@ import textwrap
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, patch, mock_open
 
 try:
     import pytest
@@ -844,6 +844,20 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             with pytest.raises(CommandExecutionError) as cmd_err:
                 filemod.line('foo', mode=mode)
             assert 'Content can only be empty if mode is "delete"' in str(cmd_err)
+
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
+    def test_line_insert_no_location_no_before_no_after(self):
+        '''
+        Test for file.line for insertion but define no location/before/after.
+        :return:
+        '''
+        files_fopen = mock_open(read_data='test data')
+        with patch('salt.utils.files.fopen', files_fopen):
+            with pytest.raises(CommandExecutionError) as cmd_err:
+                filemod.line('foo', content='test content', mode='insert')
+            assert '"location" or "before/after"' in str(cmd_err)
 
 
 class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
