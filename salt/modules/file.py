@@ -1910,14 +1910,14 @@ def line(path, content=None, match=None, mode=None, location=None,
                 _assert_occurrence(body, after, 'after')
                 out = []
                 lines = body.split(os.linesep)
-                for idx in range(len(lines)):
-                    _line = lines[idx]
+                for idx, _line in enumerate(lines):
                     out.append(_line)
                     cnd = _get_line_indent(_line, content, indent)
-                    if _line.find(after) > -1:
-                        # No dupes or append, if "after" is the last line
-                        if (idx < len(lines) and _starts_till(lines[idx + 1], cnd) < 0) or idx + 1 == len(lines):
-                            out.append(cnd)
+                    # No duplicates or append, if "after" is the last line
+                    if (_line.find(after) > -1 and
+                            (lines[((idx + 1) < len(lines)) and idx + 1 or idx].strip() != cnd or
+                             idx + 1 == len(lines))):
+                        out.append(cnd)
                 body = os.linesep.join(out)
 
         else:
