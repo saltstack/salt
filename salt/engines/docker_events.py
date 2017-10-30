@@ -11,7 +11,7 @@ import json
 import logging
 import traceback
 
-import salt.utils
+import salt.utils.event
 
 # pylint: disable=import-error
 try:
@@ -50,8 +50,8 @@ def start(docker_url='unix://var/run/docker.sock',
     .. code-block:: yaml
 
         engines:
-          docker_events:
-            docker_url: unix://var/run/docker.sock
+          - docker_events:
+              docker_url: unix://var/run/docker.sock
 
     The config above sets up engines to listen
     for events from the Docker daemon and publish
@@ -74,8 +74,12 @@ def start(docker_url='unix://var/run/docker.sock',
         else:
             __salt__['event.send'](tag, msg)
 
-    client = docker.Client(base_url=docker_url,
-                           timeout=timeout)
+    try:
+        # docker-py 2.0 renamed this client attribute
+        client = docker.APIClient(base_url=docker_url, timeout=timeout)
+    except AttributeError:
+        client = docker.Client(base_url=docker_url, timeout=timeout)
+
     try:
         events = client.events()
         for event in events:

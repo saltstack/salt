@@ -67,14 +67,14 @@ if NO_MOCK is False:
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DNSUtilTestCase(TestCase):
     def test_parse_hosts(self):
-        with patch('salt.utils.fopen', mock_open(read_data=mock_hosts_file)):
+        with patch('salt.utils.files.fopen', mock_open(read_data=mock_hosts_file)):
             self.assertEqual(dnsutil.parse_hosts(), {'::1': ['localhost'],
                                                      '255.255.255.255': ['broadcasthost'],
                                                      '127.0.0.1': ['localhost'],
                                                      'fe80::1%lo0': ['localhost']})
 
     def test_hosts_append(self):
-        with patch('salt.utils.fopen', mock_open(read_data=mock_hosts_file)) as m_open, \
+        with patch('salt.utils.files.fopen', mock_open(read_data=mock_hosts_file)) as m_open, \
                 patch('salt.modules.dnsutil.parse_hosts', MagicMock(return_value=mock_hosts_file_rtn)):
             dnsutil.hosts_append('/etc/hosts', '127.0.0.1', 'ad1.yuk.co,ad2.yuk.co')
             helper_open = m_open()
@@ -83,7 +83,7 @@ class DNSUtilTestCase(TestCase):
     def test_hosts_remove(self):
         to_remove = 'ad1.yuk.co'
         new_mock_file = mock_hosts_file + '\n127.0.0.1 ' + to_remove + '\n'
-        with patch('salt.utils.fopen', mock_open(read_data=new_mock_file)) as m_open:
+        with patch('salt.utils.files.fopen', mock_open(read_data=new_mock_file)) as m_open:
             dnsutil.hosts_remove('/etc/hosts', to_remove)
             helper_open = m_open()
             calls_list = helper_open.method_calls
@@ -91,7 +91,7 @@ class DNSUtilTestCase(TestCase):
 
     @skipIf(True, 'Waiting on bug report fixes')
     def test_parse_zone(self):
-        with patch('salt.utils.fopen', mock_open(read_data=mock_soa_zone)):
+        with patch('salt.utils.files.fopen', mock_open(read_data=mock_soa_zone)):
             log.debug(mock_soa_zone)
             log.debug(dnsutil.parse_zone('/var/lib/named/example.com.zone'))
 

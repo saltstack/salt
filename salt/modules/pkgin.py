@@ -17,13 +17,15 @@ import os
 import re
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.functools
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, MinionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 VERSION_MATCH = re.compile(r'pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)')
 log = logging.getLogger(__name__)
@@ -37,7 +39,7 @@ def _check_pkgin():
     '''
     Looks to see if pkgin is present on the system, return full path
     '''
-    ppath = salt.utils.which('pkgin')
+    ppath = salt.utils.path.which('pkgin')
     if ppath is None:
         # pkgin was not found in $PATH, try to find it via LOCALBASE
         try:
@@ -150,7 +152,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> ...
     '''
 
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
     pkglist = {}
     pkgin = _check_pkgin()
@@ -193,7 +195,7 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def version(*names, **kwargs):
@@ -254,9 +256,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
@@ -396,7 +398,7 @@ def install(name=None, refresh=False, fromrepo=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -439,7 +441,7 @@ def upgrade():
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -520,7 +522,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(

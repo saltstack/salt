@@ -28,9 +28,6 @@ bytes = bytearray
 # Python 2 does not support exception chaining.
 # s/ from None$//
 
-# Python 2 ranges need to fit in a C long
-# 'fix' hosts() for IPv6Network
-
 # When checking for instances of int, also allow Python 2's long.
 _builtin_isinstance = isinstance
 
@@ -2259,7 +2256,7 @@ class IPv6Network(_BaseV6, _BaseNetwork):
         """
         network = int(self.network_address)
         broadcast = int(self.broadcast_address)
-        for x in range(1, broadcast - network + 1):
+        for x in long_range(1, broadcast - network + 1):
             yield self._address_class(network + x)
 
     @property

@@ -32,7 +32,7 @@ from tests.support.unit import TestLoader, TextTestRunner
 from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     from tests.support.ext import console
     WIDTH, HEIGHT = console.getTerminalSize()
