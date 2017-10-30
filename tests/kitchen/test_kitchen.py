@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Test wrapper for running all KitchenSalt tests
+
+All directories in 'tests/kitchen/' will be treated as a separate test under
+the KitchenTestCase.
 '''
 from __future__ import absolute_import
 import os
