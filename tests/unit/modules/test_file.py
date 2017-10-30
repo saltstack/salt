@@ -872,6 +872,18 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             assert err_msg in str(cmd_err)
 
     @skipIf(pytest is None, 'PyTest required for this test')
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    def test_line_no_content(self):
+        '''
+        Test for file.line for an empty content when not deleting anything.
+        :return:
+        '''
+        for mode in ['insert', 'ensure', 'replace']:
+            with pytest.raises(CommandExecutionError) as cmd_err:
+                filemod.line('foo', mode=mode)
+            assert 'Content can only be empty if mode is "delete"' in str(cmd_err)
+
 
 class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
