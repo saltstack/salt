@@ -166,7 +166,7 @@ def enabled(name, **kwargs):
            'changes': {},
            'comment': []}
 
-    current_beacons = __salt__['beacons.list'](show_all=True, return_yaml=False)
+    current_beacons = __salt__['beacons.list'](return_yaml=False)
     if name in current_beacons:
         if 'test' in __opts__ and __opts__['test']:
             kwargs['test'] = True
@@ -204,7 +204,7 @@ def disabled(name, **kwargs):
            'changes': {},
            'comment': []}
 
-    current_beacons = __salt__['beacons.list'](show_all=True, return_yaml=False)
+    current_beacons = __salt__['beacons.list'](return_yaml=False)
     if name in current_beacons:
         if 'test' in __opts__ and __opts__['test']:
             kwargs['test'] = True

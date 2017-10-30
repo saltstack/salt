@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for interacting with the job cache
+'''
 
 # Import Python libs
 from __future__ import absolute_import
@@ -99,10 +102,10 @@ def store_job(opts, load, event=None, mminion=None):
         log.error(emsg)
         raise KeyError(emsg)
 
-    if 'jid' in load \
-            and 'get_load' in mminion.returners \
-            and not mminion.returners[getfstr](load.get('jid', '')):
+    try:
         mminion.returners[savefstr](load['jid'], load)
+    except KeyError as e:
+        log.error("Load does not contain 'jid': %s", e)
     mminion.returners[fstr](load)
 
     if (opts.get('job_cache_store_endtime')

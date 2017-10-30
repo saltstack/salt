@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for adding yaml encoding to the jinja context
+'''
 
 # Import Python libs
 from __future__ import absolute_import

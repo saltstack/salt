@@ -21,9 +21,9 @@ import logging
 import re
 
 # Import salt libs
-import salt.utils  # TODO: Remove this once alias_function is moved
 import salt.utils.args
 import salt.utils.data
+import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.systemd
@@ -261,7 +261,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def _get_upgradable(backtrack=3):

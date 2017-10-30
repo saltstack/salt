@@ -661,22 +661,29 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_elb.get_health_check myelb
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    retries = 30
 
-    try:
-        lb = conn.get_all_load_balancers(load_balancer_names=[name])
-        lb = lb[0]
-        ret = odict.OrderedDict()
-        hc = lb.health_check
-        ret['interval'] = hc.interval
-        ret['target'] = hc.target
-        ret['healthy_threshold'] = hc.healthy_threshold
-        ret['timeout'] = hc.timeout
-        ret['unhealthy_threshold'] = hc.unhealthy_threshold
-        return ret
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        log.error('ELB {0} does not exist: {1}'.format(name, error))
-        return {}
+    while True:
+        try:
+            lb = conn.get_all_load_balancers(load_balancer_names=[name])
+            lb = lb[0]
+            ret = odict.OrderedDict()
+            hc = lb.health_check
+            ret['interval'] = hc.interval
+            ret['target'] = hc.target
+            ret['healthy_threshold'] = hc.healthy_threshold
+            ret['timeout'] = hc.timeout
+            ret['unhealthy_threshold'] = hc.unhealthy_threshold
+            return ret
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, will retry in 5 seconds.')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(error)
+            log.error('ELB {0} not found.'.format(name))
+            return {}
 
 
 def set_health_check(name, health_check, region=None, key=None, keyid=None,
@@ -691,16 +698,23 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
         salt myminion boto_elb.set_health_check myelb '{"target": "HTTP:80/"}'
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    retries = 30
 
     hc = HealthCheck(**health_check)
-    try:
-        conn.configure_health_check(name, hc)
-        log.info('Configured health check on ELB {0}'.format(name))
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        log.info('Failed to configure health check on ELB {0}: {1}'.format(name, error))
-        return False
-    return True
+    while True:
+        try:
+            conn.configure_health_check(name, hc)
+            log.info('Configured health check on ELB {0}'.format(name))
+            return True
+        except boto.exception.BotoServerError as error:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, will retry in 5 seconds.')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(error)
+            log.error('Failed to configure health check on ELB {0}'.format(name))
+            return False
 
 
 def register_instances(name, instances, region=None, key=None, keyid=None,

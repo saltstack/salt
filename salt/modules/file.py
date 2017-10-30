@@ -46,12 +46,12 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.find
+import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.itertools
 import salt.utils.locales
@@ -2320,14 +2320,14 @@ def replace(path,
         if not_found_content is None:
             not_found_content = repl
         if prepend_if_not_found:
-            new_file.insert(0, not_found_content + salt.utils.to_bytes(os.linesep))
+            new_file.insert(0, not_found_content + salt.utils.stringutils.to_bytes(os.linesep))
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith(salt.utils.to_bytes(os.linesep)):
-                    new_file[-1] += salt.utils.to_bytes(os.linesep)
-            new_file.append(not_found_content + salt.utils.to_bytes(os.linesep))
+                if not new_file[-1].endswith(salt.utils.stringutils.to_bytes(os.linesep)):
+                    new_file[-1] += salt.utils.stringutils.to_bytes(os.linesep)
+            new_file.append(not_found_content + salt.utils.stringutils.to_bytes(os.linesep))
         has_changes = True
         if not dry_run:
             try:
@@ -2513,7 +2513,7 @@ def blockreplace(path,
                     bufsize=1, mode='rb')
         for line in fi_file:
 
-            line = salt.utils.to_str(line)
+            line = salt.utils.stringutils.to_str(line)
             result = line
 
             if marker_start in line:
@@ -2622,7 +2622,7 @@ def blockreplace(path,
             try:
                 fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
                 for line in new_file:
-                    fh_.write(salt.utils.to_bytes(line))
+                    fh_.write(salt.utils.stringutils.to_bytes(line))
             finally:
                 fh_.close()
 
@@ -3763,7 +3763,7 @@ def source_list(source, source_hash, saltenv):
                 single_hash = single[single_src] if single[single_src] else source_hash
                 urlparsed_single_src = _urlparse(single_src)
                 # Fix this for Windows
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     # urlparse doesn't handle a local Windows path without the
                     # protocol indicator (file://). The scheme will be the
                     # drive letter instead of the protocol. So, we'll add the
@@ -3800,7 +3800,7 @@ def source_list(source, source_hash, saltenv):
                     ret = (single, source_hash)
                     break
                 urlparsed_src = _urlparse(single)
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     # urlparse doesn't handle a local Windows path without the
                     # protocol indicator (file://). The scheme will be the
                     # drive letter instead of the protocol. So, we'll add the
@@ -4700,6 +4700,7 @@ def check_file_meta(
     contents
         File contents
     '''
+    lsattr_cmd = salt.utils.path.which('lsattr')
     changes = {}
     if not source_sum:
         source_sum = {}
@@ -4764,13 +4765,14 @@ def check_file_meta(
         if mode is not None and mode != smode:
             changes['mode'] = mode
 
-        diff_attrs = _cmp_attrs(name, attrs)
-        if (
-            attrs is not None and
-            diff_attrs[0] is not None or
-            diff_attrs[1] is not None
-        ):
-            changes['attrs'] = attrs
+        if lsattr_cmd:
+            diff_attrs = _cmp_attrs(name, attrs)
+            if (
+                attrs is not None and
+                diff_attrs[0] is not None or
+                diff_attrs[1] is not None
+            ):
+                changes['attrs'] = attrs
 
     return changes
 
@@ -5868,7 +5870,7 @@ def list_backups(path, limit=None):
         [files[x] for x in sorted(files, reverse=True)[:limit]]
     )))
 
-list_backup = salt.utils.alias_function(list_backups, 'list_backup')
+list_backup = salt.utils.functools.alias_function(list_backups, 'list_backup')
 
 
 def list_backups_dir(path, limit=None):
@@ -5969,7 +5971,7 @@ def restore_backup(path, backup_id):
                          '{1}'.format(backup_id, path)
         return ret
 
-    salt.utils.backup_minion(path, _get_bkroot())
+    salt.utils.files.backup_minion(path, _get_bkroot())
     try:
         shutil.copyfile(backup['Location'], path)
     except IOError as exc:
@@ -6040,7 +6042,7 @@ def delete_backup(path, backup_id):
 
     return ret
 
-remove_backup = salt.utils.alias_function(delete_backup, 'remove_backup')
+remove_backup = salt.utils.functools.alias_function(delete_backup, 'remove_backup')
 
 
 def grep(path,

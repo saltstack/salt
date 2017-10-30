@@ -44,9 +44,9 @@ import logging
 import os
 
 # Import salt libs
-import salt.utils  # TODO: Remove this once alias_function is moved
 import salt.utils.data
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.pkg
 import salt.utils.versions
@@ -217,7 +217,7 @@ def version(*names, **kwargs):
     ])
 
 # Support pkg.info get version info, since this is the CLI usage
-info = salt.utils.alias_function(version, 'info')
+info = salt.utils.functools.alias_function(version, 'info')
 
 
 def refresh_db(jail=None, chroot=None, root=None, force=False):
@@ -266,7 +266,7 @@ def refresh_db(jail=None, chroot=None, root=None, force=False):
 
 
 # Support pkg.update to refresh the db, since this is the CLI usage
-update = salt.utils.alias_function(refresh_db, 'update')
+update = salt.utils.functools.alias_function(refresh_db, 'update')
 
 
 def latest_version(*names, **kwargs):
@@ -345,7 +345,7 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def list_pkgs(versions_as_list=False,
@@ -1062,9 +1062,9 @@ def remove(name=None,
     return ret
 
 # Support pkg.delete to remove packages, since this is the CLI usage
-delete = salt.utils.alias_function(remove, 'delete')
+delete = salt.utils.functools.alias_function(remove, 'delete')
 # No equivalent to purge packages, use remove instead
-purge = salt.utils.alias_function(remove, 'purge')
+purge = salt.utils.functools.alias_function(remove, 'purge')
 
 
 def upgrade(*names, **kwargs):

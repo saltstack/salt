@@ -115,7 +115,6 @@ import re
 import sys
 
 # Import salt libs
-import salt.utils
 import salt.utils.jid
 from salt.ext import six
 

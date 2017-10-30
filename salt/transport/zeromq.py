@@ -18,11 +18,12 @@ from random import randint
 # Import Salt Libs
 import salt.auth
 import salt.crypt
-import salt.utils
-import salt.utils.verify
 import salt.utils.event
+import salt.utils.minions
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.verify
+import salt.utils.zeromq
 import salt.payload
 import salt.transport.client
 import salt.transport.server
@@ -596,6 +597,17 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         if not isinstance(payload, dict) or not isinstance(payload.get('load'), dict):
             log.error('payload and load must be a dict. Payload was: {0} and load was {1}'.format(payload, payload.get('load')))
             stream.send(self.serial.dumps('payload and load must be a dict'))
+            raise tornado.gen.Return()
+
+        try:
+            id_ = payload['load'].get('id', '')
+            if '\0' in id_:
+                log.error('Payload contains an id with a null byte: %s', payload)
+                stream.send(self.serial.dumps('bad load: id contains a null byte'))
+                raise tornado.gen.Return()
+        except TypeError:
+            log.error('Payload contains non-string id: %s', payload)
+            stream.send(self.serial.dumps('bad load: id {0} is not a string'.format(id_)))
             raise tornado.gen.Return()
 
         # intercept the "_auth" commands, since the main daemon shouldn't know

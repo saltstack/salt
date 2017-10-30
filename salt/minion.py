@@ -74,6 +74,12 @@ try:
     HAS_ZMQ_MONITOR = True
 except ImportError:
     HAS_ZMQ_MONITOR = False
+
+try:
+    import salt.utils.win_functions
+    HAS_WIN_FUNCTIONS = True
+except ImportError:
+    HAS_WIN_FUNCTIONS = False
 # pylint: enable=import-error
 
 # Import salt libs
@@ -86,7 +92,6 @@ import salt.engines
 import salt.payload
 import salt.pillar
 import salt.syspaths
-import salt.utils
 import salt.utils.args
 import salt.utils.context
 import salt.utils.data
@@ -2058,6 +2063,8 @@ class Minion(MinionBase):
         func = data.get(u'func', None)
         name = data.get(u'name', None)
         beacon_data = data.get(u'beacon_data', None)
+        include_pillar = data.get(u'include_pillar', None)
+        include_opts = data.get(u'include_opts', None)
 
         if func == u'add':
             self.beacons.add_beacon(name, beacon_data)
@@ -2074,7 +2081,7 @@ class Minion(MinionBase):
         elif func == u'disable_beacon':
             self.beacons.disable_beacon(name)
         elif func == u'list':
-            self.beacons.list_beacons()
+            self.beacons.list_beacons(include_opts, include_pillar)
         elif func == u'list_available':
             self.beacons.list_available_beacons()
         elif func == u'validate_beacon':
@@ -2371,7 +2378,8 @@ class Minion(MinionBase):
         enable_sigusr1_handler()
 
         # Make sure to gracefully handle CTRL_LOGOFF_EVENT
-        salt.utils.enable_ctrl_logoff_handler()
+        if HAS_WIN_FUNCTIONS:
+            salt.utils.win_functions.enable_ctrl_logoff_handler()
 
         # On first startup execute a state run if configured to do so
         self._state_run()

@@ -482,22 +482,15 @@ def clean_path(root, path, subdir=False):
     return ''
 
 
-def clean_id(id_):
-    '''
-    Returns if the passed id is clean.
-    '''
-    if re.search(r'\.\.\{sep}'.format(sep=os.sep), id_):
-        return False
-    return True
-
-
 def valid_id(opts, id_):
     '''
     Returns if the passed id is valid
     '''
     try:
-        return bool(clean_path(opts['pki_dir'], id_)) and clean_id(id_)
-    except (AttributeError, KeyError, TypeError) as e:
+        if any(x in id_ for x in ('/', '\\', '\0')):
+            return False
+        return bool(clean_path(opts['pki_dir'], id_))
+    except (AttributeError, KeyError, TypeError):
         return False
 
 

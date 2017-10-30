@@ -282,16 +282,18 @@ from datetime import datetime   # python3 problem in the making?
 # Import salt libs
 import salt.loader
 import salt.payload
-import salt.utils
+import salt.utils.dateutils
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
 from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.state import get_accumulator_dir as _get_accumulator_dir
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
@@ -315,8 +317,10 @@ def _get_accumulator_filepath():
     '''
     Return accumulator data path.
     '''
-    return os.path.join(salt.utils.get_accumulator_dir(__opts__['cachedir']),
-                        __instance_id__)
+    return os.path.join(
+        _get_accumulator_dir(__opts__['cachedir']),
+        __instance_id__
+    )
 
 
 def _load_accumulators():
@@ -424,7 +428,7 @@ def _gen_recurse_managed_files(
             srelpath = posixpath.relpath(lname, srcpath)
             if not _is_valid_relpath(srelpath, maxdepth=maxdepth):
                 continue
-            if not salt.utils.check_include_exclude(
+            if not salt.utils.stringutils.check_include_exclude(
                     srelpath, include_pat, exclude_pat):
                 continue
             # Check for all paths that begin with the symlink
@@ -481,7 +485,7 @@ def _gen_recurse_managed_files(
 
         # Check if it is to be excluded. Match only part of the path
         # relative to the target directory
-        if not salt.utils.check_include_exclude(
+        if not salt.utils.stringutils.check_include_exclude(
                 relname, include_pat, exclude_pat):
             continue
         dest = full_path(relname)
@@ -502,7 +506,7 @@ def _gen_recurse_managed_files(
             relname = posixpath.relpath(mdir, srcpath)
             if not _is_valid_relpath(relname, maxdepth=maxdepth):
                 continue
-            if not salt.utils.check_include_exclude(
+            if not salt.utils.stringutils.check_include_exclude(
                     relname, include_pat, exclude_pat):
                 continue
             mdest = full_path(relname)
@@ -640,7 +644,7 @@ def _clean_dir(root, keep, exclude_pat):
         if nfn not in real_keep:
             # -- check if this is a part of exclude_pat(only). No need to
             # check include_pat
-            if not salt.utils.check_include_exclude(
+            if not salt.utils.stringutils.check_include_exclude(
                     os.path.relpath(nfn, root), None, exclude_pat):
                 return
             removed.add(nfn)
@@ -730,7 +734,7 @@ def _check_directory(name,
             if path in keep:
                 return {}
             else:
-                if not salt.utils.check_include_exclude(
+                if not salt.utils.stringutils.check_include_exclude(
                         os.path.relpath(path, name), None, exclude_pat):
                     return {}
                 else:
@@ -3554,7 +3558,7 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
     def get_file_time_from_strptime(f):
         try:
             ts = datetime.strptime(f, strptime_format)
-            ts_epoch = salt.utils.total_seconds(ts - beginning_of_unix_time)
+            ts_epoch = salt.utils.dateutils.total_seconds(ts - beginning_of_unix_time)
             return (ts, ts_epoch)
         except ValueError:
             # Files which don't match the pattern are not relevant files.
@@ -4720,7 +4724,7 @@ def append(name,
             if ignore_whitespace:
                 if __salt__['file.search'](
                         name,
-                        salt.utils.build_whitespace_split_regex(chunk),
+                        salt.utils.stringutils.build_whitespace_split_regex(chunk),
                         multiline=True):
                     continue
             elif __salt__['file.search'](
@@ -4916,7 +4920,7 @@ def prepend(name,
         if not header:
             if __salt__['file.search'](
                     name,
-                    salt.utils.build_whitespace_split_regex(chunk),
+                    salt.utils.stringutils.build_whitespace_split_regex(chunk),
                     multiline=True):
                 continue
 
@@ -6547,7 +6551,8 @@ def cached(name,
             and parsed.scheme in salt.utils.files.REMOTE_PROTOS:
         ret['comment'] = (
             'Unable to verify upstream hash of source file {0}, please set '
-            'source_hash or set skip_verify to True'.format(name)
+            'source_hash or set skip_verify to True'.format(
+                salt.utils.url.redact_http_basic_auth(name))
         )
         return ret
 
@@ -6678,13 +6683,14 @@ def cached(name,
                 saltenv=saltenv,
                 source_hash=source_sum.get('hsum'))
         except Exception as exc:
-            ret['comment'] = exc.__str__()
+            ret['comment'] = salt.utils.url.redact_http_basic_auth(exc.__str__())
             return ret
 
     if not local_copy:
         ret['comment'] = (
             'Failed to cache {0}, check minion log for more '
-            'information'.format(name)
+            'information'.format(
+                salt.utils.url.redact_http_basic_auth(name))
         )
         return ret
 

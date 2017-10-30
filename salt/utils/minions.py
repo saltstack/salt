@@ -13,10 +13,10 @@ import logging
 
 # Import salt libs
 import salt.payload
-import salt.utils  # TODO: Remove this once expr_match is moved
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
+import salt.utils.stringutils
 import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltCacheError
@@ -599,10 +599,9 @@ class CkMinions(object):
             if search is None:
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts['publish_port']))
-            if '127.0.0.1' in addrs or '0.0.0.0' in addrs:
-                # Add in possible ip addresses of a locally connected minion
+            if '127.0.0.1' in addrs:
+                # Add in the address of a possible locally-connected minion.
                 addrs.discard('127.0.0.1')
-                addrs.discard('0.0.0.0')
                 addrs.update(set(salt.utils.network.ip_addrs(include_loopback=include_localhost)))
             if subset:
                 search = subset
@@ -985,7 +984,7 @@ class CkMinions(object):
                 if match.rstrip('%') in groups:
                     auth_list.extend(auth_provider[match])
             else:
-                if salt.utils.expr_match(match, name):
+                if salt.utils.stringutils.expr_match(match, name):
                     name_matched = True
                     auth_list.extend(auth_provider[match])
         if not permissive and not name_matched and '*' in auth_provider:

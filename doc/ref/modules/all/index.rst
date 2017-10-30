@@ -299,6 +299,7 @@ execution modules
     openstack_mng
     openvswitch
     opkg
+    opsgenie
     oracle
     osquery
     out
