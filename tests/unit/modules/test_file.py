@@ -965,8 +965,6 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     def test_line_delete(self):
         '''
         Test for file.line for deletion of specific line
-
-        See issue #38670
         :return:
         '''
         file_content = 'file_roots:\n  base:\n    - /srv/salt\n    - /srv/pepper\n    - /srv/sugar'
@@ -986,8 +984,6 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     def test_line_replace(self):
         '''
         Test for file.line for replacement of specific line
-
-        See issue #38670
         :return:
         '''
         file_content = 'file_roots:\n  base:\n    - /srv/salt\n    - /srv/pepper\n    - /srv/sugar'
