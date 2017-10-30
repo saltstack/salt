@@ -11,6 +11,7 @@
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_UNINST_KEY_OTHER "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OTHER}"
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
+!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py${PYTHON_VERSION}-${CPUARCH}-Setup.exe"
 
 # Import Libraries
 !include "MUI2.nsh"
@@ -50,6 +51,15 @@ ${StrStrAdv}
     Push "${String}"
     Call Trim
     Pop "${ResultVar}"
+!macroend
+
+# Part of the Explode function for Strings
+!define Explode "!insertmacro Explode"
+!macro Explode Length Separator String
+    Push    `${Separator}`
+    Push    `${String}`
+    Call    Explode
+    Pop     `${Length}`
 !macroend
 
 
@@ -92,10 +102,17 @@ Var Dialog
 Var Label
 Var CheckBox_Minion_Start
 Var CheckBox_Minion_Start_Delayed
+Var ConfigMasterHost
 Var MasterHost
 Var MasterHost_State
+Var ConfigMinionName
 Var MinionName
 Var MinionName_State
+Var ExistingConfigFound
+Var UseExistingConfig
+Var UseExistingConfig_State
+Var WarningExistingConfig
+Var WarningDefaultConfig
 Var StartMinion
 Var StartMinionDelayed
 Var DeleteInstallDir
@@ -115,19 +132,94 @@ Function pageMinionConfig
         Abort
     ${EndIf}
 
+    # Master IP or Hostname Dialog Control
     ${NSD_CreateLabel} 0 0 100% 12u "Master IP or Hostname:"
     Pop $Label
 
     ${NSD_CreateText} 0 13u 100% 12u $MasterHost_State
     Pop $MasterHost
 
+    # Minion ID Dialog Control
     ${NSD_CreateLabel} 0 30u 100% 12u "Minion Name:"
     Pop $Label
 
     ${NSD_CreateText} 0 43u 100% 12u $MinionName_State
     Pop $MinionName
 
+    # Use Existing Config Checkbox
+    ${NSD_CreateCheckBox} 0 65u 100% 12u "&Use Existing Config"
+    Pop $UseExistingConfig
+    ${NSD_OnClick} $UseExistingConfig pageMinionConfig_OnClick
+
+    # Add Existing Config Warning Label
+    ${NSD_CreateLabel} 0 80u 100% 60u "The values above are taken from an \
+        existing configuration found in `c:\salt\conf\minion`. Configuration \
+        settings defined in the `minion.d` directories, if they exist, are not \
+        shown here.$\r$\n\
+        $\r$\n\
+        Clicking `Install` will leave the existing config unchanged."
+    Pop $WarningExistingConfig
+    CreateFont $0 "Arial" 10 500 /ITALIC
+    SendMessage $WarningExistingConfig ${WM_SETFONT} $0 1
+    SetCtlColors $WarningExistingConfig 0xBB0000 transparent
+
+    # Add Default Config Warning Label
+    ${NSD_CreateLabel} 0 80u 100% 60u "Clicking `Install` will remove the \
+        the existing minion config file and remove the minion.d directories. \
+        The values above will be used in the new default config."
+    Pop $WarningDefaultConfig
+    CreateFont $0 "Arial" 10 500 /ITALIC
+    SendMessage $WarningDefaultConfig ${WM_SETFONT} $0 1
+    SetCtlColors $WarningDefaultConfig 0xBB0000 transparent
+
+    # If no existing config found, disable the checkbox and stuff
+    # Set UseExistingConfig_State to 0
+    ${If} $ExistingConfigFound == 0
+        StrCpy $UseExistingConfig_State 0
+        ShowWindow $UseExistingConfig ${SW_HIDE}
+        ShowWindow $WarningExistingConfig ${SW_HIDE}
+        ShowWindow $WarningDefaultConfig ${SW_HIDE}
+    ${Endif}
+
+    ${NSD_SetState} $UseExistingConfig $UseExistingConfig_State
+
+    Call pageMinionConfig_OnClick
+
     nsDialogs::Show
+
+FunctionEnd
+
+
+Function pageMinionConfig_OnClick
+
+    # You have to pop the top handle to keep the stack clean
+    Pop $R0
+
+    # Assign the current checkbox state to the variable
+    ${NSD_GetState} $UseExistingConfig $UseExistingConfig_State
+
+    # Validate the checkboxes
+    ${If} $UseExistingConfig_State == ${BST_CHECKED}
+        # Use Existing Config is checked, show warning
+        ShowWindow $WarningExistingConfig ${SW_SHOW}
+        EnableWindow $MasterHost 0
+        EnableWindow $MinionName 0
+        ${NSD_SetText} $MasterHost $ConfigMasterHost
+        ${NSD_SetText} $MinionName $ConfigMinionName
+        ${If} $ExistingConfigFound == 1
+            ShowWindow $WarningDefaultConfig ${SW_HIDE}
+        ${Endif}
+    ${Else}
+        # Use Existing Config is not checked, hide the warning
+        ShowWindow $WarningExistingConfig ${SW_HIDE}
+        EnableWindow $MasterHost 1
+        EnableWindow $MinionName 1
+        ${NSD_SetText} $MasterHost $MasterHost_State
+        ${NSD_SetText} $MinionName $MinionName_State
+        ${If} $ExistingConfigFound == 1
+            ShowWindow $WarningDefaultConfig ${SW_SHOW}
+        ${Endif}
+    ${EndIf}
 
 FunctionEnd
 
@@ -136,6 +228,9 @@ Function pageMinionConfig_Leave
 
     ${NSD_GetText} $MasterHost $MasterHost_State
     ${NSD_GetText} $MinionName $MinionName_State
+    ${NSD_GetState} $UseExistingConfig $UseExistingConfig_State
+
+    Call RemoveExistingConfig
 
 FunctionEnd
 
@@ -194,7 +289,7 @@ FunctionEnd
 !else
     Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 !endif
-OutFile "Salt-Minion-${PRODUCT_VERSION}-Py${PYTHON_VERSION}-${CPUARCH}-Setup.exe"
+OutFile "${OutFile}"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
@@ -311,8 +406,6 @@ SectionEnd
 
 Function .onInit
 
-    Call getMinionConfig
-
     Call parseCommandLineSwitches
 
     # Check for existing installation
@@ -364,6 +457,23 @@ Function .onInit
 
     skipUninstall:
 
+    Call getMinionConfig
+
+    IfSilent 0 +2
+        Call RemoveExistingConfig
+
+FunctionEnd
+
+
+Function RemoveExistingConfig
+
+    ${If} $ExistingConfigFound == 1
+    ${AndIf} $UseExistingConfig_State == 0
+        # Wipe out the Existing Config
+        Delete "$INSTDIR\conf\minion"
+        RMDir /r "$INSTDIR\conf\minion.d"
+    ${EndIf}
+
 FunctionEnd
 
 
@@ -407,7 +517,9 @@ Section -Post
     nsExec::Exec "nssm.exe set salt-minion AppStopMethodConsole 24000"
     nsExec::Exec "nssm.exe set salt-minion AppStopMethodWindow 2000"
 
-    Call updateMinionConfig
+    ${If} $UseExistingConfig_State == 0
+        Call updateMinionConfig
+    ${EndIf}
 
     Push "C:\salt"
     Call AddToPath
@@ -534,18 +646,32 @@ FunctionEnd
 # Helper Functions
 ###############################################################################
 Function MsiQueryProductState
+    # Used for detecting VCRedist Installation
+    !define INSTALLSTATE_DEFAULT "5"
 
-  !define INSTALLSTATE_DEFAULT "5"
-
-  Pop $R0
-  StrCpy $NeedVcRedist "False"
-  System::Call "msi::MsiQueryProductStateA(t '$R0') i.r0"
-  StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
-  StrCpy $NeedVcRedist "True"
+    Pop $R0
+    StrCpy $NeedVcRedist "False"
+    System::Call "msi::MsiQueryProductStateA(t '$R0') i.r0"
+    StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
+    StrCpy $NeedVcRedist "True"
 
 FunctionEnd
 
 
+#------------------------------------------------------------------------------
+# Trim Function
+# - Trim whitespace from the beginning and end of a string
+# - Trims spaces, \r, \n, \t
+#
+# Usage:
+#   Push " some string "  ; String to Trim
+#   Call Trim
+#   Pop $0                ; Trimmed String: "some string"
+#
+#   or
+#
+#   ${Trim} $0 $1   ; Trimmed String, String to Trim
+#------------------------------------------------------------------------------
 Function Trim
 
     Exch $R1 # Original string
@@ -577,6 +703,95 @@ Function Trim
         Pop $R2
         Exch $R1
 
+FunctionEnd
+
+
+#------------------------------------------------------------------------------
+# Explode Function
+# - Splits a string based off the passed separator
+# - Each item in the string is pushed to the stack
+# - The last item pushed to the stack is the length of the array
+#
+# Usage:
+#   Push ","                    ; Separator
+#   Push "string,to,separate"   ; String to explode
+#   Call Explode
+#   Pop $0                      ; Number of items in the array
+#
+#   or
+#
+#   ${Explode} $0 $1 $2         ; Length, Separator, String
+#------------------------------------------------------------------------------
+Function Explode
+    # Initialize variables
+    Var /GLOBAL explString
+    Var /GLOBAL explSeparator
+    Var /GLOBAL explStrLen
+    Var /GLOBAL explSepLen
+    Var /GLOBAL explOffset
+    Var /GLOBAL explTmp
+    Var /GLOBAL explTmp2
+    Var /GLOBAL explTmp3
+    Var /GLOBAL explArrCount
+
+    # Get input from user
+    Pop $explString
+    Pop $explSeparator
+
+    # Calculates initial values
+    StrLen $explStrLen $explString
+    StrLen $explSepLen $explSeparator
+    StrCpy $explArrCount 1
+
+    ${If} $explStrLen <= 1             #   If we got a single character
+    ${OrIf} $explSepLen > $explStrLen  #   or separator is larger than the string,
+        Push    $explString            #   then we return initial string with no change
+        Push    1                      #   and set array's length to 1
+        Return
+    ${EndIf}
+
+    # Set offset to the last symbol of the string
+    StrCpy $explOffset $explStrLen
+    IntOp  $explOffset $explOffset - 1
+
+    # Clear temp string to exclude the possibility of appearance of occasional data
+    StrCpy $explTmp   ""
+    StrCpy $explTmp2  ""
+    StrCpy $explTmp3  ""
+
+    # Loop until the offset becomes negative
+    ${Do}
+        # If offset becomes negative, it is time to leave the function
+        ${IfThen} $explOffset == -1 ${|} ${ExitDo} ${|}
+
+        # Remove everything before and after the searched part ("TempStr")
+        StrCpy $explTmp $explString $explSepLen $explOffset
+
+        ${If} $explTmp == $explSeparator
+            # Calculating offset to start copy from
+            IntOp   $explTmp2 $explOffset + $explSepLen    # Offset equals to the current offset plus length of separator
+            StrCpy  $explTmp3 $explString "" $explTmp2
+
+            Push    $explTmp3                              # Throwing array item to the stack
+            IntOp   $explArrCount $explArrCount + 1        # Increasing array's counter
+
+            StrCpy  $explString $explString $explOffset 0  # Cutting all characters beginning with the separator entry
+            StrLen  $explStrLen $explString
+        ${EndIf}
+
+        ${If} $explOffset = 0           # If the beginning of the line met and there is no separator,
+                                        # copying the rest of the string
+            ${If} $explSeparator == ""  # Fix for the empty separator
+                IntOp   $explArrCount   $explArrCount - 1
+            ${Else}
+                Push    $explString
+            ${EndIf}
+        ${EndIf}
+
+        IntOp   $explOffset $explOffset - 1
+    ${Loop}
+
+    Push $explArrCount
 FunctionEnd
 
 
@@ -816,6 +1031,9 @@ FunctionEnd
 ###############################################################################
 Function getMinionConfig
 
+    # Set Config Found Default Value
+    StrCpy $ExistingConfigFound 0
+
     confFind:
     IfFileExists "$INSTDIR\conf\minion" confFound confNotFound
 
@@ -828,24 +1046,42 @@ Function getMinionConfig
     ${EndIf}
 
     confFound:
+    StrCpy $ExistingConfigFound 1
     FileOpen $0 "$INSTDIR\conf\minion" r
 
-    ClearErrors
     confLoop:
-        FileRead $0 $1
-        IfErrors EndOfFile
-        ${StrLoc} $2 $1 "master:" ">"
-        ${If} $2 == 0
-            ${StrStrAdv} $2 $1 "master: " ">" ">" "0" "0" "0"
-            ${Trim} $2 $2
-                StrCpy $MasterHost_State $2
+        ClearErrors                                             # Clear Errors
+        FileRead $0 $1                                          # Read the next line
+        IfErrors EndOfFile                                      # Error is probably EOF
+        ${StrLoc} $2 $1 "master:" ">"                           # Find `master:` starting at the beginning
+        ${If} $2 == 0                                           # If it found it in the first position, then it is defined
+            ${StrStrAdv} $2 $1 "master: " ">" ">" "0" "0" "0"   # Read everything after `master: `
+            ${Trim} $2 $2                                       # Trim white space
+            ${If} $2 == ""                                      # If it's empty, it's probably a list
+                masterLoop:
+                ClearErrors                                     # Clear Errors
+                FileRead $0 $1                                  # Read the next line
+                IfErrors EndOfFile                              # Error is probably EOF
+                ${StrStrAdv} $2 $1 "- " ">" ">" "0" "0" "0"     # Read everything after `- `
+                ${Trim} $2 $2                                   # Trim white space
+                ${IfNot} $2 == ""                               # If it's not empty, we found something
+                    ${If} $ConfigMasterHost == ""               # Is the default `salt` there
+                        StrCpy $ConfigMasterHost $2             # If so, make the first item the new entry
+                    ${Else}
+                        StrCpy $ConfigMasterHost "$ConfigMasterHost,$2"  # Append the new master, comma separated
+                    ${EndIf}
+                    Goto masterLoop                             # Check the next one
+                ${EndIf}
+            ${Else}
+                StrCpy $ConfigMasterHost $2                     # A single master entry
             ${EndIf}
+        ${EndIf}
 
         ${StrLoc} $2 $1 "id:" ">"
         ${If} $2 == 0
             ${StrStrAdv} $2 $1 "id: " ">" ">" "0" "0" "0"
             ${Trim} $2 $2
-            StrCpy $MinionName_State $2
+            StrCpy $ConfigMinionName $2
         ${EndIf}
 
     Goto confLoop
@@ -854,6 +1090,14 @@ Function getMinionConfig
     FileClose $0
 
     confReallyNotFound:
+
+    # Set Default Config Values if not found
+    ${If} $ConfigMasterHost == ""
+        StrCpy $ConfigMasterHost "salt"
+    ${EndIf}
+    ${If} $ConfigMinionName == ""
+        StrCpy $ConfigMinionName "hostname"
+    ${EndIf}
 
 FunctionEnd
 
@@ -874,7 +1118,22 @@ Function updateMinionConfig
         ${StrLoc} $3 $2 "master:" ">"                    # where is 'master:' in this line
         ${If} $3 == 0                                    # is it in the first...
         ${OrIf} $3 == 1                                  # or second position (account for comments)
-            StrCpy $2 "master: $MasterHost_State$\r$\n"  # write the master
+
+            ${Explode} $9 "," $MasterHost_state          # Split the hostname on commas, $9 is the number of items found
+            ${If} $9 == 1                                # 1 means only a single master was passed
+                StrCpy $2 "master: $MasterHost_State$\r$\n"  # write the master
+            ${Else}                                      # Make a multi-master entry
+                StrCpy $2 "master:"                      # Make the first line "master:"
+
+                loop_explode:                            # Start a loop to go through the list in the config
+                pop $8                                   # Pop the next item off the stack
+                ${Trim} $8 $8                            # Trim any whitespace
+                StrCpy $2 "$2$\r$\n  - $8"               # Add it to the master variable ($2)
+                IntOp $9 $9 - 1                          # Decrement the list count
+                ${If} $9 >= 1                            # If it's not 0
+                    Goto loop_explode                    # Do it again
+                ${EndIf}                                 # close if statement
+            ${EndIf}                                     # close if statement
         ${EndIf}                                         # close if statement
     ${EndIf}                                             # close if statement
 
@@ -905,6 +1164,67 @@ Function parseCommandLineSwitches
     # Load the parameters
     ${GetParameters} $R0
 
+    # Display Help
+    ClearErrors
+    ${GetOptions} $R0 "/?" $R1
+    IfErrors display_help_not_found
+
+        System::Call 'kernel32::GetStdHandle(i -11)i.r0'
+        System::Call 'kernel32::AttachConsole(i -1)i.r1'
+        ${If} $0 = 0
+        ${OrIf} $1 = 0
+            System::Call 'kernel32::AllocConsole()'
+            System::Call 'kernel32::GetStdHandle(i -11)i.r0'
+        ${EndIf}
+        FileWrite $0 "$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "Help for Salt Minion installation$\n"
+        FileWrite $0 "===============================================================================$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "/minion-name=$\t$\tA string value to set the minion name. Default is$\n"
+        FileWrite $0 "$\t$\t$\t'hostname'. Setting the minion name will replace$\n"
+        FileWrite $0 "$\t$\t$\texisting config with a default config. Cannot be$\n"
+        FileWrite $0 "$\t$\t$\tused in conjunction with /use-existing-config=1$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "/master=$\t$\tA string value to set the IP address or hostname of$\n"
+        FileWrite $0 "$\t$\t$\tthe master. Default value is 'salt'. You may pass a$\n"
+        FileWrite $0 "$\t$\t$\tsingle master, or a comma separated list of masters.$\n"
+        FileWrite $0 "$\t$\t$\tSetting the master will replace existing config with$\n"
+        FileWrite $0 "$\t$\t$\ta default config. Cannot be used in conjunction with$\n"
+        FileWrite $0 "$\t$\t$\t/use-existing-config=1$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "/start-minion=$\t$\t1 will start the service, 0 will not. Default is 1$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "/start-minion-delayed$\tSet the minion start type to 'Automatic (Delayed Start)'$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "/use-existing-config=$\t1 will use the existing config if present, 0 will$\n"
+        FileWrite $0 "$\t$\t$\treplace existing config with a default config. Default$\n"
+        FileWrite $0 "$\t$\t$\tis 1. If this is set to 1, values passed in$\n"
+        FileWrite $0 "$\t$\t$\t/minion-name and /master will be ignored$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "/S$\t$\t$\tInstall Salt silently$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "/?$\t$\t$\tDisplay this help screen$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "-------------------------------------------------------------------------------$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "Examples:$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "${OutFile} /S$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "${OutFile} /S /minion-name=myminion /master=master.mydomain.com /start-minion-delayed$\n"
+        FileWrite $0 "$\n"
+        FileWrite $0 "===============================================================================$\n"
+        FileWrite $0 "Press Enter to continue..."
+        System::Free $0
+        System::Free $1
+        System::Call 'kernel32::FreeConsole()'
+        Abort
+    display_help_not_found:
+
+    # Set default value for Use Existing Config
+    StrCpy $UseExistingConfig_State 1
+
     # Check for start-minion switches
     # /start-service is to be deprecated, so we must check for both
     ${GetOptions} $R0 "/start-service=" $R1
@@ -930,19 +1250,31 @@ Function parseCommandLineSwitches
     start_minion_delayed_not_found:
 
     # Minion Config: Master IP/Name
+    # If setting master, we don't want to use existing config
     ${GetOptions} $R0 "/master=" $R1
     ${IfNot} $R1 == ""
         StrCpy $MasterHost_State $R1
+        StrCpy $UseExistingConfig_State 0
     ${ElseIf} $MasterHost_State == ""
         StrCpy $MasterHost_State "salt"
     ${EndIf}
 
     # Minion Config: Minion ID
+    # If setting minion id, we don't want to use existing config
     ${GetOptions} $R0 "/minion-name=" $R1
     ${IfNot} $R1 == ""
         StrCpy $MinionName_State $R1
+        StrCpy $UseExistingConfig_State 0
     ${ElseIf} $MinionName_State == ""
         StrCpy $MinionName_State "hostname"
+    ${EndIf}
+
+    # Use Existing Config
+    # Overrides above settings with user passed settings
+    ${GetOptions} $R0 "/use-existing-config=" $R1
+    ${IfNot} $R1 == ""
+        # Use Existing Config was passed something, set it
+        StrCpy $UseExistingConfig_State $R1
     ${EndIf}
 
 FunctionEnd

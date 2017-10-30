@@ -14,23 +14,33 @@ CVE-2017-14695 Directory traversal vulnerability in minion id validation in Salt
 
 CVE-2017-14696 Remote Denial of Service with a specially crafted authentication request. Credit for discovering the security flaw goes to: Julian Brost (julian@0x4a42.net)
 
-Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
-
 Known Issues
 ============
 
 On 2017.7.2 when using salt-api and cherrypy version 5.6.0, issue `#43581`_ will occur when starting the salt-api service. We have patched the cherry-py packages for python-cherrypy-5.6.0-2 from repo.saltstack.com. If you are using python-cherrypy-5.6.0-1 please ensure to run `yum install python-cherrypy` to install the new patched version.
 
-*Generated at: 2017-09-26T21:06:19Z*
+Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-Statistics:
+*Generated at: 2017-10-02T21:10:14Z*
 
-- Total Merges: **326**
-- Total Issue references: **133**
-- Total PR references: **389**
+Statistics
+==========
 
-Changes:
+- Total Merges: **328**
+- Total Issue references: **134**
+- Total PR references: **391**
 
+Changes
+=======
+
+- **PR** `#43868`_: (*rallytime*) Back-port `#43847`_ to 2017.7.2
+  * Fix to module.run
+
+- **PR** `#43756`_: (*gtmanfred*) split build and install for pkg osx
+  @ *2017-09-26T20:51:28Z*
+
+  * 88414d5 Merge pull request `#43756`_ from gtmanfred/2017.7.2
+  * f7df41f split build and install for pkg osx
 
 - **PR** `#43585`_: (*rallytime*) Back-port `#43330`_ to 2017.7.2
   @ *2017-09-19T17:33:34Z*
@@ -3110,6 +3120,12 @@ Changes:
 .. _`#480`: https://github.com/saltstack/salt/issues/480
 .. _`#495`: https://github.com/saltstack/salt/issues/495
 .. _`#43581`: https://github.com/saltstack/salt/issues/43581
+.. _`#43756`: https://github.com/saltstack/salt/pull/43756
+.. _`#43847`: https://github.com/saltstack/salt/pull/43847
+.. _`#43868`: https://github.com/saltstack/salt/pull/43868
+.. _`#475`: https://github.com/saltstack/salt/issues/475
+.. _`#480`: https://github.com/saltstack/salt/issues/480
+.. _`#495`: https://github.com/saltstack/salt/issues/495
 .. _`bp-37424`: https://github.com/saltstack/salt/pull/37424
 .. _`bp-39366`: https://github.com/saltstack/salt/pull/39366
 .. _`bp-41543`: https://github.com/saltstack/salt/pull/41543
