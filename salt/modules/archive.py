@@ -451,14 +451,14 @@ def tar(options, tarfile, sources=None, dest=None,
 
         .. code-block:: bash
 
-            salt '*' archive.tar -cjvf /tmp/salt.tar.bz2 {{grains.saltpath}} template=jinja
+            salt '*' archive.tar cjvf /tmp/salt.tar.bz2 {{grains.saltpath}} template=jinja
 
     CLI Examples:
 
     .. code-block:: bash
 
         # Create a tarfile
-        salt '*' archive.tar -cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
+        salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
         # Unpack a tarfile
         salt '*' archive.tar xf foo.tar dest=/target/directory
     '''
