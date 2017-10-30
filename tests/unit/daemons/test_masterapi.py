@@ -32,7 +32,8 @@ class AutoKeyTest(TestCase):
                                     test_func,
                                     file_content=u'test_value',
                                     file_name=u'test_grain',
-                                    autosign_grains_dir=u'test_dir'):
+                                    autosign_grains_dir=u'test_dir',
+                                    permissions_ret=True):
         '''
         Helper function for testing autosign_grains().
 
@@ -47,21 +48,25 @@ class AutoKeyTest(TestCase):
         mock_dirs = [(None, None, [file_name])]
 
         with patch('os.walk', MagicMock(return_value=mock_dirs)) as mock_walk, \
-             patch('salt.utils.files.fopen', MagicMock(return_value=mock_file)) as mock_open:
-            test_func(mock_walk, mock_open)
+             patch('salt.utils.files.fopen', MagicMock(return_value=mock_file)) as mock_open,
+             patch('salt.daemons.masterapi.AutoKey.check_permissions',
+                MagicMock(return_value=permissions_ret)) as mock_permissions:
+            test_func(mock_walk, mock_open, mock_permissions)
 
     def test_check_autosign_grains_no_grains(self):
         '''
         Asserts that autosigning from grains fails when no grain values are passed.
         '''
-        def test_func(mock_walk, mock_open):
+        def test_func(mock_walk, mock_open, mock_permissions):
             self.assertFalse(self.auto_key.check_autosign_grains(None))
             self.assertEqual(mock_walk.call_count, 0)
             self.assertEqual(mock_open.call_count, 0)
+            self.assertEqual(mock_permissions.call_count, 0)
 
             self.assertFalse(self.auto_key.check_autosign_grains({}))
             self.assertEqual(mock_walk.call_count, 0)
             self.assertEqual(mock_open.call_count, 0)
+            self.assertEqual(mock_permissions.call_count, 0)
 
         self._test_check_autosign_grains(test_func)
 
@@ -70,10 +75,11 @@ class AutoKeyTest(TestCase):
         Asserts that autosigning from grains fails when the \'autosign_grains_dir\' config option
         is undefined.
         '''
-        def test_func(mock_walk, mock_open):
+        def test_func(mock_walk, mock_open, mock_permissions):
             self.assertFalse(self.auto_key.check_autosign_grains({u'test_grain': u'test_value'}))
             self.assertEqual(mock_walk.call_count, 0)
             self.assertEqual(mock_open.call_count, 0)
+            self.assertEqual(mock_permissions.call_count, 0)
 
         self._test_check_autosign_grains(test_func, autosign_grains_dir=None)
 
@@ -82,7 +88,7 @@ class AutoKeyTest(TestCase):
         Asserts that autosigning from grains passes when a matching grain value is in an
         autosign_grain file.
         '''
-        def test_func(mock_walk, mock_open):
+        def test_func(*args):
             self.assertTrue(self.auto_key.check_autosign_grains({u'test_grain': u'test_value'}))
 
         file_content = u'#test_ignore\ntest_value'
@@ -93,11 +99,21 @@ class AutoKeyTest(TestCase):
         Asserts that autosigning from grains fails when the grain value is not in the
         autosign_grain files.
         '''
-        def test_func(mock_walk, mock_open):
+        def test_func(*args):
             self.assertFalse(self.auto_key.check_autosign_grains({u'test_grain': u'test_invalid'}))
 
         file_content = u'#test_invalid\ntest_value'
         self._test_check_autosign_grains(test_func, file_content=file_content)
+
+    def test_check_autosign_grains_invalid_file_permissions(self):
+        '''
+        Asserts that autosigning from grains fails when the grain file has the wrong permissions.
+        '''
+        def test_func(*args):
+            self.assertFalse(self.auto_key.check_autosign_grains({u'test_grain': u'test_value'}))
+
+        file_content = u'#test_ignore\ntest_value'
+        self._test_check_autosign_grains(test_func, file_content=file_content, permissions_ret=False)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
