@@ -744,7 +744,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, 'This is a templated file.')
 
 
-@skipIf(pytest is None, 'PyTest required for this test')
+@skipIf(pytest is None, 'PyTest required for this set of tests')
 class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     '''
     Unit tests for file.line
