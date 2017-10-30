@@ -2364,10 +2364,8 @@ def managed(name,
             elif ret['pchanges']:
                 ret['result'] = None
                 ret['comment'] = u'The file {0} is set to be changed'.format(name)
-                if show_changes and 'diff' in ret['pchanges']:
-                    ret['changes']['diff'] = ret['pchanges']['diff']
-                if not show_changes:
-                    ret['changes']['diff'] = '<show_changes=False>'
+                if 'diff' in ret['pchanges'] and not show_changes:
+                    ret['pchanges']['diff'] = '<show_changes=False>'
             else:
                 ret['result'] = True
                 ret['comment'] = u'The file {0} is in the correct state'.format(name)
