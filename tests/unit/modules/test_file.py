@@ -13,6 +13,11 @@ from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch
 
+try:
+    import pytest
+except ImportError:
+    pytest = None
+
 # Import Salt libs
 import salt.config
 import salt.loader
@@ -852,6 +857,21 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         empty_file.close()
         os.remove(empty_file.name)
 
+    @skipIf(pytest is None, 'PyTest required for this test')
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    def test_line_modecheck(self):
+        '''
+        Test for file.line ``mode=insert``.
+        Issue #38670
+        :return:
+        '''
+        for mode, err_msg in [(None, 'How to process the file'), ('nonsense', 'Unknown mode')]:
+            with pytest.raises(CommandExecutionError) as cmd_err:
+                filemod.line('foo', mode=mode)
+            assert err_msg in str(cmd_err)
+
+    @skipIf(pytest is None, 'PyTest required for this test')
 
 class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
