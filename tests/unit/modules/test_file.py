@@ -865,10 +865,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
 
         :return:
         '''
-        src = '<here is something>'
-        assert 1 == filemod._starts_till(src=src, probe='<here quite something else>')
-        assert 0 == filemod._starts_till(src=src, probe='<here is something>')
-        assert -1 == filemod._starts_till(src=src, probe='<and here is something>')
+        src = 'here is something'
+        assert 1 == filemod._starts_till(src=src, probe='here quite something else')
+        assert 0 == filemod._starts_till(src=src, probe='here is something')
+        assert -1 == filemod._starts_till(src=src, probe='and here is something')
 
 
 
