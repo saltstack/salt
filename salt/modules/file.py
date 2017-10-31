@@ -1714,6 +1714,8 @@ def _assert_occurrence(src, probe, target, amount=1):
     if msg:
         raise CommandExecutionError('Found {0} expected occurrences in "{1}" expression'.format(msg, target))
 
+    return occ
+
 
 def _get_line_indent(src, line, indent):
     '''
