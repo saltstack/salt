@@ -59,7 +59,9 @@ def guess_archive_type(name):
     Guess an archive type (tar, zip, or rar) by its file extension
     '''
     name = name.lower()
-    for ending in ('tar', 'tar.gz', 'tar.bz2', 'tar.xz', 'tgz', 'tbz2', 'txz',
+    for ending in ('tar', 'tar.gz', 'tgz',
+                   'tar.bz2', 'tbz2', 'tbz',
+                   'tar.xz', 'txz',
                    'tar.lzma', 'tlz'):
         if name.endswith('.' + ending):
             return 'tar'

@@ -1037,7 +1037,7 @@ class Minion(MinionBase):
                     u'may result in loss of contact with minions. Please '
                     u'upgrade your ZMQ!'
                 )
-        # Late setup the of the opts grains, so we can log from the grains
+        # Late setup of the opts grains, so we can log from the grains
         # module.  If this is a proxy, however, we need to init the proxymodule
         # before we can get the grains.  We do this for proxies in the
         # post_master_init
@@ -2063,6 +2063,8 @@ class Minion(MinionBase):
         func = data.get(u'func', None)
         name = data.get(u'name', None)
         beacon_data = data.get(u'beacon_data', None)
+        include_pillar = data.get(u'include_pillar', None)
+        include_opts = data.get(u'include_opts', None)
 
         if func == u'add':
             self.beacons.add_beacon(name, beacon_data)
@@ -2079,7 +2081,7 @@ class Minion(MinionBase):
         elif func == u'disable_beacon':
             self.beacons.disable_beacon(name)
         elif func == u'list':
-            self.beacons.list_beacons()
+            self.beacons.list_beacons(include_opts, include_pillar)
         elif func == u'list_available':
             self.beacons.list_available_beacons()
         elif func == u'validate_beacon':

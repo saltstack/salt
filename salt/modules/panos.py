@@ -68,10 +68,10 @@ def _get_job_results(query=None):
     response = __proxy__['panos.call'](query)
 
     # If the response contains a job, we will wait for the results
-    if 'job' in response:
-        jid = response['job']
+    if 'result' in response and 'job' in response['result']:
+        jid = response['result']['job']
 
-        while get_job(jid)['job']['status'] != 'FIN':
+        while get_job(jid)['result']['job']['status'] != 'FIN':
             time.sleep(5)
 
         return get_job(jid)
@@ -317,6 +317,56 @@ def fetch_license(auth_code=None):
     else:
         query = {'type': 'op', 'cmd': '<request><license><fetch><auth-code>{0}</auth-code></fetch></license>'
                                       '</request>'.format(auth_code)}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_address(address=None, vsys='1'):
+    '''
+    Get the candidate configuration for the specified get_address object. This will not return address objects that are
+    marked as pre-defined objects.
+
+    address(str): The name of the address object.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_address myhost
+        salt '*' panos.get_address myhost 3
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'address/entry[@name=\'{1}\']'.format(vsys, address)}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_address_group(addressgroup=None, vsys='1'):
+    '''
+    Get the candidate configuration for the specified address group. This will not return address groups that are
+    marked as pre-defined objects.
+
+    addressgroup(str): The name of the address group.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_address_group foobar
+        salt '*' panos.get_address_group foobar 3
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'address-group/entry[@name=\'{1}\']'.format(vsys, addressgroup)}
 
     return __proxy__['panos.call'](query)
 
@@ -588,7 +638,7 @@ def get_hostname():
              'action': 'get',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/deviceconfig/system/hostname'}
 
-    return __proxy__['panos.call'](query)['hostname']
+    return __proxy__['panos.call'](query)
 
 
 def get_interface_counters(name='all'):
@@ -930,9 +980,30 @@ def get_platform():
     return __proxy__['panos.call'](query)
 
 
+def get_predefined_application(application=None):
+    '''
+    Get the configuration for the specified pre-defined application object. This will only return pre-defined
+    application objects.
+
+    application(str): The name of the pre-defined application object.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_predefined_application saltstack
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/predefined/application/entry[@name=\'{0}\']'.format(application)}
+
+    return __proxy__['panos.call'](query)
+
+
 def get_security_rule(rulename=None, vsys='1'):
     '''
-    Get the candidate configuration for the specified rule.
+    Get the candidate configuration for the specified security rule.
 
     rulename(str): The name of the security rule.
 
@@ -950,6 +1021,56 @@ def get_security_rule(rulename=None, vsys='1'):
              'action': 'get',
              'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
              'rulebase/security/rules/entry[@name=\'{1}\']'.format(vsys, rulename)}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_service(service=None, vsys='1'):
+    '''
+    Get the candidate configuration for the specified service object. This will not return services that are marked
+    as pre-defined objects.
+
+    service(str): The name of the service object.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_service tcp-443
+        salt '*' panos.get_service tcp-443 3
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'service/entry[@name=\'{1}\']'.format(vsys, service)}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_service_group(servicegroup=None, vsys='1'):
+    '''
+    Get the candidate configuration for the specified service group. This will not return service groups that are
+    marked as pre-defined objects.
+
+    servicegroup(str): The name of the service group.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_service_group foobar
+        salt '*' panos.get_service_group foobar 3
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'service-group/entry[@name=\'{1}\']'.format(vsys, servicegroup)}
 
     return __proxy__['panos.call'](query)
 
@@ -1069,11 +1190,11 @@ def get_system_services():
     return __proxy__['panos.call'](query)
 
 
-def get_system_state(filter=None):
+def get_system_state(mask=None):
     '''
     Show the system state variables.
 
-    filter
+    mask
         Filters by a subtree or a wildcard.
 
     CLI Example:
@@ -1081,13 +1202,13 @@ def get_system_state(filter=None):
     .. code-block:: bash
 
         salt '*' panos.get_system_state
-        salt '*' panos.get_system_state filter=cfg.ha.config.enabled
-        salt '*' panos.get_system_state filter=cfg.ha.*
+        salt '*' panos.get_system_state mask=cfg.ha.config.enabled
+        salt '*' panos.get_system_state mask=cfg.ha.*
 
     '''
-    if filter:
+    if mask:
         query = {'type': 'op',
-                 'cmd': '<show><system><state><filter>{0}</filter></state></system></show>'.format(filter)}
+                 'cmd': '<show><system><state><filter>{0}</filter></state></system></show>'.format(mask)}
     else:
         query = {'type': 'op', 'cmd': '<show><system><state></state></system></show>'}
 
@@ -1097,6 +1218,7 @@ def get_system_state(filter=None):
 def get_uncommitted_changes():
     '''
     Retrieve a list of all uncommitted changes on the device.
+    Requires PANOS version 8.0.0 or greater.
 
     CLI Example:
 
@@ -1105,6 +1227,10 @@ def get_uncommitted_changes():
         salt '*' panos.get_uncommitted_changes
 
     '''
+    _required_version = '8.0.0'
+    if not __proxy__['panos.is_required_version'](_required_version):
+        return False, 'The panos device requires version {0} or greater for this command.'.format(_required_version)
+
     query = {'type': 'op',
              'cmd': '<show><config><list><changes></changes></list></config></show>'}
 
@@ -1141,6 +1267,72 @@ def get_vlans():
 
     '''
     query = {'type': 'op', 'cmd': '<show><vlan>all</vlan></show>'}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_xpath(xpath=''):
+    '''
+    Retrieve a specified xpath from the candidate configuration.
+
+    xpath(str): The specified xpath in the candidate configuration.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_xpath /config/shared/service
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': xpath}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_zone(zone='', vsys='1'):
+    '''
+    Get the candidate configuration for the specified zone.
+
+    zone(str): The name of the zone.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_zone trust
+        salt '*' panos.get_zone trust 2
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'zone/entry[@name=\'{1}\']'.format(vsys, zone)}
+
+    return __proxy__['panos.call'](query)
+
+
+def get_zones(vsys='1'):
+    '''
+    Get all the zones in the candidate configuration.
+
+    vsys(str): The string representation of the VSYS ID.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' panos.get_zones
+        salt '*' panos.get_zones 2
+
+    '''
+    query = {'type': 'config',
+             'action': 'get',
+             'xpath': '/config/devices/entry[@name=\'localhost.localdomain\']/vsys/entry[@name=\'vsys{0}\']/'
+             'zone'.format(vsys)}
 
     return __proxy__['panos.call'](query)
 

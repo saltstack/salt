@@ -2,14 +2,16 @@
 
 # Import python libs
 from __future__ import absolute_import
-import os
+from jinja2 import Environment, DictLoader, exceptions
 import ast
 import copy
-import tempfile
-import json
 import datetime
+import json
+import os
 import pprint
 import re
+import tempfile
+import yaml
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
@@ -17,27 +19,30 @@ from tests.support.case import ModuleCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from tests.support.paths import TMP_CONF_DIR
 
-# Import salt libs
+# Import Salt libs
 import salt.config
-from salt.ext import six
 import salt.loader
-import salt.utils.files
-from salt.utils import get_context
 from salt.exceptions import SaltRenderError
+
+from salt.ext import six
 from salt.ext.six.moves import builtins
+
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import (
     SaltCacheLoader,
     SerializerExtension,
     ensure_sequence_filter
 )
-from salt.utils.templates import JINJA, render_jinja_tmpl
 from salt.utils.odict import OrderedDict
+from salt.utils.templates import (
+    get_context,
+    JINJA,
+    render_jinja_tmpl
+)
+import salt.utils.files
 import salt.utils.stringutils
 
 # Import 3rd party libs
-import yaml
-from jinja2 import Environment, DictLoader, exceptions
 try:
     import timelib  # pylint: disable=W0611
     HAS_TIMELIB = True
