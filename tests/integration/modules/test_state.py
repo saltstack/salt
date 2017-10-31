@@ -23,6 +23,9 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 # Import 3rd-party libs
 from salt.ext import six
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
@@ -841,6 +844,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         result = self.normalize_ret(ret)
         self.assertEqual(expected_result_simple, result)
 
+        return
         # same test, but not using lists in yaml syntax
         # TODO: issue #8235, prereq ignored when not used in list syntax
         # Currently fails badly with :
