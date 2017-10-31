@@ -124,11 +124,13 @@ def map_run(path=None, **kwargs):
     return info
 
 
-def destroy(instances):
+def destroy(instances, opts=None):
     '''
     Destroy the named vm(s)
     '''
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     info = client.destroy(instances)
     return info
 
@@ -138,6 +140,7 @@ def action(func=None,
            instances=None,
            provider=None,
            instance=None,
+           opts=None,
            **kwargs):
     '''
     Execute a single action on the given map/provider/instance
@@ -150,6 +153,8 @@ def action(func=None,
     '''
     info = {}
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     try:
         info = client.action(
             func,
