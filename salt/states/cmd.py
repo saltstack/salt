@@ -638,6 +638,7 @@ def run(name,
         runas=None,
         shell=None,
         env=None,
+        prepend_path=None,
         stateful=False,
         umask=None,
         output_loglevel='debug',
@@ -711,6 +712,12 @@ def run(name,
                 - name: ls -l /
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+    prepend_path
+        $PATH segment to prepend (trailing ':' not necessary) to $PATH. This is
+        an easier alternative to the Jinja workaround.
+
+        .. versionadded:: Oxygen
 
     stateful
         The command being executed is expected to return data about executing
@@ -807,6 +814,7 @@ def run(name,
                        'use_vt': use_vt,
                        'shell': shell or __grains__['shell'],
                        'env': env,
+                       'prepend_path': prepend_path,
                        'umask': umask,
                        'output_loglevel': output_loglevel,
                        'quiet': quiet})
