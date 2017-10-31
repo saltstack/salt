@@ -292,7 +292,7 @@ def apply_(mods=None,
 def request(mods=None,
             **kwargs):
     '''
-    .. versionadded:: 2015.5.0
+    .. versionadded:: 2017.7.3
 
     Request that the local admin execute a state run via
     `salt-call state.run_request`
@@ -333,7 +333,7 @@ def request(mods=None,
 
 def check_request(name=None):
     '''
-    .. versionadded:: 2015.5.0
+    .. versionadded:: 2017.7.3
 
     Return the state request information, if any
 
@@ -356,7 +356,7 @@ def check_request(name=None):
 
 def clear_request(name=None):
     '''
-    .. versionadded:: 2015.5.0
+    .. versionadded:: 2017.7.3
 
     Clear out the state execution request without executing it
 
@@ -397,7 +397,7 @@ def clear_request(name=None):
 
 def run_request(name='default', **kwargs):
     '''
-    .. versionadded:: 2015.5.0
+    .. versionadded:: 2017.7.3
 
     Execute the pending state request
 
