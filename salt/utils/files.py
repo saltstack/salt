@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for working with files
+'''
 
 from __future__ import absolute_import
 
@@ -16,9 +19,9 @@ import time
 import urllib
 
 # Import Salt libs
-import salt.utils  # Can be removed when backup_minion is moved
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.modules.selinux
 from salt.exceptions import CommandExecutionError, FileLockError, MinionError
 from salt.utils.decorators.jinja import jinja_filter
@@ -56,7 +59,9 @@ def guess_archive_type(name):
     Guess an archive type (tar, zip, or rar) by its file extension
     '''
     name = name.lower()
-    for ending in ('tar', 'tar.gz', 'tar.bz2', 'tar.xz', 'tgz', 'tbz2', 'txz',
+    for ending in ('tar', 'tar.gz', 'tgz',
+                   'tar.bz2', 'tbz2', 'tbz',
+                   'tar.xz', 'txz',
                    'tar.lzma', 'tlz'):
         if name.endswith('.' + ending):
             return 'tar'
@@ -124,7 +129,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         bkroot = os.path.join(cachedir, 'file_backup')
     if backup_mode == 'minion' or backup_mode == 'both' and bkroot:
         if os.path.exists(dest):
-            salt.utils.backup_minion(dest, bkroot)
+            backup_minion(dest, bkroot)
     if backup_mode == 'master' or backup_mode == 'both' and bkroot:
         # TODO, backup to master
         pass
@@ -414,6 +419,56 @@ def fpopen(*args, **kwargs):
         yield f_handle
 
 
+def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
+    '''
+    A clone of the python os.walk function with some checks for recursive
+    symlinks. Unlike os.walk this follows symlinks by default.
+    '''
+    if _seen is None:
+        _seen = set()
+
+    # We may not have read permission for top, in which case we can't
+    # get a list of the files the directory contains.  os.path.walk
+    # always suppressed the exception then, rather than blow up for a
+    # minor reason when (say) a thousand readable directories are still
+    # left to visit.  That logic is copied here.
+    try:
+        # Note that listdir and error are globals in this module due
+        # to earlier import-*.
+        names = os.listdir(top)
+    except os.error as err:
+        if onerror is not None:
+            onerror(err)
+        return
+
+    if followlinks:
+        status = os.stat(top)
+        # st_ino is always 0 on some filesystems (FAT, NTFS); ignore them
+        if status.st_ino != 0:
+            node = (status.st_dev, status.st_ino)
+            if node in _seen:
+                return
+            _seen.add(node)
+
+    dirs, nondirs = [], []
+    for name in names:
+        full_path = os.path.join(top, name)
+        if os.path.isdir(full_path):
+            dirs.append(name)
+        else:
+            nondirs.append(name)
+
+    if topdown:
+        yield top, dirs, nondirs
+    for name in dirs:
+        new_path = os.path.join(top, name)
+        if followlinks or not os.path.islink(new_path):
+            for x in safe_walk(new_path, topdown, onerror, followlinks, _seen):
+                yield x
+    if not topdown:
+        yield top, dirs, nondirs
+
+
 def safe_rm(tgt):
     '''
     Safely remove a file
@@ -523,7 +578,7 @@ def safe_filepath(file_path_name, dir_sep=None):
 
 
 @jinja_filter('is_text_file')
-def is_text_file(fp_, blocksize=512):
+def is_text(fp_, blocksize=512):
     '''
     Uses heuristics to guess whether the given file is text or binary,
     by reading a single block of bytes from the file.
@@ -561,6 +616,27 @@ def is_text_file(fp_, blocksize=512):
     return float(len(nontext)) / len(block) <= 0.30
 
 
+@jinja_filter('is_bin_file')
+def is_binary(path):
+    '''
+    Detects if the file is a binary, returns bool. Returns True if the file is
+    a bin, False if the file is not and None if the file is not available.
+    '''
+    if not os.path.isfile(path):
+        return False
+    try:
+        with fopen(path, 'rb') as fp_:
+            try:
+                data = fp_.read(2048)
+                if six.PY3:
+                    data = data.decode(__salt_system_encoding__)
+                return salt.utils.stringutils.is_binary(data)
+            except UnicodeDecodeError:
+                return True
+    except os.error:
+        return False
+
+
 def remove(path):
     '''
     Runs os.remove(path) and suppresses the OSError if the file doesn't exist
@@ -570,3 +646,95 @@ def remove(path):
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
+
+
+@jinja_filter('list_files')
+def list_files(directory):
+    '''
+    Return a list of all files found under directory (and its subdirectories)
+    '''
+    ret = set()
+    ret.add(directory)
+    for root, dirs, files in safe_walk(directory):
+        for name in files:
+            ret.add(os.path.join(root, name))
+        for name in dirs:
+            ret.add(os.path.join(root, name))
+
+    return list(ret)
+
+
+def st_mode_to_octal(mode):
+    '''
+    Convert the st_mode value from a stat(2) call (as returned from os.stat())
+    to an octal mode.
+    '''
+    try:
+        return oct(mode)[-4:]
+    except (TypeError, IndexError):
+        return ''
+
+
+def normalize_mode(mode):
+    '''
+    Return a mode value, normalized to a string and containing a leading zero
+    if it does not have one.
+
+    Allow "keep" as a valid mode (used by file state/module to preserve mode
+    from the Salt fileserver in file states).
+    '''
+    if mode is None:
+        return None
+    if not isinstance(mode, six.string_types):
+        mode = str(mode)
+    if six.PY3:
+        mode = mode.replace('0o', '0')
+    # Strip any quotes any initial zeroes, then though zero-pad it up to 4.
+    # This ensures that somethign like '00644' is normalized to '0644'
+    return mode.strip('"').strip('\'').lstrip('0').zfill(4)
+
+
+def human_size_to_bytes(human_size):
+    '''
+    Convert human-readable units to bytes
+    '''
+    size_exp_map = {'K': 1, 'M': 2, 'G': 3, 'T': 4, 'P': 5}
+    human_size_str = str(human_size)
+    match = re.match(r'^(\d+)([KMGTP])?$', human_size_str)
+    if not match:
+        raise ValueError(
+            'Size must be all digits, with an optional unit type '
+            '(K, M, G, T, or P)'
+        )
+    size_num = int(match.group(1))
+    unit_multiplier = 1024 ** size_exp_map.get(match.group(2), 0)
+    return size_num * unit_multiplier
+
+
+def backup_minion(path, bkroot):
+    '''
+    Backup a file on the minion
+    '''
+    dname, bname = os.path.split(path)
+    if salt.utils.platform.is_windows():
+        src_dir = dname.replace(':', '_')
+    else:
+        src_dir = dname[1:]
+    if not salt.utils.platform.is_windows():
+        fstat = os.stat(path)
+    msecs = str(int(time.time() * 1000000))[-6:]
+    if salt.utils.platform.is_windows():
+        # ':' is an illegal filesystem path character on Windows
+        stamp = time.strftime('%a_%b_%d_%H-%M-%S_%Y')
+    else:
+        stamp = time.strftime('%a_%b_%d_%H:%M:%S_%Y')
+    stamp = '{0}{1}_{2}'.format(stamp[:-4], msecs, stamp[-4:])
+    bkpath = os.path.join(bkroot,
+                          src_dir,
+                          '{0}_{1}'.format(bname, stamp))
+    if not os.path.isdir(os.path.dirname(bkpath)):
+        os.makedirs(os.path.dirname(bkpath))
+    shutil.copyfile(path, bkpath)
+    if not salt.utils.platform.is_windows():
+        os.chown(bkpath, fstat.st_uid, fstat.st_gid)
+        os.chmod(bkpath, fstat.st_mode)

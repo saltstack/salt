@@ -18,7 +18,6 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.ext import six
-import salt.utils
 import salt.utils.stringutils
 import salt.modules.launchctl as launchctl
 

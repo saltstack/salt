@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
+.. _`saltify-module`:
+
 Saltify Module
 ==============
 
 The Saltify module is designed to install Salt on a remote machine, virtual or
 bare metal, using SSH. This module is useful for provisioning machines which
 are already installed, but not Salted.
+
+.. versionchanged:: Oxygen
+    The wake_on_lan capability, and actions destroy, reboot, and query functions were added.
 
 Use of this module requires some configuration in cloud profile and provider
 files as described in the
@@ -15,11 +20,12 @@ files as described in the
 # Import python libs
 from __future__ import absolute_import
 import logging
+import time
 
 # Import salt libs
-import salt.utils
+import salt.utils.cloud
 import salt.config as config
-import salt.netapi
+import salt.client
 import salt.ext.six as six
 if six.PY3:
     import ipaddress
@@ -32,6 +38,7 @@ from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 log = logging.getLogger(__name__)
 
 try:
+    # noinspection PyUnresolvedReferences
     from impacket.smbconnection import SessionError as smbSessionError
     from impacket.smb3 import SessionError as smb3SessionError
     HAS_IMPACKET = True
@@ -39,7 +46,9 @@ except ImportError:
     HAS_IMPACKET = False
 
 try:
+    # noinspection PyUnresolvedReferences
     from winrm.exceptions import WinRMTransportError
+    # noinspection PyUnresolvedReferences
     from requests.exceptions import (
         ConnectionError, ConnectTimeout, ReadTimeout, SSLError,
         ProxyError, RetryError, InvalidSchema)
@@ -55,24 +64,6 @@ def __virtual__():
     return True
 
 
-def _get_connection_info():
-    '''
-    Return connection information for the passed VM data
-    '''
-    vm_ = get_configured_provider()
-
-    try:
-        ret = {'username': vm_['username'],
-               'password': vm_['password'],
-               'eauth': vm_['eauth'],
-               'vm': vm_,
-               }
-    except KeyError:
-        raise SaltCloudException(
-            'Configuration must define salt-api "username", "password" and "eauth"')
-    return ret
-
-
 def avail_locations(call=None):
     '''
     This function returns a list of locations available.
@@ -81,7 +72,7 @@ def avail_locations(call=None):
 
         salt-cloud --list-locations my-cloud-provider
 
-    [ saltify will always returns an empty dictionary ]
+    [ saltify will always return an empty dictionary ]
     '''
 
     return {}
@@ -127,8 +118,6 @@ def list_nodes(call=None):
 
     returns a list of dictionaries of defined standard fields.
 
-    salt-api setup required for operation.
-
     ..versionadded:: Oxygen
 
     '''
@@ -172,8 +161,8 @@ def list_nodes_full(call=None):
         salt-cloud -F
 
     returns a list of dictionaries.
+
     for 'saltify' minions, returns dict of grains (enhanced).
-    salt-api setup required for operation.
 
     ..versionadded:: Oxygen
     '''
@@ -200,16 +189,9 @@ def _list_nodes_full(call=None):
     '''
     List the nodes, ask all 'saltify' minions, return dict of grains.
     '''
-    local = salt.netapi.NetapiClient(__opts__)
-    cmd = {'client': 'local',
-           'tgt': 'salt-cloud:driver:saltify',
-           'fun': 'grains.items',
-           'arg': '',
-           'tgt_type': 'grain',
-           }
-    cmd.update(_get_connection_info())
-
-    return local.run(cmd)
+    local = salt.client.LocalClient()
+    return local.cmd('salt-cloud:driver:saltify', 'grains.items', '',
+                      tgt_type='grain')
 
 
 def list_nodes_select(call=None):
@@ -226,27 +208,69 @@ def show_instance(name, call=None):
     '''
     List the a single node, return dict of grains.
     '''
-    local = salt.netapi.NetapiClient(__opts__)
-    cmd = {'client': 'local',
-           'tgt': 'name',
-           'fun': 'grains.items',
-           'arg': '',
-           'tgt_type': 'glob',
-           }
-    cmd.update(_get_connection_info())
-    ret = local.run(cmd)
+    local = salt.client.LocalClient()
+    ret = local.cmd(name, 'grains.items')
     ret.update(_build_required_items(ret))
     return ret
 
 
 def create(vm_):
     '''
-    Provision a single machine
+    if configuration parameter ``deploy`` is ``True``,
+
+        Provision a single machine, adding its keys to the salt master
+
+    else,
+
+        Test ssh connections to the machine
+
+    Configuration parameters:
+
+    - deploy:  (see above)
+    - provider:  name of entry in ``salt/cloud.providers.d/???`` file
+    - ssh_host: IP address or DNS name of the new machine
+    - ssh_username:  name used to log in to the new machine
+    - ssh_password:  password to log in (unless key_filename is used)
+    - key_filename:  (optional) SSH private key for passwordless login
+    - ssh_port: (default=22) TCP port for SSH connection
+    - wake_on_lan_mac:  (optional) hardware (MAC) address for wake on lan
+    - wol_sender_node:  (optional) salt minion to send wake on lan command
+    - wol_boot_wait:  (default=30) seconds to delay while client boots
+    - force_minion_config: (optional) replace the minion configuration files on the new machine
+
+    See also
+    :ref:`Miscellaneous Salt Cloud Options <misc-salt-cloud-options>`
+    and
+    :ref:`Getting Started with Saltify <getting-started-with-saltify>`
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -p mymachine my_new_id
     '''
     deploy_config = config.get_cloud_config_value(
         'deploy', vm_, __opts__, default=False)
 
     if deploy_config:
+        wol_mac = config.get_cloud_config_value(
+            'wake_on_lan_mac', vm_, __opts__, default='')
+        wol_host = config.get_cloud_config_value(
+            'wol_sender_node', vm_, __opts__, default='')
+        if wol_mac and wol_host:
+            log.info('sending wake-on-lan to %s using node %s',
+                     wol_mac, wol_host)
+            local = salt.client.LocalClient()
+            if isinstance(wol_mac, six.string_types):
+                wol_mac = [wol_mac]  # a smart user may have passed more params
+            ret = local.cmd(wol_host, 'network.wol', wol_mac)
+            log.info('network.wol returned value %s', ret)
+            if ret and ret[wol_host]:
+                sleep_time = config.get_cloud_config_value(
+                    'wol_boot_wait', vm_, __opts__, default=30)
+                if sleep_time > 0.0:
+                    log.info('delaying %d seconds for boot', sleep_time)
+                    time.sleep(sleep_time)
         log.info('Provisioning existing machine %s', vm_['name'])
         ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     else:
@@ -365,13 +389,20 @@ def destroy(name, call=None):
 
     .. versionadded:: Oxygen
 
+    Disconnect a minion from the master, and remove its keys.
+
+    Optionally, (if ``remove_config_on_destroy`` is ``True``),
+      disables salt-minion from running on the minion, and
+      erases the Salt configuration files from it.
+
+    Optionally, (if ``shutdown_on_destroy`` is ``True``),
+      orders the minion to halt.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud --destroy mymachine
-
-    salt-api setup required for operation.
 
     '''
     if call == 'function':
@@ -391,15 +422,9 @@ def destroy(name, call=None):
         transport=opts['transport']
     )
 
-    local = salt.netapi.NetapiClient(opts)
-    cmd = {'client': 'local',
-           'tgt': name,
-           'fun': 'grains.get',
-           'arg': ['salt-cloud'],
-           }
-    cmd.update(_get_connection_info())
-    vm_ = cmd['vm']
-    my_info = local.run(cmd)
+    vm_ = get_configured_provider()
+    local = salt.client.LocalClient()
+    my_info = local.cmd(name, 'grains.get', ['salt-cloud'])
     try:
         vm_.update(my_info[name])  # get profile name to get config value
     except (IndexError, TypeError):
@@ -407,25 +432,22 @@ def destroy(name, call=None):
     if config.get_cloud_config_value(
            'remove_config_on_destroy', vm_, opts, default=True
             ):
-        cmd.update({'fun': 'service.disable', 'arg': ['salt-minion']})
-        ret = local.run(cmd)  # prevent generating new keys on restart
+        ret = local.cmd(name,  # prevent generating new keys on restart
+                        'service.disable',
+                        ['salt-minion'])
         if ret and ret[name]:
             log.info('disabled salt-minion service on %s', name)
-        cmd.update({'fun': 'config.get', 'arg': ['conf_file']})
-        ret = local.run(cmd)
+        ret = local.cmd(name, 'config.get', ['conf_file'])
         if ret and ret[name]:
             confile = ret[name]
-            cmd.update({'fun': 'file.remove', 'arg': [confile]})
-            ret = local.run(cmd)
+            ret = local.cmd(name, 'file.remove', [confile])
             if ret and ret[name]:
                 log.info('removed minion %s configuration file %s',
                          name, confile)
-        cmd.update({'fun': 'config.get', 'arg': ['pki_dir']})
-        ret = local.run(cmd)
+        ret = local.cmd(name, 'config.get', ['pki_dir'])
         if ret and ret[name]:
             pki_dir = ret[name]
-            cmd.update({'fun': 'file.remove', 'arg': [pki_dir]})
-            ret = local.run(cmd)
+            ret = local.cmd(name, 'file.remove', [pki_dir])
             if ret and ret[name]:
                 log.info(
                     'removed minion %s key files in %s',
@@ -435,8 +457,7 @@ def destroy(name, call=None):
     if config.get_cloud_config_value(
         'shutdown_on_destroy', vm_, opts, default=False
         ):
-        cmd.update({'fun': 'system.shutdown', 'arg': ''})
-        ret = local.run(cmd)
+        ret = local.cmd(name, 'system.shutdown')
         if ret and ret[name]:
             log.info('system.shutdown for minion %s successful', name)
 
@@ -456,8 +477,6 @@ def reboot(name, call=None):
     '''
     Reboot a saltify minion.
 
-    salt-api setup required for operation.
-
     ..versionadded:: Oxygen
 
     name
@@ -475,13 +494,5 @@ def reboot(name, call=None):
             'The reboot action must be called with -a or --action.'
         )
 
-    local = salt.netapi.NetapiClient(__opts__)
-    cmd = {'client': 'local',
-           'tgt': name,
-           'fun': 'system.reboot',
-           'arg': '',
-           }
-    cmd.update(_get_connection_info())
-    ret = local.run(cmd)
-
-    return ret
+    local = salt.client.LocalClient()
+    return local.cmd(name, 'system.reboot')

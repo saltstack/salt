@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 PER_REMOTE_OVERRIDES = ('ssl_verify', 'refspecs')
 
 # Fall back to default per-remote-only. This isn't technically needed since
-# salt.utils.gitfs.GitBase.init_remotes() will default to
+# salt.utils.gitfs.GitBase.__init__ will default to
 # salt.utils.gitfs.PER_REMOTE_ONLY for this value, so this is mainly for
 # runners and other modules that import salt.runners.winrepo.
 PER_REMOTE_ONLY = salt.utils.gitfs.PER_REMOTE_ONLY
@@ -216,9 +216,12 @@ def update_git_repos(opts=None, clean=False, masterless=False):
         else:
             # New winrepo code utilizing salt.utils.gitfs
             try:
-                winrepo = salt.utils.gitfs.WinRepo(opts, base_dir)
-                winrepo.init_remotes(
-                    remotes, PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
+                winrepo = salt.utils.gitfs.WinRepo(
+                    opts,
+                    remotes,
+                    per_remote_overrides=PER_REMOTE_OVERRIDES,
+                    per_remote_only=PER_REMOTE_ONLY,
+                    cache_root=base_dir)
                 winrepo.fetch_remotes()
                 # Since we're not running update(), we need to manually call
                 # clear_old_remotes() to remove directories from remotes that

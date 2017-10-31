@@ -6,8 +6,6 @@ This system allows for authentication to be managed in a module pluggable way
 so that any external authentication system can be used inside of Salt
 '''
 
-from __future__ import absolute_import
-
 # 1. Create auth loader instance
 # 2. Accept arguments as a dict
 # 3. Verify with function introspection
@@ -16,7 +14,7 @@ from __future__ import absolute_import
 # 6. Interface to verify tokens
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import collections
 import time
 import logging
@@ -28,12 +26,14 @@ from salt.ext.six.moves import input
 import salt.config
 import salt.loader
 import salt.transport.client
-import salt.utils
 import salt.utils.args
+import salt.utils.dictupdate
 import salt.utils.files
+import salt.utils.master
 import salt.utils.minions
-import salt.utils.versions
 import salt.utils.user
+import salt.utils.versions
+import salt.utils.zeromq
 import salt.payload
 
 log = logging.getLogger(__name__)
@@ -88,9 +88,10 @@ class LoadAuth(object):
         fstr = '{0}.auth'.format(load['eauth'])
         if fstr not in self.auth:
             return False
-        fcall = salt.utils.format_call(self.auth[fstr],
-                                       load,
-                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        fcall = salt.utils.args.format_call(
+            self.auth[fstr],
+            load,
+            expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             if 'kwargs' in fcall:
                 return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
@@ -134,9 +135,10 @@ class LoadAuth(object):
         fstr = '{0}.acl'.format(mod)
         if fstr not in self.auth:
             return None
-        fcall = salt.utils.format_call(self.auth[fstr],
-                                       load,
-                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        fcall = salt.utils.args.format_call(
+            self.auth[fstr],
+            load,
+            expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except Exception as e:
@@ -169,9 +171,10 @@ class LoadAuth(object):
         fstr = '{0}.groups'.format(load['eauth'])
         if fstr not in self.auth:
             return False
-        fcall = salt.utils.format_call(self.auth[fstr],
-                                       load,
-                                       expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        fcall = salt.utils.args.format_call(
+            self.auth[fstr],
+            load,
+            expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except IndexError:
@@ -426,13 +429,26 @@ class LoadAuth(object):
 
             auth_list = self.get_auth_list(load)
         elif auth_type == 'user':
-            if not self.authenticate_key(load, key):
+            auth_ret = self.authenticate_key(load, key)
+            msg = 'Authentication failure of type "user" occurred'
+            if not auth_ret:  # auth_ret can be a boolean or the effective user id
                 if show_username:
-                    msg = 'Authentication failure of type "user" occurred for user {0}.'.format(username)
-                else:
-                    msg = 'Authentication failure of type "user" occurred'
+                    msg = '{0} for user {1}.'.format(msg, username)
                 ret['error'] = {'name': 'UserAuthenticationError', 'message': msg}
                 return ret
+
+            # Verify that the caller has root on master
+            if auth_ret is not True:
+                if AuthUser(load['user']).is_sudo():
+                    if not self.opts['sudo_acl'] or not self.opts['publisher_acl']:
+                        auth_ret = True
+
+            if auth_ret is not True:
+                auth_list = salt.utils.master.get_values_of_matching_keys(
+                    self.opts['publisher_acl'], auth_ret)
+                if not auth_list:
+                    ret['error'] = {'name': 'UserAuthenticationError', 'message': msg}
+                    return ret
         else:
             ret['error'] = {'name': 'SaltInvocationError',
                             'message': 'Authentication type not supported.'}
@@ -653,7 +669,7 @@ class Resolver(object):
 
     def _send_token_request(self, load):
         if self.opts['transport'] in ('zeromq', 'tcp'):
-            master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
+            master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
                          ':' + str(self.opts['ret_port'])
             channel = salt.transport.client.ReqChannel.factory(self.opts,
                                                                 crypt='clear',

@@ -44,7 +44,7 @@ import os
 import json
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.files
 
 
@@ -81,7 +81,7 @@ def save(name, filter=False):
     with salt.utils.files.fopen(fn_, 'w+') as fp_:
         if filter is True:
             fp_.write(json.dumps(
-                salt.utils.simple_types_filter(__reg__))
+                salt.utils.data.simple_types_filter(__reg__))
             )
         else:
             fp_.write(json.dumps(__reg__))

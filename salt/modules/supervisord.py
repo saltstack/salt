@@ -14,7 +14,6 @@ from salt.ext.six import string_types
 from salt.ext.six.moves import configparser  # pylint: disable=import-error
 
 # Import salt libs
-import salt.utils
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 

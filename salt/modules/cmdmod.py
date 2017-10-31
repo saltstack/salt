@@ -24,8 +24,8 @@ import re
 import tempfile
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
+import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -33,6 +33,7 @@ import salt.utils.powershell
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.timed_subprocess
+import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
 import salt.grains.extra
@@ -187,7 +188,7 @@ def _check_loglevel(level='info', quiet=False):
         )
         return LOG_LEVELS['info']
 
-    if salt.utils.is_true(quiet) or str(level).lower() == 'quiet':
+    if salt.utils.data.is_true(quiet) or str(level).lower() == 'quiet':
         return None
 
     try:
@@ -204,7 +205,7 @@ def _parse_env(env):
     if not env:
         env = {}
     if isinstance(env, list):
-        env = salt.utils.repack_dictlist(env)
+        env = salt.utils.data.repack_dictlist(env)
     if not isinstance(env, dict):
         env = {}
     return env
@@ -268,6 +269,7 @@ def _run(cmd,
          python_shell=False,
          env=None,
          clean_env=False,
+         prepend_path=None,
          rstrip=True,
          template=None,
          umask=None,
@@ -401,10 +403,8 @@ def _run(cmd,
             msg = 'missing salt/utils/win_runas.py'
             raise CommandExecutionError(msg)
 
-        if not isinstance(cmd, list):
-            cmd = salt.utils.args.shlex_split(cmd, posix=False)
-
-        cmd = ' '.join(cmd)
+        if isinstance(cmd, (list, tuple)):
+            cmd = ' '.join(cmd)
 
         return win_runas(cmd, runas, password, cwd)
 
@@ -493,6 +493,9 @@ def _run(cmd,
         run_env = os.environ.copy()
         run_env.update(env)
 
+    if prepend_path:
+        run_env['PATH'] = ':'.join((prepend_path, run_env['PATH']))
+
     if python_shell is None:
         python_shell = False
 
@@ -524,7 +527,7 @@ def _run(cmd,
 
     if runas or umask:
         kwargs['preexec_fn'] = functools.partial(
-            salt.utils.chugid_and_umask,
+            salt.utils.user.chugid_and_umask,
             runas,
             _umask)
 
@@ -541,11 +544,11 @@ def _run(cmd,
             .format(cwd)
         )
 
-    if python_shell is not True and not isinstance(cmd, list):
-        posix = True
-        if salt.utils.platform.is_windows():
-            posix = False
-        cmd = salt.utils.args.shlex_split(cmd, posix=posix)
+    if python_shell is not True \
+            and not salt.utils.platform.is_windows() \
+            and not isinstance(cmd, list):
+        cmd = salt.utils.args.shlex_split(cmd)
+
     if not use_vt:
         # This is where the magic happens
         try:
@@ -783,6 +786,7 @@ def run(cmd,
         password=None,
         encoded_cmd=False,
         raise_err=False,
+        prepend_path=None,
         **kwargs):
     r'''
     Execute the passed command and return the output as a string
@@ -864,6 +868,11 @@ def run(cmd,
     :param bool clean_env: Attempt to clean out all other shell environment
       variables and set only those provided in the 'env' argument to this
       function.
+
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
+      .. versionadded:: Oxygen
 
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
@@ -950,6 +959,7 @@ def run(cmd,
                stderr=subprocess.STDOUT,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -1005,6 +1015,7 @@ def shell(cmd,
         use_vt=False,
         bg=False,
         password=None,
+        prepend_path=None,
         **kwargs):
     '''
     Execute the passed command and return the output as a string.
@@ -1079,6 +1090,11 @@ def shell(cmd,
     :param bool clean_env: Attempt to clean out all other shell environment
       variables and set only those provided in the 'env' argument to this
       function.
+
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
+      .. versionadded:: Oxygen
 
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
@@ -1158,6 +1174,7 @@ def shell(cmd,
                shell=shell,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -1194,6 +1211,7 @@ def run_stdout(cmd,
                saltenv='base',
                use_vt=False,
                password=None,
+               prepend_path=None,
                **kwargs):
     '''
     Execute a command, and only return the standard out
@@ -1266,6 +1284,11 @@ def run_stdout(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
+      .. versionadded:: Oxygen
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1320,6 +1343,7 @@ def run_stdout(cmd,
                python_shell=python_shell,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -1375,6 +1399,7 @@ def run_stderr(cmd,
                saltenv='base',
                use_vt=False,
                password=None,
+               prepend_path=None,
                **kwargs):
     '''
     Execute a command and only return the standard error
@@ -1448,6 +1473,11 @@ def run_stderr(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
+      .. versionadded:: Oxygen
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -1502,6 +1532,7 @@ def run_stderr(cmd,
                python_shell=python_shell,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -1559,6 +1590,7 @@ def run_all(cmd,
             redirect_stderr=False,
             password=None,
             encoded_cmd=False,
+            prepend_path=None,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
@@ -1631,6 +1663,11 @@ def run_all(cmd,
     :param bool clean_env: Attempt to clean out all other shell environment
       variables and set only those provided in the 'env' argument to this
       function.
+
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
+      .. versionadded:: Oxygen
 
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
@@ -1710,6 +1747,7 @@ def run_all(cmd,
                python_shell=python_shell,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                rstrip=rstrip,
                umask=umask,
@@ -2574,7 +2612,7 @@ def run_chroot(root,
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
-     clean_env:
+    clean_env:
         Attempt to clean out all other shell environment variables and set
         only those provided in the 'env' argument to this function.
 
@@ -2774,8 +2812,8 @@ def shell_info(shell, list_modules=False):
     '''
     regex_shells = {
         'bash': [r'version (\d\S*)', 'bash', '--version'],
-        'bash-test-error': [r'versioZ ([-\w.]+)', 'bash', '--version'],  # used to test a error result
-        'bash-test-env': [r'(HOME=.*)', 'bash', '-c', 'declare'],  # used to test a error result
+        'bash-test-error': [r'versioZ ([-\w.]+)', 'bash', '--version'],  # used to test an error result
+        'bash-test-env': [r'(HOME=.*)', 'bash', '-c', 'declare'],  # used to test an error result
         'zsh': [r'^zsh (\d\S*)', 'zsh', '--version'],
         'tcsh': [r'^tcsh (\d\S*)', 'tcsh', '--version'],
         'cmd': [r'Version ([\d.]+)', 'cmd.exe', '/C', 'ver'],
@@ -3468,6 +3506,7 @@ def run_bg(cmd,
         ignore_retcode=False,
         saltenv='base',
         password=None,
+        prepend_path=None,
         **kwargs):
     r'''
     .. versionadded: 2016.3.0
@@ -3546,6 +3585,11 @@ def run_bg(cmd,
       variables and set only those provided in the 'env' argument to this
       function.
 
+    :param str prepend_path: $PATH segment to prepend (trailing ':' not necessary)
+      to $PATH
+
+      .. versionadded:: Oxygen
+
     :param str template: If this setting is applied then the named templating
       engine will be used to render the downloaded file. Currently jinja, mako,
       and wempy are supported
@@ -3614,6 +3658,7 @@ def run_bg(cmd,
                cwd=cwd,
                env=env,
                clean_env=clean_env,
+               prepend_path=prepend_path,
                template=template,
                umask=umask,
                log_callback=log_callback,
