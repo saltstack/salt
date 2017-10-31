@@ -1038,6 +1038,27 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.stat', MagicMock())
+    def test_line_insert_ensure_beforeafter_twolines(self):
+        '''
+        Test for file.line for insertion ensuring the line is between two lines
+        :return:
+        '''
+        cfg_content = 'EXTRA_GROUPS="dialout cdrom floppy audio video plugdev users"'
+        file_content = 'NAME_REGEX="^[a-z][-a-z0-9_]*\$"\nSKEL_IGNORE_REGEX="dpkg-(old|new|dist|save)"'
+        after, before = file_content.split(os.linesep)
+        file_modified = os.linesep.join([after, cfg_content, before])
+        for (_after, _before) in [(after, before), ('NAME_.*', 'SKEL_.*')]:
+            files_fopen = mock_open(read_data=file_content)
+            with patch('salt.utils.files.fopen', files_fopen):
+                atomic_opener = mock_open()
+                with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
+                    filemod.line('foo', content=cfg_content, after=_after, before=_before, mode='ensure')
+                assert 1 == len(atomic_opener().write.call_args_list)
+                assert file_modified == atomic_opener().write.call_args_list[0][0][0]
+
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.stat', MagicMock())
     def test_line_delete(self):
         '''
         Test for file.line for deletion of specific line
