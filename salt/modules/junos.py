@@ -1400,7 +1400,7 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
     except Exception as err:
         ret['message'] = 'Uncaught exception - please report: {0}'.format(
             str(err))
-        log.error('traceback: %s' % traceback.print_exc())
+        traceback.print_exc()
         ret['out'] = False
         return ret
     return ret
