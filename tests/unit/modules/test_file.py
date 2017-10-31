@@ -749,6 +749,18 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     '''
     Unit tests for file.line
     '''
+    def setUp(self):
+        class AnyAttr(object):
+            def __getattr__(self, item):
+                return 0
+
+            def __call__(self, *args, **kwargs):
+                return self
+        self._anyattr = AnyAttr()
+
+    def tearDown(self):
+        del self._anyattr
+
     def setup_loader_modules(self):
         return {
             filemod: {
@@ -768,32 +780,8 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             }
         }
 
-    def test_replace_line_in_empty_file(self):
-        '''
-        Tests that when calling file.line with ``mode=replace``,
-        the function doesn't stack trace if the file is empty.
-        Should return ``False``.
-
-        See Issue #31135.
-        '''
-        # Create an empty temporary named file
-        empty_file = tempfile.NamedTemporaryFile(delete=False,
-                                                 mode='w+')
-
-        # Assert that the file was created and is empty
-        self.assertEqual(os.stat(empty_file.name).st_size, 0)
-
-        # Now call the function on the empty file and assert
-        # the return is False instead of stack-tracing
-        self.assertFalse(filemod.line(empty_file.name,
-                                      content='foo',
-                                      match='bar',
-                                      mode='replace'))
-
-        # Close and remove the file
-        empty_file.close()
-        os.remove(empty_file.name)
-
+    @patch('os.path.realpath', MagicMock())
+    @patch('os.path.isfile', MagicMock(return_value=True))
     def test_delete_line_in_empty_file(self):
         '''
         Tests that when calling file.line with ``mode=delete``,
@@ -802,23 +790,13 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
 
         See Issue #38438.
         '''
-        # Create an empty temporary named file
-        empty_file = tempfile.NamedTemporaryFile(delete=False,
-                                                 mode='w+')
-
-        # Assert that the file was created and is empty
-        self.assertEqual(os.stat(empty_file.name).st_size, 0)
-
-        # Now call the function on the empty file and assert
-        # the return is False instead of stack-tracing
-        self.assertFalse(filemod.line(empty_file.name,
-                                      content='foo',
-                                      match='bar',
-                                      mode='delete'))
-
-        # Close and remove the file
-        empty_file.close()
-        os.remove(empty_file.name)
+        for mode in ['delete', 'replace']:
+            _log = MagicMock()
+            with patch('salt.utils.files.fopen', mock_open(read_data='')):
+                with patch('os.stat', self._anyattr):
+                    with patch('salt.modules.file.log', _log):
+                        assert not filemod.line('/dummy/path', content='foo', match='bar', mode=mode)
+            assert 'Cannot find text to {0}'.format(mode) in _log.warning.call_args_list[0][0][0]
 
     @patch('os.path.realpath', MagicMock())
     @patch('os.path.isfile', MagicMock(return_value=True))
