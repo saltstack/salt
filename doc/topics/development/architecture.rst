@@ -68,8 +68,8 @@ Each salt minion establishes a connection to the master Publisher.
 EventPublisher
 --------------
 
-The EventPublisher publishes events onto the event bus. It is bound to the
-following:
+The EventPublisher publishes master events out to any event listeners. It is
+bound to the following:
 
     * IPC: master_event_pull.ipc
     * IPC: master_event_pub.ipc
