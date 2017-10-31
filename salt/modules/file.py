@@ -1936,19 +1936,21 @@ def line(path, content=None, match=None, mode=None, location=None,
             _assert_occurrence(body, before, 'before')
             _assert_occurrence(body, after, 'after')
 
-            is_there = False
-            out = []
-            body = body.split(os.linesep)
-            for idx, line in enumerate(body):
-                out.append(line)
-                if line.find(content) > -1:
-                    is_there = True
-                if not is_there:
-                    if idx < (len(body) - 1) and line.find(after) > -1 and body[idx + 1].find(before) > -1:
-                        out.append(content)
-                    elif line.find(after):
-                        raise CommandExecutionError('Found more than one line between boundaries "before" and "after".')
-            body = os.linesep.join(out)
+            is_there = bool(body.count(content))
+            if not is_there:
+                out = []
+                body = body.split(os.linesep)
+                for idx, line in enumerate(body):
+                    out.append(line)
+                    if line.find(content) > -1:
+                        is_there = True
+                    if not is_there:
+                        if idx < (len(body) - 1) and line.find(after) > -1 and body[idx + 1].find(before) > -1:
+                            out.append(content)
+                        elif line.find(after) > -1:
+                            raise CommandExecutionError('Found more than one line between '
+                                                        'boundaries "before" and "after".')
+                body = os.linesep.join(out)
 
         elif before and not after:
             _assert_occurrence(body, before, 'before')
