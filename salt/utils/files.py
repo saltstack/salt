@@ -313,17 +313,20 @@ def fopen(*args, **kwargs):
 
     NB! We still have small race condition between open and fcntl.
     '''
-    binary = None
     # ensure 'binary' mode is always used on Windows in Python 2
     if ((six.PY2 and salt.utils.platform.is_windows() and 'binary' not in kwargs) or
             kwargs.pop('binary', False)):
         if len(args) > 1:
             args = list(args)
             if 'b' not in args[1]:
-                args[1] += 'b'
-        elif kwargs.get('mode', None):
+                args[1] = args[1].replace('t', 'b')
+                if 'b' not in args[1]:
+                    args[1] += 'b'
+        elif kwargs.get('mode'):
             if 'b' not in kwargs['mode']:
-                kwargs['mode'] += 'b'
+                kwargs['mode'] = kwargs['mode'].replace('t', 'b')
+                if 'b' not in kwargs['mode']:
+                    kwargs['mode'] += 'b'
         else:
             # the default is to read
             kwargs['mode'] = 'rb'
@@ -344,7 +347,7 @@ def fopen(*args, **kwargs):
     if six.PY3 and not binary and not kwargs.get('newline', None):
         kwargs['newline'] = ''
 
-    f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
+    fhandle = open(*args, **kwargs)  # pylint: disable=resource-leakage
 
     if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
@@ -353,10 +356,8 @@ def fopen(*args, **kwargs):
             FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
         except AttributeError:
             FD_CLOEXEC = 1                  # pylint: disable=C0103
-        old_flags = fcntl.fcntl(f_handle.fileno(), fcntl.F_GETFD)
-        fcntl.fcntl(f_handle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
-
-    return f_handle
+        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
+        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
 
 
 @contextlib.contextmanager
