@@ -51,7 +51,7 @@ def installed(name, user, admin_user, admin_password, admin_email, title, url):
            'comment': '',
            'result': False}
 
-    check = __salt__['wordpress.is_installed'](path, user)
+    check = __salt__['wordpress.is_installed'](name, user)
 
     if check:
         ret['result'] = True
