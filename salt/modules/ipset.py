@@ -585,7 +585,7 @@ def _parse_members(settype, members):
 def _parse_member(settype, member, strict=False):
     subtypes = settype.split(':')[1].split(',')
 
-    all_parts = member.split(' ',1)
+    all_parts = member.split(' ', 1)
     parts = all_parts[0].split(',')
 
     parsed_member = []
