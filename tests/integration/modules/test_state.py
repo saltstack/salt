@@ -844,6 +844,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         result = self.normalize_ret(ret)
         self.assertEqual(expected_result_simple, result)
 
+        log.error('=== ret {} ==='.format(ret))
         return
         # same test, but not using lists in yaml syntax
         # TODO: issue #8235, prereq ignored when not used in list syntax

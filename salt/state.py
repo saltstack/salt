@@ -2236,7 +2236,7 @@ class State(object):
         fun_stats = set()
         for r_state, chunks in six.iteritems(reqs):
             req_stats = set()
-            if r_state.startswith(u'prereq'):
+            if r_state == u'prereq':
                 run_dict = self.pre
             else:
                 run_dict = running
