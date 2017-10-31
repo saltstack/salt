@@ -67,6 +67,10 @@ def managed(name,
     name
         Path to the virtualenv.
 
+    venv_bin: virtualenv
+        The name (and optionally path) of the virtualenv command. This can also
+        be set globally in the minion config file as ``virtualenv.venv_bin``.
+
     requirements: None
         Path to a pip requirements file. If the path begins with ``salt://``
         the file will be transferred from the master file server.

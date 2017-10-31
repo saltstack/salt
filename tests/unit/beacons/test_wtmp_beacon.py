@@ -60,8 +60,10 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
-        ret = wtmp.beacon(config)
-        self.assertEqual(ret, [])
+        with patch('salt.utils.files.fopen', mock_open()) as m_open:
+            ret = wtmp.beacon(config)
+            m_open.assert_called_with(wtmp.WTMP, 'rb')
+            self.assertEqual(ret, [])
 
     def test_match(self):
         with patch('salt.utils.files.fopen',

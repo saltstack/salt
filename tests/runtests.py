@@ -130,6 +130,9 @@ TEST_SUITES = {
     'returners':
         {'display_name': 'Returners',
          'path': 'integration/returners'},
+    'spm':
+        {'display_name': 'SPM',
+         'path': 'integration/spm'},
     'loader':
        {'display_name': 'Loader',
         'path': 'integration/loader'},
@@ -337,6 +340,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run salt/returners/*.py tests'
+        )
+        self.test_selection_group.add_option(
+            '--spm',
+            dest='spm',
+            default=False,
+            action='store_true',
+            help='Run spm integration tests'
         )
         self.test_selection_group.add_option(
             '-l',

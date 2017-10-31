@@ -206,8 +206,13 @@ def wrap_tmpl_func(render_str):
             if six.PY2:
                 output = output.encode(SLS_ENCODING)
             if salt.utils.platform.is_windows():
+                newline = False
+                if output.endswith(('\n', os.linesep)):
+                    newline = True
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
+                if newline:
+                    output += os.linesep
 
         except SaltRenderError as exc:
             log.error("Rendering exception occurred: {0}".format(exc))
@@ -331,7 +336,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         # http://jinja.pocoo.org/docs/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
 
-    if tmplstr.endswith('\n'):
+    if tmplstr.endswith(os.linesep):
         newline = True
 
     if not saltenv:
@@ -441,7 +446,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
     if newline:
-        output += '\n'
+        output += os.linesep
 
     return output
 
