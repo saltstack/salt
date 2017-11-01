@@ -2809,10 +2809,6 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
     pkgs
         list of packages to upgrade
 
-        .. note::
-
-            This parameter gets ignored on the ``pkgin`` provider.
-
     :param str cache_valid_time:
         This parameter sets the value in seconds after which cache marked as invalid,
         and cache update is necessary. This overwrite ``refresh`` parameter
