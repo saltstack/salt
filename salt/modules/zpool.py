@@ -875,6 +875,95 @@ def detach(zpool, device):
     return ret
 
 
+def split(zpool, newzpool, **kwargs):
+    '''
+    .. versionadded:: Oxygen
+
+    Splits devices off pool creating newpool.
+
+    .. note::
+
+        All vdevs in pool must be mirrors.  At the time of the split,
+        newpool will be a replica of pool.
+
+    zpool : string
+        name of storage pool
+    newzpool : string
+        name of new storage pool
+    mountpoint : string
+        sets the mount point for the root dataset
+    altroot : string
+        sets altroot for newzpool
+    properties : dict
+        additional pool properties for newzpool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.split datamirror databackup
+        salt '*' zpool.split datamirror databackup altroot=/backup
+
+    .. note::
+
+        Zpool properties can be specified at the time of creation of the pool by
+        passing an additional argument called "properties" and specifying the properties
+        with their respective values in the form of a python dictionary::
+
+            properties="{'property1': 'value1', 'property2': 'value2'}"
+
+        Example:
+
+        .. code-block:: bash
+
+            salt '*' zpool.split datamirror databackup properties="{'readonly': 'on'}"
+    '''
+    ret = {}
+
+    # Check if the pool_name is already being used
+    if exists(newzpool):
+        ret[newzpool] = 'storage pool already exists'
+        return ret
+
+    if not exists(zpool):
+        ret[zpool] = 'storage pool does not exists'
+        return ret
+
+    zpool_cmd = _check_zpool()
+    altroot = kwargs.get('altroot', None)
+    properties = kwargs.get('properties', None)
+    cmd = '{0} split'.format(zpool_cmd)
+
+    # apply extra arguments from kwargs
+    if properties:  # create "-o property=value" pairs
+        optlist = []
+        for prop in properties:
+            if isinstance(properties[prop], bool):
+                value = 'on' if properties[prop] else 'off'
+            else:
+                if ' ' in properties[prop]:
+                    value = "'{0}'".format(properties[prop])
+                else:
+                    value = properties[prop]
+            optlist.append('-o {0}={1}'.format(prop, value))
+        opts = ' '.join(optlist)
+        cmd = '{0} {1}'.format(cmd, opts)
+    if altroot:  # set altroot
+        cmd = '{0} -R {1}'.format(cmd, altroot)
+    cmd = '{0} {1} {2}'.format(cmd, zpool, newzpool)
+
+    # Create storage pool
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    # Check and see if the pools is available
+    if res['retcode'] != 0:
+        ret[newzpool] = res['stderr'] if 'stderr' in res else res['stdout']
+    else:
+        ret[newzpool] = 'split off from {}'.format(zpool)
+
+    return ret
+
+
 def replace(zpool, old_device, new_device=None, force=False):
     '''
     .. versionchanged:: 2016.3.0
