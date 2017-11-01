@@ -446,7 +446,7 @@ def install(name=None, refresh=False, fromrepo=None,
     return ret
 
 
-def upgrade():
+def upgrade(refresh=True, **kwargs):
     '''
     Run pkg upgrade, if pkgin used. Otherwise do nothing
 
@@ -469,9 +469,12 @@ def upgrade():
         # There is not easy way to upgrade packages with old package system
         return {}
 
+    if salt.utils.data.is_true(refresh):
+        refresh_db()
+
     old = list_pkgs()
 
-    cmd = [pkgin, '-y', 'fug']
+    cmd = [pkgin, '-y', 'full-upgrade']
     result = __salt__['cmd.run_all'](cmd,
                                      output_loglevel='trace',
                                      python_shell=False)

@@ -906,6 +906,7 @@ def installed(
         for the following pkg providers: :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
+        :mod:`pkgin <salt.modules.pkgin>`,
         :mod:`win_pkg <salt.modules.win_pkg>`,
         :mod:`yumpkg <salt.modules.yumpkg>`, and
         :mod:`zypper <salt.modules.zypper>`. The version number includes the
@@ -2792,6 +2793,9 @@ def purged(name,
 def uptodate(name, refresh=False, pkgs=None, **kwargs):
     '''
     .. versionadded:: 2014.7.0
+    .. versionchanged:: Oxygen
+
+        Added support for the ``pkgin`` provider.
 
     Verify that the system is completely up to date.
 
@@ -2804,6 +2808,10 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
 
     pkgs
         list of packages to upgrade
+
+        .. note::
+
+            This parameter gets ignored on the ``pkgin`` provider.
 
     :param str cache_valid_time:
         This parameter sets the value in seconds after which cache marked as invalid,
