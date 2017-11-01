@@ -309,6 +309,28 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
+def list_upgrades(refresh=True, **kwargs):
+    '''
+    List all available package upgrades.
+
+    refresh
+        Whether or not to refresh the package database before installing.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_upgrades
+    '''
+    pkgs = {}
+    for pkg in sorted(list_pkgs(refresh=refresh).keys()):
+        # NOTE: we already optionally refreshed in de list_pkg call
+        pkg_upgrade = latest_version(pkg, refresh=False)
+        if pkg_upgrade:
+            pkgs[pkg] = pkg_upgrade
+    return pkgs
+
+
 def install(name=None, refresh=False, fromrepo=None,
             pkgs=None, sources=None, **kwargs):
     '''
