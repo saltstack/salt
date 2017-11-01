@@ -4,6 +4,80 @@
 Salt Release Notes - Codename Oxygen
 ====================================
 
+Lots of Docker Improvements
+---------------------------
+
+Much Improved Support for Docker Networking
+===========================================
+
+The :py:func:`docker_network.present <salt.states.docker_network.present>`
+state has undergone a full rewrite, which includes the following improvements:
+
+Full API Support for Network Management
+---------------------------------------
+
+The improvements made to input handling in the
+:py:func:`docker_container.running <salt.states.docker_container.running>`
+state for 2017.7.0 have now been expanded to :py:func:`docker_network.present
+<salt.states.docker_network.present>`. This brings with it full support for all
+tunable configuration arguments.
+
+Custom Subnets
+--------------
+
+Custom subnets can now be configured. Both IPv4 and mixed IPv4/IPv6 networks
+are supported. See :ref:`here <salt-states-docker-network-present-ipam>` for
+more information.
+
+Network Configuration in :py:func:`docker_container.running` States
+-------------------------------------------------------------------
+
+A long-requested feature has finally been added! It is now possible to
+configure static IPv4/IPv6 addresses, as well as links and labels. See
+:ref:`here <salt-states-docker-container-network-management>` for more
+informaion.
+
+.. note::
+    While the ``containers`` argument to :py:func:`docker_network.present`
+    will continue to be supported, it will no longer be the recommended way of
+    ensuring that a container is attached to a network.
+
+Improved Handling of Images from Custom Registries
+==================================================
+
+Rather than attempting to parse the tag from the passed image name, Salt will
+now resolve that tag down to an image ID and use that ID instead.
+
+.. important::
+    Due to this change, there are some backward-incompatible changes to image
+    management. See below for a full list of these changes.
+
+Backward-incompatible Changes to Docker Image Management
+********************************************************
+
+Passing image names to the following functions must now be done using separate
+``repository`` and ``tag`` arguments:
+
+- :py:func:`docker.build <salt.modules.dockermod.build>`
+- :py:func:`docker.commit <salt.modules.dockermod.commit>`
+- :py:func:`docker.import <salt.modules.dockermod.import_>`
+- :py:func:`docker.load <salt.modules.dockermod.load>`
+- :py:func:`docker.tag <salt.modules.dockermod.tag_>`
+- :py:func:`docker.sls_build <salt.modules.dockermod.sls_build>`
+
+Additionally, the ``tag`` argument must now be explicitly passed to the
+:py:func:`docker_image.present <salt.states.docker_image.present>` state,
+unless the image is being pulled from a docker registry.
+
+`start` Argument Added to :py:func:`docker.create <salt.modules.dockermod.create>` Function
+-------------------------------------------------------------------------------------------
+
+This allows for ``docker run``-like functionality. For example:
+
+.. code-block:: bash
+
+    salt myminion docker.create image=foo/bar:baz command=/path/to/command start=True
+
 Comparison Operators in Package Installation
 --------------------------------------------
 

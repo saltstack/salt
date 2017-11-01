@@ -1153,6 +1153,9 @@ VALID_OPTS = {
     # part of the extra_minion_data param
     # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
     'pass_to_ext_pillars': (six.string_types, list),
+
+    # Used by salt.modules.dockermod.compare_container_networks to specify which keys are compared
+    'docker.compare_container_networks': dict,
 }
 
 # default configurations
@@ -1432,6 +1435,11 @@ DEFAULT_MINION_OPTS = {
     'extmod_whitelist': {},
     'extmod_blacklist': {},
     'minion_sign_messages': False,
+    'docker.compare_container_networks': {
+        'static': ['Aliases', 'Links', 'IPAMConfig'],
+        'automatic': ['IPAddress', 'Gateway',
+                      'GlobalIPv6Address', 'IPv6Gateway'],
+    },
 }
 
 DEFAULT_MASTER_OPTS = {
