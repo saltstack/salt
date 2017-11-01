@@ -188,10 +188,11 @@ def latest_version(*names, **kwargs):
                         else:
                             pkglist[s[0]] = ''
 
-    if len(names) == 1 and pkglist:
-        return pkglist[names[0]]
-
-    return pkglist
+    if pkglist and len(names) == 1:
+        if names[0] in pkglist:
+            return pkglist[names[0]]
+    else:
+        return pkglist
 
 
 # available_version is being deprecated
