@@ -2236,7 +2236,7 @@ class State(object):
         fun_stats = set()
         for r_state, chunks in six.iteritems(reqs):
             req_stats = set()
-            if r_state == u'prereq':
+            if r_state.startswith(u'prereq') and not r_state.startswith(u'prerequired'):
                 run_dict = self.pre
             else:
                 run_dict = running
@@ -2267,9 +2267,11 @@ class State(object):
                     req_stats.add(u'change')
                     continue
                 if r_state.startswith(u'prereq') and run_dict[tag][u'result'] is None:
-                    req_stats.add(u'premet')
+                    if not r_state.startswith(u'prerequired'):
+                        req_stats.add(u'premet')
                 if r_state.startswith(u'prereq') and not run_dict[tag][u'result'] is None:
-                    req_stats.add(u'pre')
+                    if not r_state.startswith(u'prerequired'):
+                        req_stats.add(u'pre')
                 else:
                     req_stats.add(u'met')
             if r_state.endswith(u'_any'):
@@ -2459,7 +2461,6 @@ class State(object):
                     self.pre[tag][u'changes'] = {u'watch': u'watch'}
                     self.pre[tag][u'result'] = None
             else:
-                log.error('==== low {} running {} chunks {} ===='.format(low, running, chunks))
                 running = self.call_chunk(low, running, chunks)
             if self.check_failhard(chunk, running):
                 running[u'__FAILHARD__'] = True
