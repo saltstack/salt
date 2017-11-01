@@ -135,6 +135,7 @@ class AutoKeyTest(TestCase):
         self.stats['testfile'] = {'mode': gen_permissions('w', '', ''), 'gid': 0}
         self.assertTrue(self.auto_key.check_permissions('testfile'))
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalFuncsTestCase(TestCase):
     '''
