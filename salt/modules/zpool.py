@@ -527,7 +527,7 @@ def destroy(zpool, force=False):
     return ret
 
 
-def scrub(zpool, stop=False):
+def scrub(zpool, stop=False, pause=False):
     '''
     .. versionchanged:: 2016.3.0
 
@@ -537,6 +537,13 @@ def scrub(zpool, stop=False):
         name of storage pool
     stop : boolean
         if true, cancel ongoing scrub
+    pause : boolean
+        if true, pause ongoing scrub
+        .. versionadded:: Oxygen
+
+        .. note::
+
+            If both pause and stop are true, stop will win.
 
     CLI Example:
 
@@ -548,9 +555,16 @@ def scrub(zpool, stop=False):
     ret[zpool] = {}
     if exists(zpool):
         zpool_cmd = _check_zpool()
-        cmd = '{zpool_cmd} scrub {stop}{zpool}'.format(
+        if stop:
+            action = '-s '
+        elif pause:
+            # NOTE: https://github.com/openzfs/openzfs/pull/407
+            action = '-p '
+        else:
+            action = ''
+        cmd = '{zpool_cmd} scrub {action}{zpool}'.format(
             zpool_cmd=zpool_cmd,
-            stop='-s ' if stop else '',
+            action=action,
             zpool=zpool
         )
         res = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -565,7 +579,12 @@ def scrub(zpool, stop=False):
             else:
                 ret[zpool]['error'] = res['stdout']
         else:
-            ret[zpool]['scrubbing'] = True if not stop else False
+            if stop:
+                ret[zpool]['scrubbing'] = False
+            elif pause:
+                ret[zpool]['scrubbing'] = False
+            else:
+                ret[zpool]['scrubbing'] = True
     else:
         ret[zpool] = 'storage pool does not exist'
 
