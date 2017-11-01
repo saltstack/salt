@@ -612,6 +612,9 @@ def create(zpool, *vdevs, **kwargs):
         additional pool properties
     filesystem_properties : dict
         additional filesystem properties
+    createboot : boolean
+        ..versionadded:: Oxygen
+        create a boot partition
 
     CLI Example:
 
@@ -658,14 +661,21 @@ def create(zpool, *vdevs, **kwargs):
     zpool_cmd = _check_zpool()
     force = kwargs.get('force', False)
     altroot = kwargs.get('altroot', None)
+    createboot = kwargs.get('createboot', False)
     mountpoint = kwargs.get('mountpoint', None)
     properties = kwargs.get('properties', None)
     filesystem_properties = kwargs.get('filesystem_properties', None)
     cmd = '{0} create'.format(zpool_cmd)
 
+    # bootsize implies createboot
+    if properties and 'bootsize' in properties:
+        createboot = True
+
     # apply extra arguments from kwargs
     if force:  # force creation
         cmd = '{0} -f'.format(cmd)
+    if createboot:  # create boot paritition
+        cmd = '{0} -B'.format(cmd)
     if properties:  # create "-o property=value" pairs
         optlist = []
         for prop in properties:
