@@ -85,6 +85,15 @@ def _supports_regex():
     return tuple([int(i) for i in _get_version()]) > (0, 5)
 
 
+@decorators.memoize
+def _supports_parsing():
+    '''
+    Check support of regexp
+    '''
+
+    return tuple([int(i) for i in _get_version()]) > (0, 6)
+
+
 def __virtual__():
     '''
     Set the virtual pkg module if the os is supported by pkgin
@@ -167,11 +176,15 @@ def latest_version(*names, **kwargs):
         if _supports_regex():
             name = '^{0}$'.format(name)
         out = __salt__['cmd.run'](
-            '{0} se {1}'.format(pkgin, name),
+            '{0}{1} se {2}'.format(
+                pkgin,
+                ' -p' if _supports_parsing() else '',
+                name,
+            ),
             output_loglevel='trace'
         )
         for line in out.splitlines():
-            if _supports_regex():  # split on ;
+            if _supports_parsing():  # split on ;
                 p = line.split(';')
             else:
                 p = line.split()  # pkgname-version status
