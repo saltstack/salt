@@ -446,9 +446,24 @@ def install(name=None, refresh=False, fromrepo=None,
     return ret
 
 
-def upgrade(refresh=True, **kwargs):
+def upgrade(refresh=True, pkgs=None, **kwargs):
     '''
     Run pkg upgrade, if pkgin used. Otherwise do nothing
+
+    refresh
+        Whether or not to refresh the package database before installing.
+
+    Multiple Package Upgrade Options:
+
+    pkgs
+        A list of packages to upgrade from a software repository. Must be
+        passed as a python list.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade pkgs='["foo","bar"]'
 
     Returns a dictionary containing the changes:
 
@@ -474,10 +489,23 @@ def upgrade(refresh=True, **kwargs):
 
     old = list_pkgs()
 
-    cmd = [pkgin, '-y', 'full-upgrade']
-    result = __salt__['cmd.run_all'](cmd,
-                                     output_loglevel='trace',
-                                     python_shell=False)
+    cmds = []
+    if not pkgs:
+        cmds.append([pkgin, '-y', 'full-upgrade'])
+    elif salt.utils.data.is_list(pkgs):
+        for pkg in pkgs:
+            cmds.append([pkgin, '-y', 'install', pkg])
+    else:
+        result = {'retcode': 1, 'reason': 'Ignoring the parameter `pkgs` because it is not a list!'}
+        log.error(result['reason'])
+
+    for cmd in cmds:
+        result = __salt__['cmd.run_all'](cmd,
+                                         output_loglevel='trace',
+                                         python_shell=False)
+        if result['retcode'] != 0:
+            break
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.data.compare_dicts(old, new)
