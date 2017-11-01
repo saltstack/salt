@@ -39,8 +39,14 @@ class SPMBuildTest(SPMCase, ModuleCase):
     @skipIf(salt.utils.which('fallocate') is None, 'fallocate not installed')
     def test_spm_build_big_file(self):
         '''
-        test spm build
+        test spm build with a big file
         '''
+        # check to make sure there is enough space to run this test
+        check_space = self.run_function('status.diskusage', ['/'])
+        space = check_space['/']['available']
+        if space < 2000000:
+            self.skipTest('Not enough space on host to run this test')
+
         big_file = self.run_function('cmd.run',
                                      ['fallocate -l 1G {0}'.format(os.path.join(self.formula_sls_dir,
                                                                               'bigfile.txt'))])
@@ -56,7 +62,7 @@ class SPMBuildTest(SPMCase, ModuleCase):
 
     def test_spm_build_exclude(self):
         '''
-        test spm build
+        test spm build while excluding directory
         '''
         git_dir = os.path.join(self.formula_sls_dir, '.git')
         os.makedirs(git_dir)
