@@ -1252,6 +1252,44 @@ def offline(zpool, *vdevs, **kwargs):
     return ret
 
 
+def labelclear(device, force=False):
+    '''
+    .. versionadded:: Oxygen
+
+    Removes ZFS label information from the specified device
+
+    .. warning::
+
+        The device must not be part of an active pool configuration.
+
+    device : string
+        device
+    force : boolean
+        treat exported or foreign devices as inactive
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.labelclear /path/to/dev
+    '''
+    ret = {}
+
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} labelclear {force}{device}'.format(
+        zpool_cmd=zpool_cmd,
+        force='-f ' if force else '',
+        device=device,
+    )
+    # Bring all specified devices offline
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret[device] = res['stderr'] if 'stderr' in res else res['stdout']
+    else:
+        ret[device] = 'cleared'
+    return ret
+
+
 def reguid(zpool):
     '''
     .. versionadded:: 2016.3.0
