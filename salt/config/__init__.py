@@ -977,6 +977,9 @@ VALID_OPTS = {
     # (in other words, require that minions have 'minion_sign_messages'
     # turned on)
     'require_minion_sign_messages': bool,
+
+    # Scheduler should be a dictionary
+    'schedule': dict,
 }
 
 # default configurations
@@ -1223,6 +1226,7 @@ DEFAULT_MINION_OPTS = {
     'cache': 'localfs',
     'salt_cp_chunk_size': 65536,
     'minion_sign_messages': False,
+    'schedule', {}
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1504,6 +1508,7 @@ DEFAULT_MASTER_OPTS = {
     'salt_cp_chunk_size': 98304,
     'require_minion_sign_messages': False,
     'drop_messages_signature_fail': False,
+    'schedule': {},
 }
 
 
@@ -3337,10 +3342,6 @@ def apply_minion_config(overrides=None,
         opts['ipc_write_buffer'] = _DFLT_IPC_WBUFFER
     if 'ipc_write_buffer' not in overrides:
         opts['ipc_write_buffer'] = 0
-
-    # if there is no schedule option yet, add an empty scheduler
-    if 'schedule' not in opts:
-        opts['schedule'] = {}
 
     # Make sure hash_type is lowercase
     opts['hash_type'] = opts['hash_type'].lower()
