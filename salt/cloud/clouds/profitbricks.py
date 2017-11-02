@@ -6,7 +6,7 @@ ProfitBricks Cloud Module
 The ProfitBricks SaltStack cloud module allows a ProfitBricks server to
 be automatically deployed and bootstraped with Salt.
 
-:depends: profitbrick >= 2.3.0
+:depends: profitbrick >= 4.1.0
 
 The module requires ProfitBricks credentials to be supplied along with
 an existing virtual datacenter UUID where the server resources will
@@ -187,11 +187,8 @@ def avail_images(call=None):
 
     ret = {}
     conn = get_conn()
-    datacenter = get_datacenter(conn)
 
     for item in conn.list_images()['items']:
-        if (item['properties']['location'] ==
-           datacenter['properties']['location']):
             image = {'id': item['id']}
             image.update(item['properties'])
             ret[image['name']] = image
