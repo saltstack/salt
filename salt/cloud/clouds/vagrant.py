@@ -287,29 +287,32 @@ def destroy(name, call=None):
         transport=opts['transport']
     )
     my_info = _get_my_info(name)
-    profile_name = my_info[name]['profile']
-    profile = opts['profiles'][profile_name]
-    host = profile['host']
-    local = salt.client.LocalClient()
-    ret = local.cmd(host, 'vagrant.destroy', [name])
+    if my_info:
+        profile_name = my_info[name]['profile']
+        profile = opts['profiles'][profile_name]
+        host = profile['host']
+        local = salt.client.LocalClient()
+        ret = local.cmd(host, 'vagrant.destroy', [name])
 
-    if ret[host]:
-        __utils__['cloud.fire_event'](
-            'event',
-            'destroyed instance',
-            'salt/cloud/{0}/destroyed'.format(name),
-            args={'name': name},
-            sock_dir=opts['sock_dir'],
-            transport=opts['transport']
-        )
+        if ret[host]:
+            __utils__['cloud.fire_event'](
+                'event',
+                'destroyed instance',
+                'salt/cloud/{0}/destroyed'.format(name),
+                args={'name': name},
+                sock_dir=opts['sock_dir'],
+                transport=opts['transport']
+            )
 
-        if opts.get('update_cachedir', False) is True:
-            __utils__['cloud.delete_minion_cachedir'](
-                name, __active_provider_name__.split(':')[0], opts)
+            if opts.get('update_cachedir', False) is True:
+                __utils__['cloud.delete_minion_cachedir'](
+                    name, __active_provider_name__.split(':')[0], opts)
 
-        return {'Destroyed': '{0} was destroyed.'.format(name)}
+            return {'Destroyed': '{0} was destroyed.'.format(name)}
+        else:
+            return {'Error': 'Error destroying {}'.format(name)}
     else:
-        return {'Error': 'Error destroying {}'.format(name)}
+        return {'Error': 'No response from {}. Cannot destroy.'.format(name)}
 
 
 # noinspection PyTypeChecker
