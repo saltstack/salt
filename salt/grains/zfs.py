@@ -27,7 +27,6 @@ import salt.modules.cmdmod
 __virtualname__ = 'zfs'
 __salt__ = {
     'cmd.run': salt.modules.cmdmod.run,
-    'cmd.run_all': salt.modules.cmdmod.run_all,
 }
 
 log = logging.getLogger(__name__)
@@ -59,11 +58,10 @@ def _zfs_support():
     # NOTE: ZFS on Windows is in development
     # NOTE: ZFS on NetBSD is in development
     on_supported_platform = False
-    if salt.utils.platform.is_sunos():
-        if salt.utils.path.which('zfs'):
-            on_supported_platform = True
-    elif salt.utils.platform.is_freebsd():
-        on_supported_platform = _check_retcode('kldstat -q -m zfs')
+    if salt.utils.platform.is_sunos() and salt.utils.path.which('zfs'):
+        on_supported_platform = True
+    elif salt.utils.platform.is_freebsd() and _check_retcode('kldstat -q -m zfs'):
+        on_supported_platform = True
     elif salt.utils.platform.is_linux():
         modinfo = salt.utils.path.which('modinfo')
         if modinfo:
