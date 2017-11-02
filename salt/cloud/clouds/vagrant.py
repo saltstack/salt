@@ -30,7 +30,8 @@ if six.PY3:
     import ipaddress
 else:
     import salt.ext.ipaddress as ipaddress
-from salt.exceptions import SaltCloudException, SaltCloudSystemExit
+from salt.exceptions import SaltCloudException, SaltCloudSystemExit, \
+    SaltInvocationError
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -228,18 +229,22 @@ def create(vm_):
                         kwarg={'network_mask': network_mask,
                                 'get_private_key': True})[host]
     with tempfile.NamedTemporaryFile() as pks:
-        if 'private_key' not in vm_ and ret.get('private_key', False):
+        if 'private_key' not in vm_ and ret and ret.get('private_key', False):
             pks.write(ret['private_key'])
             pks.flush()
             log.debug('wrote private key to %s', pks.name)
             vm_['key_filename'] = pks.name
         if 'ssh_host' not in vm_:
-            vm_.setdefault('ssh_username', ret['ssh_username'])
-            if ret.get('ip_address'):
-                vm_['ssh_host'] = ret['ip_address']
-            else:  # if probe failed or not used, use Vagrant's reported ssh info
-                vm_['ssh_host'] = ret['ssh_host']
-                vm_.setdefault('ssh_port', ret['ssh_port'])
+            try:
+                vm_.setdefault('ssh_username', ret['ssh_username'])
+                if ret.get('ip_address'):
+                    vm_['ssh_host'] = ret['ip_address']
+                else:  # if probe failed or not used, use Vagrant's reported ssh info
+                    vm_['ssh_host'] = ret['ssh_host']
+                    vm_.setdefault('ssh_port', ret['ssh_port'])
+            except (KeyError, TypeError):
+                raise SaltInvocationError(
+                    'Insufficient SSH addressing information for {}'.format(name))
 
         log.info('Provisioning machine %s as node %s using ssh %s',
                  machine, name, vm_['ssh_host'])
