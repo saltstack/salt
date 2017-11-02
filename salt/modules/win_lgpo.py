@@ -86,6 +86,7 @@ TEXT_ELEMENT_XPATH = None
 try:
     import win32net
     import win32security
+    import wmi
     import uuid
     import codecs
     import lxml
@@ -2706,7 +2707,10 @@ def _processPolicyDefinitions(policy_def_path='c:\\Windows\\PolicyDefinitions',
     helper function to process all ADMX files in the specified policy_def_path
     and build a single XML doc that we can search/use for ADMX policy processing
     '''
-    display_language_fallback = 'en-US'
+    wmi_c = wmi.WMI()
+    query = "SELECT MUILanguages FROM Win32_OperatingSystem"
+    display_language_fallback = wmi_c.query(query)[0].MUILanguages[0]
+
     t_policy_definitions = lxml.etree.Element('policyDefinitions')
     t_policy_definitions.append(lxml.etree.Element('categories'))
     t_policy_definitions.append(lxml.etree.Element('policies'))
