@@ -1022,7 +1022,9 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         cfg_content = 'EXTRA_GROUPS="dialout cdrom floppy audio video plugdev users"'
+        # pylint: disable=W1401
         file_content = 'NAME_REGEX="^[a-z][-a-z0-9_]*\$"\nSKEL_IGNORE_REGEX="dpkg-(old|new|dist|save)"'
+        # pylint: enable=W1401
         after, before = file_content.split(os.linesep)
         file_modified = os.linesep.join([after, cfg_content, before])
         for (_after, _before) in [(after, before), ('NAME_.*', 'SKEL_.*')]:
@@ -1043,8 +1045,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         cfg_content = 'EXTRA_GROUPS="dialout"'
+        # pylint: disable=W1401
         file_content = 'NAME_REGEX="^[a-z][-a-z0-9_]*\$"\nEXTRA_GROUPS="dialout"' \
                        '\nSKEL_IGNORE_REGEX="dpkg-(old|new|dist|save)"'
+        # pylint: enable=W1401
         after, before = file_content.split(os.linesep)[0], file_content.split(os.linesep)[2]
         for (_after, _before) in [(after, before), ('NAME_.*', 'SKEL_.*')]:
             files_fopen = mock_open(read_data=file_content)
@@ -1066,8 +1070,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         cfg_content = 'EXTRA_GROUPS="dialout cdrom floppy audio video plugdev users"'
+        # pylint: disable=W1401
         file_content = 'NAME_REGEX="^[a-z][-a-z0-9_]*\$"\nSETGID_HOME=no\nADD_EXTRA_GROUPS=1\n' \
                        'SKEL_IGNORE_REGEX="dpkg-(old|new|dist|save)"'
+        # pylint: enable=W1401
         after, before = file_content.split(os.linesep)[0], file_content.split(os.linesep)[-1]
         for (_after, _before) in [(after, before), ('NAME_.*', 'SKEL_.*')]:
             files_fopen = mock_open(read_data=file_content)
