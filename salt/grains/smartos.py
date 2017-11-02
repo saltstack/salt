@@ -53,6 +53,7 @@ def _smartos_computenode_data():
     #   vms_total
     #   vms_running
     #   vms_stopped
+    #   vms_type
     #   sdc_version
     #   vm_capable
     #   vm_hw_virt
@@ -70,11 +71,17 @@ def _smartos_computenode_data():
     grains['computenode_vms_total'] = len(vms)
     grains['computenode_vms_running'] = 0
     grains['computenode_vms_stopped'] = 0
+    grains['computenode_vms_type'] = {'KVM': 0, 'LX': 0, 'OS': 0}
     for vm in vms:
         if vms[vm]['state'].lower() == 'running':
             grains['computenode_vms_running'] += 1
         elif vms[vm]['state'].lower() == 'stopped':
             grains['computenode_vms_stopped'] += 1
+
+        if vms[vm]['type'] not in grains['computenode_vms_type']:
+            # NOTE: be prepared for when bhyve gets its own type
+            grains['computenode_vms_type'][vms[vm]['type']] = 0
+        grains['computenode_vms_type'][vms[vm]['type']] += 1
 
     # sysinfo derived grains
     sysinfo = json.loads(__salt__['cmd.run']('sysinfo'))
