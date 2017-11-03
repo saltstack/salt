@@ -3,7 +3,7 @@
 source "https://rubygems.org"
 
 gem "test-kitchen"
-gem "kitchen-salt", :git => 'https://github.com/gtmanfred/kitchen-salt.git'
+gem "kitchen-salt", :git => 'https://github.com/saltstack/kitchen-salt.git'
 gem 'git'
 
 group :docker do
