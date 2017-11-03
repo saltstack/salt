@@ -527,11 +527,12 @@ def list_nodes_full(conn=None, call=None):
         node['private_ips'] = []
         if item['entities']['nics']['items'] > 0:
             for nic in item['entities']['nics']['items']:
-                ip_address = nic['properties']['ips'][0]
-                if salt.utils.cloud.is_public_ip(ip_address):
-                    node['public_ips'].append(ip_address)
-                else:
-                    node['private_ips'].append(ip_address)
+                if len(nic['properties']['ips']) > 0:
+                    ip_address = nic['properties']['ips'][0]
+                    if salt.utils.cloud.is_public_ip(ip_address):
+                        node['public_ips'].append(ip_address)
+                    else:
+                        node['private_ips'].append(ip_address)
 
         ret[node['name']] = node
 
