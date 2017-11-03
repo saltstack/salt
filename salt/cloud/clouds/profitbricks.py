@@ -498,6 +498,7 @@ def list_nodes(conn=None, call=None):
     for item in nodes['items']:
         node = {'id': item['id']}
         node.update(item['properties'])
+        node['state'] = node.pop('vmState')
         ret[node['name']] = node
 
     return ret
@@ -523,6 +524,7 @@ def list_nodes_full(conn=None, call=None):
     for item in nodes['items']:
         node = {'id': item['id']}
         node.update(item['properties'])
+        node['state'] = node.pop('vmState')
         node['public_ips'] = []
         node['private_ips'] = []
         if item['entities']['nics']['items'] > 0:
