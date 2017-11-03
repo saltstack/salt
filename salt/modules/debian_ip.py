@@ -1772,7 +1772,6 @@ def build_routes(iface, **settings):
         salt '*' ip.build_routes eth0 <settings>
     '''
 
-    iface = iface.lower()
     opts = _parse_routes(iface, settings)
     try:
         template = JINJA.get_template('route_eth.jinja')
