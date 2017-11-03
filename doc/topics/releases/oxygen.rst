@@ -55,6 +55,7 @@ The new grains added are:
 
 * ``fc_wwn``: Show all fibre channel world wide port names for a host
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
+* ``swap_total``: Show the configured swap_total for Linux, *BSD, OS X and Solaris/SunOS
 
 Grains Changes
 --------------
@@ -1095,3 +1096,10 @@ The ``version.py`` file had the following changes:
 Warnings for moving away from the ``env`` option were removed. ``saltenv`` should be
 used instead. The removal of these warnings does not have a behavior change. Only
 the warning text was removed.
+
+Sentry Log Handler
+------------------
+
+Configuring sentry raven python client via ``project``, ``servers``, ``public_key
+and ``secret_key`` is deprecated and won't work with sentry clients > 3.0.
+Instead, the ``dsn`` config param must be used.

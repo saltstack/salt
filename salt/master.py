@@ -1840,89 +1840,52 @@ class ClearFuncs(object):
             clear_load.get(u'tgt_type', u'glob'),
             delimiter
         )
-        minions = _res.get('minions', list())
-        missing = _res.get('missing', list())
+        minions = _res.get(u'minions', list())
+        missing = _res.get(u'missing', list())
 
-        # Check for external auth calls
-        if extra.get(u'token', False):
-            # Authenticate.
-            token = self.loadauth.authenticate_token(extra)
-            if not token:
-                return u''
-
-            # Get acl
-            auth_list = self.loadauth.get_auth_list(extra, token)
-
-            # Authorize the request
-            if not self.ckminions.auth_check(
-                    auth_list,
-                    clear_load[u'fun'],
-                    clear_load[u'arg'],
-                    clear_load[u'tgt'],
-                    clear_load.get(u'tgt_type', u'glob'),
-                    minions=minions,
-                    # always accept find_job
-                    whitelist=[u'saltutil.find_job'],
-                    ):
-                log.warning(u'Authentication failure of type "token" occurred.')
-                return u''
-            clear_load[u'user'] = token[u'name']
-            log.debug(u'Minion tokenized user = "%s"', clear_load[u'user'])
-        elif u'eauth' in extra:
-            # Authenticate.
-            if not self.loadauth.authenticate_eauth(extra):
-                return u''
-
-            # Get acl from eauth module.
-            auth_list = self.loadauth.get_auth_list(extra)
-
-            # Authorize the request
-            if not self.ckminions.auth_check(
-                    auth_list,
-                    clear_load[u'fun'],
-                    clear_load[u'arg'],
-                    clear_load[u'tgt'],
-                    clear_load.get(u'tgt_type', u'glob'),
-                    minions=minions,
-                    # always accept find_job
-                    whitelist=[u'saltutil.find_job'],
-                    ):
-                log.warning(u'Authentication failure of type "eauth" occurred.')
-                return u''
-            clear_load[u'user'] = self.loadauth.load_name(extra)  # The username we are attempting to auth with
-        # Verify that the caller has root on master
+        # Check for external auth calls and authenticate
+        auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(extra)
+        if auth_type == 'user':
+            auth_check = self.loadauth.check_authentication(clear_load, auth_type, key=key)
         else:
-            auth_ret = self.loadauth.authenticate_key(clear_load, self.key)
-            if auth_ret is False:
+            auth_check = self.loadauth.check_authentication(extra, auth_type)
+
+        # Setup authorization list variable and error information
+        auth_list = auth_check.get(u'auth_list', [])
+        err_msg = u'Authentication failure of type "{0}" occurred.'.format(auth_type)
+
+        if auth_check.get(u'error'):
+            # Authentication error occurred: do not continue.
+            log.warning(err_msg)
+            return u''
+
+        # All Token, Eauth, and non-root users must pass the authorization check
+        if auth_type != u'user' or (auth_type == u'user' and auth_list):
+            # Authorize the request
+            authorized = self.ckminions.auth_check(
+                auth_list,
+                clear_load[u'fun'],
+                clear_load[u'arg'],
+                clear_load[u'tgt'],
+                clear_load.get(u'tgt_type', u'glob'),
+                minions=minions,
+                # always accept find_job
+                whitelist=[u'saltutil.find_job'],
+            )
+
+            if not authorized:
+                # Authorization error occurred. Do not continue.
+                log.warning(err_msg)
                 return u''
 
-            if auth_ret is not True:
-                if salt.auth.AuthUser(clear_load[u'user']).is_sudo():
-                    if not self.opts[u'sudo_acl'] or not self.opts[u'publisher_acl']:
-                        auth_ret = True
-
-            if auth_ret is not True:
-                auth_list = salt.utils.master.get_values_of_matching_keys(
-                        self.opts[u'publisher_acl'],
-                        auth_ret)
-                if not auth_list:
-                    log.warning(
-                        u'Authentication failure of type "user" occurred.'
-                    )
-                    return u''
-
-                if not self.ckminions.auth_check(
-                        auth_list,
-                        clear_load[u'fun'],
-                        clear_load[u'arg'],
-                        clear_load[u'tgt'],
-                        clear_load.get(u'tgt_type', u'glob'),
-                        minions=minions,
-                        # always accept find_job
-                        whitelist=[u'saltutil.find_job'],
-                        ):
-                    log.warning(u'Authentication failure of type "user" occurred.')
-                    return u''
+            # Perform some specific auth_type tasks after the authorization check
+            if auth_type == u'token':
+                username = auth_check.get(u'username')
+                clear_load[u'user'] = username
+                log.debug(u'Minion tokenized user = "%s"', username)
+            elif auth_type == u'eauth':
+                # The username we are attempting to auth with
+                clear_load[u'user'] = self.loadauth.load_name(extra)
 
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found
