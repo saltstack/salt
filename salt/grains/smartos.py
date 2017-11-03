@@ -103,55 +103,76 @@ def _smartos_zone_data():
     Return useful information from a SmartOS zone
     '''
     # Provides:
-    #   pkgsrcversion
-    #   imageversion
-    #   pkgsrcpath
-    #   pkgin_repositories
-    #   zonename
     #   zoneid
+    #   zonename
+    #   imageversion
 
-    if salt.utils.platform.is_proxy():
-        return {}
+    grains = {
+        'zoneid': __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'', python_shell=True),
+        'zonename': __salt__['cmd.run']('zonename'),
+        'imageversion': 'Unknown',
+    }
 
-    grains = {}
-
-    pkgsrcversion = re.compile('^release:\\s(.+)')
     imageversion = re.compile('Image:\\s(.+)')
-    pkgsrcpath = re.compile('PKG_PATH=(.+)')
-    pkginrepo = re.compile('^(?:https|http|ftp|file)://.*$')
-    if os.path.isfile('/etc/pkgsrc_version'):
-        with salt.utils.files.fopen('/etc/pkgsrc_version', 'r') as fp_:
-            for line in fp_:
-                match = pkgsrcversion.match(line)
-                if match:
-                    grains['pkgsrcversion'] = match.group(1)
     if os.path.isfile('/etc/product'):
         with salt.utils.files.fopen('/etc/product', 'r') as fp_:
             for line in fp_:
                 match = imageversion.match(line)
                 if match:
                     grains['imageversion'] = match.group(1)
+
+    return grains
+
+
+def _smartos_zone_pkgsrc_data():
+    '''
+    SmartOS zone pkgsrc information
+    '''
+    # Provides:
+    #   pkgsrcversion
+    #   pkgsrcpath
+
+    grains = {
+        'pkgsrcversion': 'Unknown',
+        'pkgsrcpath': 'Unknown',
+    }
+
+    pkgsrcversion = re.compile('^release:\\s(.+)')
+    if os.path.isfile('/etc/pkgsrc_version'):
+        with salt.utils.files.fopen('/etc/pkgsrc_version', 'r') as fp_:
+            for line in fp_:
+                match = pkgsrcversion.match(line)
+                if match:
+                    grains['pkgsrcversion'] = match.group(1)
+
+    pkgsrcpath = re.compile('PKG_PATH=(.+)')
     if os.path.isfile('/opt/local/etc/pkg_install.conf'):
         with salt.utils.files.fopen('/opt/local/etc/pkg_install.conf', 'r') as fp_:
             for line in fp_:
                 match = pkgsrcpath.match(line)
                 if match:
                     grains['pkgsrcpath'] = match.group(1)
+
+    return grains
+
+
+def _smartos_zone_pkgin_data():
+    '''
+    SmartOS zone pkgsrc information
+    '''
+    # Provides:
+    #   pkgin_repositories
+
+    grains = {
+        'pkgin_repositories': [],
+    }
+
+    pkginrepo = re.compile('^(?:https|http|ftp|file)://.*$')
     if os.path.isfile('/opt/local/etc/pkgin/repositories.conf'):
-        grains['pkgin_repositories'] = []
         with salt.utils.files.fopen('/opt/local/etc/pkgin/repositories.conf', 'r') as fp_:
             for line in fp_:
                 if pkginrepo.match(line):
                     grains['pkgin_repositories'].append(line)
-    if 'pkgsrcversion' not in grains:
-        grains['pkgsrcversion'] = 'Unknown'
-    if 'imageversion' not in grains:
-        grains['imageversion'] = 'Unknown'
-    if 'pkgsrcpath' not in grains:
-        grains['pkgsrcpath'] = 'Unknown'
-
-    grains['zonename'] = __salt__['cmd.run']('zonename')
-    grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'', python_shell=True)
 
     return grains
 
@@ -164,6 +185,8 @@ def smartos():
 
     if salt.utils.platform.is_smartos_zone():
         grains = salt.utils.dictupdate.update(grains, _smartos_zone_data(), merge_lists=True)
+        grains = salt.utils.dictupdate.update(grains, _smartos_zone_pkgsrc_data(), merge_lists=True)
+        grains = salt.utils.dictupdate.update(grains, _smartos_zone_pkgin_data(), merge_lists=True)
     elif salt.utils.platform.is_smartos_globalzone():
         grains = salt.utils.dictupdate.update(grains, _smartos_computenode_data(), merge_lists=True)
 
