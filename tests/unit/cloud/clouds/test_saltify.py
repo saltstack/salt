@@ -22,9 +22,14 @@ TEST_PROFILES = {
                      'ssh_username': 'fred',
                      'remove_config_on_destroy': False,  # expected for test
                      'shutdown_on_destroy': True  # expected value for test
-                     }
+                     },
+    'testprofile3': {  # this profile is used in test_create_wake_on_lan()
+                    'wake_on_lan_mac': 'aa-bb-cc-dd-ee-ff',
+                    'wol_sender_node': 'friend1',
+                    'wol_boot_wait': 0.01  # we want the wait to be very short
+                    }
     }
-TEST_PROFILE_NAMES = ['testprofile1', 'testprofile2']
+TEST_PROFILE_NAMES = ['testprofile1', 'testprofile2', 'testprofile3']
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -78,11 +83,37 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
             {'cloud.bootstrap': mock_cmd}):
             vm_ = {'deploy':  True,
                   'driver': 'saltify',
-                  'name': 'testprofile2',
+                  'name': 'new2',
+                  'profile': 'testprofile2',
                  }
             result = saltify.create(vm_)
             mock_cmd.assert_called_once_with(vm_, ANY)
             self.assertTrue(result)
+
+    def test_create_wake_on_lan(self):
+        '''
+        Test if wake on lan works
+        '''
+        mock_sleep = MagicMock()
+        mock_cmd = MagicMock(return_value=True)
+        mm_cmd = MagicMock(return_value={'friend1': True})
+        lcl = salt.client.LocalClient()
+        lcl.cmd = mm_cmd
+        with patch('time.sleep', mock_sleep):
+            with patch('salt.client.LocalClient', return_value=lcl):
+                with patch.dict(
+                    'salt.cloud.clouds.saltify.__utils__',
+                    {'cloud.bootstrap': mock_cmd}):
+                    vm_ = {'deploy': True,
+                           'driver': 'saltify',
+                           'name': 'new1',
+                           'profile': 'testprofile3',
+                           }
+                    result = saltify.create(vm_)
+                    mock_cmd.assert_called_once_with(vm_, ANY)
+                    mm_cmd.assert_called_with('friend1', 'network.wol', ['aa-bb-cc-dd-ee-ff'])
+                    mock_sleep.assert_called_with(0.01)
+                    self.assertTrue(result)
 
     def test_avail_locations(self):
         '''

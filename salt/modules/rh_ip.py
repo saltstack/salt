@@ -1079,7 +1079,6 @@ def build_routes(iface, **settings):
         pass
     log.debug('Template name: ' + template)
 
-    iface = iface.lower()
     opts = _parse_routes(iface, settings)
     log.debug("Opts: \n {0}".format(opts))
     try:
