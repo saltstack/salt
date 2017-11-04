@@ -293,6 +293,16 @@ class FileModuleTest(integration.ModuleCase):
         else:
             self.assertItemsEqual(ret, ['file://' + self.myfile, 'filehash'])
 
+    def test_file_line_changes_format(self):
+        '''
+        Test file.line changes output formatting.
+
+        Issue #41474
+        '''
+        ret = self.minion_run('file.line', self.myfile, 'Goodbye',
+                              mode='insert', after='Hello')
+        self.assertIn('Hello\n+Goodbye', ret)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(FileModuleTest)
