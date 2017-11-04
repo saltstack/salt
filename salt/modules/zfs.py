@@ -16,6 +16,7 @@ import salt.utils.path
 import salt.modules.cmdmod
 import salt.utils.decorators as decorators
 from salt.utils.odict import OrderedDict
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
