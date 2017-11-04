@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Module for fetching artifacts from Nexus 3.x
+
+.. versionadded:: Oxygen
 '''
 
 # Import python libs
@@ -10,7 +12,7 @@ import base64
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-builtin,no-name-in-module
 from salt.ext.six.moves import urllib  # pylint: disable=no-name-in-module
 from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=no-name-in-module
@@ -115,6 +117,37 @@ def get_snapshot(nexus_url, repository, group_id, artifact_id, packaging, versio
     return __save_artifact(snapshot_url, target_file, headers)
 
 
+def get_snapshot_version_string(nexus_url, repository, group_id, artifact_id, packaging, version, classifier, username=None, password=None):
+    '''
+       Gets the specific version string of a snapshot of the desired version of the artifact
+
+       nexus_url
+           URL of nexus instance
+       repository
+           Snapshot repository in nexus to retrieve artifact from, for example: libs-snapshots
+       group_id
+           Group Id of the artifact
+       artifact_id
+           Artifact Id of the artifact
+       packaging
+           Packaging type (jar,war,ear,etc)
+       version
+           Version of the artifact
+       classifier
+           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+       username
+           nexus username. Optional parameter.
+       password
+           nexus password. Optional parameter.
+       '''
+    log.debug('======================== MODULE FUNCTION: nexus.get_snapshot_version_string(nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, classifier=%s)',
+              nexus_url, repository, group_id, artifact_id, packaging, version, classifier)
+    headers = {}
+    if username and password:
+        headers['Authorization'] = 'Basic {0}'.format(base64.encodestring('{0}:{1}'.format(username, password)).replace('\n', ''))
+    return _get_snapshot_url(nexus_url=nexus_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version, packaging=packaging, classifier=classifier, just_get_version_string=True)
+
+
 def get_latest_release(nexus_url, repository, group_id, artifact_id, packaging, target_dir='/tmp', target_file=None, classifier=None, username=None, password=None):
     '''
        Gets the latest release of the artifact
@@ -197,7 +230,7 @@ def __resolve_target_file(file_name, target_dir, target_file=None):
     return target_file
 
 
-def _get_snapshot_url(nexus_url, repository, group_id, artifact_id, version, packaging, snapshot_version=None, classifier=None, headers=None):
+def _get_snapshot_url(nexus_url, repository, group_id, artifact_id, version, packaging, snapshot_version=None, classifier=None, headers=None, just_get_version_string=None):
     if headers is None:
         headers = {}
     has_classifier = classifier is not None and classifier != ""
@@ -260,7 +293,10 @@ def _get_snapshot_url(nexus_url, repository, group_id, artifact_id, version, pac
                         file_name=file_name)
     log.debug('snapshot_url=%s', snapshot_url)
 
-    return snapshot_url, file_name
+    if just_get_version_string:
+        return snapshot_version
+    else:
+        return snapshot_url, file_name
 
 
 def _get_release_url(repository, group_id, artifact_id, packaging, version, nexus_url, classifier=None):
@@ -435,7 +471,7 @@ def __save_artifact(artifact_url, target_file, headers):
     try:
         request = urllib.request.Request(artifact_url, None, headers)
         f = urllib.request.urlopen(request)
-        with salt.utils.fopen(target_file, "wb") as local_file:
+        with salt.utils.files.fopen(target_file, "wb") as local_file:
             local_file.write(f.read())
         result['status'] = True
         result['comment'] = __append_comment(('Artifact downloaded from URL: {0}'.format(artifact_url)), result['comment'])

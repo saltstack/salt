@@ -2,6 +2,7 @@
 '''
 This state downloads artifacts from Nexus 3.x.
 
+.. versionadded:: Oxygen
 '''
 
 # Import python libs
@@ -10,11 +11,20 @@ import logging
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'nexus'
+
+
+def __virtual__():
+    '''
+    Set the virtual name for the module
+    '''
+    return __virtualname__
+
 
 def downloaded(name, artifact, target_dir='/tmp', target_file=None):
     '''
     Ensures that the artifact from nexus exists at given location. If it doesn't exist, then
-    it will be downloaded. It it already exists then the checksum of existing file is checked
+    it will be downloaded. If it already exists then the checksum of existing file is checked
     against checksum in nexus. If it is different then the step will fail.
 
     artifact
@@ -98,50 +108,54 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
 
 
 def __fetch_from_nexus(artifact, target_dir, target_file):
-    if ('latest_snapshot' in artifact and artifact['latest_snapshot']) or artifact['version'] == 'latest_snapshot':
-        fetch_result = __salt__['nexus.get_latest_snapshot'](nexus_url=artifact['nexus_url'],
-                                                                   repository=artifact['repository'],
-                                                                   group_id=artifact['group_id'],
-                                                                   artifact_id=artifact['artifact_id'],
-                                                                   packaging=artifact['packaging'] if 'packaging' in artifact else 'jar',
-                                                                   classifier=artifact['classifier'] if 'classifier' in artifact else None,
-                                                                   target_dir=target_dir,
-                                                                   target_file=target_file,
-                                                                   username=artifact['username'] if 'username' in artifact else None,
-                                                                   password=artifact['password'] if 'password' in artifact else None)
-    elif artifact['version'].endswith('SNAPSHOT'):
-        fetch_result = __salt__['nexus.get_snapshot'](nexus_url=artifact['nexus_url'],
-                                                            repository=artifact['repository'],
-                                                            group_id=artifact['group_id'],
-                                                            artifact_id=artifact['artifact_id'],
-                                                            packaging=artifact['packaging'] if 'packaging' in artifact else 'jar',
-                                                            classifier=artifact['classifier'] if 'classifier' in artifact else None,
-                                                            version=artifact['version'],
-                                                            target_dir=target_dir,
-                                                            target_file=target_file,
-                                                            username=artifact['username'] if 'username' in artifact else None,
-                                                            password=artifact['password'] if 'password' in artifact else None)
-    elif artifact['version'] == 'latest':
-        fetch_result = __salt__['nexus.get_latest_release'](nexus_url=artifact['nexus_url'],
-                                                                   repository=artifact['repository'],
-                                                                   group_id=artifact['group_id'],
-                                                                   artifact_id=artifact['artifact_id'],
-                                                                   packaging=artifact['packaging'] if 'packaging' in artifact else 'jar',
-                                                                   classifier=artifact['classifier'] if 'classifier' in artifact else None,
-                                                                   target_dir=target_dir,
-                                                                   target_file=target_file,
-                                                                   username=artifact['username'] if 'username' in artifact else None,
-                                                                   password=artifact['password'] if 'password' in artifact else None)
+    nexus_url = artifact['nexus_url']
+    repository = artifact['repository']
+    group_id = artifact['group_id']
+    artifact_id = artifact['artifact_id']
+    packaging = artifact['packaging'] if 'packaging' in artifact else 'jar'
+    classifier = artifact['classifier'] if 'classifier' in artifact else None
+    username = artifact['username'] if 'username' in artifact else None
+    password = artifact['password'] if 'password' in artifact else None
+    version = artifact['version'] if 'version' in artifact else None
+
+    # determine module function to use
+    if version == 'latest_snapshot':
+        function = 'nexus.get_latest_snapshot'
+        version_param = False        
+    elif version == 'latest':
+        function = 'nexus.get_latest_release'
+        version_param = False
+    elif version.endswith('SNAPSHOT'):
+        function = 'nexus.get_snapshot'
+        version_param = True
     else:
-        fetch_result = __salt__['nexus.get_release'](nexus_url=artifact['nexus_url'],
-                                                           repository=artifact['repository'],
-                                                           group_id=artifact['group_id'],
-                                                           artifact_id=artifact['artifact_id'],
-                                                           packaging=artifact['packaging'] if 'packaging' in artifact else 'jar',
-                                                           classifier=artifact['classifier'] if 'classifier' in artifact else None,
-                                                           version=artifact['version'],
-                                                           target_dir=target_dir,
-                                                           target_file=target_file,
-                                                           username=artifact['username'] if 'username' in artifact else None,
-                                                           password=artifact['password'] if 'password' in artifact else None)
+        function = 'nexus.get_release'
+        version_param = True
+
+    if version_param:
+        fetch_result = __salt__[function](  nexus_url=nexus_url,
+                                            repository=repository,
+                                            group_id=group_id,
+                                            artifact_id=artifact_id,
+                                            packaging=packaging,
+                                            classifier=classifier,
+                                            target_dir=target_dir,
+                                            target_file=target_file,
+                                            username=username,
+                                            password=password,
+                                            version=version
+                                            )
+    else:
+        fetch_result = __salt__[function](  nexus_url=nexus_url,
+                                            repository=repository,
+                                            group_id=group_id,
+                                            artifact_id=artifact_id,
+                                            packaging=packaging,
+                                            classifier=classifier,
+                                            target_dir=target_dir,
+                                            target_file=target_file,
+                                            username=username,
+                                            password=password,
+                                            )
+
     return fetch_result
