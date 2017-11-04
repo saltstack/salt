@@ -504,8 +504,8 @@ def secret_present(
         name,
         namespace='default',
         data=None,
-        source='',
-        template='',
+        source=None,
+        template=None,
         **kwargs):
     '''
     Ensures that the named secret is present inside of the specified namespace
@@ -562,6 +562,7 @@ def secret_present(
     else:
         if __opts__['test']:
             ret['result'] = None
+            ret['comment'] = 'The secret is going to be replaced'
             return ret
 
         # TODO: improve checks  # pylint: disable=fixme
@@ -594,7 +595,8 @@ def configmap_absent(name, namespace='default', **kwargs):
         The name of the configmap
 
     namespace
-        The name of the namespace
+        The namespace holding the configmap. The 'default' one is going to be
+        used unless a different one is specified.
     '''
 
     ret = {'name': name,
@@ -631,8 +633,8 @@ def configmap_present(
         name,
         namespace='default',
         data=None,
-        source='',
-        template='',
+        source=None,
+        template=None,
         **kwargs):
     '''
     Ensures that the named configmap is present inside of the specified namespace
@@ -665,6 +667,8 @@ def configmap_present(
             ret,
             '\'source\' cannot be used in combination with \'data\''
         )
+    elif data is None:
+        data = {}
 
     configmap = __salt__['kubernetes.show_configmap'](name, namespace, **kwargs)
 
@@ -686,6 +690,7 @@ def configmap_present(
     else:
         if __opts__['test']:
             ret['result'] = None
+            ret['comment'] = 'The configmap is going to be replaced'
             return ret
 
         # TODO: improve checks  # pylint: disable=fixme
