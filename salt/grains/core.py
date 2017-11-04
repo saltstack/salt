@@ -449,10 +449,15 @@ def _bsd_memdata(osdata):
     sysctl = salt.utils.path.which('sysctl')
     if sysctl:
         mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
-        swap_total = __salt__['cmd.run']('{0} -n vm.swap_total'.format(sysctl))
         if osdata['kernel'] == 'NetBSD' and mem.startswith('-'):
             mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
         grains['mem_total'] = int(mem) // 1024 // 1024
+
+        if osdata['kernel'] == 'OpenBSD':
+            swapctl = salt.utils.path.which('swapctl')
+            swap_total = __salt__['cmd.run']('{0} -sk'.format(swapctl)).split(' ')[1]
+        else:
+            swap_total = __salt__['cmd.run']('{0} -n vm.swap_total'.format(sysctl))
         grains['swap_total'] = int(swap_total) // 1024 // 1024
     return grains
 
