@@ -1,9 +1,18 @@
 # -*- coding: utf-8 -*-
+'''
+Functions for manipulating or otherwise processing strings
+'''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
+import errno
+import fnmatch
+import logging
 import os
+import shlex
+import re
 import string
+import time
 
 # Import Salt libs
 from salt.utils.decorators.jinja import jinja_filter
@@ -11,6 +20,8 @@ from salt.utils.decorators.jinja import jinja_filter
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+
+log = logging.getLogger(__name__)
 
 
 @jinja_filter('to_bytes')
@@ -197,3 +208,193 @@ def human_to_bytes(size):
     else:
         sbytes = 0
     return sbytes
+
+
+def build_whitespace_split_regex(text):
+    '''
+    Create a regular expression at runtime which should match ignoring the
+    addition or deletion of white space or line breaks, unless between commas
+
+    Example:
+
+    .. code-block:: python
+
+        >>> import re
+        >>> import salt.utils.stringutils
+        >>> regex = salt.utils.stringutils.build_whitespace_split_regex(
+        ...     """if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then"""
+        ... )
+
+        >>> regex
+        '(?:[\\s]+)?if(?:[\\s]+)?\\[(?:[\\s]+)?\\-z(?:[\\s]+)?\\"\\$debian'
+        '\\_chroot\\"(?:[\\s]+)?\\](?:[\\s]+)?\\&\\&(?:[\\s]+)?\\[(?:[\\s]+)?'
+        '\\-r(?:[\\s]+)?\\/etc\\/debian\\_chroot(?:[\\s]+)?\\]\\;(?:[\\s]+)?'
+        'then(?:[\\s]+)?'
+        >>> re.search(
+        ...     regex,
+        ...     """if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then"""
+        ... )
+
+        <_sre.SRE_Match object at 0xb70639c0>
+        >>>
+
+    '''
+    def __build_parts(text):
+        lexer = shlex.shlex(text)
+        lexer.whitespace_split = True
+        lexer.commenters = ''
+        if '\'' in text:
+            lexer.quotes = '"'
+        elif '"' in text:
+            lexer.quotes = '\''
+        return list(lexer)
+
+    regex = r''
+    for line in text.splitlines():
+        parts = [re.escape(s) for s in __build_parts(line)]
+        regex += r'(?:[\s]+)?{0}(?:[\s]+)?'.format(r'(?:[\s]+)?'.join(parts))
+    return r'(?m)^{0}$'.format(regex)
+
+
+def expr_match(line, expr):
+    '''
+    Evaluate a line of text against an expression. First try a full-string
+    match, next try globbing, and then try to match assuming expr is a regular
+    expression. Originally designed to match minion IDs for
+    whitelists/blacklists.
+    '''
+    if line == expr:
+        return True
+    if fnmatch.fnmatch(line, expr):
+        return True
+    try:
+        if re.match(r'\A{0}\Z'.format(expr), line):
+            return True
+    except re.error:
+        pass
+    return False
+
+
+@jinja_filter('check_whitelist_blacklist')
+def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
+    '''
+    Check a whitelist and/or blacklist to see if the value matches it.
+
+    value
+        The item to check the whitelist and/or blacklist against.
+
+    whitelist
+        The list of items that are white-listed. If ``value`` is found
+        in the whitelist, then the function returns ``True``. Otherwise,
+        it returns ``False``.
+
+    blacklist
+        The list of items that are black-listed. If ``value`` is found
+        in the blacklist, then the function returns ``False``. Otherwise,
+        it returns ``True``.
+
+    If both a whitelist and a blacklist are provided, value membership
+    in the blacklist will be examined first. If the value is not found
+    in the blacklist, then the whitelist is checked. If the value isn't
+    found in the whitelist, the function returns ``False``.
+    '''
+    if blacklist is not None:
+        if not hasattr(blacklist, '__iter__'):
+            blacklist = [blacklist]
+        try:
+            for expr in blacklist:
+                if expr_match(value, expr):
+                    return False
+        except TypeError:
+            log.error('Non-iterable blacklist %s', blacklist)
+
+    if whitelist:
+        if not hasattr(whitelist, '__iter__'):
+            whitelist = [whitelist]
+        try:
+            for expr in whitelist:
+                if expr_match(value, expr):
+                    return True
+        except TypeError:
+            log.error('Non-iterable whitelist %s', whitelist)
+    else:
+        return True
+
+    return False
+
+
+def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
+    '''
+    Check for glob or regexp patterns for include_pat and exclude_pat in the
+    'path_str' string and return True/False conditions as follows.
+      - Default: return 'True' if no include_pat or exclude_pat patterns are
+        supplied
+      - If only include_pat or exclude_pat is supplied: return 'True' if string
+        passes the include_pat test or fails exclude_pat test respectively
+      - If both include_pat and exclude_pat are supplied: return 'True' if
+        include_pat matches AND exclude_pat does not match
+    '''
+    ret = True  # -- default true
+    # Before pattern match, check if it is regexp (E@'') or glob(default)
+    if include_pat:
+        if re.match('E@', include_pat):
+            retchk_include = True if re.search(
+                include_pat[2:],
+                path_str
+            ) else False
+        else:
+            retchk_include = True if fnmatch.fnmatch(
+                path_str,
+                include_pat
+            ) else False
+
+    if exclude_pat:
+        if re.match('E@', exclude_pat):
+            retchk_exclude = False if re.search(
+                exclude_pat[2:],
+                path_str
+            ) else True
+        else:
+            retchk_exclude = False if fnmatch.fnmatch(
+                path_str,
+                exclude_pat
+            ) else True
+
+    # Now apply include/exclude conditions
+    if include_pat and not exclude_pat:
+        ret = retchk_include
+    elif exclude_pat and not include_pat:
+        ret = retchk_exclude
+    elif include_pat and exclude_pat:
+        ret = retchk_include and retchk_exclude
+    else:
+        ret = True
+
+    return ret
+
+
+def print_cli(msg, retries=10, step=0.01):
+    '''
+    Wrapper around print() that suppresses tracebacks on broken pipes (i.e.
+    when salt output is piped to less and less is stopped prematurely).
+    '''
+    while retries:
+        try:
+            try:
+                print(msg)
+            except UnicodeEncodeError:
+                print(msg.encode('utf-8'))
+        except IOError as exc:
+            err = "{0}".format(exc)
+            if exc.errno != errno.EPIPE:
+                if (
+                    ("temporarily unavailable" in err or
+                     exc.errno in (errno.EAGAIN,)) and
+                    retries
+                ):
+                    time.sleep(step)
+                    retries -= 1
+                    continue
+                else:
+                    raise
+        break

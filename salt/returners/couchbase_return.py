@@ -60,8 +60,9 @@ except ImportError:
     HAS_DEPS = False
 
 # Import salt libs
-import salt.utils
 import salt.utils.jid
+import salt.utils.json
+import salt.utils.minions
 
 log = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ def __virtual__():
         return False, 'Could not import couchbase returner; couchbase is not installed.'
 
     # try to load some faster json libraries. In order of fastest to slowest
-    json = salt.utils.import_json()
+    json = salt.utils.json.import_json()
     couchbase.set_json_converters(json.dumps, json.loads)
 
     return __virtualname__
@@ -265,9 +266,12 @@ def get_load(jid):
     except couchbase.exceptions.NotFoundError:
         return {}
 
-    ret = jid_doc.value['load']
-    if 'minions' in jid_doc.value:
+    ret = {}
+    try:
+        ret = jid_doc.value['load']
         ret['Minions'] = jid_doc.value['minions']
+    except KeyError as e:
+        log.error(e)
 
     return ret
 
@@ -310,7 +314,7 @@ def _format_job_instance(job):
            'Arguments': list(job.get('arg', [])),
            # unlikely but safeguard from invalid returns
            'Target': job.get('tgt', 'unknown-target'),
-           'Target-type': job.get('tgt_type', []),
+           'Target-type': job.get('tgt_type', 'list'),
            'User': job.get('user', 'root')}
 
     if 'metadata' in job:

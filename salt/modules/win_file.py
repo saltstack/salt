@@ -42,9 +42,9 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
 # Import salt libs
-import salt.utils
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.user
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed,
         check_managed, check_managed_changes, source_list,
@@ -62,7 +62,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         list_backups_dir)
 from salt.modules.file import normpath as normpath_
 
-from salt.utils import namespaced_function as _namespaced_function
+from salt.utils.functools import namespaced_function as _namespaced_function
 
 HAS_WINDOWS_MODULES = False
 try:
@@ -496,7 +496,7 @@ def user_to_uid(user):
         salt '*' file.user_to_uid myusername
     '''
     if user is None:
-        user = salt.utils.get_user()
+        user = salt.utils.user.get_user()
 
     return salt.utils.win_dacl.get_sid_string(user)
 

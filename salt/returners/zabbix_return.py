@@ -56,7 +56,7 @@ def zbx():
 
 
 def zabbix_send(key, host, output):
-    with salt.utils.fopen(zbx()['zabbix_config'], 'r') as file_handle:
+    with salt.utils.files.fopen(zbx()['zabbix_config'], 'r') as file_handle:
         for line in file_handle:
             if "ServerActive" in line:
                 flag = "true"

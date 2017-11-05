@@ -190,7 +190,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict('salt.modules.zypper.__salt__', {'cmd.run_all': MagicMock(return_value=ref_out)}):
             with self.assertRaisesRegex(CommandExecutionError,
-                    "^Zypper command failure: Some handled zypper internal error\nAnother zypper internal error$"):
+                    "^Zypper command failure: Some handled zypper internal error{0}Another zypper internal error$".format(os.linesep)):
                 zypper.list_upgrades(refresh=False)
 
         # Test unhandled error

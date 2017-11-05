@@ -6,7 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import salt.utils
+import salt.utils.data
 import salt.utils.platform
 
 
@@ -80,7 +80,7 @@ def upgrade(name=None, pkgs=None, refresh=True, skip_verify=True,
     old = __proxy__['dummy.package_list']()
     new = __proxy__['dummy.uptodate']()
     pkg_installed = __proxy__['dummy.upgrade']()
-    ret = salt.utils.compare_dicts(old, pkg_installed)
+    ret = salt.utils.data.compare_dicts(old, pkg_installed)
     return ret
 
 

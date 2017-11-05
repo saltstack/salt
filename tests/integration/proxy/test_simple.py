@@ -67,3 +67,23 @@ class ProxyMinionSimpleTestCase(ModuleCase):
         ret = self.run_function('service.start', ['samba'], minion_tgt='proxytest')
         ret = self.run_function('service.status', ['samba'], minion_tgt='proxytest')
         self.assertTrue(ret)
+
+    def test_service_get_all(self):
+        ret = self.run_function('service.get_all', minion_tgt='proxytest')
+        self.assertTrue(ret)
+        self.assertIn('samba', ' '.join(ret))
+
+    def test_grains_items(self):
+        ret = self.run_function('grains.items', minion_tgt='proxytest')
+        self.assertEqual(ret['kernel'], 'proxy')
+        self.assertEqual(ret['kernelrelease'], 'proxy')
+
+    def test_state_apply(self):
+        ret = self.run_function('state.apply', ['core'], minion_tgt='proxytest')
+        for key, value in ret.items():
+            self.assertTrue(value['result'])
+
+    def test_state_highstate(self):
+        ret = self.run_function('state.highstate', minion_tgt='proxytest')
+        for key, value in ret.items():
+            self.assertTrue(value['result'])

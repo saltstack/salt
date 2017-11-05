@@ -54,6 +54,10 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
       ipv6: True
       create_dns_record: True
       userdata_file: /etc/salt/cloud.userdata.d/setup
+      tags:
+        - tag1
+        - tag2
+        - tag3
 
 Locations can be obtained using the ``--list-locations`` option for the ``salt-cloud``
 command:

@@ -23,7 +23,7 @@ Supported Operating Systems
 .. note::
 
     In the event you do not see your distribution or version available please
-    review the develop branch on GitHub as it main contain updates that are
+    review the develop branch on GitHub as it may contain updates that are
     not present in the stable release:
     https://github.com/saltstack/salt-bootstrap/tree/develop
 

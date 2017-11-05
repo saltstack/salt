@@ -10,7 +10,6 @@ import logging
 import time
 
 # Import salt libs
-import salt.utils
 import salt.utils.validate.net
 import salt.exceptions
 

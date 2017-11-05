@@ -85,7 +85,7 @@ import sys
 import tempfile
 
 # Import Salt libs
-import salt.utils  # Can be removed once compare_dicts is moved
+import salt.utils.data
 import salt.utils.files
 import salt.utils.locales
 import salt.utils.platform
@@ -1216,6 +1216,6 @@ def upgrade(bin_env=None,
 
     new = list_(bin_env=bin_env, user=user, cwd=cwd)
 
-    ret['changes'] = salt.utils.compare_dicts(old, new)
+    ret['changes'] = salt.utils.data.compare_dicts(old, new)
 
     return ret

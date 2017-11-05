@@ -35,6 +35,7 @@ In case both are provided the `file` entry is prefered.
 
 # Import Python Futures
 from __future__ import absolute_import
+import sys
 import os.path
 import base64
 import logging
@@ -83,7 +84,7 @@ def __virtual__():
     return False, 'python kubernetes library not found'
 
 
-if not salt.utils.is_windows():
+if not salt.utils.platform.is_windows():
     @contextmanager
     def _time_limit(seconds):
         def signal_handler(signum, frame):
@@ -164,12 +165,15 @@ def _setup_conn(**kwargs):
 
     if client_key_file:
         kubernetes.client.configuration.key_file = client_key_file
-    if client_key:
+    elif client_key:
         with tempfile.NamedTemporaryFile(prefix='salt-kube-', delete=False) as k:
             k.write(base64.b64decode(client_key))
             kubernetes.client.configuration.key_file = k.name
     else:
         kubernetes.client.configuration.key_file = None
+
+    # The return makes unit testing easier
+    return vars(kubernetes.client.configuration)
 
 
 def _cleanup(**kwargs):
@@ -177,11 +181,11 @@ def _cleanup(**kwargs):
     cert = kubernetes.client.configuration.cert_file
     key = kubernetes.client.configuration.key_file
     if cert and os.path.exists(cert) and os.path.basename(cert).startswith('salt-kube-'):
-        salt.utils.safe_rm(cert)
+        salt.utils.files.safe_rm(cert)
     if key and os.path.exists(key) and os.path.basename(key).startswith('salt-kube-'):
-        salt.utils.safe_rm(key)
+        salt.utils.files.safe_rm(key)
     if ca and os.path.exists(ca) and os.path.basename(ca).startswith('salt-kube-'):
-        salt.utils.safe_rm(ca)
+        salt.utils.files.safe_rm(ca)
 
 
 def ping(**kwargs):
@@ -269,7 +273,7 @@ def node_labels(name, **kwargs):
     match = node(name, **kwargs)
 
     if match is not None:
-        return match.metadata.labels
+        return match['metadata']['labels']
 
     return {}
 
@@ -713,7 +717,7 @@ def delete_deployment(name, namespace='default', **kwargs):
             namespace=namespace,
             body=body)
         mutable_api_response = api_response.to_dict()
-        if not salt.utils.is_windows():
+        if not salt.utils.platform.is_windows():
             try:
                 with _time_limit(POLLING_TIME_LIMIT):
                     while show_deployment(name, namespace) is not None:
@@ -1444,6 +1448,13 @@ def __dict_to_object_meta(name, namespace, metadata):
     '''
     meta_obj = kubernetes.client.V1ObjectMeta()
     meta_obj.namespace = namespace
+
+    # Replicate `kubectl [create|replace|apply] --record`
+    if 'annotations' not in metadata:
+        metadata['annotations'] = {}
+    if 'kubernetes.io/change-cause' not in metadata['annotations']:
+        metadata['annotations']['kubernetes.io/change-cause'] = ' '.join(sys.argv)
+
     for key, value in iteritems(metadata):
         if hasattr(meta_obj, key):
             setattr(meta_obj, key, value)
