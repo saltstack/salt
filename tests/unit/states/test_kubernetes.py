@@ -4,6 +4,8 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import base64
+
 from contextlib import contextmanager
 
 
@@ -18,6 +20,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 from salt.states import kubernetes
+from salt.ext.six import iteritems
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -51,22 +54,63 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     def make_secret(self, name, namespace='default', data=None):
-        return self.make_ret_dict(
+        secret_data = self.make_ret_dict(
             kind='Secret',
             name=name,
             namespace=namespace,
             data=data,
         )
+        # Base64 all of the values just like kubectl does
+        for key, value in iteritems(secret_data['data']):
+            secret_data['data'][key] = base64.b64encode(value)
+
+        return secret_data
+
+    def make_node_labels(self, name='minikube'):
+        return {
+            'kubernetes.io/hostname': name,
+            'beta.kubernetes.io/os': 'linux',
+            'beta.kubernetes.io/arch': 'amd64',
+            'failure-domain.beta.kubernetes.io/region': 'us-west-1',
+        }
+
+    def make_node(self, name='minikube'):
+        node_data = self.make_ret_dict(kind='Node', name='minikube')
+        node_data.update({
+            'api_version': 'v1',
+            'kind': 'Node',
+            'metadata': {
+                'annotations': {
+                    u'node.alpha.kubernetes.io/ttl': '0',
+                },
+                'labels': self.make_node_labels(name=name),
+                'name': name,
+                'namespace': None,
+                'self_link': '/api/v1/nodes/{name}'.format(name=name),
+                'uid': '7811b8ae-c1a1-11e7-a55a-0800279fb61e',
+            },
+            'spec': {
+                'external_id': name,
+            },
+            'status': {},
+        })
+        return node_data
 
     def make_ret_dict(self, kind, name, namespace=None, data=None):
         '''
         Make a minimal example configmap or secret for using in mocks
         '''
 
-        assert kind in ('Secret', 'ConfigMap')
+        assert kind in ('Secret', 'ConfigMap', 'Node')
 
         if data is None:
             data = {}
+
+        self_link = '/api/v1/namespaces/{namespace}/{kind}s/{name}'.format(
+            namespace=namespace,
+            kind=kind.lower(),
+            name=name,
+        )
 
         return_data = {
             'kind': kind,
@@ -74,10 +118,11 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             'api_version': 'v1',
             'metadata': {
                 'name': name,
-                'namespace': namespace,
                 'labels': None,
+                'namespace': namespace,
+                'self_link': self_link,
                 'annotations': {
-                    u'kubernetes.io/change-cause': 'salt-call state.apply',
+                    'kubernetes.io/change-cause': 'salt-call state.apply',
                 },
             },
         }
@@ -377,6 +422,201 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                         'result': None,
                         'name': 'sekret',
                         'comment': 'The secret is going to be created',
+                    },
+                    actual,
+                )
+
+    def test_secret_absent__noop_test_true(self):
+        with self.mock_func('show_secret', return_value=None, test=True):
+            actual = kubernetes.secret_absent(name='sekret')
+            self.assertDictEqual(
+                {
+                    'changes': {},
+                    'result': None,
+                    'name': 'sekret',
+                    'comment': 'The secret does not exist',
+                },
+                actual,
+            )
+
+    def test_secret_absent__noop(self):
+        with self.mock_func('show_secret', return_value=None):
+            actual = kubernetes.secret_absent(name='passwords')
+            self.assertDictEqual(
+                {
+                    'changes': {},
+                    'result': True,
+                    'name': 'passwords',
+                    'comment': 'The secret does not exist',
+                },
+                actual,
+            )
+
+    def test_secret_absent__delete_test_true(self):
+        secret = self.make_secret(name='credentials', data={'redis': 'letmein'})
+        with self.mock_func('show_secret', return_value=secret):
+            with self.mock_func('delete_secret', return_value=secret, test=True):
+                actual = kubernetes.secret_absent(name='credentials')
+                self.assertDictEqual(
+                    {
+                        'changes': {},
+                        'result': None,
+                        'name': 'credentials',
+                        'comment': 'The secret is going to be deleted',
+                    },
+                    actual,
+                )
+
+    def test_secret_absent__delete(self):
+        secret = self.make_secret(name='foobar', data={'redis': 'letmein'})
+        deleted = {
+            'status': None,
+            'kind': 'Secret',
+            'code': None,
+            'reason': None,
+            'details': None,
+            'message': None,
+            'api_version': 'v1',
+            'metadata': {
+                'self_link': '/api/v1/namespaces/default/secrets/foobar',
+                'resource_version': '30292',
+            },
+        }
+        with self.mock_func('show_secret', return_value=secret):
+            with self.mock_func('delete_secret', return_value=deleted):
+                actual = kubernetes.secret_absent(name='foobar')
+                self.assertDictEqual(
+                    {
+                        'changes': {
+                            'kubernetes.secret': {
+                                'new': 'absent',
+                                'old': 'present'},
+                            },
+                        'result': True,
+                        'name': 'foobar',
+                        'comment': 'Secret deleted',
+                    },
+                    actual,
+                )
+
+    def test_node_label_present__add_test_true(self):
+        labels = self.make_node_labels()
+        with self.mock_func('node_labels', return_value=labels, test=True):
+            actual = kubernetes.node_label_present(
+                name='com.zoo-animal',
+                node='minikube',
+                value='monkey',
+            )
+            self.assertDictEqual(
+                {
+                    'changes': {},
+                    'result': None,
+                    'name': 'com.zoo-animal',
+                    'comment': 'The label is going to be set',
+                },
+                actual,
+            )
+
+    def test_node_label_present__add(self):
+        node_data = self.make_node()
+        # Remove some of the defaults to make it simpler
+        node_data['metadata']['labels'] = {
+            'beta.kubernetes.io/os': 'linux',
+        }
+        labels = node_data['metadata']['labels']
+
+        with self.mock_func('node_labels', return_value=labels):
+            with self.mock_func('node_add_label', return_value=node_data):
+                actual = kubernetes.node_label_present(
+                    name='failure-domain.beta.kubernetes.io/zone',
+                    node='minikube',
+                    value='us-central1-a',
+                )
+                self.assertDictEqual(
+                    {
+                        'comment': '',
+                        'changes': {
+                            'minikube.failure-domain.beta.kubernetes.io/zone': {
+                                'new': {
+                                    'failure-domain.beta.kubernetes.io/zone': 'us-central1-a',
+                                    'beta.kubernetes.io/os': 'linux'
+                                },
+                                'old': {
+                                    'beta.kubernetes.io/os': 'linux',
+                                },
+                            },
+                        },
+                        'name': 'failure-domain.beta.kubernetes.io/zone',
+                        'result': True,
+                    },
+                    actual,
+                )
+
+    def test_node_label_present__already_set(self):
+        node_data = self.make_node()
+        labels = node_data['metadata']['labels']
+        with self.mock_func('node_labels', return_value=labels):
+            with self.mock_func('node_add_label', return_value=node_data):
+                actual = kubernetes.node_label_present(
+                    name='failure-domain.beta.kubernetes.io/region',
+                    node='minikube',
+                    value='us-west-1',
+                )
+                self.assertDictEqual(
+                    {
+                        'changes': {},
+                        'result': True,
+                        'name': 'failure-domain.beta.kubernetes.io/region',
+                        'comment': 'The label is already set and has the specified value',
+                    },
+                    actual,
+                )
+
+    def test_node_label_present__update_test_true(self):
+        node_data = self.make_node()
+        labels = node_data['metadata']['labels']
+        with self.mock_func('node_labels', return_value=labels):
+            with self.mock_func('node_add_label', return_value=node_data, test=True):
+                actual = kubernetes.node_label_present(
+                    name='failure-domain.beta.kubernetes.io/region',
+                    node='minikube',
+                    value='us-east-1',
+                )
+                self.assertDictEqual(
+                    {
+                        'changes': {},
+                        'result': None,
+                        'name': 'failure-domain.beta.kubernetes.io/region',
+                        'comment': 'The label is going to be updated',
+                    },
+                    actual,
+                )
+
+    def test_node_label_present__update(self):
+        node_data = self.make_node()
+        # Remove some of the defaults to make it simpler
+        node_data['metadata']['labels'] = {
+            'failure-domain.beta.kubernetes.io/region': 'us-west-1',
+        }
+        labels = node_data['metadata']['labels']
+        with self.mock_func('node_labels', return_value=labels):
+            with self.mock_func('node_add_label', return_value=node_data):
+                actual = kubernetes.node_label_present(
+                    name='failure-domain.beta.kubernetes.io/region',
+                    node='minikube',
+                    value='us-east-1',
+                )
+                self.assertDictEqual(
+                    {
+                        'changes': {
+                            'minikube.failure-domain.beta.kubernetes.io/region': {
+                                'new': {'failure-domain.beta.kubernetes.io/region': 'us-east-1'},
+                                'old': {'failure-domain.beta.kubernetes.io/region': 'us-west-1'},
+                            }
+                        },
+                        'result': True,
+                        'name': 'failure-domain.beta.kubernetes.io/region',
+                        'comment': 'The label is already set, changing the value',
                     },
                     actual,
                 )

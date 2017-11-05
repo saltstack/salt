@@ -980,6 +980,7 @@ def node_label_present(
     else:
         if __opts__['test']:
             ret['result'] = None
+            ret['comment'] = 'The label is going to be updated'
             return ret
 
         ret['comment'] = 'The label is already set, changing the value'
