@@ -86,7 +86,7 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-from salt.utils import namespaced_function
+from salt.utils.functools import namespaced_function
 from salt.ext import six
 import salt.utils.cloud
 import salt.utils.files
@@ -2087,6 +2087,7 @@ def attach_disk(name=None, kwargs=None, call=None):
     disk_name = kwargs['disk_name']
     mode = kwargs.get('mode', 'READ_WRITE').upper()
     boot = kwargs.get('boot', False)
+    auto_delete = kwargs.get('auto_delete', False)
     if boot and boot.lower() in ['true', 'yes', 'enabled']:
         boot = True
     else:
@@ -2116,7 +2117,8 @@ def attach_disk(name=None, kwargs=None, call=None):
         transport=__opts__['transport']
     )
 
-    result = conn.attach_volume(node, disk, ex_mode=mode, ex_boot=boot)
+    result = conn.attach_volume(node, disk, ex_mode=mode, ex_boot=boot,
+                                ex_auto_delete=auto_delete)
 
     __utils__['cloud.fire_event'](
         'event',
@@ -2396,6 +2398,8 @@ def create_attach_volumes(name, kwargs, call=None):
     'type': The disk type, either pd-standard or pd-ssd. Optional, defaults to pd-standard.
     'image': An image to use for this new disk. Optional.
     'snapshot': A snapshot to use for this new disk. Optional.
+    'auto_delete': An option(bool) to keep or remove the disk upon
+                   instance deletion. Optional, defaults to False.
 
     Volumes are attached in the order in which they are given, thus on a new
     node the first volume will be /dev/sdb, the second /dev/sdc, and so on.
@@ -2408,9 +2412,10 @@ def create_attach_volumes(name, kwargs, call=None):
             '-a or --action.'
         )
 
-    volumes = kwargs['volumes']
+    volumes = literal_eval(kwargs['volumes'])
     node = kwargs['node']
-    node_data = _expand_node(node)
+    conn = get_conn()
+    node_data = _expand_node(conn.ex_get_node(node))
     letter = ord('a') - 1
 
     for idx, volume in enumerate(volumes):
@@ -2420,9 +2425,10 @@ def create_attach_volumes(name, kwargs, call=None):
           'disk_name': volume_name,
           'location': node_data['extra']['zone']['name'],
           'size': volume['size'],
-          'type': volume['type'],
-          'image': volume['image'],
-          'snapshot': volume['snapshot']
+          'type': volume.get('type', 'pd-standard'),
+          'image': volume.get('image', None),
+          'snapshot': volume.get('snapshot', None),
+          'auto_delete': volume.get('auto_delete', False)
         }
 
         create_disk(volume_dict, 'function')
@@ -2588,7 +2594,10 @@ def create(vm_=None, call=None):
     ssh_user, ssh_key = __get_ssh_credentials(vm_)
     vm_['ssh_host'] = __get_host(node_data, vm_)
     vm_['key_filename'] = ssh_key
-    __utils__['cloud.bootstrap'](vm_, __opts__)
+
+    ret = __utils__['cloud.bootstrap'](vm_, __opts__)
+
+    ret.update(node_dict)
 
     log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.trace(
@@ -2606,7 +2615,7 @@ def create(vm_=None, call=None):
         transport=__opts__['transport']
     )
 
-    return node_dict
+    return ret
 
 
 def update_pricing(kwargs=None, call=None):

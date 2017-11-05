@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import fnmatch
 import re
+import copy
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
@@ -143,7 +144,7 @@ class RosterMatcher(object):
         '''
         Return the configured ip
         '''
-        ret = __opts__.get('roster_defaults', {})
+        ret = copy.deepcopy(__opts__.get('roster_defaults', {}))
         if isinstance(self.raw[minion], string_types):
             ret.update({'host': self.raw[minion]})
             return ret

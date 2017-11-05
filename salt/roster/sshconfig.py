@@ -15,7 +15,7 @@ import fnmatch
 import re
 
 # Import Salt libs
-import salt.utils
+import salt.utils.files
 from salt.ext.six import string_types
 
 import logging
@@ -98,7 +98,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
     defaults to /etc/salt/roster
     '''
     ssh_config_file = _get_ssh_config_file(__opts__)
-    with salt.utils.fopen(ssh_config_file, 'r') as fp:
+    with salt.utils.files.fopen(ssh_config_file, 'r') as fp:
         all_minions = parse_ssh_config([line.rstrip() for line in fp])
     rmatcher = RosterMatcher(all_minions, tgt, tgt_type)
     matched = rmatcher.targets()

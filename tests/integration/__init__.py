@@ -49,7 +49,6 @@ import salt.minion
 import salt.runner
 import salt.output
 import salt.version
-import salt.utils  # Can be removed once appendproctitle is moved
 import salt.utils.color
 import salt.utils.files
 import salt.utils.path
@@ -261,7 +260,7 @@ class TestDaemon(object):
 
     def start_daemon(self, cls, opts, start_fun):
         def start(cls, opts, start_fun):
-            salt.utils.appendproctitle('{0}-{1}'.format(self.__class__.__name__, cls.__name__))
+            salt.utils.process.appendproctitle('{0}-{1}'.format(self.__class__.__name__, cls.__name__))
             daemon = cls(opts)
             getattr(daemon, start_fun)()
         process = multiprocessing.Process(target=start,
@@ -1143,7 +1142,7 @@ class TestDaemon(object):
         ]
 
     def wait_for_minion_connections(self, targets, timeout):
-        salt.utils.appendproctitle('WaitForMinionConnections')
+        salt.utils.process.appendproctitle('WaitForMinionConnections')
         sys.stdout.write(
             ' {LIGHT_BLUE}*{ENDC} Waiting at most {0} for minions({1}) to '
             'connect back\n'.format(
@@ -1286,13 +1285,13 @@ class TestDaemon(object):
         return True
 
     def sync_minion_states(self, targets, timeout=None):
-        salt.utils.appendproctitle('SyncMinionStates')
+        salt.utils.process.appendproctitle('SyncMinionStates')
         self.sync_minion_modules_('states', targets, timeout=timeout)
 
     def sync_minion_modules(self, targets, timeout=None):
-        salt.utils.appendproctitle('SyncMinionModules')
+        salt.utils.process.appendproctitle('SyncMinionModules')
         self.sync_minion_modules_('modules', targets, timeout=timeout)
 
     def sync_minion_grains(self, targets, timeout=None):
-        salt.utils.appendproctitle('SyncMinionGrains')
+        salt.utils.process.appendproctitle('SyncMinionGrains')
         self.sync_minion_modules_('grains', targets, timeout=timeout)
