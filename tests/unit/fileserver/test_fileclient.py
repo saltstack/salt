@@ -19,7 +19,7 @@ from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 # Import salt libs
 import salt.utils.files
 from salt import fileclient
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 

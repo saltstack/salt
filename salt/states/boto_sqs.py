@@ -57,16 +57,16 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
-
 from __future__ import absolute_import
 
+# Import Python libs
 import difflib
 import json
 import logging
-
 import yaml
 
-import salt.ext.six as six
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -108,8 +108,12 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    comments = []
-    ret = {'name': name, 'result': True, 'changes': {}}
+    ret = {
+        'name': name,
+        'result': True,
+        'comment': [],
+        'changes': {},
+    }
 
     r = __salt__['boto_sqs.exists'](
         name,
@@ -120,17 +124,18 @@ def present(
     )
     if 'error' in r:
         ret['result'] = False
-        ret['comment'] = '\n'.join(comments + [str(r['error'])])
+        ret['comment'].append(r['error'])
         return ret
 
     if r['result']:
-        comments.append('SQS queue {0} present.'.format(name))
+        ret['comment'].append('SQS queue {0} present.'.format(name))
     else:
         if __opts__['test']:
             ret['result'] = None
-            comments.append('SQS queue {0} is set to be created.'.format(name))
+            ret['comment'].append(
+                'SQS queue {0} is set to be created.'.format(name),
+            )
             ret['pchanges'] = {'old': None, 'new': name}
-            ret['comment'] = '\n'.join(comments)
             return ret
 
         r = __salt__['boto_sqs.create'](
@@ -143,22 +148,18 @@ def present(
         )
         if 'error' in r:
             ret['result'] = False
-            comments.append('Failed to create SQS queue {0}: {1}'.format(
-                name,
-                str(r['error']),
-            ))
-            ret['comment'] = '\n'.join(comments)
+            ret['comment'].append(
+                'Failed to create SQS queue {0}: {1}'.format(name, r['error']),
+            )
             return ret
 
-        comments.append('SQS queue {0} created.'.format(name))
+        ret['comment'].append('SQS queue {0} created.'.format(name))
         ret['changes']['old'] = None
         ret['changes']['new'] = name
         # Return immediately, as the create call also set all attributes
-        ret['comment'] = '\n'.join(comments)
         return ret
 
     if not attributes:
-        ret['comment'] = '\n'.join(comments)
         return ret
 
     r = __salt__['boto_sqs.get_attributes'](
@@ -170,10 +171,9 @@ def present(
     )
     if 'error' in r:
         ret['result'] = False
-        comments.append('Failed to get queue attributes: {0}'.format(
-            str(r['error']),
-        ))
-        ret['comment'] = '\n'.join(comments)
+        ret['comment'].append(
+            'Failed to get queue attributes: {0}'.format(r['error']),
+        )
         return ret
     current_attributes = r['result']
 
@@ -195,8 +195,7 @@ def present(
     attr_names = ', '.join(attrs_to_set)
 
     if not attrs_to_set:
-        comments.append('Queue attributes already set correctly.')
-        ret['comment'] = '\n'.join(comments)
+        ret['comment'].append('Queue attributes already set correctly.')
         return ret
 
     final_attributes = current_attributes.copy()
@@ -218,12 +217,13 @@ def present(
 
     if __opts__['test']:
         ret['result'] = None
-        comments.append('Attribute(s) {0} set to be updated:'.format(
-            attr_names,
-        ))
-        comments.append(attributes_diff)
+        ret['comment'].append(
+            'Attribute(s) {0} set to be updated:\n{1}'.format(
+                attr_names,
+                attributes_diff,
+            )
+        )
         ret['pchanges'] = {'attributes': {'diff': attributes_diff}}
-        ret['comment'] = '\n'.join(comments)
         return ret
 
     r = __salt__['boto_sqs.set_attributes'](
@@ -236,15 +236,15 @@ def present(
     )
     if 'error' in r:
         ret['result'] = False
-        comments.append('Failed to set queue attributes: {0}'.format(
-            str(r['error']),
-        ))
-        ret['comment'] = '\n'.join(comments)
+        ret['comment'].append(
+            'Failed to set queue attributes: {0}'.format(r['error']),
+        )
         return ret
 
-    comments.append('Updated SQS queue attribute(s) {0}.'.format(attr_names))
+    ret['comment'].append(
+        'Updated SQS queue attribute(s) {0}.'.format(attr_names),
+    )
     ret['changes']['attributes'] = {'diff': attributes_diff}
-    ret['comment'] = '\n'.join(comments)
     return ret
 
 
@@ -291,7 +291,7 @@ def absent(
     if not r['result']:
         ret['comment'] = 'SQS queue {0} does not exist in {1}.'.format(
             name,
-            region
+            region,
         )
         return ret
 

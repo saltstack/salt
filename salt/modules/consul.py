@@ -205,7 +205,11 @@ def get(consul_url=None, key=None, recurse=False, decode=False, raw=False):
     if ret['res']:
         if decode:
             for item in ret['data']:
-                item['Value'] = base64.b64decode(item['Value'])
+                if item['Value'] != None:
+                    item['Value'] = base64.b64decode(item['Value'])
+                else:
+                    item['Value'] = ""
+
     return ret
 
 
@@ -1949,7 +1953,7 @@ def status_peers(consul_url):
 
     :param consul_url: The Consul server URL.
     :return: Retrieves the Raft peers for the
-             datacenter in which the the agent is running.
+             datacenter in which the agent is running.
 
     CLI Example:
 

@@ -29,7 +29,7 @@ import time
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 from salt.ext.six.moves import range
 
 __virtualname__ = 'blockdev'
@@ -150,7 +150,7 @@ def formatted(name, fs_type='ext4', force=False, **kwargs):
     if current_fs == fs_type:
         ret['result'] = True
         return ret
-    elif not salt.utils.which('mkfs.{0}'.format(fs_type)):
+    elif not salt.utils.path.which('mkfs.{0}'.format(fs_type)):
         ret['comment'] = 'Invalid fs_type: {0}'.format(fs_type)
         ret['result'] = False
         return ret
@@ -159,7 +159,7 @@ def formatted(name, fs_type='ext4', force=False, **kwargs):
         ret['result'] = None
         return ret
 
-    __salt__['disk.format_'](name, fs_type, force=force, **kwargs)
+    __salt__['disk.format'](name, fs_type, force=force, **kwargs)
 
     # Repeat fstype check up to 10 times with 3s sleeping between each
     # to avoid detection failing although mkfs has succeeded

@@ -28,15 +28,21 @@ import time
 import salt.config
 import salt.payload
 import salt.state
-import salt.utils
+import salt.utils.args
+import salt.utils.data
+import salt.utils.event
 import salt.utils.files
+import salt.utils.functools
+import salt.utils.hashutils
 import salt.utils.jid
+import salt.utils.platform
 import salt.utils.url
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.runners.state import orchestrate as _orchestrate
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 __proxyenabled__ = ['*']
 
@@ -70,7 +76,7 @@ def __virtual__():
     '''
     # Update global namespace with functions that are cloned in this module
     global _orchestrate
-    _orchestrate = salt.utils.namespaced_function(_orchestrate, globals())
+    _orchestrate = salt.utils.functools.namespaced_function(_orchestrate, globals())
 
     return __virtualname__
 
@@ -95,8 +101,7 @@ def _set_retcode(ret, highstate=None):
     if isinstance(ret, list):
         __context__['retcode'] = 1
         return
-    if not salt.utils.check_state_result(ret, highstate=highstate):
-
+    if not __utils__['state.check_result'](ret, highstate=highstate):
         __context__['retcode'] = 2
 
 
@@ -118,7 +123,7 @@ def _wait(jid):
     Wait for all previously started state jobs to finish running
     '''
     if jid is None:
-        jid = salt.utils.jid.gen_jid()
+        jid = salt.utils.jid.gen_jid(__opts__)
     states = _prior_running_states(jid)
     while states:
         time.sleep(1)
@@ -270,12 +275,12 @@ def _get_opts(**kwargs):
         else:
             opts['environment'] = kwargs['saltenv']
 
-    if 'pillarenv' in kwargs:
-        pillarenv = kwargs['pillarenv']
+    if 'pillarenv' in kwargs or opts.get('pillarenv_from_saltenv', False):
+        pillarenv = kwargs.get('pillarenv') or kwargs.get('saltenv')
         if pillarenv is not None and not isinstance(pillarenv, six.string_types):
-            opts['pillarenv'] = str(kwargs['pillarenv'])
+            opts['pillarenv'] = str(pillarenv)
         else:
-            opts['pillarenv'] = kwargs['pillarenv']
+            opts['pillarenv'] = pillarenv
 
     return opts
 
@@ -313,7 +318,7 @@ def low(data, queue=False, **kwargs):
     ret = st_.call(data)
     if isinstance(ret, list):
         __context__['retcode'] = 1
-    if salt.utils.check_state_result(ret):
+    if __utils__['state.check_result'](ret):
         __context__['retcode'] = 2
     return ret
 
@@ -324,7 +329,7 @@ def _get_test_value(test=None, **kwargs):
     '''
     ret = True
     if test is None:
-        if salt.utils.test_mode(test=test, **kwargs):
+        if salt.utils.args.test_mode(test=test, **kwargs):
             ret = True
         else:
             ret = __opts__.get('test', None)
@@ -394,12 +399,7 @@ def template(tem, queue=False, **kwargs):
         salt '*' state.template '<Path to template on the minion>'
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     conflict = _check_queue(queue, kwargs)
@@ -629,7 +629,7 @@ def request(mods=None,
         })
     cumask = os.umask(0o77)
     try:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # Make sure cache file isn't read-only
             __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
         with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
@@ -693,7 +693,7 @@ def clear_request(name=None):
             return False
         cumask = os.umask(0o77)
         try:
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Make sure cache file isn't read-only
                 __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
             with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
@@ -836,12 +836,7 @@ def highstate(test=None, queue=False, **kwargs):
     opts['test'] = _get_test_value(test, **kwargs)
 
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     if 'saltenv' in kwargs:
@@ -899,8 +894,8 @@ def highstate(test=None, queue=False, **kwargs):
     finally:
         st_.pop_active()
 
-    if __salt__['config.option']('state_data', '') == 'terse' or \
-            kwargs.get('terse'):
+    if isinstance(ret, dict) and (__salt__['config.option']('state_data', '') == 'terse' or
+            kwargs.get('terse')):
         ret = _filter_running(ret)
 
     serial = salt.payload.Serial(__opts__)
@@ -928,8 +923,9 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
             salt '*' state.apply test pillar='{"foo": "bar"}'
 
         .. note::
-            Values passed this way will override Pillar values set via
-            ``pillar_roots`` or an external Pillar source.
+            Values passed this way will override existing Pillar values set via
+            ``pillar_roots`` or an external Pillar source.  Pillar values that
+            are not included in the kwarg will not be overwritten.
 
         .. versionchanged:: 2016.3.0
             GPG-encrypted CLI Pillar data is now supported via the GPG
@@ -1003,12 +999,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     '''
     concurrent = kwargs.get('concurrent', False)
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     # Modification to __opts__ lost after this if-else
@@ -1105,7 +1096,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
             return errors
 
         if exclude:
-            if isinstance(exclude, str):
+            if isinstance(exclude, six.string_types):
                 exclude = exclude.split(',')
             if '__exclude__' in high_:
                 high_['__exclude__'].extend(exclude)
@@ -1120,7 +1111,7 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
     cumask = os.umask(0o77)
     try:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # Make sure cache file isn't read-only
             __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
         with salt.utils.files.fopen(cache_file, 'w+b') as fp_:
@@ -1389,6 +1380,20 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         :conf_minion:`pillarenv` minion config option nor this CLI argument is
         used, all Pillar environments will be merged together.
 
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. code-block:: bash
+
+            salt '*' state.sls_id my_state my_module pillar='{"foo": "bar"}'
+
+        .. note::
+            Values passed this way will override existing Pillar values set via
+            ``pillar_roots`` or an external Pillar source.  Pillar values that
+            are not included in the kwarg will not be overwritten.
+
+        .. versionadded:: Oxygen
+
     CLI Example:
 
     .. code-block:: bash
@@ -1409,12 +1414,26 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     if opts['environment'] is None:
         opts['environment'] = 'base'
 
+    pillar_override = kwargs.get('pillar')
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
+        )
+
     try:
         st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
                                    proxy=__proxy__,
                                    initial_pillar=_get_initial_pillar(opts))
     except NameError:
         st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
                                    initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
@@ -1431,6 +1450,12 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
+    # Apply requisites to high data
+    high_, req_in_errors = st_.state.requisite_in(high_)
+    if req_in_errors:
+        # This if statement should not be necessary if there were no errors,
+        # but it is required to get the unit tests to pass.
+        errors.extend(req_in_errors)
     if errors:
         __context__['retcode'] = 1
         return errors
@@ -1460,6 +1485,17 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
     saltenv
         Specify a salt fileserver environment to be used when applying states
 
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. code-block:: bash
+
+            salt '*' state.show_low_sls test pillar='{"foo": "bar"}'
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
+
     pillarenv
         Specify a Pillar environment to be used when applying states. This
         can also be set in the minion config file using the
@@ -1475,12 +1511,7 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
         salt '*' state.show_low_sls foo saltenv=dev
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     conflict = _check_queue(queue, kwargs)
@@ -1494,12 +1525,26 @@ def show_low_sls(mods, test=None, queue=False, **kwargs):
     # the 'base' saltenv if none is configured and none was passed.
     if opts['environment'] is None:
         opts['environment'] = 'base'
+
+    pillar_override = kwargs.get('pillar')
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
+        )
+
     try:
         st_ = salt.state.HighState(opts,
+                                   pillar_override,
                                    proxy=__proxy__,
                                    initial_pillar=_get_initial_pillar(opts))
     except NameError:
-        st_ = salt.state.HighState(opts, initial_pillar=_get_initial_pillar(opts))
+        st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
         __context__['retcode'] = 5
@@ -1552,12 +1597,7 @@ def show_sls(mods, test=None, queue=False, **kwargs):
         salt '*' state.show_sls core,edit.vim dev
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     conflict = _check_queue(queue, kwargs)
@@ -1628,12 +1668,7 @@ def show_top(queue=False, **kwargs):
         salt '*' state.show_top
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     conflict = _check_queue(queue, kwargs)
@@ -1723,7 +1758,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
 
     st_._mod_init(kwargs)
     snapper_pre = _snapper_pre(opts, kwargs.get('__pub_jid', 'called localy'))
-    ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
+    ret = {u'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
@@ -1777,7 +1812,7 @@ def pkg(pkg_path,
     # TODO - Add ability to download from salt master or other source
     if not os.path.isfile(pkg_path):
         return {}
-    if not salt.utils.get_hash(pkg_path, hash_type) == pkg_sum:
+    if not salt.utils.hashutils.get_hash(pkg_path, hash_type) == pkg_sum:
         return {}
     root = tempfile.mkdtemp()
     s_pkg = tarfile.open(pkg_path, 'r:gz')
@@ -1792,7 +1827,7 @@ def pkg(pkg_path,
     s_pkg.close()
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.files.fopen(lowstate_json, 'r') as fp_:
-        lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
+        lowstate = json.load(fp_, object_hook=salt.utils.data.decode_dict)
     # Check for errors in the lowstate
     for chunk in lowstate:
         if not isinstance(chunk, dict):
@@ -1807,7 +1842,7 @@ def pkg(pkg_path,
     roster_grains_json = os.path.join(root, 'roster_grains.json')
     if os.path.isfile(roster_grains_json):
         with salt.utils.files.fopen(roster_grains_json, 'r') as fp_:
-            roster_grains = json.load(fp_, object_hook=salt.utils.decode_dict)
+            roster_grains = json.load(fp_, object_hook=salt.utils.data.decode_dict)
 
     popts = _get_opts(**kwargs)
     if os.path.isfile(roster_grains_json):

@@ -16,8 +16,8 @@ import re
 import tempfile
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def __virtual__():
     '''
     Only load module if rsync binary is present
     '''
-    if salt.utils.which('rsync'):
+    if salt.utils.path.which('rsync'):
         return __virtualname__
     return (False, 'The rsync execution module cannot be loaded: '
             'the rsync binary is not in the path.')
@@ -184,7 +184,7 @@ def rsync(src,
             else:
                 raise CommandExecutionError('{0} does not exist'.format(src))
         else:
-            tmp_src = salt.utils.mkstemp()
+            tmp_src = salt.utils.files.mkstemp()
             file_src = __salt__['cp.get_file'](_src,
                                                tmp_src,
                                                saltenv)

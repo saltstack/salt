@@ -11,28 +11,30 @@ dns.srv_name('ldap/tcp', 'example.com')
 
 '''
 from __future__ import absolute_import
-# Python
+
+# Import Python libs
 import base64
 import binascii
 import hashlib
 import itertools
+import logging
 import random
-import socket
 import shlex
+import socket
 import ssl
 import string
-from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
+
+# Import Salt libs
+import salt.utils.files
+import salt.utils.network
+import salt.utils.path
+import salt.modules.cmdmod
 from salt._compat import ipaddress
 from salt.utils.odict import OrderedDict
 
-# Salt
-import salt.modules.cmdmod
-import salt.utils
-import salt.utils.files
-import salt.utils.network
+# Import 3rd-party libs
+from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
 
-# Debug & Logging
-import logging
 
 # Integrations
 try:
@@ -40,10 +42,10 @@ try:
     HAS_DNSPYTHON = True
 except ImportError:
     HAS_DNSPYTHON = False
-HAS_DIG = salt.utils.which('dig') is not None
-HAS_DRILL = salt.utils.which('drill') is not None
-HAS_HOST = salt.utils.which('host') is not None
-HAS_NSLOOKUP = salt.utils.which('nslookup') is not None
+HAS_DIG = salt.utils.path.which('dig') is not None
+HAS_DRILL = salt.utils.path.which('drill') is not None
+HAS_HOST = salt.utils.path.which('host') is not None
+HAS_NSLOOKUP = salt.utils.path.which('nslookup') is not None
 
 __salt__ = {
     'cmd.run_all': salt.modules.cmdmod.run_all

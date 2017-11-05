@@ -1,6 +1,6 @@
-=======================
-salt.modules.kubernetes
-=======================
+======================
+salt.states.kubernetes
+======================
 
-.. automodule:: salt.modules.kubernetes
+.. automodule:: salt.states.kubernetes
     :members:

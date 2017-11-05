@@ -17,8 +17,8 @@ import re
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
-import salt.utils.decorators as decorators
-import salt.ext.six as six
+import salt.utils.decorators.path
+from salt.ext import six
 # pylint: disable=import-error
 try:
     import salt.utils.psutil_compat as psutil
@@ -656,7 +656,7 @@ def lsof(name):
     return ret
 
 
-@decorators.which('netstat')
+@salt.utils.decorators.path.which('netstat')
 def netstat(name):
     '''
     Retrieve the netstat information of the given process name.
@@ -678,7 +678,7 @@ def netstat(name):
     return ret
 
 
-@decorators.which('ss')
+@salt.utils.decorators.path.which('ss')
 def ss(name):
     '''
     Retrieve the ss information of the given process name.

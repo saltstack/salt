@@ -209,7 +209,7 @@ import pprint
 import yaml
 
 # Import Salt Libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.pycrypto
@@ -223,7 +223,7 @@ except ImportError as exc:
 # Import Salt Cloud Libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
 import salt.config as config
-from salt.utils import namespaced_function
+from salt.utils.functools import namespaced_function
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
@@ -728,12 +728,18 @@ def request_instance(vm_=None, call=None):
 
         else:
             pool = floating_ip_conf.get('pool', 'public')
-            for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
-                if opts['fixed_ip'] is None and opts['pool'] == pool:
-                    floating_ip = fl_ip
-                    break
-            if floating_ip is None:
+            try:
                 floating_ip = conn.floating_ip_create(pool)['ip']
+            except Exception:
+                log.info('A new IP address was unable to be allocated. '
+                         'An IP address will be pulled from the already allocated list, '
+                         'This will cause a race condition when building in parallel.')
+                for fl_ip, opts in six.iteritems(conn.floating_ip_list()):
+                    if opts['fixed_ip'] is None and opts['pool'] == pool:
+                        floating_ip = fl_ip
+                        break
+                if floating_ip is None:
+                    log.error('No IP addresses available to allocate for this server: {0}'.format(vm_['name']))
 
         def __query_node_data(vm_):
             try:

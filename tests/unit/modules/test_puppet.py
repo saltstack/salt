@@ -19,7 +19,7 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.args
 import salt.utils.files
 import salt.modules.puppet as puppet
 from salt.exceptions import CommandExecutionError
@@ -38,7 +38,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
             Test to execute a puppet run
         '''
         mock = MagicMock(return_value={"A": "B"})
-        with patch.object(salt.utils, 'clean_kwargs', mock):
+        with patch.object(salt.utils.args, 'clean_kwargs', mock):
             mock = MagicMock(return_value={'retcode': 0})
             mock_lst = MagicMock(return_value=[])
             with patch.dict(puppet.__salt__, {'cmd.run_all': mock,

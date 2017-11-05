@@ -7,14 +7,16 @@
     Module to deploy and manage salt-proxy processes
     on a minion.
 '''
+# Import Python libs
 from __future__ import absolute_import
-
-import salt.ext.six.moves
-
 import os
 import logging
 
+# Import Salt libs
 import salt.utils.files
+
+# Import 3rd-party libs
+import salt.ext.six.moves
 
 log = logging.getLogger(__name__)
 

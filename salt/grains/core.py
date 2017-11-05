@@ -16,6 +16,7 @@ import os
 import json
 import socket
 import sys
+import glob
 import re
 import platform
 import logging
@@ -42,14 +43,15 @@ except ImportError:
 # Import salt libs
 import salt.exceptions
 import salt.log
-import salt.utils
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
-import salt.ext.six as six
+import salt.utils.path
+import salt.utils.platform
+from salt.ext import six
 from salt.ext.six.moves import range
 
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     import salt.utils.win_osinfo
 
 # Solve the Chicken and egg problem where grains need to run before any
@@ -63,11 +65,12 @@ __salt__ = {
     'cmd.run_all': salt.modules.cmdmod._run_all_quiet,
     'smbios.records': salt.modules.smbios.records,
     'smbios.get': salt.modules.smbios.get,
+    'cmd.run_ps': salt.modules.cmdmod.powershell,
 }
 log = logging.getLogger(__name__)
 
 HAS_WMI = False
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
@@ -174,7 +177,7 @@ def _linux_gpu_data():
     if __opts__.get('enable_gpu_grains', True) is False:
         return {}
 
-    lspci = salt.utils.which('lspci')
+    lspci = salt.utils.path.which('lspci')
     if not lspci:
         log.debug(
             'The `lspci` binary is not available on the system. GPU grains '
@@ -305,8 +308,8 @@ def _bsd_cpudata(osdata):
     #   num_cpus
     #   cpu_model
     #   cpu_flags
-    sysctl = salt.utils.which('sysctl')
-    arch = salt.utils.which('arch')
+    sysctl = salt.utils.path.which('sysctl')
+    arch = salt.utils.path.which('arch')
     cmds = {}
 
     if sysctl:
@@ -392,46 +395,116 @@ def _sunos_cpudata():
     return grains
 
 
+def _linux_memdata():
+    '''
+    Return the memory information for Linux-like systems
+    '''
+    grains = {'mem_total': 0, 'swap_total': 0}
+
+    meminfo = '/proc/meminfo'
+    if os.path.isfile(meminfo):
+        with salt.utils.files.fopen(meminfo, 'r') as ifile:
+            for line in ifile:
+                comps = line.rstrip('\n').split(':')
+                if not len(comps) > 1:
+                    continue
+                if comps[0].strip() == 'MemTotal':
+                    # Use floor division to force output to be an integer
+                    grains['mem_total'] = int(comps[1].split()[0]) // 1024
+                if comps[0].strip() == 'SwapTotal':
+                    # Use floor division to force output to be an integer
+                    grains['swap_total'] = int(comps[1].split()[0]) // 1024
+    return grains
+
+
+def _osx_memdata():
+    '''
+    Return the memory information for BSD-like systems
+    '''
+    grains = {'mem_total': 0, 'swap_total': 0}
+
+    sysctl = salt.utils.path.which('sysctl')
+    if sysctl:
+        mem = __salt__['cmd.run']('{0} -n hw.memsize'.format(sysctl))
+        swap_total = __salt__['cmd.run']('{0} -n vm.swapusage').split()[2]
+        if swap_total.endswith('K'):
+            _power = 2**10
+        elif swap_total.endswith('M'):
+            _power = 2**20
+        elif swap_total.endswith('G'):
+            _power = 2**30
+        swap_total = swap_total[:-1] * _power
+
+        grains['mem_total'] = int(mem) // 1024 // 1024
+        grains['swap_total'] = int(swap_total) // 1024 // 1024
+    return grains
+
+
+def _bsd_memdata(osdata):
+    '''
+    Return the memory information for BSD-like systems
+    '''
+    grains = {'mem_total': 0, 'swap_total': 0}
+
+    sysctl = salt.utils.path.which('sysctl')
+    if sysctl:
+        mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
+        swap_total = __salt__['cmd.run']('{0} -n vm.swap_total'.format(sysctl))
+        if osdata['kernel'] == 'NetBSD' and mem.startswith('-'):
+            mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
+        grains['mem_total'] = int(mem) // 1024 // 1024
+        grains['swap_total'] = int(swap_total) // 1024 // 1024
+    return grains
+
+
+def _sunos_memdata():
+    '''
+    Return the memory information for SunOS-like systems
+    '''
+    grains = {'mem_total': 0, 'swap_total': 0}
+
+    prtconf = '/usr/sbin/prtconf 2>/dev/null'
+    for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
+        comps = line.split(' ')
+        if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
+            grains['mem_total'] = int(comps[2].strip())
+
+    swap_cmd = salt.utils.path.which('swap')
+    swap_total = __salt__['cmd.run']('{0} -s'.format(swap_cmd)).split()[1]
+    grains['swap_total'] = int(swap_total) // 1024
+    return grains
+
+
+def _windows_memdata():
+    '''
+    Return the memory information for Windows systems
+    '''
+    grains = {'mem_total': 0}
+    # get the Total Physical memory as reported by msinfo32
+    tot_bytes = win32api.GlobalMemoryStatusEx()['TotalPhys']
+    # return memory info in gigabytes
+    grains['mem_total'] = int(tot_bytes / (1024 ** 2))
+    return grains
+
+
 def _memdata(osdata):
     '''
     Gather information about the system memory
     '''
     # Provides:
     #   mem_total
+    #   swap_total, for supported systems.
     grains = {'mem_total': 0}
     if osdata['kernel'] == 'Linux':
-        meminfo = '/proc/meminfo'
-
-        if os.path.isfile(meminfo):
-            with salt.utils.files.fopen(meminfo, 'r') as ifile:
-                for line in ifile:
-                    comps = line.rstrip('\n').split(':')
-                    if not len(comps) > 1:
-                        continue
-                    if comps[0].strip() == 'MemTotal':
-                        # Use floor division to force output to be an integer
-                        grains['mem_total'] = int(comps[1].split()[0]) // 1024
-    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Darwin'):
-        sysctl = salt.utils.which('sysctl')
-        if sysctl:
-            if osdata['kernel'] == 'Darwin':
-                mem = __salt__['cmd.run']('{0} -n hw.memsize'.format(sysctl))
-            else:
-                mem = __salt__['cmd.run']('{0} -n hw.physmem'.format(sysctl))
-            if osdata['kernel'] == 'NetBSD' and mem.startswith('-'):
-                mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
-            grains['mem_total'] = int(mem) // 1024 // 1024
+        grains.update(_linux_memdata())
+    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+        grains.update(_bsd_memdata(osdata))
+    elif osdata['kernel'] == 'Darwin':
+        grains.update(_osx_memdata())
     elif osdata['kernel'] == 'SunOS':
-        prtconf = '/usr/sbin/prtconf 2>/dev/null'
-        for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
-            comps = line.split(' ')
-            if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
-                grains['mem_total'] = int(comps[2].strip())
+        grains.update(_sunos_memdata())
     elif osdata['kernel'] == 'Windows' and HAS_WMI:
-        # get the Total Physical memory as reported by msinfo32
-        tot_bytes = win32api.GlobalMemoryStatusEx()['TotalPhys']
-        # return memory info in gigabytes
-        grains['mem_total'] = int(tot_bytes / (1024 ** 2))
+        grains.update(_windows_memdata())
     return grains
 
 
@@ -510,8 +583,8 @@ def _virtual(osdata):
     _cmds = ['systemd-detect-virt', 'virt-what', 'dmidecode']
     # test first for virt-what, which covers most of the desired functionality
     # on most platforms
-    if not salt.utils.is_windows() and osdata['kernel'] not in skip_cmds:
-        if salt.utils.which('virt-what'):
+    if not salt.utils.platform.is_windows() and osdata['kernel'] not in skip_cmds:
+        if salt.utils.path.which('virt-what'):
             _cmds = ['virt-what']
         else:
             log.debug(
@@ -541,7 +614,7 @@ def _virtual(osdata):
             command = 'system_profiler'
             args = ['SPDisplaysDataType']
         elif osdata['kernel'] == 'SunOS':
-            virtinfo = salt.utils.which('virtinfo')
+            virtinfo = salt.utils.path.which('virtinfo')
             if virtinfo:
                 try:
                     ret = __salt__['cmd.run_all']('{0} -a'.format(virtinfo))
@@ -556,7 +629,7 @@ def _virtual(osdata):
             else:
                 command = 'prtdiag'
 
-        cmd = salt.utils.which(command)
+        cmd = salt.utils.path.which(command)
 
         if not cmd:
             continue
@@ -571,13 +644,13 @@ def _virtual(osdata):
                     # systemd-detect-virt always returns > 0 on non-virtualized
                     # systems
                     # prtdiag only works in the global zone, skip if it fails
-                    if salt.utils.is_windows() or 'systemd-detect-virt' in cmd or 'prtdiag' in cmd:
+                    if salt.utils.platform.is_windows() or 'systemd-detect-virt' in cmd or 'prtdiag' in cmd:
                         continue
                     failed_commands.add(command)
                 continue
         except salt.exceptions.CommandExecutionError:
             if salt.log.is_logging_configured():
-                if salt.utils.is_windows():
+                if salt.utils.platform.is_windows():
                     continue
                 failed_commands.add(command)
             continue
@@ -715,7 +788,7 @@ def _virtual(osdata):
 
     choices = ('Linux', 'HP-UX')
     isdir = os.path.isdir
-    sysctl = salt.utils.which('sysctl')
+    sysctl = salt.utils.path.which('sysctl')
     if osdata['kernel'] in choices:
         if os.path.isdir('/proc'):
             try:
@@ -803,10 +876,12 @@ def _virtual(osdata):
                         grains['virtual_subtype'] = 'ovirt'
                     elif 'Google' in output:
                         grains['virtual'] = 'gce'
+                    elif 'BHYVE' in output:
+                        grains['virtual'] = 'bhyve'
             except IOError:
                 pass
     elif osdata['kernel'] == 'FreeBSD':
-        kenv = salt.utils.which('kenv')
+        kenv = salt.utils.path.which('kenv')
         if kenv:
             product = __salt__['cmd.run'](
                 '{0} smbios.system.product'.format(kenv)
@@ -842,6 +917,8 @@ def _virtual(osdata):
     elif osdata['kernel'] == 'OpenBSD':
         if osdata['manufacturer'] in ['QEMU', 'Red Hat']:
             grains['virtual'] = 'kvm'
+        if osdata['manufacturer'] == 'OpenBSD':
+            grains['virtual'] = 'vmm'
     elif osdata['kernel'] == 'SunOS':
         if grains['virtual'] == 'LDOM':
             roles = []
@@ -854,12 +931,12 @@ def _virtual(osdata):
                 grains['virtual_subtype'] = roles
         else:
             # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
-            zonename = salt.utils.which('zonename')
+            zonename = salt.utils.path.which('zonename')
             if zonename:
                 zone = __salt__['cmd.run']('{0}'.format(zonename))
                 if zone != 'global':
                     grains['virtual'] = 'zone'
-                    if salt.utils.is_smartos_zone():
+                    if salt.utils.platform.is_smartos_zone():
                         grains.update(_smartos_zone_data())
             # Check if it's a branded zone (i.e. Solaris 8/9 zone)
             if isdir('/.SUNWnative'):
@@ -1201,6 +1278,10 @@ _OS_FAMILY_MAP = {
     'Raspbian': 'Debian',
     'Devuan': 'Debian',
     'antiX': 'Debian',
+    'Kali': 'Debian',
+    'neon': 'Debian',
+    'Cumulus': 'Debian',
+    'Deepin': 'Debian',
     'NILinuxRT': 'NILinuxRT',
     'NILinuxRT-XFCE': 'NILinuxRT',
     'KDE neon': 'Debian',
@@ -1286,7 +1367,7 @@ def os_data():
      grains['kernelrelease'], grains['kernelversion'], grains['cpuarch'], _) = platform.uname()
     # pylint: enable=unpacking-non-sequence
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         grains['kernel'] = 'proxy'
         grains['kernelrelease'] = 'proxy'
         grains['kernelversion'] = 'proxy'
@@ -1294,7 +1375,7 @@ def os_data():
         grains['os'] = 'proxy'
         grains['os_family'] = 'proxy'
         grains['osfullname'] = 'proxy'
-    elif salt.utils.is_windows():
+    elif salt.utils.platform.is_windows():
         grains['os'] = 'Windows'
         grains['os_family'] = 'Windows'
         grains.update(_memdata(grains))
@@ -1322,7 +1403,7 @@ def os_data():
         grains['init'] = 'Windows'
 
         return grains
-    elif salt.utils.is_linux():
+    elif salt.utils.platform.is_linux():
         # Add SELinux grain, if you have it
         if _linux_bin_exists('selinuxenabled'):
             grains['selinux'] = {}
@@ -1353,7 +1434,7 @@ def os_data():
                 with salt.utils.files.fopen('/proc/1/cmdline') as fhr:
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     try:
-                        init_bin = salt.utils.which(init_cmdline[0])
+                        init_bin = salt.utils.path.which(init_cmdline[0])
                     except IndexError:
                         # Emtpy init_cmdline
                         init_bin = None
@@ -1389,7 +1470,7 @@ def os_data():
                                 'Unable to read from init_bin ({0}): {1}'
                                 .format(init_bin, exc)
                             )
-                    elif salt.utils.which('supervisord') in init_cmdline:
+                    elif salt.utils.path.which('supervisord') in init_cmdline:
                         grains['init'] = 'supervisord'
                     elif init_cmdline == ['runit']:
                         grains['init'] = 'runit'
@@ -1399,7 +1480,10 @@ def os_data():
                             .format(' '.join(init_cmdline))
                         )
 
-        # Add lsb grains on any distro with lsb-release
+        # Add lsb grains on any distro with lsb-release. Note that this import
+        # can fail on systems with lsb-release installed if the system package
+        # does not install the python package for the python interpreter used by
+        # Salt (i.e. python2 or python3)
         try:
             import lsb_release  # pylint: disable=import-error
             release = lsb_release.get_distro_information()
@@ -1448,7 +1532,13 @@ def os_data():
                     if 'VERSION_ID' in os_release:
                         grains['lsb_distrib_release'] = os_release['VERSION_ID']
                     if 'PRETTY_NAME' in os_release:
-                        grains['lsb_distrib_codename'] = os_release['PRETTY_NAME']
+                        codename = os_release['PRETTY_NAME']
+                        # https://github.com/saltstack/salt/issues/44108
+                        if os_release['ID'] == 'debian':
+                            codename_match = re.search(r'\((\w+)\)$', codename)
+                            if codename_match:
+                                codename = codename_match.group(1)
+                        grains['lsb_distrib_codename'] = codename
                     if 'CPE_NAME' in os_release:
                         if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
                             grains['os'] = "SUSE"
@@ -1568,7 +1658,7 @@ def os_data():
         grains.update(_linux_cpudata())
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
-        if salt.utils.is_smartos():
+        if salt.utils.platform.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
             uname_v = os.uname()[3]  # format: joyent_20161101T004406Z
             uname_v = uname_v[uname_v.index('_')+1:]
@@ -1581,7 +1671,7 @@ def os_data():
             ])
             # store a untouched copy of the timestamp in osrelease_stamp
             grains['osrelease_stamp'] = uname_v
-            if salt.utils.is_smartos_globalzone():
+            if salt.utils.platform.is_smartos_globalzone():
                 grains.update(_smartos_computenode_data())
         elif os.path.isfile('/etc/release'):
             with salt.utils.files.fopen('/etc/release', 'r') as fp_:
@@ -1726,7 +1816,7 @@ def locale_info():
     grains = {}
     grains['locale_info'] = {}
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return grains
 
     try:
@@ -1756,7 +1846,7 @@ def hostname():
     global __FQDN__
     grains = {}
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return grains
 
     grains['localhost'] = socket.gethostname()
@@ -1784,7 +1874,7 @@ def append_domain():
 
     grain = {}
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return grain
 
     if 'append_domain' in __opts__:
@@ -1796,7 +1886,7 @@ def ip_fqdn():
     '''
     Return ip address and FQDN grains
     '''
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return {}
 
     ret = {}
@@ -1831,7 +1921,7 @@ def ip_interfaces():
     # Provides:
     #   ip_interfaces
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return {}
 
     ret = {}
@@ -1859,7 +1949,7 @@ def ip4_interfaces():
     # Provides:
     #   ip_interfaces
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return {}
 
     ret = {}
@@ -1884,7 +1974,7 @@ def ip6_interfaces():
     # Provides:
     #   ip_interfaces
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return {}
 
     ret = {}
@@ -1924,7 +2014,7 @@ def dns():
     '''
     # Provides:
     #   dns
-    if salt.utils.is_windows() or 'proxyminion' in __opts__:
+    if salt.utils.platform.is_windows() or 'proxyminion' in __opts__:
         return {}
 
     resolv = salt.utils.dns.parse_resolv()
@@ -2047,7 +2137,7 @@ def _hw_data(osdata):
     .. versionadded:: 0.9.5
     '''
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return {}
 
     grains = {}
@@ -2076,8 +2166,8 @@ def _hw_data(osdata):
                     if err.errno == EACCES or err.errno == EPERM:
                         # Skip the grain if non-root user has no access to the file.
                         pass
-    elif salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not (
-            salt.utils.is_smartos() or
+    elif salt.utils.path.which_bin(['dmidecode', 'smbios']) is not None and not (
+            salt.utils.platform.is_smartos() or
             (  # SunOS on SPARC - 'smbios: failed to load SMBIOS: System does not export an SMBIOS table'
                 osdata['kernel'] == 'SunOS' and
                 osdata['cpuarch'].startswith('sparc')
@@ -2100,7 +2190,7 @@ def _hw_data(osdata):
             if serial is not None:
                 grains['serialnumber'] = serial
                 break
-    elif salt.utils.which_bin(['fw_printenv']) is not None:
+    elif salt.utils.path.which_bin(['fw_printenv']) is not None:
         # ARM Linux devices expose UBOOT env variables via fw_printenv
         hwdata = {
             'manufacturer': 'manufacturer',
@@ -2114,7 +2204,7 @@ def _hw_data(osdata):
     elif osdata['kernel'] == 'FreeBSD':
         # On FreeBSD /bin/kenv (already in base system)
         # can be used instead of dmidecode
-        kenv = salt.utils.which('kenv')
+        kenv = salt.utils.path.which('kenv')
         if kenv:
             # In theory, it will be easier to add new fields to this later
             fbsd_hwdata = {
@@ -2129,7 +2219,7 @@ def _hw_data(osdata):
                 value = __salt__['cmd.run']('{0} {1}'.format(kenv, val))
                 grains[key] = _clean_value(key, value)
     elif osdata['kernel'] == 'OpenBSD':
-        sysctl = salt.utils.which('sysctl')
+        sysctl = salt.utils.path.which('sysctl')
         hwdata = {'biosversion': 'hw.version',
                   'manufacturer': 'hw.vendor',
                   'productname': 'hw.product',
@@ -2140,7 +2230,7 @@ def _hw_data(osdata):
             if not value.endswith(' value is not available'):
                 grains[key] = _clean_value(key, value)
     elif osdata['kernel'] == 'NetBSD':
-        sysctl = salt.utils.which('sysctl')
+        sysctl = salt.utils.path.which('sysctl')
         nbsd_hwdata = {
             'biosversion': 'machdep.dmi.board-version',
             'manufacturer': 'machdep.dmi.system-vendor',
@@ -2155,7 +2245,7 @@ def _hw_data(osdata):
                 grains[key] = _clean_value(key, result['stdout'])
     elif osdata['kernel'] == 'Darwin':
         grains['manufacturer'] = 'Apple Inc.'
-        sysctl = salt.utils.which('sysctl')
+        sysctl = salt.utils.path.which('sysctl')
         hwdata = {'productname': 'hw.model'}
         for key, oid in hwdata.items():
             value = __salt__['cmd.run']('{0} -b {1}'.format(sysctl, oid))
@@ -2167,7 +2257,7 @@ def _hw_data(osdata):
         # commands and attempt various lookups.
         data = ""
         for (cmd, args) in (('/usr/sbin/prtdiag', '-v'), ('/usr/sbin/prtconf', '-vp'), ('/usr/sbin/virtinfo', '-a')):
-            if salt.utils.which(cmd):  # Also verifies that cmd is executable
+            if salt.utils.path.which(cmd):  # Also verifies that cmd is executable
                 data += __salt__['cmd.run']('{0} {1}'.format(cmd, args))
                 data += '\n'
 
@@ -2293,7 +2383,7 @@ def _smartos_computenode_data():
     #   vm_capable
     #   vm_hw_virt
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return {}
 
     grains = {}
@@ -2331,7 +2421,7 @@ def _smartos_zone_data():
     #   hypervisor_uuid
     #   datacenter
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return {}
 
     grains = {}
@@ -2375,15 +2465,15 @@ def _zpool_data(grains):
     Provide grains about zpools
     '''
     # quickly return if windows or proxy
-    if salt.utils.is_windows() or 'proxyminion' in __opts__:
+    if salt.utils.platform.is_windows() or 'proxyminion' in __opts__:
         return {}
 
     # quickly return if NetBSD (ZFS still under development)
-    if salt.utils.is_netbsd():
+    if salt.utils.platform.is_netbsd():
         return {}
 
     # quickly return if no zpool and zfs command
-    if not salt.utils.which('zpool'):
+    if not salt.utils.path.which('zpool'):
         return {}
 
     # collect zpool data
@@ -2407,7 +2497,7 @@ def get_server_id():
     # Provides:
     #   server_id
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return {}
     return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
 
@@ -2421,4 +2511,167 @@ def get_master():
     #   master
     return {'master': __opts__.get('master', '')}
 
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
+
+def default_gateway():
+    '''
+    Populates grains which describe whether a server has a default gateway
+    configured or not. Uses `ip -4 route show` and `ip -6 route show` and greps
+    for a `default` at the beginning of any line. Assuming the standard
+    `default via <ip>` format for default gateways, it will also parse out the
+    ip address of the default gateway, and put it in ip4_gw or ip6_gw.
+
+    If the `ip` command is unavailable, no grains will be populated.
+
+    Currently does not support multiple default gateways. The grains will be
+    set to the first default gateway found.
+
+    List of grains:
+
+        ip4_gw: True  # ip/True/False if default ipv4 gateway
+        ip6_gw: True  # ip/True/False if default ipv6 gateway
+        ip_gw: True   # True if either of the above is True, False otherwise
+    '''
+    grains = {}
+    if not salt.utils.path.which('ip'):
+        return {}
+    grains['ip_gw'] = False
+    grains['ip4_gw'] = False
+    grains['ip6_gw'] = False
+    if __salt__['cmd.run']('ip -4 route show | grep "^default"', python_shell=True):
+        grains['ip_gw'] = True
+        grains['ip4_gw'] = True
+        try:
+            gateway_ip = __salt__['cmd.run']('ip -4 route show | grep "^default via"', python_shell=True).split(' ')[2].strip()
+            grains['ip4_gw'] = gateway_ip if gateway_ip else True
+        except Exception as exc:
+            pass
+    if __salt__['cmd.run']('ip -6 route show | grep "^default"', python_shell=True):
+        grains['ip_gw'] = True
+        grains['ip6_gw'] = True
+        try:
+            gateway_ip = __salt__['cmd.run']('ip -6 route show | grep "^default via"', python_shell=True).split(' ')[2].strip()
+            grains['ip6_gw'] = gateway_ip if gateway_ip else True
+        except Exception as exc:
+            pass
+    return grains
+
+
+def fc_wwn():
+    '''
+    Return list of fiber channel HBA WWNs
+    '''
+    grains = {}
+    grains['fc_wwn'] = False
+    if salt.utils.platform.is_linux():
+        grains['fc_wwn'] = _linux_wwns()
+    elif salt.utils.platform.is_windows():
+        grains['fc_wwn'] = _windows_wwns()
+    return grains
+
+
+def iscsi_iqn():
+    '''
+    Return iSCSI IQN
+    '''
+    grains = {}
+    grains['iscsi_iqn'] = False
+    if salt.utils.platform.is_linux():
+        grains['iscsi_iqn'] = _linux_iqn()
+    elif salt.utils.platform.is_windows():
+        grains['iscsi_iqn'] = _windows_iqn()
+    elif salt.utils.platform.is_aix():
+        grains['iscsi_iqn'] = _aix_iqn()
+    return grains
+
+
+def _linux_iqn():
+    '''
+    Return iSCSI IQN from a Linux host.
+    '''
+    ret = []
+
+    initiator = '/etc/iscsi/initiatorname.iscsi'
+
+    if os.path.isfile(initiator):
+        with salt.utils.files.fopen(initiator, 'r') as _iscsi:
+            for line in _iscsi:
+                if line.find('InitiatorName') != -1:
+                    iqn = line.split('=')
+                    final_iqn = iqn[1].rstrip()
+                    ret.extend([final_iqn])
+    return ret
+
+
+def _aix_iqn():
+    '''
+    Return iSCSI IQN from an AIX host.
+    '''
+    ret = []
+
+    aixcmd = 'lsattr -E -l iscsi0 | grep initiator_name'
+
+    aixret = __salt__['cmd.run'](aixcmd)
+    if aixret[0].isalpha():
+        iqn = aixret.split()
+        final_iqn = iqn[1].rstrip()
+        ret.extend([final_iqn])
+    return ret
+
+
+def _linux_wwns():
+    '''
+    Return Fibre Channel port WWNs from a Linux host.
+    '''
+    ret = []
+
+    for fcfile in glob.glob('/sys/class/fc_host/*/port_name'):
+        with salt.utils.files.fopen(fcfile, 'r') as _wwn:
+            for line in _wwn:
+                line = line.rstrip()
+                ret.extend([line[2:]])
+    return ret
+
+
+def _windows_iqn():
+    '''
+    Return iSCSI IQN from a Windows host.
+    '''
+    ret = []
+
+    wmic = salt.utils.path.which('wmic')
+
+    if not wmic:
+        return ret
+
+    namespace = r'\\root\WMI'
+    mspath = 'MSiSCSIInitiator_MethodClass'
+    get = 'iSCSINodeName'
+
+    cmdret = __salt__['cmd.run_all'](
+        '{0} /namespace:{1} path {2} get {3} /format:table'.format(
+            wmic, namespace, mspath, get))
+
+    for line in cmdret['stdout'].splitlines():
+        if line[0].isalpha():
+            continue
+        line = line.rstrip()
+        ret.extend([line])
+
+    return ret
+
+
+def _windows_wwns():
+    '''
+    Return Fibre Channel port WWNs from a Windows host.
+    '''
+    ps_cmd = r'Get-WmiObject -class MSFC_FibrePortHBAAttributes -namespace "root\WMI" | Select -Expandproperty Attributes | %{($_.PortWWN | % {"{0:x2}" -f $_}) -join ""}'
+
+    ret = []
+
+    cmdret = __salt__['cmd.run_ps'](ps_cmd)
+
+    for line in cmdret:
+        line = line.rstrip()
+        ret.append(line)
+
+    return ret

@@ -110,7 +110,7 @@ from salt.exceptions import (
 )
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     from profitbricks.client import (
         ProfitBricksService, Server,

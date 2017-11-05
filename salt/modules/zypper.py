@@ -14,20 +14,16 @@ Package support for openSUSE via the zypper package manager
 
 # Import python libs
 from __future__ import absolute_import
-import copy
 import fnmatch
 import logging
 import re
 import os
 import time
 import datetime
-from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
-import salt.ext.six as six
-from salt.exceptions import SaltInvocationError
-import salt.utils.event
+from salt.ext import six
 from salt.ext.six.moves import configparser
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
@@ -36,12 +32,15 @@ from xml.dom import minidom as dom
 from xml.parsers.expat import ExpatError
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.event
 import salt.utils.files
+import salt.utils.functools
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.systemd
-from salt.exceptions import (
-    CommandExecutionError, MinionError)
+from salt.utils.versions import LooseVersion
+from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +61,7 @@ def __virtual__():
     if __grains__.get('os_family', '') != 'Suse':
         return (False, "Module zypper: non SUSE OS not suppored by zypper package manager")
     # Not all versions of SUSE use zypper, check that it is available
-    if not salt.utils.which('zypper'):
+    if not salt.utils.path.which('zypper'):
         return (False, "Module zypper: zypper package manager not found")
     return __virtualname__
 
@@ -432,7 +431,7 @@ def list_upgrades(refresh=True, **kwargs):
     return ret
 
 # Provide a list_updates function for those used to using zypper list-updates
-list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
+list_updates = salt.utils.functools.alias_function(list_upgrades, 'list_updates')
 
 
 def info_installed(*names, **kwargs):
@@ -590,7 +589,7 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name, **kwargs):
@@ -668,7 +667,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         {'<package_name>': [{'version' : 'version', 'arch' : 'arch'}]}
 
-        Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
 
         If ``all`` is specified, all valid attributes will be returned.
 
@@ -687,15 +687,16 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
         salt '*' pkg.list_pkgs attr='["version", "arch"]'
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 
     attr = kwargs.get("attr")
     if 'pkg.list_pkgs' in __context__:
-        return _format_pkg_list(__context__['pkg.list_pkgs'], versions_as_list, attr)
+        cached = __context__['pkg.list_pkgs']
+        return __salt__['pkg_resource.format_pkg_list'](cached, versions_as_list, attr)
 
     cmd = ['rpm', '-qa', '--queryformat', (
         "%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-"
@@ -703,15 +704,11 @@ def list_pkgs(versions_as_list=False, **kwargs):
     ret = {}
     for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
         name, pkgver, rel, arch, epoch, install_time = line.split('_|-')
-        if epoch:
-            pkgver = '{0}:{1}'.format(epoch, pkgver)
-        if rel:
-            pkgver += '-{0}'.format(rel)
         install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
         install_date_time_t = int(install_time)
 
-        all_attr = {'version': pkgver, 'arch': arch, 'install_date': install_date,
-                    'install_date_time_t': install_date_time_t}
+        all_attr = {'epoch': epoch, 'version': pkgver, 'release': rel, 'arch': arch,
+                    'install_date': install_date, 'install_date_time_t': install_date_time_t}
         __salt__['pkg_resource.add_pkg'](ret, name, all_attr)
 
     for pkgname in ret:
@@ -719,35 +716,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     __context__['pkg.list_pkgs'] = ret
 
-    return _format_pkg_list(ret, versions_as_list, attr)
-
-
-def _format_pkg_list(packages, versions_as_list, attr):
-    '''
-    Formats packages according to parameters.
-    '''
-    ret = copy.deepcopy(packages)
-    if attr:
-        requested_attr = set(['version', 'arch', 'install_date', 'install_date_time_t'])
-
-        if attr != 'all':
-            requested_attr &= set(attr + ['version'])
-
-        for name in ret:
-            versions = []
-            for all_attr in ret[name]:
-                filtered_attr = {}
-                for key in requested_attr:
-                    filtered_attr[key] = all_attr[key]
-                versions.append(filtered_attr)
-            ret[name] = versions
-        return ret
-
-    for name in ret:
-        ret[name] = [d['version'] for d in ret[name]]
-    if not versions_as_list:
-        __salt__['pkg_resource.stringify'](ret)
-    return ret
+    return __salt__['pkg_resource.format_pkg_list'](ret, versions_as_list, attr)
 
 
 def _get_configured_repos():
@@ -1126,7 +1095,8 @@ def install(name=None,
                     'version': '<new-version>',
                     'arch': '<new-arch>'}}}
 
-        Valid attributes are: ``version``, ``arch``, ``install_date``, ``install_date_time_t``.
+        Valid attributes are: ``epoch``, ``version``, ``release``, ``arch``,
+        ``install_date``, ``install_date_time_t``.
 
         If ``all`` is specified, all valid attributes will be returned.
 
@@ -1234,7 +1204,7 @@ def install(name=None,
         if isinstance(pkg_data, six.string_types):
             new[pkg_name] = pkg_data.split(',')[-1]
 
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if errors:
         raise CommandExecutionError(
@@ -1348,7 +1318,7 @@ def upgrade(refresh=True,
     # (affects only kernel packages at this point)
     for pkg in new:
         new[pkg] = new[pkg].split(',')[-1]
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if __zypper__.exit_code not in __zypper__.SUCCESS_EXIT_CODES:
         result = {
@@ -1391,7 +1361,7 @@ def _uninstall(name=None, pkgs=None):
         targets = targets[500:]
 
     __context__.pop('pkg.list_pkgs', None)
-    ret = salt.utils.compare_dicts(old, list_pkgs())
+    ret = salt.utils.data.compare_dicts(old, list_pkgs())
 
     if errors:
         raise CommandExecutionError(

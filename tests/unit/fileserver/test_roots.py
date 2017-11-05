@@ -15,11 +15,11 @@ from tests.support.paths import FILES, TMP, TMP_STATE_TREE
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
-# Import salt libs
-from salt.fileserver import roots
-from salt import fileclient
-import salt.utils
+# Import Salt libs
+import salt.fileserver.roots
+import salt.fileclient
 import salt.utils.files
+import salt.utils.platform
 
 try:
     import win32file
@@ -37,14 +37,14 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         empty_dir = os.path.join(TMP_STATE_TREE, 'empty_dir')
         if not os.path.isdir(empty_dir):
             os.makedirs(empty_dir)
-        return {roots: {'__opts__': self.opts}}
+        return {salt.fileserver.roots: {'__opts__': self.opts}}
 
     @classmethod
     def setUpClass(cls):
         '''
         Create special file_roots for symlink test on Windows
         '''
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             root_dir = tempfile.mkdtemp(dir=TMP)
             source_sym = os.path.join(root_dir, 'source_sym')
             with salt.utils.files.fopen(source_sym, 'w') as fp_:
@@ -64,7 +64,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         '''
         Remove special file_roots for symlink test
         '''
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             try:
                 salt.utils.files.rm_rf(cls.test_symlink_list_file_roots['base'][0])
             except OSError:
@@ -74,25 +74,25 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         del self.opts
 
     def test_file_list(self):
-        ret = roots.file_list({'saltenv': 'base'})
+        ret = salt.fileserver.roots.file_list({'saltenv': 'base'})
         self.assertIn('testfile', ret)
 
     def test_find_file(self):
-        ret = roots.find_file('testfile')
+        ret = salt.fileserver.roots.find_file('testfile')
         self.assertEqual('testfile', ret['rel'])
 
         full_path_to_file = os.path.join(FILES, 'file', 'base', 'testfile')
         self.assertEqual(full_path_to_file, ret['path'])
 
     def test_serve_file(self):
-        with patch.dict(roots.__opts__, {'file_buffer_size': 262144}):
+        with patch.dict(salt.fileserver.roots.__opts__, {'file_buffer_size': 262144}):
             load = {'saltenv': 'base',
                     'path': os.path.join(FILES, 'file', 'base', 'testfile'),
                     'loc': 0
                     }
             fnd = {'path': os.path.join(FILES, 'file', 'base', 'testfile'),
                    'rel': 'testfile'}
-            ret = roots.serve_file(load, fnd)
+            ret = salt.fileserver.roots.serve_file(load, fnd)
 
             data = 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  ' \
                    'ARTHUR:  And this enchanter of whom you speak, he ' \
@@ -107,7 +107,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                    'OLD MAN:  Seek you the Bridge of Death.\n  ARTHUR:  ' \
                    'The Bridge of Death, which leads to the Grail?\n  ' \
                    'OLD MAN:  Hee hee ha ha!\n\n'
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 data = 'Scene 24\r\n\r\n \r\n  OLD MAN:  Ah, hee he he ' \
                        'ha!\r\n  ARTHUR:  And this enchanter of whom you ' \
                        'speak, he has seen the grail?\r\n  OLD MAN:  Ha ha ' \
@@ -141,12 +141,12 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             'path': os.path.join(FILES, 'file', 'base', 'testfile'),
             'rel': 'testfile'
         }
-        ret = roots.file_hash(load, fnd)
+        ret = salt.fileserver.roots.file_hash(load, fnd)
 
         # Hashes are different in Windows. May be how git translates line
         # endings
         hsum = 'baba5791276eb99a7cc498fb1acfbc3b4bd96d24cfe984b4ed6b5be2418731df'
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             hsum = '754aa260e1f3e70f43aaf92149c7d1bad37f708c53304c37660e628d7553f687'
 
         self.assertDictEqual(
@@ -158,17 +158,17 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         )
 
     def test_file_list_emptydirs(self):
-        ret = roots.file_list_emptydirs({'saltenv': 'base'})
+        ret = salt.fileserver.roots.file_list_emptydirs({'saltenv': 'base'})
         self.assertIn('empty_dir', ret)
 
     def test_dir_list(self):
-        ret = roots.dir_list({'saltenv': 'base'})
+        ret = salt.fileserver.roots.dir_list({'saltenv': 'base'})
         self.assertIn('empty_dir', ret)
 
     def test_symlink_list(self):
         if self.test_symlink_list_file_roots:
             self.opts['file_roots'] = self.test_symlink_list_file_roots
-        ret = roots.symlink_list({'saltenv': 'base'})
+        ret = salt.fileserver.roots.symlink_list({'saltenv': 'base'})
         self.assertDictEqual(ret, {'dest_sym': 'source_sym'})
 
 
@@ -184,7 +184,7 @@ class RootsLimitTraversalTest(TestCase, AdaptedConfigurationTestCaseMixin):
         file_client_opts = self.get_temp_config('master')
         file_client_opts['fileserver_limit_traversal'] = True
 
-        ret = fileclient.Client(file_client_opts).list_states('base')
+        ret = salt.fileclient.Client(file_client_opts).list_states('base')
         self.assertIn('test_deep.test', ret)
         self.assertIn('test_deep.a.test', ret)
         self.assertNotIn('test_deep.b.2.test', ret)

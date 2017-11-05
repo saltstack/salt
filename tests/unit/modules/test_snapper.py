@@ -22,7 +22,7 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 import salt.modules.snapper as snapper
 
@@ -141,6 +141,7 @@ MODULE_RET = {
 }
 
 
+@skipIf(sys.platform.startswith('win'), 'Snapper not available on Windows')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SnapperTestCase(TestCase, LoaderModuleMockMixin):
 

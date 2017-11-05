@@ -9,9 +9,9 @@ import os
 import logging
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError
-import salt.utils
 import salt.utils.files
+import salt.utils.platform
+from salt.exceptions import SaltInvocationError
 
 _LOG = logging.getLogger(__name__)
 _DEFAULT_CONF = '/etc/logrotate.conf'
@@ -27,8 +27,12 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    if salt.utils.is_windows():
-        return (False, 'The logrotate execution module cannot be loaded: only available on non-Windows systems.')
+    if salt.utils.platform.is_windows():
+        return (
+            False,
+            'The logrotate execution module cannot be loaded: only available '
+            'on non-Windows systems.'
+        )
     return True
 
 

@@ -85,18 +85,18 @@ cluster.skip_full_coverage_check: ``False``
 
 '''
 
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import json
 import logging
 
 # Import Salt libs
-import salt.ext.six as six
-import salt.utils
-import salt.utils.jid
 import salt.returners
+import salt.utils.jid
+import salt.utils.platform
 
-# Import third party libs
+# Import 3rd-party libs
+from salt.ext import six
 try:
     import redis
     HAS_REDIS = True
@@ -142,7 +142,7 @@ def _get_options(ret=None):
              'skip_full_coverage_check': 'cluster.skip_full_coverage_check',
         }
 
-    if salt.utils.is_proxy():
+    if salt.utils.platform.is_proxy():
         return {
             'host': __opts__.get('redis.host', 'salt'),
             'port': __opts__.get('redis.port', 6379),
@@ -312,4 +312,4 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

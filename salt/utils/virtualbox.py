@@ -19,7 +19,9 @@ from salt.utils.timeout import wait_for
 log = logging.getLogger(__name__)
 
 # Import 3rd-party libs
+from salt.ext import six
 from salt.ext.six.moves import range
+
 # Import virtualbox libs
 HAS_LIBS = False
 try:
@@ -279,7 +281,10 @@ def vb_get_network_addresses(machine_name=None, machine=None):
     # We can't trust virtualbox to give us up to date guest properties if the machine isn't running
     # For some reason it may give us outdated (cached?) values
     if machine.state == _virtualboxManager.constants.MachineState_Running:
-        total_slots = int(machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/Count'))
+        try:
+            total_slots = int(machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/Count'))
+        except ValueError:
+            total_slots = 0
         for i in range(total_slots):
             try:
                 address = machine.getGuestPropertyValue('/VirtualBox/GuestInfo/Net/{0}/V4/IP'.format(i))
@@ -598,7 +603,7 @@ def vb_machinestate_to_tuple(machinestate):
     '''
     if isinstance(machinestate, int):
         return MACHINE_STATES_ENUM.get(machinestate, UNKNOWN_MACHINE_STATE)
-    elif isinstance(machinestate, str):
+    elif isinstance(machinestate, six.string_types):
         return MACHINE_STATES.get(machinestate, UNKNOWN_MACHINE_STATE)
     else:
         return UNKNOWN_MACHINE_STATE
@@ -625,9 +630,9 @@ def vb_machine_exists(name):
         vbox.findMachine(name)
         return True
     except Exception as e:
-        if isinstance(e.message, str):
+        if isinstance(e.message, six.string_types):
             message = e.message
-        elif hasattr(e, 'msg') and isinstance(getattr(e, 'msg'), str):
+        elif hasattr(e, 'msg') and isinstance(getattr(e, 'msg'), six.string_types):
             message = getattr(e, 'msg')
         else:
             message = ''

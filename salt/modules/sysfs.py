@@ -5,18 +5,18 @@ Module for interfacing with SysFS
 .. seealso:: https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt
 .. versionadded:: 2016.3.0
 '''
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import logging
 import os
 import stat
 
-# Import external libs
-import salt.ext.six as six
-
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.files
+import salt.utils.platform
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def __virtual__():
     '''
     Only work on Linux
     '''
-    return salt.utils.is_linux()
+    return salt.utils.platform.is_linux()
 
 
 def attr(key, value=None):

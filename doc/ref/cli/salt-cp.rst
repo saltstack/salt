@@ -39,6 +39,13 @@ specified target expression.
     desitination will be assumed to be a directory. Finally, recursion is now
     supported, allowing for entire directories to be copied.
 
+.. versionchanged:: 2016.11.7,2017.7.2
+    Reverted back to the old copy mode to preserve backward compatibility. The
+    new functionality added in 2016.6.6 and 2017.7.0 is now available using the
+    ``-C`` or ``--chunked`` CLI arguments. Note that compression, recursive
+    copying, and support for copying large files is only available in chunked
+    mode.
+
 Options
 =======
 
@@ -56,9 +63,16 @@ Options
 .. include:: _includes/target-selection.rst
 
 
+.. option:: -C, --chunked
+
+    Use new chunked mode to copy files. This mode supports large files, recursive
+    directories copying and compression.
+
+    .. versionadded:: 2016.11.7,2017.7.2
+
 .. option:: -n, --no-compression
 
-    Disable gzip compression.
+    Disable gzip compression in chunked mode.
 
     .. versionadded:: 2016.3.7,2016.11.6,2017.7.0
 

@@ -18,13 +18,12 @@ import shutil
 import tempfile
 
 from salt.exceptions import SaltCacheError
-import salt.utils
 import salt.utils.atomicfile
 import salt.utils.files
 
 log = logging.getLogger(__name__)
 
-__func_alias__ = {'list': 'ls'}
+__func_alias__ = {'list_': 'list'}
 
 
 def __cachedir(kwargs=None):
@@ -144,7 +143,7 @@ def flush(bank, key=None, cachedir=None):
     return True
 
 
-def ls(bank, cachedir):
+def list_(bank, cachedir):
     '''
     Return an iterable object containing all entries stored in the specified bank.
     '''

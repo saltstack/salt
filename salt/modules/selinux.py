@@ -17,13 +17,13 @@ import os
 import re
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 _SELINUX_FILETYPES = {
@@ -47,7 +47,7 @@ def __virtual__():
     # Iterate over all of the commands this module uses and make sure
     # each of them are available in the standard PATH to prevent breakage
     for cmd in required_cmds:
-        if not salt.utils.which(cmd):
+        if not salt.utils.path.which(cmd):
             return (False, cmd + ' is not in the path')
     # SELinux only makes sense on Linux *obviously*
     if __grains__['kernel'] == 'Linux':
@@ -375,8 +375,10 @@ def list_semod():
 
 def _validate_filetype(filetype):
     '''
-    Checks if the given filetype is a valid SELinux filetype specification.
-    Throws an SaltInvocationError if it isn't.
+    .. versionadded:: 2017.7.0
+
+    Checks if the given filetype is a valid SELinux filetype
+    specification. Throws an SaltInvocationError if it isn't.
     '''
     if filetype not in _SELINUX_FILETYPES.keys():
         raise SaltInvocationError('Invalid filetype given: {0}'.format(filetype))
@@ -385,6 +387,8 @@ def _validate_filetype(filetype):
 
 def _context_dict_to_string(context):
     '''
+    .. versionadded:: 2017.7.0
+
     Converts an SELinux file context from a dict to a string.
     '''
     return '{sel_user}:{sel_role}:{sel_type}:{sel_level}'.format(**context)
@@ -392,6 +396,8 @@ def _context_dict_to_string(context):
 
 def _context_string_to_dict(context):
     '''
+    .. versionadded:: 2017.7.0
+
     Converts an SELinux file context from string to dict.
     '''
     if not re.match('[^:]+:[^:]+:[^:]+:[^:]+$', context):
@@ -404,10 +410,13 @@ def _context_string_to_dict(context):
     return ret
 
 
-def _filetype_id_to_string(filetype='a'):
+def filetype_id_to_string(filetype='a'):
     '''
-    Translates SELinux filetype single-letter representation
-    to a more human-readable version (which is also used in `semanage fcontext -l`).
+    .. versionadded:: 2017.7.0
+
+    Translates SELinux filetype single-letter representation to a more
+    human-readable version (which is also used in `semanage fcontext
+    -l`).
     '''
     _validate_filetype(filetype)
     return _SELINUX_FILETYPES.get(filetype, 'error')
@@ -415,20 +424,27 @@ def _filetype_id_to_string(filetype='a'):
 
 def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
     '''
-    Returns the current entry in the SELinux policy list as a dictionary.
-    Returns None if no exact match was found
+    .. versionadded:: 2017.7.0
+
+    Returns the current entry in the SELinux policy list as a
+    dictionary. Returns None if no exact match was found.
+
     Returned keys are:
-    - filespec (the name supplied and matched)
-    - filetype (the descriptive name of the filetype supplied)
-    - sel_user, sel_role, sel_type, sel_level (the selinux context)
+
+    * filespec (the name supplied and matched)
+    * filetype (the descriptive name of the filetype supplied)
+    * sel_user, sel_role, sel_type, sel_level (the selinux context)
+
     For a more in-depth explanation of the selinux context, go to
     https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Security-Enhanced_Linux/chap-Security-Enhanced_Linux-SELinux_Contexts.html
 
-    name: filespec of the file or directory. Regex syntax is allowed.
-    filetype: The SELinux filetype specification.
-              Use one of [a, f, d, c, b, s, l, p].
-              See also `man semanage-fcontext`.
-              Defaults to 'a' (all files)
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    filetype
+        The SELinux filetype specification. Use one of [a, f, d, c, b,
+        s, l, p]. See also `man semanage-fcontext`. Defaults to 'a'
+        (all files).
 
     CLI Example:
 
@@ -445,10 +461,10 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
                   'sel_role': '[^:]+',  # se_role for file context is always object_r
                   'sel_type': sel_type or '[^:]+',
                   'sel_level': sel_level or '[^:]+'}
-    cmd_kwargs['filetype'] = '[[:alpha:] ]+' if filetype is None else _filetype_id_to_string(filetype)
+    cmd_kwargs['filetype'] = '[[:alpha:] ]+' if filetype is None else filetype_id_to_string(filetype)
     cmd = 'semanage fcontext -l | egrep ' + \
           "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}$'".format(**cmd_kwargs)
-    current_entry_text = __salt__['cmd.shell'](cmd)
+    current_entry_text = __salt__['cmd.shell'](cmd, ignore_retcode=True)
     if current_entry_text == '':
         return None
     ret = {}
@@ -461,20 +477,34 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
 
 def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
     '''
-    Sets or deletes the SELinux policy for a given filespec and other optional parameters.
-    Returns the result of the call to semanage.
-    Note that you don't have to remove an entry before setting a new one for a given
-    filespec and filetype, as adding one with semanage automatically overwrites a
-    previously configured SELinux context.
+    .. versionadded:: 2017.7.0
 
-    name: filespec of the file or directory. Regex syntax is allowed.
-    file_type: The SELinux filetype specification.
-              Use one of [a, f, d, c, b, s, l, p].
-              See also ``man semanage-fcontext``.
-              Defaults to 'a' (all files)
-    sel_type: SELinux context type. There are many.
-    sel_user: SELinux user. Use ``semanage login -l`` to determine which ones are available to you
-    sel_level: The MLS range of the SELinux context.
+    Sets or deletes the SELinux policy for a given filespec and other
+    optional parameters.
+
+    Returns the result of the call to semanage.
+
+    Note that you don't have to remove an entry before setting a new
+    one for a given filespec and filetype, as adding one with semanage
+    automatically overwrites a previously configured SELinux context.
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    file_type
+        The SELinux filetype specification. Use one of [a, f, d, c, b,
+        s, l, p]. See also ``man semanage-fcontext``. Defaults to 'a'
+        (all files).
+
+    sel_type
+        SELinux context type. There are many.
+
+    sel_user
+        SELinux user. Use ``semanage login -l`` to determine which ones
+        are available to you.
+
+    sel_level
+        The MLS range of the SELinux context.
 
     CLI Example:
 
@@ -500,10 +530,14 @@ def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, se
 
 def fcontext_policy_is_applied(name, recursive=False):
     '''
-    Returns an empty string if the SELinux policy for a given filespec is applied,
-    returns string with differences in policy and actual situation otherwise.
+    .. versionadded:: 2017.7.0
 
-    name: filespec of the file or directory. Regex syntax is allowed.
+    Returns an empty string if the SELinux policy for a given filespec
+    is applied, returns string with differences in policy and actual
+    situation otherwise.
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
 
     CLI Example:
 
@@ -520,11 +554,17 @@ def fcontext_policy_is_applied(name, recursive=False):
 
 def fcontext_apply_policy(name, recursive=False):
     '''
-    Applies SElinux policies to filespec using `restorecon [-R] filespec`.
-    Returns dict with changes if succesful, the output of the restorecon command otherwise.
+    .. versionadded:: 2017.7.0
 
-    name: filespec of the file or directory. Regex syntax is allowed.
-    recursive: Recursively apply SELinux policies.
+    Applies SElinux policies to filespec using `restorecon [-R]
+    filespec`. Returns dict with changes if succesful, the output of
+    the restorecon command otherwise.
+
+    name
+        filespec of the file or directory. Regex syntax is allowed.
+
+    recursive
+        Recursively apply SELinux policies.
 
     CLI Example:
 

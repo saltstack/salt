@@ -240,7 +240,8 @@ import json
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.functools
 from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.ext.six import string_types
 
@@ -276,7 +277,7 @@ def _reinterpreted_state(state):
             out = out[idx + 1:]
         data = {}
         try:
-            for item in salt.utils.shlex_split(out):
+            for item in salt.utils.args.shlex_split(out):
                 key, val = item.split('=')
                 data[key] = val
         except ValueError:
@@ -510,7 +511,7 @@ def wait(name,
 
 
 # Alias "cmd.watch" to "cmd.wait", as this is a common misconfiguration
-watch = salt.utils.alias_function(wait, 'watch')
+watch = salt.utils.functools.alias_function(wait, 'watch')
 
 
 def wait_script(name,
@@ -637,6 +638,7 @@ def run(name,
         runas=None,
         shell=None,
         env=None,
+        prepend_path=None,
         stateful=False,
         umask=None,
         output_loglevel='debug',
@@ -710,6 +712,12 @@ def run(name,
                 - name: ls -l /
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+    prepend_path
+        $PATH segment to prepend (trailing ':' not necessary) to $PATH. This is
+        an easier alternative to the Jinja workaround.
+
+        .. versionadded:: Oxygen
 
     stateful
         The command being executed is expected to return data about executing
@@ -806,6 +814,7 @@ def run(name,
                        'use_vt': use_vt,
                        'shell': shell or __grains__['shell'],
                        'env': env,
+                       'prepend_path': prepend_path,
                        'umask': umask,
                        'output_loglevel': output_loglevel,
                        'quiet': quiet})
@@ -838,7 +847,7 @@ def run(name,
 
     ret['changes'] = cmd_all
     ret['result'] = not bool(cmd_all['retcode'])
-    ret['comment'] = 'Command "{0}" run'.format(name)
+    ret['comment'] = u'Command "{0}" run'.format(name)
 
     # Ignore timeout errors if asked (for nohups) and treat cmd as a success
     if ignore_timeout:

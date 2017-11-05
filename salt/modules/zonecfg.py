@@ -19,11 +19,14 @@ import logging
 import re
 
 # Import Salt libs
-import salt.ext.six as six
-import salt.utils
-import salt.utils.files
+import salt.utils.args
 import salt.utils.decorators
+import salt.utils.files
+import salt.utils.path
 from salt.utils.odict import OrderedDict
+
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -97,7 +100,7 @@ def __virtual__():
     We are available if we are have zonecfg and are the global zone on
     Solaris 10, OmniOS, OpenIndiana, OpenSolaris, or Smartos.
     '''
-    if _is_globalzone() and salt.utils.which('zonecfg'):
+    if _is_globalzone() and salt.utils.path.which('zonecfg'):
         if __grains__['os'] in ['OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana']:
             return __virtualname__
         elif __grains__['os'] == 'Oracle Solaris' and int(__grains__['osmajorrelease']) == 10:
@@ -124,7 +127,7 @@ def _parse_value(value):
     '''Internal helper for parsing configuration values into python values'''
     if isinstance(value, bool):
         return 'true' if value else 'false'
-    elif isinstance(value, str):
+    elif isinstance(value, six.string_types):
         # parse compacted notation to dict
         listparser = re.compile(r'''((?:[^,"']|"[^"]*"|'[^']*')+)''')
 
@@ -503,7 +506,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
     ret = {'status': True}
 
     # parse kwargs
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     for k in kwargs:
         if isinstance(kwargs[k], dict) or isinstance(kwargs[k], list):
             kwargs[k] = _sanitize_value(kwargs[k])

@@ -39,7 +39,7 @@ import json
 import logging
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.files
 import salt.exceptions
 import yaml
@@ -79,8 +79,6 @@ def _construct_yaml_str(self, node):
     Construct for yaml
     '''
     return self.construct_scalar(node)
-YamlLoader.add_constructor(u'tag:yaml.org,2002:str',
-                           _construct_yaml_str)
 YamlLoader.add_constructor(u'tag:yaml.org,2002:timestamp',
                            _construct_yaml_str)
 

@@ -36,8 +36,9 @@ import logging
 # Import salt libs
 from salt.key import get_key
 import salt.crypt
-import salt.utils
+import salt.utils.crypt
 import salt.utils.files
+import salt.utils.platform
 from salt.utils.sanitizers import clean
 
 
@@ -314,7 +315,7 @@ def finger_master(hash_type=None):
     if hash_type is None:
         hash_type = __opts__['hash_type']
 
-    fingerprint = salt.utils.pem_finger(
+    fingerprint = salt.utils.crypt.pem_finger(
         os.path.join(__opts__['pki_dir'], keyname), sum_type=hash_type)
     return {'local': {keyname: fingerprint}}
 
@@ -361,7 +362,7 @@ def gen(id_=None, keysize=2048):
 
     # The priv key is given the Read-Only attribute. The causes `os.remove` to
     # fail in Windows.
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         os.chmod(priv, 128)
 
     os.remove(priv)

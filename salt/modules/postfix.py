@@ -18,8 +18,11 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.path
+
+# Import 3rd-party libs
+from salt.ext import six
 
 SWWS = re.compile(r'^\s')
 
@@ -33,7 +36,7 @@ def __virtual__():
     '''
     Only load the module if Postfix is installed
     '''
-    if salt.utils.which('postfix'):
+    if salt.utils.path.which('postfix'):
         return True
     return (False, 'postfix execution module not loaded: postfix not installed.')
 
@@ -239,7 +242,7 @@ def _parse_main(path=MAIN_CF):
                 # This should only happen at the top of the file
                 conf_list.append(line)
                 continue
-            if not isinstance(conf_list[-1], str):
+            if not isinstance(conf_list[-1], six.string_types):
                 conf_list[-1] = ''
             # This line is a continuation of the previous line
             conf_list[-1] = '\n'.join([conf_list[-1], line])

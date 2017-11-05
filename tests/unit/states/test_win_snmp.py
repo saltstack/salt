@@ -11,7 +11,7 @@ from __future__ import absolute_import
 
 # Import Salt Libs
 import salt.states.win_snmp as win_snmp
-import salt.ext.six as six
+from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin

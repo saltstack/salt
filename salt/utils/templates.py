@@ -5,7 +5,7 @@ Template render systems
 
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import codecs
 import os
 import logging
@@ -13,10 +13,10 @@ import tempfile
 import traceback
 import sys
 
-# Import third party libs
+# Import 3rd-party libs
 import jinja2
 import jinja2.ext
-import salt.ext.six as six
+from salt.ext import six
 
 if sys.version_info[:2] >= (3, 5):
     import importlib.machinery  # pylint: disable=no-name-in-module,import-error
@@ -26,20 +26,22 @@ else:
     import imp
     USE_IMPORTLIB = False
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.data
 import salt.utils.http
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.yamlencoding
 import salt.utils.locales
 import salt.utils.hashutils
+import salt.utils.stringutils
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
 import salt.utils.jinja
 import salt.utils.network
 from salt.utils.odict import OrderedDict
-from salt.utils.decorators import JinjaFilter, JinjaTest, JinjaGlobal
+from salt.utils.decorators.jinja import JinjaFilter, JinjaTest, JinjaGlobal
 from salt import __path__ as saltpath
 
 log = logging.getLogger(__name__)
@@ -91,6 +93,41 @@ class AliasedModule(object):
 
     def __getattr__(self, name):
         return getattr(self.wrapped, name)
+
+
+def get_context(template, line, num_lines=5, marker=None):
+    '''
+    Returns debugging context around a line in a given string
+
+    Returns:: string
+    '''
+    template_lines = template.splitlines()
+    num_template_lines = len(template_lines)
+
+    # in test, a single line template would return a crazy line number like,
+    # 357.  do this sanity check and if the given line is obviously wrong, just
+    # return the entire template
+    if line > num_template_lines:
+        return template
+
+    context_start = max(0, line - num_lines - 1)  # subt 1 for 0-based indexing
+    context_end = min(num_template_lines, line + num_lines)
+    error_line_in_context = line - context_start - 1  # subtr 1 for 0-based idx
+
+    buf = []
+    if context_start > 0:
+        buf.append('[...]')
+        error_line_in_context += 1
+
+    buf.extend(template_lines[context_start:context_end])
+
+    if context_end < num_template_lines:
+        buf.append('[...]')
+
+    if marker:
+        buf[error_line_in_context] += marker
+
+    return u'---\n{0}\n---'.format(u'\n'.join(buf))
 
 
 def wrap_tmpl_func(render_str):
@@ -151,7 +188,7 @@ def wrap_tmpl_func(render_str):
                         ValueError,
                         OSError,
                         IOError) as exc:
-                    if salt.utils.is_bin_file(tmplsrc):
+                    if salt.utils.files.is_binary(tmplsrc):
                         # Template is a bin file, return the raw file
                         return dict(result=True, data=tmplsrc)
                     log.error(
@@ -168,9 +205,14 @@ def wrap_tmpl_func(render_str):
             output = render_str(tmplstr, context, tmplpath)
             if six.PY2:
                 output = output.encode(SLS_ENCODING)
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
+                newline = False
+                if output.endswith(('\n', os.linesep)):
+                    newline = True
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
+                if newline:
+                    output += os.linesep
 
         except SaltRenderError as exc:
             log.error("Rendering exception occurred: {0}".format(exc))
@@ -274,7 +316,7 @@ def _get_jinja_error(trace, context=None):
             out = '\n{0}\n'.format(msg.splitlines()[0])
             with salt.utils.files.fopen(template_path) as fp_:
                 template_contents = fp_.read()
-            out += salt.utils.get_context(
+            out += get_context(
                 template_contents,
                 line,
                 marker='    <======================')
@@ -294,7 +336,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         # http://jinja.pocoo.org/docs/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
 
-    if tmplstr.endswith('\n'):
+    if tmplstr.endswith(os.linesep):
         newline = True
 
     if not saltenv:
@@ -338,7 +380,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = salt.utils.jinja.show_full_context
 
-    jinja_env.tests['list'] = salt.utils.is_list
+    jinja_env.tests['list'] = salt.utils.data.is_list
 
     decoded_context = {}
     for key, value in six.iteritems(context):
@@ -357,9 +399,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
-        raise SaltRenderError('Jinja syntax error: {0}{1}'.format(exc, out),
-                              line,
-                              tmplstr)
+        raise SaltRenderError(
+            'Jinja syntax error: {0}{1}'.format(exc, out),
+            line,
+            tmplstr)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         out = _get_jinja_error(trace, context=decoded_context)[1]
@@ -403,7 +446,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
     if newline:
-        output += '\n'
+        output += os.linesep
 
     return output
 

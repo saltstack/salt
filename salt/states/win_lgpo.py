@@ -112,7 +112,7 @@ import json
 import salt.utils.dictdiffer
 
 # Import 3rd party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'lgpo'

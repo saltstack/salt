@@ -9,6 +9,7 @@ Work with virtual machines managed by libvirt
 
 # Import python libs
 from __future__ import absolute_import
+import copy
 import os
 import re
 import sys
@@ -24,7 +25,7 @@ from xml.etree import ElementTree
 import yaml
 import jinja2
 import jinja2.exceptions
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
 from xml.dom import minidom
 try:
@@ -35,8 +36,10 @@ except ImportError:
     HAS_LIBVIRT = False
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
+import salt.utils.network
+import salt.utils.path
+import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -196,14 +199,14 @@ def _libvirt_creds():
         stdout = subprocess.Popen(g_cmd,
                     shell=True,
                     stdout=subprocess.PIPE).communicate()[0]
-        group = salt.utils.to_str(stdout).split('"')[1]
+        group = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         group = 'root'
     try:
         stdout = subprocess.Popen(u_cmd,
                     shell=True,
                     stdout=subprocess.PIPE).communicate()[0]
-        user = salt.utils.to_str(stdout).split('"')[1]
+        user = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         user = 'root'
     return {'user': user, 'group': group}
@@ -395,7 +398,7 @@ def _qemu_image_create(vm_name,
         sfn = __salt__['cp.cache_file'](disk_image, saltenv)
 
         qcow2 = False
-        if salt.utils.which('qemu-img'):
+        if salt.utils.path.which('qemu-img'):
             res = __salt__['cmd.run']('qemu-img info {}'.format(sfn))
             imageinfo = yaml.load(res)
             qcow2 = imageinfo['file format'] == 'qcow2'
@@ -551,7 +554,8 @@ def _disk_profile(profile, hypervisor, **kwargs):
     else:
         overlay = {}
 
-    disklist = __salt__['config.get']('virt:disk', {}).get(profile, default)
+    disklist = copy.deepcopy(
+        __salt__['config.get']('virt:disk', {}).get(profile, default))
     for key, val in six.iteritems(overlay):
         for i, disks in enumerate(disklist):
             for disk in disks:
@@ -652,7 +656,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
             if key not in attributes or not attributes[key]:
                 attributes[key] = value
 
-    def _assign_mac(attributes):
+    def _assign_mac(attributes, hypervisor):
         dmac = kwargs.get('dmac', None)
         if dmac is not None:
             log.debug('DMAC address is {0}'.format(dmac))
@@ -662,11 +666,15 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
                 msg = 'Malformed MAC address: {0}'.format(dmac)
                 raise CommandExecutionError(msg)
         else:
-            attributes['mac'] = salt.utils.gen_mac()
+            if hypervisor in ['qemu', 'kvm']:
+                attributes['mac'] = salt.utils.network.gen_mac(
+                    prefix='52:54:00')
+            else:
+                attributes['mac'] = salt.utils.network.gen_mac()
 
     for interface in interfaces:
         _normalize_net_types(interface)
-        _assign_mac(interface)
+        _assign_mac(interface, hypervisor)
         if hypervisor in overlays:
             _apply_default_overlay(interface)
 
@@ -1086,7 +1094,7 @@ def get_disks(vm_):
                         ['qemu-img', 'info', disks[dev]['file']],
                         shell=False,
                         stdout=subprocess.PIPE).communicate()[0]
-            qemu_output = salt.utils.to_str(stdout)
+            qemu_output = salt.utils.stringutils.to_str(stdout)
             snapshots = False
             columns = None
             lines = qemu_output.strip().split('\n')
@@ -1527,7 +1535,7 @@ def migrate_non_shared(vm_, target, ssh=False):
     stdout = subprocess.Popen(cmd,
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]
-    return salt.utils.to_str(stdout)
+    return salt.utils.stringutils.to_str(stdout)
 
 
 def migrate_non_shared_inc(vm_, target, ssh=False):
@@ -1546,7 +1554,7 @@ def migrate_non_shared_inc(vm_, target, ssh=False):
     stdout = subprocess.Popen(cmd,
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]
-    return salt.utils.to_str(stdout)
+    return salt.utils.stringutils.to_str(stdout)
 
 
 def migrate(vm_, target, ssh=False):
@@ -1565,7 +1573,7 @@ def migrate(vm_, target, ssh=False):
     stdout = subprocess.Popen(cmd,
                 shell=True,
                 stdout=subprocess.PIPE).communicate()[0]
-    return salt.utils.to_str(stdout)
+    return salt.utils.stringutils.to_str(stdout)
 
 
 def seed_non_shared_migrate(disks, force=False):

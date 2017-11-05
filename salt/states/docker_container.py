@@ -51,9 +51,9 @@ import logging
 # Import salt libs
 from salt.exceptions import CommandExecutionError
 import copy
-import salt.utils
+import salt.utils.args
 import salt.utils.docker
-import salt.ext.six as six
+from salt.ext import six
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -145,7 +145,7 @@ def running(name,
     .. _docker-container-running-skip-translate:
 
     skip_translate
-        This function translates Salt CLI input into the format which
+        This function translates Salt CLI or SLS input into the format which
         docker-py_ expects. However, in the event that Salt's translation logic
         fails (due to potential changes in the Docker Remote API, or to bugs in
         the translation code), this argument can be used to exert granular
@@ -677,24 +677,14 @@ def running(name,
                   - foo2.domain.tld
 
     domainname
-        Set custom DNS search domains. Can be expressed as a comma-separated
-        list or a YAML list. The below two examples are equivalent:
+        The domain name to use for the container
 
         .. code-block:: yaml
 
             foo:
               docker_container.running:
                 - image: bar/baz:latest
-                - dommainname: domain.tld,domain2.tld
-
-        .. code-block:: yaml
-
-            foo:
-              docker_container.running:
-                - image: bar/baz:latest
-                - dommainname:
-                  - domain.tld
-                  - domain2.tld
+                - dommainname: domain.tld
 
     entrypoint
         Entrypoint for the container
@@ -1863,7 +1853,7 @@ def stopped(name=None,
         .. code-block:: yaml
 
             stopped_containers:
-              docker.stopped:
+              docker_container.stopped:
                 - names:
                   - foo
                   - bar
@@ -1872,7 +1862,7 @@ def stopped(name=None,
         .. code-block:: yaml
 
             stopped_containers:
-              docker.stopped:
+              docker_container.stopped:
                 - containers:
                   - foo
                   - bar
@@ -2008,10 +1998,10 @@ def absent(name, force=False):
     .. code-block:: yaml
 
         mycontainer:
-          docker.absent
+          docker_container.absent
 
         multiple_containers:
-          docker.absent:
+          docker_container.absent:
             - names:
               - foo
               - bar
@@ -2068,7 +2058,7 @@ def mod_watch(name, sfun=None, **kwargs):
         return running(name, **watch_kwargs)
 
     if sfun == 'stopped':
-        return stopped(name, **salt.utils.clean_kwargs(**kwargs))
+        return stopped(name, **salt.utils.args.clean_kwargs(**kwargs))
 
     return {'name': name,
             'changes': {},

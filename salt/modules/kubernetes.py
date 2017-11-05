@@ -35,27 +35,39 @@ In case both are provided the `file` entry is prefered.
 
 # Import Python Futures
 from __future__ import absolute_import
+import sys
 import os.path
 import base64
 import logging
 import yaml
 import tempfile
+import signal
+from time import sleep
+from contextlib import contextmanager
 
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import iteritems
 import salt.utils.files
 import salt.utils.templates
+from salt.exceptions import TimeoutError
+from salt.ext.six.moves import range  # pylint: disable=import-error
 
 try:
     import kubernetes  # pylint: disable=import-self
     import kubernetes.client
     from kubernetes.client.rest import ApiException
     from urllib3.exceptions import HTTPError
+    try:
+        # There is an API change in Kubernetes >= 2.0.0.
+        from kubernetes.client import V1beta1Deployment as AppsV1beta1Deployment
+        from kubernetes.client import V1beta1DeploymentSpec as AppsV1beta1DeploymentSpec
+    except ImportError:
+        from kubernetes.client import AppsV1beta1Deployment
+        from kubernetes.client import AppsV1beta1DeploymentSpec
 
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
-
 
 log = logging.getLogger(__name__)
 
@@ -70,6 +82,21 @@ def __virtual__():
         return __virtualname__
 
     return False, 'python kubernetes library not found'
+
+
+if not salt.utils.platform.is_windows():
+    @contextmanager
+    def _time_limit(seconds):
+        def signal_handler(signum, frame):
+            raise TimeoutError
+        signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
+
+    POLLING_TIME_LIMIT = 30
 
 
 # pylint: disable=no-member
@@ -138,12 +165,15 @@ def _setup_conn(**kwargs):
 
     if client_key_file:
         kubernetes.client.configuration.key_file = client_key_file
-    if client_key:
+    elif client_key:
         with tempfile.NamedTemporaryFile(prefix='salt-kube-', delete=False) as k:
             k.write(base64.b64decode(client_key))
             kubernetes.client.configuration.key_file = k.name
     else:
         kubernetes.client.configuration.key_file = None
+
+    # The return makes unit testing easier
+    return vars(kubernetes.client.configuration)
 
 
 def _cleanup(**kwargs):
@@ -151,11 +181,11 @@ def _cleanup(**kwargs):
     cert = kubernetes.client.configuration.cert_file
     key = kubernetes.client.configuration.key_file
     if cert and os.path.exists(cert) and os.path.basename(cert).startswith('salt-kube-'):
-        salt.utils.safe_rm(cert)
+        salt.utils.files.safe_rm(cert)
     if key and os.path.exists(key) and os.path.basename(key).startswith('salt-kube-'):
-        salt.utils.safe_rm(key)
+        salt.utils.files.safe_rm(key)
     if ca and os.path.exists(ca) and os.path.basename(ca).startswith('salt-kube-'):
-        salt.utils.safe_rm(ca)
+        salt.utils.files.safe_rm(ca)
 
 
 def ping(**kwargs):
@@ -243,7 +273,7 @@ def node_labels(name, **kwargs):
     match = node(name, **kwargs)
 
     if match is not None:
-        return match.metadata.labels
+        return match['metadata']['labels']
 
     return {}
 
@@ -686,7 +716,30 @@ def delete_deployment(name, namespace='default', **kwargs):
             name=name,
             namespace=namespace,
             body=body)
-        return api_response.to_dict()
+        mutable_api_response = api_response.to_dict()
+        if not salt.utils.platform.is_windows():
+            try:
+                with _time_limit(POLLING_TIME_LIMIT):
+                    while show_deployment(name, namespace) is not None:
+                        sleep(1)
+                    else:  # pylint: disable=useless-else-on-loop
+                        mutable_api_response['code'] = 200
+            except TimeoutError:
+                pass
+        else:
+            # Windows has not signal.alarm implementation, so we are just falling
+            # back to loop-counting.
+            for i in range(60):
+                if show_deployment(name, namespace) is None:
+                    mutable_api_response['code'] = 200
+                    break
+                else:
+                    sleep(1)
+        if mutable_api_response['code'] != 200:
+            log.warning('Reached polling time limit. Deployment is not yet '
+                        'deleted, but we are backing off. Sorry, but you\'ll '
+                        'have to check manually.')
+        return mutable_api_response
     except (ApiException, HTTPError) as exc:
         if isinstance(exc, ApiException) and exc.status == 404:
             return None
@@ -876,7 +929,7 @@ def create_deployment(
     '''
     body = __create_object_body(
         kind='Deployment',
-        obj_class=kubernetes.client.V1beta1Deployment,
+        obj_class=AppsV1beta1Deployment,
         spec_creator=__dict_to_deployment_spec,
         name=name,
         namespace=namespace,
@@ -1139,7 +1192,7 @@ def replace_deployment(name,
     '''
     body = __create_object_body(
         kind='Deployment',
-        obj_class=kubernetes.client.V1beta1Deployment,
+        obj_class=AppsV1beta1Deployment,
         spec_creator=__dict_to_deployment_spec,
         name=name,
         namespace=namespace,
@@ -1395,6 +1448,13 @@ def __dict_to_object_meta(name, namespace, metadata):
     '''
     meta_obj = kubernetes.client.V1ObjectMeta()
     meta_obj.namespace = namespace
+
+    # Replicate `kubectl [create|replace|apply] --record`
+    if 'annotations' not in metadata:
+        metadata['annotations'] = {}
+    if 'kubernetes.io/change-cause' not in metadata['annotations']:
+        metadata['annotations']['kubernetes.io/change-cause'] = ' '.join(sys.argv)
+
     for key, value in iteritems(metadata):
         if hasattr(meta_obj, key):
             setattr(meta_obj, key, value)
@@ -1410,9 +1470,9 @@ def __dict_to_object_meta(name, namespace, metadata):
 
 def __dict_to_deployment_spec(spec):
     '''
-    Converts a dictionary into kubernetes V1beta1DeploymentSpec instance.
+    Converts a dictionary into kubernetes AppsV1beta1DeploymentSpec instance.
     '''
-    spec_obj = kubernetes.client.V1beta1DeploymentSpec()
+    spec_obj = AppsV1beta1DeploymentSpec()
     for key, value in iteritems(spec):
         if hasattr(spec_obj, key):
             setattr(spec_obj, key, value)
