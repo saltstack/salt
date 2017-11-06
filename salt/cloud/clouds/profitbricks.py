@@ -6,7 +6,7 @@ ProfitBricks Cloud Module
 The ProfitBricks SaltStack cloud module allows a ProfitBricks server to
 be automatically deployed and bootstraped with Salt.
 
-:depends: profitbrick >= 4.1.0
+:depends: profitbrick >= 4.1.1
 
 The module requires ProfitBricks credentials to be supplied along with
 an existing virtual datacenter UUID where the server resources will
@@ -40,6 +40,8 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       size: Micro Instance
       # Name or UUID of the HDD image to use.
       image: <UUID>
+      # Image alias could be provieded instead of image. Example 'ubuntu:latest'
+      #image_alias: <IMAGE_ALIAS>
       # Size of the node disk in GB (overrides server size).
       disk_size: 40
       # Type of disk (HDD or SSD).
@@ -215,6 +217,41 @@ def avail_images(call=None):
             image = {'id': item['id']}
             image.update(item['properties'])
             ret[image['name']] = image
+
+    return ret
+
+def list_images(conn=None, call=None, kwargs=None):
+    '''
+    List all the images with alias by location
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_images my-profitbricks-config location=us/las
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_images function must be called with '
+            '-f or --function.'
+        )
+
+    #if kwargs.get('location') is None:
+    #    raise SaltCloudExecutionFailure('The "location" parameter is required')
+
+    ret = {}
+    conn = get_conn()
+
+    if kwargs.get('location') is None:
+        for item in conn.list_locations()['items']:
+                loc = {'location': item['id']}
+                loc.update(item['imagealias'])
+                ret[item['id']] = loc
+    else:
+        item = conn.get_location(kwargs.get('location'))
+        loc = {'location': item['id']}
+        loc.update(item['imagealias'])
+        ret[item['id']] = loc
 
     return ret
 
@@ -1007,6 +1044,10 @@ def _get_system_volume(vm_):
         disk_type=get_disk_type(vm_),
         ssh_keys=ssh_keys
     )
+
+    if 'image_alias' in vm_.keys():
+        volume.image_alias = vm_['image_alias']
+        volume.image = None
 
     return volume
 
