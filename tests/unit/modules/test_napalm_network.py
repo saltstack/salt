@@ -20,25 +20,39 @@ from functools import wraps
 
 # Test data
 TEST_FACTS = {
+    '__opts__': {},
+    'OPTIONAL_ARGS': {},
     'uptime': 'Forever',
-    'UP': True
+    'UP': True,
+    'HOSTNAME': 'test-device.com'
 }
 
 TEST_ENVIRONMENT = {
     'hot': 'yes'
 }
 
+TEST_COMMAND_RESPONSE = 'all the command output'
+
 
 class MockNapalmDevice(object):
     '''Setup a mock device for our tests'''
-    def get_facts():
+    def get_facts(self):
         return TEST_FACTS
 
-    def get_environment():
+    def get_environment(self):
         return TEST_ENVIRONMENT
 
-    def get(key):
-        return TEST_FACTS[key]
+    def get(self, key, default=None, *args, **kwargs):
+        try:
+            if key == 'DRIVER':
+                return self
+            return TEST_FACTS[key]
+        except KeyError:
+            return default
+
+    def cli(self, commands, *args, **kwargs):
+        assert commands[0] == 'show run'
+        return TEST_COMMAND_RESPONSE
 
 
 def mock_proxy_napalm_wrap(func):
@@ -78,26 +92,21 @@ class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         return {napalm_network: module_globals}
 
-    def test_init(self):
-        with patch('salt.utils.compat.pack_dunder', return_value=False) as dunder:
-            napalm_network.__init__("test")
-            dunder.assert_called_with('salt.modules.napalm_network')
-
     def test_connected_pass(self):
         ret = napalm_network.connected()
         assert ret['out'] is True
 
     def test_facts(self):
         ret = napalm_network.facts()
-        assert ret == TEST_FACTS
+        assert ret['out'] == TEST_FACTS
 
     def test_environment(self):
         ret = napalm_network.environment()
-        assert ret == TEST_ENVIRONMENT
+        assert ret['out'] == TEST_ENVIRONMENT
 
     def test_cli_single_command(self):
         '''
         Test that CLI works with 1 arg
         '''
         ret = napalm_network.cli("show run")
-        assert ret == TEST_COMMAND_RESPONSE
+        assert ret['out'] == TEST_COMMAND_RESPONSE
