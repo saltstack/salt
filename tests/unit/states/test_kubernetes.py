@@ -490,8 +490,9 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                         'changes': {
                             'kubernetes.secret': {
                                 'new': 'absent',
-                                'old': 'present'},
+                                'old': 'present',
                             },
+                        },
                         'result': True,
                         'name': 'foobar',
                         'comment': 'Secret deleted',
