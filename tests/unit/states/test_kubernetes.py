@@ -96,12 +96,35 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         })
         return node_data
 
+    def make_namespace(self, name='default'):
+        namespace_data = self.make_ret_dict(kind='Namespace', name=name)
+        del namespace_data['data']
+        namespace_data.update({
+            'status': {
+                'phase': 'Active',
+            },
+            'spec': {
+                'finalizers': ['kubernetes'],
+            },
+            'metadata': {
+                'name': name,
+                'namespace': None,
+                'labels': None,
+                'self_link': '/api/v1/namespaces/{namespace}'.format(
+                    namespace=name,
+                ),
+                'annotations': None,
+                'uid': '752fceeb-c1a1-11e7-a55a-0800279fb61e',
+            },
+        })
+        return namespace_data
+
     def make_ret_dict(self, kind, name, namespace=None, data=None):
         '''
         Make a minimal example configmap or secret for using in mocks
         '''
 
-        assert kind in ('Secret', 'ConfigMap', 'Node')
+        assert kind in ('Secret', 'ConfigMap', 'Namespace', 'Node')
 
         if data is None:
             data = {}
@@ -620,4 +643,285 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': 'The label is already set, changing the value',
                     },
                     actual,
+                )
+
+    def test_node_label_absent__noop_test_true(self):
+        labels = self.make_node_labels()
+        with self.mock_func('node_labels', return_value=labels, test=True):
+            actual = kubernetes.node_label_absent(
+                name='non-existent-label',
+                node='minikube',
+            )
+            self.assertDictEqual(
+                {
+                    'changes': {},
+                    'result': None,
+                    'name': 'non-existent-label',
+                    'comment': 'The label does not exist',
+                },
+                actual
+            )
+
+    def test_node_label_absent__noop(self):
+        labels = self.make_node_labels()
+        with self.mock_func('node_labels', return_value=labels):
+            actual = kubernetes.node_label_absent(
+                name='non-existent-label',
+                node='minikube',
+            )
+            self.assertDictEqual(
+                {
+                    'changes': {},
+                    'result': True,
+                    'name': 'non-existent-label',
+                    'comment': 'The label does not exist',
+                },
+                actual
+            )
+
+    def test_node_label_absent__delete_test_true(self):
+        labels = self.make_node_labels()
+        with self.mock_func('node_labels', return_value=labels, test=True):
+            actual = kubernetes.node_label_absent(
+                name='failure-domain.beta.kubernetes.io/region',
+                node='minikube',
+            )
+            self.assertDictEqual(
+                {
+                    'changes': {},
+                    'result': None,
+                    'name': 'failure-domain.beta.kubernetes.io/region',
+                    'comment': 'The label is going to be deleted',
+                },
+                actual
+            )
+
+    def test_node_label_absent__delete(self):
+        node_data = self.make_node()
+        labels = node_data['metadata']['labels'].copy()
+
+        del node_data['metadata']['labels']['failure-domain.beta.kubernetes.io/region']
+
+        with self.mock_func('node_labels', return_value=labels):
+            with self.mock_func('node_remove_label', return_value=node_data):
+                actual = kubernetes.node_label_absent(
+                    name='failure-domain.beta.kubernetes.io/region',
+                    node='minikube',
+                )
+                self.assertDictEqual(
+                    {
+                        'result': True,
+                        'changes': {
+                            'kubernetes.node_label': {
+                                'new': 'absent',
+                                'old': 'present',
+                            }
+                        },
+                        'comment': 'Label removed from node',
+                        'name': 'failure-domain.beta.kubernetes.io/region',
+                    },
+                    actual
+                )
+
+    def test_namespace_present__create_test_true(self):
+        with self.mock_func('show_namespace', return_value=None, test=True):
+            actual = kubernetes.namespace_present(name='saltstack')
+            self.assertDictEqual(
+                {
+                    'changes': {},
+                    'result': None,
+                    'name': 'saltstack',
+                    'comment': 'The namespace is going to be created',
+                },
+                actual
+            )
+
+    def test_namespace_present__create(self):
+        namespace_data = self.make_namespace(name='saltstack')
+        with self.mock_func('show_namespace', return_value=None):
+            with self.mock_func('create_namespace', return_value=namespace_data):
+                actual = kubernetes.namespace_present(name='saltstack')
+                self.assertDictEqual(
+                    {
+                        'changes': {
+                            'namespace': {
+                                'new': namespace_data,
+                                'old': {},
+                            },
+                        },
+                        'result': True,
+                        'name': 'saltstack',
+                        'comment': '',
+                    },
+                    actual
+                )
+
+    def test_namespace_present__noop_test_true(self):
+        namespace_data = self.make_namespace(name='saltstack')
+        with self.mock_func('show_namespace', return_value=namespace_data, test=True):
+            actual = kubernetes.namespace_present(name='saltstack')
+            self.assertDictEqual(
+                {
+                    'changes': {},
+                    'result': None,
+                    'name': 'saltstack',
+                    'comment': 'The namespace already exists',
+                },
+                actual
+            )
+
+    def test_namespace_present__noop(self):
+        namespace_data = self.make_namespace(name='saltstack')
+        with self.mock_func('show_namespace', return_value=namespace_data):
+            actual = kubernetes.namespace_present(name='saltstack')
+            self.assertDictEqual(
+                {
+                    'changes': {},
+                    'result': True,
+                    'name': 'saltstack',
+                    'comment': 'The namespace already exists',
+                },
+                actual
+            )
+
+    def test_namespace_absent__noop_test_true(self):
+        with self.mock_func('show_namespace', return_value=None, test=True):
+            actual = kubernetes.namespace_absent(name='salt')
+            self.assertDictEqual(
+                {
+                    'changes': {},
+                    'result': None,
+                    'name': 'salt',
+                    'comment': 'The namespace does not exist',
+                },
+                actual
+            )
+
+    def test_namespace_absent__noop(self):
+        with self.mock_func('show_namespace', return_value=None):
+            actual = kubernetes.namespace_absent(name='salt')
+            self.assertDictEqual(
+                {
+                    'changes': {},
+                    'result': True,
+                    'name': 'salt',
+                    'comment': 'The namespace does not exist',
+                },
+                actual
+            )
+
+    def test_namespace_absent__delete_test_true(self):
+        namespace_data = self.make_namespace(name='salt')
+        with self.mock_func('show_namespace', return_value=namespace_data, test=True):
+            actual = kubernetes.namespace_absent(name='salt')
+            self.assertDictEqual(
+                {
+                    'changes': {},
+                    'result': None,
+                    'name': 'salt',
+                    'comment': 'The namespace is going to be deleted',
+                },
+                actual
+            )
+
+    def test_namespace_absent__delete_code_200(self):
+        namespace_data = self.make_namespace(name='salt')
+        deleted = namespace_data.copy()
+        deleted['code'] = 200
+        deleted.update({
+            'code': 200,
+            'message': None,
+        })
+        with self.mock_func('show_namespace', return_value=namespace_data):
+            with self.mock_func('delete_namespace', return_value=deleted):
+                actual = kubernetes.namespace_absent(name='salt')
+                self.assertDictEqual(
+                    {
+                        'changes': {
+                            'kubernetes.namespace': {
+                                'new': 'absent',
+                                'old': 'present',
+                            }
+                        },
+                        'result': True,
+                        'name': 'salt',
+                        'comment': 'Terminating',
+                    },
+                    actual
+                )
+
+    def test_namespace_absent__delete_status_terminating(self):
+        namespace_data = self.make_namespace(name='salt')
+        deleted = namespace_data.copy()
+        deleted.update({
+            'code': None,
+            'status': 'Terminating namespace',
+            'message': 'Terminating this shizzzle yo',
+        })
+        with self.mock_func('show_namespace', return_value=namespace_data):
+            with self.mock_func('delete_namespace', return_value=deleted):
+                actual = kubernetes.namespace_absent(name='salt')
+                self.assertDictEqual(
+                    {
+                        'changes': {
+                            'kubernetes.namespace': {
+                                'new': 'absent',
+                                'old': 'present',
+                            }
+                        },
+                        'result': True,
+                        'name': 'salt',
+                        'comment': 'Terminating this shizzzle yo',
+                    },
+                    actual
+                )
+
+    def test_namespace_absent__delete_status_phase_terminating(self):
+        # This is what kubernetes 1.8.0 looks like when deleting namespaces
+        namespace_data = self.make_namespace(name='salt')
+        deleted = namespace_data.copy()
+        deleted.update({
+            'code': None,
+            'message': None,
+            'status': {'phase': 'Terminating'},
+        })
+        with self.mock_func('show_namespace', return_value=namespace_data):
+            with self.mock_func('delete_namespace', return_value=deleted):
+                actual = kubernetes.namespace_absent(name='salt')
+                self.assertDictEqual(
+                    {
+                        'changes': {
+                            'kubernetes.namespace': {
+                                'new': 'absent',
+                                'old': 'present',
+                            }
+                        },
+                        'result': True,
+                        'name': 'salt',
+                        'comment': 'Terminating',
+                    },
+                    actual
+                )
+
+    def test_namespace_absent__delete_error(self):
+        namespace_data = self.make_namespace(name='salt')
+        deleted = namespace_data.copy()
+        deleted.update({
+            'code': 418,
+            'message': 'I\' a teapot!',
+            'status': None,
+        })
+        with self.mock_func('show_namespace', return_value=namespace_data):
+            with self.mock_func('delete_namespace', return_value=deleted):
+                actual = kubernetes.namespace_absent(name='salt')
+                self.assertDictEqual(
+                    {
+                        'changes': {},
+                        'result': False,
+                        'name': 'salt',
+                        'comment': 'Something went wrong, response: {0}'.format(
+                            deleted,
+                        ),
+                    },
+                    actual
                 )
