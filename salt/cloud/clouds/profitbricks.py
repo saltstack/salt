@@ -40,7 +40,8 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       size: Micro Instance
       # Name or UUID of the HDD image to use.
       image: <UUID>
-      # Image alias could be provieded instead of image. Example 'ubuntu:latest'
+      # Image alias could be provided instead of image.
+      # Example 'ubuntu:latest'
       #image_alias: <IMAGE_ALIAS>
       # Size of the node disk in GB (overrides server size).
       disk_size: 40
@@ -176,6 +177,7 @@ def get_conn():
         )
     )
 
+
 def avail_locations(call=None):
     '''
     Return a dict of all available VM locations on the cloud provider with
@@ -194,8 +196,9 @@ def avail_locations(call=None):
         reg, loc = item['id'].split('/')
         location = {'id': item['id']}
 
-        if not reg in ret:
+        if reg not in ret:
             ret[reg] = {}
+
         ret[reg][loc] = location
     return ret
 
@@ -214,13 +217,14 @@ def avail_images(call=None):
     conn = get_conn()
 
     for item in conn.list_images()['items']:
-            image = {'id': item['id']}
-            image.update(item['properties'])
-            ret[image['name']] = image
+        image = {'id': item['id']}
+        image.update(item['properties'])
+        ret[image['name']] = image
 
     return ret
 
-def list_images(conn=None, call=None, kwargs=None):
+
+def list_images(call=None, kwargs=None):
     '''
     List all the images with alias by location
 
@@ -236,21 +240,19 @@ def list_images(conn=None, call=None, kwargs=None):
             '-f or --function.'
         )
 
-    #if kwargs.get('location') is None:
-    #    raise SaltCloudExecutionFailure('The "location" parameter is required')
+    if kwargs is None:
+        kwargs = {}
 
     ret = {}
     conn = get_conn()
 
     if kwargs.get('location') is None:
-        for item in conn.list_locations()['items']:
-                loc = {'location': item['id']}
-                loc.update(item['imagealias'])
-                ret[item['id']] = loc
+        for item in conn.list_locations(depth=3)['items']:
+            loc = {'image_alias': item['properties']['imageAliases']}
+            ret[item['id']] = loc
     else:
-        item = conn.get_location(kwargs.get('location'))
-        loc = {'location': item['id']}
-        loc.update(item['imagealias'])
+        item = conn.get_location(kwargs.get('location'), depth=3)
+        loc = {'image_alias': item['properties']['imageAliases']}
         ret[item['id']] = loc
 
     return ret
@@ -722,10 +724,10 @@ def create(vm_):
     try:
         # Check for required profile parameters before sending any API calls.
         if (vm_['profile'] and
-           config.is_profile_configured(__opts__,
-                                        (__active_provider_name__ or
-                                         'profitbricks'),
-                                        vm_['profile']) is False):
+            config.is_profile_configured(__opts__,
+                                         (__active_provider_name__ or
+                                          'profitbricks'),
+                                         vm_['profile']) is False):
             return False
     except AttributeError:
         pass
@@ -1133,4 +1135,4 @@ def _wait_for_completion(conn, promise, wait_timeout, msg):
     raise Exception(
         'Timed out waiting for async operation ' + msg + ' "' + str(
             promise['requestId']
-            ) + '" to complete.')
+        ) + '" to complete.')
