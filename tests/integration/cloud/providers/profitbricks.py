@@ -43,7 +43,7 @@ PROVIDER_NAME = 'profitbricks'
 DRIVER_NAME = 'profitbricks'
 
 
-@skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 2.3.0')
+@skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 4.1.0')
 class ProfitBricksTest(integration.ShellCase):
     '''
     Integration tests for the ProfitBricks cloud provider
