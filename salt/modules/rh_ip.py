@@ -692,27 +692,21 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if 'ipaddrs' in opts:
         result['ipaddrs'] = []
         for opt in opts['ipaddrs']:
-            try:
-                if salt.utils.validate.net.ipv4_addr(opt):
-                    ip, prefix = [i.strip() for i in opt.split('/')]
-                    result['ipaddrs'].append({'ipaddr': ip, 'prefix': prefix})
-                else:
-                    msg = 'ipv4 address is invalid'
-                    log.error(msg)
-                    raise AttributeError(msg)
-            except Exception:
-                _raise_error_iface(iface, 'ipaddrs', ['127.0.0.1/8'])
+            if salt.utils.validate.net.ipv4_addr(opt):
+                ip, prefix = [i.strip() for i in opt.split('/')]
+                result['ipaddrs'].append({'ipaddr': ip, 'prefix': prefix})
+            else:
+                msg = 'ipv4 CIDR is invalid'
+                log.error(msg)
+                raise AttributeError(msg)
 
     if 'ipv6addrs' in opts:
         for opt in opts['ipv6addrs']:
-            try:
-                if not salt.utils.validate.net.ipv6_addr(opt):
-                    msg = 'ipv6 address is invalid'
-                    log.error(msg)
-                    raise AttributeError(msg)
-                result['ipv6addrs'] = opts['ipv6addrs']
-            except Exception:
-                _raise_error_iface(iface, 'ipv6addrs', ['fc00::1/128'])
+            if not salt.utils.validate.net.ipv6_addr(opt):
+                msg = 'ipv6 CIDR is invalid'
+                log.error(msg)
+                raise AttributeError(msg)
+            result['ipv6addrs'] = opts['ipv6addrs']
 
     if 'enable_ipv6' in opts:
         result['enable_ipv6'] = opts['enable_ipv6']
