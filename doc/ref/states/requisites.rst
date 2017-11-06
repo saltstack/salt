@@ -268,24 +268,24 @@ will not execute.
 
 .. code-block:: yaml
 
-	A:
-	  cmd.run:
-		- name: echo A
-		- require_any:
-		  - cmd: B
-		  - cmd: C
-		  - cmd: D
-	B:
-	  cmd.run:
-		- name: echo B
+    A:
+      cmd.run:
+        - name: echo A
+        - require_any:
+          - cmd: B
+          - cmd: C
+          - cmd: D
+    B:
+      cmd.run:
+        - name: echo B
 
-	C:
-	  cmd.run:
-		- name: /bin/false
+    C:
+      cmd.run:
+        - name: /bin/false
 
-	D:
-	  cmd.run:
-		- name: echo D
+    D:
+      cmd.run:
+        - name: echo D
 
 In this example `A` will run because at least one of the requirements specified,
 `B`, `C`, or `D` will succeed.
@@ -621,23 +621,23 @@ a useful way to execute a post hook after changing aspects of a system.
 
 .. code-block:: yaml
 
-	myservice:
-	  pkg.installed:
-		- name: myservice
-		- name: yourservice
-	  file.managed:
-		- name: /etc/myservice/myservice.conf
-		- source: salt://myservice/files/myservice.conf
-		- mode: 600
-	  file.managed:
-		- name: /etc/yourservice/yourservice.conf
-		- source: salt://yourservice/files/yourservice.conf
-		- mode: 600
-	  cmd.run:
-		- name: /usr/libexec/myservice/post-changes-hook.sh
-		- onchanges:
-		  - file: /etc/myservice/myservice.conf
-		  - file: /etc/your_service/yourservice.conf
+    myservice:
+      pkg.installed:
+        - name: myservice
+        - name: yourservice
+      file.managed:
+        - name: /etc/myservice/myservice.conf
+        - source: salt://myservice/files/myservice.conf
+        - mode: 600
+      file.managed:
+        - name: /etc/yourservice/yourservice.conf
+        - source: salt://yourservice/files/yourservice.conf
+        - mode: 600
+      cmd.run:
+        - name: /usr/libexec/myservice/post-changes-hook.sh
+        - onchanges:
+          - file: /etc/myservice/myservice.conf
+          - file: /etc/your_service/yourservice.conf
 
 use
 ~~~
