@@ -2357,7 +2357,15 @@ class State(object):
         tag = _gen_tag(low)
         if not low.get(u'prerequired'):
             self.active.add(tag)
-        requisites = [u'require', u'watch', u'prereq', u'onfail', u'onchanges']
+        requisites = [u'require',
+                      u'require_any',
+                      u'watch',
+                      u'watch_any',
+                      u'prereq',
+                      u'onfail',
+                      u'onfail_any',
+                      u'onchanges',
+                      u'onchanges_any']
         if not low.get(u'__prereq__'):
             requisites.append(u'prerequired')
             status, reqs = self.check_requisite(low, running, chunks, pre=True)
