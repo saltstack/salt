@@ -449,6 +449,7 @@ def namespace_present(name, **kwargs):
             return ret
 
         res = __salt__['kubernetes.create_namespace'](name, **kwargs)
+        ret['result'] = True
         ret['changes']['namespace'] = {
             'old': {},
             'new': res}
