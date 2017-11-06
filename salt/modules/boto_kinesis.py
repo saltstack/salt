@@ -453,6 +453,8 @@ def list_streams(region=None, key=None, keyid=None, profile=None):
     while ExclusiveStartStreamName is not None:
         args = {'ExclusiveStartStreamName': ExclusiveStartStreamName} if ExclusiveStartStreamName else {}
         r = _execute_with_retries(conn, 'list_streams', **args)
+        if 'error' in r:
+            return []
         r = r['result'] if r and r.get('result') else {}
         streams += r.get('StreamNames', [])
         ExclusiveStartStreamName = streams[-1] if r.get('HasMoreStreams', False) in (True, 'true') else None
@@ -520,10 +522,12 @@ def _execute_with_retries(conn, function, **kwargs):
             else:
                 # ResourceNotFoundException or InvalidArgumentException
                 r['error'] = e.response['Error']
+                log.error(r['error'])
                 r['result'] = None
                 return r
 
     r['error'] = "Tried to execute function {0} {1} times, but was unable".format(function, max_attempts)
+    log.error(r['error'])
     return r
 
 
