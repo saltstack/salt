@@ -439,6 +439,26 @@ def reshard(stream_name, desired_size, force=False,
     return r
 
 
+def list_streams(region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a list of all streams visible to the current account
+
+    CLI example::
+
+        salt myminion boto_kinesis.list_streams
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    streams = []
+    ExclusiveStartStreamName = ''
+    while ExclusiveStartStreamName is not None:
+        args = {'ExclusiveStartStreamName': ExclusiveStartStreamName} if ExclusiveStartStreamName else {}
+        r = _execute_with_retries(conn, 'list_streams', **args)
+        r = r['result'] if r and r.get('result') else {}
+        streams += r.get('StreamNames', [])
+        ExclusiveStartStreamName = streams[-1] if r.get('HasMoreStreams', False) in (True, 'true') else None
+    return streams
+
+
 def _get_next_open_shard(stream_details, shard_id):
     '''
     Return the next open shard after shard_id
