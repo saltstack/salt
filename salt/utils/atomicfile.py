@@ -13,7 +13,6 @@ import errno
 import time
 import random
 import shutil
-import stat
 import salt.ext.six as six
 
 
@@ -122,7 +121,7 @@ class _AtomicWFile(object):
         if os.path.isfile(self._filename):
             shutil.copymode(self._filename, self._tmp_filename)
             st = os.stat(self._filename)
-            os.chown(self._tmp_filename, st[stat.ST_UID], st[stat.ST_GID])
+            os.chown(self._tmp_filename, st.st_uid, st.st_gid)
         atomic_rename(self._tmp_filename, self._filename)
 
     def __exit__(self, exc_type, exc_value, traceback):
