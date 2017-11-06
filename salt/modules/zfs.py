@@ -51,12 +51,17 @@ def _check_features():
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     return res['retcode'] == 0
 
+
 def _zfs_quote_escape_path(name):
+    '''
+    Quotes zfs path with single quotes and escapes single quotes in path if present
+    '''
     if six.PY3:
         name = '\'' + name.replace('\'', '\\\'') + '\''
     else:
         name = '\'' + name.encode('string_escape').replace('\'', '\\\'') + '\''
     return name
+
 
 def __virtual__():
     '''
@@ -164,7 +169,7 @@ def create(name, **kwargs):
     zfs = _check_zfs()
     properties = kwargs.get('properties', None)
     if 'mountpoint' in properties:
-        properties['mountpoint']=_zfs_quote_escape_path(properties['mountpoint'])
+        properties['mountpoint'] = _zfs_quote_escape_path(properties['mountpoint'])
     create_parent = kwargs.get('create_parent', False)
     volume_size = kwargs.get('volume_size', None)
     sparse = kwargs.get('sparse', False)
@@ -1270,7 +1275,7 @@ def get(*dataset, **kwargs):
     cmd = '{0} {1}'.format(cmd, properties)
 
     # datasets
-    dataset = [ _zfs_quote_escape_path(x) for x in dataset ]
+    dataset = [_zfs_quote_escape_path(x) for x in dataset]
     cmd = '{0} {1}'.format(cmd, ' '.join(dataset))
 
     # parse output
