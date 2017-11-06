@@ -432,7 +432,7 @@ def namespace_present(name, **kwargs):
     Ensures that the named namespace is present.
 
     name
-        The name of the deployment.
+        The name of the namespace.
 
     '''
     ret = {'name': name,
