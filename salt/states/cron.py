@@ -300,7 +300,7 @@ def present(name,
 
     identifier
         Custom-defined identifier for tracking the cron line for future crontab
-        edits. This defaults to the state id
+        edits. This defaults to the state name
 
     special
         A special keyword to specify periodicity (eg. @reboot, @hourly...).
@@ -387,7 +387,7 @@ def absent(name,
 
     identifier
         Custom-defined identifier for tracking the cron line for future crontab
-        edits. This defaults to the state id
+        edits. This defaults to the state name
 
     special
         The special keyword used in the job (eg. @reboot, @hourly...).
