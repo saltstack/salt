@@ -466,7 +466,9 @@ def exit_success(jid, ext_source=None):
         The external job cache to use. Default: `None`.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt-run jobs.exit_success 20160520145827701627
     '''
     ret = dict()

@@ -1235,6 +1235,7 @@ def running(name,
         If ``True``, runs the exec process with extended privileges
 
         .. code-block:: yaml
+
             foo:
               docker_container.running:
                 - image: bar/baz:lates
