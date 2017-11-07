@@ -1,11 +1,11 @@
 ---
 <% vagrant = system('which vagrant 2>/dev/null >/dev/null') %>
-<% version = '2016.11.8' %>
+<% version = '2017.7.2' %>
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
 
 <% if File.exists?(driverfile) %>
-<%= File.read(driverfile) %>
+<%= ERB.new(File.read(driverfile)).result %>
 <% else %>
 driver:
   name: docker
@@ -31,8 +31,8 @@ provisioner:
   log_level: info
   require_chef: false
   remote_states:
-    name: git://github.com/gtmanfred/salt-jenkins.git
-    branch: 2016.11
+    name: git://github.com/saltstack/salt-jenkins.git
+    branch: 2017.7
     repo: git
     testingdir: /testing
   salt_copy_filter:
@@ -51,7 +51,7 @@ provisioner:
         - git.salt
         - kitchen
 <% if File.exists?(platformsfile) %>
-<%= File.read(platformsfile) %>
+<%= ERB.new(File.read(platformsfile)).result %>
 <% else %>
 platforms:
   - name: fedora
@@ -162,6 +162,18 @@ suites:
         jenkins.sls:
           testing_dir: /tmp/kitchen/testing
           clone_repo: false
+          salttesting_namespec: salttesting==2017.6.1
+  - name: py3
+    provisioner:
+      pillars:
+        top.sls:
+          base:
+            "*":
+              - jenkins
+        jenkins.sls:
+          testing_dir: /tmp/kitchen/testing
+          clone_repo: false
+          py3: true
           salttesting_namespec: salttesting==2017.6.1
 verifier:
   name: shell
