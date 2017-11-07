@@ -298,3 +298,9 @@ Syncing grains can be done a number of ways, they are automatically synced when
 above) the grains can be manually synced and reloaded by calling the
 :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
+
+.. note::
+
+    The grains dictionary is built and stored in memory on the minion. Everytime
+    the salt-minion restarts or `saltutil.refresh_grains` is run the grain
+    dictionary is rebuilt from scratch.
