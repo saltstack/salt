@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Namecheap management
+Namecheap dns management
 
 .. versionadded:: 2017.7.0
 
