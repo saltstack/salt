@@ -300,7 +300,7 @@ def running(name,
           Additionally, the specified selinux context will be set within the
           container.
 
-        ``<read_only>`` can be either ``ro`` for read-write access, or ``ro``
+        ``<read_only>`` can be either ``rw`` for read-write access, or ``ro``
         for read-only access. When omitted, it is assumed to be read-write.
 
         ``<selinux_context>`` can be ``z`` if the volume is shared between
