@@ -259,7 +259,7 @@ require_any
 
 .. versionadded:: Oxygen
 
-The use of ``require_any`` demands that one of the required state executes before the
+The use of ``require_any`` demands that one of the required states executes before the
 dependent state. The state containing the ``require_any`` requisite is defined as the
 dependent state. The states specified in the ``require_any`` statement are defined as the
 required states. If at least one of the required state's execution succeeds, the dependent state
@@ -418,8 +418,8 @@ exactly like the ``require`` requisite (the watching state will execute if
         - name: /etc/apache2/sites-available/site2.conf
         - source: salt://apache2/files/site2.conf
 
-In this example, the service will be reloaded/restarted if the either of the state
-has a result of True and has changes.
+In this example, the service will be reloaded/restarted if either of the
+file.managed states has a result of True and has changes.
 
 .. _requisites-prereq:
 
@@ -512,7 +512,7 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 
 .. _Issue #22370: https://github.com/saltstack/salt/issues/22370
 
-.. _requisites-onfail:
+.. _requisites-onfail_any:
 
 onfail_any
 ~~~~~~~~~~
@@ -524,7 +524,7 @@ to the failure of at least one other state. This can be used in a number of ways
 executing a second attempt to set up a service or begin to execute a separate
 thread of states because of a failure.
 
-The ``onfail_any`` requisite is applied in the same way as ``require_any`` as ``watch_any``:
+The ``onfail_any`` requisite is applied in the same way as ``require_any`` and ``watch_any``:
 
 .. code-block:: yaml
 
@@ -545,9 +545,12 @@ The ``onfail_any`` requisite is applied in the same way as ``require_any`` as ``
         - name: /mnt/share
         - device: 192.168.40.34:/share
         - fstype: nfs
-        - onfail:
+        - onfail_any:
           - mount: primary_mount
           - mount: secondary_mount
+
+In this example, the `backup_mount` will be mounted if either of the
+`primary_mount` or `secondary_mount` states results in a failure.
 
 .. _requisites-onchanges:
 
