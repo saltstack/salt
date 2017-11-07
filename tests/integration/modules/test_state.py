@@ -747,8 +747,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         expected_result = {
             'cmd_|-D_|-echo D_|-run': {
-                '__run_num__': 3,
-                'comment': 'One or more requisite failed: requisites.require_any_fail.F, requisites.require_any_fail.G, requisites.require_any_fail.E',
+                '__run_num__': 2,
+                'comment': 'One or more requisite failed: requisites.require_any_fail.F, requisites.require_any_fail.E',
                 'result': False,
                 'changes': False,
             },
@@ -760,12 +760,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             },
             'cmd_|-F_|-false_|-run': {
                 '__run_num__': 1,
-                'comment': 'Command "false" run',
-                'result': False,
-                'changes': True,
-            },
-            'cmd_|-G_|-false_|-run': {
-                '__run_num__': 2,
                 'comment': 'Command "false" run',
                 'result': False,
                 'changes': True,
@@ -845,8 +839,8 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         expected_result = {
             'cmd_|-A_|-true_|-wait': {
-                '__run_num__': 3,
-                'comment': 'One or more requisite failed: requisites.watch_any_fail.B, requisites.watch_any_fail.C, requisites.watch_any_fail.D',
+                '__run_num__': 2,
+                'comment': 'One or more requisite failed: requisites.watch_any_fail.B, requisites.watch_any_fail.C',
                 'result': False,
                 'changes': False,
             },
@@ -858,12 +852,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             },
             'cmd_|-C_|-false_|-run': {
                 '__run_num__': 1,
-                'comment': 'Command "false" run',
-                'result': False,
-                'changes': True,
-            },
-            'cmd_|-D_|-false_|-run': {
-                '__run_num__': 2,
                 'comment': 'Command "false" run',
                 'result': False,
                 'changes': True,
