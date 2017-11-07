@@ -1055,14 +1055,22 @@ def create_service(
 
 def create_secret(
         name,
-        namespace,
-        data,
-        source,
-        template,
-        saltenv,
+        namespace='default',
+        data=None,
+        source=None,
+        template=None,
+        saltenv='base',
         **kwargs):
     '''
     Creates the kubernetes secret as defined by the user.
+
+    CLI Examples::
+
+        salt 'minion1' kubernetes.create_secret \
+            passwords default '{"db": "letmein"}'
+
+        salt 'minion2' kubernetes.create_secret \
+            name=passwords namespace=default data='{"db": "letmein"}'
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
@@ -1104,12 +1112,20 @@ def create_configmap(
         name,
         namespace,
         data,
-        source,
-        template,
-        saltenv,
+        source=None,
+        template=None,
+        saltenv='base',
         **kwargs):
     '''
     Creates the kubernetes configmap as defined by the user.
+
+    CLI Examples::
+
+        salt 'minion1' kubernetes.create_configmap \
+            settings default '{"example.conf": "# example file"}'
+
+        salt 'minion2' kubernetes.create_configmap \
+            name=settings namespace=default data='{"example.conf": "# example file"}'
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
@@ -1278,14 +1294,22 @@ def replace_service(name,
 
 def replace_secret(name,
                    data,
-                   source,
-                   template,
-                   saltenv,
+                   source=None,
+                   template=None,
+                   saltenv='base',
                    namespace='default',
                    **kwargs):
     '''
     Replaces an existing secret with a new one defined by name and namespace,
     having the specificed data.
+
+    CLI Examples::
+
+        salt 'minion1' kubernetes.replace_secret \
+            name=passwords data='{"db": "letmein"}'
+
+        salt 'minion2' kubernetes.replace_secret \
+            name=passwords namespace=saltstack data='{"db": "passw0rd"}'
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
@@ -1325,14 +1349,22 @@ def replace_secret(name,
 
 def replace_configmap(name,
                       data,
-                      source,
-                      template,
-                      saltenv,
+                      source=None,
+                      template=None,
+                      saltenv='base',
                       namespace='default',
                       **kwargs):
     '''
     Replaces an existing configmap with a new one defined by name and
-    namespace, having the specificed data.
+    namespace with the specified data.
+
+    CLI Examples::
+
+        salt 'minion1' kubernetes.replace_configmap \
+            settings default '{"example.conf": "# example file"}'
+
+        salt 'minion2' kubernetes.replace_configmap \
+            name=settings namespace=default data='{"example.conf": "# example file"}'
     '''
     if source:
         data = __read_and_render_yaml_file(source, template, saltenv)
