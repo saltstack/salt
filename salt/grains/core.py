@@ -1772,9 +1772,6 @@ def os_data():
     # Get the hardware and bios data
     grains.update(_hw_data(grains))
 
-    # Get zpool data
-    grains.update(_zpool_data(grains))
-
     # Load the virtual machine info
     grains.update(_virtual(grains))
     grains.update(_ps(grains))
@@ -2364,34 +2361,6 @@ def _hw_data(osdata):
                 break
 
     return grains
-
-
-def _zpool_data(grains):
-    '''
-    Provide grains about zpools
-    '''
-    # quickly return if windows or proxy
-    if salt.utils.platform.is_windows() or 'proxyminion' in __opts__:
-        return {}
-
-    # quickly return if NetBSD (ZFS still under development)
-    if salt.utils.platform.is_netbsd():
-        return {}
-
-    # quickly return if no zpool and zfs command
-    if not salt.utils.path.which('zpool'):
-        return {}
-
-    # collect zpool data
-    zpool_grains = {}
-    for zpool in __salt__['cmd.run']('zpool list -H -o name,size').splitlines():
-        zpool = zpool.split()
-        zpool_grains[zpool[0]] = zpool[1]
-
-    # return grain data
-    if len(zpool_grains.keys()) < 1:
-        return {}
-    return {'zpool': zpool_grains}
 
 
 def get_server_id():
