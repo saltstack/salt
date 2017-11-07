@@ -228,7 +228,7 @@ def _config_logic(napalm_device,
 
 
 @proxy_napalm_wrap
-def connected(**kwarvs):  # pylint: disable=unused-argument
+def connected(**kwargs):  # pylint: disable=unused-argument
     '''
     Specifies if the connection to the device succeeded.
 
