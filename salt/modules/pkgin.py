@@ -81,16 +81,14 @@ def _supports_regex():
     '''
     Check support of regexp
     '''
-
     return tuple([int(i) for i in _get_version()]) > (0, 5)
 
 
 @decorators.memoize
 def _supports_parsing():
     '''
-    Check support of regexp
+    Check support of parsing
     '''
-
     return tuple([int(i) for i in _get_version()]) > (0, 6)
 
 
@@ -107,6 +105,7 @@ def __virtual__():
 
 
 def _splitpkg(name):
+    '''Split package name from versioned string'''
     # name is in the format foobar-1.0nb1, already space-splitted
     if name[0].isalnum() and name != 'No':  # avoid < > = and 'No result'
         return name.split(';', 1)[0].rsplit('-', 1)
