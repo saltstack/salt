@@ -1322,6 +1322,37 @@ class Schedule(object):
                                      Ignoring job {0}.'.format(job))
                             continue
 
+                if 'not_during_range' in data:
+                    if not _RANGE_SUPPORTED:
+                        log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
+                        continue
+                    else:
+                        if isinstance(data['not_during_range'], dict):
+                            try:
+                                start = int(time.mktime(dateutil_parser.parse(data['not_during_range']['start']).timetuple()))
+                            except ValueError:
+                                log.error('Invalid date string for start in not_during_range. Ignoring job {0}.'.format(job))
+                                continue
+                            try:
+                                end = int(time.mktime(dateutil_parser.parse(data['not_during_range']['end']).timetuple()))
+                            except ValueError:
+                                log.error('Invalid date string for end in not_during_range. Ignoring job {0}.'.format(job))
+                                log.error(data)
+                                continue
+                            if end > start:
+                                if start <= now <= end:
+                                    run = False
+                                else:
+                                    run = True
+                            else:
+                                log.error('schedule.handle_func: Invalid range, end must be larger than start. \
+                                         Ignoring job {0}.'.format(job))
+                                continue
+                        else:
+                            log.error('schedule.handle_func: Invalid, range must be specified as a dictionary. \
+                                     Ignoring job {0}.'.format(job))
+                            continue
+
             if not run:
                 continue
 
