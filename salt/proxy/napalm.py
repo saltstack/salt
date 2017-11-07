@@ -129,17 +129,7 @@ from __future__ import absolute_import
 import logging
 log = logging.getLogger(__file__)
 
-# Import third party lib
-try:
-    # will try to import NAPALM
-    # https://github.com/napalm-automation/napalm
-    # pylint: disable=W0611
-    import napalm_base
-    # pylint: enable=W0611
-    HAS_NAPALM = True
-except ImportError:
-    HAS_NAPALM = False
-
+# Import Salt modules
 from salt.ext import six
 import salt.utils.napalm
 
@@ -163,7 +153,7 @@ DETAILS = {}
 
 
 def __virtual__():
-    return HAS_NAPALM or (False, 'Please install the NAPALM library: `pip install napalm`!')
+    return salt.utils.napalm.virtual(__opts__, 'napalm', __file__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
