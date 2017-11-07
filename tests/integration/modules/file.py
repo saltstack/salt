@@ -301,7 +301,7 @@ class FileModuleTest(integration.ModuleCase):
         '''
         ret = self.minion_run('file.line', self.myfile, 'Goodbye',
                               mode='insert', after='Hello')
-        self.assertIn('Hello\n+Goodbye', ret)
+        self.assertIn('Hello' + os.linesep + '+Goodbye', ret)
 
 if __name__ == '__main__':
     from integration import run_tests
