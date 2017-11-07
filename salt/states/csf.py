@@ -18,6 +18,7 @@ CSF Ip tables management
 from __future__ import absolute_import
 from salt.ext.six.moves import map
 
+
 def __virtual__():
     return 'csf'
 
