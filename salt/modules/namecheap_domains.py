@@ -73,7 +73,7 @@ def reactivate(domain_name):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' namecheap_domains.reactivate my-domain-name
 
