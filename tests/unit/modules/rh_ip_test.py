@@ -14,6 +14,7 @@ from salttesting.mock import (
     patch)
 
 from salttesting.helpers import ensure_in_syspath
+from salt.ext.six.moves import range
 
 ensure_in_syspath('../../')
 
@@ -118,7 +119,6 @@ class RhipTestCase(TestCase):
                                                     self.assertEqual(rh_ip.build_interface
                                                                      ('iface', 'eth', True,
                                                                       ipv6addrs=['fc00::1/128']), 'A')
-
 
     def test_build_routes(self):
         '''
