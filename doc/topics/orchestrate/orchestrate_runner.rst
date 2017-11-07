@@ -202,7 +202,7 @@ this.
 
     # /srv/salt/orch/deploy.sls
     {% set servers = salt['pillar.get']('servers', 'test') %}
-    {% set master = salt['pillat.get']('master', 'salt') %}
+    {% set master = salt['pillar.get']('master', 'salt') %}
     create_instance:
       salt.runner:
         - name: cloud.profile
