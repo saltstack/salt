@@ -289,9 +289,9 @@ Disable The Job Cache
 ~~~~~~~~~~~~~~~~~~~~~
 
 The job cache is a central component of the Salt Master and many aspects of
-the Salt Master will not function correctly without a runnign job cache.
+the Salt Master will not function correctly without a running job cache.
 
-Disableing the job cache is `STRONGLY DISCOURAGED` and should not be done
+Disabling the job cache is **STRONGLY DISCOURAGED** and should not be done
 unless the master is being used to execute routines that require no history
 or reliable feedback!
 
