@@ -91,6 +91,7 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
         The command and version that we want to check against, the version number can use regex.
 
         .. code-block:: yaml
+
             version_check: python --version_check=2.7.[0-9]
 
     '''
