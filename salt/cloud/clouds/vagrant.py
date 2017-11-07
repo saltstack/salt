@@ -194,6 +194,7 @@ def create(vm_):
     CLI Example:
 
     .. code-block:: bash
+
         salt-cloud -p my_profile new_node_1
 
     '''

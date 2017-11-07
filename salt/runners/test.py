@@ -85,7 +85,7 @@ def get_opts():
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt-run test.get_opts
     '''
