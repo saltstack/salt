@@ -227,7 +227,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db():
+def refresh_db(force=False):
     '''
     Use pkg update to get latest pkg_summary
 
@@ -242,7 +242,12 @@ def refresh_db():
     pkgin = _check_pkgin()
 
     if pkgin:
-        call = __salt__['cmd.run_all']('{0} up'.format(pkgin), output_loglevel='trace')
+        call = __salt__['cmd.run_all'](
+            '{0}{1} up'.format(
+                pkgin,
+                ' -f' if force else '',
+            ),
+        output_loglevel='trace')
 
         if call['retcode'] != 0:
             comment = ''
