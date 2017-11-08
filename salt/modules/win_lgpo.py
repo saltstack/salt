@@ -709,10 +709,10 @@ class _policy_info(object):
                         'Policy': 'Maximum password age',
                         'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
-                            'Function': '_in_range_inclusive_non_zero',
+                            'Function': '_in_range_inclusive',
                             'Args': {'min': 1,
                                      'max': 86313600,
-                                     'zero_value': 0xffffffffL}
+                                     'zero_value': 0xffffffff}
                         },
                         'NetUserModal': {
                             'Modal': 0,
@@ -2389,10 +2389,10 @@ class _policy_info(object):
     @classmethod
     def _seconds_to_days_non_zero(cls, val, **kwargs):
         '''
-        converts a number of seconds to days, 0xffffffffL becomes 0
+        converts a number of seconds to days, 0xffffffff becomes 0
         '''
         if val is not None:
-            if val == 0xffffffffL:
+            if val == 0xffffffff:
                 return 0
             return val / 86400
         else:
@@ -2401,11 +2401,11 @@ class _policy_info(object):
     @classmethod
     def _days_to_seconds_non_zero(cls, val, **kwargs):
         '''
-        converts a number of days to seconds, 0 becomes 0xffffffffL
+        converts a number of days to seconds, 0 becomes 0xffffffff
         '''
         if val is not None:
             if val == 0:
-                return 0xffffffffL
+                return 0xffffffff
             return val * 86400
         else:
             return 'Not Defined'
@@ -2517,9 +2517,11 @@ class _policy_info(object):
     def _in_range_inclusive(cls, val, **kwargs):
         '''
         checks that a value is in an inclusive range
+        The value for 0 used by Max Password Age is actually 0xffffffff
         '''
         minimum = kwargs.get('min', 0)
         maximum = kwargs.get('max', 1)
+        zero_value = kwargs.get('zero_value', 0)
 
         if isinstance(val, six.string_types):
             if val.lower() == 'not defined':
@@ -2530,33 +2532,7 @@ class _policy_info(object):
                 except ValueError:
                     return False
         if val is not None:
-            if val >= minimum and val <= maximum:
-                return True
-            else:
-                return False
-        else:
-            return False
-
-    @classmethod
-    def _in_range_inclusive_non_zero(cls, val, **kwargs):
-        '''
-        checks that a value is in an inclusive range
-        The value for 0 used by Max Password Age is actually 0xffffffffL
-        '''
-        minimum = kwargs.get('min', 0)
-        maximum = kwargs.get('max', 1)
-        zero_value = kwargs.get('zero_value', 0xffffffffL)
-
-        if isinstance(val, six.string_types):
-            if val.lower() == 'not defined':
-                return True
-            else:
-                try:
-                    val = int(val)
-                except ValueError:
-                    return False
-        if val is not None:
-            if val == zero_value or minimum <= val <= maximum:
+            if minimum <= val <= maximum or val == zero_value:
                 return True
             else:
                 return False
