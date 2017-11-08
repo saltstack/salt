@@ -719,8 +719,10 @@ class _policy_info(object):
                             'Option': 'max_passwd_age',
                         },
                         'Transform': {
-                            'Get': '_seconds_to_days_non_zero',
-                            'Put': '_days_to_seconds_non_zero'
+                            'Get': '_seconds_to_days',
+                            'Put': '_days_to_seconds',
+                            'GetArgs': {'zero_value': 0xffffffff},
+                            'PutArgs': {'zero_value': 0xffffffff}
                         },
                     },
                     'MinPasswordAge': {
@@ -2371,7 +2373,10 @@ class _policy_info(object):
         '''
         converts a number of seconds to days
         '''
+        zero_value = kwargs.get('zero_value', 0)
         if val is not None:
+            if val == zero_value:
+                return 0
             return val / 86400
         else:
             return 'Not Defined'
@@ -2381,31 +2386,10 @@ class _policy_info(object):
         '''
         converts a number of days to seconds
         '''
-        if val is not None:
-            return val * 86400
-        else:
-            return 'Not Defined'
-
-    @classmethod
-    def _seconds_to_days_non_zero(cls, val, **kwargs):
-        '''
-        converts a number of seconds to days, 0xffffffff becomes 0
-        '''
-        if val is not None:
-            if val == 0xffffffff:
-                return 0
-            return val / 86400
-        else:
-            return 'Not Defined'
-
-    @classmethod
-    def _days_to_seconds_non_zero(cls, val, **kwargs):
-        '''
-        converts a number of days to seconds, 0 becomes 0xffffffff
-        '''
+        zero_value = kwargs.get('zero_value', 0)
         if val is not None:
             if val == 0:
-                return 0xffffffff
+                return zero_value
             return val * 86400
         else:
             return 'Not Defined'
@@ -2664,11 +2648,7 @@ class _policy_info(object):
         or values
         '''
         log.debug('item == {0}'.format(item))
-        value_lookup = False
-        if 'value_lookup' in kwargs:
-            value_lookup = kwargs['value_lookup']
-        else:
-            value_lookup = False
+        value_lookup = kwargs.get('value_lookup', False)
         if 'lookup' in kwargs:
             for k, v in six.iteritems(kwargs['lookup']):
                 if value_lookup:
