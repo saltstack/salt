@@ -752,7 +752,7 @@ class _policy_info(object):
                         },
                     },
                     'PasswordComplexity': {
-                        'Policy': 'Passwords must meet complexity requirements',
+                        'Policy': 'Password must meet complexity requirements',
                         'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'Secedit': {
