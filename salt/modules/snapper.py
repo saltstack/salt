@@ -229,6 +229,7 @@ def set_config(name='root', **kwargs):
     snapper convention. The above example is equivalent to:
 
     .. code-block:: bash
+
         salt '*' snapper.set_config sync_acl=True
     '''
     try:

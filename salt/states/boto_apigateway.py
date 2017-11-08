@@ -124,7 +124,9 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
     with the following schema.  The lambda functions should throw exceptions for any non successful responses.
     An optional pattern field can be specified in errorMessage field to aid the response mapping from Lambda
     to the proper error return status codes.
+
         .. code-block:: yaml
+
             Error:
               type: object
               properties:
