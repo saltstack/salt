@@ -434,7 +434,7 @@ def _present(name,
         # If we're not pruning, include current items in new output so it's clear
         # that they're still present
         if not prune_block_icmp:
-            block_icmp = new_icmp_types | _current_icmp_blocks
+            block_icmp = list(new_icmp_types | set(_current_icmp_blocks))
         ret['changes'].update({'icmp_types':
                                 {'old': _current_icmp_blocks,
                                 'new': block_icmp}})
@@ -529,7 +529,7 @@ def _present(name,
         # If we're not pruning, include current items in new output so it's clear
         # that they're still present
         if not prune_ports:
-            ports = new_ports | _current_ports
+            ports = list(new_ports | set(_current_ports))
         ret['changes'].update({'ports':
                                 {'old': _current_ports,
                                 'new': ports}})
@@ -580,7 +580,7 @@ def _present(name,
         # If we're not pruning, include current items in new output so it's clear
         # that they're still present
         if not prune_port_fwd:
-            port_fwd = new_port_fwd | _current_port_fwd
+            port_fwd = list(new_port_fwd | set(_current_port_fwd))
         ret['changes'].update({'port_fwd':
                                 {'old': [fwd.todict() for fwd in
                                          _current_port_fwd],
@@ -621,7 +621,7 @@ def _present(name,
         # If we're not pruning, include current items in new output so it's clear
         # that they're still present
         if not prune_services:
-            services = new_services | _current_services
+            services = list(new_services | set(_current_services))
         ret['changes'].update({'services':
                                 {'old': _current_services,
                                 'new': services}})
@@ -661,7 +661,7 @@ def _present(name,
         # If we're not pruning, include current items in new output so it's clear
         # that they're still present
         if not prune_interfaces:
-            interfaces = new_interfaces | _current_interfaces
+            interfaces = list(new_interfaces | set(_current_interfaces))
         ret['changes'].update({'interfaces':
                                 {'old': _current_interfaces,
                                 'new': interfaces}})
@@ -700,7 +700,7 @@ def _present(name,
         # If we're not pruning, include current items in new output so it's clear
         # that they're still present
         if not prune_sources:
-            sources = new_sources | _current_sources
+            sources = list(new_sources | set(_current_sources))
         ret['changes'].update({'sources':
                                 {'old': _current_sources,
                                 'new': sources}})
@@ -740,7 +740,7 @@ def _present(name,
         # If we're not pruning, include current items in new output so it's clear
         # that they're still present
         if not prune_rich_rules:
-            rich_rules = new_rich_rules | _current_rich_rules
+            rich_rules = list(new_rich_rules | set(_current_rich_rules))
         ret['changes'].update({'rich_rules':
                               {'old': _current_rich_rules,
                                'new': rich_rules}})
