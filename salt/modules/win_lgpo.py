@@ -709,16 +709,18 @@ class _policy_info(object):
                         'Policy': 'Maximum password age',
                         'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
-                            'Function': '_in_range_inclusive',
-                            'Args': {'min': 0, 'max': 86313600}
+                            'Function': '_in_range_inclusive_non_zero',
+                            'Args': {'min': 1,
+                                     'max': 86313600,
+                                     'zero_value': 0xffffffffL}
                         },
                         'NetUserModal': {
                             'Modal': 0,
                             'Option': 'max_passwd_age',
                         },
                         'Transform': {
-                            'Get': '_seconds_to_days',
-                            'Put': '_days_to_seconds'
+                            'Get': '_seconds_to_days_non_zero',
+                            'Put': '_days_to_seconds_non_zero'
                         },
                     },
                     'MinPasswordAge': {
@@ -2385,6 +2387,30 @@ class _policy_info(object):
             return 'Not Defined'
 
     @classmethod
+    def _seconds_to_days_non_zero(cls, val, **kwargs):
+        '''
+        converts a number of seconds to days, 0xffffffffL becomes 0
+        '''
+        if val is not None:
+            if val == 0xffffffffL:
+                return 0
+            return val / 86400
+        else:
+            return 'Not Defined'
+
+    @classmethod
+    def _days_to_seconds_non_zero(cls, val, **kwargs):
+        '''
+        converts a number of days to seconds, 0 becomes 0xffffffffL
+        '''
+        if val is not None:
+            if val == 0:
+                return 0xffffffffL
+            return val * 86400
+        else:
+            return 'Not Defined'
+
+    @classmethod
     def _seconds_to_minutes(cls, val, **kwargs):
         '''
         converts a number of seconds to minutes
@@ -2492,8 +2518,8 @@ class _policy_info(object):
         '''
         checks that a value is in an inclusive range
         '''
-        minimum = 0
-        maximum = 1
+        minimum = kwargs.get('min', 0)
+        maximum = kwargs.get('max', 1)
 
         if isinstance(val, six.string_types):
             if val.lower() == 'not defined':
@@ -2503,12 +2529,34 @@ class _policy_info(object):
                     val = int(val)
                 except ValueError:
                     return False
-        if 'min' in kwargs:
-            minimum = kwargs['min']
-        if 'max' in kwargs:
-            maximum = kwargs['max']
         if val is not None:
             if val >= minimum and val <= maximum:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    @classmethod
+    def _in_range_inclusive_non_zero(cls, val, **kwargs):
+        '''
+        checks that a value is in an inclusive range
+        The value for 0 used by Max Password Age is actually 0xffffffffL
+        '''
+        minimum = kwargs.get('min', 0)
+        maximum = kwargs.get('max', 1)
+        zero_value = kwargs.get('zero_value', 0xffffffffL)
+
+        if isinstance(val, six.string_types):
+            if val.lower() == 'not defined':
+                return True
+            else:
+                try:
+                    val = int(val)
+                except ValueError:
+                    return False
+        if val is not None:
+            if val == zero_value or minimum <= val <= maximum:
                 return True
             else:
                 return False
