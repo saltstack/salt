@@ -70,10 +70,8 @@ def _zfs_support():
             on_supported_platform = _check_retcode('ls /sys/module/zfs')
 
         # NOTE: fallback to zfs-fuse if needed
-        if not on_supported_platform:
-            _zfs_fuse = lambda f: __salt__['service.' + f]('zfs-fuse')
-            if _zfs_fuse('available') and (_zfs_fuse('status') or _zfs_fuse('start')):
-                on_supported_platform = True
+        if not on_supported_platform and salt.utils.path.which('zfs-fuse'):
+            on_supported_platform = True
 
     # Additional check for the zpool command
     if on_supported_platform and salt.utils.path.which('zpool'):
