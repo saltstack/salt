@@ -124,11 +124,13 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_ssh(self, arg_str, with_retcode=False, timeout=25, catch_stderr=False):
+    def run_ssh(self, arg_str, with_retcode=False, timeout=25,
+                catch_stderr=False, wipe=False):
         '''
         Execute salt-ssh
         '''
-        arg_str = '-c {0} -i --priv {1} --roster-file {2} localhost {3} --out=json'.format(
+        arg_str = '{0} -c {1} -i --priv {2} --roster-file {3} localhost {4} --out=json'.format(
+            ' -W' if wipe else '',
             self.get_config_dir(),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
