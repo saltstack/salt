@@ -9,7 +9,7 @@
     Common salt configuration schemas
 '''
 
-# Import Pythosn libs
+# Import Python libs
 from __future__ import absolute_import
 
 # Import salt libs
