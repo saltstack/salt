@@ -13,7 +13,6 @@ as those returned here
 # Import python libs
 from __future__ import absolute_import
 import os
-import json
 import socket
 import sys
 import glob
@@ -936,8 +935,6 @@ def _virtual(osdata):
                 zone = __salt__['cmd.run']('{0}'.format(zonename))
                 if zone != 'global':
                     grains['virtual'] = 'zone'
-                    if salt.utils.platform.is_smartos_zone():
-                        grains.update(_smartos_zone_data())
             # Check if it's a branded zone (i.e. Solaris 8/9 zone)
             if isdir('/.SUNWnative'):
                 grains['virtual'] = 'zone'
@@ -1671,8 +1668,6 @@ def os_data():
             ])
             # store a untouched copy of the timestamp in osrelease_stamp
             grains['osrelease_stamp'] = uname_v
-            if salt.utils.platform.is_smartos_globalzone():
-                grains.update(_smartos_computenode_data())
         elif os.path.isfile('/etc/release'):
             with salt.utils.files.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()
@@ -1776,9 +1771,6 @@ def os_data():
 
     # Get the hardware and bios data
     grains.update(_hw_data(grains))
-
-    # Get zpool data
-    grains.update(_zpool_data(grains))
 
     # Load the virtual machine info
     grains.update(_virtual(grains))
@@ -2369,123 +2361,6 @@ def _hw_data(osdata):
                 break
 
     return grains
-
-
-def _smartos_computenode_data():
-    '''
-    Return useful information from a SmartOS compute node
-    '''
-    # Provides:
-    #   vms_total
-    #   vms_running
-    #   vms_stopped
-    #   sdc_version
-    #   vm_capable
-    #   vm_hw_virt
-
-    if salt.utils.platform.is_proxy():
-        return {}
-
-    grains = {}
-
-    # *_vms grains
-    grains['computenode_vms_total'] = len(__salt__['cmd.run']('vmadm list -p').split("\n"))
-    grains['computenode_vms_running'] = len(__salt__['cmd.run']('vmadm list -p state=running').split("\n"))
-    grains['computenode_vms_stopped'] = len(__salt__['cmd.run']('vmadm list -p state=stopped').split("\n"))
-
-    # sysinfo derived grains
-    sysinfo = json.loads(__salt__['cmd.run']('sysinfo'))
-    grains['computenode_sdc_version'] = sysinfo['SDC Version']
-    grains['computenode_vm_capable'] = sysinfo['VM Capable']
-    if sysinfo['VM Capable']:
-        grains['computenode_vm_hw_virt'] = sysinfo['CPU Virtualization']
-
-    # sysinfo derived smbios grains
-    grains['manufacturer'] = sysinfo['Manufacturer']
-    grains['productname'] = sysinfo['Product']
-    grains['uuid'] = sysinfo['UUID']
-
-    return grains
-
-
-def _smartos_zone_data():
-    '''
-    Return useful information from a SmartOS zone
-    '''
-    # Provides:
-    #   pkgsrcversion
-    #   imageversion
-    #   pkgsrcpath
-    #   zonename
-    #   zoneid
-    #   hypervisor_uuid
-    #   datacenter
-
-    if salt.utils.platform.is_proxy():
-        return {}
-
-    grains = {}
-
-    pkgsrcversion = re.compile('^release:\\s(.+)')
-    imageversion = re.compile('Image:\\s(.+)')
-    pkgsrcpath = re.compile('PKG_PATH=(.+)')
-    if os.path.isfile('/etc/pkgsrc_version'):
-        with salt.utils.files.fopen('/etc/pkgsrc_version', 'r') as fp_:
-            for line in fp_:
-                match = pkgsrcversion.match(line)
-                if match:
-                    grains['pkgsrcversion'] = match.group(1)
-    if os.path.isfile('/etc/product'):
-        with salt.utils.files.fopen('/etc/product', 'r') as fp_:
-            for line in fp_:
-                match = imageversion.match(line)
-                if match:
-                    grains['imageversion'] = match.group(1)
-    if os.path.isfile('/opt/local/etc/pkg_install.conf'):
-        with salt.utils.files.fopen('/opt/local/etc/pkg_install.conf', 'r') as fp_:
-            for line in fp_:
-                match = pkgsrcpath.match(line)
-                if match:
-                    grains['pkgsrcpath'] = match.group(1)
-    if 'pkgsrcversion' not in grains:
-        grains['pkgsrcversion'] = 'Unknown'
-    if 'imageversion' not in grains:
-        grains['imageversion'] = 'Unknown'
-    if 'pkgsrcpath' not in grains:
-        grains['pkgsrcpath'] = 'Unknown'
-
-    grains['zonename'] = __salt__['cmd.run']('zonename')
-    grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'', python_shell=True)
-
-    return grains
-
-
-def _zpool_data(grains):
-    '''
-    Provide grains about zpools
-    '''
-    # quickly return if windows or proxy
-    if salt.utils.platform.is_windows() or 'proxyminion' in __opts__:
-        return {}
-
-    # quickly return if NetBSD (ZFS still under development)
-    if salt.utils.platform.is_netbsd():
-        return {}
-
-    # quickly return if no zpool and zfs command
-    if not salt.utils.path.which('zpool'):
-        return {}
-
-    # collect zpool data
-    zpool_grains = {}
-    for zpool in __salt__['cmd.run']('zpool list -H -o name,size').splitlines():
-        zpool = zpool.split()
-        zpool_grains[zpool[0]] = zpool[1]
-
-    # return grain data
-    if len(zpool_grains.keys()) < 1:
-        return {}
-    return {'zpool': zpool_grains}
 
 
 def get_server_id():
