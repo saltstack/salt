@@ -653,21 +653,17 @@ SwapTotal:       4789244 kB'''
                                             empty_mock):
                                         with patch.object(
                                                 core,
-                                                '_zpool_data',
+                                                '_virtual',
                                                 empty_mock):
                                             with patch.object(
                                                     core,
-                                                    '_virtual',
+                                                    '_ps',
                                                     empty_mock):
-                                                with patch.object(
-                                                        core,
-                                                        '_ps',
-                                                        empty_mock):
-                                                    # Mock the osarch
-                                                    with patch.dict(
-                                                            core.__salt__,
-                                                            {'cmd.run': cmd_run_mock}):
-                                                        os_grains = core.os_data()
+                                                # Mock the osarch
+                                                with patch.dict(
+                                                        core.__salt__,
+                                                        {'cmd.run': cmd_run_mock}):
+                                                    os_grains = core.os_data()
 
         self.assertEqual(os_grains.get('mem_total'), 2023)
         self.assertEqual(os_grains.get('swap_total'), 400)

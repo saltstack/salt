@@ -718,7 +718,7 @@ Note that ping_on_rotate may cause high load on the master immediately after
 the key rotation event as minions reconnect. Consider this carefully if this
 salt master is managing a large number of minions.
 
-.. code-black:: yaml
+.. code-block:: yaml
 
     ping_on_rotate: False
 
@@ -904,7 +904,7 @@ is set to ``tcp`` by default on Windows.
 
     ipc_mode: ipc
 
-.. conf_master::
+.. conf_master:: tcp_master_pub_port
 
 ``tcp_master_pub_port``
 -----------------------
@@ -4237,6 +4237,7 @@ Default: ``10``
 The number of workers for the runner/wheel in the reactor.
 
 .. code-block:: yaml
+
     reactor_worker_threads: 10
 
 .. conf_master:: reactor_worker_hwm
