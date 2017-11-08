@@ -1027,6 +1027,25 @@ def get_network_adapter_type(adapter_type):
         return vim.vm.device.VirtualE1000e()
 
 
+def get_network_adapter_object_type(adapter_object):
+    '''
+    Returns the network adapter type.
+
+    adapter_object
+        The adapter object from which to obtain the network adapter type.
+    '''
+    if isinstance(adapter_object, vim.vm.device.VirtualVmxnet2):
+        return 'vmxnet2'
+    if isinstance(adapter_object, vim.vm.device.VirtualVmxnet3):
+        return 'vmxnet3'
+    if isinstance(adapter_object, vim.vm.device.VirtualVmxnet):
+        return 'vmxnet'
+    if isinstance(adapter_object, vim.vm.device.VirtualE1000e):
+        return 'e1000e'
+    if isinstance(adapter_object, vim.vm.device.VirtualE1000):
+        return 'e1000'
+
+
 def get_dvss(dc_ref, dvs_names=None, get_all_dvss=False):
     '''
     Returns distributed virtual switches (DVSs) in a datacenter.
