@@ -113,6 +113,13 @@ def present(name,
     if len(users) > 0:
         # check each user occurrence
         users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
+        # catch errors e.g.
+        # users= (False, 'Failed to connect to MongoDB database localhost:27017')
+        # users= (False, 'not authorized on admin to execute command { usersInfo: "root" }')
+        if not users[0]:
+            ret['result'] = False
+            ret['comment']="Mongo Err: "+str(users[1])
+            return ret
         # check each user occurrence
         for usr in users:
             # prepare empty list for current roles
