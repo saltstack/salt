@@ -125,12 +125,13 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_ssh(self, arg_str, with_retcode=False, timeout=25,
-                catch_stderr=False, wipe=False):
+                catch_stderr=False, wipe=False, raw=False):
         '''
         Execute salt-ssh
         '''
-        arg_str = '{0} -c {1} -i --priv {2} --roster-file {3} localhost {4} --out=json'.format(
+        arg_str = '{0} {1} -c {2} -i --priv {3} --roster-file {4} localhost {5} --out=json'.format(
             ' -W' if wipe else '',
+            ' -r' if raw else '',
             self.get_config_dir(),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
@@ -456,12 +457,13 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                timeout=timeout)
 
     def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False,
-                timeout=60, wipe=True):  # pylint: disable=W0221
+                timeout=60, wipe=True, raw=False):  # pylint: disable=W0221
         '''
         Execute salt-ssh
         '''
-        arg_str = '-ldebug{0} -c {1} -i --priv {2} --roster-file {3} --out=json localhost {4}'.format(
+        arg_str = '{0} -ldebug{1} -c {2} -i --priv {3} --roster-file {4} --out=json localhost {5}'.format(
             ' -W' if wipe else '',
+            ' -r' if raw else '',
             self.get_config_dir(),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
@@ -801,12 +803,12 @@ class SSHCase(ShellCase):
     def _arg_str(self, function, arg):
         return '{0} {1}'.format(function, ' '.join(arg))
 
-    def run_function(self, function, arg=(), timeout=90, wipe=True, **kwargs):
+    def run_function(self, function, arg=(), timeout=90, wipe=True, raw=False, **kwargs):
         '''
         We use a 90s timeout here, which some slower systems do end up needing
         '''
         ret = self.run_ssh(self._arg_str(function, arg), timeout=timeout,
-                           wipe=wipe)
+                           wipe=wipe, raw=raw)
         try:
             return json.loads(ret)['localhost']
         except Exception:
