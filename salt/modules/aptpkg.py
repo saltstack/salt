@@ -1401,7 +1401,9 @@ def list_pkgs(versions_as_list=False,
         for realpkg, provides in six.iteritems(virtpkgs_all):
             # grep-available returns info on all virtual packages. Ignore any
             # virtual packages that do not have the real package installed.
-            if realpkg in ret['installed']:
+            # _get_virtual() do not use grep-available if HAS_APT true
+            # so can skipt that loop
+            if not HAS_APT and realpkg in ret['installed']:
                 virtpkgs.update(provides)
         for virtname in virtpkgs:
             # Set virtual package versions to '1'
