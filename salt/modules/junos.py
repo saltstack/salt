@@ -46,6 +46,7 @@ try:
     from jnpr.junos.factory.factory_loader import FactoryLoader
     from jnpr.junos.factory.optable import OpTable
     import jxmlease
+    import yamlordereddictloader
     # pylint: enable=W0611
     HAS_JUNOS = True
 except ImportError:
@@ -1377,7 +1378,8 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
             ret['out'] = False
             return ret
         try:
-            ret['table'] = yaml.load(open(file_name).read())
+            ret['table'] = yaml.load(open(file_name).read(),
+                                     Loader=yamlordereddictloader.Loader)
             globals().update(FactoryLoader().load(ret['table']))
         except IOError as err:
             ret['message'] = 'Unable to find file: {0}'.format(file_name)
