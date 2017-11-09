@@ -758,7 +758,7 @@ def _check_directory_win(name,
     changes = {}
 
     if not os.path.isdir(name):
-        changes = {'directory': 'new'}
+        changes = {name: {'directory': 'new'}}
     else:
         # Check owner
         owner = salt.utils.win_dacl.get_owner(name)
