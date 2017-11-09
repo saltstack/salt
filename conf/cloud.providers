@@ -3,7 +3,7 @@
 # directory is identical.
 
 #my-digitalocean-config:
-#  driver: digital_ocean
+#  driver: digitalocean
 #  client_key: wFGEwgregeqw3435gDger
 #  api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
 #  location: New York 1

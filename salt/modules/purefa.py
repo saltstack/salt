@@ -27,10 +27,28 @@ Installation Prerequisites
 
       pip install purestorage
 
+- Configure Pure Storage FlashArray authentication. Use one of the following
+  three methods.
+
+  1) From the minion config
+
+  .. code-block:: yaml
+
+        pure_tags:
+          fa:
+            san_ip: management vip or hostname for the FlashArray
+            api_token: A valid api token for the FlashArray being managed
+
+  2) From environment (PUREFA_IP and PUREFA_API)
+  3) From the pillar (PUREFA_IP and PUREFA_API)
+
 :maintainer: Simon Dodsley (simon@purestorage.com)
 :maturity: new
 :requires: purestorage
 :platform: all
+
+.. versionadded:: Oxygen
+
 '''
 
 # Import Python libs
@@ -192,7 +210,7 @@ def snap_create(name, suffix=None):
 
     Will return False is volume selected to snap does not exist.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of volume to snapshot
@@ -203,8 +221,8 @@ def snap_create(name, suffix=None):
 
     .. code-block:: bash
 
-        salt '*' pure.snap_create foo
-        salt '*' pure.snap_create foo suffix=bar
+        salt '*' purefa.snap_create foo
+        salt '*' purefa.snap_create foo suffix=bar
 
     '''
     array = _get_system()
@@ -228,7 +246,7 @@ def snap_delete(name, suffix=None, eradicate=False):
 
     Will return False if selected snapshot does not exist.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of volume
@@ -241,7 +259,7 @@ def snap_delete(name, suffix=None, eradicate=False):
 
     .. code-block:: bash
 
-        salt '*' pure.snap_delete foo suffix=snap eradicate=True
+        salt '*' purefa.snap_delete foo suffix=snap eradicate=True
 
     '''
     array = _get_system()
@@ -270,7 +288,7 @@ def snap_eradicate(name, suffix=None):
 
     Will retunr False is snapshot is not in a deleted state.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of volume
@@ -281,7 +299,7 @@ def snap_eradicate(name, suffix=None):
 
     .. code-block:: bash
 
-        salt '*' pure.snap_delete foo suffix=snap eradicate=True
+        salt '*' purefa.snap_delete foo suffix=snap eradicate=True
 
     '''
     array = _get_system()
@@ -303,7 +321,7 @@ def volume_create(name, size=None):
 
     Will return False if volume already exists.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of volume (truncated to 63 characters)
@@ -315,8 +333,8 @@ def volume_create(name, size=None):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_create foo
-        salt '*' pure.volume_create foo size=10T
+        salt '*' purefa.volume_create foo
+        salt '*' purefa.volume_create foo size=10T
 
     '''
     if len(name) > 63:
@@ -341,7 +359,7 @@ def volume_delete(name, eradicate=False):
 
     Will return False if volume doesn't exist is already in a deleted state.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of volume
@@ -352,7 +370,7 @@ def volume_delete(name, eradicate=False):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_delete foo eradicate=True
+        salt '*' purefa.volume_delete foo eradicate=True
 
     '''
     array = _get_system()
@@ -380,7 +398,7 @@ def volume_eradicate(name):
 
     Will return False is volume is not in a deleted state.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of volume
@@ -389,7 +407,7 @@ def volume_eradicate(name):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_eradicate foo
+        salt '*' purefa.volume_eradicate foo
 
     '''
     array = _get_system()
@@ -410,7 +428,7 @@ def volume_extend(name, size):
 
     Will return False if new size is less than or equal to existing size.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of volume
@@ -422,7 +440,7 @@ def volume_extend(name, size):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_extend foo 10T
+        salt '*' purefa.volume_extend foo 10T
 
     '''
     array = _get_system()
@@ -448,7 +466,7 @@ def snap_volume_create(name, target, overwrite=False):
     Will return False if target volume already exists and
     overwrite is not specified, or selected snapshot doesn't exist.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of volume snapshot
@@ -461,7 +479,7 @@ def snap_volume_create(name, target, overwrite=False):
 
     .. code-block:: bash
 
-        salt '*' pure.snap_volume_create foo.bar clone overwrite=True
+        salt '*' purefa.snap_volume_create foo.bar clone overwrite=True
 
     '''
     array = _get_system()
@@ -494,7 +512,7 @@ def volume_clone(name, target, overwrite=False):
     Will return False if source volume doesn't exist, or
     target volume already exists and overwrite not specified.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of volume
@@ -507,7 +525,7 @@ def volume_clone(name, target, overwrite=False):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_clone foo bar overwrite=True
+        salt '*' purefa.volume_clone foo bar overwrite=True
 
     '''
     array = _get_system()
@@ -538,7 +556,7 @@ def volume_attach(name, host):
 
     Host and volume must exist or else will return False.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of volume
@@ -549,7 +567,7 @@ def volume_attach(name, host):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_attach foo bar
+        salt '*' purefa.volume_attach foo bar
 
     '''
     array = _get_system()
@@ -571,7 +589,7 @@ def volume_detach(name, host):
     Will return False if either host or volume do not exist, or
     if selected volume isn't already connected to the host.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of volume
@@ -582,7 +600,7 @@ def volume_detach(name, host):
 
     .. code-block:: bash
 
-        salt '*' pure.volume_detach foo bar
+        salt '*' purefa.volume_detach foo bar
 
     '''
     array = _get_system()
@@ -605,7 +623,7 @@ def host_create(name, iqn=None, wwn=None):
     Fibre Channel parameters are not in a valid format.
     See Pure Storage FlashArray documentation.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of host (truncated to 63 characters)
@@ -618,7 +636,7 @@ def host_create(name, iqn=None, wwn=None):
 
     .. code-block:: bash
 
-        salt '*' pure.host_create foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
+        salt '*' purefa.host_create foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
 
     '''
     array = _get_system()
@@ -656,7 +674,7 @@ def host_update(name, iqn=None, wwn=None):
     by another host, or are not in a valid format.
     See Pure Storage FlashArray documentation.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of host
@@ -669,7 +687,7 @@ def host_update(name, iqn=None, wwn=None):
 
     .. code-block:: bash
 
-        salt '*' pure.host_update foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
+        salt '*' purefa.host_update foo iqn='<Valid iSCSI IQN>' wwn='<Valid WWN>'
 
     '''
     array = _get_system()
@@ -696,7 +714,7 @@ def host_delete(name):
 
     Will return False if the host doesn't exist.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of host
@@ -705,7 +723,7 @@ def host_delete(name):
 
     .. code-block:: bash
 
-        salt '*' pure.host_delete foo
+        salt '*' purefa.host_delete foo
 
     '''
     array = _get_system()
@@ -732,7 +750,7 @@ def hg_create(name, host=None, volume=None):
     Will return False if hostgroup already exists, or if
     named host or volume do not exist.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of hostgroup (truncated to 63 characters)
@@ -745,7 +763,7 @@ def hg_create(name, host=None, volume=None):
 
     .. code-block:: bash
 
-        salt '*' pure.hg_create foo host=bar volume=vol
+        salt '*' purefa.hg_create foo host=bar volume=vol
 
     '''
     array = _get_system()
@@ -788,7 +806,7 @@ def hg_update(name, host=None, volume=None):
     Will return False is hostgroup doesn't exist, or host
     or volume do not exist.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of hostgroup
@@ -801,7 +819,7 @@ def hg_update(name, host=None, volume=None):
 
     .. code-block:: bash
 
-        salt '*' pure.hg_update foo host=bar volume=vol
+        salt '*' purefa.hg_update foo host=bar volume=vol
 
     '''
     array = _get_system()
@@ -834,7 +852,7 @@ def hg_delete(name):
 
     Will return False is hostgroup is already in a deleted state.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of hostgroup
@@ -843,7 +861,7 @@ def hg_delete(name):
 
     .. code-block:: bash
 
-        salt '*' pure.hg_delete foo
+        salt '*' purefa.hg_delete foo
 
     '''
     array = _get_system()
@@ -872,7 +890,7 @@ def hg_remove(name, volume=None, host=None):
     Will return False is hostgroup does not exist, or named host or volume are
     not in the hostgroup.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of hostgroup
@@ -885,7 +903,7 @@ def hg_remove(name, volume=None, host=None):
 
     .. code-block:: bash
 
-        salt '*' pure.hg_remove foo volume=test host=bar
+        salt '*' purefa.hg_remove foo volume=test host=bar
 
     '''
     array = _get_system()
@@ -933,7 +951,7 @@ def pg_create(name, hostgroup=None, host=None, volume=None, enabled=True):
          hostgroups, hosts or volumes
        * Named type for protection group does not exist
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of protection group
@@ -948,7 +966,7 @@ def pg_create(name, hostgroup=None, host=None, volume=None, enabled=True):
 
     .. code-block:: bash
 
-        salt '*' pure.pg_create foo [hostgroup=foo | host=bar | volume=vol] enabled=[true | false]
+        salt '*' purefa.pg_create foo [hostgroup=foo | host=bar | volume=vol] enabled=[true | false]
 
     '''
     array = _get_system()
@@ -1026,7 +1044,7 @@ def pg_update(name, hostgroup=None, host=None, volume=None):
       * Incorrect type selected for current protection group type
       * Specified type does not exist
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of protection group
@@ -1041,7 +1059,7 @@ def pg_update(name, hostgroup=None, host=None, volume=None):
 
     .. code-block:: bash
 
-        salt '*' pure.pg_update foo [hostgroup=foo | host=bar | volume=vol]
+        salt '*' purefa.pg_update foo [hostgroup=foo | host=bar | volume=vol]
 
     '''
     array = _get_system()
@@ -1116,7 +1134,7 @@ def pg_delete(name, eradicate=False):
 
     Will return False if protection group is already in a deleted state.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of protection group
@@ -1125,7 +1143,7 @@ def pg_delete(name, eradicate=False):
 
     .. code-block:: bash
 
-        salt '*' pure.pg_delete foo
+        salt '*' purefa.pg_delete foo
 
     '''
     array = _get_system()
@@ -1153,7 +1171,7 @@ def pg_eradicate(name):
 
     Will return False if protection group is not in a deleted state.
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of protection group
@@ -1162,7 +1180,7 @@ def pg_eradicate(name):
 
     .. code-block:: bash
 
-        salt '*' pure.pg_eradicate foo
+        salt '*' purefa.pg_eradicate foo
 
     '''
     array = _get_system()
@@ -1185,7 +1203,7 @@ def pg_remove(name, hostgroup=None, host=None, volume=None):
       * Protection group does not exist
       * Specified type is not currently associated with the protection group
 
-    .. versionadded:: 2017.7.3
+    .. versionadded:: Oxygen
 
     name : string
         name of hostgroup
@@ -1200,7 +1218,7 @@ def pg_remove(name, hostgroup=None, host=None, volume=None):
 
     .. code-block:: bash
 
-        salt '*' pure.pg_remove foo [hostgroup=bar | host=test | volume=bar]
+        salt '*' purefa.pg_remove foo [hostgroup=bar | host=test | volume=bar]
 
     '''
     array = _get_system()

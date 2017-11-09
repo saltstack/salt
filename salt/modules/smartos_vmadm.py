@@ -14,12 +14,11 @@ except ImportError:
     from pipes import quote as _quote_args
 
 # Import Salt libs
-import salt.utils
 import salt.utils.args
-import salt.utils.path
-import salt.utils.platform
 import salt.utils.decorators as decorators
 import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs

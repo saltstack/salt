@@ -1,10 +1,18 @@
 # -*- coding: utf-8 -*-
 '''
+Functions to interact with Hashicorp Vault.
+
 :maintainer:    SaltStack
 :maturity:      new
 :platform:      all
 
-Functions to interact with Hashicorp Vault.
+
+:note: If you see the following error, you'll need to upgrade ``requests`` to atleast 2.4.2
+
+.. code-block:: text
+
+    <timestamp> [salt.pillar][CRITICAL][14337] Pillar render error: Failed to load ext_pillar vault: {'error': "request() got an unexpected keyword argument 'json'"}
+
 
 :configuration: The salt-master must be configured to allow peer-runner
     configuration, as well as configuration for the module.
@@ -16,6 +24,7 @@ Functions to interact with Hashicorp Vault.
 
         vault:
             url: https://vault.service.domain:8200
+            verify: /etc/ssl/certs/ca-certificates.crt
             auth:
                 method: token
                 token: 11111111-2222-3333-4444-555555555555
@@ -26,6 +35,12 @@ Functions to interact with Hashicorp Vault.
 
     url
         Url to your Vault installation. Required.
+
+    verify
+        For details please see
+        http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
+
+        .. versionadded:: Oxygen
 
     auth
         Currently only token auth is supported. The token must be able to create
@@ -139,6 +154,7 @@ def write_secret(path, **kwargs):
     CLI Example:
 
     .. code-block:: bash
+
             salt '*' vault.write_secret "secret/my/secret" user="foo" password="bar"
     '''
     log.debug(
@@ -164,6 +180,7 @@ def delete_secret(path):
     CLI Example:
 
     .. code-block:: bash
+
             salt '*' vault.delete_secret "secret/my/secret"
     '''
     log.debug('Deleting vault secrets for {0} in {1}'
@@ -187,6 +204,7 @@ def list_secrets(path):
     CLI Example:
 
     .. code-block:: bash
+
             salt '*' vault.list_secrets "secret/my/"
     '''
     log.debug('Listing vault secret keys for {0} in {1}'

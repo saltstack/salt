@@ -365,7 +365,7 @@ def __virtual__():
         return False
 
     try:
-        salt.utils.gitfs.GitPillar(__opts__)
+        salt.utils.gitfs.GitPillar(__opts__, init_remotes=False)
         # Initialization of the GitPillar object did not fail, so we
         # know we have valid configuration syntax and that a valid
         # provider was detected.
@@ -374,20 +374,23 @@ def __virtual__():
         return False
 
 
-def ext_pillar(minion_id, repo):
+def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
     '''
     Checkout the ext_pillar sources and compile the resulting pillar SLS
     '''
     opts = copy.deepcopy(__opts__)
     opts['pillar_roots'] = {}
     opts['__git_pillar'] = True
-    pillar = salt.utils.gitfs.GitPillar(opts)
-    pillar.init_remotes(repo, PER_REMOTE_OVERRIDES, PER_REMOTE_ONLY)
+    git_pillar = salt.utils.gitfs.GitPillar(
+        opts,
+        repos,
+        per_remote_overrides=PER_REMOTE_OVERRIDES,
+        per_remote_only=PER_REMOTE_ONLY)
     if __opts__.get('__role') == 'minion':
         # If masterless, fetch the remotes. We'll need to remove this once
         # we make the minion daemon able to run standalone.
-        pillar.fetch_remotes()
-    pillar.checkout()
+        git_pillar.fetch_remotes()
+    git_pillar.checkout()
     ret = {}
     merge_strategy = __opts__.get(
         'pillar_source_merging_strategy',
@@ -397,7 +400,14 @@ def ext_pillar(minion_id, repo):
         'pillar_merge_lists',
         False
     )
-    for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
+    for pillar_dir, env in six.iteritems(git_pillar.pillar_dirs):
+        # Map env if env == '__env__' before checking the env value
+        if env == '__env__':
+            env = opts.get('pillarenv') \
+                or opts.get('environment') \
+                or opts.get('git_pillar_base')
+            log.debug('__env__ maps to %s', env)
+
         # If pillarenv is set, only grab pillars with that match pillarenv
         if opts['pillarenv'] and env != opts['pillarenv']:
             log.debug(
@@ -406,7 +416,7 @@ def ext_pillar(minion_id, repo):
                 env, pillar_dir, opts['pillarenv']
             )
             continue
-        if pillar_dir in pillar.pillar_linked_dirs:
+        if pillar_dir in git_pillar.pillar_linked_dirs:
             log.debug(
                 'git_pillar is skipping processing on %s as it is a '
                 'mounted repo', pillar_dir
@@ -418,12 +428,6 @@ def ext_pillar(minion_id, repo):
                 'env \'%s\'', pillar_dir, env
             )
 
-        if env == '__env__':
-            env = opts.get('pillarenv') \
-                or opts.get('environment') \
-                or opts.get('git_pillar_base')
-            log.debug('__env__ maps to %s', env)
-
         pillar_roots = [pillar_dir]
 
         if __opts__['git_pillar_includes']:
@@ -433,7 +437,7 @@ def ext_pillar(minion_id, repo):
             # list, so that its top file is sourced from the correct
             # location and not from another git_pillar remote.
             pillar_roots.extend(
-                [d for (d, e) in six.iteritems(pillar.pillar_dirs)
+                [d for (d, e) in six.iteritems(git_pillar.pillar_dirs)
                  if env == e and d != pillar_dir]
             )
 

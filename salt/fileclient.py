@@ -24,9 +24,9 @@ import salt.loader
 import salt.payload
 import salt.transport
 import salt.fileserver
-import salt.utils
 import salt.utils.files
 import salt.utils.gzip_util
+import salt.utils.hashutils
 import salt.utils.http
 import salt.utils.path
 import salt.utils.platform
@@ -185,12 +185,13 @@ class Client(object):
         '''
         raise NotImplementedError
 
-    def cache_file(self, path, saltenv=u'base', cachedir=None):
+    def cache_file(self, path, saltenv=u'base', cachedir=None, source_hash=None):
         '''
         Pull a file down from the file server and store it in the minion
         file cache
         '''
-        return self.get_url(path, u'', True, saltenv, cachedir=cachedir)
+        return self.get_url(
+            path, u'', True, saltenv, cachedir=cachedir, source_hash=source_hash)
 
     def cache_files(self, paths, saltenv=u'base', cachedir=None):
         '''
@@ -238,7 +239,7 @@ class Client(object):
         for fn_ in self.file_list(saltenv):
             fn_ = sdecode(fn_)
             if fn_.strip() and fn_.startswith(path):
-                if salt.utils.check_include_exclude(
+                if salt.utils.stringutils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
                     fn_ = self.cache_file(
                         salt.utils.url.create(fn_), saltenv, cachedir=cachedir)
@@ -470,7 +471,7 @@ class Client(object):
         return ret
 
     def get_url(self, url, dest, makedirs=False, saltenv=u'base',
-                no_cache=False, cachedir=None):
+                no_cache=False, cachedir=None, source_hash=None):
         '''
         Get a single file from a URL.
         '''
@@ -488,7 +489,7 @@ class Client(object):
                 strpath = u'index.html'
 
             if salt.utils.platform.is_windows():
-                strpath = salt.utils.sanitize_win_path_string(strpath)
+                strpath = salt.utils.path.sanitize_win_path(strpath)
 
             dest = os.path.join(dest, strpath)
 
@@ -525,6 +526,18 @@ class Client(object):
                     return u''
         elif not no_cache:
             dest = self._extrn_path(url, saltenv, cachedir=cachedir)
+            if source_hash is not None:
+                try:
+                    source_hash = source_hash.split('=')[-1]
+                    form = salt.utils.files.HASHES_REVMAP[len(source_hash)]
+                    if salt.utils.hashutils.get_hash(dest, form) == source_hash:
+                        log.debug(
+                            'Cached copy of %s (%s) matches source_hash %s, '
+                            'skipping download', url, dest, source_hash
+                        )
+                        return dest
+                except (AttributeError, KeyError, IOError, OSError):
+                    pass
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
@@ -532,7 +545,9 @@ class Client(object):
         if url_data.scheme == u's3':
             try:
                 def s3_opt(key, default=None):
-                    u'''Get value of s3.<key> from Minion config or from Pillar'''
+                    '''
+                    Get value of s3.<key> from Minion config or from Pillar
+                    '''
                     if u's3.' + key in self.opts:
                         return self.opts[u's3.' + key]
                     try:
@@ -641,10 +656,14 @@ class Client(object):
             def on_header(hdr):
                 if write_body[1] is not False and write_body[2] is None:
                     if not hdr.strip() and 'Content-Type' not in write_body[1]:
-                        # We've reached the end of the headers and not yet
-                        # found the Content-Type. Reset the values we're
-                        # tracking so that we properly follow the redirect.
-                        write_body[0] = None
+                        # If write_body[0] is True, then we are not following a
+                        # redirect (initial response was a 200 OK). So there is
+                        # no need to reset write_body[0].
+                        if write_body[0] is not True:
+                            # We are following a redirect, so we need to reset
+                            # write_body[0] so that we properly follow it.
+                            write_body[0] = None
+                        # We don't need the HTTPHeaders object anymore
                         write_body[1] = False
                         return
                     # Try to find out what content type encoding is used if
@@ -667,9 +686,12 @@ class Client(object):
                         # If write_body[0] is False, this means that this
                         # header is a 30x redirect, so we need to reset
                         # write_body[0] to None so that we parse the HTTP
-                        # status code from the redirect target.
+                        # status code from the redirect target. Additionally,
+                        # we need to reset write_body[2] so that we inspect the
+                        # headers for the Content-Type of the URL we're
+                        # following.
                         if write_body[0] is write_body[1] is False:
-                            write_body[0] = None
+                            write_body[0] = write_body[2] = None
 
                 # Check the status line of the HTTP request
                 if write_body[0] is None:
@@ -785,11 +807,11 @@ class Client(object):
 
     def _extrn_path(self, url, saltenv, cachedir=None):
         '''
-        Return the extn_filepath for a given url
+        Return the extrn_filepath for a given url
         '''
         url_data = urlparse(url)
         if salt.utils.platform.is_windows():
-            netloc = salt.utils.sanitize_win_path_string(url_data.netloc)
+            netloc = salt.utils.path.sanitize_win_path(url_data.netloc)
         else:
             netloc = url_data.netloc
 
@@ -953,7 +975,7 @@ class LocalClient(Client):
             fnd_path = fnd
 
         hash_type = self.opts.get(u'hash_type', u'md5')
-        ret[u'hsum'] = salt.utils.get_hash(fnd_path, form=hash_type)
+        ret[u'hsum'] = salt.utils.hashutils.get_hash(fnd_path, form=hash_type)
         ret[u'hash_type'] = hash_type
         return ret
 
@@ -984,7 +1006,7 @@ class LocalClient(Client):
                 fnd_stat = None
 
         hash_type = self.opts.get(u'hash_type', u'md5')
-        ret[u'hsum'] = salt.utils.get_hash(fnd_path, form=hash_type)
+        ret[u'hsum'] = salt.utils.hashutils.get_hash(fnd_path, form=hash_type)
         ret[u'hash_type'] = hash_type
         return ret, fnd_stat
 
@@ -1179,7 +1201,7 @@ class RemoteClient(Client):
                         # Master has prompted a file verification, if the
                         # verification fails, re-download the file. Try 3 times
                         d_tries += 1
-                        hsum = salt.utils.get_hash(dest, salt.utils.stringutils.to_str(data.get(u'hash_type', b'md5')))  # future lint: disable=non-unicode-string
+                        hsum = salt.utils.hashutils.get_hash(dest, salt.utils.stringutils.to_str(data.get(u'hash_type', b'md5')))  # future lint: disable=non-unicode-string
                         if hsum != data[u'hsum']:
                             log.warning(
                                 u'Bad download of file %s, attempt %d of 3',
@@ -1293,7 +1315,7 @@ class RemoteClient(Client):
             else:
                 ret = {}
                 hash_type = self.opts.get(u'hash_type', u'md5')
-                ret[u'hsum'] = salt.utils.get_hash(path, form=hash_type)
+                ret[u'hsum'] = salt.utils.hashutils.get_hash(path, form=hash_type)
                 ret[u'hash_type'] = hash_type
                 return ret
         load = {u'path': path,

@@ -23,10 +23,10 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 from salt.ext.six import string_types
 
 # Import salt libs
-import salt.utils
 import salt.utils.args
 import salt.utils.decorators.path
 import salt.utils.stringutils
+import salt.utils.user
 from salt.utils.locales import sdecode as _sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -454,7 +454,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    groups = [group for group in salt.utils.get_group_list(name)]
+    groups = [group for group in salt.utils.user.get_group_list(name)]
     return groups
 
 

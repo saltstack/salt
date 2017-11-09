@@ -219,7 +219,7 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None,
     # TODO: Call cluster.shutdown() when the module is unloaded on
     # master/minion shutdown. Currently, Master.shutdown() and Minion.shutdown()
     # do nothing to allow loaded modules to gracefully handle resources stored
-    # in __context__ (i.e. connection pools). This means that the the connection
+    # in __context__ (i.e. connection pools). This means that the connection
     # pool is orphaned and Salt relies on Cassandra to reclaim connections.
     # Perhaps if Master/Minion daemons could be enhanced to call an "__unload__"
     # function, or something similar for each loaded module, connection pools
@@ -430,7 +430,7 @@ def cql_query_with_prepare(query, statement_name, statement_arguments, async=Fal
                 values[key] = value
             ret.append(values)
 
-    # If this was a synchronous call, then we either have a empty list
+    # If this was a synchronous call, then we either have an empty list
     # because there was no return, or we have a return
     # If this was an async call we only return the empty list
     return ret

@@ -115,7 +115,6 @@ import salt.client
 import salt.loader
 import salt.minion
 import salt.runner
-import salt.utils
 import salt.utils.args
 import salt.utils.event
 import salt.utils.http

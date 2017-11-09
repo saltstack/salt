@@ -718,7 +718,7 @@ Note that ping_on_rotate may cause high load on the master immediately after
 the key rotation event as minions reconnect. Consider this carefully if this
 salt master is managing a large number of minions.
 
-.. code-black:: yaml
+.. code-block:: yaml
 
     ping_on_rotate: False
 
@@ -904,7 +904,7 @@ is set to ``tcp`` by default on Windows.
 
     ipc_mode: ipc
 
-.. conf_master::
+.. conf_master:: tcp_master_pub_port
 
 ``tcp_master_pub_port``
 -----------------------
@@ -963,6 +963,19 @@ The TCP port for ``mworkers`` to connect to on the master.
 Salt-SSH Configuration
 ======================
 
+.. conf_master:: roster
+
+``roster``
+---------------
+
+Default: ``flat``
+
+Define the default salt-ssh roster module to use
+
+.. code-block:: yaml
+
+    roster: cache
+
 .. conf_master:: roster_file
 
 ``roster_file``
@@ -970,11 +983,30 @@ Salt-SSH Configuration
 
 Default: ``/etc/salt/roster``
 
-Pass in an alternative location for the salt-ssh roster file.
+Pass in an alternative location for the salt-ssh `flat` roster file.
 
 .. code-block:: yaml
 
     roster_file: /root/roster
+
+.. conf_master:: roster_file
+
+``rosters``
+---------------
+
+Default: None
+
+Define locations for `flat` roster files so they can be chosen when using Salt API.
+An administrator can place roster files into these locations.
+Then when calling Salt API, parameter 'roster_file' should contain a relative path to these locations.
+That is, "roster_file=/foo/roster" will be resolved as "/etc/salt/roster.d/foo/roster" etc.
+This feature prevents passing insecure custom rosters through the Salt API.
+
+.. code-block:: yaml
+
+    rosters:
+     - /etc/salt/roster.d
+     - /opt/salt/some/more/rosters
 
 .. conf_master:: ssh_passwd
 
@@ -2011,11 +2043,14 @@ output for states that failed or states that have changes.
 
 Default: ``full``
 
-The state_output setting changes if the output is the full multi line
-output for each changed state if set to 'full', but if set to 'terse'
-the output will be shortened to a single line.  If set to 'mixed', the output
-will be terse unless a state failed, in which case that output will be full.
-If set to 'changes', the output will be full unless the state didn't change.
+The state_output setting controls which results will be output full multi line:
+
+* ``full``, ``terse`` - each state will be full/terse
+* ``mixed`` - only states with errors will be full
+* ``changes`` - states with changes and errors will be full
+
+``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
+when set, the state ID will be used as name in the output.
 
 .. code-block:: yaml
 
@@ -4175,7 +4210,9 @@ information.
 
 .. code-block:: yaml
 
-    reactor: []
+    reactor:
+      - 'salt/minion/*/start':
+        - salt://reactor/startup_tasks.sls
 
 .. conf_master:: reactor_refresh_interval
 
@@ -4200,6 +4237,7 @@ Default: ``10``
 The number of workers for the runner/wheel in the reactor.
 
 .. code-block:: yaml
+
     reactor_worker_threads: 10
 
 .. conf_master:: reactor_worker_hwm
