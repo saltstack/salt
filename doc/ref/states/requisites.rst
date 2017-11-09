@@ -638,9 +638,13 @@ a useful way to execute a post hook after changing aspects of a system.
         - mode: 600
       cmd.run:
         - name: /usr/libexec/myservice/post-changes-hook.sh
-        - onchanges:
+        - onchanges_any:
           - file: /etc/myservice/myservice.conf
           - file: /etc/your_service/yourservice.conf
+
+In this example, the `cmd.run` would be run only if either of the
+`file.managed` states generated changes and at least one of the
+watched state's "result" is ``True``.
 
 use
 ~~~
