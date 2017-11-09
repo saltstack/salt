@@ -12,7 +12,7 @@ import salt.utils
 
 
 @skipIf(salt.utils.is_windows(), 'salt-ssh not available on Windows')
-class SSHGrainsTest(SSHCase):
+class SSHRawTest(SSHCase):
     '''
     testing salt-ssh with raw calls
     '''
