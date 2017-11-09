@@ -12,7 +12,7 @@ import re
 import shlex
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, TemplateError
 from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 import salt.utils.data
@@ -501,3 +501,43 @@ def format_call(fun,
         # Lets pack the current extra kwargs as template context
         ret.setdefault('context', {}).update(extra)
     return ret
+
+
+def parse_function(s):
+    sh = shlex.shlex(s, posix=True)
+    sh.escapedquotes = '"\''
+    word = []
+    args = []
+    kwargs = {}
+    brackets = []
+    key = None
+    for token in sh:
+        if token == '(':
+            break
+        word.append(token)
+    fname = ''.join(word)
+    word = []
+    for token in sh:
+        if token in '[{(':
+            word.append(token)
+            brackets.append(token)
+        elif (token == ',' or token == ')') and not brackets:
+            if key:
+                kwargs[key] = ''.join(word)
+            else:
+                args.append(''.join(word))
+            if token == ')':
+                break
+            key = None
+            word = []
+        elif token in ']})':
+            if not brackets or token != {'[': ']', '{': '}', '(': ')'}[brackets.pop()]:
+                raise TemplateError('Func spec syntax error. Wrong word is: {0}'.format(''.join(word)))
+            word.append(token)
+        elif token == '=' and not brackets:
+            key = ''.join(word)
+            word = []
+            continue
+        else:
+            word.append(token)
+    return fname, args, kwargs

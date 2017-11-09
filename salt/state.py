@@ -2040,24 +2040,40 @@ class State(object):
                                                 low['retry']['splay'])])
         return ret
 
+    def __eval_slot(self, slot):
+        log.debug(u'Evaluating slot: %s', slot)
+        fmt = slot.split(u':', 2)
+        if len(fmt) != 3:
+            log.warning(u'Malformed slot: %s', slot)
+            return slot
+        if fmt[1] != u'salt':
+            log.warning(u'Malformed slot: %s', slot)
+            log.warning(u'Only execution modules are currently supported in slots. This means slot '
+                        u'should start with "__slot__:salt:"')
+            return slot
+        fun, args, kwargs = salt.utils.args.parse_function(fmt[2])
+        if not fun or fun not in self.functions:
+            log.warning(u'Malformed slot: %s', slot)
+            log.warning(u'Execution module should be specified in a function call format: '
+                        u'test.arg(\'arg\', kw=\'kwarg\')')
+            return slot
+        log.debug(u'Calling slot: %s(%s, %s)', fun, args, kwargs)
+        return self.functions[fun](*args, **kwargs)
+
     def format_slots(self, cdata):
         '''
         Read in the arguments from the low level slot syntax to make a last
         minute runtime call to gather relevant data for the specific routine
         '''
         # __slot__:salt.cmd.run(foo, bar, baz=qux)
-        for ind in range(len(cdata['args'])):
-            arg = cdata['args'][ind]
-            if arg.startswith('__slot__:'):
-                # Call the slot
-                fmt = arg.split(':')
-                if len(fmt) < 2:
-                    # Impropperly formated slot
+        ctx = ((u'args', enumerate(cdata[u'args'])),
+               (u'kwargs', cdata[u'kwargs'].items()))
+        for atype, avalues in ctx:
+            for ind, arg in avalues:
+                if not isinstance(arg, six.string_types) or not arg.startswith(u'__slot__:'):
+                    # Not a slot, skip it
                     continue
-                fun = fmt[1]
-                comps = fun.split('(')
-                if len(comps) < 3:
-                    continue
+                cdata[atype][ind] = self.__eval_slot(arg)
 
     def verify_retry_data(self, retry_data):
         '''
