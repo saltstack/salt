@@ -130,8 +130,8 @@ TEST_SUITES = {
     'returners':
         {'display_name': 'Returners',
          'path': 'integration/returners'},
-    'ssh':
-        {'display_name': 'SSH',
+    'ssh-int':
+        {'display_name': 'SSH Integration',
          'path': 'integration/ssh'},
     'spm':
         {'display_name': 'SPM',
@@ -414,6 +414,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run salt-ssh tests. These tests will spin up a temporary '
                  'SSH server on your machine. In certain environments, this '
                  'may be insecure! Default: False'
+        )
+        self.test_selection_group.add_option(
+            '--ssh-int',
+            dest='ssh-int',
+            action='store_true',
+            default=False,
+            help='Run salt-ssh integration tests. Requires to be run with --ssh'
+                 'to spin up the SSH server on your machine.'
         )
         self.test_selection_group.add_option(
             '-A',
