@@ -1779,9 +1779,9 @@ def line(path, content=None, match=None, mode=None, location=None,
 
     location
         Defines where to place content in the line. Note this option is only
-        used when ``mode=insert`` or ``mode=ensure`` is specified. If a location
-        is passed in, it takes precedence over both the ``before`` and ``after``
-        kwargs. Valid locations are:``
+        used when ``mode=insert`` is specified. If a location is passed in, it
+        takes precedence over both the ``before`` and ``after`` kwargs. Valid
+        locations are:
 
         - start
             Place the content at the beginning of the file.
@@ -1970,80 +1970,21 @@ def line(path, content=None, match=None, mode=None, location=None,
             body = body.split(os.linesep)
             skip = None
             out = []
-            if body:
-                for file_line in body.split(os.linesep):
-                    if file_line.find(match) > -1 and not file_line == content:
-                        out.append(_get_line_indent(file_line, content, indent))
-                        found = True
-                    elif file_line == content:
-                        out.append(file_line)
-                        found = True
-                    else:
-                        out.append(file_line)
-                body = os.linesep.join(out)
-            if not found:
-                if location == 'start':
-                    body = os.linesep.join([content, body])
-                elif location == 'end':
-                    body = os.linesep.join([body, _get_line_indent(body[-1], content, indent) if body else content])
-        else:
-            if before and after:
-                _assert_occurrence(body, before, 'before')
-                _assert_occurrence(body, after, 'after')
-
-                a_idx = b_idx = -1
-                idx = 0
-                body = body.split(os.linesep)
-                for _line in body:
-                    idx += 1
-                    if _line.find(before) > -1 and b_idx < 0:
-                        b_idx = idx
-                    if _line.find(after) > -1 and a_idx < 0:
-                        a_idx = idx
-
-                # Add
-                if not b_idx - a_idx - 1:
-                    body = body[:a_idx] + [content] + body[b_idx - 1:]
-                elif b_idx - a_idx - 1 == 1:
-                    if _starts_till(body[a_idx:b_idx - 1][0], content) > -1:
-                        body[a_idx] = _get_line_indent(body[a_idx - 1], content, indent)
-                else:
-                    raise CommandExecutionError('Found more than one line between boundaries "before" and "after".')
-                body = os.linesep.join(body)
-
-            elif before and not after:
-                _assert_occurrence(body, before, 'before')
-                body = body.split(os.linesep)
-                out = []
-                for idx in range(len(body)):
-                    if body[idx].find(before) > -1:
-                        prev = (idx > 0 and idx or 1) - 1
-                        out.append(_get_line_indent(body[prev], content, indent))
-                        if _starts_till(out[prev], content) > -1:
-                            del out[prev]
+            for idx in range(len(body)):
+                if skip != body[idx]:
                     out.append(body[idx])
-                body = os.linesep.join(out)
 
-            elif not before and after:
-                _assert_occurrence(body, after, 'after')
-                body = body.split(os.linesep)
-                skip = None
-                out = []
-                for idx in range(len(body)):
-                    if skip != body[idx]:
-                        out.append(body[idx])
+                if body[idx].find(after) > -1:
+                    next_line = idx + 1 < len(body) and body[idx + 1] or None
+                    if next_line is not None and _starts_till(next_line, content) > -1:
+                        skip = next_line
+                    out.append(_get_line_indent(body[idx], content, indent))
+            body = os.linesep.join(out)
 
-                    if body[idx].find(after) > -1:
-                        next_line = idx + 1 < len(body) and body[idx + 1] or None
-                        if next_line is not None and _starts_till(next_line, content) > -1:
-                            skip = next_line
-                        out.append(_get_line_indent(body[idx], content, indent))
-                body = os.linesep.join(out)
-
-            else:
-                raise CommandExecutionError("Wrong conditions? "
-                                            "Unable to ensure line without knowing "
-                                            "where to put it before and/or after.")
+        else:
+            raise CommandExecutionError("Wrong conditions? "
+                                        "Unable to ensure line without knowing "
+                                        "where to put it before and/or after.")
 
     changed = body_before != hashlib.sha256(salt.utils.stringutils.to_bytes(body)).hexdigest()
 
