@@ -745,7 +745,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # File DOESN'T contain the match
         with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            tfile.write(salt.utils.to_bytes('first=foo' + os.linesep))
+            tfile.write(salt.utils.stringutils.to_bytes('first=foo' + os.linesep))
             tfile.flush()
         filemod.line(tfile.name,
                      content='second=bar',
@@ -758,7 +758,9 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         # File DOES contain the match
         with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            tfile.write(salt.utils.to_bytes(os.linesep.join(['first=foo', 'second=foo']) + os.linesep))
+            tfile.write(salt.utils.stringutils.to_bytes(
+                os.linesep.join(['first=foo', 'second=foo']) + os.linesep)
+            )
             tfile.flush()
         filemod.line(tfile.name,
                      content='second=bar',
@@ -776,7 +778,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # File DOESN'T contain the match
         with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            tfile.write(salt.utils.to_bytes('first=foo'))
+            tfile.write(salt.utils.stringutils.to_bytes('first=foo'))
             tfile.flush()
         filemod.line(tfile.name,
                      content='second=bar',
@@ -789,7 +791,9 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         # File DOES contain the match
         with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
-            tfile.write(salt.utils.to_bytes(os.linesep.join(['second=foo', 'first=foo']) + os.linesep))
+            tfile.write(salt.utils.stringutils.to_bytes(
+                os.linesep.join(['second=foo', 'first=foo']) + os.linesep)
+            )
             tfile.flush()
         filemod.line(tfile.name,
                      content='second=bar',
