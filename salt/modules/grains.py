@@ -413,6 +413,7 @@ def delkey(key):
     CLI Example:
 
     .. code-block:: bash
+
         salt '*' grains.delkey key
     '''
     setval(key, None, destructive=True)

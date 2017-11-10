@@ -258,11 +258,11 @@ class TestVerify(TestCase):
                     self.skipTest('We\'ve hit the max open files setting')
                 raise
             finally:
-                shutil.rmtree(tempdir)
                 if sys.platform.startswith('win'):
                     win32file._setmaxstdio(mof_h)
                 else:
                     resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
+                shutil.rmtree(tempdir)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_verify_log(self):

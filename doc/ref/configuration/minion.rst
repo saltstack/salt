@@ -2387,6 +2387,7 @@ Default: ``10``
 The number of workers for the runner/wheel in the reactor.
 
 .. code-block:: yaml
+
     reactor_worker_threads: 10
 
 .. conf_minion:: reactor_worker_hwm

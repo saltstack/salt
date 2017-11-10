@@ -738,6 +738,68 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             saltenv='base')
         self.assertEqual(ret, 'This is a templated file.')
 
+    def test_line_ensure_location_start(self):
+        '''
+        Check that file.line uses ``location=start`` if a
+        match is not found and replaces content if it is.
+        '''
+        # File DOESN'T contain the match
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            tfile.write(salt.utils.to_bytes('first=foo' + os.linesep))
+            tfile.flush()
+        filemod.line(tfile.name,
+                     content='second=bar',
+                     match='second=',
+                     mode='ensure',
+                     location='start')
+        expected = os.linesep.join(['second=bar', 'first=foo']) + os.linesep
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
+
+        # File DOES contain the match
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            tfile.write(salt.utils.to_bytes(os.linesep.join(['first=foo', 'second=foo']) + os.linesep))
+            tfile.flush()
+        filemod.line(tfile.name,
+                     content='second=bar',
+                     match='second=',
+                     mode='ensure',
+                     location='start')
+        expected = os.linesep.join(['first=foo', 'second=bar']) + os.linesep
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
+
+    def test_line_ensure_location_end(self):
+        '''
+        Check that file.line uses ``location=end`` if a
+        match is not found and replaces content if it is.
+        '''
+        # File DOESN'T contain the match
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            tfile.write(salt.utils.to_bytes('first=foo'))
+            tfile.flush()
+        filemod.line(tfile.name,
+                     content='second=bar',
+                     match='second=',
+                     mode='ensure',
+                     location='end')
+        expected = os.linesep.join(['first=foo', 'second=bar'])
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
+
+        # File DOES contain the match
+        with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as tfile:
+            tfile.write(salt.utils.to_bytes(os.linesep.join(['second=foo', 'first=foo']) + os.linesep))
+            tfile.flush()
+        filemod.line(tfile.name,
+                     content='second=bar',
+                     match='second=',
+                     mode='ensure',
+                     location='end')
+        expected = os.linesep.join(['second=bar', 'first=foo']) + os.linesep
+        with salt.utils.files.fopen(tfile.name) as tfile2:
+            self.assertEqual(tfile2.read(), expected)
+
     def test_replace_line_in_empty_file(self):
         '''
         Tests that when calling file.line with ``mode=replace``,
