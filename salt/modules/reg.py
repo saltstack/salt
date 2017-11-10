@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-===========================
 Manage the Windows registry
-===========================
 
 -----
 Hives

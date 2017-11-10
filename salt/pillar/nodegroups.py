@@ -16,6 +16,7 @@ Command Line
 ------------
 
 .. code-block:: bash
+
     salt-call pillar.get nodegroups
     local:
         - class_infra
