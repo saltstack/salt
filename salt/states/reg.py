@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 r'''
-===========================
 Manage the Windows registry
 ===========================
+
 Many python developers think of registry keys as if they were python keys in a
 dictionary which is not the case. The windows registry is broken down into the
 following components:

@@ -500,7 +500,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
 
     CLI Example with TextFSM template:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' net.cli textfsm_parse=True textfsm_path=salt://textfsm/
 
@@ -1238,6 +1238,7 @@ def load_config(filename=None,
     Example output:
 
     .. code-block:: python
+
         {
             'comment': 'Configuration discarded.',
             'already_configured': False,

@@ -65,6 +65,7 @@ def present(name, definition):
     **Example:**
 
     .. code-block:: yaml
+
         mytestindex2_template:
           elasticsearch_index_template.present:
             - definition:

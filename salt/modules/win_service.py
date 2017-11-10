@@ -448,8 +448,9 @@ def stop(name):
     try:
         win32serviceutil.StopService(name)
     except pywintypes.error as exc:
-        raise CommandExecutionError(
-            'Failed To Stop {0}: {1}'.format(name, exc[2]))
+        if exc[0] != 1062:
+            raise CommandExecutionError(
+                'Failed To Stop {0}: {1}'.format(name, exc[2]))
 
     attempts = 0
     while info(name)['Status'] in ['Running', 'Stop Pending'] \

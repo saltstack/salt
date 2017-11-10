@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+'''
+Module to work with salt formula defaults files
+
+'''
+
 from __future__ import absolute_import
 import json
 import logging

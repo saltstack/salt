@@ -174,11 +174,13 @@ to create it.
 The generated grain information will appear similar to:
 
 .. code-block:: yaml
+
     grains:
       salt-cloud:
         driver: ec2
         provider: my_ec2:ec2
         profile: ec2-web
+
 The generation of salt-cloud grains can be surpressed by the
 option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
 

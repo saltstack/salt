@@ -29,7 +29,6 @@ import salt.transport.client
 import salt.utils.args
 import salt.utils.dictupdate
 import salt.utils.files
-import salt.utils.master
 import salt.utils.minions
 import salt.utils.user
 import salt.utils.versions
@@ -444,6 +443,8 @@ class LoadAuth(object):
                         auth_ret = True
 
             if auth_ret is not True:
+                # Avoid a circular import
+                import salt.utils.master
                 auth_list = salt.utils.master.get_values_of_matching_keys(
                     self.opts['publisher_acl'], auth_ret)
                 if not auth_list:
