@@ -581,7 +581,7 @@ def secret_present(
     ret['changes'] = {
         # Omit values from the return. They are unencrypted
         # and can contain sensitive data.
-        'data': res['data'].keys()
+        'data': list(res['data'])
     }
     ret['result'] = True
 
@@ -933,7 +933,10 @@ def node_label_folder_absent(name, node, **kwargs):
     ret['result'] = True
     ret['changes'] = {
         'kubernetes.node_label_folder_absent': {
-            'new': new_labels, 'old': labels.keys()}}
+            'old': list(labels),
+            'new': new_labels,
+        }
+    }
     ret['comment'] = 'Label folder removed from node'
 
     return ret
