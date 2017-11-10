@@ -1392,7 +1392,7 @@ def list_pkgs(versions_as_list=False,
                                                  version_num)
 
     # Check for virtual packages. We need dctrl-tools for this.
-    if not removed:
+    if not removed and not HAS_APT:
         try:
             virtpkgs_all = _get_virtual()
         except CommandExecutionError as cee:
@@ -1401,9 +1401,7 @@ def list_pkgs(versions_as_list=False,
         for realpkg, provides in six.iteritems(virtpkgs_all):
             # grep-available returns info on all virtual packages. Ignore any
             # virtual packages that do not have the real package installed.
-            # _get_virtual() do not use grep-available if HAS_APT is true
-            # so we can skip loop below
-            if not HAS_APT and realpkg in ret['installed']:
+            if realpkg in ret['installed']:
                 virtpkgs.update(provides)
         for virtname in virtpkgs:
             # Set virtual package versions to '1'
