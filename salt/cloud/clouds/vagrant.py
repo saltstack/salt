@@ -30,7 +30,8 @@ if six.PY3:
     import ipaddress
 else:
     import salt.ext.ipaddress as ipaddress
-from salt.exceptions import SaltCloudException, SaltCloudSystemExit
+from salt.exceptions import SaltCloudException, SaltCloudSystemExit, \
+    SaltInvocationError
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -229,18 +230,22 @@ def create(vm_):
                         kwarg={'network_mask': network_mask,
                                 'get_private_key': True})[host]
     with tempfile.NamedTemporaryFile() as pks:
-        if 'private_key' not in vm_ and ret.get('private_key', False):
+        if 'private_key' not in vm_ and ret and ret.get('private_key', False):
             pks.write(ret['private_key'])
             pks.flush()
             log.debug('wrote private key to %s', pks.name)
             vm_['key_filename'] = pks.name
         if 'ssh_host' not in vm_:
-            vm_.setdefault('ssh_username', ret['ssh_username'])
-            if ret.get('ip_address'):
-                vm_['ssh_host'] = ret['ip_address']
-            else:  # if probe failed or not used, use Vagrant's reported ssh info
-                vm_['ssh_host'] = ret['ssh_host']
-                vm_.setdefault('ssh_port', ret['ssh_port'])
+            try:
+                vm_.setdefault('ssh_username', ret['ssh_username'])
+                if ret.get('ip_address'):
+                    vm_['ssh_host'] = ret['ip_address']
+                else:  # if probe failed or not used, use Vagrant's reported ssh info
+                    vm_['ssh_host'] = ret['ssh_host']
+                    vm_.setdefault('ssh_port', ret['ssh_port'])
+            except (KeyError, TypeError):
+                raise SaltInvocationError(
+                    'Insufficient SSH addressing information for {}'.format(name))
 
         log.info('Provisioning machine %s as node %s using ssh %s',
                  machine, name, vm_['ssh_host'])
@@ -288,29 +293,32 @@ def destroy(name, call=None):
         transport=opts['transport']
     )
     my_info = _get_my_info(name)
-    profile_name = my_info[name]['profile']
-    profile = opts['profiles'][profile_name]
-    host = profile['host']
-    local = salt.client.LocalClient()
-    ret = local.cmd(host, 'vagrant.destroy', [name])
+    if my_info:
+        profile_name = my_info[name]['profile']
+        profile = opts['profiles'][profile_name]
+        host = profile['host']
+        local = salt.client.LocalClient()
+        ret = local.cmd(host, 'vagrant.destroy', [name])
 
-    if ret[host]:
-        __utils__['cloud.fire_event'](
-            'event',
-            'destroyed instance',
-            'salt/cloud/{0}/destroyed'.format(name),
-            args={'name': name},
-            sock_dir=opts['sock_dir'],
-            transport=opts['transport']
-        )
+        if ret[host]:
+            __utils__['cloud.fire_event'](
+                'event',
+                'destroyed instance',
+                'salt/cloud/{0}/destroyed'.format(name),
+                args={'name': name},
+                sock_dir=opts['sock_dir'],
+                transport=opts['transport']
+            )
 
-        if opts.get('update_cachedir', False) is True:
-            __utils__['cloud.delete_minion_cachedir'](
-                name, __active_provider_name__.split(':')[0], opts)
+            if opts.get('update_cachedir', False) is True:
+                __utils__['cloud.delete_minion_cachedir'](
+                    name, __active_provider_name__.split(':')[0], opts)
 
-        return {'Destroyed': '{0} was destroyed.'.format(name)}
+            return {'Destroyed': '{0} was destroyed.'.format(name)}
+        else:
+            return {'Error': 'Error destroying {}'.format(name)}
     else:
-        return {'Error': 'Error destroying {}'.format(name)}
+        return {'Error': 'No response from {}. Cannot destroy.'.format(name)}
 
 
 # noinspection PyTypeChecker
