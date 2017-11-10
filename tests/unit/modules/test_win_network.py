@@ -7,7 +7,6 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -64,15 +63,13 @@ class Mockwinapi(object):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
+class WinNetworkTestCase(TestCase):
     '''
     Test cases for salt.modules.win_network
     '''
-    def setup_loader_modules(self):
-        # wmi modules are platform specific...
+    def setUp(self):
         self.WMI = Mock()
         self.addCleanup(delattr, self, 'WMI')
-        return {win_network: {'wmi': wmi}}
 
     # 'ping' function tests: 1
 
