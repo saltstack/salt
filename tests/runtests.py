@@ -175,7 +175,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
     source_code_basedir = SALT_ROOT
 
     def _get_suites(self, include_unit=False, include_cloud_provider=False,
-                    include_proxy=False, include_ssh=False):
+                    include_proxy=False):
         '''
         Return a set of all test suites except unit and cloud provider tests
         unless requested
@@ -187,33 +187,28 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             suites -= set(['cloud_provider'])
         if not include_proxy:
             suites -= set(['proxy'])
-        if not include_ssh:
-            suites -= set(['ssh'])
 
         return suites
 
     def _check_enabled_suites(self, include_unit=False,
-                              include_cloud_provider=False,
-                              include_proxy=False, include_ssh=False):
+                              include_cloud_provider=False, include_proxy=False):
         '''
         Query whether test suites have been enabled
         '''
         suites = self._get_suites(include_unit=include_unit,
                                   include_cloud_provider=include_cloud_provider,
-                                  include_proxy=include_proxy,
-                                  include_ssh=include_ssh)
+                                  include_proxy=include_proxy)
 
         return any([getattr(self.options, suite) for suite in suites])
 
     def _enable_suites(self, include_unit=False, include_cloud_provider=False,
-                       include_proxy=False, include_ssh=False):
+                       include_proxy=False):
         '''
         Enable test suites for current test run
         '''
         suites = self._get_suites(include_unit=include_unit,
                                   include_cloud_provider=include_cloud_provider,
-                                  include_proxy=include_proxy,
-                                  include_ssh=include_ssh)
+                                  include_proxy=include_proxy)
 
         for suite in suites:
             setattr(self.options, suite, True)
@@ -481,8 +476,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if not self.options.name and not \
                 self._check_enabled_suites(include_unit=True,
                                            include_cloud_provider=True,
-                                           include_proxy=True,
-                                           include_ssh=True):
+                                           include_proxy=True):
             self._enable_suites(include_unit=True)
 
         self.start_coverage(
@@ -671,8 +665,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         status = []
         # Return an empty status if no tests have been enabled
-        if not self._check_enabled_suites(include_cloud_provider=True,
-                                          include_proxy=True, include_ssh=True) and not self.options.name:
+        if not self._check_enabled_suites(include_cloud_provider=True, include_proxy=True) and not self.options.name:
             return status
 
         with TestDaemon(self):
