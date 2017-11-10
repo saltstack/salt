@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
- Namecheap management
+Namecheap nameservers management
 
 .. versionadded:: 2017.7.0
 
@@ -17,6 +17,7 @@
    the namecheap API:
 
         * ``requests``
+
         .. code-block:: bash
 
             pip install requests
