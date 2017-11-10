@@ -1924,9 +1924,9 @@ def line(path, content=None, match=None, mode=None, location=None,
 
         else:
             if location == 'start':
-                body = os.linesep.join([content, body])
+                body = os.linesep.join((content, body))
             elif location == 'end':
-                body = os.linesep.join([body, _get_line_indent(body[-1], content, indent) if body else content])
+                body = os.linesep.join((body, _get_line_indent(body[-1], content, indent) if body else content))
 
     elif mode == 'ensure':
         after = after and after.strip()
