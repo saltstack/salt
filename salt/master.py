@@ -232,6 +232,8 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         # Clean out the fileserver backend cache
         salt.daemons.masterapi.clean_fsbackend(self.opts)
 
+        run_once = True
+        time_elapsed = 0
         old_present = set()
         while True:
             now = int(time.time())
@@ -244,7 +246,16 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
             self.handle_key_cache()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
-            salt.daemons.masterapi.fileserver_update(self.fileserver)
+            if run_once == True:
+                salt.daemons.masterapi.fileserver_update(self.fileserver)
+                run_once = False
+                random_interval_fun = lambda: random.randrange(self.loop_interval, 600, self.loop_interval/2)
+                random_interval = random_interval_fun()
+                log.info('Setting random interval to run fileserver_update: {0} seconds'.format(random_interval))
+            if time_elapsed >= random_interval:
+                salt.daemons.masterapi.fileserver_update(self.fileserver)
+                time_elapsed = 0
+            time_elapsed += self.loop_interval
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
             time.sleep(self.loop_interval)
