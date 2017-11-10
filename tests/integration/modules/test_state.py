@@ -910,7 +910,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.sls', mods='requisites.use')
         self.assertReturnNonEmptySaltType(ret)
         for item, descr in six.iteritems(ret):
-            self.assertEqual(descr['comment'], 'onlyif execution failed')
+            self.assertEqual(descr['comment'], 'onlyif condition is false')
 
         # TODO: issue #8802 : use recursions undetected
         # issue is closed as use does not actually inherit requisites
