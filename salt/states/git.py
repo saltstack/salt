@@ -3002,13 +3002,13 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     cmd_kwargs['python_shell'] = True
     if onlyif:
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
-            return {'comment': 'onlyif execution failed',
+            return {'comment': 'onlyif condition is false',
                     'skip_watch': True,
                     'result': True}
 
     if unless:
         if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
-            return {'comment': 'unless execution succeeded',
+            return {'comment': 'unless condition is true',
                     'skip_watch': True,
                     'result': True}
 
