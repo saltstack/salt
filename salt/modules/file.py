@@ -1887,7 +1887,7 @@ def line(path, content=None, match=None, mode=None, location=None,
                 out = []
                 lines = body.split(os.linesep)
                 in_range = False
-                for idx, line in enumerate(lines):
+                for line in lines:
                     if line.find(after) > -1:
                         in_range = True
                     elif line.find(before) > -1 and in_range:
