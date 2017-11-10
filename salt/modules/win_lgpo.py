@@ -39,6 +39,7 @@ Current known limitations
 '''
 # Import Python libs
 from __future__ import absolute_import
+from __future__ import unicode_literals
 import io
 import os
 import logging
@@ -48,10 +49,11 @@ import ctypes
 import time
 
 # Import Salt libs
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.utils.dictupdate as dictupdate
 import salt.utils.files
 import salt.utils.platform
-import salt.utils.dictupdate as dictupdate
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -4081,7 +4083,7 @@ def _write_regpol_data(data_to_write,
             gpt_ini_data = ''
             if os.path.exists(gpt_ini_path):
                 with salt.utils.files.fopen(gpt_ini_path, 'rb') as gpt_file:
-                    gpt_ini_data = gpt_file.read()
+                    gpt_ini_data = salt.utils.stringutils.to_str(gpt_file.read())
             if not _regexSearchRegPolData(r'\[General\]\r\n', gpt_ini_data):
                 gpt_ini_data = '[General]\r\n' + gpt_ini_data
             if _regexSearchRegPolData(r'{0}='.format(re.escape(gpt_extension)), gpt_ini_data):
@@ -4136,7 +4138,7 @@ def _write_regpol_data(data_to_write,
                         gpt_ini_data[general_location.end():])
             if gpt_ini_data:
                 with salt.utils.files.fopen(gpt_ini_path, 'wb') as gpt_file:
-                    gpt_file.write(gpt_ini_data)
+                    gpt_file.write(salt.utils.stringutils.to_bytes(gpt_ini_data))
         except Exception as e:
             msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
                     gpt_ini_path, e)
@@ -5374,7 +5376,7 @@ def set_(computer_policy=None, user_policy=None,
                                     _regedits[regedit]['policy']['Registry']['Type'])
                         else:
                             _ret = __salt__['reg.delete_value'](
-                                    _regedits[regedit]['polic']['Registry']['Hive'],
+                                    _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'])
                         if not _ret:

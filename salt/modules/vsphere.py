@@ -4211,6 +4211,7 @@ def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
         Default is None.
 
     .. code-block:: bash
+
         salt '*' vsphere.list_dvporgroups
 
         salt '*' vsphere.list_dvportgroups dvs=dvs1
@@ -4662,6 +4663,7 @@ def list_storage_policies(policy_names=None, service_instance=None):
         Default is None.
 
     .. code-block:: bash
+
         salt '*' vsphere.list_storage_policies
 
         salt '*' vsphere.list_storage_policy policy_names=[policy_name]
@@ -4688,6 +4690,7 @@ def list_default_vsan_policy(service_instance=None):
         Default is None.
 
     .. code-block:: bash
+
         salt '*' vsphere.list_storage_policies
 
         salt '*' vsphere.list_storage_policy policy_names=[policy_name]
@@ -4726,6 +4729,7 @@ def list_capability_definitions(service_instance=None):
         Default is None.
 
     .. code-block:: bash
+
         salt '*' vsphere.list_capabilities
     '''
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
@@ -4806,6 +4810,7 @@ def create_storage_policy(policy_name, policy_dict, service_instance=None):
         Default is None.
 
     .. code-block:: bash
+
         salt '*' vsphere.create_storage_policy policy_name='policy name'
             policy_dict="$policy_dict"
     '''
@@ -4845,6 +4850,7 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
         Default is None.
 
     .. code-block:: bash
+
         salt '*' vsphere.update_storage_policy policy='policy name'
             policy_dict="$policy_dict"
     '''
@@ -4882,6 +4888,7 @@ def list_default_storage_policy_of_datastore(datastore, service_instance=None):
         Default is None.
 
     .. code-block:: bash
+
         salt '*' vsphere.list_default_storage_policy_of_datastore datastore=ds1
     '''
     log.trace('Listing the default storage policy of datastore \'{0}\''
@@ -4920,6 +4927,7 @@ def assign_default_storage_policy_to_datastore(policy, datastore,
         Default is None.
 
     .. code-block:: bash
+
         salt '*' vsphere.assign_storage_policy_to_datastore
             policy='policy name' datastore=ds1
     '''
@@ -4964,6 +4972,7 @@ def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
         Default is None.
 
     .. code-block:: bash
+
         salt '*' vsphere.list_datacenters_via_proxy
 
         salt '*' vsphere.list_datacenters_via_proxy dc1
