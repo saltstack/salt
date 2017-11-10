@@ -3070,6 +3070,8 @@ def to_unicode(s, encoding=None):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
+    if s is None:
+        return s
     if six.PY3:
         return to_str(s, encoding)
     else:
