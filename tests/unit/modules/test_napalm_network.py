@@ -6,16 +6,16 @@
 # Import Python Libs
 from __future__ import absolute_import
 
+from functools import wraps
+
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    patch,
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
-from functools import wraps
 
 
 # Test data
@@ -239,21 +239,24 @@ def mock_proxy_napalm_wrap(func):
     return func_wrapper
 
 
-import salt.utils.napalm as napalm_utils
+import salt.utils.napalm as napalm_utils  # NOQA
 napalm_utils.proxy_napalm_wrap = mock_proxy_napalm_wrap
 
-import salt.modules.napalm_network as napalm_network
+import salt.modules.napalm_network as napalm_network  # NOQA
 
 
 def true(name):
     assert name == 'set_ntp_peers'
     return True
 
+
 def random_hash(source, method):
     return 12346789
 
+
 def join(*files):
     return True
+
 
 def get_managed_file(*args, **kwargs):
     return 'True'
@@ -263,7 +266,6 @@ def get_managed_file(*args, **kwargs):
 class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        # TODO: Determine configuration best case
         module_globals = {
             '__salt__': {
                 'config.option': MagicMock(return_value={
