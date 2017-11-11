@@ -351,6 +351,7 @@ def install(name,
             override_args=False,
             force_x86=False,
             package_args=None,
+            execution_timeout=None,
             allow_multiple=False):
     '''
     Instructs Chocolatey to install a package.
@@ -401,6 +402,9 @@ def install(name,
         package_args (str):
             Arguments you want to pass to the package. Default is None.
 
+        execution_timeout (str):
+            Chocolatey execution timeout value you want to you want to pass to the installation process. Default is None.
+
         allow_multiple (bool):
             Allow multiple versions of the package to be installed. Do not use
             with ``force``. Does not work with all packages. Default is False.
@@ -443,6 +447,8 @@ def install(name,
         cmd.append('--forcex86')
     if package_args:
         cmd.extend(['--packageparameters', package_args])
+    if execution_timeout:
+        cmd.extend(['--execution-timeout', execution_timeout])
     if allow_multiple:
         cmd.append('--allow-multiple')
     cmd.extend(_yes(__context__))
