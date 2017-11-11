@@ -205,6 +205,26 @@ class MockNapalmDevice(object):
     def get_optics(self, **kwargs):
         return TEST_OPTICS
 
+    def load_merge_candidate(self, filename=None, config=None):
+        assert config == 'new config'
+        return TEST_RUNNING_CONFIG
+
+    def load_replace_candidate(self, filename=None, config=None):
+        assert config == 'new config'
+        return TEST_RUNNING_CONFIG
+
+    def commit_config(self, **kwargs):
+        return TEST_RUNNING_CONFIG
+
+    def discard_config(self, **kwargs):
+        return TEST_RUNNING_CONFIG
+
+    def compare_config(self, **kwargs):
+        return TEST_RUNNING_CONFIG
+
+    def rollback(self, **kwargs):
+        return TEST_RUNNING_CONFIG
+
 
 def mock_proxy_napalm_wrap(func):
     '''
@@ -225,6 +245,20 @@ napalm_utils.proxy_napalm_wrap = mock_proxy_napalm_wrap
 import salt.modules.napalm_network as napalm_network
 
 
+def true(name):
+    assert name == 'set_ntp_peers'
+    return True
+
+def random_hash(source, method):
+    return 12346789
+
+def join(*files):
+    return True
+
+def get_managed_file(*args, **kwargs):
+    return 'True'
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
 
@@ -237,7 +271,11 @@ class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
                         'driver': 'test',
                         'key': '2orgk34kgk34g'
                     }
-                })
+                }),
+                'file.file_exists': true,
+                'file.join': join,
+                'file.get_managed': get_managed_file,
+                'random.hash': random_hash
             }
         }
 
@@ -304,3 +342,40 @@ class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
     def test_optics(self):
         ret = napalm_network.optics()
         assert ret['out'] == TEST_OPTICS
+
+    def test_load_config(self):
+        ret = napalm_network.load_config(text='new config')
+        assert ret['result']
+
+    def test_load_config_replace(self):
+        ret = napalm_network.load_config(text='new config', replace=True)
+        assert ret['result']
+
+    def test_load_template(self):
+        ret = napalm_network.load_template('set_ntp_peers', 
+                                           peers=['192.168.0.1'])
+        assert ret['out'] is None
+
+    def test_commit(self):
+        ret = napalm_network.commit()
+        assert ret['out'] == TEST_RUNNING_CONFIG
+
+    def test_discard_config(self):
+        ret = napalm_network.discard_config()
+        assert ret['out'] == TEST_RUNNING_CONFIG
+
+    def test_compare_config(self):
+        ret = napalm_network.compare_config()
+        assert ret['out'] == TEST_RUNNING_CONFIG
+
+    def test_rollback(self):
+        ret = napalm_network.rollback()
+        assert ret['out'] == TEST_RUNNING_CONFIG
+
+    def test_config_changed(self):
+        ret = napalm_network.config_changed()
+        assert ret == (True, '')
+
+    def test_config_control(self):
+        ret = napalm_network.config_control()
+        assert ret == (True, '')
