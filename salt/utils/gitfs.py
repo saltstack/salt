@@ -537,7 +537,7 @@ class GitProvider(object):
             return root_dir
         log.error(
             'Root path \'%s\' not present in %s remote \'%s\', '
-            'skipping.', self.root, self.role, self.id
+            'skipping.', self.root(), self.role, self.id
         )
         return None
 
