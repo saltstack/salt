@@ -17,8 +17,8 @@ import os
 import re
 
 # Import salt libs
-import salt.utils  # Can be removed when alias_function, is_true are moved
 import salt.utils.data
+import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.decorators as decorators
@@ -152,7 +152,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> ...
     '''
 
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
     pkglist = {}
     pkgin = _check_pkgin()
@@ -195,7 +195,7 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.functools.alias_function(latest_version, 'available_version')
 
 
 def version(*names, **kwargs):
@@ -256,9 +256,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x))
+    if any([salt.utils.data.is_true(kwargs.get(x))
             for x in ('removed', 'purge_desired')]):
         return {}
 

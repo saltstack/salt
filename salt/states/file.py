@@ -282,15 +282,18 @@ from datetime import datetime   # python3 problem in the making?
 # Import salt libs
 import salt.loader
 import salt.payload
-import salt.utils
+import salt.utils.dateutils
 import salt.utils.dictupdate
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
 from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.state import get_accumulator_dir as _get_accumulator_dir
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
@@ -314,8 +317,10 @@ def _get_accumulator_filepath():
     '''
     Return accumulator data path.
     '''
-    return os.path.join(salt.utils.get_accumulator_dir(__opts__['cachedir']),
-                        __instance_id__)
+    return os.path.join(
+        _get_accumulator_dir(__opts__['cachedir']),
+        __instance_id__
+    )
 
 
 def _load_accumulators():
@@ -423,7 +428,7 @@ def _gen_recurse_managed_files(
             srelpath = posixpath.relpath(lname, srcpath)
             if not _is_valid_relpath(srelpath, maxdepth=maxdepth):
                 continue
-            if not salt.utils.check_include_exclude(
+            if not salt.utils.stringutils.check_include_exclude(
                     srelpath, include_pat, exclude_pat):
                 continue
             # Check for all paths that begin with the symlink
@@ -480,7 +485,7 @@ def _gen_recurse_managed_files(
 
         # Check if it is to be excluded. Match only part of the path
         # relative to the target directory
-        if not salt.utils.check_include_exclude(
+        if not salt.utils.stringutils.check_include_exclude(
                 relname, include_pat, exclude_pat):
             continue
         dest = full_path(relname)
@@ -501,7 +506,7 @@ def _gen_recurse_managed_files(
             relname = posixpath.relpath(mdir, srcpath)
             if not _is_valid_relpath(relname, maxdepth=maxdepth):
                 continue
-            if not salt.utils.check_include_exclude(
+            if not salt.utils.stringutils.check_include_exclude(
                     relname, include_pat, exclude_pat):
                 continue
             mdest = full_path(relname)
@@ -639,7 +644,7 @@ def _clean_dir(root, keep, exclude_pat):
         if nfn not in real_keep:
             # -- check if this is a part of exclude_pat(only). No need to
             # check include_pat
-            if not salt.utils.check_include_exclude(
+            if not salt.utils.stringutils.check_include_exclude(
                     os.path.relpath(nfn, root), None, exclude_pat):
                 return
             removed.add(nfn)
@@ -729,7 +734,7 @@ def _check_directory(name,
             if path in keep:
                 return {}
             else:
-                if not salt.utils.check_include_exclude(
+                if not salt.utils.stringutils.check_include_exclude(
                         os.path.relpath(path, name), None, exclude_pat):
                     return {}
                 else:
@@ -902,8 +907,8 @@ def _check_dir_meta(name,
             and group != stats.get('gid')):
         changes['group'] = group
     # Normalize the dir mode
-    smode = salt.utils.normalize_mode(stats['mode'])
-    mode = salt.utils.normalize_mode(mode)
+    smode = salt.utils.files.normalize_mode(stats['mode'])
+    mode = salt.utils.files.normalize_mode(mode)
     if mode is not None and mode != smode:
         changes['mode'] = mode
     return changes
@@ -1256,7 +1261,7 @@ def symlink(
     name = os.path.expanduser(name)
 
     # Make sure that leading zeros stripped by YAML loader are added back
-    mode = salt.utils.normalize_mode(mode)
+    mode = salt.utils.files.normalize_mode(mode)
 
     user = _test_owner(kwargs, user=user)
     ret = {'name': name,
@@ -2121,7 +2126,7 @@ def managed(name,
         keep_mode = False
 
     # Make sure that any leading zeros stripped by YAML loader are added back
-    mode = salt.utils.normalize_mode(mode)
+    mode = salt.utils.files.normalize_mode(mode)
 
     contents_count = len(
         [x for x in (contents, contents_pillar, contents_grains)
@@ -2359,10 +2364,8 @@ def managed(name,
             elif ret['pchanges']:
                 ret['result'] = None
                 ret['comment'] = u'The file {0} is set to be changed'.format(name)
-                if show_changes and 'diff' in ret['pchanges']:
-                    ret['changes']['diff'] = ret['pchanges']['diff']
-                if not show_changes:
-                    ret['changes']['diff'] = '<show_changes=False>'
+                if 'diff' in ret['pchanges'] and not show_changes:
+                    ret['pchanges']['diff'] = '<show_changes=False>'
             else:
                 ret['result'] = True
                 ret['comment'] = u'The file {0} is in the correct state'.format(name)
@@ -2814,8 +2817,8 @@ def directory(name,
         file_mode = dir_mode
 
     # Make sure that leading zeros stripped by YAML loader are added back
-    dir_mode = salt.utils.normalize_mode(dir_mode)
-    file_mode = salt.utils.normalize_mode(file_mode)
+    dir_mode = salt.utils.files.normalize_mode(dir_mode)
+    file_mode = salt.utils.files.normalize_mode(file_mode)
 
     if salt.utils.platform.is_windows():
         # Verify win_owner is valid on the target system
@@ -2881,6 +2884,7 @@ def directory(name,
     if __opts__['test']:
         ret['result'] = presult
         ret['comment'] = pcomment
+        ret['changes'] = ret['pchanges']
         return ret
 
     if not os.path.isdir(name):
@@ -3268,7 +3272,7 @@ def recurse(name,
         return _error(ret, 'mode management is not supported on Windows')
 
     # Make sure that leading zeros stripped by YAML loader are added back
-    dir_mode = salt.utils.normalize_mode(dir_mode)
+    dir_mode = salt.utils.files.normalize_mode(dir_mode)
 
     try:
         keep_mode = file_mode.lower() == 'keep'
@@ -3278,7 +3282,7 @@ def recurse(name,
     except AttributeError:
         keep_mode = False
 
-    file_mode = salt.utils.normalize_mode(file_mode)
+    file_mode = salt.utils.files.normalize_mode(file_mode)
 
     u_check = _check_user(user, group)
     if u_check:
@@ -3553,7 +3557,7 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
     def get_file_time_from_strptime(f):
         try:
             ts = datetime.strptime(f, strptime_format)
-            ts_epoch = salt.utils.total_seconds(ts - beginning_of_unix_time)
+            ts_epoch = salt.utils.dateutils.total_seconds(ts - beginning_of_unix_time)
             return (ts, ts_epoch)
         except ValueError:
             # Files which don't match the pattern are not relevant files.
@@ -3669,20 +3673,20 @@ def line(name, content=None, match=None, mode=None, location=None,
 
     .. versionadded:: 2015.8.0
 
-    name
+    :param name:
         Filesystem path to the file to be edited.
 
-    content
+    :param content:
         Content of the line. Allowed to be empty if mode=delete.
 
-    match
+    :param match:
         Match the target line for an action by
         a fragment of a string or regular expression.
 
         If neither ``before`` nor ``after`` are provided, and ``match``
         is also ``None``, match becomes the ``content`` value.
 
-    mode
+    :param mode:
         Defines how to edit a line. One of the following options is
         required:
 
@@ -3702,7 +3706,7 @@ def line(name, content=None, match=None, mode=None, location=None,
             ``after``. If ``location`` is used, it takes precedence
             over the other two options.
 
-    location
+    :param location:
         Defines where to place content in the line. Note this option is only
         used when ``mode=insert`` is specified. If a location is passed in, it
         takes precedence over both the ``before`` and ``after`` kwargs. Valid
@@ -3713,17 +3717,17 @@ def line(name, content=None, match=None, mode=None, location=None,
         - end
             Place the content at the end of the file.
 
-    before
+    :param before:
         Regular expression or an exact case-sensitive fragment of the string.
         This option is only used when either the ``ensure`` or ``insert`` mode
         is defined.
 
-    after
+    :param after:
         Regular expression or an exact case-sensitive fragment of the string.
         This option is only used when either the ``ensure`` or ``insert`` mode
         is defined.
 
-    show_changes
+    :param show_changes:
         Output a unified diff of the old file and the new file.
         If ``False`` return a boolean if any changes were made.
         Default is ``True``
@@ -3732,15 +3736,15 @@ def line(name, content=None, match=None, mode=None, location=None,
             Using this option will store two copies of the file in-memory
             (the original version and the edited version) in order to generate the diff.
 
-    backup
+    :param backup:
         Create a backup of the original file with the extension:
         "Year-Month-Day-Hour-Minutes-Seconds".
 
-    quiet
+    :param quiet:
         Do not raise any exceptions. E.g. ignore the fact that the file that is
         tried to be edited does not exist and nothing really happened.
 
-    indent
+    :param indent:
         Keep indentation with the previous line. This option is not considered when
         the ``delete`` mode is specified.
 
@@ -4385,7 +4389,7 @@ def comment(name, regex, char='#', backup='.bak'):
     ret['result'] = __salt__['file.search'](name, unanchor_regex, multiline=True)
 
     if slines != nlines:
-        if not __utils__['files.is_text_file'](name):
+        if not __utils__['files.is_text'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -4497,7 +4501,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     )
 
     if slines != nlines:
-        if not __utils__['files.is_text_file'](name):
+        if not __utils__['files.is_text'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -4719,7 +4723,7 @@ def append(name,
             if ignore_whitespace:
                 if __salt__['file.search'](
                         name,
-                        salt.utils.build_whitespace_split_regex(chunk),
+                        salt.utils.stringutils.build_whitespace_split_regex(chunk),
                         multiline=True):
                     continue
             elif __salt__['file.search'](
@@ -4740,7 +4744,7 @@ def append(name,
         nlines = list(slines)
         nlines.extend(append_lines)
         if slines != nlines:
-            if not __utils__['files.is_text_file'](name):
+            if not __utils__['files.is_text'](name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
                 # Changes happened, add them
@@ -4765,7 +4769,7 @@ def append(name,
         nlines = nlines.splitlines()
 
     if slines != nlines:
-        if not __utils__['files.is_text_file'](name):
+        if not __utils__['files.is_text'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -4915,7 +4919,7 @@ def prepend(name,
         if not header:
             if __salt__['file.search'](
                     name,
-                    salt.utils.build_whitespace_split_regex(chunk),
+                    salt.utils.stringutils.build_whitespace_split_regex(chunk),
                     multiline=True):
                 continue
 
@@ -4933,7 +4937,7 @@ def prepend(name,
     if __opts__['test']:
         nlines = test_lines + slines
         if slines != nlines:
-            if not __utils__['files.is_text_file'](name):
+            if not __utils__['files.is_text'](name):
                 ret['changes']['diff'] = 'Replace binary file'
             else:
                 # Changes happened, add them
@@ -4976,7 +4980,7 @@ def prepend(name,
         nlines = nlines.splitlines(True)
 
     if slines != nlines:
-        if not __utils__['files.is_text_file'](name):
+        if not __utils__['files.is_text'](name):
             ret['changes']['diff'] = 'Replace binary file'
         else:
             # Changes happened, add them
@@ -5314,8 +5318,8 @@ def copy(
     if os.path.lexists(source) and os.path.lexists(name):
         # if this is a file which did not change, do not update
         if force and os.path.isfile(name):
-            hash1 = salt.utils.get_hash(name)
-            hash2 = salt.utils.get_hash(source)
+            hash1 = salt.utils.hashutils.get_hash(name)
+            hash2 = salt.utils.hashutils.get_hash(source)
             if hash1 == hash2:
                 changed = True
                 ret['comment'] = ' '.join([ret['comment'], '- files are identical but force flag is set'])
@@ -5789,7 +5793,7 @@ def serialize(name,
     contents += '\n'
 
     # Make sure that any leading zeros stripped by YAML loader are added back
-    mode = salt.utils.normalize_mode(mode)
+    mode = salt.utils.files.normalize_mode(mode)
 
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
@@ -6546,7 +6550,8 @@ def cached(name,
             and parsed.scheme in salt.utils.files.REMOTE_PROTOS:
         ret['comment'] = (
             'Unable to verify upstream hash of source file {0}, please set '
-            'source_hash or set skip_verify to True'.format(name)
+            'source_hash or set skip_verify to True'.format(
+                salt.utils.url.redact_http_basic_auth(name))
         )
         return ret
 
@@ -6653,7 +6658,7 @@ def cached(name,
             # it cause any trouble, and just return True.
             return True
         try:
-            return salt.utils.get_hash(path, form=form) != checksum
+            return salt.utils.hashutils.get_hash(path, form=form) != checksum
         except (IOError, OSError, ValueError):
             # Again, shouldn't happen, but don't let invalid input/permissions
             # in the call to get_hash blow this up.
@@ -6677,13 +6682,14 @@ def cached(name,
                 saltenv=saltenv,
                 source_hash=source_sum.get('hsum'))
         except Exception as exc:
-            ret['comment'] = exc.__str__()
+            ret['comment'] = salt.utils.url.redact_http_basic_auth(exc.__str__())
             return ret
 
     if not local_copy:
         ret['comment'] = (
             'Failed to cache {0}, check minion log for more '
-            'information'.format(name)
+            'information'.format(
+                salt.utils.url.redact_http_basic_auth(name))
         )
         return ret
 

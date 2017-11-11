@@ -46,7 +46,6 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
-import salt.utils
 import salt.utils.stringutils
 
 # Import third party libs

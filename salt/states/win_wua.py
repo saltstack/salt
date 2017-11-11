@@ -55,7 +55,7 @@ import logging
 
 # Import Salt libs
 from salt.ext import six
-import salt.utils
+import salt.utils.data
 import salt.utils.platform
 import salt.utils.win_update
 
@@ -151,14 +151,14 @@ def installed(name, updates=None):
     # List of updates to download
     download = salt.utils.win_update.Updates()
     for item in install_list.updates:
-        if not salt.utils.is_true(item.IsDownloaded):
+        if not salt.utils.data.is_true(item.IsDownloaded):
             download.updates.Add(item)
 
     # List of updates to install
     install = salt.utils.win_update.Updates()
     installed_updates = []
     for item in install_list.updates:
-        if not salt.utils.is_true(item.IsInstalled):
+        if not salt.utils.data.is_true(item.IsInstalled):
             install.updates.Add(item)
         else:
             installed_updates.extend('KB' + kb for kb in item.KBArticleIDs)
@@ -190,7 +190,7 @@ def installed(name, updates=None):
 
     # Verify the installation
     for item in install.list():
-        if not salt.utils.is_true(post_info[item]['Installed']):
+        if not salt.utils.data.is_true(post_info[item]['Installed']):
             ret['changes']['failed'] = {
                 item: {'Title': post_info[item]['Title'][:40] + '...',
                        'KBs': post_info[item]['KBs']}
@@ -285,7 +285,7 @@ def removed(name, updates=None):
     uninstall = salt.utils.win_update.Updates()
     removed_updates = []
     for item in updates.updates:
-        if salt.utils.is_true(item.IsInstalled):
+        if salt.utils.data.is_true(item.IsInstalled):
             uninstall.updates.Add(item)
         else:
             removed_updates.extend('KB' + kb for kb in item.KBArticleIDs)
@@ -314,7 +314,7 @@ def removed(name, updates=None):
 
     # Verify the installation
     for item in uninstall.list():
-        if salt.utils.is_true(post_info[item]['Installed']):
+        if salt.utils.data.is_true(post_info[item]['Installed']):
             ret['changes']['failed'] = {
                 item: {'Title': post_info[item]['Title'][:40] + '...',
                        'KBs': post_info[item]['KBs']}
@@ -451,13 +451,13 @@ def uptodate(name,
     # List of updates to download
     download = salt.utils.win_update.Updates()
     for item in install_list.updates:
-        if not salt.utils.is_true(item.IsDownloaded):
+        if not salt.utils.data.is_true(item.IsDownloaded):
             download.updates.Add(item)
 
     # List of updates to install
     install = salt.utils.win_update.Updates()
     for item in install_list.updates:
-        if not salt.utils.is_true(item.IsInstalled):
+        if not salt.utils.data.is_true(item.IsInstalled):
             install.updates.Add(item)
 
     # Return comment of changes if test.
@@ -483,7 +483,7 @@ def uptodate(name,
 
     # Verify the installation
     for item in install.list():
-        if not salt.utils.is_true(post_info[item]['Installed']):
+        if not salt.utils.data.is_true(post_info[item]['Installed']):
             ret['changes']['failed'] = {
                 item: {'Title': post_info[item]['Title'][:40] + '...',
                        'KBs': post_info[item]['KBs']}

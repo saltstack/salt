@@ -11,6 +11,7 @@ import shutil
 
 # Import salt libs
 import salt.fileclient
+import salt.utils.hashutils
 import salt.utils.url
 
 # Import 3rd-party libs
@@ -111,8 +112,8 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                 if os.path.isfile(dest):
                     # The file is present, if the sum differs replace it
                     hash_type = opts.get('hash_type', 'md5')
-                    src_digest = salt.utils.get_hash(fn_, hash_type)
-                    dst_digest = salt.utils.get_hash(dest, hash_type)
+                    src_digest = salt.utils.hashutils.get_hash(fn_, hash_type)
+                    dst_digest = salt.utils.hashutils.get_hash(dest, hash_type)
                     if src_digest != dst_digest:
                         # The downloaded file differs, replace!
                         shutil.copyfile(fn_, dest)

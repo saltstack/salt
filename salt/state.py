@@ -27,7 +27,6 @@ import time
 import random
 
 # Import salt libs
-import salt.utils
 import salt.loader
 import salt.minion
 import salt.pillar
@@ -38,10 +37,9 @@ import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
 import salt.utils.immutabletypes as immutabletypes
-import salt.utils.url
 import salt.utils.platform
 import salt.utils.process
-import salt.utils.files
+import salt.utils.url
 import salt.syspaths as syspaths
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
@@ -163,6 +161,18 @@ def _l_tag(name, id_):
            u'state': u'Listen_Error',
            u'fun': u'Listen_Error'}
     return _gen_tag(low)
+
+
+def get_accumulator_dir(cachedir):
+    '''
+    Return the directory that accumulator data is stored in, creating it if it
+    doesn't exist.
+    '''
+    fn_ = os.path.join(cachedir, 'accumulator')
+    if not os.path.isdir(fn_):
+        # accumulator_dir is not present, create it
+        os.makedirs(fn_)
+    return fn_
 
 
 def trim_req(req):
@@ -816,12 +826,12 @@ class State(object):
                     entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug(u'Last command return code: %s', cmd)
                 if cmd != 0 and ret[u'result'] is False:
-                    ret.update({u'comment': u'onlyif execution failed',
+                    ret.update({u'comment': u'onlyif condition is false',
                                 u'skip_watch': True,
                                 u'result': True})
                     return ret
                 elif cmd == 0:
-                    ret.update({u'comment': u'onlyif execution succeeded', u'result': False})
+                    ret.update({u'comment': u'onlyif condition is true', u'result': False})
             return ret
 
         if u'unless' in low_data:
@@ -831,17 +841,17 @@ class State(object):
                 low_data_unless = low_data[u'unless']
             for entry in low_data_unless:
                 if not isinstance(entry, six.string_types):
-                    ret.update({u'comment': u'unless execution failed, bad type passed', u'result': False})
+                    ret.update({u'comment': u'unless condition is false, bad type passed', u'result': False})
                     return ret
                 cmd = self.functions[u'cmd.retcode'](
                     entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug(u'Last command return code: %s', cmd)
                 if cmd == 0 and ret[u'result'] is False:
-                    ret.update({u'comment': u'unless execution succeeded',
+                    ret.update({u'comment': u'unless condition is true',
                                 u'skip_watch': True,
                                 u'result': True})
                 elif cmd != 0:
-                    ret.update({u'comment': u'unless execution failed', u'result': False})
+                    ret.update({u'comment': u'unless condition is false', u'result': False})
                     return ret
 
         # No reason to stop, return ret
@@ -1825,7 +1835,7 @@ class State(object):
             self.load_modules(low)
 
         state_func_name = u'{0[state]}.{0[fun]}'.format(low)
-        cdata = salt.utils.format_call(
+        cdata = salt.utils.args.format_call(
             self.states[state_func_name],
             low,
             initial_ret={u'full': state_func_name},
@@ -2593,7 +2603,7 @@ class State(object):
 
         def _cleanup_accumulator_data():
             accum_data_path = os.path.join(
-                salt.utils.get_accumulator_dir(self.opts[u'cachedir']),
+                get_accumulator_dir(self.opts[u'cachedir']),
                 self.instance_id
             )
             try:

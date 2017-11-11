@@ -12,7 +12,7 @@ import os
 # Import salt libs
 import salt.client
 import salt.payload
-import salt.utils
+import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
 import salt.minion
@@ -326,14 +326,14 @@ def list_jobs(ext_source=None,
                 if isinstance(targets, six.string_types):
                     targets = [targets]
                 for target in targets:
-                    for key in salt.utils.split_input(search_target):
+                    for key in salt.utils.args.split_input(search_target):
                         if fnmatch.fnmatch(target, key):
                             _match = True
 
         if search_function and _match:
             _match = False
             if 'Function' in ret[item]:
-                for key in salt.utils.split_input(search_function):
+                for key in salt.utils.args.split_input(search_function):
                     if fnmatch.fnmatch(ret[item]['Function'], key):
                         _match = True
 
@@ -466,7 +466,9 @@ def exit_success(jid, ext_source=None):
         The external job cache to use. Default: `None`.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt-run jobs.exit_success 20160520145827701627
     '''
     ret = dict()

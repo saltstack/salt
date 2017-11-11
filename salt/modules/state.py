@@ -28,10 +28,12 @@ import time
 import salt.config
 import salt.payload
 import salt.state
-import salt.utils
+import salt.utils.args
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.functools
+import salt.utils.hashutils
 import salt.utils.jid
 import salt.utils.platform
 import salt.utils.url
@@ -74,7 +76,7 @@ def __virtual__():
     '''
     # Update global namespace with functions that are cloned in this module
     global _orchestrate
-    _orchestrate = salt.utils.namespaced_function(_orchestrate, globals())
+    _orchestrate = salt.utils.functools.namespaced_function(_orchestrate, globals())
 
     return __virtualname__
 
@@ -327,7 +329,7 @@ def _get_test_value(test=None, **kwargs):
     '''
     ret = True
     if test is None:
-        if salt.utils.test_mode(test=test, **kwargs):
+        if salt.utils.args.test_mode(test=test, **kwargs):
             ret = True
         else:
             ret = __opts__.get('test', None)
@@ -892,8 +894,8 @@ def highstate(test=None, queue=False, **kwargs):
     finally:
         st_.pop_active()
 
-    if __salt__['config.option']('state_data', '') == 'terse' or \
-            kwargs.get('terse'):
+    if isinstance(ret, dict) and (__salt__['config.option']('state_data', '') == 'terse' or
+            kwargs.get('terse')):
         ret = _filter_running(ret)
 
     serial = salt.payload.Serial(__opts__)
@@ -921,8 +923,9 @@ def sls(mods, test=None, exclude=None, queue=False, **kwargs):
             salt '*' state.apply test pillar='{"foo": "bar"}'
 
         .. note::
-            Values passed this way will override Pillar values set via
-            ``pillar_roots`` or an external Pillar source.
+            Values passed this way will override existing Pillar values set via
+            ``pillar_roots`` or an external Pillar source.  Pillar values that
+            are not included in the kwarg will not be overwritten.
 
         .. versionchanged:: 2016.3.0
             GPG-encrypted CLI Pillar data is now supported via the GPG
@@ -1377,6 +1380,20 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         :conf_minion:`pillarenv` minion config option nor this CLI argument is
         used, all Pillar environments will be merged together.
 
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. code-block:: bash
+
+            salt '*' state.sls_id my_state my_module pillar='{"foo": "bar"}'
+
+        .. note::
+            Values passed this way will override existing Pillar values set via
+            ``pillar_roots`` or an external Pillar source.  Pillar values that
+            are not included in the kwarg will not be overwritten.
+
+        .. versionadded:: Oxygen
+
     CLI Example:
 
     .. code-block:: bash
@@ -1397,12 +1414,26 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     if opts['environment'] is None:
         opts['environment'] = 'base'
 
+    pillar_override = kwargs.get('pillar')
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar_override is not None \
+            and not isinstance(pillar_override, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
+        )
+
     try:
         st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
                                    proxy=__proxy__,
                                    initial_pillar=_get_initial_pillar(opts))
     except NameError:
         st_ = salt.state.HighState(opts,
+                                   pillar_override,
+                                   pillar_enc=pillar_enc,
                                    initial_pillar=_get_initial_pillar(opts))
 
     if not _check_pillar(kwargs, st_.opts['pillar']):
@@ -1419,6 +1450,12 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
+    # Apply requisites to high data
+    high_, req_in_errors = st_.state.requisite_in(high_)
+    if req_in_errors:
+        # This if statement should not be necessary if there were no errors,
+        # but it is required to get the unit tests to pass.
+        errors.extend(req_in_errors)
     if errors:
         __context__['retcode'] = 1
         return errors
@@ -1775,7 +1812,7 @@ def pkg(pkg_path,
     # TODO - Add ability to download from salt master or other source
     if not os.path.isfile(pkg_path):
         return {}
-    if not salt.utils.get_hash(pkg_path, hash_type) == pkg_sum:
+    if not salt.utils.hashutils.get_hash(pkg_path, hash_type) == pkg_sum:
         return {}
     root = tempfile.mkdtemp()
     s_pkg = tarfile.open(pkg_path, 'r:gz')

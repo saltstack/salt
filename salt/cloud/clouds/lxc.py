@@ -17,9 +17,6 @@ import copy
 import time
 from pprint import pformat
 
-# Import salt libs
-import salt.utils
-
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config

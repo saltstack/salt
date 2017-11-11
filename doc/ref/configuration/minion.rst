@@ -1196,7 +1196,7 @@ be able to execute a certain module. The ``sys`` module is built into the minion
 and cannot be disabled.
 
 This setting can also tune the minion. Because all modules are loaded into system
-memory, disabling modules will lover the minion's memory footprint.
+memory, disabling modules will lower the minion's memory footprint.
 
 Modules should be specified according to their file name on the system and not by
 their virtual name. For example, to disable ``cmd``, use the string ``cmdmod`` which
@@ -2387,6 +2387,7 @@ Default: ``10``
 The number of workers for the runner/wheel in the reactor.
 
 .. code-block:: yaml
+
     reactor_worker_threads: 10
 
 .. conf_minion:: reactor_worker_hwm

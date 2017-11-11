@@ -13,8 +13,8 @@ import os
 import socket
 
 # Import salt libs
-import salt.utils  # Can be removed when alias_function mac_str_to_bytes are moved
 import salt.utils.decorators.path
+import salt.utils.functools
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
@@ -1038,7 +1038,7 @@ def hw_addr(iface):
     return salt.utils.network.hw_addr(iface)
 
 # Alias hwaddr to preserve backward compat
-hwaddr = salt.utils.alias_function(hw_addr, 'hwaddr')
+hwaddr = salt.utils.functools.alias_function(hw_addr, 'hwaddr')
 
 
 def interface(iface):
@@ -1191,7 +1191,7 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
             return addrs
 
 
-ipaddrs = salt.utils.alias_function(ip_addrs, 'ipaddrs')
+ipaddrs = salt.utils.functools.alias_function(ip_addrs, 'ipaddrs')
 
 
 def ip_addrs6(interface=None, include_loopback=False, cidr=None):
@@ -1215,7 +1215,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     else:
         return addrs
 
-ipaddrs6 = salt.utils.alias_function(ip_addrs6, 'ipaddrs6')
+ipaddrs6 = salt.utils.functools.alias_function(ip_addrs6, 'ipaddrs6')
 
 
 def get_hostname():
