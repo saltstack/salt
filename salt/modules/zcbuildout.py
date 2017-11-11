@@ -1031,17 +1031,17 @@ def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
         if onlyif is not None:
             if not isinstance(onlyif, six.string_types):
                 if not onlyif:
-                    _valid(status, 'onlyif execution failed')
+                    _valid(status, 'onlyif condition is false')
             elif isinstance(onlyif, six.string_types):
                 if retcode(onlyif, cwd=directory, runas=runas, env=env) != 0:
-                    _valid(status, 'onlyif execution failed')
+                    _valid(status, 'onlyif condition is false')
         if unless is not None:
             if not isinstance(unless, six.string_types):
                 if unless:
-                    _valid(status, 'unless execution succeeded')
+                    _valid(status, 'unless condition is true')
             elif isinstance(unless, six.string_types):
                 if retcode(unless, cwd=directory, runas=runas, env=env, python_shell=False) == 0:
-                    _valid(status, 'unless execution succeeded')
+                    _valid(status, 'unless condition is true')
     if status['status']:
         ret = status
     return ret

@@ -343,7 +343,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
             cmd = __salt__['cmd.retcode'](onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs)
             log.debug('Last command return code: {0}'.format(cmd))
             if cmd != 0:
-                return {'comment': 'onlyif execution failed',
+                return {'comment': 'onlyif condition is false',
                         'skip_watch': True,
                         'result': True}
         elif isinstance(onlyif, list):
@@ -351,13 +351,13 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
                 cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
                 log.debug('Last command \'{0}\' return code: {1}'.format(entry, cmd))
                 if cmd != 0:
-                    return {'comment': 'onlyif execution failed: {0}'.format(entry),
+                    return {'comment': 'onlyif condition is false: {0}'.format(entry),
                             'skip_watch': True,
                             'result': True}
         elif not isinstance(onlyif, string_types):
             if not onlyif:
                 log.debug('Command not run: onlyif did not evaluate to string_type')
-                return {'comment': 'onlyif execution failed',
+                return {'comment': 'onlyif condition is false',
                         'skip_watch': True,
                         'result': True}
 
@@ -366,7 +366,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
             cmd = __salt__['cmd.retcode'](unless, ignore_retcode=True, python_shell=True, **cmd_kwargs)
             log.debug('Last command return code: {0}'.format(cmd))
             if cmd == 0:
-                return {'comment': 'unless execution succeeded',
+                return {'comment': 'unless condition is true',
                         'skip_watch': True,
                         'result': True}
         elif isinstance(unless, list):
@@ -375,13 +375,13 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
                 cmd.append(__salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs))
                 log.debug('Last command return code: {0}'.format(cmd))
             if all([c == 0 for c in cmd]):
-                return {'comment': 'unless execution succeeded',
+                return {'comment': 'unless condition is true',
                         'skip_watch': True,
                         'result': True}
         elif not isinstance(unless, string_types):
             if unless:
                 log.debug('Command not run: unless did not evaluate to string_type')
-                return {'comment': 'unless execution succeeded',
+                return {'comment': 'unless condition is true',
                         'skip_watch': True,
                         'result': True}
 

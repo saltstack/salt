@@ -34,6 +34,7 @@ Configuration
     be set up as different configuration profiles. For example:
 
     .. code-block:: yaml
+
         zookeeper:
           prod:
             hosts: zoo1,zoo2,zoo3

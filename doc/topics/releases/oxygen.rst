@@ -174,11 +174,13 @@ to create it.
 The generated grain information will appear similar to:
 
 .. code-block:: yaml
+
     grains:
       salt-cloud:
         driver: ec2
         provider: my_ec2:ec2
         profile: ec2-web
+
 The generation of salt-cloud grains can be surpressed by the
 option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
 
@@ -411,7 +413,7 @@ signed certificates.  :ref:`Here<new-pywinrm>` for more information.
 DigitalOcean
 ------------
 
-The DigitalOcean driver has been renamed to conform to the companies name.  The
+The DigitalOcean driver has been renamed to conform to the company name.  The
 new driver name is ``digitalocean``.  The old name ``digital_ocean`` and a
 short one ``do`` will still be supported through virtual aliases, this is mostly
 cosmetic.
