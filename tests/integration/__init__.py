@@ -803,7 +803,10 @@ class TestDaemon(object):
 
         # Set up config options that require internal data
         master_opts['pillar_roots'] = syndic_master_opts['pillar_roots'] = {
-            'base': [os.path.join(FILES, 'pillar', 'base')]
+            'base': [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(FILES, 'pillar', 'base'),
+            ]
         }
         master_opts['file_roots'] = syndic_master_opts['file_roots'] = {
             'base': [
@@ -979,6 +982,7 @@ class TestDaemon(object):
                     sub_minion_opts['sock_dir'],
                     minion_opts['sock_dir'],
                     RUNTIME_VARS.TMP_STATE_TREE,
+                    RUNTIME_VARS.TMP_PILLAR_TREE,
                     RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
                     TMP,
                     ],
@@ -1090,7 +1094,8 @@ class TestDaemon(object):
             os.chmod(path, stat.S_IRWXU)
             func(path)
 
-        for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
+        for dirname in (TMP, RUNTIME_VARS.TMP_STATE_TREE,
+                        RUNTIME_VARS.TMP_PILLAR_TREE, RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
             if os.path.isdir(dirname):
                 shutil.rmtree(dirname, onerror=remove_readonly)
 
