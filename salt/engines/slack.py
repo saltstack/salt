@@ -4,53 +4,45 @@ An engine that reads messages from Slack and sends them to the Salt
 event bus.  Alternatively Salt commands can be sent to the Salt master
 via Slack by setting the control parameter to ``True`` and using command
 prefaced with a ``!``.
-
 .. versionadded: 2016.3.0
-
 :configuration: Example configuration
-
     .. code-block:: yaml
-
         engines:
-            slack:
-               token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
-               control: True
-               valid_users:
-                   - garethgreenaway
-               valid_commands:
-                   - test.ping
-                   - cmd.run
-                   - list_jobs
-                   - list_commands
-               aliases:
-                   list_jobs:
-                       cmd: jobs.list_jobs
-                   list_commands:
-                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
-
+            - slack:
+                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
+                control: True
+                valid_users:
+                    - garethgreenaway
+                valid_commands:
+                    - test.ping
+                    - cmd.run
+                    - list_jobs
+                    - list_commands
+                aliases:
+                    list_jobs:
+                        cmd: jobs.list_jobs
+                    list_commands:
+                        cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
     :configuration: Example configuration using groups
     .. versionadded: 2017.7.0
-
         engines:
-            slack:
-               token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
-               control: True
-               groups:
-                 gods:
-                   users:
-                     - garethgreenaway
-                   commands:
-                     - test.ping
-                     - cmd.run
-                     - list_jobs
-                     - list_commands
-               aliases:
+            - slack:
+                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
+                control: True
+                groups:
+                    gods:
+                        users:
+                            - garethgreenaway
+                        commands:
+                            - test.ping
+                            - cmd.run
+                            - list_jobs
+                            - list_commands
+                aliases:
                    list_jobs:
-                       cmd: jobs.list_jobs
+                        cmd: jobs.list_jobs
                    list_commands:
-                       cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
-
-
+                        cmd: pillar.get salt:engines:slack:valid_commands target=saltmaster tgt_type=list
 :depends: slackclient
 '''
 
@@ -63,7 +55,6 @@ import time
 import re
 import yaml
 import ast
-import collections
 
 try:
     import slackclient
@@ -80,13 +71,13 @@ import salt.utils.event
 import salt.utils.http
 import salt.utils.slack
 import salt.output.highstate
-from salt.output import nested 
-from salt.utils.odict import OrderedDict
+
 
 def __virtual__():
     return HAS_SLACKCLIENT
 
 log = logging.getLogger(__name__)
+
 
 def _get_users(token):
     '''
@@ -104,6 +95,7 @@ def _get_users(token):
                     users[item['name']] = item['id']
                     users[item['id']] = item['name']
     return users
+
 
 def start(token,
           aliases=None,
@@ -184,11 +176,20 @@ def start(token,
                                             if 'aliases' in groups[group]:
                                                 aliases.update(groups[group]['aliases'])
 
+                                if 'user' not in _m:
+                                    if 'message' in _m and 'user' in _m['message']:
+                                        log.debug('Message was edited, '
+                                                  'so we look for user in '
+                                                  'the original message.')
+                                        _user = _m['message']['user']
+                                else:
+                                    _user = _m['user']
+
                                 # Ensure the user is allowed to run commands
                                 if valid_users:
-                                    log.debug('{0} {1}'.format(all_users, _m['user']))
-                                    if _m['user'] not in valid_users and all_users.get(_m['user'], None) not in valid_users:
-                                        channel.send_message('{0} not authorized to run Salt commands'.format(all_users[_m['user']]))
+                                    log.debug('{0} {1}'.format(all_users, _user))
+                                    if _user not in valid_users and all_users.get(_user, None) not in valid_users:
+                                        channel.send_message('{0} not authorized to run Salt commands'.format(all_users[_user]))
                                         return
 
                                 # Trim the ! from the front
@@ -222,7 +223,7 @@ def start(token,
                                 # Ensure the command is allowed
                                 if valid_commands:
                                     if cmd not in valid_commands:
-                                        channel.send_message('{0} is not allowed to use command {1}.'.format(all_users[_m['user']], cmd))
+                                        channel.send_message('{0} is not allowed to use command {1}.'.format(all_users[_user], cmd))
                                         return
 
                                 # Parse args and kwargs
@@ -248,7 +249,7 @@ def start(token,
                                     tgt_type = kwargs['tgt_type']
                                     del kwargs['tgt_type']
 
-                                # Check for pillar dict
+                                # Check for pillar string representation of dict and convert it to dict
                                 if 'pillar' in kwargs:
                                     kwargs.update(pillar=ast.literal_eval(kwargs['pillar']))
 
