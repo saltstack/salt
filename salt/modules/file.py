@@ -552,11 +552,11 @@ def lsattr(path):
         raise SaltInvocationError("File or directory does not exist.")
 
     cmd = ['lsattr', path]
-    result = __salt__['cmd.run'](cmd, python_shell=False)
+    result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
 
     results = {}
     for line in result.splitlines():
-        if not line.startswith('lsattr'):
+        if not line.startswith('lsattr: '):
             vals = line.split(None, 1)
             results[vals[1]] = re.findall(r"[acdijstuADST]", vals[0])
 
