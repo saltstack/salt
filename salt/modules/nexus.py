@@ -117,7 +117,7 @@ def get_snapshot(nexus_url, repository, group_id, artifact_id, packaging, versio
     return __save_artifact(snapshot_url, target_file, headers)
 
 
-def get_snapshot_version_string(nexus_url, repository, group_id, artifact_id, packaging, version, classifier, username=None, password=None):
+def get_snapshot_version_string(nexus_url, repository, group_id, artifact_id, packaging, version, classifier=None, username=None, password=None):
     '''
        Gets the specific version string of a snapshot of the desired version of the artifact
 
