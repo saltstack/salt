@@ -42,12 +42,10 @@ from functools import reduce  # pylint: disable=redefined-builtin
 
 # Import salt libs
 import salt.output
-import salt.utils.locales
 from salt.ext.six import string_types
-from salt.utils import get_colors
-from salt.ext.six.moves import map  # pylint: disable=redefined-builtin
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
-
+from salt.ext.six.moves import map, zip  # pylint: disable=redefined-builtin
+import salt.utils.color
+import salt.utils.locales
 
 __virtualname__ = 'table'
 
@@ -78,7 +76,7 @@ class TableDisplay(object):
                  width=50,  # column max width
                  wrapfunc=None):  # function wrapper
         self.__dict__.update(
-            get_colors(
+            salt.utils.color.get_colors(
                 __opts__.get('color'),
                 __opts__.get('color_theme')
             )

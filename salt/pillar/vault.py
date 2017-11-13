@@ -48,10 +48,12 @@ Multiple Vault sources may also be used:
       - vault: path=secret/minions/{minion}/pass
 '''
 
-# import python libs
+# Import Python libs
 from __future__ import absolute_import
 import logging
-import salt.utils
+
+# Import Salt libs
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +78,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     comps = conf.split()
 
     if not comps[0].startswith('path='):
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The \'profile\' argument has been deprecated. Any parts up until '
             'and following the first "path=" are discarded'

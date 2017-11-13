@@ -102,16 +102,17 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                                'cmd.run_all': mock_run,
                                                'archive.list': list_mock,
                                                'file.source_list': mock_source_list}):
-                with patch.object(os.path, 'isfile', isfile_mock):
-                    for test_opts, ret_opts in zip(test_tar_opts, ret_tar_opts):
-                        ret = archive.extracted(tmp_dir,
-                                                source,
-                                                options=test_opts,
-                                                enforce_toplevel=False)
-                        ret_opts.append(source)
-                        mock_run.assert_called_with(ret_opts,
-                                                    cwd=tmp_dir + os.sep,
-                                                    python_shell=False)
+                with patch.dict(archive.__states__, {'file.directory': mock_true}):
+                    with patch.object(os.path, 'isfile', isfile_mock):
+                        for test_opts, ret_opts in zip(test_tar_opts, ret_tar_opts):
+                            ret = archive.extracted(tmp_dir,
+                                                    source,
+                                                    options=test_opts,
+                                                    enforce_toplevel=False)
+                            ret_opts.append(source)
+                            mock_run.assert_called_with(ret_opts,
+                                                        cwd=tmp_dir + os.sep,
+                                                        python_shell=False)
 
     def test_tar_gnutar(self):
         '''
@@ -142,13 +143,14 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                            'cmd.run_all': run_all,
                                            'archive.list': list_mock,
                                            'file.source_list': mock_source_list}):
-            with patch.object(os.path, 'isfile', isfile_mock):
-                ret = archive.extracted('/tmp/out',
-                                        source,
-                                        options='xvzf',
-                                        enforce_toplevel=False,
-                                        keep=True)
-                self.assertEqual(ret['changes']['extracted_files'], 'stdout')
+            with patch.dict(archive.__states__, {'file.directory': mock_true}):
+                with patch.object(os.path, 'isfile', isfile_mock):
+                    ret = archive.extracted('/tmp/out',
+                                            source,
+                                            options='xvzf',
+                                            enforce_toplevel=False,
+                                            keep=True)
+                    self.assertEqual(ret['changes']['extracted_files'], 'stdout')
 
     def test_tar_bsdtar(self):
         '''
@@ -179,10 +181,11 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                            'cmd.run_all': run_all,
                                            'archive.list': list_mock,
                                            'file.source_list': mock_source_list}):
-            with patch.object(os.path, 'isfile', isfile_mock):
-                ret = archive.extracted('/tmp/out',
-                                        source,
-                                        options='xvzf',
-                                        enforce_toplevel=False,
-                                        keep=True)
-                self.assertEqual(ret['changes']['extracted_files'], 'stderr')
+            with patch.dict(archive.__states__, {'file.directory': mock_true}):
+                with patch.object(os.path, 'isfile', isfile_mock):
+                    ret = archive.extracted('/tmp/out',
+                                            source,
+                                            options='xvzf',
+                                            enforce_toplevel=False,
+                                            keep=True)
+                    self.assertEqual(ret['changes']['extracted_files'], 'stderr')

@@ -20,7 +20,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.virt as virt
-import salt.utils
+import salt.utils.files
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -67,7 +67,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)
 
                 with patch.dict(virt.__opts__, {'test': False}):
-                    with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
+                    with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                         comt = ('Updated libvirt certs and keys')
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'servercert': 'new'}})
@@ -102,7 +102,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                    expiration_days=700), ret)
 
                 with patch.dict(virt.__opts__, {'test': False}):
-                    with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
+                    with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                         comt = ('Updated libvirt certs and keys')
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'servercert': 'new'}})
@@ -139,7 +139,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                    st='California'), ret)
 
                 with patch.dict(virt.__opts__, {'test': False}):
-                    with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
+                    with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                         comt = ('Updated libvirt certs and keys')
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'servercert': 'new'}})
@@ -184,7 +184,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                    expiration_days=700), ret)
 
                 with patch.dict(virt.__opts__, {'test': False}):
-                    with patch.object(salt.utils, 'fopen', MagicMock(mock_open())):
+                    with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                         comt = ('Updated libvirt certs and keys')
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'servercert': 'new'}})

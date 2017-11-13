@@ -59,23 +59,25 @@ import fnmatch
 import hashlib
 import logging
 import datetime
+import sys
 from collections import MutableMapping
 from multiprocessing.util import Finalize
 from salt.ext.six.moves import range
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 import tornado.ioloop
 import tornado.iostream
 
 # Import salt libs
 import salt.config
 import salt.payload
-import salt.utils
 import salt.utils.async
 import salt.utils.cache
 import salt.utils.dicttrim
+import salt.utils.platform
 import salt.utils.process
+import salt.utils.stringutils
 import salt.utils.zeromq
 import salt.log.setup
 import salt.defaults.exitcodes
@@ -248,7 +250,7 @@ class SaltEvent(object):
         else:
             self.opts['sock_dir'] = sock_dir
 
-        if salt.utils.is_windows() and 'ipc_mode' not in opts:
+        if salt.utils.platform.is_windows() and 'ipc_mode' not in opts:
             self.opts['ipc_mode'] = 'tcp'
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
         self.pending_tags = []
@@ -299,7 +301,7 @@ class SaltEvent(object):
                 hash_type = getattr(hashlib, self.opts['hash_type'])
                 # Only use the first 10 chars to keep longer hashes from exceeding the
                 # max socket path length.
-                id_hash = hash_type(salt.utils.to_bytes(self.opts['id'])).hexdigest()[:10]
+                id_hash = hash_type(salt.utils.stringutils.to_bytes(self.opts['id'])).hexdigest()[:10]
                 puburi = os.path.join(
                     sock_dir,
                     'minion_event_{0}_pub.ipc'.format(id_hash)
@@ -418,7 +420,7 @@ class SaltEvent(object):
                     self.pulluri,
                     io_loop=self.io_loop
                 )
-            # For the async case, the connect will be defered to when
+            # For the async case, the connect will be deferred to when
             # fire_event() is invoked.
             self.cpush = True
         return self.cpush
@@ -432,8 +434,8 @@ class SaltEvent(object):
             mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
             data = serial.loads(mdata)
         else:
-            mtag, sep, mdata = raw.partition(salt.utils.to_bytes(TAGEND))  # split tag from data
-            mtag = salt.utils.to_str(mtag)
+            mtag, sep, mdata = raw.partition(salt.utils.stringutils.to_bytes(TAGEND))  # split tag from data
+            mtag = salt.utils.stringutils.to_str(mtag)
             data = serial.loads(mdata, encoding='utf-8')
         return mtag, data
 
@@ -574,16 +576,17 @@ class SaltEvent(object):
                   auto_reconnect=False):
         '''
         Get a single publication.
-        IF no publication available THEN block for up to wait seconds
-        AND either return publication OR None IF no publication available.
+        If no publication is available, then block for up to ``wait`` seconds.
+        Return publication if it is available or ``None`` if no publication is
+        available.
 
-        IF wait is 0 then block forever.
+        If wait is 0, then block forever.
 
         tag
             Only return events matching the given tag. If not specified, or set
             to an empty string, all events are returned. It is recommended to
             always be selective on what is to be returned in the event that
-            multiple requests are being multiplexed
+            multiple requests are being multiplexed.
 
         match_type
             Set the function to match the search tag with event tags.
@@ -644,7 +647,8 @@ class SaltEvent(object):
             return ret['data']
 
     def get_event_noblock(self):
-        '''Get the raw event without blocking or any other niceties
+        '''
+        Get the raw event without blocking or any other niceties
         '''
         assert self._run_io_loop_sync
 
@@ -658,8 +662,9 @@ class SaltEvent(object):
         return {'data': data, 'tag': mtag}
 
     def get_event_block(self):
-        '''Get the raw event in a blocking fashion
-           Slower, but decreases the possibility of dropped events
+        '''
+        Get the raw event in a blocking fashion. This is slower, but it decreases the
+        possibility of dropped events.
         '''
         assert self._run_io_loop_sync
 
@@ -729,10 +734,10 @@ class SaltEvent(object):
             event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         else:
             event = b''.join([
-                salt.utils.to_bytes(tag),
-                salt.utils.to_bytes(tagend),
+                salt.utils.stringutils.to_bytes(tag),
+                salt.utils.stringutils.to_bytes(tagend),
                 serialized_data])
-        msg = salt.utils.to_bytes(event, 'utf-8')
+        msg = salt.utils.stringutils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
             with salt.utils.async.current_ioloop(self.io_loop):
                 try:
@@ -949,7 +954,7 @@ class AsyncEventPublisher(object):
         hash_type = getattr(hashlib, self.opts['hash_type'])
         # Only use the first 10 chars to keep longer hashes from exceeding the
         # max socket path length.
-        id_hash = hash_type(salt.utils.to_bytes(self.opts['id'])).hexdigest()[:10]
+        id_hash = hash_type(salt.utils.stringutils.to_bytes(self.opts['id'])).hexdigest()[:10]
         epub_sock_path = os.path.join(
             self.opts['sock_dir'],
             'minion_event_{0}_pub.ipc'.format(id_hash)
@@ -1075,7 +1080,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Bind the pub and pull sockets for events
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
         self.io_loop = tornado.ioloop.IOLoop()
         with salt.utils.async.current_ioloop(self.io_loop):
             if self.opts['ipc_mode'] == 'tcp':
@@ -1159,6 +1164,16 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
     '''
+    def __new__(cls, *args, **kwargs):
+        if sys.platform.startswith('win'):
+            # This is required for Windows.  On Linux, when a process is
+            # forked, the module namespace is copied and the current process
+            # gets all of sys.modules from where the fork happens.  This is not
+            # the case for Windows.
+            import salt.minion
+        instance = super(EventReturn, cls).__new__(cls, *args, **kwargs)
+        return instance
+
     def __init__(self, opts, log_queue=None):
         '''
         Initialize the EventReturn system
@@ -1230,7 +1245,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Spin up the multiprocess event returner
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
         self.event = get_event('master', opts=self.opts, listen=True)
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, 'salt/event_listen/start')

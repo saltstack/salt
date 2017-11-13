@@ -26,7 +26,7 @@ except ImportError:
     HAS_PWD = False
 
 from salt.exceptions import CommandExecutionError
-import salt.utils
+import salt.utils.files
 
 
 try:
@@ -229,6 +229,7 @@ def set_config(name='root', **kwargs):
     snapper convention. The above example is equivalent to:
 
     .. code-block:: bash
+
         salt '*' snapper.set_config sync_acl=True
     '''
     try:
@@ -796,7 +797,7 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
 
             if os.path.isfile(pre_file):
                 pre_file_exists = True
-                with salt.utils.fopen(pre_file) as rfh:
+                with salt.utils.files.fopen(pre_file) as rfh:
                     pre_file_content = rfh.readlines()
             else:
                 pre_file_content = []
@@ -804,7 +805,7 @@ def diff(config='root', filename=None, num_pre=None, num_post=None):
 
             if os.path.isfile(post_file):
                 post_file_exists = True
-                with salt.utils.fopen(post_file) as rfh:
+                with salt.utils.files.fopen(post_file) as rfh:
                     post_file_content = rfh.readlines()
             else:
                 post_file_content = []

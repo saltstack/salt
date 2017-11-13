@@ -11,11 +11,13 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.path
 import salt.modules.cmdmod
 import salt.utils.decorators as decorators
 from salt.utils.odict import OrderedDict
 
+__virtualname__ = 'zfs'
 log = logging.getLogger(__name__)
 
 # Function alias to set mapping.
@@ -24,13 +26,23 @@ __func_alias__ = {
 }
 
 
+def __virtual__():
+    '''
+    Only load when the platform has zfs support
+    '''
+    if __grains__['zfs_support']:
+        return __virtualname__
+    else:
+        return (False, "The zfs module cannot be loaded: zfs not supported")
+
+
 @decorators.memoize
 def _check_zfs():
     '''
     Looks to see if zfs is present on the system.
     '''
     # Get the path to the zfs binary.
-    return salt.utils.which('zfs')
+    return salt.utils.path.which('zfs')
 
 
 @decorators.memoize
@@ -39,7 +51,7 @@ def _check_features():
     Looks to see if zpool-features is available
     '''
     # get man location
-    man = salt.utils.which('man')
+    man = salt.utils.path.which('man')
     if not man:
         return False
 
@@ -48,34 +60,6 @@ def _check_features():
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     return res['retcode'] == 0
-
-
-def __virtual__():
-    '''
-    Makes sure that ZFS kernel module is loaded.
-    '''
-    on_freebsd = __grains__['kernel'] == 'FreeBSD'
-    on_linux = __grains__['kernel'] == 'Linux'
-    on_solaris = __grains__['kernel'] == 'SunOS' and __grains__['kernelrelease'] == '5.11'
-
-    cmd = ''
-    if on_freebsd:
-        cmd = 'kldstat -q -m zfs'
-    elif on_linux:
-        modinfo = salt.utils.which('modinfo')
-        if modinfo:
-            cmd = '{0} zfs'.format(modinfo)
-        else:
-            cmd = 'ls /sys/module/zfs'
-    elif on_solaris:
-        # not using salt.utils.which('zfs') to keep compatible with others
-        cmd = 'which zfs'
-
-    if cmd and salt.modules.cmdmod.retcode(
-        cmd, output_loglevel='quiet', ignore_retcode=True
-    ) == 0:
-        return 'zfs'
-    return (False, "The zfs module cannot be loaded: zfs not found")
 
 
 def exists(name, **kwargs):
@@ -1142,7 +1126,7 @@ def set(*dataset, **kwargs):
         ret['error'] = 'one or more snapshots must be specified'
 
     # clean kwargs
-    properties = salt.utils.clean_kwargs(**kwargs)
+    properties = salt.utils.args.clean_kwargs(**kwargs)
     if len(properties) < 1:
         ret['error'] = '{0}one or more properties must be specified'.format(
             '{0},\n'.format(ret['error']) if 'error' in ret else ''

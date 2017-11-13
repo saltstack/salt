@@ -6,6 +6,7 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import fnmatch
 import os
 
 # Import Salt Testing libs
@@ -13,32 +14,37 @@ from tests.support.unit import TestCase
 from tests.support.paths import CODE_DIR
 
 EXCLUDED_DIRS = [
-    'tests/pkg',
-    'tests/perf',
-    'tests/support',
-    'tests/unit/utils/cache_mods',
-    'tests/unit/modules/inspectlib',
-    'tests/unit/modules/zypp/',
-    'tests/unit/templates/files',
-    'tests/integration/files/',
-    'tests/integration/cloud/helpers',
+    os.path.join('tests', 'pkg'),
+    os.path.join('tests', 'perf'),
+    os.path.join('tests', 'support'),
+    os.path.join('tests', 'unit', 'utils', 'cache_mods'),
+    os.path.join('tests', 'unit', 'modules', 'inspectlib'),
+    os.path.join('tests', 'unit', 'modules', 'zypp'),
+    os.path.join('tests', 'unit', 'templates', 'files'),
+    os.path.join('tests', 'integration', 'files'),
+    os.path.join('tests', 'integration', 'cloud', 'helpers'),
+    os.path.join('tests', 'kitchen', 'tests'),
+]
+INCLUDED_DIRS = [
+    os.path.join('tests', 'kitchen', 'tests', '*', 'tests', '*'),
 ]
 EXCLUDED_FILES = [
-    'tests/eventlisten.py',
-    'tests/buildpackage.py',
-    'tests/saltsh.py',
-    'tests/minionswarm.py',
-    'tests/wheeltest.py',
-    'tests/runtests.py',
-    'tests/jenkins.py',
-    'tests/salt-tcpdump.py',
-    'tests/conftest.py',
-    'tests/packdump.py',
-    'tests/consist.py',
-    'tests/modparser.py',
-    'tests/committer_parser.py',
-    'tests/unit/transport/mixins.py',
-    'tests/integration/utils/testprogram.py',
+    os.path.join('tests', 'eventlisten.py'),
+    os.path.join('tests', 'buildpackage.py'),
+    os.path.join('tests', 'saltsh.py'),
+    os.path.join('tests', 'minionswarm.py'),
+    os.path.join('tests', 'wheeltest.py'),
+    os.path.join('tests', 'runtests.py'),
+    os.path.join('tests', 'jenkins.py'),
+    os.path.join('tests', 'salt-tcpdump.py'),
+    os.path.join('tests', 'conftest.py'),
+    os.path.join('tests', 'packdump.py'),
+    os.path.join('tests', 'consist.py'),
+    os.path.join('tests', 'modparser.py'),
+    os.path.join('tests', 'committer_parser.py'),
+    os.path.join('tests', 'zypp_plugin.py'),
+    os.path.join('tests', 'unit', 'transport', 'mixins.py'),
+    os.path.join('tests', 'integration', 'utils', 'testprogram.py'),
 ]
 
 
@@ -49,16 +55,20 @@ class BadTestModuleNamesTestCase(TestCase):
 
     maxDiff = None
 
+    def _match_dirs(self, reldir, matchdirs):
+        return any(fnmatch.fnmatchcase(reldir, mdir) for mdir in matchdirs)
+
     def test_module_name(self):
         '''
         Make sure all test modules conform to the test_*.py naming scheme
         '''
-        excluded_dirs = tuple(EXCLUDED_DIRS)
+        excluded_dirs, included_dirs = tuple(EXCLUDED_DIRS), tuple(INCLUDED_DIRS)
         tests_dir = os.path.join(CODE_DIR, 'tests')
         bad_names = []
         for root, dirs, files in os.walk(tests_dir):
             reldir = os.path.relpath(root, CODE_DIR)
-            if reldir.startswith(excluded_dirs) or reldir.endswith('__pycache__'):
+            if (reldir.startswith(excluded_dirs) and not self._match_dirs(reldir, included_dirs)) \
+                    or reldir.endswith('__pycache__'):
                 continue
             for fname in files:
                 if fname == '__init__.py' or not fname.endswith('.py'):

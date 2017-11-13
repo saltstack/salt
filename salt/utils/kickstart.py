@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import yaml
 import shlex
 import argparse  # pylint: disable=minimum-python-version
-import salt.utils
+import salt.utils.files
 from salt.ext.six.moves import range
 
 
@@ -898,7 +898,7 @@ def mksls(src, dst=None):
     mode = 'command'
     sls = {}
     ks_opts = {}
-    with salt.utils.fopen(src, 'r') as fh_:
+    with salt.utils.files.fopen(src, 'r') as fh_:
         for line in fh_:
             if line.startswith('#'):
                 continue
@@ -1175,7 +1175,7 @@ def mksls(src, dst=None):
             sls[package] = {'pkg': ['absent']}
 
     if dst:
-        with salt.utils.fopen(dst, 'w') as fp_:
+        with salt.utils.files.fopen(dst, 'w') as fp_:
             fp_.write(yaml.safe_dump(sls, default_flow_style=False))
     else:
         return yaml.safe_dump(sls, default_flow_style=False)

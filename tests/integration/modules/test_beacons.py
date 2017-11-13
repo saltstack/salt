@@ -35,7 +35,7 @@ class BeaconsAddDeleteTest(ModuleCase):
         '''
         Test adding and deleting a beacon
         '''
-        _add = self.run_function('beacons.add', ['ps', [{'apache2': 'stopped'}]])
+        _add = self.run_function('beacons.add', ['ps', [{'processes': {'apache2': 'stopped'}}]])
         self.assertTrue(_add['result'])
 
         # save added beacon
@@ -58,7 +58,7 @@ class BeaconsTest(ModuleCase):
 
     @classmethod
     def tearDownClass(cls):
-        if os.path.isfile(cls.beacons_config_file_path):
+        if cls.beacons_config_file_path and os.path.isfile(cls.beacons_config_file_path):
             os.unlink(cls.beacons_config_file_path)
 
     def setUp(self):
@@ -71,7 +71,7 @@ class BeaconsTest(ModuleCase):
         self.__class__.beacons_config_file_path = os.path.join(self.minion_conf_d_dir, 'beacons.conf')
         try:
             # Add beacon to disable
-            self.run_function('beacons.add', ['ps', [{'apache2': 'stopped'}]])
+            self.run_function('beacons.add', ['ps', [{'processes': {'apache2': 'stopped'}}]])
             self.run_function('beacons.save')
         except CommandExecutionError:
             self.skipTest('Unable to add beacon')
@@ -143,6 +143,6 @@ class BeaconsTest(ModuleCase):
         # list beacons
         ret = self.run_function('beacons.list', return_yaml=False)
         if 'enabled' in ret:
-            self.assertEqual(ret, {'ps': [{'apache2': 'stopped'}], 'enabled': True})
+            self.assertEqual(ret, {'ps': [{'processes': {'apache2': 'stopped'}}], 'enabled': True})
         else:
-            self.assertEqual(ret, {'ps': {'apache': 'stopped'}})
+            self.assertEqual(ret, {'ps': [{'processes': {'apache2': 'stopped'}}]})

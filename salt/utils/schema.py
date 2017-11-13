@@ -332,7 +332,7 @@ from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 #import yaml
-import salt.ext.six as six
+from salt.ext import six
 
 BASE_SCHEMA_URL = 'https://non-existing.saltstack.com/schemas'
 RENDER_COMMENT_YAML_MAX_LINE_LENGTH = 80

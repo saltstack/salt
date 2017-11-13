@@ -29,11 +29,8 @@ To use the sms returner, append '--return sms' to the salt command.
 
 '''
 from __future__ import absolute_import
-
-
 import logging
 
-import salt.utils
 import salt.returners
 
 log = logging.getLogger(__name__)

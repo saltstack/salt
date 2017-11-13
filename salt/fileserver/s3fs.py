@@ -68,11 +68,14 @@ import logging
 # Import salt libs
 import salt.fileserver as fs
 import salt.modules
-import salt.utils
+import salt.utils.files
+import salt.utils.gzip_util
+import salt.utils.hashutils
+import salt.utils.versions
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import filter
 from salt.ext.six.moves.urllib.parse import quote as _quote
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
@@ -123,12 +126,7 @@ def find_file(path, saltenv='base', **kwargs):
     is missing, or if the MD5 does not match.
     '''
     if 'env' in kwargs:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         kwargs.pop('env')
 
     fnd = {'bucket': None,
@@ -165,12 +163,7 @@ def file_hash(load, fnd):
     Return an MD5 file hash
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = {}
@@ -187,7 +180,7 @@ def file_hash(load, fnd):
             fnd['path'])
 
     if os.path.isfile(cached_file_path):
-        ret['hsum'] = salt.utils.get_hash(cached_file_path)
+        ret['hsum'] = salt.utils.hashutils.get_hash(cached_file_path)
         ret['hash_type'] = 'md5'
 
     return ret
@@ -198,12 +191,7 @@ def serve_file(load, fnd):
     Return a chunk from a file based on the data received
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = {'data': '',
@@ -225,10 +213,10 @@ def serve_file(load, fnd):
 
     ret['dest'] = _trim_env_off_path([fnd['path']], load['saltenv'])[0]
 
-    with salt.utils.fopen(cached_file_path, 'rb') as fp_:
+    with salt.utils.files.fopen(cached_file_path, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
-        if data and six.PY3 and not salt.utils.is_bin_file(cached_file_path):
+        if data and six.PY3 and not salt.utils.files.is_binary(cached_file_path):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -242,12 +230,7 @@ def file_list(load):
     Return a list of all files on the file server in a specified environment
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = []
@@ -283,12 +266,7 @@ def dir_list(load):
     Return a list of all directories on the master
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = []
@@ -535,7 +513,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     log.debug('Writing buckets cache file')
 
-    with salt.utils.fopen(cache_file, 'w') as fp_:
+    with salt.utils.files.fopen(cache_file, 'w') as fp_:
         pickle.dump(metadata, fp_)
 
     return metadata
@@ -548,7 +526,7 @@ def _read_buckets_cache_file(cache_file):
 
     log.debug('Reading buckets cache file')
 
-    with salt.utils.fopen(cache_file, 'rb') as fp_:
+    with salt.utils.files.fopen(cache_file, 'rb') as fp_:
         try:
             data = pickle.load(fp_)
         except (pickle.UnpicklingError, AttributeError, EOFError, ImportError,
@@ -641,7 +619,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
 
             if file_etag.find('-') == -1:
                 file_md5 = file_etag
-                cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
+                cached_md5 = salt.utils.hashutils.get_hash(cached_file_path, 'md5')
 
                 # hashes match we have a cache hit
                 if cached_md5 == file_md5:
