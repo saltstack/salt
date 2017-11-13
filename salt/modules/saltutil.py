@@ -15,6 +15,8 @@ import logging
 import os
 import signal
 import sys
+import time
+import shutil
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -44,13 +46,15 @@ import salt.payload
 import salt.runner
 import salt.state
 import salt.transport
-import salt.utils
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
+import salt.utils.files
+import salt.utils.functools
 import salt.utils.minion
 import salt.utils.process
 import salt.utils.url
+import salt.utils.versions
 import salt.wheel
 
 HAS_PSUTIL = True
@@ -104,7 +108,7 @@ def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     # Dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
-        with salt.utils.fopen(mod_file, 'a+') as ofile:
+        with salt.utils.files.fopen(mod_file, 'a+') as ofile:
             ofile.write('')
     if form == 'grains' and \
        __opts__.get('grains_cache') and \
@@ -372,10 +376,10 @@ def refresh_grains(**kwargs):
 
         salt '*' saltutil.refresh_grains
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     _refresh_pillar = kwargs.pop('refresh_pillar', True)
     if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
+        salt.utils.args.invalid_kwargs(kwargs)
     # Modules and pillar need to be refreshed in case grains changes affected
     # them, and the module refresh process reloads the grains and assigns the
     # newly-reloaded grains to each execution module's __grains__ dunder.
@@ -617,7 +621,7 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         refresh_modules()
     return ret
 
-sync_outputters = salt.utils.alias_function(sync_output, 'sync_outputters')
+sync_outputters = salt.utils.functools.alias_function(sync_output, 'sync_outputters')
 
 
 def sync_clouds(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
@@ -903,7 +907,7 @@ def refresh_pillar():
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
 
-pillar_refresh = salt.utils.alias_function(refresh_pillar, 'pillar_refresh')
+pillar_refresh = salt.utils.functools.alias_function(refresh_pillar, 'pillar_refresh')
 
 
 def refresh_modules(async=True):
@@ -984,12 +988,42 @@ def clear_cache():
 
         salt '*' saltutil.clear_cache
     '''
-    for root, dirs, files in salt.utils.safe_walk(__opts__['cachedir'], followlinks=False):
+    for root, dirs, files in salt.utils.files.safe_walk(__opts__['cachedir'], followlinks=False):
         for name in files:
             try:
                 os.remove(os.path.join(root, name))
             except OSError as exc:
                 log.error('Attempt to clear cache with saltutil.clear_cache FAILED with: {0}'.format(exc))
+                return False
+    return True
+
+
+def clear_job_cache(hours=24):
+    '''
+    Forcibly removes job cache folders and files on a minion.
+
+    .. versionadded:: Oxygen
+
+    WARNING: The safest way to clear a minion cache is by first stopping
+    the minion and then deleting the cache files before restarting it.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.clear_job_cache hours=12
+    '''
+    threshold = time.time() - hours * 3600
+    for root, dirs, files in salt.utils.files.safe_walk(os.path.join(__opts__['cachedir'], 'minion_jobs'),
+                                                  followlinks=False):
+        for name in dirs:
+            try:
+                directory = os.path.join(root, name)
+                mtime = os.path.getmtime(directory)
+                if mtime < threshold:
+                    shutil.rmtree(directory)
+            except OSError as exc:
+                log.error('Attempt to clear cache with saltutil.clear_job_cache FAILED with: %s', exc)
                 return False
     return True
 
@@ -1067,7 +1101,7 @@ def find_cached_job(jid):
         else:
             return 'Local jobs cache directory {0} not found'.format(job_dir)
     path = os.path.join(job_dir, 'return.p')
-    with salt.utils.fopen(path, 'rb') as fp_:
+    with salt.utils.files.fopen(path, 'rb') as fp_:
         buf = fp_.read()
         fp_.close()
         if buf:
@@ -1252,7 +1286,7 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
 
 def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
     if 'expr_form' in kwargs:
-        salt.utils.warn_until(
+        salt.utils.versions.warn_until(
             'Fluorine',
             'The target type should be passed using the \'tgt_type\' '
             'argument instead of \'expr_form\'. Support for using '
@@ -1412,7 +1446,7 @@ def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=No
         kwarg = {}
     jid = kwargs.pop('__orchestration_jid__', jid)
     saltenv = kwargs.pop('__env__', saltenv)
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         kwarg.update(kwargs)
 

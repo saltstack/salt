@@ -18,7 +18,7 @@ import inspect
 import yaml
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 class LoaderGlobalsTest(ModuleCase):

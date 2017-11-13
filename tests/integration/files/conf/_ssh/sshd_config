@@ -4,7 +4,7 @@
 Port 2827
 ListenAddress 127.0.0.1
 Protocol 2
-UsePrivilegeSeparation yes
+#UsePrivilegeSeparation yes
 # Turn strict modes off so that we can operate in /tmp
 StrictModes no
 

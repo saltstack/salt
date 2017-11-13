@@ -28,7 +28,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
     def test_create(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(mdadm.__salt__, {'cmd.run': mock}), \
-                patch('salt.utils.which', lambda exe: exe):
+                patch('salt.utils.path.which', lambda exe: exe):
             ret = mdadm.create(
                     '/dev/md0', 5,
                     devices=['/dev/sdb1', '/dev/sdc1', '/dev/sdd1'],

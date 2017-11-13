@@ -65,7 +65,8 @@ class TestGemModule(TestCase, LoaderModuleMockMixin):
         with patch.dict(gem.__salt__,
                         {'rvm.is_installed': MagicMock(return_value=False),
                          'rbenv.is_installed': MagicMock(return_value=True),
-                         'rbenv.do': mock}):
+                         'rbenv.do': mock}),\
+                patch('salt.utils.platform.is_windows', return_value=False):
             gem._gem(['install', 'rails'])
             mock.assert_called_once_with(
                 ['gem', 'install', 'rails'],

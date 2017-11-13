@@ -42,7 +42,7 @@ from salt.exceptions import FileserverConfigError
 PER_REMOTE_OVERRIDES = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
 
 # Import third party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 HAS_SVN = False
 try:
@@ -54,8 +54,13 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.files
+import salt.utils.gzip_util
+import salt.utils.hashutils
+import salt.utils.stringutils
 import salt.utils.url
+import salt.utils.versions
 import salt.fileserver
 from salt.utils.event import tagify
 
@@ -136,7 +141,7 @@ def init():
             repo_url = next(iter(remote))
             per_remote_conf = dict(
                 [(key, six.text_type(val)) for key, val in
-                 six.iteritems(salt.utils.repack_dictlist(remote[repo_url]))]
+                 six.iteritems(salt.utils.data.repack_dictlist(remote[repo_url]))]
             )
             if not per_remote_conf:
                 log.error(
@@ -224,7 +229,7 @@ def init():
     if new_remote:
         remote_map = os.path.join(__opts__['cachedir'], 'svnfs/remote_map.txt')
         try:
-            with salt.utils.fopen(remote_map, 'w+') as fp_:
+            with salt.utils.files.fopen(remote_map, 'w+') as fp_:
                 timestamp = datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
                 fp_.write('# svnfs_remote map as of {0}\n'.format(timestamp))
                 for repo_conf in repos:
@@ -367,7 +372,7 @@ def lock(remote=None):
         failed = []
         if not os.path.exists(repo['lockfile']):
             try:
-                with salt.utils.fopen(repo['lockfile'], 'w+') as fp_:
+                with salt.utils.files.fopen(repo['lockfile'], 'w+') as fp_:
                     fp_.write('')
             except (IOError, OSError) as exc:
                 msg = ('Unable to set update lock for {0} ({1}): {2} '
@@ -453,7 +458,7 @@ def update():
             os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
         serial = salt.payload.Serial(__opts__)
-        with salt.utils.fopen(env_cache, 'wb+') as fp_:
+        with salt.utils.files.fopen(env_cache, 'wb+') as fp_:
             fp_.write(serial.dumps(new_envs))
             log.trace('Wrote env cache data to {0}'.format(env_cache))
 
@@ -481,10 +486,30 @@ def _env_is_exposed(env):
     Check if an environment is exposed by comparing it against a whitelist and
     blacklist.
     '''
-    return salt.utils.check_whitelist_blacklist(
+    if __opts__['svnfs_env_whitelist']:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The svnfs_env_whitelist config option has been renamed to '
+            'svnfs_saltenv_whitelist. Please update your configuration.'
+        )
+        whitelist = __opts__['svnfs_env_whitelist']
+    else:
+        whitelist = __opts__['svnfs_saltenv_whitelist']
+
+    if __opts__['svnfs_env_blacklist']:
+        salt.utils.versions.warn_until(
+            'Neon',
+            'The svnfs_env_blacklist config option has been renamed to '
+            'svnfs_saltenv_blacklist. Please update your configuration.'
+        )
+        blacklist = __opts__['svnfs_env_blacklist']
+    else:
+        blacklist = __opts__['svnfs_saltenv_blacklist']
+
+    return salt.utils.stringutils.check_whitelist_blacklist(
         env,
-        whitelist=__opts__['svnfs_env_whitelist'],
-        blacklist=__opts__['svnfs_env_blacklist']
+        whitelist=whitelist,
+        blacklist=blacklist,
     )
 
 
@@ -608,12 +633,7 @@ def serve_file(load, fnd):
     Return a chunk from a file based on the data received
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     ret = {'data': '',
@@ -625,10 +645,10 @@ def serve_file(load, fnd):
     ret['dest'] = fnd['rel']
     gzip = load.get('gzip', None)
     fpath = os.path.normpath(fnd['path'])
-    with salt.utils.fopen(fpath, 'rb') as fp_:
+    with salt.utils.files.fopen(fpath, 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
-        if data and six.PY3 and not salt.utils.is_bin_file(fpath):
+        if data and six.PY3 and not salt.utils.files.is_binary(fpath):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
@@ -642,12 +662,7 @@ def file_hash(load, fnd):
     Return a file hash, the hash type is set in the master config file
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if not all(x in load for x in ('path', 'saltenv')):
@@ -675,7 +690,7 @@ def file_hash(load, fnd):
                                                     __opts__['hash_type']))
     # If we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
-        with salt.utils.fopen(cache_path, 'rb') as fp_:
+        with salt.utils.files.fopen(cache_path, 'rb') as fp_:
             hsum, mtime = fp_.read().split(':')
             if os.path.getmtime(path) == mtime:
                 # check if mtime changed
@@ -683,13 +698,13 @@ def file_hash(load, fnd):
                 return ret
 
     # if we don't have a cache entry-- lets make one
-    ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
+    ret['hsum'] = salt.utils.hashutils.get_hash(path, __opts__['hash_type'])
     cache_dir = os.path.dirname(cache_path)
     # make cache directory if it doesn't exist
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
-    with salt.utils.fopen(cache_path, 'w') as fp_:
+    with salt.utils.files.fopen(cache_path, 'w') as fp_:
         fp_.write('{0}:{1}'.format(ret['hsum'], os.path.getmtime(path)))
 
     return ret
@@ -700,12 +715,7 @@ def _file_lists(load, form):
     Return a dict containing the file lists for files, dirs, emptydirs and symlinks
     '''
     if 'env' in load:
-        salt.utils.warn_until(
-            'Oxygen',
-            'Parameter \'env\' has been detected in the argument list.  This '
-            'parameter is no longer used and has been replaced by \'saltenv\' '
-            'as of Salt 2016.11.0.  This warning will be removed in Salt Oxygen.'
-            )
+        # "env" is not supported; Use "saltenv".
         load.pop('env')
 
     if 'saltenv' not in load or load['saltenv'] not in envs():

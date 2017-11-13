@@ -16,7 +16,7 @@ from __future__ import absolute_import
 from tests.support.unit import TestCase
 
 # Import salt libs
-from salt.utils import immutabletypes
+import salt.utils.immutabletypes as immutabletypes
 
 
 class ImmutableTypesTestCase(TestCase):

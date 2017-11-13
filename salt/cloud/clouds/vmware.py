@@ -124,9 +124,9 @@ import os.path
 import subprocess
 
 # Import salt libs
-import salt.utils
 import salt.utils.cloud
 import salt.utils.network
+import salt.utils.stringutils
 import salt.utils.xmlutil
 import salt.utils.vmware
 from salt.exceptions import SaltCloudSystemExit
@@ -135,7 +135,7 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 try:
     # Attempt to import pyVmomi libs
     from pyVmomi import vim
@@ -272,7 +272,7 @@ def _edit_existing_hard_disk_helper(disk, size_kb=None, size_gb=None, mode=None)
     return disk_spec
 
 
-def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1000, thin_provision=False, datastore=None, vm_name=None):
+def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1000, thin_provision=False, eagerly_scrub=False, datastore=None, vm_name=None):
     random_key = randint(-2099, -2000)
     size_kb = int(size_gb * 1024.0 * 1024.0)
 
@@ -288,6 +288,7 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1
 
     disk_spec.device.backing = vim.vm.device.VirtualDisk.FlatVer2BackingInfo()
     disk_spec.device.backing.thinProvisioned = thin_provision
+    disk_spec.device.backing.eagerlyScrub = eagerly_scrub
     disk_spec.device.backing.diskMode = 'persistent'
 
     if datastore:
@@ -703,7 +704,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         network_name = devices['network'][device.deviceInfo.label]['name']
                         adapter_type = devices['network'][device.deviceInfo.label]['adapter_type'] if 'adapter_type' in devices['network'][device.deviceInfo.label] else ''
                         switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
-                        network_spec = _edit_existing_network_adapter(device, network_name, adapter_type, switch_type)
+                        network_spec = _edit_existing_network_adapter(device, network_name, adapter_type, switch_type, container_ref)
                         adapter_mapping = _set_network_adapter_mapping(devices['network'][device.deviceInfo.label])
                         device_specs.append(network_spec)
                         nics_map.append(adapter_mapping)
@@ -796,8 +797,9 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
             # create the disk
             size_gb = float(devices['disk'][disk_label]['size'])
             thin_provision = bool(devices['disk'][disk_label]['thin_provision']) if 'thin_provision' in devices['disk'][disk_label] else False
+            eagerly_scrub = bool(devices['disk'][disk_label]['eagerly_scrub']) if 'eagerly_scrub' in devices['disk'][disk_label] else False
             datastore = devices['disk'][disk_label].get('datastore', None)
-            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number, thin_provision=thin_provision, datastore=datastore, vm_name=new_vm_name)
+            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number, thin_provision=thin_provision, eagerly_scrub=eagerly_scrub, datastore=datastore, vm_name=new_vm_name)
 
             # when creating both SCSI controller and Hard disk at the same time we need the randomly
             # assigned (temporary) key of the newly created SCSI controller
@@ -989,6 +991,10 @@ def _format_instance_info_select(vm, selection):
         cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
         ram = "{0} MB".format(vm["config.hardware.memoryMB"]) if "config.hardware.memoryMB" in vm else "N/A"
         vm_select_info['size'] = u"cpu: {0}\nram: {1}".format(cpu, ram)
+        vm_select_info['size_dict'] = {
+            'cpu': cpu,
+            'memory': ram,
+        }
 
     if 'state' in selection:
         vm_select_info['state'] = str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A"
@@ -1176,6 +1182,10 @@ def _format_instance_info(vm):
         'id': str(vm['name']),
         'image': "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A",
         'size': u"cpu: {0}\nram: {1}".format(cpu, ram),
+        'size_dict': {
+            'cpu': cpu,
+            'memory': ram,
+        },
         'state': str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A",
         'private_ips': ip_addresses,
         'public_ips': [],
@@ -1580,6 +1590,10 @@ def list_nodes(kwargs=None, call=None):
             'id': vm["name"],
             'image': "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A",
             'size': u"cpu: {0}\nram: {1}".format(cpu, ram),
+            'size_dict': {
+                'cpu': cpu,
+                'memory': ram,
+            },
             'state': str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A",
             'private_ips': [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
             'public_ips': []
@@ -2359,6 +2373,9 @@ def create(vm_):
     extra_config = config.get_cloud_config_value(
         'extra_config', vm_, __opts__, default=None
     )
+    annotation = config.get_cloud_config_value(
+        'annotation', vm_, __opts__, default=None
+    )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=True
     )
@@ -2561,13 +2578,16 @@ def create(vm_):
         config_spec.memoryMB = memory_mb
 
     if devices:
-        specs = _manage_devices(devices, vm=object_ref, new_vm_name=vm_name)
+        specs = _manage_devices(devices, vm=object_ref, container_ref=container_ref, new_vm_name=vm_name)
         config_spec.deviceChange = specs['device_specs']
 
     if extra_config:
         for key, value in six.iteritems(extra_config):
             option = vim.option.OptionValue(key=key, value=value)
             config_spec.extraConfig.append(option)
+
+    if annotation:
+        config_spec.annotation = str(annotation)
 
     if 'clonefrom' in vm_:
         clone_spec = handle_snapshot(
@@ -3782,7 +3802,7 @@ def add_host(kwargs=None, call=None):
             p1 = subprocess.Popen(('echo', '-n'), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             p2 = subprocess.Popen(('openssl', 's_client', '-connect', '{0}:443'.format(host_name)), stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             p3 = subprocess.Popen(('openssl', 'x509', '-noout', '-fingerprint', '-sha1'), stdin=p2.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out = salt.utils.to_str(p3.stdout.read())
+            out = salt.utils.stringutils.to_str(p3.stdout.read())
             ssl_thumbprint = out.split('=')[-1].strip()
             log.debug('SSL thumbprint received from the host system: {0}'.format(ssl_thumbprint))
             spec.sslThumbprint = ssl_thumbprint

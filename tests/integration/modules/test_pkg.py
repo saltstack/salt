@@ -14,9 +14,9 @@ from tests.support.helpers import (
 )
 from tests.support.unit import skipIf
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
 import salt.utils.pkg
+import salt.utils.platform
 
 
 class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
@@ -24,7 +24,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     Validate the pkg module
     '''
     def setUp(self):
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             self.run_function('pkg.refresh_db')
 
     def test_list(self):
@@ -266,7 +266,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_network()
     @destructiveTest
-    @skipIf(salt.utils.is_windows(), 'pkg.upgrade not available on Windows')
+    @skipIf(salt.utils.platform.is_windows(), 'pkg.upgrade not available on Windows')
     def test_pkg_upgrade_has_pending_upgrades(self):
         '''
         Test running a system upgrade when there are packages that need upgrading
