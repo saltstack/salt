@@ -123,6 +123,7 @@ class CloudUtilsTestCase(TestCase):
         # we successful pass the place with os.write(tmpfd, ...
         self.assertNotEqual("a bytes-like object is required, not 'str'", str(context.exception))
 
+    @skipIf(salt.utils.is_windows(), 'Not applicable to Windows')
     def test_check_key_path_and_mode(self):
         with tempfile.NamedTemporaryFile() as f:
             key_file = f.name
