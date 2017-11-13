@@ -105,7 +105,9 @@ def __virtual__():
 
 
 def _splitpkg(name):
-    '''Split package name from versioned string'''
+    '''
+    Split package name from versioned string
+    '''
     # name is in the format foobar-1.0nb1, already space-splitted
     if name[0].isalnum() and name != 'No':  # avoid < > = and 'No result'
         return name.split(';', 1)[0].rsplit('-', 1)
@@ -231,6 +233,12 @@ def refresh_db(force=False):
     '''
     Use pkg update to get latest pkg_summary
 
+    force
+        Pass -f so that the cache is always refreshed.
+
+        .. versionadded:: Oxygen
+
+
     CLI Example:
 
     .. code-block:: bash
@@ -316,6 +324,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 def list_upgrades(refresh=True, **kwargs):
     '''
     List all available package upgrades.
+
+    .. versionadded:: Oxygen
 
     refresh
         Whether or not to refresh the package database before installing.
