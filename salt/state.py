@@ -830,12 +830,12 @@ class State(object):
                     entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug(u'Last command return code: %s', cmd)
                 if cmd != 0 and ret[u'result'] is False:
-                    ret.update({u'comment': u'onlyif execution failed',
+                    ret.update({u'comment': u'onlyif condition is false',
                                 u'skip_watch': True,
                                 u'result': True})
                     return ret
                 elif cmd == 0:
-                    ret.update({u'comment': u'onlyif execution succeeded', u'result': False})
+                    ret.update({u'comment': u'onlyif condition is true', u'result': False})
             return ret
 
         if u'unless' in low_data:
@@ -845,17 +845,17 @@ class State(object):
                 low_data_unless = low_data[u'unless']
             for entry in low_data_unless:
                 if not isinstance(entry, six.string_types):
-                    ret.update({u'comment': u'unless execution failed, bad type passed', u'result': False})
+                    ret.update({u'comment': u'unless condition is false, bad type passed', u'result': False})
                     return ret
                 cmd = self.functions[u'cmd.retcode'](
                     entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug(u'Last command return code: %s', cmd)
                 if cmd == 0 and ret[u'result'] is False:
-                    ret.update({u'comment': u'unless execution succeeded',
+                    ret.update({u'comment': u'unless condition is true',
                                 u'skip_watch': True,
                                 u'result': True})
                 elif cmd != 0:
-                    ret.update({u'comment': u'unless execution failed', u'result': False})
+                    ret.update({u'comment': u'unless condition is false', u'result': False})
                     return ret
 
         # No reason to stop, return ret

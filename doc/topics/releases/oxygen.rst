@@ -413,7 +413,7 @@ signed certificates.  :ref:`Here<new-pywinrm>` for more information.
 DigitalOcean
 ------------
 
-The DigitalOcean driver has been renamed to conform to the companies name.  The
+The DigitalOcean driver has been renamed to conform to the company name.  The
 new driver name is ``digitalocean``.  The old name ``digital_ocean`` and a
 short one ``do`` will still be supported through virtual aliases, this is mostly
 cosmetic.
