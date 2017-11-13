@@ -74,7 +74,6 @@ except ImportError:
 
 # Import salt libs
 import salt.config as config
-import salt.utils
 import salt.utils.cloud
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -466,16 +465,52 @@ def create(vm_):
 
         return ret
     except Exception as e:  # pylint: disable=broad-except
-        # Try to clean up in as much cases as possible
-        log.info('Cleaning up after exception clean up items: {0}'.format(cleanup))
-        for leftover in cleanup:
-            what = leftover['what']
-            item = leftover['item']
-            if what == 'domain':
-                destroy_domain(conn, item)
-            if what == 'volume':
-                item.delete()
+        do_cleanup(cleanup)
+        # throw the root cause after cleanup
         raise e
+
+
+def do_cleanup(cleanup):
+    '''
+    Clean up clone domain leftovers as much as possible.
+
+    Extra robust clean up in order to deal with some small changes in libvirt
+    behavior over time. Passed in volumes and domains are deleted, any errors
+    are ignored. Used when cloning/provisioning a domain fails.
+
+    :param cleanup: list containing dictonaries with two keys: 'what' and 'item'.
+                    If 'what' is domain the 'item' is a libvirt domain object.
+                    If 'what' is volume then the item is a libvirt volume object.
+
+    Returns:
+        none
+
+    .. versionadded: 2017.7.3
+    '''
+    log.info('Cleaning up after exception')
+    for leftover in cleanup:
+        what = leftover['what']
+        item = leftover['item']
+        if what == 'domain':
+            log.info('Cleaning up {0} {1}'.format(what, item.name()))
+            try:
+                item.destroy()
+                log.debug('{0} {1} forced off'.format(what, item.name()))
+            except libvirtError:
+                pass
+            try:
+                item.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE+
+                                   libvirt.VIR_DOMAIN_UNDEFINE_SNAPSHOTS_METADATA+
+                                   libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
+                log.debug('{0} {1} undefined'.format(what, item.name()))
+            except libvirtError:
+                pass
+        if what == 'volume':
+            try:
+                item.delete()
+                log.debug('{0} {1} cleaned up'.format(what, item.name()))
+            except libvirtError:
+                pass
 
 
 def destroy(name, call=None):

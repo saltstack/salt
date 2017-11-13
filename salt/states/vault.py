@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
+States for managing Hashicorp Vault.
+Currently handles policies. Configuration instructions are documented in the execution module docs.
+
 :maintainer:    SaltStack
 :maturity:      new
 :platform:      all
 
 .. versionadded:: 2017.7.0
 
-States for managing Hashicorp Vault. Currently handles policies. Configuration
-instructions are documented in the execution module docs.
 '''
 from __future__ import absolute_import
 import logging

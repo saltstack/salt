@@ -24,7 +24,7 @@ from salt.ext.six.moves.urllib.parse import urlparse
 # pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
-import salt.utils  # Can be removed once is_dictlist, ip_bracket are moved
+import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.network
@@ -35,6 +35,7 @@ import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yamlloader as yamlloader
+import salt.utils.zeromq
 import salt.syspaths
 import salt.exceptions
 from salt.utils.locales import sdecode
@@ -3388,6 +3389,17 @@ def _cache_id(minion_id, cache_file):
     '''
     Helper function, writes minion id to a cache file.
     '''
+    path = os.path.dirname(cache_file)
+    try:
+        if not os.path.isdir(path):
+            os.makedirs(path)
+    except OSError as exc:
+        # Handle race condition where dir is created after os.path.isdir check
+        if os.path.isdir(path):
+            pass
+        else:
+            log.error('Failed to create dirs to minion_id file: {0}'.format(exc))
+
     try:
         with salt.utils.files.fopen(cache_file, 'w') as idf:
             idf.write(minion_id)
@@ -3696,8 +3708,8 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None, exit_on_con
     # out or not present.
     if opts.get('nodegroups') is None:
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
-    if salt.utils.is_dictlist(opts['nodegroups']):
-        opts['nodegroups'] = salt.utils.repack_dictlist(opts['nodegroups'])
+    if salt.utils.data.is_dictlist(opts['nodegroups']):
+        opts['nodegroups'] = salt.utils.data.repack_dictlist(opts['nodegroups'])
     if opts.get('transport') == 'raet' and 'aes' in opts:
         opts.pop('aes')
     apply_sdb(opts)
@@ -3903,7 +3915,7 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
     # Make sure the master_uri is set
     if 'master_uri' not in opts:
         opts['master_uri'] = 'tcp://{ip}:{port}'.format(
-            ip=salt.utils.ip_bracket(opts['interface']),
+            ip=salt.utils.zeromq.ip_bracket(opts['interface']),
             port=opts['ret_port']
         )
 

@@ -47,7 +47,6 @@ import tornado.gen  # pylint: disable=F0401
 
 # Import salt libs
 import salt.crypt
-import salt.utils
 import salt.client
 import salt.payload
 import salt.pillar
@@ -65,6 +64,7 @@ import salt.transport.server
 import salt.log.setup
 import salt.utils.args
 import salt.utils.atomicfile
+import salt.utils.crypt
 import salt.utils.event
 import salt.utils.files
 import salt.utils.gitfs
@@ -222,7 +222,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
         This is where any data that needs to be cleanly maintained from the
         master is maintained.
         '''
-        salt.utils.appendproctitle(u'Maintenance')
+        salt.utils.process.appendproctitle(u'Maintenance')
 
         # init things that need to be done after the process is forked
         self._post_fork_init()
@@ -486,11 +486,11 @@ class Master(SMaster):
                     for repo in git_pillars:
                         new_opts[u'ext_pillar'] = [repo]
                         try:
-                            git_pillar = salt.utils.gitfs.GitPillar(new_opts)
-                            git_pillar.init_remotes(
+                            git_pillar = salt.utils.gitfs.GitPillar(
+                                new_opts,
                                 repo[u'git'],
-                                salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                salt.pillar.git_pillar.PER_REMOTE_ONLY)
+                                per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
+                                per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY)
                         except FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:
@@ -652,7 +652,7 @@ class Halite(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Fire up halite!
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.process.appendproctitle(self.__class__.__name__)
         halite.start(self.hopts)
 
 
@@ -912,13 +912,13 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
         '''
         Start a Master Worker
         '''
-        salt.utils.appendproctitle(self.name)
+        salt.utils.process.appendproctitle(self.name)
         self.clear_funcs = ClearFuncs(
            self.opts,
            self.key,
            )
         self.aes_funcs = AESFuncs(self.opts)
-        salt.utils.reinit_crypto()
+        salt.utils.crypt.reinit_crypto()
         self.__bind()
 
 
@@ -1421,40 +1421,43 @@ class AESFuncs(object):
 
         :param dict load: The minion payload
         '''
-        # Verify the load
-        if any(key not in load for key in (u'return', u'jid', u'id')):
-            return None
-        # if we have a load, save it
-        if load.get(u'load'):
-            fstr = u'{0}.save_load'.format(self.opts[u'master_job_cache'])
-            self.mminion.returners[fstr](load[u'jid'], load[u'load'])
+        loads = load.get(u'load')
+        if not isinstance(loads, list):
+            loads = [load]  # support old syndics not aggregating returns
+        for load in loads:
+            # Verify the load
+            if any(key not in load for key in (u'return', u'jid', u'id')):
+                continue
+            # if we have a load, save it
+            if load.get(u'load'):
+                fstr = u'{0}.save_load'.format(self.opts[u'master_job_cache'])
+                self.mminion.returners[fstr](load[u'jid'], load[u'load'])
 
-        # Register the syndic
-        syndic_cache_path = os.path.join(self.opts[u'cachedir'], u'syndics', load[u'id'])
-        if not os.path.exists(syndic_cache_path):
-            path_name = os.path.split(syndic_cache_path)[0]
-            if not os.path.exists(path_name):
-                os.makedirs(path_name)
-            with salt.utils.files.fopen(syndic_cache_path, u'w') as wfh:
-                wfh.write(u'')
+            # Register the syndic
+            syndic_cache_path = os.path.join(self.opts[u'cachedir'], u'syndics', load[u'id'])
+            if not os.path.exists(syndic_cache_path):
+                path_name = os.path.split(syndic_cache_path)[0]
+                if not os.path.exists(path_name):
+                    os.makedirs(path_name)
+                with salt.utils.files.fopen(syndic_cache_path, u'w') as wfh:
+                    wfh.write(u'')
 
-        # Format individual return loads
-        for key, item in six.iteritems(load[u'return']):
-            ret = {u'jid': load[u'jid'],
-                   u'id': key}
-            ret.update(item)
-            if u'master_id' in load:
-                ret[u'master_id'] = load[u'master_id']
-            if u'fun' in load:
-                ret[u'fun'] = load[u'fun']
-            if u'arg' in load:
-                ret[u'fun_args'] = load[u'arg']
-            if u'out' in load:
-                ret[u'out'] = load[u'out']
-            if u'sig' in load:
-                ret[u'sig'] = load[u'sig']
-
-            self._return(ret)
+            # Format individual return loads
+            for key, item in six.iteritems(load[u'return']):
+                ret = {u'jid': load[u'jid'],
+                       u'id': key}
+                ret.update(item)
+                if u'master_id' in load:
+                    ret[u'master_id'] = load[u'master_id']
+                if u'fun' in load:
+                    ret[u'fun'] = load[u'fun']
+                if u'arg' in load:
+                    ret[u'fun_args'] = load[u'arg']
+                if u'out' in load:
+                    ret[u'out'] = load[u'out']
+                if u'sig' in load:
+                    ret[u'sig'] = load[u'sig']
+                self._return(ret)
 
     def minion_runner(self, clear_load):
         '''
@@ -1837,89 +1840,52 @@ class ClearFuncs(object):
             clear_load.get(u'tgt_type', u'glob'),
             delimiter
         )
-        minions = _res.get('minions', list())
-        missing = _res.get('missing', list())
+        minions = _res.get(u'minions', list())
+        missing = _res.get(u'missing', list())
 
-        # Check for external auth calls
-        if extra.get(u'token', False):
-            # Authenticate.
-            token = self.loadauth.authenticate_token(extra)
-            if not token:
-                return u''
-
-            # Get acl
-            auth_list = self.loadauth.get_auth_list(extra, token)
-
-            # Authorize the request
-            if not self.ckminions.auth_check(
-                    auth_list,
-                    clear_load[u'fun'],
-                    clear_load[u'arg'],
-                    clear_load[u'tgt'],
-                    clear_load.get(u'tgt_type', u'glob'),
-                    minions=minions,
-                    # always accept find_job
-                    whitelist=[u'saltutil.find_job'],
-                    ):
-                log.warning(u'Authentication failure of type "token" occurred.')
-                return u''
-            clear_load[u'user'] = token[u'name']
-            log.debug(u'Minion tokenized user = "%s"', clear_load[u'user'])
-        elif u'eauth' in extra:
-            # Authenticate.
-            if not self.loadauth.authenticate_eauth(extra):
-                return u''
-
-            # Get acl from eauth module.
-            auth_list = self.loadauth.get_auth_list(extra)
-
-            # Authorize the request
-            if not self.ckminions.auth_check(
-                    auth_list,
-                    clear_load[u'fun'],
-                    clear_load[u'arg'],
-                    clear_load[u'tgt'],
-                    clear_load.get(u'tgt_type', u'glob'),
-                    minions=minions,
-                    # always accept find_job
-                    whitelist=[u'saltutil.find_job'],
-                    ):
-                log.warning(u'Authentication failure of type "eauth" occurred.')
-                return u''
-            clear_load[u'user'] = self.loadauth.load_name(extra)  # The username we are attempting to auth with
-        # Verify that the caller has root on master
+        # Check for external auth calls and authenticate
+        auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(extra)
+        if auth_type == 'user':
+            auth_check = self.loadauth.check_authentication(clear_load, auth_type, key=key)
         else:
-            auth_ret = self.loadauth.authenticate_key(clear_load, self.key)
-            if auth_ret is False:
+            auth_check = self.loadauth.check_authentication(extra, auth_type)
+
+        # Setup authorization list variable and error information
+        auth_list = auth_check.get(u'auth_list', [])
+        err_msg = u'Authentication failure of type "{0}" occurred.'.format(auth_type)
+
+        if auth_check.get(u'error'):
+            # Authentication error occurred: do not continue.
+            log.warning(err_msg)
+            return u''
+
+        # All Token, Eauth, and non-root users must pass the authorization check
+        if auth_type != u'user' or (auth_type == u'user' and auth_list):
+            # Authorize the request
+            authorized = self.ckminions.auth_check(
+                auth_list,
+                clear_load[u'fun'],
+                clear_load[u'arg'],
+                clear_load[u'tgt'],
+                clear_load.get(u'tgt_type', u'glob'),
+                minions=minions,
+                # always accept find_job
+                whitelist=[u'saltutil.find_job'],
+            )
+
+            if not authorized:
+                # Authorization error occurred. Do not continue.
+                log.warning(err_msg)
                 return u''
 
-            if auth_ret is not True:
-                if salt.auth.AuthUser(clear_load[u'user']).is_sudo():
-                    if not self.opts[u'sudo_acl'] or not self.opts[u'publisher_acl']:
-                        auth_ret = True
-
-            if auth_ret is not True:
-                auth_list = salt.utils.get_values_of_matching_keys(
-                        self.opts[u'publisher_acl'],
-                        auth_ret)
-                if not auth_list:
-                    log.warning(
-                        u'Authentication failure of type "user" occurred.'
-                    )
-                    return u''
-
-                if not self.ckminions.auth_check(
-                        auth_list,
-                        clear_load[u'fun'],
-                        clear_load[u'arg'],
-                        clear_load[u'tgt'],
-                        clear_load.get(u'tgt_type', u'glob'),
-                        minions=minions,
-                        # always accept find_job
-                        whitelist=[u'saltutil.find_job'],
-                        ):
-                    log.warning(u'Authentication failure of type "user" occurred.')
-                    return u''
+            # Perform some specific auth_type tasks after the authorization check
+            if auth_type == u'token':
+                username = auth_check.get(u'username')
+                clear_load[u'user'] = username
+                log.debug(u'Minion tokenized user = "%s"', username)
+            elif auth_type == u'eauth':
+                # The username we are attempting to auth with
+                clear_load[u'user'] = self.loadauth.load_name(extra)
 
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found
@@ -2163,7 +2129,7 @@ class FloMWorker(MWorker):
         '''
         Prepare the needed objects and socket for iteration within ioflo
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.crypt.appendproctitle(self.__class__.__name__)
         self.clear_funcs = salt.master.ClearFuncs(
                 self.opts,
                 self.key,

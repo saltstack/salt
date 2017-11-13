@@ -14,7 +14,7 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.path
 
 # Import 3rd-party libs
@@ -42,7 +42,7 @@ def _pecl(command, defaults=False):
     Execute the command passed with pecl
     '''
     cmdline = 'pecl {0}'.format(command)
-    if salt.utils.is_true(defaults):
+    if salt.utils.data.is_true(defaults):
         cmdline = 'yes ' "''" + ' | ' + cmdline
 
     ret = __salt__['cmd.run_all'](cmdline, python_shell=True)

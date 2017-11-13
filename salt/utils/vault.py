@@ -90,7 +90,8 @@ def _get_token_and_url_from_master():
         raise salt.exceptions.CommandExecutionError(result)
     return {
             'url': result['url'],
-            'token': result['token']
+            'token': result['token'],
+            'verify': result['verify'],
            }
 
 
@@ -104,7 +105,8 @@ def _get_vault_connection():
         try:
             return {
                 'url': __opts__['vault']['url'],
-                'token': __opts__['vault']['auth']['token']
+                'token': __opts__['vault']['auth']['token'],
+                'verify': __opts__['vault'].get('verify', None)
             }
         except KeyError as err:
             errmsg = 'Minion has "vault" config section, but could not find key "{0}" within'.format(err.message)
@@ -124,6 +126,8 @@ def make_request(method, resource, profile=None, **args):
 
     connection = _get_vault_connection()
     token, vault_url = connection['token'], connection['url']
+    if 'verify' not in args:
+        args['verify'] = connection['verify']
 
     url = "{0}/{1}".format(vault_url, resource)
     headers = {'X-Vault-Token': token, 'Content-Type': 'application/json'}

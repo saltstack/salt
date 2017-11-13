@@ -13,7 +13,6 @@ import traceback
 # Import salt libs
 import salt.crypt
 import salt.payload
-import salt.utils
 import salt.utils.args
 import salt.utils.event
 import salt.utils.network
@@ -212,9 +211,10 @@ def send(func, *args, **kwargs):
         except IndexError:
             # Safe error, arg may be in kwargs
             pass
-    f_call = salt.utils.format_call(__salt__[mine_func],
-                                    func_data,
-                                    expected_extra_kws=MINE_INTERNAL_KEYWORDS)
+    f_call = salt.utils.args.format_call(
+        __salt__[mine_func],
+        func_data,
+        expected_extra_kws=MINE_INTERNAL_KEYWORDS)
     for arg in args:
         if arg not in f_call['args']:
             f_call['args'].append(arg)

@@ -155,6 +155,7 @@ def _config_logic(napalm_device,
         loaded_result['diff'] = None
         loaded_result['result'] = False
         loaded_result['comment'] = _compare.get('comment')
+        __context__['retcode'] = 1
         return loaded_result
 
     _loaded_res = loaded_result.get('result', False)
@@ -174,12 +175,15 @@ def _config_logic(napalm_device,
             # make sure it notifies
             # that something went wrong
             _explicit_close(napalm_device)
+            __context__['retcode'] = 1
             return loaded_result
 
         loaded_result['comment'] += 'Configuration discarded.'
         # loaded_result['result'] = False not necessary
         # as the result can be true when test=True
         _explicit_close(napalm_device)
+        if not loaded_result['result']:
+            __context__['retcode'] = 1
         return loaded_result
 
     if not test and commit_config:
@@ -210,10 +214,13 @@ def _config_logic(napalm_device,
                 loaded_result['result'] = False
                 # notify if anything goes wrong
                 _explicit_close(napalm_device)
+                __context__['retcode'] = 1
                 return loaded_result
             loaded_result['already_configured'] = True
             loaded_result['comment'] = 'Already configured.'
     _explicit_close(napalm_device)
+    if not loaded_result['result']:
+        __context__['retcode'] = 1
     return loaded_result
 
 
@@ -493,7 +500,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
 
     CLI Example with TextFSM template:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' net.cli textfsm_parse=True textfsm_path=salt://textfsm/
 
@@ -1231,6 +1238,7 @@ def load_config(filename=None,
     Example output:
 
     .. code-block:: python
+
         {
             'comment': 'Configuration discarded.',
             'already_configured': False,
