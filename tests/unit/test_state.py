@@ -16,8 +16,9 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 
 # Import Salt libs
-import salt.state
 import salt.exceptions
+from salt.ext import six
+import salt.state
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
 
 
@@ -472,3 +473,28 @@ class TopFileMergeTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         expected_merge = DefaultOrderedDict(OrderedDict)
 
         self.assertEqual(merged_tops, expected_merge)
+
+
+class StateReturnsTestCase(TestCase):
+    '''
+    TestCase for code handling state returns.
+    '''
+
+    def test_comment_lists_are_converted_to_string(self):
+        '''
+        Tests that states returning a list of comments
+        have that converted to a single string
+        '''
+        ret = {
+            'name': 'myresource',
+            'result': True,
+            'comment': ['comment 1', 'comment 2'],
+            'changes': {},
+        }
+        salt.state.State.verify_ret(ret)  # sanity check
+        with self.assertRaises(salt.exceptions.SaltException):
+            # Not suitable for export as is
+            salt.state.State.verify_ret_for_export(ret)
+        salt.state.State.munge_ret_for_export(ret)
+        self.assertIsInstance(ret[u'comment'], six.string_types)
+        salt.state.State.verify_ret_for_export(ret)

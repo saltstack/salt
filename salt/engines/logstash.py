@@ -8,6 +8,9 @@ them onto a logstash endpoint.
 :configuration:
 
     Example configuration
+
+    .. code-block:: yaml
+
         engines:
           - logstash:
             host: log.my_network.com

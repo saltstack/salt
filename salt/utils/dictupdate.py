@@ -11,7 +11,7 @@ import collections
 # Import 3rd-party libs
 import copy
 import logging
-import salt.ext.six as six
+from salt.ext import six
 from salt.serializers.yamlex import merge_recursive as _yamlex_merge_recursive
 
 log = logging.getLogger(__name__)

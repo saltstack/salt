@@ -22,6 +22,7 @@ import time
 import stat
 import errno
 import signal
+import textwrap
 import logging
 import tempfile
 import subprocess
@@ -35,7 +36,7 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTe
 from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
 
 STATE_FUNCTION_RUNNING_RE = re.compile(
@@ -83,9 +84,9 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             log.debug('Generating {0}'.format(script_path))
 
             # Late import
-            import salt.utils
+            import salt.utils.files
 
-            with salt.utils.fopen(script_path, 'w') as sfh:
+            with salt.utils.files.fopen(script_path, 'w') as sfh:
                 script_template = SCRIPT_TEMPLATES.get(script_name, None)
                 if script_template is None:
                     script_template = SCRIPT_TEMPLATES.get('common', None)
@@ -371,7 +372,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 try:
                     if os.path.exists(tmp_file.name):
-                        if isinstance(tmp_file.name, str):
+                        if isinstance(tmp_file.name, six.string_types):
                             # tmp_file.name is an int when using SpooledTemporaryFiles
                             # int types cannot be used with os.remove() in Python 3
                             os.remove(tmp_file.name)
@@ -403,7 +404,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             try:
                 if os.path.exists(tmp_file.name):
-                    if isinstance(tmp_file.name, str):
+                    if isinstance(tmp_file.name, six.string_types):
                         # tmp_file.name is an int when using SpooledTemporaryFiles
                         # int types cannot be used with os.remove() in Python 3
                         os.remove(tmp_file.name)
@@ -437,6 +438,16 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         '''
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt',
+                               arg_str,
+                               with_retcode=with_retcode,
+                               catch_stderr=catch_stderr,
+                               timeout=timeout)
+
+    def run_spm(self, arg_str, with_retcode=False, catch_stderr=False, timeout=60):  # pylint: disable=W0221
+        '''
+        Execute spm
+        '''
+        return self.run_script('spm',
                                arg_str,
                                with_retcode=with_retcode,
                                catch_stderr=catch_stderr,
@@ -554,6 +565,120 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                timeout=timeout)
 
 
+class SPMTestUserInterface(object):
+    '''
+    Test user interface to SPMClient
+    '''
+    def __init__(self):
+        self._status = []
+        self._confirm = []
+        self._error = []
+
+    def status(self, msg):
+        self._status.append(msg)
+
+    def confirm(self, action):
+        self._confirm.append(action)
+
+    def error(self, msg):
+        self._error.append(msg)
+
+
+class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
+    '''
+    Class for handling spm commands
+    '''
+
+    def _spm_build_files(self, config):
+        self.formula_dir = os.path.join(' '.join(config['file_roots']['base']), 'formulas')
+        self.formula_sls_dir = os.path.join(self.formula_dir, 'apache')
+        self.formula_sls = os.path.join(self.formula_sls_dir, 'apache.sls')
+        self.formula_file = os.path.join(self.formula_dir, 'FORMULA')
+
+        dirs = [self.formula_dir, self.formula_sls_dir]
+        for f_dir in dirs:
+            os.makedirs(f_dir)
+
+        # Late import
+        import salt.utils.files
+
+        with salt.utils.files.fopen(self.formula_sls, 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     install-apache:
+                       pkg.installed:
+                         - name: apache2
+                     '''))
+
+        with salt.utils.files.fopen(self.formula_file, 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     name: apache
+                     os: RedHat, Debian, Ubuntu, Suse, FreeBSD
+                     os_family: RedHat, Debian, Suse, FreeBSD
+                     version: 201506
+                     release: 2
+                     summary: Formula for installing Apache
+                     description: Formula for installing Apache
+                     '''))
+
+    def _spm_config(self):
+        self._tmp_spm = tempfile.mkdtemp()
+        config = self.get_temp_config('minion', **{
+            'spm_logfile': os.path.join(self._tmp_spm, 'log'),
+            'spm_repos_config': os.path.join(self._tmp_spm, 'etc', 'spm.repos'),
+            'spm_cache_dir': os.path.join(self._tmp_spm, 'cache'),
+            'spm_build_dir': os.path.join(self._tmp_spm, 'build'),
+            'spm_build_exclude': ['apache/.git'],
+            'spm_db_provider': 'sqlite3',
+            'spm_files_provider': 'local',
+            'spm_db': os.path.join(self._tmp_spm, 'packages.db'),
+            'extension_modules': os.path.join(self._tmp_spm, 'modules'),
+            'file_roots': {'base': [self._tmp_spm, ]},
+            'formula_path': os.path.join(self._tmp_spm, 'spm'),
+            'pillar_path': os.path.join(self._tmp_spm, 'pillar'),
+            'reactor_path': os.path.join(self._tmp_spm, 'reactor'),
+            'assume_yes': True,
+            'force': False,
+            'verbose': False,
+            'cache': 'localfs',
+            'cachedir': os.path.join(self._tmp_spm, 'cache'),
+            'spm_repo_dups': 'ignore',
+            'spm_share_dir': os.path.join(self._tmp_spm, 'share'),
+        })
+        return config
+
+    def _spm_create_update_repo(self, config):
+
+        build_spm = self.run_spm('build', self.config, self.formula_dir)
+
+        c_repo = self.run_spm('create_repo', self.config,
+                              self.config['spm_build_dir'])
+
+        repo_conf_dir = self.config['spm_repos_config'] + '.d'
+        os.makedirs(repo_conf_dir)
+
+        # Late import
+        import salt.utils.files
+
+        with salt.utils.files.fopen(os.path.join(repo_conf_dir, 'spm.repo'), 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     local_repo:
+                       url: file://{0}
+                     '''.format(self.config['spm_build_dir'])))
+
+        u_repo = self.run_spm('update_repo', self.config)
+
+    def _spm_client(self, config):
+        import salt.spm
+        self.ui = SPMTestUserInterface()
+        client = salt.spm.SPMClient(self.ui, config)
+        return client
+
+    def run_spm(self, cmd, config, arg=None):
+        client = self._spm_client(config)
+        spm_cmd = client.run([cmd, arg])
+        return self.ui._status
+
+
 class ModuleCase(TestCase, SaltClientTestCaseMixin):
     '''
     Execute a module function
@@ -572,7 +697,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         behavior of the raw function call
         '''
         know_to_return_none = (
-            'file.chown', 'file.chgrp', 'ssh.recv_known_host'
+            'file.chown', 'file.chgrp', 'ssh.recv_known_host_entries'
         )
         if 'f_arg' in kwargs:
             kwargs['arg'] = kwargs.pop('f_arg')

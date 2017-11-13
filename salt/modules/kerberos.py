@@ -25,13 +25,13 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if salt.utils.which('kadmin'):
+    if salt.utils.path.which('kadmin'):
         return True
 
     return (False, 'The kerberos execution module not loaded: kadmin not in path')
@@ -262,7 +262,7 @@ def create_keytab(name, keytab, enctypes=None):
 
     .. code-block:: bash
 
-        salt 'kdc.example.com' host/host1.example.com host1.example.com.keytab
+        salt 'kdc.example.com' kerberos.create_keytab host/host1.example.com host1.example.com.keytab
     '''
     ret = {}
 

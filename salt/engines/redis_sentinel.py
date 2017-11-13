@@ -8,6 +8,9 @@ events based on the channels they are subscribed to.
 :configuration:
 
     Example configuration
+
+    .. code-block:: yaml
+
         engines:
           - redis_sentinel:
               hosts:

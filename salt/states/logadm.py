@@ -21,7 +21,8 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ def rotate(name, **kwargs):
            'comment': ''}
 
     ## cleanup kwargs
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     ## inject name as entryname
     if 'entryname' not in kwargs:
@@ -95,7 +96,7 @@ def rotate(name, **kwargs):
             new_config = __salt__['logadm.list_conf']()
             ret['comment'] = 'Log configuration {}'.format('updated' if kwargs['log_file'] in old_config else 'added')
             if kwargs['log_file'] in old_config:
-                for key, val in salt.utils.compare_dicts(old_config[kwargs['log_file']], new_config[kwargs['log_file']]).items():
+                for key, val in salt.utils.data.compare_dicts(old_config[kwargs['log_file']], new_config[kwargs['log_file']]).items():
                     ret['changes'][key] = val['new']
             else:
                 ret['changes'] = new_config[kwargs['log_file']]

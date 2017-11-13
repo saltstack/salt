@@ -20,7 +20,7 @@ from __future__ import absolute_import
 import difflib
 import logging
 
-import salt.utils
+import salt.utils.files
 
 LOG = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def task_present(name,
     else:
         script_path = tick_script
 
-    with salt.utils.fopen(script_path, 'r') as file:
+    with salt.utils.files.fopen(script_path, 'r') as file:
         new_script = file.read().replace('\t', '    ')
 
     is_up_to_date = task and (

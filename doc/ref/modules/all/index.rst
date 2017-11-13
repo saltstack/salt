@@ -44,6 +44,7 @@ execution modules
     boto_apigateway
     boto_asg
     boto_cfn
+    boto_cloudfront
     boto_cloudtrail
     boto_cloudwatch
     boto_cloudwatch_event
@@ -97,6 +98,7 @@ execution modules
     cytest
     daemontools
     data
+    datadog_api
     ddns
     deb_apache
     deb_postgres
@@ -197,6 +199,7 @@ execution modules
     keyboard
     keystone
     kmod
+    kubernetes
     launchctl
     layman
     ldap3
@@ -296,8 +299,10 @@ execution modules
     openstack_mng
     openvswitch
     opkg
+    opsgenie
     oracle
     osquery
+    out
     pacman
     pagerduty
     pagerduty_util
@@ -323,6 +328,7 @@ execution modules
     ps
     publish
     puppet
+    purefa
     pushbullet
     pushover_notify
     pw_group
@@ -397,7 +403,6 @@ execution modules
     state
     status
     statuspage
-    stormpath
     supervisord
     suse_apache
     svn
@@ -415,6 +420,7 @@ execution modules
     test
     testinframod
     test_virtual
+    textfsm_mod
     timezone
     tls
     tomcat
@@ -427,6 +433,7 @@ execution modules
     uptime
     useradd
     uwsgi
+    vagrant
     varnish
     vault
     vbox_guest

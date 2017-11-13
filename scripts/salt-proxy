@@ -5,13 +5,13 @@ This script is used to kick off a salt proxy minion daemon
 '''
 
 from __future__ import absolute_import
+import salt.utils.platform
 from salt.scripts import salt_proxy
-from salt.utils import is_windows
 from multiprocessing import freeze_support
 
 
 if __name__ == '__main__':
-    if is_windows():
+    if salt.utils.platform.is_windows():
         # Since this file does not have a '.py' extension, when running on
         # Windows, spawning any addional processes will fail due to Python
         # not being able to load this 'module' in the new process.

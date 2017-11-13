@@ -200,7 +200,7 @@ import copy
 
 # Import Salt libs
 import salt.utils.dictupdate as dictupdate
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)

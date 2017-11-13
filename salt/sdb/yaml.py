@@ -41,7 +41,8 @@ import logging
 
 import salt.exceptions
 import salt.loader
-import salt.utils
+import salt.utils.data
+import salt.utils.files
 import salt.utils.dictupdate
 
 log = logging.getLogger(__name__)
@@ -63,7 +64,7 @@ def get(key, profile=None):  # pylint: disable=W0613
     Get a value from the REST interface
     '''
     data = _get_values(profile)
-    return salt.utils.traverse_dict_and_list(data, key, None)
+    return salt.utils.data.traverse_dict_and_list(data, key, None)
 
 
 def _get_values(profile=None):
@@ -76,7 +77,7 @@ def _get_values(profile=None):
     ret = {}
     for fname in profile.get('files', []):
         try:
-            with salt.utils.flopen(fname) as f:
+            with salt.utils.files.flopen(fname) as f:
                 contents = serializers.yaml.deserialize(f)
                 ret = salt.utils.dictupdate.merge(ret, contents,
                         **profile.get('merge', {}))

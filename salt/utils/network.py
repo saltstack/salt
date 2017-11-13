@@ -12,11 +12,12 @@ import types
 import socket
 import logging
 import platform
+import random
 import subprocess
 from string import ascii_letters, digits
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # Attempt to import wmi
 try:
@@ -26,15 +27,29 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
+import salt.utils.args
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.zeromq
 from salt._compat import ipaddress
-from salt.utils.decorators import jinja_filter
+from salt.exceptions import SaltClientError, SaltSystemExit
+from salt.utils.decorators.jinja import jinja_filter
 
 # inet_pton does not exist in Windows, this is a workaround
-if salt.utils.is_windows():
+if salt.utils.platform.is_windows():
     from salt.ext import win_inet_pton  # pylint: disable=unused-import
 
 log = logging.getLogger(__name__)
+
+try:
+    import ctypes
+    import ctypes.util
+    libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("c"))
+    res_init = libc.__res_init
+except (ImportError, OSError, AttributeError, TypeError):
+    pass
 
 # pylint: disable=C0103
 
@@ -137,13 +152,13 @@ def _generate_minion_id():
                    r'{win}\system32\drivers\etc\hosts'.format(win=os.getenv('WINDIR'))]:
         if not os.path.exists(f_name):
             continue
-        with salt.utils.fopen(f_name) as f_hdl:
+        with salt.utils.files.fopen(f_name) as f_hdl:
             for hst in (line.strip().split('#')[0].strip().split() or None for line in f_hdl.read().split(os.linesep)):
                 if hst and (hst[0][:4] in ['127.', '::1'] or len(hst) == 1):
                     hosts.extend(hst)
 
     # include public and private ipaddresses
-    return hosts.extend([addr for addr in salt.utils.network.ip_addrs()
+    return hosts.extend([addr for addr in ip_addrs()
                          if not ipaddress.ip_address(addr).is_loopback])
 
 
@@ -204,6 +219,21 @@ def ip_to_host(ip):
     return hostname
 
 # pylint: enable=C0103
+
+
+def is_reachable_host(entity_name):
+    '''
+    Returns a bool telling if the entity name is a reachable host (IPv4/IPv6/FQDN/etc).
+    :param hostname:
+    :return:
+    '''
+    try:
+        assert type(socket.getaddrinfo(entity_name, 0, 0, 0, 0)) == list
+        ret = True
+    except socket.gaierror:
+        ret = False
+
+    return ret
 
 
 def is_ip(ip):
@@ -462,6 +492,11 @@ def _network_hosts(ip_addr_entry):
 def network_hosts(value, options=None, version=None):
     '''
     Return the list of hosts within a network.
+
+    .. note::
+
+        When running this command with a large IPv6 network, the command will
+        take a long time to gather all of the hosts.
     '''
     ipaddr_filter_out = _filter_ipaddr(value, options=options, version=version)
     if not ipaddr_filter_out:
@@ -675,7 +710,7 @@ def _interfaces_ifconfig(out):
 
     piface = re.compile(r'^([^\s:]+)')
     pmac = re.compile('.*?(?:HWaddr|ether|address:|lladdr) ([0-9a-fA-F:]+)')
-    if salt.utils.is_sunos():
+    if salt.utils.platform.is_sunos():
         pip = re.compile(r'.*?(?:inet\s+)([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)(.*)')
         pip6 = re.compile('.*?(?:inet6 )([0-9a-fA-F:]+)')
         pmask6 = re.compile(r'.*?(?:inet6 [0-9a-fA-F:]+/(\d+)).*')
@@ -702,7 +737,7 @@ def _interfaces_ifconfig(out):
                 iface = miface.group(1)
             if mmac:
                 data['hwaddr'] = mmac.group(1)
-                if salt.utils.is_sunos():
+                if salt.utils.platform.is_sunos():
                     expand_mac = []
                     for chunk in data['hwaddr'].split(':'):
                         expand_mac.append('0{0}'.format(chunk) if len(chunk) < 2 else '{0}'.format(chunk))
@@ -734,11 +769,11 @@ def _interfaces_ifconfig(out):
                 mmask6 = pmask6.match(line)
                 if mmask6:
                     addr_obj['prefixlen'] = mmask6.group(1) or mmask6.group(2)
-                    if not salt.utils.is_sunos():
+                    if not salt.utils.platform.is_sunos():
                         ipv6scope = mmask6.group(3) or mmask6.group(4)
                         addr_obj['scope'] = ipv6scope.lower() if ipv6scope is not None else ipv6scope
                 # SunOS sometimes has ::/0 as inet6 addr when using addrconf
-                if not salt.utils.is_sunos() \
+                if not salt.utils.platform.is_sunos() \
                         or addr_obj['address'] != '::' \
                         and addr_obj['prefixlen'] != 0:
                     data['inet6'].append(addr_obj)
@@ -767,8 +802,8 @@ def linux_interfaces():
     Obtain interface information for *NIX/BSD variants
     '''
     ifaces = dict()
-    ip_path = salt.utils.which('ip')
-    ifconfig_path = None if ip_path else salt.utils.which('ifconfig')
+    ip_path = salt.utils.path.which('ip')
+    ifconfig_path = None if ip_path else salt.utils.path.which('ifconfig')
     if ip_path:
         cmd1 = subprocess.Popen(
             '{0} link show'.format(ip_path),
@@ -783,15 +818,15 @@ def linux_interfaces():
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
         ifaces = _interfaces_ip("{0}\n{1}".format(
-            salt.utils.to_str(cmd1),
-            salt.utils.to_str(cmd2)))
+            salt.utils.stringutils.to_str(cmd1),
+            salt.utils.stringutils.to_str(cmd2)))
     elif ifconfig_path:
         cmd = subprocess.Popen(
             '{0} -a'.format(ifconfig_path),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
-        ifaces = _interfaces_ifconfig(salt.utils.to_str(cmd))
+        ifaces = _interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
     return ifaces
 
 
@@ -894,7 +929,7 @@ def interfaces():
     '''
     Return a dictionary of information about all the interfaces on the minion
     '''
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return win_interfaces()
     else:
         return linux_interfaces()
@@ -985,7 +1020,7 @@ def hw_addr(iface):
         Added support for AIX
 
     '''
-    if salt.utils.is_aix():
+    if salt.utils.platform.is_aix():
         return _hw_addr_aix
 
     iface_info, error = _get_iface_info(iface)
@@ -1015,7 +1050,8 @@ def interface_ip(iface):
     iface_info, error = _get_iface_info(iface)
 
     if error is False:
-        return iface_info.get(iface, {}).get('inet', {})[0].get('address', '')
+        inet = iface_info.get(iface, {}).get('inet', None)
+        return inet[0].get('address', '') if inet else ''
     else:
         return error
 
@@ -1206,7 +1242,7 @@ def active_tcp():
     ret = {}
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
         if os.path.isfile(statf):
-            with salt.utils.fopen(statf, 'rb') as fp_:
+            with salt.utils.files.fopen(statf, 'rb') as fp_:
                 for line in fp_:
                     if line.strip().startswith('sl'):
                         continue
@@ -1241,7 +1277,7 @@ def _remotes_on(port, which_end):
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
         if os.path.isfile(statf):
             proc_available = True
-            with salt.utils.fopen(statf, 'r') as fp_:
+            with salt.utils.files.fopen(statf, 'r') as fp_:
                 for line in fp_:
                     if line.strip().startswith('sl'):
                         continue
@@ -1251,17 +1287,17 @@ def _remotes_on(port, which_end):
                         ret.add(iret[sl]['remote_addr'])
 
     if not proc_available:  # Fallback to use OS specific tools
-        if salt.utils.is_sunos():
+        if salt.utils.platform.is_sunos():
             return _sunos_remotes_on(port, which_end)
-        if salt.utils.is_freebsd():
+        if salt.utils.platform.is_freebsd():
             return _freebsd_remotes_on(port, which_end)
-        if salt.utils.is_netbsd():
+        if salt.utils.platform.is_netbsd():
             return _netbsd_remotes_on(port, which_end)
-        if salt.utils.is_openbsd():
+        if salt.utils.platform.is_openbsd():
             return _openbsd_remotes_on(port, which_end)
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             return _windows_remotes_on(port, which_end)
-        if salt.utils.is_aix():
+        if salt.utils.platform.is_aix():
             return _aix_remotes_on(port, which_end)
 
         return _linux_remotes_on(port, which_end)
@@ -1308,7 +1344,7 @@ def _sunos_remotes_on(port, which_end):
         log.error('Failed netstat')
         raise
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
     for line in lines:
         if 'ESTABLISHED' not in line:
             continue
@@ -1348,13 +1384,13 @@ def _freebsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        cmd = salt.utils.shlex_split('sockstat -4 -c -p {0}'.format(port))
+        cmd = salt.utils.args.shlex_split('sockstat -4 -c -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
 
     for line in lines:
         chunks = line.split()
@@ -1408,13 +1444,13 @@ def _netbsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        cmd = salt.utils.shlex_split('sockstat -4 -c -n -p {0}'.format(port))
+        cmd = salt.utils.args.shlex_split('sockstat -4 -c -n -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
 
     for line in lines:
         chunks = line.split()
@@ -1503,7 +1539,7 @@ def _windows_remotes_on(port, which_end):
         log.error('Failed netstat')
         raise
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
     for line in lines:
         if 'ESTABLISHED' not in line:
             continue
@@ -1550,7 +1586,7 @@ def _linux_remotes_on(port, which_end):
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
     for line in lines:
         chunks = line.split()
         if not chunks:
@@ -1609,7 +1645,7 @@ def _aix_remotes_on(port, which_end):
         log.error('Failed netstat')
         raise
 
-    lines = salt.utils.to_str(data).split('\n')
+    lines = salt.utils.stringutils.to_str(data).split('\n')
     for line in lines:
         if 'ESTABLISHED' not in line:
             continue
@@ -1623,3 +1659,133 @@ def _aix_remotes_on(port, which_end):
             continue
         remotes.add(remote_host)
     return remotes
+
+
+@jinja_filter('gen_mac')
+def gen_mac(prefix='AC:DE:48'):
+    '''
+    Generates a MAC address with the defined OUI prefix.
+
+    Common prefixes:
+
+     - ``00:16:3E`` -- Xen
+     - ``00:18:51`` -- OpenVZ
+     - ``00:50:56`` -- VMware (manually generated)
+     - ``52:54:00`` -- QEMU/KVM
+     - ``AC:DE:48`` -- PRIVATE
+
+    References:
+
+     - http://standards.ieee.org/develop/regauth/oui/oui.txt
+     - https://www.wireshark.org/tools/oui-lookup.html
+     - https://en.wikipedia.org/wiki/MAC_address
+    '''
+    return '{0}:{1:02X}:{2:02X}:{3:02X}'.format(prefix,
+                                                random.randint(0, 0xff),
+                                                random.randint(0, 0xff),
+                                                random.randint(0, 0xff))
+
+
+@jinja_filter('mac_str_to_bytes')
+def mac_str_to_bytes(mac_str):
+    '''
+    Convert a MAC address string into bytes. Works with or without separators:
+
+    b1 = mac_str_to_bytes('08:00:27:13:69:77')
+    b2 = mac_str_to_bytes('080027136977')
+    assert b1 == b2
+    assert isinstance(b1, bytes)
+    '''
+    if len(mac_str) == 12:
+        pass
+    elif len(mac_str) == 17:
+        sep = mac_str[2]
+        mac_str = mac_str.replace(sep, '')
+    else:
+        raise ValueError('Invalid MAC address')
+    if six.PY3:
+        mac_bytes = bytes(int(mac_str[s:s+2], 16) for s in range(0, 12, 2))
+    else:
+        mac_bytes = ''.join(chr(int(mac_str[s:s+2], 16)) for s in range(0, 12, 2))
+    return mac_bytes
+
+
+def refresh_dns():
+    '''
+    issue #21397: force glibc to re-read resolv.conf
+    '''
+    try:
+        res_init()
+    except NameError:
+        # Exception raised loading the library, thus res_init is not defined
+        pass
+
+
+@jinja_filter('dns_check')
+def dns_check(addr, port, safe=False, ipv6=None):
+    '''
+    Return the ip resolved by dns, but do not exit on failure, only raise an
+    exception. Obeys system preference for IPv4/6 address resolution.
+    Tries to connect to the address before considering it useful. If no address
+    can be reached, the first one resolved is used as a fallback.
+    '''
+    error = False
+    lookup = addr
+    seen_ipv6 = False
+    try:
+        refresh_dns()
+        hostnames = socket.getaddrinfo(
+            addr, None, socket.AF_UNSPEC, socket.SOCK_STREAM
+        )
+        if not hostnames:
+            error = True
+        else:
+            resolved = False
+            candidates = []
+            for h in hostnames:
+                # It's an IP address, just return it
+                if h[4][0] == addr:
+                    resolved = addr
+                    break
+
+                if h[0] == socket.AF_INET and ipv6 is True:
+                    continue
+                if h[0] == socket.AF_INET6 and ipv6 is False:
+                    continue
+
+                candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
+
+                if h[0] != socket.AF_INET6 or ipv6 is not None:
+                    candidates.append(candidate_addr)
+
+                try:
+                    s = socket.socket(h[0], socket.SOCK_STREAM)
+                    s.connect((candidate_addr.strip('[]'), port))
+                    s.close()
+
+                    resolved = candidate_addr
+                    break
+                except socket.error:
+                    pass
+            if not resolved:
+                if len(candidates) > 0:
+                    resolved = candidates[0]
+                else:
+                    error = True
+    except TypeError:
+        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
+        raise SaltSystemExit(code=42, msg=err)
+    except socket.error:
+        error = True
+
+    if error:
+        err = ('DNS lookup or connection check of \'{0}\' failed.').format(addr)
+        if safe:
+            if salt.log.is_console_configured():
+                # If logging is not configured it also means that either
+                # the master or minion instance calling this hasn't even
+                # started running
+                log.error(err)
+            raise SaltClientError()
+        raise SaltSystemExit(code=42, msg=err)
+    return resolved

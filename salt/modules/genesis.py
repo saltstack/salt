@@ -17,13 +17,16 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
-import salt.utils
-import salt.utils.yast
-import salt.utils.preseed
-import salt.utils.kickstart
 import salt.syspaths
+import salt.utils.kickstart
+import salt.utils.path
+import salt.utils.preseed
+import salt.utils.validate.path
+import salt.utils.yast
 from salt.exceptions import SaltInvocationError
 
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -303,7 +306,7 @@ def _bootstrap_yum(
 
     root
         The root of the image to install to. Will be created as a directory if
-        if does not exist. (e.x.: /root/arch)
+        it does not exist. (e.x.: /root/arch)
 
     pkg_confs
         The location of the conf files to copy into the image, to point yum
@@ -325,6 +328,8 @@ def _bootstrap_yum(
     '''
     if pkgs is None:
         pkgs = []
+    elif isinstance(pkgs, six.string_types):
+        pkgs = pkgs.split(',')
 
     default_pkgs = ('yum', 'centos-release', 'iputils')
     for pkg in default_pkgs:
@@ -333,6 +338,8 @@ def _bootstrap_yum(
 
     if exclude_pkgs is None:
         exclude_pkgs = []
+    elif isinstance(exclude_pkgs, six.string_types):
+        exclude_pkgs = exclude_pkgs.split(',')
 
     for pkg in exclude_pkgs:
         pkgs.remove(pkg)
@@ -367,7 +374,7 @@ def _bootstrap_deb(
 
     root
         The root of the image to install to. Will be created as a directory if
-        if does not exist. (e.x.: /root/wheezy)
+        it does not exist. (e.x.: /root/wheezy)
 
     arch
         Architecture of the target image. (e.x.: amd64)
@@ -393,15 +400,32 @@ def _bootstrap_deb(
     if repo_url is None:
         repo_url = 'http://ftp.debian.org/debian/'
 
+    if not salt.utils.path.which('debootstrap'):
+        log.error('Required tool debootstrap is not installed.')
+        return False
+
+    if static_qemu and not salt.utils.validate.path.is_executable(static_qemu):
+        log.error('Required tool qemu not '
+                  'present/readable at: {0}'.format(static_qemu))
+        return False
+
+    if isinstance(pkgs, (list, tuple)):
+        pkgs = ','.join(pkgs)
+    if isinstance(exclude_pkgs, (list, tuple)):
+        exclude_pkgs = ','.join(exclude_pkgs)
+
     deb_args = [
         'debootstrap',
         '--foreign',
         '--arch',
-        _cmd_quote(arch),
-        '--include',
-    ] + pkgs + [
-        '--exclude',
-    ] + exclude_pkgs + [
+        _cmd_quote(arch)]
+
+    if pkgs:
+        deb_args += ['--include', _cmd_quote(pkgs)]
+    if exclude_pkgs:
+        deb_args += ['--exclude', _cmd_quote(exclude_pkgs)]
+
+    deb_args += [
         _cmd_quote(flavor),
         _cmd_quote(root),
         _cmd_quote(repo_url),
@@ -409,11 +433,13 @@ def _bootstrap_deb(
 
     __salt__['cmd.run'](deb_args, python_shell=False)
 
-    __salt__['cmd.run'](
-        'cp {qemu} {root}/usr/bin/'.format(
-            qemu=_cmd_quote(static_qemu), root=_cmd_quote(root)
+    if static_qemu:
+        __salt__['cmd.run'](
+            'cp {qemu} {root}/usr/bin/'.format(
+                qemu=_cmd_quote(static_qemu), root=_cmd_quote(root)
+            )
         )
-    )
+
     env = {'DEBIAN_FRONTEND': 'noninteractive',
            'DEBCONF_NONINTERACTIVE_SEEN': 'true',
            'LC_ALL': 'C',
@@ -446,7 +472,7 @@ def _bootstrap_pacman(
 
     root
         The root of the image to install to. Will be created as a directory if
-        if does not exist. (e.x.: /root/arch)
+        it does not exist. (e.x.: /root/arch)
 
     pkg_confs
         The location of the conf files to copy into the image, to point pacman
@@ -454,7 +480,7 @@ def _bootstrap_pacman(
 
     img_format
         The image format to be used. The ``dir`` type needs no special
-        treatment, but others need special treatement.
+        treatment, but others need special treatment.
 
     pkgs
         A list of packages to be installed on this image. For Arch Linux, this
@@ -469,6 +495,8 @@ def _bootstrap_pacman(
 
     if pkgs is None:
         pkgs = []
+    elif isinstance(pkgs, six.string_types):
+        pkgs = pkgs.split(',')
 
     default_pkgs = ('pacman', 'linux', 'systemd-sysvcompat', 'grub')
     for pkg in default_pkgs:
@@ -477,6 +505,8 @@ def _bootstrap_pacman(
 
     if exclude_pkgs is None:
         exclude_pkgs = []
+    elif isinstance(exclude_pkgs, six.string_types):
+        exclude_pkgs = exclude_pkgs.split(',')
 
     for pkg in exclude_pkgs:
         pkgs.remove(pkg)
@@ -549,7 +579,7 @@ def avail_platforms():
     for platform in CMD_MAP:
         ret[platform] = True
         for cmd in CMD_MAP[platform]:
-            if not salt.utils.which(cmd):
+            if not salt.utils.path.which(cmd):
                 ret[platform] = False
     return ret
 
@@ -663,7 +693,7 @@ def ldd_deps(filename, ret=None):
         salt myminion genesis.ldd_deps /bin/bash
     '''
     if not os.path.exists(filename):
-        filename = salt.utils.which(filename)
+        filename = salt.utils.path.which(filename)
 
     if ret is None:
         ret = []

@@ -9,7 +9,7 @@ Management of Mongodb users
 
 from __future__ import absolute_import
 
-import salt.utils
+import salt.utils.versions
 
 # Define the module's virtual name
 __virtualname__ = 'mongodb_user'
@@ -85,7 +85,7 @@ def present(name,
 
     '''
 
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'The \'mongodb_user.present\' function has been deprecated and will be removed in Salt '
         '{version}. Please use \'mongodb.user_present\' instead.'
@@ -111,8 +111,6 @@ def present(name,
     # check if user exists
     users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
     if len(users) > 0:
-        # check each user occurrence
-        users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
         # check each user occurrence
         for usr in users:
             # prepare empty list for current roles
@@ -189,7 +187,7 @@ def absent(name,
         The database in which to authenticate
     '''
 
-    salt.utils.warn_until(
+    salt.utils.versions.warn_until(
         'Fluorine',
         'The \'mongodb_user.absent\' function has been deprecated and will be removed in Salt '
         '{version}. Please use \'mongodb.user_absent\' instead.'

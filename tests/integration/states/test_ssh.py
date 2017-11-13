@@ -20,7 +20,7 @@ from tests.support.helpers import (
 )
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 
 KNOWN_HOSTS = os.path.join(RUNTIME_VARS.TMP, 'known_hosts')
 GITHUB_FINGERPRINT = '9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f'
@@ -66,7 +66,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
                 raise err
 
         self.assertSaltStateChangesEqual(
-            ret, GITHUB_FINGERPRINT, keys=('new', 'fingerprint')
+            ret, GITHUB_FINGERPRINT, keys=('new', 0, 'fingerprint')
         )
 
         # save twice, no changes
@@ -81,7 +81,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
                              **dict(kwargs, name=GITHUB_IP))
         try:
             self.assertSaltStateChangesEqual(
-                ret, GITHUB_FINGERPRINT, keys=('new', 'fingerprint')
+                ret, GITHUB_FINGERPRINT, keys=('new', 0, 'fingerprint')
             )
         except AssertionError as err:
             try:
@@ -94,8 +94,8 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         # record for every host must be available
         ret = self.run_function(
-            'ssh.get_known_host', ['root', 'github.com'], config=KNOWN_HOSTS
-        )
+            'ssh.get_known_host_entries', ['root', 'github.com'], config=KNOWN_HOSTS
+        )[0]
         try:
             self.assertNotIn(ret, ('', None))
         except AssertionError:
@@ -103,8 +103,8 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
                 'Salt return \'{0}\' is in (\'\', None).'.format(ret)
             )
         ret = self.run_function(
-            'ssh.get_known_host', ['root', GITHUB_IP], config=KNOWN_HOSTS
-        )
+            'ssh.get_known_host_entries', ['root', GITHUB_IP], config=KNOWN_HOSTS
+        )[0]
         try:
             self.assertNotIn(ret, ('', None, {}))
         except AssertionError:
@@ -144,7 +144,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
         # remove once, the key is gone
         ret = self.run_state('ssh_known_hosts.absent', **kwargs)
         self.assertSaltStateChangesEqual(
-            ret, GITHUB_FINGERPRINT, keys=('old', 'fingerprint')
+            ret, GITHUB_FINGERPRINT, keys=('old', 0, 'fingerprint')
         )
 
         # remove twice, nothing has changed
@@ -188,7 +188,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltStateChangesEqual(
             ret, {'AAAAB3NzaC1kcQ9J5bYTEyZ==': 'New'}
         )
-        with salt.utils.fopen(authorized_keys_file, 'r') as fhr:
+        with salt.utils.files.fopen(authorized_keys_file, 'r') as fhr:
             self.assertEqual(
                 fhr.read(),
                 'ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n'
@@ -206,13 +206,13 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         key_fname = 'issue_10198.id_rsa.pub'
 
         # Create the keyfile that we expect to get back on the state call
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_PRODENV_STATE_TREE, key_fname), 'w') as kfh:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PRODENV_STATE_TREE, key_fname), 'w') as kfh:
             kfh.write(
                 'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
             )
 
         # Create a bogus key file on base environment
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_STATE_TREE, key_fname), 'w') as kfh:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_STATE_TREE, key_fname), 'w') as kfh:
             kfh.write(
                 'ssh-rsa BAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
             )
@@ -226,7 +226,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
             comment=username
         )
         self.assertSaltTrueReturn(ret)
-        with salt.utils.fopen(authorized_keys_file, 'r') as fhr:
+        with salt.utils.files.fopen(authorized_keys_file, 'r') as fhr:
             self.assertEqual(
                 fhr.read(),
                 'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
@@ -244,7 +244,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
             saltenv='prod'
         )
         self.assertSaltTrueReturn(ret)
-        with salt.utils.fopen(authorized_keys_file, 'r') as fhr:
+        with salt.utils.files.fopen(authorized_keys_file, 'r') as fhr:
             self.assertEqual(
                 fhr.read(),
                 'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)

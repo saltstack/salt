@@ -19,7 +19,7 @@ from tests.support.unit import TestCase
 # Import salt libs
 import salt.config
 import salt.loader
-from salt.utils import cache
+import salt.utils.cache as cache
 
 
 class CacheDictTestCase(TestCase):

@@ -45,11 +45,10 @@ from __future__ import absolute_import
 import time
 import json
 import logging
-# Import third party libs
 import yaml
-# Import salt libs
-import salt.ext.six as six
-import salt.utils
+
+# Import Salt libs
+from salt.ext import six
 import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
@@ -102,8 +101,6 @@ def _construct_yaml_str(self, node):
     Construct for yaml
     '''
     return self.construct_scalar(node)
-YamlLoader.add_constructor(u'tag:yaml.org,2002:str',
-                           _construct_yaml_str)
 YamlLoader.add_constructor(u'tag:yaml.org,2002:timestamp',
                            _construct_yaml_str)
 
@@ -543,9 +540,9 @@ def create_stack(name=None, template_file=None, enviroment=None,
             contents=None,
             dir_mode=None)
         if template_manage_result['result']:
-            with salt.utils.fopen(template_tmp_file, 'r') as tfp_:
+            with salt.utils.files.fopen(template_tmp_file, 'r') as tfp_:
                 tpl = tfp_.read()
-                salt.utils.safe_rm(template_tmp_file)
+                salt.utils.files.safe_rm(template_tmp_file)
                 try:
                     if isinstance(tpl, six.binary_type):
                         tpl = tpl.decode('utf-8')
@@ -605,9 +602,9 @@ def create_stack(name=None, template_file=None, enviroment=None,
             contents=None,
             dir_mode=None)
         if enviroment_manage_result['result']:
-            with salt.utils.fopen(enviroment_tmp_file, 'r') as efp_:
+            with salt.utils.files.fopen(enviroment_tmp_file, 'r') as efp_:
                 env_str = efp_.read()
-                salt.utils.safe_rm(enviroment_tmp_file)
+                salt.utils.files.safe_rm(enviroment_tmp_file)
                 try:
                     env = _parse_enviroment(env_str)
                 except ValueError as ex:
@@ -732,9 +729,9 @@ def update_stack(name=None, template_file=None, enviroment=None,
             contents=None,
             dir_mode=None)
         if template_manage_result['result']:
-            with salt.utils.fopen(template_tmp_file, 'r') as tfp_:
+            with salt.utils.files.fopen(template_tmp_file, 'r') as tfp_:
                 tpl = tfp_.read()
-                salt.utils.safe_rm(template_tmp_file)
+                salt.utils.files.safe_rm(template_tmp_file)
                 try:
                     if isinstance(tpl, six.binary_type):
                         tpl = tpl.decode('utf-8')
@@ -794,9 +791,9 @@ def update_stack(name=None, template_file=None, enviroment=None,
             contents=None,
             dir_mode=None)
         if enviroment_manage_result['result']:
-            with salt.utils.fopen(enviroment_tmp_file, 'r') as efp_:
+            with salt.utils.files.fopen(enviroment_tmp_file, 'r') as efp_:
                 env_str = efp_.read()
-                salt.utils.safe_rm(enviroment_tmp_file)
+                salt.utils.files.safe_rm(enviroment_tmp_file)
                 try:
                     env = _parse_enviroment(env_str)
                 except ValueError as ex:
