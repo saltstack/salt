@@ -100,6 +100,9 @@ TEST_SUITES = {
     'unit':
        {'display_name': 'Unit',
         'path': 'unit'},
+    'kitchen':
+       {'display_name': 'Kitchen',
+        'path': 'kitchen'},
     'module':
        {'display_name': 'Module',
         'path': 'integration/modules'},
@@ -175,7 +178,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
     source_code_basedir = SALT_ROOT
 
     def _get_suites(self, include_unit=False, include_cloud_provider=False,
-                    include_proxy=False):
+                    include_proxy=False, include_kitchen=False):
         '''
         Return a set of all test suites except unit and cloud provider tests
         unless requested
@@ -187,28 +190,34 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             suites -= set(['cloud_provider'])
         if not include_proxy:
             suites -= set(['proxy'])
+        if not include_kitchen:
+            suites -= set(['kitchen'])
 
         return suites
 
     def _check_enabled_suites(self, include_unit=False,
-                              include_cloud_provider=False, include_proxy=False):
+                              include_cloud_provider=False,
+                              include_proxy=False,
+                              include_kitchen=False):
         '''
         Query whether test suites have been enabled
         '''
         suites = self._get_suites(include_unit=include_unit,
                                   include_cloud_provider=include_cloud_provider,
-                                  include_proxy=include_proxy)
+                                  include_proxy=include_proxy,
+                                  include_kitchen=include_kitchen)
 
         return any([getattr(self.options, suite) for suite in suites])
 
     def _enable_suites(self, include_unit=False, include_cloud_provider=False,
-                       include_proxy=False):
+                       include_proxy=False, include_kitchen=False):
         '''
         Enable test suites for current test run
         '''
         suites = self._get_suites(include_unit=include_unit,
                                   include_cloud_provider=include_cloud_provider,
-                                  include_proxy=include_proxy)
+                                  include_proxy=include_proxy,
+                                  include_kitchen=include_kitchen)
 
         for suite in suites:
             setattr(self.options, suite, True)
@@ -370,6 +379,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run unit tests'
         )
         self.test_selection_group.add_option(
+            '-k',
+            '--kitchen',
+            '--kitchen-tests',
+            dest='kitchen',
+            default=False,
+            action='store_true',
+            help='Run kitchen tests'
+        )
+        self.test_selection_group.add_option(
             '--fileserver',
             '--fileserver-tests',
             dest='fileserver',
@@ -486,7 +504,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if not self.options.name and not \
                 self._check_enabled_suites(include_unit=True,
                                            include_cloud_provider=True,
-                                           include_proxy=True):
+                                           include_proxy=True,
+                                           include_kitchen=True):
             self._enable_suites(include_unit=True)
 
         self.start_coverage(
@@ -650,12 +669,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         if self.options.name:
             for test in self.options.name:
-                if test.startswith(('tests.unit.', 'unit.')):
+                if test.startswith(('tests.unit.', 'unit.', 'test.kitchen.', 'kitchen.')):
                     named_unit_test.append(test)
                     continue
                 named_tests.append(test)
 
-        if (self.options.unit or named_unit_test) and not named_tests and not \
+        if (self.options.unit or self.options.kitchen or named_unit_test) and not named_tests and not \
                 self._check_enabled_suites(include_cloud_provider=True):
             # We're either not running any integration test suites, or we're
             # only running unit tests by passing --unit or by passing only
@@ -737,6 +756,39 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             status.append(results)
         return status
 
+    def run_kitchen_tests(self):
+        '''
+        Execute the kitchen tests
+        '''
+        named_kitchen_test = []
+        if self.options.name:
+            for test in self.options.name:
+                if not test.startswith(('tests.kitchen.', 'kitchen.')):
+                    continue
+                named_kitchen_test.append(test)
+
+        if not self.options.kitchen and not named_kitchen_test:
+            # We are not explicitly running the unit tests and none of the
+            # names passed to --name is a unit test.
+            return [True]
+
+        status = []
+        if self.options.kitchen:
+            results = self.run_suite(
+                os.path.join(TEST_DIR, 'kitchen'), 'Kitchen', suffix='test_*.py'
+            )
+            status.append(results)
+            # We executed ALL unittests, we can skip running unittests by name
+            # below
+            return status
+
+        for name in named_kitchen_test:
+            results = self.run_suite(
+                os.path.join(TEST_DIR, 'kitchen'), name, suffix='test_*.py', load_from_name=True
+            )
+            status.append(results)
+        return status
+
 
 def main():
     '''
@@ -756,6 +808,8 @@ def main():
         status = parser.run_integration_tests()
         overall_status.extend(status)
         status = parser.run_unit_tests()
+        overall_status.extend(status)
+        status = parser.run_kitchen_tests()
         overall_status.extend(status)
         false_count = overall_status.count(False)
 
