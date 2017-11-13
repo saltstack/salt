@@ -315,7 +315,7 @@ option on the Salt master.
 
 .. code-block:: yaml
 
-    master_port: 4505
+    publish_port: 4505
 
 .. conf_minion:: user
 
