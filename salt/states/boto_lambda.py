@@ -153,6 +153,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None,
         to the same VPC.  This is a dict of the form:
 
         .. code-block:: yaml
+
             VpcConfig:
                 SecurityGroupNames:
                 - mysecgroup1

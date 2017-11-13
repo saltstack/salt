@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+'''
+Module for OpenSCAP Management
+
+'''
+
 from __future__ import absolute_import
 import tempfile
 import shlex

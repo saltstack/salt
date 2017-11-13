@@ -100,17 +100,17 @@ def present(name, cloud_provider, onlyif=None, unless=None, opts=None, **kwargs)
     if onlyif is not None:
         if not isinstance(onlyif, six.string_types):
             if not onlyif:
-                return _valid(name, comment='onlyif execution failed')
+                return _valid(name, comment='onlyif condition is false')
         elif isinstance(onlyif, six.string_types):
             if retcode(onlyif, python_shell=True) != 0:
-                return _valid(name, comment='onlyif execution failed')
+                return _valid(name, comment='onlyif condition is false')
     if unless is not None:
         if not isinstance(unless, six.string_types):
             if unless:
-                return _valid(name, comment='unless execution succeeded')
+                return _valid(name, comment='unless condition is true')
         elif isinstance(unless, six.string_types):
             if retcode(unless, python_shell=True) == 0:
-                return _valid(name, comment='unless execution succeeded')
+                return _valid(name, comment='unless condition is true')
 
     # provider=None not cloud_provider because
     # need to ensure ALL providers don't have the instance
@@ -177,17 +177,17 @@ def absent(name, onlyif=None, unless=None):
     if onlyif is not None:
         if not isinstance(onlyif, six.string_types):
             if not onlyif:
-                return _valid(name, comment='onlyif execution failed')
+                return _valid(name, comment='onlyif condition is false')
         elif isinstance(onlyif, six.string_types):
             if retcode(onlyif, python_shell=True) != 0:
-                return _valid(name, comment='onlyif execution failed')
+                return _valid(name, comment='onlyif condition is false')
     if unless is not None:
         if not isinstance(unless, six.string_types):
             if unless:
-                return _valid(name, comment='unless execution succeeded')
+                return _valid(name, comment='unless condition is true')
         elif isinstance(unless, six.string_types):
             if retcode(unless, python_shell=True) == 0:
-                return _valid(name, comment='unless execution succeeded')
+                return _valid(name, comment='unless condition is true')
 
     if not __salt__['cloud.has_instance'](name=name, provider=None):
         ret['result'] = True
@@ -253,17 +253,17 @@ def profile(name, profile, onlyif=None, unless=None, opts=None, **kwargs):
     if onlyif is not None:
         if not isinstance(onlyif, six.string_types):
             if not onlyif:
-                return _valid(name, comment='onlyif execution failed')
+                return _valid(name, comment='onlyif condition is false')
         elif isinstance(onlyif, six.string_types):
             if retcode(onlyif, python_shell=True) != 0:
-                return _valid(name, comment='onlyif execution failed')
+                return _valid(name, comment='onlyif condition is false')
     if unless is not None:
         if not isinstance(unless, six.string_types):
             if unless:
-                return _valid(name, comment='unless execution succeeded')
+                return _valid(name, comment='unless condition is true')
         elif isinstance(unless, six.string_types):
             if retcode(unless, python_shell=True) == 0:
-                return _valid(name, comment='unless execution succeeded')
+                return _valid(name, comment='unless condition is true')
     instance = _get_instance([name])
     if instance and not any('Not Actioned' in key for key in instance):
         ret['result'] = True

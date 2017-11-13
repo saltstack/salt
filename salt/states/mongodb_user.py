@@ -112,8 +112,6 @@ def present(name,
     users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
     if len(users) > 0:
         # check each user occurrence
-        users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
-        # check each user occurrence
         for usr in users:
             # prepare empty list for current roles
             current_roles = []

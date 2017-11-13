@@ -311,7 +311,8 @@ syndic_user: salt
 
 # If the autosign_file is specified, incoming keys specified in the
 # autosign_file will be automatically accepted. This is insecure.  Regular
-# expressions as well as globing lines are supported.
+# expressions as well as globing lines are supported. The file must be readonly
+# except for the owner. Use permissive_pki_access to allow the group write access.
 #autosign_file: /etc/salt/autosign.conf
 
 # Works like autosign_file, but instead allows you to specify minion IDs for

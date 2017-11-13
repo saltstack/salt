@@ -718,7 +718,7 @@ Note that ping_on_rotate may cause high load on the master immediately after
 the key rotation event as minions reconnect. Consider this carefully if this
 salt master is managing a large number of minions.
 
-.. code-black:: yaml
+.. code-block:: yaml
 
     ping_on_rotate: False
 
@@ -904,7 +904,7 @@ is set to ``tcp`` by default on Windows.
 
     ipc_mode: ipc
 
-.. conf_master::
+.. conf_master:: tcp_master_pub_port
 
 ``tcp_master_pub_port``
 -----------------------
@@ -1277,6 +1277,12 @@ will be automatically accepted. Matches will be searched for first by string
 comparison, then by globbing, then by full-string regex matching.
 This should still be considered a less than secure option, due to the fact
 that trust is based on just the requesting minion id.
+
+.. versionchanged:: Oxygen
+    For security reasons the file must be readonly except for it's owner.
+    If :conf_master:`permissive_pki_access` is ``True`` the owning group can also
+    have write access, but if Salt is running as ``root`` it must be a member of that group.
+    A less strict requirement also existed in previous version.
 
 .. conf_master:: autoreject_file
 
@@ -4237,6 +4243,7 @@ Default: ``10``
 The number of workers for the runner/wheel in the reactor.
 
 .. code-block:: yaml
+
     reactor_worker_threads: 10
 
 .. conf_master:: reactor_worker_hwm
