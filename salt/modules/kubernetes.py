@@ -145,6 +145,9 @@ def _setup_conn(**kwargs):
     kubernetes.client.configuration.host = host
     kubernetes.client.configuration.user = username
     kubernetes.client.configuration.passwd = password
+    if __salt__['config.option']('kubernetes.api_key'):
+        kubernetes.client.configuration.api_key = {'authorization': __salt__['config.option']('kubernetes.api_key')}
+        kubernetes.client.configuration.api_key_prefix = {'authorization': __salt__['config.option']('kubernetes.api_key_prefix')}
 
     if ca_cert_file:
         kubernetes.client.configuration.ssl_ca_cert = ca_cert_file
