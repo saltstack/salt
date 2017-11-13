@@ -662,7 +662,7 @@ class State(object):
                     .format(', '.join(VALID_PILLAR_ENC))
                 )
         self._pillar_enc = pillar_enc
-        if initial_pillar is not None:
+        if initial_pillar:
             self.opts['pillar'] = initial_pillar
             if self._pillar_override:
                 self.opts['pillar'] = salt.utils.dictupdate.merge(
