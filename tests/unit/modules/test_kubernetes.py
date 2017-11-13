@@ -208,3 +208,14 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 data.annotations,
                 {'kubernetes.io/change-cause': 'NOPE'}
             )
+
+    def test_enforce_only_strings_dict(self):
+        func = getattr(kubernetes, '__enforce_only_strings_dict')
+        data = {
+            u'unicode': 1,
+            2: 2,
+        }
+        self.assertEqual(
+            {'unicode': '1', '2': '2'},
+            func(data),
+        )
