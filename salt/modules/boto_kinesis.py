@@ -454,11 +454,11 @@ def list_streams(region=None, key=None, keyid=None, profile=None):
         args = {'ExclusiveStartStreamName': ExclusiveStartStreamName} if ExclusiveStartStreamName else {}
         r = _execute_with_retries(conn, 'list_streams', **args)
         if 'error' in r:
-            return []
+            return r
         r = r['result'] if r and r.get('result') else {}
         streams += r.get('StreamNames', [])
         ExclusiveStartStreamName = streams[-1] if r.get('HasMoreStreams', False) in (True, 'true') else None
-    return streams
+    return {'result': streams}
 
 
 def _get_next_open_shard(stream_details, shard_id):
