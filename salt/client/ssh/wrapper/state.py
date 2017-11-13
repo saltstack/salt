@@ -15,7 +15,9 @@ import salt.client.ssh.shell
 import salt.client.ssh.state
 import salt.utils.args
 import salt.utils.data
+import salt.utils.files
 import salt.utils.hashutils
+import salt.utils.platform
 import salt.utils.thin
 import salt.roster
 import salt.state
@@ -337,10 +339,10 @@ def request(mods=None,
         })
     cumask = os.umask(0o77)
     try:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             # Make sure cache file isn't read-only
             __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-        with salt.utils.fopen(notify_path, 'w+b') as fp_:
+        with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
             serial.dump(req, fp_)
     except (IOError, OSError):
         msg = 'Unable to write state request file {0}. Check permission.'
@@ -364,7 +366,7 @@ def check_request(name=None):
     notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
     serial = salt.payload.Serial(__opts__)
     if os.path.isfile(notify_path):
-        with salt.utils.fopen(notify_path, 'rb') as fp_:
+        with salt.utils.files.fopen(notify_path, 'rb') as fp_:
             req = serial.load(fp_)
         if name:
             return req[name]
@@ -401,10 +403,10 @@ def clear_request(name=None):
             return False
         cumask = os.umask(0o77)
         try:
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 # Make sure cache file isn't read-only
                 __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
-            with salt.utils.fopen(notify_path, 'w+b') as fp_:
+            with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
                 serial.dump(req, fp_)
         except (IOError, OSError):
             msg = 'Unable to write state request file {0}. Check permission.'

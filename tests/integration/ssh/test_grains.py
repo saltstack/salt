@@ -8,10 +8,10 @@ from tests.support.case import SSHCase
 from tests.support.unit import skipIf
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
 
 
-@skipIf(salt.utils.is_windows(), 'salt-ssh not available on Windows')
+@skipIf(salt.utils.platform.is_windows(), 'salt-ssh not available on Windows')
 class SSHGrainsTest(SSHCase):
     '''
     testing grains with salt-ssh
