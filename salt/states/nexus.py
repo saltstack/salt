@@ -121,7 +121,7 @@ def __fetch_from_nexus(artifact, target_dir, target_file):
     # determine module function to use
     if version == 'latest_snapshot':
         function = 'nexus.get_latest_snapshot'
-        version_param = False        
+        version_param = False
     elif version == 'latest':
         function = 'nexus.get_latest_release'
         version_param = False
@@ -133,29 +133,27 @@ def __fetch_from_nexus(artifact, target_dir, target_file):
         version_param = True
 
     if version_param:
-        fetch_result = __salt__[function](  nexus_url=nexus_url,
-                                            repository=repository,
-                                            group_id=group_id,
-                                            artifact_id=artifact_id,
-                                            packaging=packaging,
-                                            classifier=classifier,
-                                            target_dir=target_dir,
-                                            target_file=target_file,
-                                            username=username,
-                                            password=password,
-                                            version=version
-                                            )
+        fetch_result = __salt__[function](nexus_url=nexus_url,
+                                          repository=repository,
+                                          group_id=group_id,
+                                          artifact_id=artifact_id,
+                                          packaging=packaging,
+                                          classifier=classifier,
+                                          target_dir=target_dir,
+                                          target_file=target_file,
+                                          username=username,
+                                          password=password,
+                                          version=version)
     else:
-        fetch_result = __salt__[function](  nexus_url=nexus_url,
-                                            repository=repository,
-                                            group_id=group_id,
-                                            artifact_id=artifact_id,
-                                            packaging=packaging,
-                                            classifier=classifier,
-                                            target_dir=target_dir,
-                                            target_file=target_file,
-                                            username=username,
-                                            password=password,
-                                            )
+        fetch_result = __salt__[function](nexus_url=nexus_url,
+                                          repository=repository,
+                                          group_id=group_id,
+                                          artifact_id=artifact_id,
+                                          packaging=packaging,
+                                          classifier=classifier,
+                                          target_dir=target_dir,
+                                          target_file=target_file,
+                                          username=username,
+                                          password=password)
 
     return fetch_result
