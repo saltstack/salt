@@ -56,7 +56,6 @@ import time
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.odict as odict
-import salt.utils
 from salt.exceptions import SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 

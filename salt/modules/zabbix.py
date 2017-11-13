@@ -30,7 +30,7 @@ import socket
 import json
 
 # Import salt libs
-import salt.utils
+import salt.utils.http
 import salt.utils.path
 from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=import-error,no-name-in-module

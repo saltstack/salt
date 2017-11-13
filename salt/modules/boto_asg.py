@@ -51,6 +51,7 @@ import datetime
 import logging
 import json
 import sys
+import time
 import email.mime.multipart
 
 log = logging.getLogger(__name__)
@@ -677,11 +678,23 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
         salt '*' boto_asg.get_scaling_policy_arn mygroup mypolicy
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    policies = conn.get_all_policies(as_group=as_group)
-    for policy in policies:
-        if policy.name == scaling_policy_name:
-            return policy.policy_arn
-    log.error('Could not convert: {0}'.format(as_group))
+    retries = 30
+    while retries > 0:
+        retries -= 1
+        try:
+            policies = conn.get_all_policies(as_group=as_group)
+            for policy in policies:
+                if policy.name == scaling_policy_name:
+                    return policy.policy_arn
+            log.error('Could not convert: {0}'.format(as_group))
+            return None
+        except boto.exception.BotoServerError as e:
+            if e.error_code != 'Throttling':
+                raise
+            log.debug('Throttled by API, will retry in 5 seconds')
+            time.sleep(5)
+
+    log.error('Maximum number of retries exceeded')
     return None
 
 
@@ -763,11 +776,18 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy",
     # get full instance info, so that we can return the attribute
     instances = ec2_conn.get_only_instances(instance_ids=instance_ids)
     if attributes:
-        return [[getattr(instance, attr).encode("ascii") for attr in attributes] for instance in instances]
+        return [[_convert_attribute(instance, attr) for attr in attributes] for instance in instances]
     else:
         # properly handle case when not all instances have the requested attribute
-        return [getattr(instance, attribute).encode("ascii") for instance in instances if getattr(instance, attribute)]
-    return [getattr(instance, attribute).encode("ascii") for instance in instances]
+        return [_convert_attribute(instance, attribute) for instance in instances if getattr(instance, attribute)]
+
+
+def _convert_attribute(instance, attribute):
+    if attribute == "tags":
+        tags = dict(getattr(instance, attribute))
+        return {key.encode("utf-8"): value.encode("utf-8") for key, value in six.iteritems(tags)}
+
+    return getattr(instance, attribute).encode("ascii")
 
 
 def enter_standby(name, instance_ids, should_decrement_desired_capacity=False,
