@@ -559,20 +559,46 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
             raise e
 
 
-def _wait_for_sync(status, conn, wait_for_sync):
-    if not wait_for_sync:
+def _try_func(conn, func, **args):
+    tries = 30
+    while True:
+        try:
+            return getattr(conn, func)(**args)
+        except AttributeError as e:
+            # Don't include **args in log messages - security concern.
+            log.error('Function `{0}()` not found for AWS connection object '
+                      '{1}'.format(func, conn))
+            return None
+        except DNSServerError as e:
+            if tries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API.  Will retry in 5 seconds')
+                time.sleep(5)
+                tries -= 1
+                continue
+            log.error('Failed calling {0}(): {1}'.format(func, str(e)))
+            return None
+
+
+def _wait_for_sync(status, conn, wait=True):
+    ### Wait should be a bool or an integer
+    if wait is True:
+        wait = 600
+    if not wait:
         return True
-    retry = 10
-    i = 0
-    while i < retry:
-        log.info('Getting route53 status (attempt {0})'.format(i + 1))
+    orig_wait = wait
+    log.info('Waiting up to {0} seconds for Route53 changes to synchronize'.format(orig_wait))
+    while wait > 0:
         change = conn.get_change(status)
-        log.debug(change.GetChangeResponse.ChangeInfo.Status)
-        if change.GetChangeResponse.ChangeInfo.Status == 'INSYNC':
+        current = change.GetChangeResponse.ChangeInfo.Status
+        if current == 'INSYNC':
             return True
-        i = i + 1
-        time.sleep(20)
-    log.error('Timed out waiting for Route53 status update.')
+        sleep = wait if wait % 60 == wait else 60
+        log.info('Sleeping {0} seconds waiting for changes to synch (current status {1})'.format(
+                 sleep, current))
+        time.sleep(sleep)
+        wait -= sleep
+        continue
+    log.error('Route53 changes not synced after {0} seconds.'.format(orig_wait))
     return False
 
 
@@ -684,20 +710,15 @@ def create_hosted_zone(domain_name, caller_ref=None, comment='',
             log.info('Options vpc_id, vpc_name, and vpc_region are ignored '
                      'when creating non-private zones.')
 
-    retries = 10
-    while retries:
-        try:
-            # Crazy layers of dereference...
-            r = conn.create_hosted_zone(**args)
-            r = r.CreateHostedZoneResponse.__dict__ if hasattr(r,
-                    'CreateHostedZoneResponse') else {}
-            return r.get('parent', {}).get('CreateHostedZoneResponse')
-        except DNSServerError as e:
-            if retries and 'Throttling' == e.code:
-                log.debug('Throttled by AWS API.')
-                time.sleep(3)
-                retries -= 1
-                continue
-            log.error('Failed to create hosted zone {0}: {1}'.format(
-                    domain_name, e.message))
-            return None
+    r = _try_func(conn, 'create_hosted_zone', **args)
+    if r is None:
+        log.error('Failed to create hosted zone {0}'.format(domain_name))
+        return None
+    r = r.get('CreateHostedZoneResponse', {})
+    # Pop it since it'll be irrelevant by the time we return
+    status = r.pop('ChangeInfo', {}).get('Id', '').replace('/change/', '')
+    synced = _wait_for_sync(status, conn, wait=600)
+    if not synced:
+        log.error('Hosted zone {0} not synced after 600 seconds.'.format(domain_name))
+        return None
+    return r
