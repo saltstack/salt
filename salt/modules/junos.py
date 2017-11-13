@@ -1317,6 +1317,7 @@ def commit_check():
 
     return ret
 
+
 def get_table(table, file, path=None, target=None, key=None, key_items=None,
               filters=None, args={}):
     """
@@ -1365,15 +1366,16 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
     if filters is not None:
         get_kvargs['filters'] = filters
     get_kvargs.update(args)
-    table_path = path or os.path.dirname(os.path.abspath(tables_par_dir.__file__))
+    table_path = path or os.path.dirname(
+        os.path.abspath(tables_par_dir.__file__))
     try:
         file_loc = glob.glob(os.path.join(table_path, '*/{}'.format(file))) or \
-                   glob.glob(os.path.join(table_path, '{}'.format(file)))
+            glob.glob(os.path.join(table_path, '{}'.format(file)))
         if len(file_loc) == 1:
             file_name = file_loc[0]
-        elif len(file_loc)>1:
+        elif len(file_loc) > 1:
             ret['message'] = 'Given table file %s is located at multiple location'\
-                      % file
+                % file
             ret['out'] = False
             return ret
         elif len(file_loc) == 0:
@@ -1393,7 +1395,7 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
             data.get(**get_kvargs)
         except KeyError:
             ret['message'] = 'Unable to find Table %s in provided yaml file %s'\
-                             %(table, file_name)
+                             % (table, file_name)
             ret['out'] = False
             return ret
         if data.__class__.__bases__[0] == OpTable:
