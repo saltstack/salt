@@ -33,6 +33,7 @@ import integration
 import salt.utils
 from salt.modules import file as filemod
 
+
 def symlink(source, link_name):
     '''
     Handle symlinks on Windows with Python < 3.2
