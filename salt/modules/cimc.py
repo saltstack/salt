@@ -129,6 +129,74 @@ def create_user(uid=None, username=None, password=None, priv=None):
     return ret
 
 
+def http_update_bios(server=None, path=None):
+    '''
+    Update the BIOS firmware through HTTP.
+
+    Args:
+        server(str): The IP address or hostname of the HTTP server.
+
+        path(str): The HTTP path and filename for the BIOS image.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.http_update_bios foo.bar.com /path/HP-SL2.cap
+
+    '''
+
+    if not server:
+        raise salt.exceptions.CommandExecutionError("The server name must be specified.")
+
+    if not path:
+        raise salt.exceptions.CommandExecutionError("The HTTP path must be specified.")
+
+    dn = "sys/rack-unit-1/bios/fw-updatable"
+
+    inconfig = """<firmwareUpdatable adminState='trigger' dn='sys/rack-unit-1/bios/fw-updatable'
+    protocol='http' remoteServer='{0}' remotePath='{1}'
+    type='blade-bios' />""".format(server, path)
+
+    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+
+    return ret
+
+
+def http_update_cimc(server=None, path=None):
+    '''
+    Update the CIMC firmware through HTTP.
+
+    Args:
+        server(str): The IP address or hostname of the HTTP server.
+
+        path(str): The HTTP path and filename for the CIMC image.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.http_update_cimc foo.bar.com /path/HP-SL2.cap
+
+    '''
+
+    if not server:
+        raise salt.exceptions.CommandExecutionError("The server name must be specified.")
+
+    if not path:
+        raise salt.exceptions.CommandExecutionError("The HTTP path must be specified.")
+
+    dn = "sys/rack-unit-1/mgmt/fw-updatable"
+
+    inconfig = """<firmwareUpdatable adminState='trigger' dn='sys/rack-unit-1/mgmt/fw-updatable'
+    protocol='http' remoteServer='{0}' remotePath='{1}'
+    type='blade-controller' />""".format(server, path)
+
+    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+
+    return ret
+
+
 def get_bios_defaults():
     '''
     Get the default values of BIOS tokens.
@@ -159,6 +227,27 @@ def get_bios_settings():
     ret = __proxy__['cimc.get_config_resolver_class']('biosSettings', True)
 
     return ret
+
+
+def get_bios_running():
+    '''
+    Returns the current bios version that is running.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.get_bios_running
+
+    '''
+    ret = __proxy__['cimc.get_config_resolver_class']('firmwareRunning', False)
+
+    if 'outConfigs' in ret and 'firmwareRunning' in ret['outConfigs']:
+        for version in ret['outConfigs']['firmwareRunning']:
+            if 'dn' in version and version['dn'] == 'sys/rack-unit-1/bios/fw-boot-loader':
+                return version['version']
+
+    return "Unable to retrieve version."
 
 
 def get_boot_order():
@@ -209,6 +298,29 @@ def get_disks():
     return ret
 
 
+def get_dns_servers():
+    '''
+    Retrieves the DNS servers from the device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.get_dns_servers
+
+    '''
+    ret = __proxy__['cimc.get_config_resolver_class']('mgmtIf', True)
+
+    response = {'preferred': None, 'alternate': None}
+
+    try:
+        response['preferred'] = ret['outConfigs']['mgmtIf'][0]['dnsPreferred']
+        response['alternate'] = ret['outConfigs']['mgmtIf'][0]['dnsAlternate']
+        return response
+    except Exception:
+        return "Unable to retrieve DNS Servers"
+
+
 def get_ethernet_interfaces():
     '''
     Get the adapter Ethernet interface details.
@@ -255,6 +367,43 @@ def get_firmware():
     ret = __proxy__['cimc.get_config_resolver_class']('firmwareRunning', False)
 
     return ret
+
+
+def get_firmware_available():
+    '''
+    Retrieves the list of firmware on the device that is available for upgrade.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.get_firmware_available
+
+    '''
+    ret = __proxy__['cimc.get_config_resolver_class']('firmwareUpdatable', False)
+
+    return ret
+
+
+def get_firmware_running():
+    '''
+    Returns the current firmware version that is running.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.get_firmware_running
+
+    '''
+    ret = __proxy__['cimc.get_config_resolver_class']('firmwareRunning', False)
+
+    if 'outConfigs' in ret and 'firmwareRunning' in ret['outConfigs']:
+        for version in ret['outConfigs']['firmwareRunning']:
+            if 'dn' in version and version['dn'] == 'sys/rack-unit-1/mgmt/fw-system':
+                return version['version']
+
+    return "Unable to retrieve version."
 
 
 def get_hostname():
@@ -437,6 +586,38 @@ def get_snmp_config():
 
     '''
     ret = __proxy__['cimc.get_config_resolver_class']('commSnmp', False)
+
+    return ret
+
+
+def get_snmp_users():
+    '''
+    Get the SNMPv3 users.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.get_snmp_users
+
+    '''
+    ret = __proxy__['cimc.get_config_resolver_class']('commSnmpUser', False)
+
+    return ret
+
+
+def get_snmp_traps():
+    '''
+    Get the SNMPv3 trap destinations.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.get_snmp_traps
+
+    '''
+    ret = __proxy__['cimc.get_config_resolver_class']('commSnmpTrap', False)
 
     return ret
 
@@ -629,6 +810,43 @@ def reboot():
     return ret
 
 
+def set_dns_servers(preferred=None, alternate=None):
+    '''
+    Sets the DNS servers for the device.
+
+    Args:
+        preferred(str): The preferred DNS server.
+
+        alternate(str): The alternate DNS server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.set_dns_servers 10.0.0.1 10.0.0.2
+
+        salt '*' cimc.set_dns_servers 10.0.0.1
+
+    '''
+    if not preferred and not alternate:
+        raise salt.exceptions.CommandExecutionError("At least one DNS server must be provided.")
+
+    primary = " dnsPreferred=\"{0}\"".format(preferred) if preferred else ""
+    secondary = " dnsAlternate=\"{0}\"".format(alternate) if alternate else ""
+    dn = "sys/rack-unit-1/mgmt/if-1"
+    inconfig = """<mgmtIf dn="sys/rack-unit-1/mgmt/if-1"{0}{1}></mgmtIf>""".format(primary, secondary)
+
+    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+
+    try:
+        if ret['outConfig']['mgmtIf'][0]['status'] == 'modified':
+            return True
+        else:
+            return False
+    except Exception:
+        return False
+
+
 def set_hostname(hostname=None):
     '''
     Sets the hostname on the server.
@@ -801,7 +1019,7 @@ def set_power_configuration(policy=None, delayType=None, delayValue=None):
             else:
                 raise salt.exceptions.CommandExecutionError("Invalid delay type entered.")
     elif policy == "stay-off":
-        query = ' vpResumeOnACPowerLoss="reset"'
+        query = ' vpResumeOnACPowerLoss="stay-off"'
     elif policy == "last-state":
         query = ' vpResumeOnACPowerLoss="last-state"'
     else:
@@ -811,6 +1029,117 @@ def set_power_configuration(policy=None, delayType=None, delayValue=None):
     inconfig = """<biosVfResumeOnACPowerLoss
     dn="sys/rack-unit-1/board/Resume-on-AC-power-loss"{0}>
     </biosVfResumeOnACPowerLoss>""".format(query)
+
+    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+
+    return ret
+
+
+def set_snmp_configuration(adminState=None, location=None, contact=None, communityAccess=None, trapCommunity=None, community=None):
+    '''
+    Sets the SNMP configuration on the device. This is only available for some
+    C-Series servers.
+
+    Args:
+        adminState(bool): Controls if the SNMP service is running or not.
+
+        location(str): The SNMP location string.
+
+        contact(str): The SNMP contact address.
+
+        communityAccess(str): Controls if the SNMP community string access is allowed. Valid options are:
+
+            disabled: SNMP community strings are disabled.
+
+            limited: Provides read-only access.
+
+            full: Provides full access.
+
+        trapCommunity(str): The SNMPv2 trap community string.
+
+        community(str): The SNMPv2 community string.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.set_snmp_configuration True
+
+    '''
+
+    options = []
+    if adminState is not None:
+        options.append('adminState="{0}"'.format('enabled' if adminState else 'disabled'))
+    if location:
+        options.append('sysLocation="{0}"'.format(location))
+    if contact:
+        options.append('sysContact="{0}"'.format(contact))
+    if communityAccess:
+        options.append('com2Sec="{0}"'.format(communityAccess))
+    if trapCommunity:
+        options.append('trapCommunity="{0}"'.format(trapCommunity))
+    if community:
+        options.append('community="{0}"'.format(community))
+
+    dn = "sys/svc-ext/snmp-svc"
+    inconfig = """<commSnmp dn="sys/svc-ext/snmp-svc" {0}></commSnmp>""".format(" ".join(options))
+
+    ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
+
+    return ret
+
+
+def set_snmp_user(uid=None, username=None, securityLevel=None, auth=None, authPassword=None, privacy=None,
+                  privacyPassword=None):
+    '''
+    Sets a SNMPv3 user.
+
+    Args:
+        uid(int): The SNMPv3 ID slot to create the user account in.
+
+        username(str): The name of the SNMPv3 user.
+
+        securityLevel(str): The SNMPv3 security level to utilize. This contols if SNMPv3 will use the `AUTH` and `PRIV`
+            functions.
+
+        auth(str): The hash function to use for `AUTH`.
+
+        authPassword(str): The `AUTH` password.
+
+        privacy(str): The `PRIV` encryption to use.
+
+        privacyPassword(str): The `PRIV` password.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cimc.set_snmp_user 1 username=foobar securityLevel=authpriv auth=SHA authPassword=foobar privacy=AES
+            privacyPassword=foobar
+
+    '''
+
+    if not uid:
+        raise salt.exceptions.CommandExecutionError("The SNMPv3 user ID must be specified.")
+
+    options = []
+    if username:
+        options.append('name="{0}"'.format(username))
+    if securityLevel:
+        options.append('securityLevel="{0}"'.format(securityLevel))
+    if auth:
+        options.append('auth="{0}"'.format(auth))
+    if authPassword:
+        options.append('authPwd="{0}"'.format(authPassword))
+    if privacy:
+        options.append('privacy="{0}"'.format(privacy))
+    if privacyPassword:
+        options.append('privacyPwd="{0}"'.format(privacyPassword))
+
+    dn = "sys/svc-ext/snmp-svc/snmpv3-user-{0}".format(uid)
+
+    inconfig = """<commSnmpUser id="{0}" dn="sys/svc-ext/snmp-svc/snmpv3-user-{0}" {1}></commSnmpUser>""".format(
+        uid, " ".join(options))
 
     ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
 
