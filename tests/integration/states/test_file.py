@@ -73,7 +73,7 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
 
     # Get the current mode so that we can put the file back the way we
     # found it when we're done.
-    grail_fs_mode = int(testcase.run_function('file.get_mode', [grail_fs_path]))
+    grail_fs_mode = int(testcase.run_function('file.get_mode', [grail_fs_path]), 8)
     initial_mode = 504    # 0770 octal
     new_mode_1 = 384      # 0600 octal
     new_mode_2 = 420      # 0644 octal
