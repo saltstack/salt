@@ -532,7 +532,18 @@ class RemoteFuncs(object):
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
-        match_type = load.get('tgt_type', 'glob')
+        expr_form = load.get('expr_form')
+        if expr_form is not None and 'tgt_type' not in load:
+            salt.utils.warn_until(
+                u'Neon',
+                u'_mine_get: minion {0} uses pre-Nitrogen API key '
+                u'"expr_form". Accepting for backwards compatibility '
+                u'but this is not guaranteed '
+                u'after the Neon release'.format(load['id'])
+            )
+            match_type = expr_form
+        else:
+            match_type = load.get('tgt_type', 'glob')
         if match_type.lower() == 'pillar':
             match_type = 'pillar_exact'
         if match_type.lower() == 'compound':
