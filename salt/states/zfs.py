@@ -44,7 +44,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-from time import strftime, strptime, gmtime
+from time import strftime, strptime, localtime
 
 log = logging.getLogger(__name__)
 
@@ -717,6 +717,10 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
         a schedule must be setup to automatically run the state. this means that if
         you run the state daily the hourly snapshot will only be made once per day!
 
+    .. versionchanged:: Oxygen
+
+        switched to localtime from gmtime so times now take into account timezones.
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -789,7 +793,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
 
         # create snapshot
         needed_holds = []
-        current_timestamp = gmtime()
+        current_timestamp = localtime()
         for hold in snapshots:
             # check if we need need to consider hold
             if schedule[hold] == 0:
