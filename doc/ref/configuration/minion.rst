@@ -303,6 +303,20 @@ option on the Salt master.
 
     master_port: 4506
 
+.. conf_minion:: publish_port
+
+``publish_port``
+---------------
+
+Default: ``4505``
+
+The port of the master publish server, this needs to coincide with the publish_port
+option on the Salt master.
+
+.. code-block:: yaml
+
+    master_port: 4505
+
 .. conf_minion:: user
 
 ``user``
