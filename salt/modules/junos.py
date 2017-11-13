@@ -1318,7 +1318,7 @@ def commit_check():
     return ret
 
 def get_table(table, file, path=None, target=None, key=None, key_items=None,
-              filters=None):
+              filters=None, args={}):
     """
     Retrieve data from a Junos device using Tables/Views
 
@@ -1346,6 +1346,8 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
           To select only given key items
         * filters:
           To select only filter for the dictionary from columns
+        * args:
+          key/value pair which should render Jinja template command
     """
 
     conn = __proxy__['junos.conn']()
@@ -1362,6 +1364,7 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
         get_kvargs['key_items'] = key_items
     if filters is not None:
         get_kvargs['filters'] = filters
+    get_kvargs.update(args)
     table_path = path or os.path.dirname(os.path.abspath(tables_par_dir.__file__))
     try:
         file_loc = glob.glob(os.path.join(table_path, '*/{}'.format(file))) or \
