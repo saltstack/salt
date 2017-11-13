@@ -19,8 +19,9 @@ from tests.support.mock import (
     patch)
 
 # Import Salt Libs
+import salt.utils.stringutils
 from salt.states import kubernetes
-from salt.ext.six import iteritems
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -61,8 +62,10 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             data=data,
         )
         # Base64 all of the values just like kubectl does
-        for key, value in iteritems(secret_data['data']):
-            secret_data['data'][key] = base64.b64encode(value)
+        for key, value in six.iteritems(secret_data['data']):
+            secret_data['data'][key] = base64.b64encode(
+                salt.utils.stringutils.to_bytes(value)
+            )
 
         return secret_data
 

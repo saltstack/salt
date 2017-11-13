@@ -4,20 +4,20 @@ This module is used to manage Wordpress installations
 
 :depends: wp binary from http://wp-cli.org/
 '''
-from __future__ import absolute_import
 
 # Import Python Modules
+from __future__ import absolute_import
 import collections
 
 # Import Salt Modules
-import salt.utils
+import salt.utils.path
 from salt.ext.six.moves import map
 
 Plugin = collections.namedtuple('Plugin', 'name status update versino')
 
 
 def __virtual__():
-    if salt.utils.which('wp'):
+    if salt.utils.path.which('wp'):
         return True
     return False
 
