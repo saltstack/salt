@@ -31,11 +31,27 @@ try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
     # pylint: disable=W0611
-    import napalm_base
+    import napalm
+    import napalm.base as napalm_base
     # pylint: enable=W0611
     HAS_NAPALM = True
+    HAS_NAPALM_BASE = False  # doesn't matter anymore, but needed for the logic below
+    log.debug('napalm seems to be installed')
+    try:
+        NAPALM_MAJOR = int(napalm.__version__.split('.')[0])
+        log.debug('napalm version: %s', napalm.__version__)
+    except AttributeError:
+        NAPALM_MAJOR = 0
 except ImportError:
+    log.info('napalm doesnt seem to be installed, trying to import napalm_base')
     HAS_NAPALM = False
+    try:
+        import napalm_base
+        log.debug('napalm_base seems to be installed')
+        HAS_NAPALM_BASE = True
+    except ImportError:
+        log.info('napalm_base doesnt seem to be installed either')
+        HAS_NAPALM_BASE = False
 
 try:
     # try importing ConnectionClosedException
@@ -81,7 +97,9 @@ def virtual(opts, virtualname, filename):
     '''
     Returns the __virtual__.
     '''
-    if HAS_NAPALM and (is_proxy(opts) or is_minion(opts)):
+    if ((HAS_NAPALM and NAPALM_MAJOR >= 2) or HAS_NAPALM_BASE) and (is_proxy(opts) or is_minion(opts)):
+        if HAS_NAPALM_BASE:
+            log.info('You still seem to use napalm_base. Please consider upgrading to napalm >= 2.0.0')
         return virtualname
     else:
         return (
