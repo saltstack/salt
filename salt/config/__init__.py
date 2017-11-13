@@ -186,6 +186,9 @@ VALID_OPTS = {
     # The directory used to store public key data
     'pki_dir': str,
 
+    # The directory to store authentication keys of a master's local environment.
+    'key_dir': str,
+
     # A unique identifier for this daemon
     'id': str,
 
@@ -1420,6 +1423,7 @@ DEFAULT_MASTER_OPTS = {
     'archive_jobs': False,
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
+    'key_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'key'),
     'key_cache': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
@@ -2399,7 +2403,7 @@ def syndic_config(master_config_path,
     opts.update(syndic_opts)
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'pki_dir', 'key_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir'
     ]
     for config_key in ('log_file', 'key_logfile', 'syndic_log_file'):
@@ -3770,7 +3774,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'pki_dir', 'key_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir', 'syndic_dir',
         'sqlite_queue_dir'
     ]

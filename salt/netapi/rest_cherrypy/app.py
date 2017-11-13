@@ -71,12 +71,12 @@ A REST API for Salt
     log_access_file
         Path to a file to write HTTP access logs.
 
-        .. versionaddedd:: 2016.11.0
+        .. versionadded:: 2016.11.0
 
     log_error_file
         Path to a file to write HTTP error logs.
 
-        .. versionaddedd:: 2016.11.0
+        .. versionadded:: 2016.11.0
 
     ssl_crt
         The path to a SSL certificate. (See below)

@@ -814,7 +814,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         ret.update({
                             'comment': comt,
                             'result': None,
-                            'pchanges': p_chg
+                            'pchanges': p_chg,
+                            'changes': {'/etc/grub.conf': {'directory': 'new'}}
                         })
                         self.assertDictEqual(filestate.directory(name,
                                                                  user=user,
@@ -825,7 +826,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         with patch.object(os.path, 'isdir', mock_f):
                             comt = ('No directory to create {0} in'
                                     .format(name))
-                            ret.update({'comment': comt, 'result': False})
+                            ret.update({'comment': comt, 'result': False, 'changes': {}})
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user, group=group),
                                                  ret)
