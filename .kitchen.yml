@@ -164,6 +164,9 @@ suites:
           clone_repo: false
           salttesting_namespec: salttesting==2017.6.1
   - name: py3
+    excludes:
+      - centos-6
+      - ubuntu-14.04
     provisioner:
       pillars:
         top.sls:
