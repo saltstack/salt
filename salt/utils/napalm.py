@@ -97,7 +97,7 @@ def virtual(opts, virtualname, filename):
     '''
     Returns the __virtual__.
     '''
-    if ( (HAS_NAPALM and NAPALM_MAJOR >= 2) or HAS_NAPALM_BASE ) and ( is_proxy(opts) or is_minion(opts) ):
+    if ((HAS_NAPALM and NAPALM_MAJOR >= 2) or HAS_NAPALM_BASE) and (is_proxy(opts) or is_minion(opts)):
         if HAS_NAPALM_BASE:
             log.info('You still seem to use napalm_base. Please consider upgrading to napalm >= 2.0.0')
         return virtualname
