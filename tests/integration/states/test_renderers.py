@@ -21,3 +21,12 @@ class TestJinjaRenderer(ModuleCase):
         ret = self.run_function('state.sls', ['jinja_dot_notation'])
         for state_ret in ret.values():
             self.assertTrue(state_ret['result'])
+
+    def test_salt_contains_function(self):
+        '''
+        Test if we are able to check if a function exists inside the "salt"
+        wrapper (AliasLoader) which is available on Jinja templates.
+        '''
+        ret = self.run_function('state.sls', ['jinja_salt_contains_function'])
+        for state_ret in ret.values():
+            self.assertTrue(state_ret['result'])

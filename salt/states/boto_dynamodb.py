@@ -163,7 +163,7 @@ import logging
 import copy
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 import salt.utils.dictupdate as dictupdate
 
 logging.basicConfig(

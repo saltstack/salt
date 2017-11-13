@@ -31,11 +31,11 @@ import datetime
 import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
-LEA = salt.utils.which_bin(['certbot', 'letsencrypt',
+LEA = salt.utils.path.which_bin(['certbot', 'letsencrypt',
                             'certbot-auto', 'letsencrypt-auto',
                             '/opt/letsencrypt/letsencrypt-auto'])
 LE_LIVE = '/etc/letsencrypt/live/'
@@ -125,7 +125,8 @@ def cert(name,
         salt 'gitlab.example.com' acme.cert dev.example.com "[gitlab.example.com]" test_cert=True renew=14 webroot=/opt/gitlab/embedded/service/gitlab-rails/public
     '''
 
-    cmd = [LEA, 'certonly', '--quiet']
+    # cmd = [LEA, 'certonly', '--quiet']
+    cmd = [LEA, 'certonly']
 
     cert_file = _cert_file(name, 'cert')
     if not __salt__['file.file_exists'](cert_file):

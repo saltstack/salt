@@ -77,7 +77,8 @@ import json
 import uuid
 
 # Import Salt Libs
-from salt.utils import SaltInvocationError, exactly_one
+from salt.utils import exactly_one
+from salt.exceptions import SaltInvocationError
 import logging
 log = logging.getLogger(__name__)
 
