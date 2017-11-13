@@ -323,6 +323,13 @@ class FileModuleTest(integration.ModuleCase):
                               mode='insert', after='Hello')
         self.assertIn('Hello' + os.linesep + '+Goodbye', ret)
 
+    def test_file_line_content(self):
+        self.minion_run('file.line', self.myfile, 'Goodbye',
+                        mode='insert', after='Hello')
+        with salt.utils.fopen(self.myfile, 'r') as fp:
+            content = fp.read()
+        self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(FileModuleTest)
