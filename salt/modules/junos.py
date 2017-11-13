@@ -1319,7 +1319,7 @@ def commit_check():
 
 
 def get_table(table, file, path=None, target=None, key=None, key_items=None,
-              filters=None, args={}):
+              filters=None, args=None):
     """
     Retrieve data from a Junos device using Tables/Views
 
@@ -1365,7 +1365,8 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
         get_kvargs['key_items'] = key_items
     if filters is not None:
         get_kvargs['filters'] = filters
-    get_kvargs.update(args)
+    if args is not None and isinstance(args, dict):
+        get_kvargs['args'] = args
     table_path = path or os.path.dirname(
         os.path.abspath(tables_par_dir.__file__))
     try:
@@ -1401,9 +1402,16 @@ def get_table(table, file, path=None, target=None, key=None, key_items=None,
         if data.__class__.__bases__[0] == OpTable:
             ret['reply'] = json.loads(data.to_json())
         else:
-            if key is not None:
-                ret['table'][table]['key'] = key
             ret['reply'] = dict(data)
+            if target is not None:
+                ret['table'][table]['target'] = data.TARGET
+            if key is not None:
+                ret['table'][table]['key'] = data.KEY
+            if key_items is not None:
+                ret['table'][table]['key_items'] = data.KEY_ITEMS
+            if args is not None:
+                ret['table'][table]['args'] = data.CMD_ARGS
+                ret['table'][table]['command'] = data.GET_CMD
     except Exception as err:
         ret['message'] = 'Uncaught exception - please report: {0}'.format(
             str(err))

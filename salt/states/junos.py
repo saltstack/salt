@@ -520,7 +520,7 @@ def commit_check(name):
 
 
 def get_table(name, table, file, path=None, target=None, key=None,
-              key_items=None, filters=None):
+              key_items=None, filters=None, args=None):
     '''
     Retrieve data from a Junos device using Tables/Views
 
@@ -553,8 +553,10 @@ def get_table(name, table, file, path=None, target=None, key=None,
           To select only given key items
         * filters:
           To select only filter for the dictionary from columns
+        * args:
+          key/value pair which should render Jinja template command
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     ret['changes'] = __salt__['junos.get_table'](table, file, path, target,
-                                                 key, key_items, filters)
+                                                 key, key_items, filters, args)
     return ret
