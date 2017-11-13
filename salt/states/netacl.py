@@ -239,6 +239,7 @@ def term(name,
         - flattened_addr
         - flattened_saddr
         - flattened_daddr
+        - priority
 
     .. note::
         The following fields can be also a single value and a list of values:
