@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 r'''
-.. index:: Vagrant state function
-
 Manage Vagrant VMs
 ==================
+
+.. index:: Vagrant state function
 
 Manange execution of Vagrant virtual machines on Salt minions.
 

@@ -1037,7 +1037,7 @@ class Minion(MinionBase):
                     u'may result in loss of contact with minions. Please '
                     u'upgrade your ZMQ!'
                 )
-        # Late setup the of the opts grains, so we can log from the grains
+        # Late setup of the opts grains, so we can log from the grains
         # module.  If this is a proxy, however, we need to init the proxymodule
         # before we can get the grains.  We do this for proxies in the
         # post_master_init
@@ -1244,7 +1244,7 @@ class Minion(MinionBase):
             )
             modules_max_memory = True
             old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
-            rss, vms = psutil.Process(os.getpid()).memory_info()
+            rss, vms = psutil.Process(os.getpid()).memory_info()[:2]
             mem_limit = rss + vms + self.opts[u'modules_max_memory']
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
         elif self.opts.get(u'modules_max_memory', -1) > 0:

@@ -1747,6 +1747,7 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
     YAML example fragment:
 
     .. code-block:: yaml
+
         - filters:
             attachment.instance_id: i-abcdef12
           tags:
