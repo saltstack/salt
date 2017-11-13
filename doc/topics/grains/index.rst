@@ -303,4 +303,4 @@ above) the grains can be manually synced and reloaded by calling the
 
     When the :conf_minion:`grains_cache` is set to False, the grains dictionary is built
     and stored in memory on the minion. Every time the minion restarts or
-    `saltutil.refresh_grains` is run, the grain dictionary is rebuilt from scratch.
+    ``saltutil.refresh_grains`` is run, the grain dictionary is rebuilt from scratch.
