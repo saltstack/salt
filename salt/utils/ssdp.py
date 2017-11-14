@@ -100,7 +100,7 @@ class SSDPFactory(SSDPBase):
         self.disable_hidden = False
         self.transport = None
         self.my_ip = socket.gethostbyname(socket.gethostname())
-        self.DEFAULTS[self.ANSWER] = '{}'
+        self.DEFAULTS[self.ANSWER] = {}
 
     def __call__(self, *args, **kwargs):
         '''
@@ -145,7 +145,8 @@ class SSDPFactory(SSDPBase):
                 return
 
             self.log.debug('Received %r from %s' % (message, "%s:%s" % addr))
-            self.transport.sendto('{0}#OK#{1}'.format(self.signature, self.answer), addr)
+            self.transport.sendto('{0}#OK#{1}'.format(self.signature,
+                                                      json.dumps(self.answer)), addr)
         else:
             if self.disable_hidden:
                 self.transport.sendto('{0}#ERROR#{1}'.format(self.signature,
