@@ -406,6 +406,7 @@ execution modules
     supervisord
     suse_apache
     svn
+    swarm
     swift
     sysbench
     sysfs
