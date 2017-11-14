@@ -201,3 +201,58 @@ class SSDPDiscoveryServer(SSDPBase):
             self.log.info('Removing SSDP publisher')
             transport.close()
             loop.close()
+
+
+class SSPDiscoveryClient(SSDPBase):
+    '''
+    Class to discover Salt Master via UDP broadcast.
+    '''
+    is_available = SSDPBase._is_available
+
+    def __init__(self, **config):
+        '''
+        Initialize
+        '''
+        self._config = config
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self._socket.settimeout(self._config.get(self.TIMEOUT, self.DEFAUTS[self.TIMEOUT]))
+
+        for attr in [self.SIGNATURE, self.TIMEOUT, self.PORT]:
+            setattr(self, attr, self._config.get(attr, self.DEFAUTS[attr]))
+
+    def _query(self):
+        '''
+        Query the broadcast for defined services.
+        :return:
+        '''
+        query = "%s%s" % (self.signature, datetime.datetime.now().timestamp())
+        self._socket.sendto(query.encode(), ('<broadcast>', self.port))
+
+        return query
+
+    def discover(self):
+        '''
+        Gather the information of currently declared servers.
+
+        :return:
+        '''
+        self.log.info("Looking for a server discovery")
+        try:
+            self._query()
+            data, addr = self._socket.recvfrom(1024)  # wait for a packet
+        except socket.timeout:
+            msg = 'No master has been discovered.'
+            self.log.info(msg)
+            raise TimeOutException(msg)
+        msg = data.decode()
+        if msg.startswith(self.signature):
+            msg = msg.split(self.signature)[-1]
+            self.log.debug("Service announcement at '{0}'. Response: '{1}'".format("%s:%s" % addr, msg))
+            if '#ERROR#' in msg:
+                err = msg.split('#ERROR#')[-1]
+                self.log.debug('Error response from the service publisher: {0}'.format(err))
+                if "timestamp" in err:
+                    raise TimeStampException(err)
+            else:
+                return json.loads(msg.split('#OK#')[-1]), "%s:%s" % addr
