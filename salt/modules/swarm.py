@@ -44,7 +44,7 @@ def __virtual__():
     return False, 'The swarm module failed to load: Docker python module is not avaialble.'
 
 
-def __init__():
+def __init__(self):
     __context__['client'] = docker.from_env()
     __context__['server_name'] = __grains__['id']
 
@@ -89,21 +89,20 @@ def swarm_init(advertise_addr=str,
 
     .. code-block:: bash
 
-      salt '*' docker_util.swarm_init advertise_addr='192.168.50.10' listen_addr='0.0.0.0' force_new_cluster=False
+      salt '*' swarm.swarm_init advertise_addr='192.168.50.10' listen_addr='0.0.0.0' force_new_cluster=False
     '''
     try:
         salt_return = {}
-        client.swarm.init(advertise_addr,
-                          listen_addr,
-                          force_new_cluster)
-        output = 'Docker swarm has been Initalized on '+ server_name + ' and the worker/manager Join token is below'
+        __context__['client'].swarm.init(advertise_addr,
+                                         listen_addr,
+                                         force_new_cluster)
+        output = 'Docker swarm has been Initalized on '+ __context__['server_name'] + ' and the worker/manager Join token is below'
         salt_return.update({'Comment': output,
                             'Tokens': swarm_tokens()})
-        return salt_return
     except TypeError:
         salt_return = {}
         salt_return.update({'Error': 'Please make sure your passing advertise_addr, listen_addr and force_new_cluster correctly.'})
-        return salt_return
+    return salt_return
 
 
 def joinswarm(remote_addr=int,
@@ -131,16 +130,15 @@ def joinswarm(remote_addr=int,
     '''
     try:
         salt_return = {}
-        client.swarm.join(remote_addrs=[remote_addr],
-                          listen_addr=listen_addr,
-                          join_token=token)
-        output = server_name + ' has joined the Swarm'
+        __context__['client'].swarm.join(remote_addrs=[remote_addr],
+                                         listen_addr=listen_addr,
+                                         join_token=token)
+        output = __context__['server_name'] + ' has joined the Swarm'
         salt_return.update({'Comment': output, 'Manager_Addr': remote_addr})
-        return salt_return
     except TypeError:
         salt_return = {}
         salt_return.update({'Error': 'Please make sure this minion is not part of a swarm and your passing remote_addr, listen_addr and token correctly.'})
-        return salt_return
+    return salt_return
 
 
 def leave_swarm(force=bool):
@@ -157,8 +155,8 @@ def leave_swarm(force=bool):
       salt '*' swarm.leave_swarm force=False
     '''
     salt_return = {}
-    client.swarm.leave(force=force)
-    output = server_name + ' has left the swarm'
+    __context__['client'].swarm.leave(force=force)
+    output = __context__['server_name'] + ' has left the swarm'
     salt_return.update({'Comment': output})
     return salt_return
 
@@ -203,14 +201,14 @@ def service_create(image=str,
         salt_return = {}
         replica_mode = docker.types.ServiceMode('replicated', replicas=replicas)
         ports = docker.types.EndpointSpec(ports={target_port: published_port})
-        client.services.create(name=name,
-                               image=image,
-                               command=command,
-                               mode=replica_mode,
-                               endpoint_spec=ports)
-        echoback = server_name + ' has a Docker Swarm Service running named ' + name
+        __context__['client'].services.create(name=name,
+                                              image=image,
+                                              command=command,
+                                              mode=replica_mode,
+                                              endpoint_spec=ports)
+        echoback = __context__['server_name'] + ' has a Docker Swarm Service running named ' + name
         salt_return.update({'Info': echoback,
-                            'Minion': server_name,
+                            'Minion': __context__['server_name'],
                             'Name': name,
                             'Image': image,
                             'Command': command,
@@ -218,11 +216,10 @@ def service_create(image=str,
                             'Replicas': replicas,
                             'Target_Port': target_port,
                             'Published_Port': published_port})
-        return salt_return
     except TypeError:
         salt_return = {}
         salt_return.update({'Error': 'Please make sure your passing arguments correctly [image, name, command, hostname, replicas, target_port and published_port]'})
-        return salt_return
+    return salt_return
 
 
 def swarm_service_info(service_name=str):
@@ -273,11 +270,10 @@ def swarm_service_info(service_name=str):
                                 'Docker Image': image,
                                 'Minion Id': server_name,
                                 'Version': version})
-        return salt_return
     except TypeError:
         salt_return = {}
         salt_return.update({'Error': 'service_name arg is missing?'})
-        return salt_return
+    return salt_return
 
 
 def remove_service(service=str):
@@ -298,11 +294,10 @@ def remove_service(service=str):
         service = client.remove_service(service)
         salt_return.update({'Service Deleted': service,
                             'Minion ID': server_name})
-        return salt_return
     except TypeError:
         salt_return = {}
         salt_return.update({'Error': 'service arg is missing?'})
-        return salt_return
+    return salt_return
 
 
 def node_ls(server=str):
@@ -340,11 +335,10 @@ def node_ls(server=str):
                                 'Availability': availability,
                                 'Status': status,
                                 'Version': Version})
-            return salt_return
     except TypeError:
         salt_return = {}
         salt_return.update({'Error': 'The server arg is missing or you not targeting a Manager node?'})
-        return salt_return
+    return salt_return
 
 
 def remove_node(node_id=str, force=bool):
@@ -414,8 +408,7 @@ def update_node(availability=str,
                            version=version,
                            node_spec=node_spec)
         salt_return.update({'Node Information': node_spec})
-        return salt_return
     except TypeError:
         salt_return = {}
         salt_return.update({'Error': 'Make sure all args are passed [availability, node_name, role, node_id, version]'})
-        return salt_return
+    return salt_return
