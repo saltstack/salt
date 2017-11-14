@@ -73,3 +73,72 @@ class SSDPBase(object):
         finally:
             sck.close()
         return ip_addr
+
+
+class SSDPFactory(SSDPBase):
+    '''
+    Socket protocol factory.
+    '''
+
+    def __init__(self, **config):
+        '''
+        Initialize
+
+        :param config:
+        '''
+        for attr in (self.SIGNATURE, self.ANSWER):
+            setattr(self, attr, config.get(attr, self.DEFAULTS[attr]))
+        self.disable_hidden = False
+        self.transport = None
+        self.my_ip = socket.gethostbyname(socket.gethostname())
+        self.DEFAULTS[self.ANSWER] = '{}'
+
+    def __call__(self, *args, **kwargs):
+        '''
+        Return instance on Factory call.
+        :param args:
+        :param kwargs:
+        :return:
+        '''
+        return self
+
+    def connection_made(self, transport):
+        '''
+        On connection.
+
+        :param transport:
+        :return:
+        '''
+        self.transport = transport
+
+    def datagram_received(self, data, addr):
+        '''
+        On datagram receive.
+
+        :param data:
+        :param addr:
+        :return:
+        '''
+        message = data.decode()
+        if message.startswith(self.signature):
+            try:
+                timestamp = float(message[len(self.signature):])
+            except TypeError:
+                self.log.debug('Received invalid timestamp in package from %s' % ("%s:%s" % addr))
+                if self.disable_hidden:
+                    self.transport.sendto('{0}#ERROR#{1}'.format(self.signature, 'Invalid timestamp'), addr)
+                return
+
+            if datetime.datetime.fromtimestamp(timestamp) < (datetime.datetime.now() - datetime.timedelta(seconds=20)):
+                if self.disable_hidden:
+                    self.transport.sendto('{0}#ERROR#{1}'.format(self.signature, 'Timestamp is too old'), addr)
+                self.log.debug('Received outdated package from %s' % ("%s:%s" % addr))
+                return
+
+            self.log.debug('Received %r from %s' % (message, "%s:%s" % addr))
+            self.transport.sendto('{0}#OK#{1}'.format(self.signature, self.answer), addr)
+        else:
+            if self.disable_hidden:
+                self.transport.sendto('{0}#ERROR#{1}'.format(self.signature,
+                                                             'Invalid packet signature').encode(), addr)
+            self.log.debug('Received bad magic or password from %s:%s' % addr)
