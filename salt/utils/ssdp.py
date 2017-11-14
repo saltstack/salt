@@ -48,10 +48,14 @@ class SSDPBase(object):
     # Fields
     SIGNATURE = 'signature'
     ANSWER = 'answer'
+    PORT = 'port'
+    LISTEN_IP = 'listen_ip'
 
     # Default values
     DEFAULTS = {
-        SIGNATURE: '__salt_master_service'
+        SIGNATURE: '__salt_master_service',
+        PORT: 30777,
+        LISTEN_IP: '0.0.0.0',
     }
 
     @staticmethod
@@ -60,7 +64,7 @@ class SSDPBase(object):
         Return True if the USSDP dependencies are satisfied.
         :return:
         '''
-        return bool(asyncio)
+        return bool(asyncio and json)
 
     @staticmethod
     def get_self_ip():
