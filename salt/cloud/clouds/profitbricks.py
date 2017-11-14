@@ -789,7 +789,7 @@ def create(vm_):
                 'Loaded node data for {0}:\nname: {1}\nstate: {2}'.format(
                     vm_['name'],
                     pprint.pformat(data['name']),
-                    data['vmState']
+                    data['state']
                 )
             )
         except Exception as err:
@@ -803,7 +803,7 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = data['vmState'] == 'RUNNING'
+        running = data['state'] == 'RUNNING'
         if not running:
             # Still not running, trigger another iteration
             return
