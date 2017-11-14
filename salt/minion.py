@@ -1244,7 +1244,7 @@ class Minion(MinionBase):
             )
             modules_max_memory = True
             old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
-            rss, vms = psutil.Process(os.getpid()).memory_info()
+            rss, vms = psutil.Process(os.getpid()).memory_info()[:2]
             mem_limit = rss + vms + self.opts[u'modules_max_memory']
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
         elif self.opts.get(u'modules_max_memory', -1) > 0:
@@ -1665,7 +1665,25 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
+        fn_ = os.path.join(minion_instance.proc_dir, data[u'jid'])
+
+        if opts[u'multiprocessing'] and not salt.utils.platform.is_windows():
+            # Shutdown the multiprocessing before daemonizing
+            salt.log.setup.shutdown_multiprocessing_logging()
+
+            salt.utils.process.daemonize_if(opts)
+
+            # Reconfigure multiprocessing logging after daemonizing
+            salt.log.setup.setup_multiprocessing_logging()
+
         salt.utils.process.appendproctitle(u'{0}._thread_multi_return {1}'.format(cls.__name__, data[u'jid']))
+
+        sdata = {u'pid': os.getpid()}
+        sdata.update(data)
+        log.info(u'Starting a new job with PID %s', sdata[u'pid'])
+        with salt.utils.files.fopen(fn_, u'w+b') as fp_:
+            fp_.write(minion_instance.serial.dumps(sdata))
+
         multifunc_ordered = opts.get(u'multifunc_ordered', False)
         num_funcs = len(data[u'fun'])
         if multifunc_ordered:

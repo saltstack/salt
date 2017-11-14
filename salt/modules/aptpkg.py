@@ -1392,7 +1392,7 @@ def list_pkgs(versions_as_list=False,
                                                  version_num)
 
     # Check for virtual packages. We need dctrl-tools for this.
-    if not removed:
+    if not removed and not HAS_APT:
         try:
             virtpkgs_all = _get_virtual()
         except CommandExecutionError as cee:

@@ -13,10 +13,12 @@ import salt.utils.stringutils
 from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log
 from salt.exceptions import (
-        SaltClientError,
-        SaltInvocationError,
-        EauthAuthenticationError
-        )
+    EauthAuthenticationError,
+    LoaderError,
+    SaltClientError,
+    SaltInvocationError,
+    SaltSystemExit
+)
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -78,7 +80,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         if 'token' in self.config:
             import salt.utils.files
             try:
-                with salt.utils.files.fopen(os.path.join(self.config['cachedir'], '.root_key'), 'r') as fp_:
+                with salt.utils.files.fopen(os.path.join(self.config['key_dir'], '.root_key'), 'r') as fp_:
                     kwargs['key'] = fp_.readline()
             except IOError:
                 kwargs['token'] = self.config['token']
@@ -167,8 +169,8 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     out = 'progress'
                     try:
                         self._progress_ret(progress, out)
-                    except salt.exceptions.LoaderError as exc:
-                        raise salt.exceptions.SaltSystemExit(exc)
+                    except LoaderError as exc:
+                        raise SaltSystemExit(exc)
                     if 'return_count' not in progress:
                         ret.update(progress)
                 self._progress_end(out)
@@ -251,7 +253,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
             try:
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
-            except salt.exceptions.SaltClientError as exc:
+            except SaltClientError:
                 sys.exit(2)
 
             ret = {}
@@ -265,7 +267,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             try:
                 self.config['batch'] = self.options.batch
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, parser=self.options)
-            except salt.exceptions.SaltClientError as exc:
+            except SaltClientError:
                 # We will print errors to the console further down the stack
                 sys.exit(1)
             # Printing the output is already taken care of in run() itself
@@ -345,9 +347,9 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         if not hasattr(self, 'progress_bar'):
             try:
                 self.progress_bar = salt.output.get_progress(self.config, out, progress)
-            except Exception as exc:
-                raise salt.exceptions.LoaderError('\nWARNING: Install the `progressbar` python package. '
-                                                  'Requested job was still run but output cannot be displayed.\n')
+            except Exception:
+                raise LoaderError('\nWARNING: Install the `progressbar` python package. '
+                                  'Requested job was still run but output cannot be displayed.\n')
         salt.output.update_progress(self.config, progress, self.progress_bar, out)
 
     def _output_ret(self, ret, out):

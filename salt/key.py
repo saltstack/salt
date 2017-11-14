@@ -124,7 +124,7 @@ class KeyCLI(object):
         if self.opts[u'eauth']:
             if u'token' in self.opts:
                 try:
-                    with salt.utils.files.fopen(os.path.join(self.opts[u'cachedir'], u'.root_key'), u'r') as fp_:
+                    with salt.utils.files.fopen(os.path.join(self.opts[u'key_dir'], u'.root_key'), u'r') as fp_:
                         low[u'key'] = fp_.readline()
                 except IOError:
                     low[u'token'] = self.opts[u'token']
