@@ -49,21 +49,24 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_virtual_bails_without_parted(self):
         '''If parted not in PATH, __virtual__ shouldn't register module'''
-        with patch('salt.utils.which', lambda exe: not exe == "parted"):
+        with patch('salt.utils.which', lambda exe: not exe == "parted"),\
+                patch('salt.utils.is_windows', return_value=False):
             ret = parted.__virtual__()
             err = (False, 'The parted execution module failed to load parted binary is not in the path.')
             self.assertEqual(err, ret)
 
     def test_virtual_bails_without_lsblk(self):
         '''If lsblk not in PATH, __virtual__ shouldn't register module'''
-        with patch('salt.utils.which', lambda exe: not exe == "lsblk"):
+        with patch('salt.utils.which', lambda exe: not exe == "lsblk"),\
+                patch('salt.utils.is_windows', return_value=False):
             ret = parted.__virtual__()
             err = (False, 'The parted execution module failed to load lsblk binary is not in the path.')
             self.assertEqual(err, ret)
 
     def test_virtual_bails_without_partprobe(self):
         '''If partprobe not in PATH, __virtual__ shouldn't register module'''
-        with patch('salt.utils.which', lambda exe: not exe == "partprobe"):
+        with patch('salt.utils.which', lambda exe: not exe == "partprobe"),\
+                patch('salt.utils.is_windows', return_value=False):
             ret = parted.__virtual__()
             err = (False, 'The parted execution module failed to load partprobe binary is not in the path.')
             self.assertEqual(err, ret)

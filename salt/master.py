@@ -60,7 +60,6 @@ import salt.search
 import salt.key
 import salt.acl
 import salt.engines
-import salt.fileserver
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.transport.server
@@ -181,7 +180,8 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         in the parent process, then once the fork happens you'll start getting
         errors like "WARNING: Mixing fork() and threads detected; memory leaked."
         '''
-        # Init fileserver manager
+        # Avoid circular import
+        import salt.fileserver
         self.fileserver = salt.fileserver.Fileserver(self.opts)
         # Load Runners
         ropts = dict(self.opts)
@@ -459,6 +459,8 @@ class Master(SMaster):
             )
 
         if self.opts.get('fileserver_verify_config', True):
+            # Avoid circular import
+            import salt.fileserver
             fileserver = salt.fileserver.Fileserver(self.opts)
             if not fileserver.servers:
                 errors.append(
@@ -494,16 +496,15 @@ class Master(SMaster):
             if non_legacy_git_pillars:
                 try:
                     new_opts = copy.deepcopy(self.opts)
-                    from salt.pillar.git_pillar \
-                        import PER_REMOTE_OVERRIDES as per_remote_overrides, \
-                        PER_REMOTE_ONLY as per_remote_only
+                    import salt.pillar.git_pillar
                     for repo in non_legacy_git_pillars:
                         new_opts['ext_pillar'] = [repo]
                         try:
                             git_pillar = salt.utils.gitfs.GitPillar(new_opts)
-                            git_pillar.init_remotes(repo['git'],
-                                                    per_remote_overrides,
-                                                    per_remote_only)
+                            git_pillar.init_remotes(
+                                repo['git'],
+                                salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
+                                salt.pillar.git_pillar.PER_REMOTE_ONLY)
                         except FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:
@@ -973,6 +974,8 @@ class AESFuncs(object):
         '''
         Set the local file objects from the file server interface
         '''
+        # Avoid circular import
+        import salt.fileserver
         self.fs_ = salt.fileserver.Fileserver(self.opts)
         self._serve_file = self.fs_.serve_file
         self._file_find = self.fs_._find_file

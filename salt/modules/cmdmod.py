@@ -396,10 +396,8 @@ def _run(cmd,
             msg = 'missing salt/utils/win_runas.py'
             raise CommandExecutionError(msg)
 
-        if not isinstance(cmd, list):
-            cmd = salt.utils.shlex_split(cmd, posix=False)
-
-        cmd = ' '.join(cmd)
+        if isinstance(cmd, (list, tuple)):
+            cmd = ' '.join(cmd)
 
         return win_runas(cmd, runas, password, cwd)
 
@@ -536,11 +534,11 @@ def _run(cmd,
             .format(cwd)
         )
 
-    if python_shell is not True and not isinstance(cmd, list):
-        posix = True
-        if salt.utils.is_windows():
-            posix = False
-        cmd = salt.utils.shlex_split(cmd, posix=posix)
+    if python_shell is not True \
+            and not salt.utils.is_windows() \
+            and not isinstance(cmd, list):
+        cmd = salt.utils.shlex_split(cmd)
+
     if not use_vt:
         # This is where the magic happens
         try:

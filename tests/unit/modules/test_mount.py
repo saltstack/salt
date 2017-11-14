@@ -19,7 +19,7 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
 import salt.modules.mount as mount
 
 MOCK_SHELL_FILE = 'A B C D F G\n'
@@ -242,15 +242,26 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Returns true if the command passed is a fuse mountable application
         '''
-        with patch.object(salt.utils, 'which', return_value=None):
+        # Return False if fuse doesn't exist
+        with patch('salt.utils.which', return_value=None):
             self.assertFalse(mount.is_fuse_exec('cmd'))
 
-        with patch.object(salt.utils, 'which', return_value=True):
-            self.assertFalse(mount.is_fuse_exec('cmd'))
+        # Return CommandNotFoundError if fuse exists, but ldd doesn't exist
+        with patch('salt.utils.which', side_effect=[True, False]):
+            self.assertRaises(CommandNotFoundError, mount.is_fuse_exec, 'cmd')
 
-        mock = MagicMock(side_effect=[1, 0])
-        with patch.object(salt.utils, 'which', mock):
-            self.assertFalse(mount.is_fuse_exec('cmd'))
+        # Return False if fuse exists, ldd exists, but libfuse is not in the
+        # return
+        with patch('salt.utils.which', side_effect=[True, True]):
+            mock = MagicMock(return_value='not correct')
+            with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                self.assertFalse(mount.is_fuse_exec('cmd'))
+
+        # Return True if fuse exists, ldd exists, and libfuse is in the return
+        with patch('salt.utils.which', side_effect=[True, True]):
+            mock = MagicMock(return_value='contains libfuse')
+            with patch.dict(mount.__salt__, {'cmd.run': mock}):
+                self.assertTrue(mount.is_fuse_exec('cmd'))
 
     def test_swaps(self):
         '''

@@ -55,7 +55,7 @@ _DFLT_LOG_DATEFMT = '%H:%M:%S'
 _DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
 _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
-    '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
+    '%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d] %(message)s'
 )
 _DFLT_REFSPECS = ['+refs/heads/*:refs/remotes/origin/*', '+refs/tags/*:refs/tags/*']
 
@@ -334,7 +334,7 @@ VALID_OPTS = {
     # Whether or not scheduled mine updates should be accompanied by a job return for the job cache
     'mine_return_job': bool,
 
-    # Schedule a mine update every n number of seconds
+    # The number of minutes between mine updates.
     'mine_interval': int,
 
     # The ipc strategy. (i.e., sockets versus tcp, etc)
@@ -569,6 +569,23 @@ VALID_OPTS = {
     # False in 2016.3.0
     'add_proxymodule_to_opts': bool,
 
+    # Merge pillar data into configuration opts.
+    # As multiple proxies can run on the same server, we may need different
+    # configuration options for each, while there's one single configuration file.
+    # The solution is merging the pillar data of each proxy minion into the opts.
+    'proxy_merge_pillar_in_opts': bool,
+
+    # Deep merge of pillar data into configuration opts.
+    # Evaluated only when `proxy_merge_pillar_in_opts` is True.
+    'proxy_deep_merge_pillar_in_opts': bool,
+
+    # The strategy used when merging pillar into opts.
+    # Considered only when `proxy_merge_pillar_in_opts` is True.
+    'proxy_merge_pillar_in_opts_strategy': str,
+
+    # Allow enabling mine details using pillar data.
+    'proxy_mines_pillar': bool,
+
     # In some particular cases, always alive proxies are not beneficial.
     # This option can be used in those less dynamic environments:
     # the user can request the connection
@@ -699,6 +716,10 @@ VALID_OPTS = {
     'fileserver_ignoresymlinks': bool,
     'fileserver_limit_traversal': bool,
     'fileserver_verify_config': bool,
+
+    # Optionally apply '*' permissioins to any user. By default '*' is a fallback case that is
+    # applied only if the user didn't matched by other matchers.
+    'permissive_acl': bool,
 
     # Optionally enables keeping the calculated user's auth list in the token file.
     'keep_acl_in_token': bool,
@@ -1449,6 +1470,7 @@ DEFAULT_MASTER_OPTS = {
     'external_auth': {},
     'token_expire': 43200,
     'token_expire_user_override': False,
+    'permissive_acl': False,
     'keep_acl_in_token': False,
     'eauth_acl_module': '',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
@@ -1636,6 +1658,12 @@ DEFAULT_PROXY_MINION_OPTS = {
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'proxy', 'extmods'),
     'append_minionid_config_dirs': ['cachedir', 'pidfile', 'default_include', 'extension_modules'],
     'default_include': 'proxy.d/*.conf',
+
+    'proxy_merge_pillar_in_opts': False,
+    'proxy_deep_merge_pillar_in_opts': False,
+    'proxy_merge_pillar_in_opts_strategy': 'smart',
+
+    'proxy_mines_pillar': True,
 
     # By default, proxies will preserve the connection.
     # If this option is set to False,

@@ -23,9 +23,20 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
+LOCAL_PROTOS = ('', 'file')
 REMOTE_PROTOS = ('http', 'https', 'ftp', 'swift', 's3')
 VALID_PROTOS = ('salt', 'file') + REMOTE_PROTOS
 TEMPFILE_PREFIX = '__salt.tmp.'
+
+HASHES = {
+    'sha512': 128,
+    'sha384': 96,
+    'sha256': 64,
+    'sha224': 56,
+    'sha1': 40,
+    'md5': 32,
+}
+HASHES_REVMAP = dict([(y, x) for x, y in six.iteritems(HASHES)])
 
 
 def guess_archive_type(name):
@@ -33,7 +44,9 @@ def guess_archive_type(name):
     Guess an archive type (tar, zip, or rar) by its file extension
     '''
     name = name.lower()
-    for ending in ('tar', 'tar.gz', 'tar.bz2', 'tar.xz', 'tgz', 'tbz2', 'txz',
+    for ending in ('tar', 'tar.gz', 'tgz',
+                   'tar.bz2', 'tbz2', 'tbz',
+                   'tar.xz', 'txz',
                    'tar.lzma', 'tlz'):
         if name.endswith('.' + ending):
             return 'tar'
@@ -271,6 +284,8 @@ def safe_filename_leaf(file_basename):
     windows is \\ / : * ? " < > | posix is /
 
     .. versionadded:: 2017.7.2
+
+    :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
     def _replace(re_obj):
         return urllib.quote(re_obj.group(0), safe=u'')
@@ -283,16 +298,35 @@ def safe_filename_leaf(file_basename):
     return re.sub(u'[\\\\:/*?"<>|]', _replace, file_basename, flags=re.UNICODE)
 
 
-def safe_filepath(file_path_name):
+def safe_filepath(file_path_name, dir_sep=None):
     '''
     Input the full path and filename, splits on directory separator and calls safe_filename_leaf for
-    each part of the path.
+    each part of the path. dir_sep allows coder to force a directory separate to a particular character
 
     .. versionadded:: 2017.7.2
+
+    :codeauthor: Damon Atkins <https://github.com/damon-atkins>
     '''
+    if not dir_sep:
+        dir_sep = os.sep
+    # Normally if file_path_name or dir_sep is Unicode then the output will be Unicode
+    # This code ensure the output type is the same as file_path_name
+    if not isinstance(file_path_name, six.text_type) and isinstance(dir_sep, six.text_type):
+        dir_sep = dir_sep.encode('ascii')  # This should not be executed under PY3
+    # splitdrive only set drive on windows platform
     (drive, path) = os.path.splitdrive(file_path_name)
-    path = os.sep.join([safe_filename_leaf(file_section) for file_section in file_path_name.rsplit(os.sep)])
+    path = dir_sep.join([safe_filename_leaf(file_section) for file_section in path.rsplit(dir_sep)])
     if drive:
-        return os.sep.join([drive, path])
-    else:
-        return path
+        path = dir_sep.join([drive, path])
+    return path
+
+
+def remove(path):
+    '''
+    Runs os.remove(path) and suppresses the OSError if the file doesn't exist
+    '''
+    try:
+        os.remove(path)
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            raise

@@ -893,8 +893,8 @@ def highstate(test=None, queue=False, **kwargs):
     finally:
         st_.pop_active()
 
-    if __salt__['config.option']('state_data', '') == 'terse' or \
-            kwargs.get('terse'):
+    if isinstance(ret, dict) and (__salt__['config.option']('state_data', '') == 'terse' or
+            kwargs.get('terse')):
         ret = _filter_running(ret)
 
     serial = salt.payload.Serial(__opts__)
@@ -1408,6 +1408,12 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
+    # Apply requisites to high data
+    high_, req_in_errors = st_.state.requisite_in(high_)
+    if req_in_errors:
+        # This if statement should not be necessary if there were no errors,
+        # but it is required to get the unit tests to pass.
+        errors.extend(req_in_errors)
     if errors:
         __context__['retcode'] = 1
         return errors

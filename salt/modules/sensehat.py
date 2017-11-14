@@ -2,6 +2,8 @@
 '''
 Module for controlling the LED matrix or reading environment data on the SenseHat of a Raspberry Pi.
 
+.. versionadded:: 2017.7.0
+
 :maintainer:    Benedikt Werner <1benediktwerner@gmail.com>, Joachim Werner <joe@suse.com>
 :maturity:      new
 :depends:       sense_hat Python module

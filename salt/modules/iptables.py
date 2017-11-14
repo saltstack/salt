@@ -1455,6 +1455,8 @@ def _parser():
     add_arg('--or-mark', dest='or-mark', action='append')
     add_arg('--xor-mark', dest='xor-mark', action='append')
     add_arg('--set-mark', dest='set-mark', action='append')
+    add_arg('--nfmask', dest='nfmask', action='append')
+    add_arg('--ctmask', dest='ctmask', action='append')
     ## CONNSECMARK
     add_arg('--save', dest='save', action='append')
     add_arg('--restore', dest='restore', action='append')

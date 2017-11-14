@@ -674,7 +674,7 @@ Note these can be defined in the pillar for a minion as well.
 
 Default: ``60``
 
-The number of seconds a mine update runs.
+The number of minutes between mine updates.
 
 .. code-block:: yaml
 
@@ -1164,7 +1164,7 @@ be able to execute a certain module. The ``sys`` module is built into the minion
 and cannot be disabled.
 
 This setting can also tune the minion. Because all modules are loaded into system
-memory, disabling modules will lover the minion's memory footprint.
+memory, disabling modules will lower the minion's memory footprint.
 
 Modules should be specified according to their file name on the system and not by
 their virtual name. For example, to disable ``cmd``, use the string ``cmdmod`` which
@@ -2337,11 +2337,14 @@ Thread Settings
 
 .. conf_minion:: multiprocessing
 
+``multiprocessing``
+-------
+
 Default: ``True``
 
-If `multiprocessing` is enabled when a minion receives a
+If ``multiprocessing`` is enabled when a minion receives a
 publication a new process is spawned and the command is executed therein.
-Conversely, if `multiprocessing` is disabled the new publication will be run
+Conversely, if ``multiprocessing`` is disabled the new publication will be run
 executed in a thread.
 
 

@@ -1388,7 +1388,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     for opt in ['up_cmds', 'pre_up_cmds', 'post_up_cmds',
                 'down_cmds', 'pre_down_cmds', 'post_down_cmds']:
         if opt in opts:
-            iface_data['inet'][opt] = opts[opt]
+            iface_data[def_addrfam][opt] = opts[opt]
 
     for addrfam in ['inet', 'inet6']:
         if 'addrfam' in iface_data[addrfam] and iface_data[addrfam]['addrfam'] == addrfam:
@@ -2027,18 +2027,11 @@ def build_network_settings(**settings):
         # Write settings
         _write_file_network(network, _DEB_NETWORKING_FILE, True)
 
-    # Write hostname to /etc/hostname
+    # Get hostname and domain from opts
     sline = opts['hostname'].split('.', 1)
     opts['hostname'] = sline[0]
-    hostname = '{0}\n' . format(opts['hostname'])
     current_domainname = current_network_settings['domainname']
     current_searchdomain = current_network_settings['searchdomain']
-
-    # Only write the hostname if it has changed
-    if not opts['hostname'] == current_network_settings['hostname']:
-        if not ('test' in settings and settings['test']):
-            # TODO  replace wiht a call to network.mod_hostname instead
-            _write_file_network(hostname, _DEB_HOSTNAME_FILE)
 
     new_domain = False
     if len(sline) > 1:

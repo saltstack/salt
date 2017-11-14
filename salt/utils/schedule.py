@@ -842,7 +842,8 @@ class Schedule(object):
             if argspec.keywords:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in six.iteritems(ret):
-                    kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
+                    if key is not 'kwargs':
+                        kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
 
             ret['return'] = self.functions[func](*args, **kwargs)
 
@@ -1138,7 +1139,8 @@ class Schedule(object):
                     # Sort the list of "whens" from earlier to later schedules
                     _when.sort()
 
-                    for i in _when:
+                    # Copy the list so we can loop through it
+                    for i in copy.deepcopy(_when):
                         if i < now and len(_when) > 1:
                             # Remove all missed schedules except the latest one.
                             # We need it to detect if it was triggered previously.
