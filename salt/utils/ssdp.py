@@ -263,9 +263,13 @@ class SSDPDiscoveryServer(SSDPBase):
         listen_ip = self._config.get(self.LISTEN_IP, self.DEFAULTS[self.LISTEN_IP])
         port = self._config.get(self.PORT, self.DEFAULTS[self.PORT])
         loop = asyncio.get_event_loop()
-        transport, protocol = loop.run_until_complete(
-            loop.create_datagram_endpoint(SSDPFactory(answer=self._config[self.ANSWER]),
-                                          local_addr=(listen_ip, port), allow_broadcast=True))
+        protocol = SSDPFactory(answer=self._config[self.ANSWER])
+        if asyncio.ported:
+            transport, protocol = loop.run_until_complete(
+                SSDPDiscoveryServer.create_datagram_endpoint(loop, protocol, local_addr=(listen_ip, port)))
+        else:
+            transport, protocol = loop.run_until_complete(
+                loop.create_datagram_endpoint(protocol, local_addr=(listen_ip, port), allow_broadcast=True))
         try:
             loop.run_forever()
         except KeyboardInterrupt:
