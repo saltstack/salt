@@ -889,8 +889,8 @@ def destroy(name, call=None, kwargs=None):
     if kwargs is None:
         kwargs = {}
 
-    if kwargs.get('delete_volumes') is None:
-        raise SaltCloudExecutionFailure('The "delete_volumes" parameter is required')    
+    #if kwargs.get('delete_volumes') is None:
+    #    raise SaltCloudExecutionFailure('The "delete_volumes" parameter is required')    
 
     __utils__['cloud.fire_event'](
         'event',
@@ -915,7 +915,9 @@ def destroy(name, call=None, kwargs=None):
     #The server is deleted and now is safe to delete the volumes
     if kwargs.get('delete_volumes') is True:        
         for vol in attached_volumes:
+            log.debug('Deleting volume %s' % (vol.id)
             client.delete_volume(datacenter_id=datacenter_id, volume_id=vol.id)
+            log.debug('Deleted volume %s' % (vol.id)
 
     __utils__['cloud.fire_event'](
         'event',
