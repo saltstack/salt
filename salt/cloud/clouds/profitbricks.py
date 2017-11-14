@@ -905,16 +905,15 @@ def destroy(name, call=None, kwargs=None):
     conn = get_conn()
     node = get_node(conn, name)
     attached_volumes = None
-    log.debug(kwargs.get('delete_volumes'))
-    log.debug(kwargs)
+ 
     #Get volumes before the server is deleted
-    if kwargs.get('delete_volumes') is True:
+    if 'delete_volumes' in kwargs:
         attached_volumes = conn.get_attached_volumes(datacenter_id=datacenter_id, server_id=node['id'])        
     
     conn.delete_server(datacenter_id=datacenter_id, server_id=node['id'])
 
     #The server is deleted and now is safe to delete the volumes
-    if kwargs.get('delete_volumes') is True:        
+    if 'delete_volumes' in kwargs:        
         for vol in attached_volumes['items']:        
             log.debug('Deleting volume %s' % (vol['id']))
             conn.delete_volume(datacenter_id=datacenter_id, volume_id=vol['id'])
