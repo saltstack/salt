@@ -912,6 +912,7 @@ def destroy(name, call=None, kwargs=None):
     #The server is deleted and now is safe to delete the volumes
     #if kwargs.get('delete_volumes') is True:        
     for vol in attached_volumes:
+        print(vol)
         log.debug('Deleting volume %s' % (vol['id']))
         client.delete_volume(datacenter_id=datacenter_id, volume_id=vol['id'])
         log.debug('Deleted volume %s' % (vol['id']))
