@@ -889,8 +889,8 @@ def destroy(name, call=None, kwargs=None):
     if kwargs is None:
         kwargs = {}
 
-    if kwargs.get('delete_volume') is None:
-        raise SaltCloudExecutionFailure('The "delete_boot_volume" parameter is required')    
+    if kwargs.get('delete_volumes') is None:
+        raise SaltCloudExecutionFailure('The "delete_volumes" parameter is required')    
 
     __utils__['cloud.fire_event'](
         'event',
