@@ -907,7 +907,7 @@ def destroy(name, call=None, kwargs=None):
     #if kwargs.get('delete_volumes') is True:
     attached_volumes = conn.get_attached_volumes(datacenter_id=datacenter_id, server_id=node['id'])        
     
-    conn.delete_server(datacenter_id=datacenter_id, server_id=node['id'])
+    #conn.delete_server(datacenter_id=datacenter_id, server_id=node['id'])
 
     #The server is deleted and now is safe to delete the volumes
     #if kwargs.get('delete_volumes') is True:        
