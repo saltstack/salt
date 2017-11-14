@@ -4,6 +4,7 @@ source 'https://rubygems.org'
 
 gem 'test-kitchen'
 gem 'kitchen-salt', :git => 'https://github.com/saltstack/kitchen-salt.git'
+gem 'kitchen-sync'
 gem 'git'
 
 group :docker do

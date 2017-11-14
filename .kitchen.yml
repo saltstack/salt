@@ -19,6 +19,8 @@ driver:
   disable_upstart: false
   provision_command:
     - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+transport:
+  name: sftp
 <% end %>
 
 sudo: false
