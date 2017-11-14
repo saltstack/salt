@@ -20,6 +20,7 @@ import re
 import os
 import time
 import datetime
+import copy
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
@@ -1049,6 +1050,10 @@ def install(name=None,
         operator (<, >, <=, >=, =) and a version number (ex. '>1.2.3-4').
         This parameter is ignored if ``pkgs`` or ``sources`` is passed.
 
+    resolve_capabilities
+        If this option is set to True zypper will take capabilites into
+        account. In this case names which are just provided by a package
+        will get installed. Default is False.
 
     Multiple Package Installation Options:
 
@@ -1164,7 +1169,13 @@ def install(name=None,
         log.info('Targeting repo \'{0}\''.format(fromrepo))
     else:
         fromrepoopt = ''
-    cmd_install = ['install', '--name', '--auto-agree-with-licenses']
+    cmd_install = ['install', '--auto-agree-with-licenses']
+
+    if kwargs.get('resolve_capabilities', False):
+        cmd_install.append('--capability')
+    else:
+        cmd_install.append('--name')
+
     if not refresh:
         cmd_install.insert(0, '--no-refresh')
     if skip_verify:
@@ -1195,6 +1206,7 @@ def install(name=None,
         __zypper__(no_repo_failure=ignore_repo_failure).call(*cmd)
 
     __context__.pop('pkg.list_pkgs', None)
+    __context__.pop('pkg.list_list_provides', None)
     new = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
 
     # Handle packages which report multiple new versions
@@ -1312,6 +1324,7 @@ def upgrade(refresh=True,
 
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
     __context__.pop('pkg.list_pkgs', None)
+    __context__.pop('pkg.list_list_provides', None)
     new = list_pkgs()
 
     # Handle packages which report multiple new versions
@@ -1361,6 +1374,7 @@ def _uninstall(name=None, pkgs=None):
         targets = targets[500:]
 
     __context__.pop('pkg.list_pkgs', None)
+    __context__.pop('pkg.list_list_provides', None)
     ret = salt.utils.data.compare_dicts(old, list_pkgs())
 
     if errors:
@@ -2109,3 +2123,85 @@ def list_installed_patches():
         salt '*' pkg.list_installed_patches
     '''
     return _get_patches(installed_only=True)
+
+def list_provides(**kwargs):
+    '''
+    List package provides currently installed as a dict.
+    {'<provided_name>': ['<package_name', 'package_name', ...]}
+    '''
+    if 'pkg.list_provides' in __context__:
+        cached = __context__['pkg.list_provides']
+        return cached
+
+    cmd = ['rpm', '-qa', '--queryformat', '[%{PROVIDES}_|-%{NAME}\n]']
+    ret = {}
+    for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
+        provide, realname = line.split('_|-')
+
+        if provide == realname:
+            continue
+        if provide not in ret:
+            ret[provide] = list()
+        ret[provide].append(realname)
+
+    __context__['pkg.list_list_provides'] = ret
+
+    return ret
+
+def resolve_capabilities(pkgs, refresh, **kwargs):
+    '''
+    .. versionadded:: Oxygen
+
+    Convert name provides in ``pkgs`` into real package names if
+    ``resolve_capabilities`` parameter is set to True. In case of
+    ``resolve_capabilities`` is set to False the package list
+    is returned unchanged.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
+
+    resolve_capabilities
+        If this option is set to True the input will be checked if
+        a package with this name exists. If not, this function will
+        search for a package which provides this name. If one is found
+        the output is exchanged with the real package name.
+        In case this option is set to False (Default) the input will
+        be returned unchanged.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.resolve_capabilities resolve_capabilities=True w3m_ssl
+    '''
+    if refresh:
+        refresh_db()
+
+    ret = list()
+    for pkg in pkgs:
+        if isinstance(pkg, dict):
+            for name, version in pkg.items():
+                break
+        else:
+            name = pkg
+            version = None
+
+        if kwargs.get('resolve_capabilities', False):
+            try:
+                search(name, match='exact')
+            except CommandExecutionError as e:
+                # no package this such a name found
+                # search for a package which provides this name
+                result = search(name, provides=True, match='exact')
+                if len(result.keys()) == 1:
+                    name = result.keys()[0]
+                elif len(result.keys()) > 1:
+                    log.warn("Found ambiguous match for capability '{0}'.".format(pkg))
+
+        if version:
+            ret.append({name: version})
+        else:
+            ret.append(name)
+    return ret
