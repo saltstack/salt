@@ -1,6 +1,6 @@
 ---
 <% vagrant = system('which vagrant 2>/dev/null >/dev/null') %>
-<% version = '2017.7.2' %>
+<% version = '2017.7.1' %>
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
 

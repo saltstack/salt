@@ -1,9 +1,9 @@
 # This file is only used for running the test suite with kitchen-salt.
 
-source "https://rubygems.org"
+source 'https://rubygems.org'
 
-gem "test-kitchen"
-gem "kitchen-salt", :git => 'https://github.com/saltstack/kitchen-salt.git'
+gem 'test-kitchen'
+gem 'kitchen-salt', :git => 'https://github.com/saltstack/kitchen-salt.git'
 gem 'git'
 
 group :docker do
