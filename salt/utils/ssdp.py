@@ -262,6 +262,7 @@ class SSDPDiscoveryServer(SSDPBase):
         '''
         listen_ip = self._config.get(self.LISTEN_IP, self.DEFAULTS[self.LISTEN_IP])
         port = self._config.get(self.PORT, self.DEFAULTS[self.PORT])
+        self.log.info('Starting service discovery listener on udp://{0}:{1}'.format(listen_ip, port))
         loop = asyncio.get_event_loop()
         protocol = SSDPFactory(answer=self._config[self.ANSWER])
         if asyncio.ported:
@@ -273,7 +274,7 @@ class SSDPDiscoveryServer(SSDPBase):
         try:
             loop.run_forever()
         finally:
-            self.log.info('Removing SSDP publisher')
+            self.log.info('Stopping service discovery listener.')
             transport.close()
             loop.close()
 
