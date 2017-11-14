@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 from salt.ext import six
 import salt.utils.templates
 import salt.utils.napalm
+import salt.utils.versions
 from salt.utils.napalm import proxy_napalm_wrap
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -1072,6 +1073,10 @@ def load_template(template_name,
 
     To replace the config, set ``replace`` to ``True``.
 
+    .. warning::
+        The support for native NAPALM templates will be dropped in Salt Fluorine.
+        Implicitly, the ``template_path`` argument will be removed.
+
     template_name
         Identifies path to the template source.
         The template can be either stored on the local machine, either remotely.
@@ -1107,6 +1112,9 @@ def load_template(template_name,
         E.g.: if ``template_name`` is specified as ``my_template.jinja``,
         in order to find the template, this argument must be provided:
         ``template_path: /absolute/path/to/``.
+
+        .. note::
+            This argument will be deprecated beginning with release codename ``Fluorine``.
 
     template_hash: None
         Hash of the template file. Format: ``{hash_type: 'md5', 'hsum': <md5sum>}``
@@ -1274,7 +1282,11 @@ def load_template(template_name,
         'out': None
     }
     loaded_config = None
-
+    if template_path:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'Use of `template_path` detected. This argument will be removed in Salt Fluorine.'
+        )
     # prechecks
     if template_engine not in salt.utils.templates.TEMPLATE_REGISTRY:
         _loaded.update({
