@@ -17,12 +17,23 @@ import salt.modules.cmdmod
 import salt.utils.decorators as decorators
 from salt.utils.odict import OrderedDict
 
+__virtualname__ = 'zfs'
 log = logging.getLogger(__name__)
 
 # Function alias to set mapping.
 __func_alias__ = {
     'list_': 'list',
 }
+
+
+def __virtual__():
+    '''
+    Only load when the platform has zfs support
+    '''
+    if __grains__['zfs_support']:
+        return __virtualname__
+    else:
+        return (False, "The zfs module cannot be loaded: zfs not supported")
 
 
 @decorators.memoize
@@ -49,42 +60,6 @@ def _check_features():
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     return res['retcode'] == 0
-
-
-def __virtual__():
-    '''
-    Makes sure that ZFS kernel module is loaded.
-    '''
-    on_freebsd = __grains__['kernel'] == 'FreeBSD'
-    on_linux = __grains__['kernel'] == 'Linux'
-    on_solaris = __grains__['kernel'] == 'SunOS' and __grains__['kernelrelease'] == '5.11'
-
-    cmd = ''
-    if on_freebsd:
-        cmd = 'kldstat -q -m zfs'
-    elif on_linux:
-        modinfo = salt.utils.path.which('modinfo')
-        if modinfo:
-            cmd = '{0} zfs'.format(modinfo)
-        else:
-            cmd = 'ls /sys/module/zfs'
-    elif on_solaris:
-        # not using salt.utils.path.which('zfs') to keep compatible with others
-        cmd = 'which zfs'
-
-    if cmd and salt.modules.cmdmod.retcode(
-        cmd, output_loglevel='quiet', ignore_retcode=True
-    ) == 0:
-        return 'zfs'
-
-    if __grains__['kernel'] == 'OpenBSD':
-        return False
-
-    _zfs_fuse = lambda f: __salt__['service.' + f]('zfs-fuse')
-    if _zfs_fuse('available') and (_zfs_fuse('status') or _zfs_fuse('start')):
-        return 'zfs'
-
-    return (False, "The zfs module cannot be loaded: zfs not found")
 
 
 def exists(name, **kwargs):
