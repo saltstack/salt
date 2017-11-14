@@ -106,12 +106,15 @@ class NestDisplay(object):
                 )
                 first_line = False
         elif isinstance(ret, (list, tuple)):
+            color = self.GREEN
+            if 'retcode' in __context__ and __context__['retcode']:
+                color = self.RED
             for ind in ret:
                 if isinstance(ind, (list, tuple, dict)):
                     out.append(
                         self.ustring(
                             indent,
-                            self.GREEN,
+                            color,
                             '|_'
                         )
                     )
@@ -121,10 +124,13 @@ class NestDisplay(object):
                     self.display(ind, indent, '- ', out)
         elif isinstance(ret, dict):
             if indent:
+                color = self.CYAN
+                if 'retcode' in __context__ and __context__['retcode']:
+                    color = self.RED
                 out.append(
                     self.ustring(
                         indent,
-                        self.CYAN,
+                        color,
                         '----------'
                     )
                 )
@@ -134,13 +140,15 @@ class NestDisplay(object):
                 keys = ret.keys()
             else:
                 keys = sorted(ret)
-
+            color = self.CYAN
+            if 'retcode' in __context__ and __context__['retcode']:
+                color = self.RED
             for key in keys:
                 val = ret[key]
                 out.append(
                     self.ustring(
                         indent,
-                        self.CYAN,
+                        color,
                         key,
                         suffix=':',
                         prefix=prefix
