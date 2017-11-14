@@ -279,7 +279,7 @@ class SSDPDiscoveryServer(SSDPBase):
             loop.close()
 
 
-class SSPDiscoveryClient(SSDPBase):
+class SSDPDiscoveryClient(SSDPBase):
     '''
     Class to discover Salt Master via UDP broadcast.
     '''
