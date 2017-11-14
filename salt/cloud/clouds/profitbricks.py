@@ -732,7 +732,7 @@ def create(vm_):
     except AttributeError:
         pass
 
-    if (not 'image' in vm_) and (not 'image_alias' in vm_):
+    if ('image' not in vm_) and ('image_alias' not in vm_):
         log.error('The image or image_alias parameter is required.')
 
     data = None
@@ -867,7 +867,7 @@ def create(vm_):
         raise SaltCloudSystemExit('A valid IP address was not found.')
 
 
-def destroy(name, call=None, kwargs=None):
+def destroy(kwargs=None, name, call=None):
     '''
     destroy a machine by name
 
