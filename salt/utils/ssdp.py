@@ -20,9 +20,14 @@ Salt Service Discovery Protocol.
 JSON-based service discovery protocol, used by minions to find running Master.
 '''
 
-import socket
-import logging
 import datetime
+import logging
+import socket
+
+from salt.utils import json
+json = json.import_json()
+if not hasattr(json, 'dumps'):
+    json = None
 
 try:
     import asyncio
