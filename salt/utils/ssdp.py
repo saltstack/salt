@@ -198,6 +198,6 @@ class SSDPDiscoveryServer(SSDPBase):
         except KeyboardInterrupt:
             pass
         finally:
-            log.info("Shutdown server")
+            self.log.info('Removing SSDP publisher')
             transport.close()
             loop.close()
