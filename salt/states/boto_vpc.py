@@ -1509,7 +1509,7 @@ def accept_vpc_peering_connection(name=None, conn_id=None, conn_name=None,
     if not pending:
         ret['result'] = True
         ret['changes'].update({'old':
-              'No pending VPC peering connection found. Nothing to be done.' })
+              'No pending VPC peering connection found. Nothing to be done.'})
         return ret
 
     if __opts__['test']:
