@@ -91,7 +91,6 @@ import sys
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 import salt.utils.data
 import salt.utils.files
@@ -406,7 +405,7 @@ def managed(name, ppa=None, **kwargs):
         sanitizedkwargs = kwargs
 
     if os_family == 'debian':
-        repo = _strip_uri(repo)
+        repo = salt.utils.pkg.deb.strip_uri(repo)
 
     if pre:
         for kwarg in sanitizedkwargs:

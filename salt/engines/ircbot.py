@@ -40,7 +40,7 @@ event <tag> [<extra>, <data>]
 
 Example of usage
 
-.. code:: txt
+.. code-block:: txt
 
     08:33:57 @gtmanfred > !ping
     08:33:57   gtmanbot > gtmanfred: pong
@@ -49,7 +49,7 @@ Example of usage
     08:34:17 @gtmanfred > !event test/tag/ircbot irc is usefull
     08:34:17   gtmanbot > gtmanfred: TaDa!
 
-.. code:: txt
+.. code-block:: txt
 
     [DEBUG   ] Sending event: tag = salt/engines/ircbot/test/tag/ircbot; data = {'_stamp': '2016-11-28T14:34:16.633623', 'data': [u'irc', u'is', u'usefull']}
 

@@ -718,7 +718,7 @@ Note that ping_on_rotate may cause high load on the master immediately after
 the key rotation event as minions reconnect. Consider this carefully if this
 salt master is managing a large number of minions.
 
-.. code-black:: yaml
+.. code-block:: yaml
 
     ping_on_rotate: False
 
@@ -904,7 +904,7 @@ is set to ``tcp`` by default on Windows.
 
     ipc_mode: ipc
 
-.. conf_master::
+.. conf_master:: tcp_master_pub_port
 
 ``tcp_master_pub_port``
 -----------------------
@@ -1277,6 +1277,12 @@ will be automatically accepted. Matches will be searched for first by string
 comparison, then by globbing, then by full-string regex matching.
 This should still be considered a less than secure option, due to the fact
 that trust is based on just the requesting minion id.
+
+.. versionchanged:: Oxygen
+    For security reasons the file must be readonly except for it's owner.
+    If :conf_master:`permissive_pki_access` is ``True`` the owning group can also
+    have write access, but if Salt is running as ``root`` it must be a member of that group.
+    A less strict requirement also existed in previous version.
 
 .. conf_master:: autoreject_file
 
@@ -1973,10 +1979,119 @@ the cloud profile or master config file, no templating will be performed.
 
     userdata_template: jinja
 
+.. conf_master:: jinja_env
+
+``jinja_env``
+-------------
+
+.. versionadded:: Oxygen
+
+Default: ``{}``
+
+jinja_env overrides the default Jinja environment options for
+**all templates except sls templates**.
+To set the options for sls templates use :conf_master:`jinja_sls_env`.
+
+.. note::
+
+    The `Jinja2 Environment documentation <http://jinja.pocoo.org/docs/api/#jinja2.Environment>`_ is the official source for the default values.
+    Not all the options listed in the jinja documentation can be overridden using :conf_master:`jinja_env` or :conf_master:`jinja_sls_env`.
+
+The default options are:
+
+.. code-block:: yaml
+
+    jinja_env:
+      block_start_string: '{%'
+      block_end_string: '%}'
+      variable_start_string: '{{'
+      variable_end_string: '}}'
+      comment_start_string: '{#'
+      comment_end_string: '#}'
+      line_statement_prefix: 
+      line_comment_prefix: 
+      trim_blocks: False
+      lstrip_blocks: False
+      newline_sequence: '\n'
+      keep_trailing_newline: False
+
+.. conf_master:: jinja_sls_env
+
+``jinja_sls_env``
+-----------------
+
+.. versionadded:: Oxygen
+
+Default: ``{}``
+
+jinja_sls_env sets the Jinja environment options for **sls templates**.
+The defaults and accepted options are exactly the same as they are
+for :conf_master:`jinja_env`.
+
+The default options are:
+
+.. code-block:: yaml
+
+    jinja_sls_env:
+      block_start_string: '{%'
+      block_end_string: '%}'
+      variable_start_string: '{{'
+      variable_end_string: '}}'
+      comment_start_string: '{#'
+      comment_end_string: '#}'
+      line_statement_prefix: 
+      line_comment_prefix: 
+      trim_blocks: False
+      lstrip_blocks: False
+      newline_sequence: '\n'
+      keep_trailing_newline: False
+
+Example using line statements and line comments to increase ease of use:
+
+If your configuration options are
+
+.. code-block:: yaml
+    jinja_sls_env:
+      line_statement_prefix: '%'
+      line_comment_prefix: '##'
+
+With these options jinja will interpret anything after a ``%`` at the start of a line (ignoreing whitespace)
+as a jinja statement and will interpret anything after a ``##`` as a comment.
+
+This allows the following more convenient syntax to be used:
+
+.. code-block:: yaml
+
+    ## (this comment will not stay once rendered)
+    # (this comment remains in the rendered template)
+    ## ensure all the formula services are running
+    % for service in formula_services:
+    enable_service_{{ serivce }}:
+      service.running:
+        name: {{ service }}
+    % endfor
+
+The following less convenient but equivalent syntax would have to
+be used if you had not set the line_statement and line_comment options:
+
+.. code-block:: yaml
+
+    {# (this comment will not stay once rendered) #}
+    # (this comment remains in the rendered template)
+    {# ensure all the formula services are running #}
+    {% for service in formula_services %}
+    enable_service_{{ service }}:
+      service.running:
+        name: {{ service }}
+    {% endfor %}
+
 .. conf_master:: jinja_trim_blocks
 
 ``jinja_trim_blocks``
 ---------------------
+
+.. deprecated:: Oxygen
+    Replaced by :conf_master:`jinja_env` and :conf_master:`jinja_sls_env`
 
 .. versionadded:: 2014.1.0
 
@@ -1994,6 +2109,9 @@ to the Jinja environment init variable ``trim_blocks``.
 
 ``jinja_lstrip_blocks``
 -----------------------
+
+.. deprecated:: Oxygen
+    Replaced by :conf_master:`jinja_env` and :conf_master:`jinja_sls_env`
 
 .. versionadded:: 2014.1.0
 
@@ -4237,6 +4355,7 @@ Default: ``10``
 The number of workers for the runner/wheel in the reactor.
 
 .. code-block:: yaml
+
     reactor_worker_threads: 10
 
 .. conf_master:: reactor_worker_hwm

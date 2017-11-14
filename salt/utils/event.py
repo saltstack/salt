@@ -420,7 +420,7 @@ class SaltEvent(object):
                     self.pulluri,
                     io_loop=self.io_loop
                 )
-            # For the async case, the connect will be defered to when
+            # For the async case, the connect will be deferred to when
             # fire_event() is invoked.
             self.cpush = True
         return self.cpush
@@ -576,16 +576,17 @@ class SaltEvent(object):
                   auto_reconnect=False):
         '''
         Get a single publication.
-        IF no publication available THEN block for up to wait seconds
-        AND either return publication OR None IF no publication available.
+        If no publication is available, then block for up to ``wait`` seconds.
+        Return publication if it is available or ``None`` if no publication is
+        available.
 
-        IF wait is 0 then block forever.
+        If wait is 0, then block forever.
 
         tag
             Only return events matching the given tag. If not specified, or set
             to an empty string, all events are returned. It is recommended to
             always be selective on what is to be returned in the event that
-            multiple requests are being multiplexed
+            multiple requests are being multiplexed.
 
         match_type
             Set the function to match the search tag with event tags.
@@ -646,7 +647,8 @@ class SaltEvent(object):
             return ret['data']
 
     def get_event_noblock(self):
-        '''Get the raw event without blocking or any other niceties
+        '''
+        Get the raw event without blocking or any other niceties
         '''
         assert self._run_io_loop_sync
 
@@ -660,8 +662,9 @@ class SaltEvent(object):
         return {'data': data, 'tag': mtag}
 
     def get_event_block(self):
-        '''Get the raw event in a blocking fashion
-           Slower, but decreases the possibility of dropped events
+        '''
+        Get the raw event in a blocking fashion. This is slower, but it decreases the
+        possibility of dropped events.
         '''
         assert self._run_io_loop_sync
 

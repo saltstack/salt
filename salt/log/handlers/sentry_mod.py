@@ -123,36 +123,25 @@ def setup_handlers():
             url = urlparse(dsn)
             if not transport_registry.supported_scheme(url.scheme):
                 raise ValueError('Unsupported Sentry DSN scheme: {0}'.format(url.scheme))
-            dsn_config = {}
-            if (hasattr(transport_registry, 'compute_scope') and
-                    callable(transport_registry.compute_scope)):
-                conf_extras = transport_registry.compute_scope(url, dsn_config)
-                dsn_config.update(conf_extras)
-                options.update({
-                    'project': dsn_config['SENTRY_PROJECT'],
-                    'servers': dsn_config['SENTRY_SERVERS'],
-                    'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
-                    'secret_key': dsn_config['SENTRY_SECRET_KEY']
-                })
         except ValueError as exc:
             log.info(
                 'Raven failed to parse the configuration provided '
                 'DSN: {0}'.format(exc)
             )
 
-    # Allow options to be overridden if previously parsed, or define them
-    for key in ('project', 'servers', 'public_key', 'secret_key'):
-        config_value = get_config_value(key)
-        if config_value is None and key not in options:
-            log.debug(
-                'The required \'sentry_handler\' configuration key, '
-                '\'{0}\', is not properly configured. Not configuring '
-                'the sentry logging handler.'.format(key)
-            )
-            return
-        elif config_value is None:
-            continue
-        options[key] = config_value
+    if not dsn:
+        for key in ('project', 'servers', 'public_key', 'secret_key'):
+            config_value = get_config_value(key)
+            if config_value is None and key not in options:
+                log.debug(
+                    'The required \'sentry_handler\' configuration key, '
+                    '\'{0}\', is not properly configured. Not configuring '
+                    'the sentry logging handler.'.format(key)
+                )
+                return
+            elif config_value is None:
+                continue
+            options[key] = config_value
 
     # site: An optional, arbitrary string to identify this client installation.
     options.update({

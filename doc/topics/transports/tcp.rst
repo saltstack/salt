@@ -34,7 +34,7 @@ passing on a single socket.
 TLS Support
 ===========
 
-.. version_added:: 2016.11.1
+.. versionadded:: 2016.11.1
 
 The TCP transport allows for the master/minion communication to be optionally
 wrapped in a TLS connection. Enabling this is simple, the master and minion need
