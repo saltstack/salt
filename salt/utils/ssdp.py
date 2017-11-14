@@ -272,8 +272,6 @@ class SSDPDiscoveryServer(SSDPBase):
                 loop.create_datagram_endpoint(protocol, local_addr=(listen_ip, port), allow_broadcast=True))
         try:
             loop.run_forever()
-        except KeyboardInterrupt:
-            pass
         finally:
             self.log.info('Removing SSDP publisher')
             transport.close()
