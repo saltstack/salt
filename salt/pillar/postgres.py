@@ -90,7 +90,8 @@ class POSTGRESExtPillar(SqlBaseExtPillar):
         conn = psycopg2.connect(host=_options['host'],
                                 user=_options['user'],
                                 password=_options['pass'],
-                                dbname=_options['db'])
+                                dbname=_options['db'],
+                                port=_options['port'])
         cursor = conn.cursor()
         try:
             yield cursor
