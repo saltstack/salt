@@ -905,7 +905,7 @@ def destroy(name, call=None, delete_volumes=None):
     conn = get_conn()
     node = get_node(conn, name)
     attached_volumes = None
-
+    log.debug(delete_volumes)
     #Get volumes before the server is deleted
     if delete_volumes is True:
         attached_volumes = conn.get_attached_volumes(datacenter_id=datacenter_id, server_id=node['id'])        
