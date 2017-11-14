@@ -904,17 +904,17 @@ def destroy(name, call=None, kwargs=None):
     attached_volumes = None
 
     #Get volumes before the server is deleted
-    #if kwargs.get('delete_volumes') is True:
-    attached_volumes = conn.get_attached_volumes(datacenter_id=datacenter_id, server_id=node['id'])        
+    if kwargs.get('delete_volumes') is True:
+        attached_volumes = conn.get_attached_volumes(datacenter_id=datacenter_id, server_id=node['id'])        
     
     conn.delete_server(datacenter_id=datacenter_id, server_id=node['id'])
 
     #The server is deleted and now is safe to delete the volumes
-    #if kwargs.get('delete_volumes') is True:        
-    for vol in attached_volumes['items']:        
-        log.debug('Deleting volume %s' % (vol['id']))
-        conn.delete_volume(datacenter_id=datacenter_id, volume_id=vol['id'])
-        log.debug('Deleted volume %s' % (vol['id']))
+    if kwargs.get('delete_volumes') is True:        
+        for vol in attached_volumes['items']:        
+            log.debug('Deleting volume %s' % (vol['id']))
+            conn.delete_volume(datacenter_id=datacenter_id, volume_id=vol['id'])
+            log.debug('Deleted volume %s' % (vol['id']))
 
     __utils__['cloud.fire_event'](
         'event',
