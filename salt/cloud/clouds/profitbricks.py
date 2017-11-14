@@ -732,6 +732,9 @@ def create(vm_):
     except AttributeError:
         pass
 
+    if (not 'image' in vm_) and (not 'image_alias' in vm_):
+        log.error('The image or image_alias parameter is required.')
+
     data = None
     datacenter_id = get_datacenter_id()
     conn = get_conn()
