@@ -306,7 +306,7 @@ def _bootstrap_yum(
 
     root
         The root of the image to install to. Will be created as a directory if
-        if does not exist. (e.x.: /root/arch)
+        it does not exist. (e.x.: /root/arch)
 
     pkg_confs
         The location of the conf files to copy into the image, to point yum
@@ -374,7 +374,7 @@ def _bootstrap_deb(
 
     root
         The root of the image to install to. Will be created as a directory if
-        if does not exist. (e.x.: /root/wheezy)
+        it does not exist. (e.x.: /root/wheezy)
 
     arch
         Architecture of the target image. (e.x.: amd64)
@@ -472,7 +472,7 @@ def _bootstrap_pacman(
 
     root
         The root of the image to install to. Will be created as a directory if
-        if does not exist. (e.x.: /root/arch)
+        it does not exist. (e.x.: /root/arch)
 
     pkg_confs
         The location of the conf files to copy into the image, to point pacman
@@ -480,7 +480,7 @@ def _bootstrap_pacman(
 
     img_format
         The image format to be used. The ``dir`` type needs no special
-        treatment, but others need special treatement.
+        treatment, but others need special treatment.
 
     pkgs
         A list of packages to be installed on this image. For Arch Linux, this
