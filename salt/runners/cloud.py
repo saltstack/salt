@@ -115,11 +115,13 @@ def profile(prof=None, instances=None, opts=None, **kwargs):
     return info
 
 
-def map_run(path=None, **kwargs):
+def map_run(path=None, opts=None, **kwargs):
     '''
     Execute a salt cloud map file
     '''
     client = _get_client()
+    if isinstance(opts, dict):
+        client.opts.update(opts)
     info = client.map_run(path, **salt.utils.args.clean_kwargs(**kwargs))
     return info
 
