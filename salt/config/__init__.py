@@ -186,6 +186,9 @@ VALID_OPTS = {
     # The directory used to store public key data
     'pki_dir': str,
 
+    # The directory to store authentication keys of a master's local environment.
+    'key_dir': str,
+
     # A unique identifier for this daemon
     'id': str,
 
@@ -887,6 +890,12 @@ VALID_OPTS = {
     # check in with their lists of expected minions before giving up
     'syndic_wait': int,
 
+    # Override Jinja environment option defaults for all templates except sls templates
+    'jinja_env': dict,
+
+    # Set Jinja environment options for sls templates
+    'jinja_sls_env': dict,
+
     # If this is set to True leading spaces and tabs are stripped from the start
     # of a line to a block.
     'jinja_lstrip_blocks': bool,
@@ -1420,6 +1429,7 @@ DEFAULT_MASTER_OPTS = {
     'archive_jobs': False,
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
+    'key_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'key'),
     'key_cache': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
@@ -1638,6 +1648,8 @@ DEFAULT_MASTER_OPTS = {
     'winrepo_passphrase': '',
     'winrepo_refspecs': _DFLT_REFSPECS,
     'syndic_wait': 5,
+    'jinja_env': {},
+    'jinja_sls_env': {},
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
     'tcp_keepalive': True,
@@ -2399,7 +2411,7 @@ def syndic_config(master_config_path,
     opts.update(syndic_opts)
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'pki_dir', 'key_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir'
     ]
     for config_key in ('log_file', 'key_logfile', 'syndic_log_file'):
@@ -3770,7 +3782,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [
-        'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
+        'pki_dir', 'key_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
         'autosign_file', 'autoreject_file', 'token_dir', 'syndic_dir',
         'sqlite_queue_dir'
     ]
