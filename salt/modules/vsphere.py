@@ -1939,7 +1939,7 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxi', 'esxcluster', 'esxdatacenter', 'vcenter')
+@supports_proxies('esxi', 'esxcluster', 'esxdatacenter', 'vcenter', 'esxvm')
 @gets_service_instance_via_proxy
 def test_vcenter_connection(service_instance=None):
     '''
@@ -7218,6 +7218,7 @@ def _get_esxi_proxy_details():
             det.get('principal'), det.get('domain'), esxi_hosts
 
 
+@depends(HAS_PYVMOMI)
 @gets_service_instance_via_proxy
 def get_vm(name, datacenter=None, vm_properties=None, traversal_spec=None,
            parent_ref=None, service_instance=None):
@@ -7301,7 +7302,7 @@ def get_vm_config_file(name, datacenter, placement, datastore, service_instance=
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxvm')
+@supports_proxies('esxvm', 'esxcluster', 'esxdatacenter')
 @gets_service_instance_via_proxy
 def register_vm(name, datacenter, placement, vmx_path, service_instance=None):
     '''
@@ -7495,7 +7496,31 @@ def _apply_memory_config(config_spec, memory):
         config_spec.memoryHotAddEnabled = memory['hotadd']
 
 
-def _apply_advanced_config(config_spec, advanced_config):
+depends(HAS_PYVMOMI)
+@supports_proxies('esxvm', 'esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def get_advanced_configs(vm_name, datacenter, service_instance=None):
+    '''
+    Returns extra config parameters from a virtual machine advanced config list
+
+    vm_name
+        Virtual machine name
+
+    datacenter
+        Datacenter name where the virtual machine is available
+
+
+    service_instance
+        vCenter service instance for connection and configuration
+    '''
+    current_config = get_vm_config(vm_name,
+                                   datacenter=datacenter,
+                                   objects=True,
+                                   service_instance=service_instance)
+    return current_config['advanced_configs']
+
+
+def _apply_advanced_config(config_spec, advanced_config, vm_extra_config=None):
     '''
     Sets configuration parameters for the vm
 
@@ -7505,50 +7530,28 @@ def _apply_advanced_config(config_spec, advanced_config):
     advanced_config
         config key value pairs
 
-    vm_ref
-        Virtual machine object vim.VirtualMachine
+    vm_extra_config
+        Virtual machine vm_ref.config.extraConfig object
     '''
     log.trace('Configuring advanced configuration parameters {0}'.format(advanced_config))
-    vm_extra_config = []
     if isinstance(advanced_config, str):
         raise salt.exceptions.ArgumentValueError('The specified \'advanced_configs\' configuration'
                                       ' option cannot be parsed, please check the parameters')
     for key, value in six.iteritems(advanced_config):
         for option in vm_extra_config:
             if option.key == key and option.value == str(value):
-                break
+                continue
         else:
             option = vim.option.OptionValue(key=key, value=value)
             config_spec.extraConfig.append(option)
 
 
-def _delete_advanced_config(config_spec, advanced_config):
-    '''
-    Removes configuration parameters for the vm
-
-    config_spec
-        vm.ConfigSpec object
-
-    advanced_config
-        config key value pairs
-
-    vm_ref
-        Virtual machine object vim.VirtualMachine
-    '''
-    log.trace('Removing advanced configuration parameters {0}'.format(advanced_config))
-    vm_extra_config = []
-    if isinstance(advanced_config, str):
-        raise salt.exceptions.ArgumentValueError('The specified \'advanced_configs\' configuration'
-                                      ' option cannot be parsed, please check the parameters')
-    for key, value in six.iteritems(advanced_config):
-        option = vim.option.OptionValue(key=key, value='')
-        config_spec.extraConfig.append(option)
-
-
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxvm', 'esxcluster', 'esxdatacenter')
 @gets_service_instance_via_proxy
-def delete_advanced_configs(vm_name, datacenter, advanced_configs, service_instance=None):
+def set_advanced_configs(vm_name, datacenter, advanced_configs, service_instance=None):
     '''
-    Removes extra config parameters from a virtual machine
+    Appends extra config parameters to a virtual machine advanced config list
 
     vm_name
         Virtual machine name
@@ -7557,8 +7560,7 @@ def delete_advanced_configs(vm_name, datacenter, advanced_configs, service_insta
         Datacenter name where the virtual machine is available
 
     advanced_configs
-        Dictionary with advanced parameter key value pairs, for removal an
-        empty string should be supplied as a value for a key
+        Dictionary with advanced parameter key value pairs
 
     service_instance
         vCenter service instance for connection and configuration
@@ -7578,10 +7580,71 @@ def delete_advanced_configs(vm_name, datacenter, advanced_configs, service_insta
                                                    container_ref=datacenter_ref)
     config_spec = vim.vm.ConfigSpec()
     changes = diffs['advanced_configs'].diffs
-    if _delete_advanced_config(config_spec, diffs['advanced_configs'].diffs):
+    _apply_advanced_config(config_spec, diffs['advanced_configs'].new_values, vm_ref.config.extraConfig)
+    if changes:
         salt.utils.vmware.update_vm(vm_ref, config_spec)
+    return {'advanced_config_changes': changes}
 
-    return changes
+
+def _delete_advanced_config(config_spec, advanced_config, vm_extra_config):
+    '''
+    Removes configuration parameters for the vm
+
+    config_spec
+        vm.ConfigSpec object
+
+    advanced_config
+        List of advanced config keys to be deleted
+
+    vm_extra_config
+        Virtual machine vm_ref.config.extraConfig object
+    '''
+    log.trace('Removing advanced configuration parameters {0}'.format(advanced_config))
+    if isinstance(advanced_config, str):
+        raise salt.exceptions.ArgumentValueError('The specified \'advanced_configs\' configuration'
+                                      ' option cannot be parsed, please check the parameters')
+    removed_configs = []
+    for key in advanced_config:
+        for option in vm_extra_config:
+            if option.key == key:
+                option = vim.option.OptionValue(key=key, value='')
+                config_spec.extraConfig.append(option)
+                removed_configs.append(key)
+        else:
+            continue
+    return removed_configs
+
+
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxvm', 'esxcluster', 'esxdatacenter')
+@gets_service_instance_via_proxy
+def delete_advanced_configs(vm_name, datacenter, advanced_configs, service_instance=None):
+    '''
+    Removes extra config parameters from a virtual machine
+
+    vm_name
+        Virtual machine name
+
+    datacenter
+        Datacenter name where the virtual machine is available
+
+    advanced_configs
+        List of advanced config values to be removed
+
+    service_instance
+        vCenter service instance for connection and configuration
+    '''
+    datacenter_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
+    vm_ref = salt.utils.vmware.get_mor_by_property(service_instance,
+                                                   vim.VirtualMachine,
+                                                   vm_name,
+                                                   property_name='name',
+                                                   container_ref=datacenter_ref)
+    config_spec = vim.vm.ConfigSpec()
+    removed_configs = _delete_advanced_config(config_spec, advanced_configs, vm_ref.config.extraConfig)
+    if removed_configs:
+        salt.utils.vmware.update_vm(vm_ref, config_spec)
+    return {'removed_configs': removed_configs}
 
 
 def _get_scsi_controller_key(bus_number, scsi_ctrls):
@@ -8372,7 +8435,7 @@ def _create_cd_drives(cd_drives, controllers=None, parent_ref=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies('esxvm')
+@supports_proxies('esxvm', 'esxcluster', 'esxdatacenter')
 @gets_service_instance_via_proxy
 def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore, placement,
               interfaces, disks, scsi_devices, serial_ports=None, ide_controllers=None,
@@ -8605,15 +8668,15 @@ def compare_vm_configs(new_config, current_config):
     keys.discard('datastore')
     for property_key in ('version', 'image'):
         if property_key in keys:
-            single_value_diff = recursive_diff({property_key: new_config[property_key]},
-                                               {property_key: current_config[property_key]})
+            single_value_diff = recursive_diff({property_key: current_config[property_key]},
+                                               {property_key: new_config[property_key]})
             if single_value_diff.diffs:
                 diffs[property_key] = single_value_diff
             keys.discard(property_key)
 
     if 'cpu' in keys:
         keys.remove('cpu')
-        cpu_diff = recursive_diff(new_config['cpu'], current_config['cpu'])
+        cpu_diff = recursive_diff(current_config['cpu'], new_config['cpu'])
         if cpu_diff.diffs:
             diffs['cpu'] = cpu_diff
 
@@ -8621,14 +8684,14 @@ def compare_vm_configs(new_config, current_config):
         keys.remove('memory')
         _convert_units([current_config['memory']])
         _convert_units([new_config['memory']])
-        memory_diff = recursive_diff(new_config['memory'], current_config['memory'])
+        memory_diff = recursive_diff(current_config['memory'], new_config['memory'])
         if memory_diff.diffs:
             diffs['memory'] = memory_diff
 
     if 'advanced_configs' in keys:
         keys.remove('advanced_configs')
         key = 'advanced_configs'
-        advanced_diff = recursive_diff(new_config[key], current_config[key])
+        advanced_diff = recursive_diff(current_config[key], new_config[key])
         if advanced_diff.diffs:
             diffs[key] = advanced_diff
 
@@ -8858,7 +8921,7 @@ def _update_disks(disks_old_new):
     for item in disks_old_new:
         current_disk = item['old']
         next_disk = item['new']
-        difference = recursive_diff(next_disk, current_disk)
+        difference = recursive_diff(current_disk, next_disk)
         difference.ignore_unset_values = False
         if difference.changed():
             if next_disk['size'] < current_disk['size']:
@@ -8900,7 +8963,7 @@ def _update_scsi_devices(scsis_old_new, current_disks):
     for item in scsis_old_new:
         next_scsi = item['new']
         current_scsi = item['old']
-        difference = recursive_diff(next_scsi, current_scsi)
+        difference = recursive_diff(current_scsi, next_scsi)
         difference.ignore_unset_values = False
         if difference.changed():
             log.trace('Virtual machine scsi device will be updated '
@@ -8955,7 +9018,7 @@ def _update_network_adapters(interface_old_new, parent):
     for item in interface_old_new:
         current_interface = item['old']
         next_interface = item['new']
-        difference = recursive_diff(next_interface, current_interface)
+        difference = recursive_diff(current_interface, next_interface)
         difference.ignore_unset_values = False
         if difference.changed():
             log.trace('Virtual machine network adapter will be updated switch_type={0} name={1} '
@@ -8988,7 +9051,7 @@ def _update_serial_ports(serial_old_new):
     for item in serial_old_new:
         current_serial = item['old']
         next_serial = item['new']
-        difference = recursive_diff(next_serial, current_serial)
+        difference = recursive_diff(current_serial, next_serial)
         difference.ignore_unset_values = False
         if difference.changed():
             serial_changes.append(_apply_serial_port(next_serial, current_serial['key'], 'edit'))
@@ -9015,7 +9078,7 @@ def _update_cd_drives(drives_old_new, controllers=[], parent=None):
     for item in drives_old_new:
         current_drive = item['old']
         new_drive = item['new']
-        difference = recursive_diff(new_drive, current_drive)
+        difference = recursive_diff(current_drive, new_drive)
         difference.ignore_unset_values = False
         if difference.changed():
             if controllers:
@@ -9048,6 +9111,8 @@ def _delete_device(device):
     return device_spec
 
 
+@depends(HAS_PYVMOMI)
+@supports_proxies('esxvm', 'esxcluster', 'esxdatacenter')
 @gets_service_instance_via_proxy
 def update_vm(vm_name, cpu=None, memory=None, image=None, version=None, interfaces=None, disks=None,
               scsi_devices=None, serial_ports=None, datacenter=None, datastore=None,
@@ -9133,7 +9198,7 @@ def update_vm(vm_name, cpu=None, memory=None, image=None, version=None, interfac
         if diffs['memory'].changed() != set():
             _apply_memory_config(config_spec, diffs['memory'].current_dict)
     if 'advanced_configs' in difference_keys:
-        _apply_advanced_config(config_spec, diffs['advanced_configs'].new_values)
+        _apply_advanced_config(config_spec, diffs['advanced_configs'].new_values, vm_ref.config.extraConfig)
     if 'version' in difference_keys:
         _apply_hardware_version(version, config_spec, 'edit')
     if 'image' in difference_keys:
