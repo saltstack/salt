@@ -39,6 +39,14 @@ except ImportError:
         asyncio = None
 
 
+class TimeOutException(Exception):
+    pass
+
+
+class TimeStampException(Exception):
+    pass
+
+
 class SSDPBase(object):
     '''
     Salt Service Discovery Protocol.
