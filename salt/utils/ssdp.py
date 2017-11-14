@@ -20,7 +20,10 @@ Salt Service Discovery Protocol.
 JSON-based service discovery protocol, used by minions to find running Master.
 '''
 
+import socket
 import logging
+import datetime
+
 try:
     import asyncio
 except ImportError:
@@ -37,10 +40,36 @@ class SSDPBase(object):
     '''
     log = logging.getLogger(__name__)
 
+    # Fields
+    SIGNATURE = 'signature'
+    ANSWER = 'answer'
+
+    # Default values
+    DEFAULTS = {
+        SIGNATURE: '__salt_master_service'
+    }
+
     @staticmethod
-    def is_available():
+    def _is_available():
         '''
         Return True if the USSDP dependencies are satisfied.
         :return:
         '''
         return bool(asyncio)
+
+    @staticmethod
+    def get_self_ip():
+        '''
+        Find out localhost outside IP.
+
+        :return:
+        '''
+        sck = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            sck.connect(('1.255.255.255', 1))  # Does not needs to be reachable
+            ip_addr = sck.getsockname()[0]
+        except Exception:
+            ip_addr = socket.gethostbyname(socket.gethostname())
+        finally:
+            sck.close()
+        return ip_addr
