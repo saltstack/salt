@@ -23,6 +23,7 @@ JSON-based service discovery protocol, used by minions to find running Master.
 import datetime
 import logging
 import socket
+from collections import OrderedDict
 
 from salt.utils import json
 json = json.import_json()
@@ -31,10 +32,12 @@ if not hasattr(json, 'dumps'):
 
 try:
     import asyncio
+    asyncio.ported = False
 except ImportError:
     try:
         # Python 2 doesn't have asyncio
         import trollius as asyncio
+        asyncio.ported = True
     except ImportError:
         asyncio = None
 
