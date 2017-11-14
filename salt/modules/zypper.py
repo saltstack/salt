@@ -1750,7 +1750,7 @@ def list_installed_patterns():
     return _get_patterns(installed_only=True)
 
 
-def search(criteria, refresh=False):
+def search(criteria, refresh=False, **kwargs):
     '''
     List known packags, available to the system.
 
@@ -1758,6 +1758,47 @@ def search(criteria, refresh=False):
         force a refresh if set to True.
         If set to False (default) it depends on zypper if a refresh is
         executed.
+
+    match (str)
+        One of `exact`, `words`, `substrings`. Search for an `exact` match
+        or for the whole `words` only. Default to `substrings` to patch
+        partial words.
+
+    provides (bool)
+        Search for packages which provide the search strings.
+
+    recommends (bool)
+        Search for packages which recommend the search strings.
+
+    requires (bool)
+        Search for packages which require the search strings.
+
+    suggests (bool)
+        Search for packages which suggest the search strings.
+
+    conflicts (bool)
+        Search packages conflicting with search strings.
+
+    obsoletes (bool)
+        Search for packages which obsolete the search strings.
+
+    file_list (bool)
+        Search for a match in the file list of packages.
+
+    search_descriptions (bool)
+        Search also in package summaries and descriptions.
+
+    case_sensitive (bool)
+        Perform case-sensitive search.
+
+    installed_only (bool)
+        Show only installed packages.
+
+    not_installed_only (bool)
+        Show only packages which are not installed.
+
+    details (bool)
+        Show version and repository
 
     CLI Examples:
 
@@ -1768,17 +1809,52 @@ def search(criteria, refresh=False):
     if refresh:
         refresh_db()
 
-    solvables = __zypper__.nolock.xml.call('se', criteria).getElementsByTagName('solvable')
+    cmd = ['se']
+    if kwargs.get('match') == 'exact':
+        cmd.append('--match-exact')
+    elif kwargs.get('match') == 'words':
+        cmd.append('--match-words')
+    elif kwargs.get('match') == 'substrings':
+        cmd.append('--match-substrings')
+
+    if kwargs.get('provides'):
+        cmd.append('--provides')
+    if kwargs.get('recommends'):
+        cmd.append('--recommends')
+    if kwargs.get('requires'):
+        cmd.append('--requires')
+    if kwargs.get('suggests'):
+        cmd.append('--suggests')
+    if kwargs.get('conflicts'):
+        cmd.append('--conflicts')
+    if kwargs.get('obsoletes'):
+        cmd.append('--obsoletes')
+
+    if kwargs.get('file_list'):
+        cmd.append('--file-list')
+    if kwargs.get('search_descriptions'):
+        cmd.append('--search-descriptions')
+    if kwargs.get('case_sensitive'):
+        cmd.append('--case-sensitive')
+    if kwargs.get('installed_only'):
+        cmd.append('--installed-only')
+    if kwargs.get('not_installed_only'):
+        cmd.append('--not-installed-only')
+    if kwargs.get('details'):
+        cmd.append('--details')
+
+    cmd.append(criteria)
+    solvables = __zypper__.nolock.noraise.xml.call(*cmd).getElementsByTagName('solvable')
     if not solvables:
         raise CommandExecutionError(
             'No packages found matching \'{0}\''.format(criteria)
         )
 
     out = {}
-    for solvable in [slv for slv in solvables
-                     if slv.getAttribute('status') == 'not-installed'
-                         and slv.getAttribute('kind') == 'package']:
-        out[solvable.getAttribute('name')] = {'summary': solvable.getAttribute('summary')}
+    for solvable in solvables:
+        out[solvable.getAttribute('name')] = dict()
+        for k,v in solvable.attributes.items():
+            out[solvable.getAttribute('name')][k] = v
 
     return out
 
