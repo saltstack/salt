@@ -58,12 +58,15 @@ class SSDPBase(object):
     ANSWER = 'answer'
     PORT = 'port'
     LISTEN_IP = 'listen_ip'
+    TIMEOUT = 'timeout'
 
     # Default values
     DEFAULTS = {
         SIGNATURE: '__salt_master_service',
         PORT: 30777,
         LISTEN_IP: '0.0.0.0',
+        TIMEOUT: 3,
+        ANSWER: {},
     }
 
     @staticmethod
@@ -108,7 +111,6 @@ class SSDPFactory(SSDPBase):
         self.disable_hidden = False
         self.transport = None
         self.my_ip = socket.gethostbyname(socket.gethostname())
-        self.DEFAULTS[self.ANSWER] = {}
 
     def __call__(self, *args, **kwargs):
         '''
@@ -175,10 +177,6 @@ class SSDPDiscoveryServer(SSDPBase):
 
         :param config:
         '''
-        self.DEFAULTS = {
-            self.ANSWER: {},
-        }
-
         self._config = config.copy()
         if self.ANSWER not in self._config:
             self._config[self.ANSWER] = {}
