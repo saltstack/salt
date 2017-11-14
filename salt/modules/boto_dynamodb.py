@@ -252,6 +252,25 @@ def update_global_secondary_index(table_name, global_indexes, region=None,
     return table.update_global_secondary_index(global_indexes)
 
 
+def list_tables(region=None, key=None, keyid=None, profile=None):
+    '''
+    List all DynamoDB tables visible to the supplied credentials.
+
+    CLI example::
+
+        salt myminion boto_dynamodb.list_tables region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    estn = ''
+    tables = []
+    while estn is not None:
+        args = {'exclusive_start_table_name': estn} if estn else {}
+        r = conn.list_tables(**args)
+        tables += r.get('TableNames', [])
+        estn = r.get('LastEvaluatedTableName', None)
+    return tables
+
+
 def describe(table_name, region=None, key=None, keyid=None, profile=None):
     '''
     Describe a DynamoDB table.
