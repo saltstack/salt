@@ -185,6 +185,76 @@ class SSDPDiscoveryServer(SSDPBase):
             self._config[self.ANSWER] = {}
         self._config[self.ANSWER].update({'master': self.get_self_ip()})
 
+    @staticmethod
+    def create_datagram_endpoint(loop, protocol_factory, local_addr=None, remote_addr=None, family=0, proto=0, flags=0):
+        '''
+        Create datagram connection.
+
+        Based on code from Python 3.5 version, this method is used
+        only in Python 2.7+ versions, since Trollius library did not
+        ported UDP packets broadcast.
+        '''
+        if not (local_addr or remote_addr):
+            if not family:
+                raise ValueError('unexpected address family')
+            addr_pairs_info = (((family, proto), (None, None)),)
+        else:
+            addr_infos = OrderedDict()
+            for idx, addr in ((0, local_addr), (1, remote_addr)):
+                if addr is not None:
+                    assert isinstance(addr, tuple) and len(addr) == 2, '2-tuple is expected'
+                    infos = yield asyncio.coroutines.From(loop.getaddrinfo(
+                        *addr, family=family, type=socket.SOCK_DGRAM, proto=proto, flags=flags))
+                    if not infos:
+                        raise socket.error('getaddrinfo() returned empty list')
+                    for fam, _, pro, _, address in infos:
+                        key = (fam, pro)
+                        if key not in addr_infos:
+                            addr_infos[key] = [None, None]
+                        addr_infos[key][idx] = address
+            addr_pairs_info = [
+                (key, addr_pair) for key, addr_pair in addr_infos.items()
+                if not ((local_addr and addr_pair[0] is None) or
+                        (remote_addr and addr_pair[1] is None))]
+            if not addr_pairs_info:
+                raise ValueError('can not get address information')
+        exceptions = []
+        for ((family, proto),
+             (local_address, remote_address)) in addr_pairs_info:
+            sock = r_addr = None
+            try:
+                sock = socket.socket(family=family, type=socket.SOCK_DGRAM, proto=proto)
+                for opt in [socket.SO_REUSEADDR, socket.SO_BROADCAST]:
+                    sock.setsockopt(socket.SOL_SOCKET, opt, 1)
+                sock.setblocking(False)
+                if local_addr:
+                    sock.bind(local_address)
+                if remote_addr:
+                    yield asyncio.coroutines.From(loop.sock_connect(sock, remote_address))
+                    r_addr = remote_address
+            except socket.error as exc:
+                if sock is not None:
+                    sock.close()
+                exceptions.append(exc)
+            except Exception:
+                if sock is not None:
+                    sock.close()
+                raise
+            else:
+                break
+        else:
+            raise exceptions[0]
+
+        protocol = protocol_factory()
+        waiter = asyncio.futures.Future(loop=loop)
+        transport = loop._make_datagram_transport(sock, protocol, r_addr, waiter)
+        try:
+            yield asyncio.coroutines.From(waiter)
+        except Exception:
+            transport.close()
+            raise
+        raise asyncio.coroutines.Return(transport, protocol)
+
     def run(self):
         '''
         Run server.
