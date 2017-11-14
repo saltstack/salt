@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
+Functions to interact with Hashicorp Vault.
+
 :maintainer:    SaltStack
 :maturity:      new
 :platform:      all
 
-Functions to interact with Hashicorp Vault.
 
 :note: If you see the following error, you'll need to upgrade ``requests`` to atleast 2.4.2
-.. code-block:: shell
+
+.. code-block:: text
+
     <timestamp> [salt.pillar][CRITICAL][14337] Pillar render error: Failed to load ext_pillar vault: {'error': "request() got an unexpected keyword argument 'json'"}
 
 
@@ -151,6 +154,7 @@ def write_secret(path, **kwargs):
     CLI Example:
 
     .. code-block:: bash
+
             salt '*' vault.write_secret "secret/my/secret" user="foo" password="bar"
     '''
     log.debug(
@@ -176,6 +180,7 @@ def delete_secret(path):
     CLI Example:
 
     .. code-block:: bash
+
             salt '*' vault.delete_secret "secret/my/secret"
     '''
     log.debug('Deleting vault secrets for {0} in {1}'
@@ -199,6 +204,7 @@ def list_secrets(path):
     CLI Example:
 
     .. code-block:: bash
+
             salt '*' vault.list_secrets "secret/my/"
     '''
     log.debug('Listing vault secret keys for {0} in {1}'

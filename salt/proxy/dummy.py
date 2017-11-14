@@ -9,6 +9,9 @@ import os
 import logging
 import pickle
 
+# Import Salt libs
+import salt.utils.files
+
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ['dummy']
 
@@ -35,16 +38,14 @@ def __virtual__():
 
 
 def _save_state(details):
-    pck = open(FILENAME, 'wb')  # pylint: disable=W8470
-    pickle.dump(details, pck)
-    pck.close()
+    with salt.utils.files.fopen(FILENAME, 'wb') as pck:
+        pickle.dump(details, pck)
 
 
 def _load_state():
     try:
-        pck = open(FILENAME, 'r')  # pylint: disable=W8470
-        DETAILS = pickle.load(pck)
-        pck.close()
+        with salt.utils.files.fopen(FILENAME, 'r') as pck:
+            DETAILS = pickle.load(pck)
     except IOError:
         DETAILS = {}
         DETAILS['initialized'] = False
