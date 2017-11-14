@@ -268,7 +268,7 @@ def swarm_service_info(service_name=str):
                                 'Published Mode': published_mode,
                                 'Protocol': protocol,
                                 'Docker Image': image,
-                                'Minion Id': server_name,
+                                'Minion Id': __context__['server_name'],
                                 'Version': version})
     except TypeError:
         salt_return = {}
@@ -293,7 +293,7 @@ def remove_service(service=str):
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         service = client.remove_service(service)
         salt_return.update({'Service Deleted': service,
-                            'Minion ID': server_name})
+                            'Minion ID': __context__['server_name']})
     except TypeError:
         salt_return = {}
         salt_return.update({'Error': 'service arg is missing?'})
