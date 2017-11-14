@@ -864,7 +864,7 @@ def create(vm_):
         raise SaltCloudSystemExit('A valid IP address was not found.')
 
 
-def destroy(name, call=None):
+def destroy(name, call=None, kwargs=None):
     '''
     destroy a machine by name
 
@@ -886,6 +886,15 @@ def destroy(name, call=None):
             '-a or --action.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
+    if kwargs.get('delete_boot_volume') is None:
+        raise SaltCloudExecutionFailure('The "delete_boot_volume" parameter is required')
+
+    if kwargs.get('delete_data_volume') is None:
+        raise SaltCloudExecutionFailure('The "delete_data_volume" parameter is required')
+
     __utils__['cloud.fire_event'](
         'event',
         'destroying instance',
@@ -899,7 +908,7 @@ def destroy(name, call=None):
     conn = get_conn()
     node = get_node(conn, name)
 
-    conn.delete_server(datacenter_id=datacenter_id, server_id=node['id'])
+    #conn.delete_server(datacenter_id=datacenter_id, server_id=node['id'])
 
     __utils__['cloud.fire_event'](
         'event',
@@ -1042,14 +1051,16 @@ def _get_system_volume(vm_):
     volume = Volume(
         name='{0} Storage'.format(vm_['name']),
         size=disk_size,
-        image=get_image(vm_)['id'],
+        #image=get_image(vm_)['id'],
         disk_type=get_disk_type(vm_),
         ssh_keys=ssh_keys
     )
 
     if 'image_alias' in vm_.keys():
         volume.image_alias = vm_['image_alias']
-        volume.image = None
+        #volume.image = None
+    else:
+        volume.image=get_image(vm_)['id']
 
     return volume
 
