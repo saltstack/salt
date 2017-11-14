@@ -11,7 +11,7 @@ and disk size without being tied to a particular server size.
 Dependencies
 ============
 
-* profitbricks >= 2.3.4
+* profitbricks >= 4.1.1
 
 Configuration
 =============
