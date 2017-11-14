@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 """
 Docker Swarm Module using Docker's Python SDK
@@ -23,8 +24,6 @@ More information: https://docker-py.readthedocs.io/en/stable/
 """
 # Import python libraries
 from __future__ import absolute_import
-import salt.config
-import salt.loader
 import json
 
 try:
@@ -33,7 +32,7 @@ try:
 except ImportError:
     HAS_DOCKER = False
 
-__virtualname__ = 'docker'
+__virtualname__ = 'swarm'
 
 
 def __virtual__():
@@ -42,7 +41,7 @@ def __virtual__():
     '''
     if HAS_DOCKER:
         return __virtualname__
-    return False, 'The Docker module failed to load: Docker python module is not avaialble.'
+    return False, 'The swarm module failed to load: Docker python module is not avaialble.'
 
 
 def __init__():
@@ -58,7 +57,7 @@ def swarm_tokens():
 
     .. code-block:: bash
 
-      salt '*' swarm.swarm_tokens 
+      salt '*' swarm.swarm_tokens
     '''
     client = docker.APIClient(base_url='unix://var/run/docker.sock')
     service = client.inspect_swarm()
@@ -72,17 +71,19 @@ def swarm_init(advertise_addr=str,
     Initalize Docker on Minion as a Swarm Manager
 
     advertise_addr
-      
-      the ip of the manager
+      The ip of the manager
 
-    listen_addr 
-    
-      Listen address used for inter-manager communication,as well as determining the networking interface used for the VXLAN Tunnel Endpoint (VTEP).
-      This can either be an address/port combination in the form 192.168.1.1:4567,or an interface followed by a port number, like eth0:4567
-    
+    listen_addr
+      Listen address used for inter-manager communication,
+      as well as determining the networking interface used
+      for the VXLAN Tunnel Endpoint (VTEP).
+      This can either be an address/port combination in
+      the form 192.168.1.1:4567,
+      or an interface followed by a port number,
+      like eth0:4567
+
     force_new_cluster
-      
-      will force a new cluster if True is passed
+      Force a new cluster if True is passed
 
     CLI Example:
 
@@ -97,7 +98,7 @@ def swarm_init(advertise_addr=str,
                           force_new_cluster)
         output = 'Docker swarm has been Initalized on '+ server_name + ' and the worker/manager Join token is below'
         salt_return.update({'Comment': output,
-                  'Tokens': swarm_tokens()})
+                            'Tokens': swarm_tokens()})
         return salt_return
     except TypeError:
         salt_return = {}
@@ -112,22 +113,20 @@ def joinswarm(remote_addr=int,
     Join a Swarm Worker to the cluster
 
     remote_addr
-    
-      the manager node you want to connect to for the swarm
+      The manager node you want to connect to for the swarm
 
     listen_addr
       Listen address used for inter-manager communication if the node gets promoted to manager,
       as well as determining the networking interface used for the VXLAN Tunnel Endpoint (VTEP)
 
-    token 
-      
-      either the manager join token or the worker join token.
-      You can get the worker or manager token via  swarm_tokens() function or `salt '*' swarm.swarm_tokens`
+    token
+      Either the manager join token or the worker join token.
+      You can get the worker or manager token via `salt '*' swarm.swarm_tokens`
 
     CLI Example:
 
     .. code-block:: bash
-      
+
       salt '*' swarm.joinswarm remote_addr=192.168.50.10 listen_addr='0.0.0.0' token='SWMTKN-1-64tux2g0701r84ofq93zppcih0pe081akq45owe9ts61f30x4t-06trjugdu7x2z47j938s54il'
     '''
     try:
@@ -149,13 +148,12 @@ def leave_swarm(force=bool):
     Force the minion to leave the swarm
 
     force
-      
       Will force the minion/worker/manager to leave the swarm
 
     CLI Example:
 
     .. code-block:: bash
-      
+
       salt '*' swarm.leave_swarm force=False
     '''
     salt_return = {}
@@ -176,33 +174,26 @@ def service_create(image=str,
     Create Docker Swarm Service Create
 
     image
-    
-      the docker image
+      The docker image
 
     name
-      
-      is the service name
+      Is the service name
 
     command
-     
-      the docker command to run in the container at launch
+      The docker command to run in the container at launch
 
-    hostname 
-      
-      the hostname of the containers
+    hostname
+      The hostname of the containers
 
-    replicas 
-     
-       how many replicas you want running in the swarm
+    replicas
+      How many replicas you want running in the swarm
 
-    target_port 
-    
-      the target port on the container
+    target_port
+      The target port on the container
 
-    published_port  
-    
+    published_port
       port thats published on the host/os
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -239,8 +230,7 @@ def swarm_service_info(service_name=str):
     Swarm Service Information
 
     service_name
-      
-      the name of the service that you want information on about the service
+      The name of the service that you want information on about the service
 
     CLI Example:
 
@@ -294,9 +284,8 @@ def remove_service(service=str):
     '''
     Remove Swarm Service
 
-    service  
-    
-      the name of the service
+    service
+      The name of the service
 
     CLI Example:
 
@@ -308,7 +297,7 @@ def remove_service(service=str):
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         service = client.remove_service(service)
         salt_return.update({'Service Deleted': service,
-                  'Minion ID': server_name})
+                            'Minion ID': server_name})
         return salt_return
     except TypeError:
         salt_return = {}
@@ -320,9 +309,8 @@ def node_ls(server=str):
     '''
     Displays Information about Swarm Nodes with passing in the server
 
-    server 
-      
-      the minion/server name
+    server
+      The minion/server name
 
     CLI Example:
 
@@ -364,14 +352,12 @@ def remove_node(node_id=str, force=bool):
     Remove a node from a swarm and the target needs to be a swarm manager
 
     node_id
-    
       The node id from the return of swarm.node_ls
 
-    force 
-    
+    force
       Forcefully remove the node/minion from the service
 
-    CLI Example: 
+    CLI Example:
 
     .. code-block:: bash
       salt '*' swarm.remove_node node_id=z4gjbe9rwmqahc2a91snvolm5 force=false
@@ -398,25 +384,20 @@ def update_node(availability=str,
     '''
     Updates docker swarm nodes/needs to target a manager node/minion
 
-    availability 
-    
-      drain or active
+    availability
+      Drain or Active
 
-    node_name 
-      
+    node_name
       minion/node
 
     role
-    
       role of manager or worker
 
     node_id
-    
-      the Id and that can be obtained via swarm.node_ls
+      The Id and that can be obtained via swarm.node_ls
 
     version
-    
-      is obtained by swarm.node_ls
+      Is obtained by swarm.node_ls
 
     CLI Example:
 
