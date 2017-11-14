@@ -152,3 +152,46 @@ class SSDPFactory(SSDPBase):
                 self.transport.sendto('{0}#ERROR#{1}'.format(self.signature,
                                                              'Invalid packet signature').encode(), addr)
             self.log.debug('Received bad magic or password from %s:%s' % addr)
+
+
+class SSDPDiscoveryServer(SSDPBase):
+    '''
+    Discovery service publisher.
+
+    '''
+    is_available = SSDPBase._is_available
+
+    def __init__(self, **config):
+        '''
+        Initialize.
+
+        :param config:
+        '''
+        self.DEFAULTS = {
+            self.ANSWER: {},
+        }
+
+        self._config = config.copy()
+        if self.ANSWER not in self._config:
+            self._config[self.ANSWER] = {}
+        self._config[self.ANSWER].update({'master': self.get_self_ip()})
+
+    def run(self):
+        '''
+        Run server.
+        :return:
+        '''
+        listen_ip = self._config.get(self.LISTEN_IP, self.DEFAULTS[self.LISTEN_IP])
+        port = self._config.get(self.PORT, self.DEFAULTS[self.PORT])
+        loop = asyncio.get_event_loop()
+        transport, protocol = loop.run_until_complete(
+            loop.create_datagram_endpoint(SSDPFactory(answer=self._config[self.ANSWER]),
+                                          local_addr=(listen_ip, port), allow_broadcast=True))
+        try:
+            loop.run_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            log.info("Shutdown server")
+            transport.close()
+            loop.close()
