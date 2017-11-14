@@ -732,7 +732,7 @@ def create(vm_):
     except AttributeError:
         pass
 
-    if ('image' not in vm_) and ('image_alias' not in vm_):
+    if (not 'image' in vm_) and (not 'image_alias' in vm_):
         log.error('The image or image_alias parameter is required.')
 
     data = None
