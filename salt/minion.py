@@ -716,13 +716,24 @@ class MinionBase(object):
         Discover master(s) and decide where to connect, if SSDP is around.
         :return:
         '''
-        if opts['master'] == DEFAULT_MINION_OPTS['master']:
+        if opts['master'] == DEFAULT_MINION_OPTS['master'] and opts['discovery'] is not False:
             master_discovery_client = salt.utils.ssdp.SSDPDiscoveryClient()
             try:
                 proto_data, ssdp_addr = master_discovery_client.discover()
-            except Exception:
-                proto_data = {'master': 'salt'}
-            opts['master'] = proto_data['master']
+            except Exception as err:
+                log.error('SSDP discovery failure: {0}'.format(err))
+                proto_data = {'master': 'salt', 'mapping': {}}
+
+            policy = self.opts.get(u'discovery', {}).get(u'match', DEFAULT_MINION_OPTS[u'discovery'][u'match'])
+            if policy not in ['any', 'all']:
+                log.error('SSDP configuration matcher failure: unknown value "{0}". '
+                          'Should be "any" or "all"'.format(policy))
+            else:
+                mapping = self.opts[u'discovery'].get(u'mapping', {})
+
+                cnt = len([key for key, value in mapping.items() if proto_data.get('mapping', {}).get(key) == value])
+                if policy == 'any' and bool(cnt) or cnt == len(mapping):
+                    opts['master'] = proto_data['master']
 
     def _return_retry_timer(self):
         '''
