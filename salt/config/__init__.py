@@ -1156,6 +1156,19 @@ VALID_OPTS = {
 
     # Used by salt.modules.dockermod.compare_container_networks to specify which keys are compared
     'docker.compare_container_networks': dict,
+
+    # SSDP discovery publisher description.
+    # Contains publisher configuration and minion mapping.
+    # Setting it to False disables discovery
+    'discovery': (dict, bool),
+
+    # SSDP discovery mapping
+    # Defines arbitrary data for description and grouping minions across various types of masters,
+    # especially when masters are not related to each other.
+    'mapping': dict,
+
+    # Port definition.
+    'port': int,
 }
 
 # default configurations
