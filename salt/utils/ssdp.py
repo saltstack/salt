@@ -317,7 +317,7 @@ class SSDPDiscoveryClient(SSDPBase):
         self.log.info("Looking for a server discovery")
         try:
             self._query()
-            data, addr = self._socket.recvfrom(1024)  # wait for a packet
+            data, addr = self._socket.recvfrom(0x400)  # wait for a packet
         except socket.timeout:
             msg = 'No master has been discovered.'
             self.log.info(msg)
