@@ -8,7 +8,9 @@ from __future__ import absolute_import
 import os
 import pickle
 import logging
-import tempfile
+
+# Import Salt modules
+import salt.utils.files
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ['dummy']
@@ -20,7 +22,7 @@ DETAILS = {}
 
 DETAILS['services'] = {'apache': 'running', 'ntp': 'running', 'samba': 'stopped'}
 DETAILS['packages'] = {'coreutils': '1.0', 'apache': '2.4', 'tinc': '1.4', 'redbull': '999.99'}
-FILENAME = tempfile.mkstemp()[1]
+FILENAME = salt.utils.files.mkstemp()
 # Want logging!
 log = logging.getLogger(__file__)
 
