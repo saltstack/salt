@@ -293,10 +293,10 @@ class SSDPDiscoveryClient(SSDPBase):
         self._config = config
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self._socket.settimeout(self._config.get(self.TIMEOUT, self.DEFAUTS[self.TIMEOUT]))
+        self._socket.settimeout(self._config.get(self.TIMEOUT, self.DEFAULTS[self.TIMEOUT]))
 
         for attr in [self.SIGNATURE, self.TIMEOUT, self.PORT]:
-            setattr(self, attr, self._config.get(attr, self.DEFAUTS[attr]))
+            setattr(self, attr, self._config.get(attr, self.DEFAULTS[attr]))
 
     def _query(self):
         '''
