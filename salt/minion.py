@@ -483,8 +483,13 @@ class MinionBase(object):
             log.warning('Master is set to disable, skipping connection')
             self.connected = False
             raise tornado.gen.Return((None, None))
+
+        # Run masters discovery over SSDP. This may modify the whole configuration,
+        # depending of the networking and sets of masters.
+        self._discover_masters(opts)
+
         # check if master_type was altered from its default
-        elif opts['master_type'] != 'str' and opts['__role'] != 'syndic':
+        if opts[u'master_type'] != u'str' and opts[u'__role'] != u'syndic':
             # check for a valid keyword
             if opts['master_type'] == 'func':
                 eval_master_func(opts)
@@ -661,7 +666,6 @@ class MinionBase(object):
 
         # single master sign in
         else:
-            self._discover_masters(opts)
             if opts[u'random_master']:
                 log.warning(u'random_master is True but there is only one master specified. Ignoring.')
             while True:
