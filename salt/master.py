@@ -82,6 +82,7 @@ import salt.utils.verify
 import salt.utils.zeromq
 import salt.utils.ssdp
 from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.config import DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError
 from salt.transport import iter_transport_opts
 from salt.utils.debug import (
@@ -606,7 +607,11 @@ class Master(SMaster):
                 name='ReqServer')
 
             # Fire up SSDP discovery publisher
-            self.process_manager.add_process(salt.utils.ssdp.SSDPDiscoveryServer(answer={}).run)
+            if self.opts[u'discovery'] is not False:
+                self.process_manager.add_process(salt.utils.ssdp.SSDPDiscoveryServer(
+                    port=self.opts[u'discovery'].get(u'port', DEFAULT_MASTER_OPTS[u'discovery'][u'port']),
+                    listen_ip=self.opts[u'interface'],
+                    answer={u'mapping': self.opts[u'discovery'].get(u'mapping', {})}).run)
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
