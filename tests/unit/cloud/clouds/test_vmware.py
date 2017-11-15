@@ -640,7 +640,7 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit,
             vmware.remove_snapshot,
             name=VM_NAME,
-            call='function'
+            call='action'
         )
 
     def test_remove_all_snapshots_call(self):
