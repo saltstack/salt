@@ -67,7 +67,7 @@ class SSDPBase(object):
     # Default values
     DEFAULTS = {
         SIGNATURE: '__salt_master_service',
-        PORT: 30777,
+        PORT: 4520,
         LISTEN_IP: '0.0.0.0',
         TIMEOUT: 3,
         ANSWER: {},
