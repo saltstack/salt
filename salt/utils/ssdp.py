@@ -165,7 +165,7 @@ class SSDPFactory(SSDPBase):
             if self.disable_hidden:
                 self.transport.sendto('{0}#ERROR#{1}'.format(self.signature,
                                                              'Invalid packet signature').encode(), addr)
-            self.log.debug('Received bad magic or password from %s:%s' % addr)
+            self.log.debug('Received bad signature from %s:%s' % addr)
 
 
 class SSDPDiscoveryServer(SSDPBase):
