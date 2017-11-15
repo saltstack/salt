@@ -258,19 +258,31 @@ def create(vm_):
         wol_host = config.get_cloud_config_value(
             'wol_sender_node', vm_, __opts__, default='')
         if wol_mac and wol_host:
-            log.info('sending wake-on-lan to %s using node %s',
-                     wol_mac, wol_host)
+            good_ping = False
             local = salt.client.LocalClient()
-            if isinstance(wol_mac, six.string_types):
-                wol_mac = [wol_mac]  # a smart user may have passed more params
-            ret = local.cmd(wol_host, 'network.wol', wol_mac)
-            log.info('network.wol returned value %s', ret)
-            if ret and ret[wol_host]:
-                sleep_time = config.get_cloud_config_value(
-                    'wol_boot_wait', vm_, __opts__, default=30)
-                if sleep_time > 0.0:
-                    log.info('delaying %d seconds for boot', sleep_time)
-                    time.sleep(sleep_time)
+            ssh_host = config.get_cloud_config_value(
+                'ssh_host', vm_, __opts__, default='')
+            if ssh_host:
+                log.info('trying to ping %s', ssh_host)
+                count = 'n' if salt.utils.platform.is_windows() else 'c'
+                cmd = 'ping -{} 1 {}'.format(count, ssh_host)
+                good_ping = local.cmd(wol_host, 'cmd.retcode', [cmd]) == 0
+            if good_ping:
+                log.info('successful ping.')
+            else:
+                log.info('sending wake-on-lan to %s using node %s',
+                         wol_mac, wol_host)
+
+                if isinstance(wol_mac, six.string_types):
+                    wol_mac = [wol_mac]  # a smart user may have passed more params
+                ret = local.cmd(wol_host, 'network.wol', wol_mac)
+                log.info('network.wol returned value %s', ret)
+                if ret and ret[wol_host]:
+                    sleep_time = config.get_cloud_config_value(
+                        'wol_boot_wait', vm_, __opts__, default=30)
+                    if sleep_time > 0.0:
+                        log.info('delaying %d seconds for boot', sleep_time)
+                        time.sleep(sleep_time)
         log.info('Provisioning existing machine %s', vm_['name'])
         ret = __utils__['cloud.bootstrap'](vm_, __opts__)
     else:
