@@ -1457,6 +1457,10 @@ DEFAULT_MINION_OPTS = {
         'static': ['Aliases', 'Links', 'IPAMConfig'],
         'automatic': ['IPAddress', 'Gateway',
                       'GlobalIPv6Address', 'IPv6Gateway'],
+    'discovery': {
+        'port': 4520,
+        'match': 'any',
+        'mapping': {},
     },
 }
 
