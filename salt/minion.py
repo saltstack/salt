@@ -486,7 +486,7 @@ class MinionBase(object):
 
         # Run masters discovery over SSDP. This may modify the whole configuration,
         # depending of the networking and sets of masters.
-        self._discover_masters(opts)
+        self._discover_masters()
 
         # check if master_type was altered from its default
         if opts[u'master_type'] != u'str' and opts[u'__role'] != u'syndic':
@@ -711,12 +711,13 @@ class MinionBase(object):
                         self.connected = False
                         raise exc
 
-    def _discover_masters(self, opts):
+    def _discover_masters(self):
         '''
         Discover master(s) and decide where to connect, if SSDP is around.
+        This modifies the configuration on the fly.
         :return:
         '''
-        if opts['master'] == DEFAULT_MINION_OPTS['master'] and opts['discovery'] is not False:
+        if self.opts['master'] == DEFAULT_MINION_OPTS['master'] and self.opts['discovery'] is not False:
             master_discovery_client = salt.utils.ssdp.SSDPDiscoveryClient()
             try:
                 proto_data, ssdp_addr = master_discovery_client.discover()
@@ -733,7 +734,7 @@ class MinionBase(object):
 
                 cnt = len([key for key, value in mapping.items() if proto_data.get('mapping', {}).get(key) == value])
                 if policy == 'any' and bool(cnt) or cnt == len(mapping):
-                    opts['master'] = proto_data['master']
+                    self.opts['master'] = proto_data['master']
 
     def _return_retry_timer(self):
         '''
