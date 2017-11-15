@@ -1167,6 +1167,11 @@ VALID_OPTS = {
     # especially when masters are not related to each other.
     'mapping': dict,
 
+    # SSDP discovery mapping matcher policy
+    # Values: "any" where at least one key/value pair should be found or
+    # "all", where every key/value should be identical
+    'match': str,
+
     # Port definition.
     'port': int,
 }
