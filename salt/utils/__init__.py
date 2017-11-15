@@ -3221,6 +3221,8 @@ def to_unicode(s, encoding=None):
     '''
     Given str or unicode, return unicode (str for python 3)
     '''
+    if s is None:
+        return s
     if not isinstance(s, (bytes, bytearray, six.string_types)):
         return s
     if six.PY3:
