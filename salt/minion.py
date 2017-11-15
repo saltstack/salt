@@ -105,6 +105,7 @@ import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.schedule
+import salt.utils.ssdp
 import salt.utils.user
 import salt.utils.zeromq
 import salt.defaults.exitcodes
@@ -660,8 +661,9 @@ class MinionBase(object):
 
         # single master sign in
         else:
-            if opts['random_master']:
-                log.warning('random_master is True but there is only one master specified. Ignoring.')
+            self._discover_masters(opts)
+            if opts[u'random_master']:
+                log.warning(u'random_master is True but there is only one master specified. Ignoring.')
             while True:
                 if attempts != 0:
                     # Give up a little time between connection attempts
@@ -704,6 +706,19 @@ class MinionBase(object):
                         # Exhausted all attempts. Return exception.
                         self.connected = False
                         raise exc
+
+    def _discover_masters(self, opts):
+        '''
+        Discover master(s) and decide where to connect, if SSDP is around.
+        :return:
+        '''
+        if opts['master'] == DEFAULT_MINION_OPTS['master']:
+            master_discovery_client = salt.utils.ssdp.SSDPDiscoveryClient()
+            try:
+                proto_data, ssdp_addr = master_discovery_client.discover()
+            except Exception:
+                proto_data = {'master': 'salt'}
+            opts['master'] = proto_data['master']
 
     def _return_retry_timer(self):
         '''
