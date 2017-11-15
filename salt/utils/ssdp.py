@@ -21,6 +21,7 @@ JSON-based service discovery protocol, used by minions to find running Master.
 '''
 
 import datetime
+import time
 import logging
 import socket
 from collections import OrderedDict
@@ -302,7 +303,7 @@ class SSDPDiscoveryClient(SSDPBase):
         Query the broadcast for defined services.
         :return:
         '''
-        query = "%s%s" % (self.signature, datetime.datetime.now().timestamp())
+        query = "%s%s" % (self.signature, time.time())
         self._socket.sendto(query.encode(), ('<broadcast>', self.port))
 
         return query
