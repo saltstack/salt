@@ -628,6 +628,18 @@ class VMwareTestCase(ExtendedTestCase):
             SaltCloudSystemExit,
             vmware.remove_snapshot,
             name=VM_NAME,
+            kwargs={'snapshot_name': 'mySnapshot'},
+            call='function'
+        )
+
+    def test_remove_snapshot_call_no_snapshot_name_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when name is not present in kwargs.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.remove_snapshot,
+            name=VM_NAME,
             call='function'
         )
 
