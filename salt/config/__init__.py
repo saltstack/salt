@@ -1771,6 +1771,10 @@ DEFAULT_MASTER_OPTS = {
     'salt_cp_chunk_size': 98304,
     'require_minion_sign_messages': False,
     'drop_messages_signature_fail': False,
+    'discovery': {
+        'port': 4520,
+        'mapping': {},
+    },
 }
 
 
