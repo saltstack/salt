@@ -1821,6 +1821,20 @@ def search(criteria, refresh=False, **kwargs):
 
         salt '*' pkg.search <criteria>
     '''
+    ALLOWED_SEARCH_OPTIONS = {
+            'provides': '--provides',
+            'recommends': '--recommends',
+            'requires': '--requires',
+            'suggests': '--suggests',
+            'conflicts': '--conflicts',
+            'obsoletes': '--obsoletes',
+            'file_list': '--file-list',
+            'search_descriptions': '--search-descriptions',
+            'case_sensitive': '--case-sensitive',
+            'installed_only': '--installed-only',
+            'not_installed_only': '-u',
+            'details': '--details'
+            }
     if refresh:
         refresh_db()
 
@@ -1832,32 +1846,9 @@ def search(criteria, refresh=False, **kwargs):
     elif kwargs.get('match') == 'substrings':
         cmd.append('--match-substrings')
 
-    if kwargs.get('provides'):
-        cmd.append('--provides')
-    if kwargs.get('recommends'):
-        cmd.append('--recommends')
-    if kwargs.get('requires'):
-        cmd.append('--requires')
-    if kwargs.get('suggests'):
-        cmd.append('--suggests')
-    if kwargs.get('conflicts'):
-        cmd.append('--conflicts')
-    if kwargs.get('obsoletes'):
-        cmd.append('--obsoletes')
-
-    if kwargs.get('file_list'):
-        cmd.append('--file-list')
-    if kwargs.get('search_descriptions'):
-        cmd.append('--search-descriptions')
-    if kwargs.get('case_sensitive'):
-        cmd.append('--case-sensitive')
-    if kwargs.get('installed_only'):
-        cmd.append('--installed-only')
-    if kwargs.get('not_installed_only'):
-        # long parameter was renamed in the past
-        cmd.append('-u')
-    if kwargs.get('details'):
-        cmd.append('--details')
+    for opt in kwargs:
+        if opt in ALLOWED_SEARCH_OPTIONS:
+            cmd.append(ALLOWED_SEARCH_OPTIONS.get(opt))
 
     cmd.append(criteria)
     solvables = __zypper__.nolock.noraise.xml.call(*cmd).getElementsByTagName('solvable')
