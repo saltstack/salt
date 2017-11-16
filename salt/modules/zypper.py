@@ -399,6 +399,14 @@ def _systemd_scope():
         and __salt__['config.get']('systemd.scope', True)
 
 
+def _clean_cache():
+    '''
+    Clean cached results
+    '''
+    for cache_name in ['list_pkgs', 'list_provides']:
+    __context__.pop(cache_name, None)
+
+
 def list_upgrades(refresh=True, **kwargs):
     '''
     List all available package upgrades on this system
@@ -1201,8 +1209,7 @@ def install(name=None,
         downgrades = downgrades[500:]
         __zypper__(no_repo_failure=ignore_repo_failure).call(*cmd)
 
-    __context__.pop('pkg.list_pkgs', None)
-    __context__.pop('pkg.list_provides', None)
+    _clean_cache()
     new = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
 
     # Handle packages which report multiple new versions
@@ -1319,8 +1326,7 @@ def upgrade(refresh=True,
     old = list_pkgs()
 
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
-    __context__.pop('pkg.list_pkgs', None)
-    __context__.pop('pkg.list_provides', None)
+    _clean_cache()
     new = list_pkgs()
 
     # Handle packages which report multiple new versions
@@ -1369,8 +1375,7 @@ def _uninstall(name=None, pkgs=None):
         __zypper__(systemd_scope=systemd_scope).call('remove', *targets[:500])
         targets = targets[500:]
 
-    __context__.pop('pkg.list_pkgs', None)
-    __context__.pop('pkg.list_provides', None)
+    _clean_cache()
     ret = salt.utils.data.compare_dicts(old, list_pkgs())
 
     if errors:
