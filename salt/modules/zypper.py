@@ -2202,8 +2202,9 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
                         name = result.keys()[0]
                     elif len(result) > 1:
                         log.warn("Found ambiguous match for capability '{0}'.".format(pkg))
-                except CommandExecutionError:
-                    # when search throw an exception stay with original name and version
+                except CommandExecutionError as exc:
+                    # when search throws an exception stay with original name and version
+                    log.debug("Search failed with: {0}".format(exc))
                     pass
 
         if version:
