@@ -259,19 +259,20 @@ def create(vm_):
             'wol_sender_node', vm_, __opts__, default='')
         if wol_mac and wol_host:
             good_ping = False
+            local = salt.client.LocalClient()
             ssh_host = config.get_cloud_config_value(
                 'ssh_host', vm_, __opts__, default='')
             if ssh_host:
                 log.info('trying to ping %s', ssh_host)
                 count = 'n' if salt.utils.platform.is_windows() else 'c'
                 cmd = 'ping -{} 1 {}'.format(count, ssh_host)
-                good_ping = __salt__['cmd.retcode'](cmd) == 0
+                good_ping = local.cmd(wol_host, 'cmd.retcode', [cmd]) == 0
             if good_ping:
                 log.info('successful ping.')
             else:
                 log.info('sending wake-on-lan to %s using node %s',
                          wol_mac, wol_host)
-                local = salt.client.LocalClient()
+
                 if isinstance(wol_mac, six.string_types):
                     wol_mac = [wol_mac]  # a smart user may have passed more params
                 ret = local.cmd(wol_host, 'network.wol', wol_mac)

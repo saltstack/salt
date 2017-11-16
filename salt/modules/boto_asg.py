@@ -48,6 +48,7 @@ Connection module for Amazon Autoscale Groups
 # Import Python libs
 from __future__ import absolute_import
 import datetime
+import time
 import logging
 import json
 import sys
@@ -111,17 +112,24 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_asg.exists myasg region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    try:
-        _conn = conn.get_all_groups(names=[name])
-        if _conn:
-            return True
-        else:
-            msg = 'The autoscale group does not exist in region {0}'.format(region)
-            log.debug(msg)
+    retries = 30
+    while True:
+        try:
+            _conn = conn.get_all_groups(names=[name])
+            if _conn:
+                return True
+            else:
+                msg = 'The autoscale group does not exist in region {0}'.format(region)
+                log.debug(msg)
+                return False
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, retrying in 5 seconds...')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
             return False
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
 
 
 def get_config(name, region=None, key=None, keyid=None, profile=None):
@@ -133,74 +141,81 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_asg.get_config myasg region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    try:
-        asg = conn.get_all_groups(names=[name])
-        if asg:
-            asg = asg[0]
-        else:
-            return {}
-        ret = odict.OrderedDict()
-        attrs = ['name', 'availability_zones', 'default_cooldown',
-                 'desired_capacity', 'health_check_period',
-                 'health_check_type', 'launch_config_name', 'load_balancers',
-                 'max_size', 'min_size', 'placement_group',
-                 'vpc_zone_identifier', 'tags', 'termination_policies',
-                 'suspended_processes']
-        for attr in attrs:
-            # Tags are objects, so we need to turn them into dicts.
-            if attr == 'tags':
-                _tags = []
-                for tag in asg.tags:
-                    _tag = odict.OrderedDict()
-                    _tag['key'] = tag.key
-                    _tag['value'] = tag.value
-                    _tag['propagate_at_launch'] = tag.propagate_at_launch
-                    _tags.append(_tag)
-                ret['tags'] = _tags
-            # Boto accepts a string or list as input for vpc_zone_identifier,
-            # but always returns a comma separated list. We require lists in
-            # states.
-            elif attr == 'vpc_zone_identifier':
-                ret[attr] = getattr(asg, attr).split(',')
-            # convert SuspendedProcess objects to names
-            elif attr == 'suspended_processes':
-                suspended_processes = getattr(asg, attr)
-                ret[attr] = sorted([x.process_name for x in suspended_processes])
+    retries = 30
+    while True:
+        try:
+            asg = conn.get_all_groups(names=[name])
+            if asg:
+                asg = asg[0]
             else:
-                ret[attr] = getattr(asg, attr)
-        # scaling policies
-        policies = conn.get_all_policies(as_group=name)
-        ret["scaling_policies"] = []
-        for policy in policies:
-            ret["scaling_policies"].append(
-                dict([
-                    ("name", policy.name),
-                    ("adjustment_type", policy.adjustment_type),
-                    ("scaling_adjustment", policy.scaling_adjustment),
-                    ("min_adjustment_step", policy.min_adjustment_step),
-                    ("cooldown", policy.cooldown)
+                return {}
+            ret = odict.OrderedDict()
+            attrs = ['name', 'availability_zones', 'default_cooldown',
+                    'desired_capacity', 'health_check_period',
+                    'health_check_type', 'launch_config_name', 'load_balancers',
+                    'max_size', 'min_size', 'placement_group',
+                    'vpc_zone_identifier', 'tags', 'termination_policies',
+                    'suspended_processes']
+            for attr in attrs:
+                # Tags are objects, so we need to turn them into dicts.
+                if attr == 'tags':
+                    _tags = []
+                    for tag in asg.tags:
+                        _tag = odict.OrderedDict()
+                        _tag['key'] = tag.key
+                        _tag['value'] = tag.value
+                        _tag['propagate_at_launch'] = tag.propagate_at_launch
+                        _tags.append(_tag)
+                    ret['tags'] = _tags
+                # Boto accepts a string or list as input for vpc_zone_identifier,
+                # but always returns a comma separated list. We require lists in
+                # states.
+                elif attr == 'vpc_zone_identifier':
+                    ret[attr] = getattr(asg, attr).split(',')
+                # convert SuspendedProcess objects to names
+                elif attr == 'suspended_processes':
+                    suspended_processes = getattr(asg, attr)
+                    ret[attr] = sorted([x.process_name for x in suspended_processes])
+                else:
+                    ret[attr] = getattr(asg, attr)
+            # scaling policies
+            policies = conn.get_all_policies(as_group=name)
+            ret["scaling_policies"] = []
+            for policy in policies:
+                ret["scaling_policies"].append(
+                    dict([
+                        ("name", policy.name),
+                        ("adjustment_type", policy.adjustment_type),
+                        ("scaling_adjustment", policy.scaling_adjustment),
+                        ("min_adjustment_step", policy.min_adjustment_step),
+                        ("cooldown", policy.cooldown)
+                    ])
+                )
+            # scheduled actions
+            actions = conn.get_all_scheduled_actions(as_group=name)
+            ret['scheduled_actions'] = {}
+            for action in actions:
+                end_time = None
+                if action.end_time:
+                    end_time = action.end_time.isoformat()
+                ret['scheduled_actions'][action.name] = dict([
+                  ("min_size", action.min_size),
+                  ("max_size", action.max_size),
+                  # AWS bug
+                  ("desired_capacity", int(action.desired_capacity)),
+                  ("start_time", action.start_time.isoformat()),
+                  ("end_time", end_time),
+                  ("recurrence", action.recurrence)
                 ])
-            )
-        # scheduled actions
-        actions = conn.get_all_scheduled_actions(as_group=name)
-        ret['scheduled_actions'] = {}
-        for action in actions:
-            end_time = None
-            if action.end_time:
-                end_time = action.end_time.isoformat()
-            ret['scheduled_actions'][action.name] = dict([
-              ("min_size", action.min_size),
-              ("max_size", action.max_size),
-              # AWS bug
-              ("desired_capacity", int(action.desired_capacity)),
-              ("start_time", action.start_time.isoformat()),
-              ("end_time", end_time),
-              ("recurrence", action.recurrence)
-            ])
-        return ret
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return {}
+            return ret
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, retrying in 5 seconds...')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
+            return {}
 
 
 def create(name, launch_config_name, availability_zones, min_size, max_size,
@@ -251,34 +266,41 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         suspended_processes = json.loads(suspended_processes)
     if isinstance(scheduled_actions, six.string_types):
         scheduled_actions = json.loads(scheduled_actions)
-    try:
-        _asg = autoscale.AutoScalingGroup(
-            name=name, launch_config=launch_config_name,
-            availability_zones=availability_zones,
-            min_size=min_size, max_size=max_size,
-            desired_capacity=desired_capacity, load_balancers=load_balancers,
-            default_cooldown=default_cooldown,
-            health_check_type=health_check_type,
-            health_check_period=health_check_period,
-            placement_group=placement_group, tags=_tags,
-            vpc_zone_identifier=vpc_zone_identifier,
-            termination_policies=termination_policies,
-            suspended_processes=suspended_processes)
-        conn.create_auto_scaling_group(_asg)
-        # create scaling policies
-        _create_scaling_policies(conn, name, scaling_policies)
-        # create scheduled actions
-        _create_scheduled_actions(conn, name, scheduled_actions)
-        # create notifications
-        if notification_arn and notification_types:
-            conn.put_notification_configuration(_asg, notification_arn, notification_types)
-        log.info('Created ASG {0}'.format(name))
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to create ASG {0}'.format(name)
-        log.error(msg)
-        return False
+    retries = 30
+    while True:
+        try:
+            _asg = autoscale.AutoScalingGroup(
+                name=name, launch_config=launch_config_name,
+                availability_zones=availability_zones,
+                min_size=min_size, max_size=max_size,
+                desired_capacity=desired_capacity, load_balancers=load_balancers,
+                default_cooldown=default_cooldown,
+                health_check_type=health_check_type,
+                health_check_period=health_check_period,
+                placement_group=placement_group, tags=_tags,
+                vpc_zone_identifier=vpc_zone_identifier,
+                termination_policies=termination_policies,
+                suspended_processes=suspended_processes)
+            conn.create_auto_scaling_group(_asg)
+            # create scaling policies
+            _create_scaling_policies(conn, name, scaling_policies)
+            # create scheduled actions
+            _create_scheduled_actions(conn, name, scheduled_actions)
+            # create notifications
+            if notification_arn and notification_types:
+                conn.put_notification_configuration(_asg, notification_arn, notification_types)
+            log.info('Created ASG {0}'.format(name))
+            return True
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, retrying in 5 seconds...')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
+            msg = 'Failed to create ASG {0}'.format(name)
+            log.error(msg)
+            return False
 
 
 def update(name, launch_config_name, availability_zones, min_size, max_size,
@@ -351,56 +373,63 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             desired_tags.append(_tag)
     delete_tags = [t for t in current_tags if t not in desired_tags]
 
-    try:
-        _asg = autoscale.AutoScalingGroup(
-            connection=conn,
-            name=name, launch_config=launch_config_name,
-            availability_zones=availability_zones,
-            min_size=min_size, max_size=max_size,
-            desired_capacity=desired_capacity, load_balancers=load_balancers,
-            default_cooldown=default_cooldown,
-            health_check_type=health_check_type,
-            health_check_period=health_check_period,
-            placement_group=placement_group, tags=add_tags,
-            vpc_zone_identifier=vpc_zone_identifier,
-            termination_policies=termination_policies)
-        if notification_arn and notification_types:
-            conn.put_notification_configuration(_asg, notification_arn, notification_types)
-        _asg.update()
-        # Seems the update call doesn't handle tags, so we'll need to update
-        # that separately.
-        if add_tags:
-            log.debug('Adding/updating tags from ASG: {}'.format(add_tags))
-            conn.create_or_update_tags([autoscale.Tag(**t) for t in add_tags])
-        if delete_tags:
-            log.debug('Deleting tags from ASG: {}'.format(delete_tags))
-            conn.delete_tags([autoscale.Tag(**t) for t in delete_tags])
-        # update doesn't handle suspended_processes either
-        # Resume all processes
-        _asg.resume_processes()
-        # suspend any that are specified.  Note that the boto default of empty
-        # list suspends all; don't do that.
-        if suspended_processes is not None and len(suspended_processes) > 0:
-            _asg.suspend_processes(suspended_processes)
-        log.info('Updated ASG {0}'.format(name))
-        # ### scaling policies
-        # delete all policies, then recreate them
-        for policy in conn.get_all_policies(as_group=name):
-            conn.delete_policy(policy.name, autoscale_group=name)
-        _create_scaling_policies(conn, name, scaling_policies)
-        # ### scheduled actions
-        # delete all scheduled actions, then recreate them
-        for scheduled_action in conn.get_all_scheduled_actions(as_group=name):
-            conn.delete_scheduled_action(
-                scheduled_action.name, autoscale_group=name
-            )
-        _create_scheduled_actions(conn, name, scheduled_actions)
-        return True, ''
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to update ASG {0}'.format(name)
-        log.error(msg)
-        return False, str(e)
+    retries = 30
+    while True:
+        try:
+            _asg = autoscale.AutoScalingGroup(
+                connection=conn,
+                name=name, launch_config=launch_config_name,
+                availability_zones=availability_zones,
+                min_size=min_size, max_size=max_size,
+                desired_capacity=desired_capacity, load_balancers=load_balancers,
+                default_cooldown=default_cooldown,
+                health_check_type=health_check_type,
+                health_check_period=health_check_period,
+                placement_group=placement_group, tags=add_tags,
+                vpc_zone_identifier=vpc_zone_identifier,
+                termination_policies=termination_policies)
+            if notification_arn and notification_types:
+                conn.put_notification_configuration(_asg, notification_arn, notification_types)
+            _asg.update()
+            # Seems the update call doesn't handle tags, so we'll need to update
+            # that separately.
+            if add_tags:
+                log.debug('Adding/updating tags from ASG: {}'.format(add_tags))
+                conn.create_or_update_tags([autoscale.Tag(**t) for t in add_tags])
+            if delete_tags:
+                log.debug('Deleting tags from ASG: {}'.format(delete_tags))
+                conn.delete_tags([autoscale.Tag(**t) for t in delete_tags])
+            # update doesn't handle suspended_processes either
+            # Resume all processes
+            _asg.resume_processes()
+            # suspend any that are specified.  Note that the boto default of empty
+            # list suspends all; don't do that.
+            if suspended_processes is not None and len(suspended_processes) > 0:
+                _asg.suspend_processes(suspended_processes)
+            log.info('Updated ASG {0}'.format(name))
+            # ### scaling policies
+            # delete all policies, then recreate them
+            for policy in conn.get_all_policies(as_group=name):
+                conn.delete_policy(policy.name, autoscale_group=name)
+            _create_scaling_policies(conn, name, scaling_policies)
+            # ### scheduled actions
+            # delete all scheduled actions, then recreate them
+            for scheduled_action in conn.get_all_scheduled_actions(as_group=name):
+                conn.delete_scheduled_action(
+                    scheduled_action.name, autoscale_group=name
+                )
+            _create_scheduled_actions(conn, name, scheduled_actions)
+            return True, ''
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, retrying in 5 seconds...')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
+            msg = 'Failed to update ASG {0}'.format(name)
+            log.error(msg)
+            return False, str(e)
 
 
 def _create_scaling_policies(conn, as_name, scaling_policies):
@@ -450,16 +479,23 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_asg.delete myasg region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    try:
-        conn.delete_auto_scaling_group(name, force)
-        msg = 'Deleted autoscale group {0}.'.format(name)
-        log.info(msg)
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to delete autoscale group {0}'.format(name)
-        log.error(msg)
-        return False
+    retries = 30
+    while True:
+        try:
+            conn.delete_auto_scaling_group(name, force)
+            msg = 'Deleted autoscale group {0}.'.format(name)
+            log.info(msg)
+            return True
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, retrying in 5 seconds...')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
+            msg = 'Failed to delete autoscale group {0}'.format(name)
+            log.error(msg)
+            return False
 
 
 def get_cloud_init_mime(cloud_init):
@@ -510,17 +546,24 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
         salt myminion boto_asg.launch_configuration_exists mylc
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    try:
-        lc = conn.get_all_launch_configurations(names=[name])
-        if lc:
-            return True
-        else:
-            msg = 'The launch configuration does not exist in region {0}'.format(region)
-            log.debug(msg)
+    retries = 30
+    while True:
+        try:
+            lc = conn.get_all_launch_configurations(names=[name])
+            if lc:
+                return True
+            else:
+                msg = 'The launch configuration does not exist in region {0}'.format(region)
+                log.debug(msg)
+                return False
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, retrying in 5 seconds...')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
             return False
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
 
 
 def get_all_launch_configurations(region=None, key=None, keyid=None,
@@ -533,11 +576,18 @@ def get_all_launch_configurations(region=None, key=None, keyid=None,
         salt myminion boto_asg.get_all_launch_configurations
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    try:
-        return conn.get_all_launch_configurations()
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return []
+    retries = 30
+    while True:
+        try:
+            return conn.get_all_launch_configurations()
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, retrying in 5 seconds...')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
+            return []
 
 
 def list_launch_configurations(region=None, key=None, keyid=None,
@@ -563,17 +613,24 @@ def describe_launch_configuration(name, region=None, key=None, keyid=None,
         salt myminion boto_asg.describe_launch_configuration mylc
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    try:
-        lc = conn.get_all_launch_configurations(names=[name])
-        if lc:
-            return lc[0]
-        else:
-            msg = 'The launch configuration does not exist in region {0}'.format(region)
-            log.debug(msg)
+    retries = 30
+    while True:
+        try:
+            lc = conn.get_all_launch_configurations(names=[name])
+            if lc:
+                return lc[0]
+            else:
+                msg = 'The launch configuration does not exist in region {0}'.format(region)
+                log.debug(msg)
+                return None
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, retrying in 5 seconds...')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
             return None
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return None
 
 
 def create_launch_configuration(name, image_id, key_name=None,
@@ -634,15 +691,22 @@ def create_launch_configuration(name, image_id, key_name=None,
         associate_public_ip_address=associate_public_ip_address,
         volume_type=volume_type, delete_on_termination=delete_on_termination,
         iops=iops, use_block_device_types=use_block_device_types)
-    try:
-        conn.create_launch_configuration(lc)
-        log.info('Created LC {0}'.format(name))
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to create LC {0}'.format(name)
-        log.error(msg)
-        return False
+    retries = 30
+    while True:
+        try:
+            conn.create_launch_configuration(lc)
+            log.info('Created LC {0}'.format(name))
+            return True
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, retrying in 5 seconds...')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
+            msg = 'Failed to create LC {0}'.format(name)
+            log.error(msg)
+            return False
 
 
 def delete_launch_configuration(name, region=None, key=None, keyid=None,
@@ -655,15 +719,22 @@ def delete_launch_configuration(name, region=None, key=None, keyid=None,
         salt myminion boto_asg.delete_launch_configuration mylc
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    try:
-        conn.delete_launch_configuration(name)
-        log.info('Deleted LC {0}'.format(name))
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to delete LC {0}'.format(name)
-        log.error(msg)
-        return False
+    retries = 30
+    while True:
+        try:
+            conn.delete_launch_configuration(name)
+            log.info('Deleted LC {0}'.format(name))
+            return True
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, retrying in 5 seconds...')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
+            msg = 'Failed to delete LC {0}'.format(name)
+            log.error(msg)
+            return False
 
 
 def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
@@ -713,17 +784,24 @@ def get_all_groups(region=None, key=None, keyid=None, profile=None):
 
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    try:
-        next_token = ''
-        asgs = []
-        while next_token is not None:
-            ret = conn.get_all_groups(next_token=next_token)
-            asgs += [a for a in ret]
-            next_token = ret.next_token
-        return asgs
-    except boto.exception.BotoServerError as e:
-        log.error(e)
-        return []
+    retries = 30
+    while True:
+        try:
+            next_token = ''
+            asgs = []
+            while next_token is not None:
+                ret = conn.get_all_groups(next_token=next_token)
+                asgs += [a for a in ret]
+                next_token = ret.next_token
+            return asgs
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, retrying in 5 seconds...')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
+            return []
 
 
 def list_groups(region=None, key=None, keyid=None, profile=None):
@@ -756,11 +834,18 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy",
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     ec2_conn = _get_ec2_conn(region=region, key=key, keyid=keyid, profile=profile)
-    try:
-        asgs = conn.get_all_groups(names=[name])
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
+    retries = 30
+    while True:
+        try:
+            asgs = conn.get_all_groups(names=[name])
+        except boto.exception.BotoServerError as e:
+            if retries and e.code == 'Throttling':
+                log.debug('Throttled by AWS API, retrying in 5 seconds...')
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error(e)
+            return False
     if len(asgs) != 1:
         log.debug("name '{0}' returns multiple ASGs: {1}".format(name, [asg.name for asg in asgs]))
         return False
@@ -802,8 +887,7 @@ def enter_standby(name, instance_ids, should_decrement_desired_capacity=False,
         salt-call boto_asg.enter_standby my_autoscale_group_name '["i-xxxxxx"]'
 
     '''
-    conn = _get_conn_autoscaling_boto3(
-        region=region, key=key, keyid=keyid, profile=profile)
+    conn = _get_conn_autoscaling_boto3(region=region, key=key, keyid=keyid, profile=profile)
     try:
         response = conn.enter_standby(
             InstanceIds=instance_ids,

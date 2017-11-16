@@ -79,7 +79,7 @@ class GroupModuleTest(ModuleCase):
         gid_max = login_defs.get('SYS_GID_MAX',
                                  int(login_defs.get('GID_MIN', 1000)) - 1)
 
-        return gid_min, gid_max
+        return int(gid_min), int(gid_max)
 
     def __get_free_system_gid(self):
         '''
