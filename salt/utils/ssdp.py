@@ -176,21 +176,21 @@ class SSDPFactory(SSDPBase):
             except TypeError:
                 self.log.debug('Received invalid timestamp in package from %s' % ("%s:%s" % addr))
                 if self.disable_hidden:
-                    self._sendto('{0}#ERROR#{1}'.format(self.signature, 'Invalid timestamp'), addr)
+                    self._sendto('{0}:E:{1}'.format(self.signature, 'Invalid timestamp'), addr)
                 return
 
             if datetime.datetime.fromtimestamp(timestamp) < (datetime.datetime.now() - datetime.timedelta(seconds=20)):
                 if self.disable_hidden:
-                    self._sendto('{0}#ERROR#{1}'.format(self.signature, 'Timestamp is too old'), addr)
+                    self._sendto('{0}:E:{1}'.format(self.signature, 'Timestamp is too old'), addr)
                 self.log.debug('Received outdated package from %s' % ("%s:%s" % addr))
                 return
 
             self.log.debug('Received %r from %s' % (message, "%s:%s" % addr))
-            self._sendto('{0}#OK#{1}'.format(self.signature,
+            self._sendto('{0}:@:{1}'.format(self.signature,
                                                       json.dumps(self.answer)), addr)
         else:
             if self.disable_hidden:
-                self._sendto('{0}#ERROR#{1}'.format(self.signature,
+                self._sendto('{0}:E:{1}'.format(self.signature,
                                                              'Invalid packet signature').encode(), addr)
             self.log.debug('Received bad signature from %s:%s' % addr)
 
@@ -353,10 +353,10 @@ class SSDPDiscoveryClient(SSDPBase):
         if msg.startswith(self.signature):
             msg = msg.split(self.signature)[-1]
             self.log.debug("Service announcement at '{0}'. Response: '{1}'".format("%s:%s" % addr, msg))
-            if '#ERROR#' in msg:
-                err = msg.split('#ERROR#')[-1]
+            if ':E:' in msg:
+                err = msg.split(':E:')[-1]
                 self.log.debug('Error response from the service publisher: {0}'.format(err))
                 if "timestamp" in err:
                     raise TimeStampException(err)
             else:
-                return json.loads(msg.split('#OK#')[-1]), "%s:%s" % addr
+                return json.loads(msg.split(':@:')[-1]), "%s:%s" % addr
