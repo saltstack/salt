@@ -403,8 +403,8 @@ def _clean_cache():
     '''
     Clean cached results
     '''
-    for cache_name in ['list_pkgs', 'list_provides']:
-    __context__.pop(cache_name, None)
+    for cache_name in ['pkg.list_pkgs', 'pkg.list_provides']:
+        __context__.pop(cache_name, None)
 
 
 def list_upgrades(refresh=True, **kwargs):
