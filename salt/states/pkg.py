@@ -508,7 +508,6 @@ def _find_install_targets(name=None,
         # add it to the kwargs.
         kwargs['refresh'] = refresh
 
-
     resolve_capabilities = kwargs.get('resolve_capabilities', False) and 'pkg.list_provides' in __salt__
     try:
         cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
@@ -792,13 +791,15 @@ def _find_install_targets(name=None,
             warnings, was_refreshed)
 
 
-def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps={}):
+def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
     '''
     Determine whether or not the installed packages match what was requested in
     the SLS file.
     '''
     ok = []
     failed = []
+    if not new_caps:
+        new_caps = dict()
     for pkgname, pkgver in desired.items():
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names.
         # Homebrew for Mac OSX does something similar with tap names
@@ -879,6 +880,7 @@ def _nested_output(obj):
     nested.__opts__ = __opts__
     ret = nested.output(obj).rstrip()
     return ret
+
 
 def _resolve_capabilities(pkgs, refresh=False, **kwargs):
     '''
@@ -2913,11 +2915,8 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         ret['comment'] = '\'fromrepo\' argument not supported on this platform'
         return ret
 
-
     if isinstance(refresh, bool):
         pkgs, refresh = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
-        if was_refreshed:
-            refresh = False
         try:
             packages = __salt__['pkg.list_upgrades'](refresh=refresh, **kwargs)
             if isinstance(pkgs, list):

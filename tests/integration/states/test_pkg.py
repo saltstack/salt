@@ -1054,5 +1054,3 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                              refresh=False,
                              test=True)
         self.assertInSaltComment("System update will be performed", ret)
-
-

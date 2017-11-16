@@ -2196,7 +2196,6 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
                 except CommandExecutionError as exc:
                     # when search throws an exception stay with original name and version
                     log.debug("Search failed with: {0}".format(exc))
-                    pass
 
         if version:
             ret.append({name: version})
