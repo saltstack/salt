@@ -365,11 +365,15 @@ class CloudClient(object):
         '''
         Destroy the named VMs
         '''
-        mapper = salt.cloud.Map(self._opts_defaults(destroy=True))
+
+        if kwargs is None:
+            kwargs = {}
+
+        mapper = salt.cloud.Map(self._opts_defaults(destroy=True,**kwargs))        
         if isinstance(names, str):
             names = names.split(',')
         return salt.utils.simple_types_filter(
-            mapper.destroy(names)
+            mapper.destroy(names,kwargs)
         )
 
     def create(self, provider, names, **kwargs):
