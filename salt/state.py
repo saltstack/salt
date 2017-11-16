@@ -1601,7 +1601,24 @@ class State(object):
                             for ind in items:
                                 if not isinstance(ind, dict):
                                     # Malformed req_in
-                                    continue
+                                    if ind in high:
+                                        _ind_high = [x for x
+                                                     in high[ind]
+                                                     if not x.startswith('__')]
+                                        ind = {_ind_high[0]: ind}
+                                    else:
+                                        found = False
+                                        for _id in iter(high):
+                                            for state in [state for state
+                                                          in iter(high[_id])
+                                                          if not state.startswith('__')]:
+                                                for j in iter(high[_id][state]):
+                                                    if isinstance(j, dict) and 'name' in j:
+                                                        if j['name'] == ind:
+                                                            ind = {state: _id}
+                                                            found = True
+                                        if not found:
+                                            continue
                                 if len(ind) < 1:
                                     continue
                                 pstate = next(iter(ind))
@@ -2512,7 +2529,7 @@ class State(object):
             self.event(running[tag], len(chunks), fire_event=low.get(u'fire_event'))
         return running
 
-    def call_listen(self, chunks, running):
+    def call_listen(self, chunks, running, high):
         '''
         Find all of the listen routines and call the associated mod_watch runs
         '''
@@ -2533,7 +2550,24 @@ class State(object):
             for key, val in six.iteritems(l_dict):
                 for listen_to in val:
                     if not isinstance(listen_to, dict):
-                        continue
+                        if listen_to in high:
+                            _listen_high = [x for x
+                                            in high[listen_to]
+                                            if not x.startswith('__')]
+                            listen_to = {_listen_high[0]: listen_to}
+                        else:
+                            found = False
+                            for _id in iter(high):
+                                for state in [state for state
+                                              in iter(high[_id])
+                                              if not state.startswith('__')]:
+                                    for j in iter(high[_id][state]):
+                                        if isinstance(j, dict) and 'name' in j:
+                                            if j['name'] == listen_to:
+                                                listen_to = {state: _id}
+                                                found = True
+                            if not found:
+                                continue
                     for lkey, lval in six.iteritems(listen_to):
                         if (lkey, lval) not in crefs:
                             rerror = {_l_tag(lkey, lval):
@@ -2599,7 +2633,7 @@ class State(object):
         if errors:
             return errors
         ret = self.call_chunks(chunks)
-        ret = self.call_listen(chunks, ret)
+        ret = self.call_listen(chunks, ret, high)
 
         def _cleanup_accumulator_data():
             accum_data_path = os.path.join(
