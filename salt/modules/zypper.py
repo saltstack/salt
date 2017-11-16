@@ -1823,7 +1823,7 @@ def search(criteria, refresh=False, **kwargs):
     if refresh:
         refresh_db()
 
-    cmd = ['se']
+    cmd = ['search']
     if kwargs.get('match') == 'exact':
         cmd.append('--match-exact')
     elif kwargs.get('match') == 'words':
@@ -1853,7 +1853,8 @@ def search(criteria, refresh=False, **kwargs):
     if kwargs.get('installed_only'):
         cmd.append('--installed-only')
     if kwargs.get('not_installed_only'):
-        cmd.append('--not-installed-only')
+        # long parameter was renamed in the past
+        cmd.append('-u')
     if kwargs.get('details'):
         cmd.append('--details')
 
