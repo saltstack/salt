@@ -2575,7 +2575,7 @@ class State(object):
             self.event(running[tag], len(chunks), fire_event=low.get(u'fire_event'))
         return running
 
-    def call_listen(self, chunks, running, high):
+    def call_listen(self, chunks, running):
         '''
         Find all of the listen routines and call the associated mod_watch runs
         '''
@@ -2596,22 +2596,12 @@ class State(object):
             for key, val in six.iteritems(l_dict):
                 for listen_to in val:
                     if not isinstance(listen_to, dict):
-                        if listen_to in high:
-                            _listen_high = [x for x
-                                            in high[listen_to]
-                                            if not x.startswith('__')]
-                            listen_to = {_listen_high[0]: listen_to}
-                        else:
-                            found = False
-                            for _id in iter(high):
-                                for state in [state for state
-                                              in iter(high[_id])
-                                              if not state.startswith('__')]:
-                                    for j in iter(high[_id][state]):
-                                        if isinstance(j, dict) and 'name' in j:
-                                            if j['name'] == listen_to:
-                                                listen_to = {state: _id}
-                                                found = True
+                        found = False
+                        for chunk in chunks:
+                            if chunk['__id__'] == listen_to or \
+                               chunk['name'] == listen_to:
+                                listen_to = {chunk['state']: chunk['__id__']}
+                                found = True
                             if not found:
                                 continue
                     for lkey, lval in six.iteritems(listen_to):
@@ -2679,7 +2669,7 @@ class State(object):
         if errors:
             return errors
         ret = self.call_chunks(chunks)
-        ret = self.call_listen(chunks, ret, high)
+        ret = self.call_listen(chunks, ret)
 
         def _cleanup_accumulator_data():
             accum_data_path = os.path.join(
