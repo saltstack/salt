@@ -5,10 +5,12 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import errno
 import os
 import shutil
 import tempfile
 import textwrap
+import tornado.ioloop
 import logging
 import stat
 try:
@@ -40,18 +42,26 @@ import salt.utils.win_functions
 
 log = logging.getLogger(__name__)
 
+TMP_SOCK_DIR = tempfile.mkdtemp(dir=TMP)
+TMP_REPO_DIR = os.path.join(TMP, 'gitfs_root')
+INTEGRATION_BASE_FILES = os.path.join(FILES, 'file', 'base')
+
+
+def _rmtree_error(func, path, excinfo):
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
 
 @skipIf(not HAS_GITPYTHON, 'GitPython is not installed')
 class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
-        self.tmp_sock_dir = tempfile.mkdtemp(dir=TMP)
         return {
             gitfs: {
                 '__opts__': {
                     'cachedir': self.tmp_cachedir,
-                    'sock_dir': self.tmp_sock_dir,
+                    'sock_dir': TMP_SOCK_DIR,
                     'gitfs_root': 'salt',
                     'fileserver_backend': ['git'],
                     'gitfs_base': 'master',
@@ -81,9 +91,17 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
+    @classmethod
+    def setUpClass(cls):
+        # Clear the instance map so that we make sure to create a new instance
+        # for this test class.
+        try:
+            del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
+        except KeyError:
+            pass
+
     def tearDown(self):
         shutil.rmtree(self.tmp_cachedir)
-        shutil.rmtree(self.tmp_sock_dir)
 
     def test_per_saltenv_config(self):
         opts_override = textwrap.dedent('''
@@ -109,10 +127,11 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
                     - mountpoint: abc
         ''')
         with patch.dict(gitfs.__opts__, yaml.safe_load(opts_override)):
-            git_fs = salt.utils.gitfs.GitFS(gitfs.__opts__)
-            git_fs.init_remotes(
+            git_fs = salt.utils.gitfs.GitFS(
+                gitfs.__opts__,
                 gitfs.__opts__['gitfs_remotes'],
-                gitfs.PER_REMOTE_OVERRIDES, gitfs.PER_REMOTE_ONLY)
+                per_remote_overrides=gitfs.PER_REMOTE_OVERRIDES,
+                per_remote_only=gitfs.PER_REMOTE_ONLY)
 
         # repo1 (branch: foo)
         # The mountpoint should take the default (from gitfs_mountpoint), while
@@ -169,14 +188,12 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
-        self.tmp_sock_dir = tempfile.mkdtemp(dir=TMP)
-        self.tmp_repo_dir = os.path.join(TMP, 'gitfs_root')
         return {
             gitfs: {
                 '__opts__': {
                     'cachedir': self.tmp_cachedir,
-                    'sock_dir': self.tmp_sock_dir,
-                    'gitfs_remotes': ['file://' + self.tmp_repo_dir],
+                    'sock_dir': TMP_SOCK_DIR,
+                    'gitfs_remotes': ['file://' + TMP_REPO_DIR],
                     'gitfs_root': '',
                     'fileserver_backend': ['git'],
                     'gitfs_base': 'master',
@@ -206,26 +223,26 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
             }
         }
 
-    def setUp(self):
-        '''
-        We don't want to check in another .git dir into GH because that just gets messy.
-        Instead, we'll create a temporary repo on the fly for the tests to examine.
-        '''
-        if not gitfs.__virtual__():
-            self.skipTest("GitFS could not be loaded. Skipping GitFS tests!")
-        self.integration_base_files = os.path.join(FILES, 'file', 'base')
+    @classmethod
+    def setUpClass(cls):
+        # Clear the instance map so that we make sure to create a new instance
+        # for this test class.
+        try:
+            del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
+        except KeyError:
+            pass
 
         # Create the dir if it doesn't already exist
         try:
-            shutil.copytree(self.integration_base_files, self.tmp_repo_dir + '/')
+            shutil.copytree(INTEGRATION_BASE_FILES, TMP_REPO_DIR + '/')
         except OSError:
             # We probably caught an error because files already exist. Ignore
             pass
 
         try:
-            repo = git.Repo(self.tmp_repo_dir)
+            repo = git.Repo(TMP_REPO_DIR)
         except git.exc.InvalidGitRepositoryError:
-            repo = git.Repo.init(self.tmp_repo_dir)
+            repo = git.Repo.init(TMP_REPO_DIR)
 
         if 'USERNAME' not in os.environ:
             try:
@@ -238,9 +255,19 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
                           '\'root\'.')
                 os.environ['USERNAME'] = 'root'
 
-        repo.index.add([x for x in os.listdir(self.tmp_repo_dir)
+        repo.index.add([x for x in os.listdir(TMP_REPO_DIR)
                         if x != '.git'])
         repo.index.commit('Test')
+
+    def setUp(self):
+        '''
+        We don't want to check in another .git dir into GH because that just
+        gets messy. Instead, we'll create a temporary repo on the fly for the
+        tests to examine.
+        '''
+        if not gitfs.__virtual__():
+            self.skipTest("GitFS could not be loaded. Skipping GitFS tests!")
+        self.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
         gitfs.update()
 
     def tearDown(self):
@@ -248,17 +275,11 @@ class GitFSTest(TestCase, LoaderModuleMockMixin):
         Remove the temporary git repository and gitfs cache directory to ensure
         a clean environment for each test.
         '''
-        shutil.rmtree(self.tmp_repo_dir, onerror=self._rmtree_error)
-        shutil.rmtree(self.tmp_cachedir, onerror=self._rmtree_error)
-        shutil.rmtree(self.tmp_sock_dir, onerror=self._rmtree_error)
-        del self.tmp_repo_dir
-        del self.tmp_cachedir
-        del self.tmp_sock_dir
-        del self.integration_base_files
-
-    def _rmtree_error(self, func, path, excinfo):
-        os.chmod(path, stat.S_IWRITE)
-        func(path)
+        try:
+            shutil.rmtree(self.tmp_cachedir, onerror=_rmtree_error)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
 
     def test_file_list(self):
         ret = gitfs.file_list(LOAD)

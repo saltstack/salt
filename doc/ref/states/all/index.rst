@@ -188,6 +188,7 @@ state modules
     openstack_config
     openvswitch_bridge
     openvswitch_port
+    opsgenie
     pagerduty
     pagerduty_escalation_policy
     pagerduty_schedule

@@ -33,11 +33,11 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to verify that a device is mounted.
         '''
-        name = '/mnt/sdb'
-        device = '/dev/sdb5'
+        name = os.path.realpath('/mnt/sdb')
+        device = os.path.realpath('/dev/sdb5')
         fstype = 'xfs'
 
-        name2 = '/mnt/cifs'
+        name2 = os.path.realpath('/mnt/cifs')
         device2 = '//SERVER/SHARE/'
         fstype2 = 'cifs'
         opts2 = ['noowners']
@@ -64,12 +64,11 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         mock_group = MagicMock(return_value={'gid': 100})
         mock_read_cache = MagicMock(return_value={})
         mock_write_cache = MagicMock(return_value=True)
-        umount1 = ("Forced unmount because devices don't match. "
-                   "Wanted: /dev/sdb6, current: /dev/sdb5, /dev/sdb5")
         with patch.dict(mount.__grains__, {'os': 'Darwin'}):
             with patch.dict(mount.__salt__, {'mount.active': mock_mnt,
                                              'cmd.run_all': mock_ret,
-                                             'mount.umount': mock_f}):
+                                             'mount.umount': mock_f}), \
+                    patch('os.path.exists', MagicMock(return_value=True)):
                 comt = ('Unable to find device with label /dev/sdb5.')
                 ret.update({'comment': comt})
                 self.assertDictEqual(mount.mounted(name, 'LABEL=/dev/sdb5',
@@ -83,7 +82,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                          ret)
 
                 with patch.dict(mount.__opts__, {'test': False}):
-                    comt = ('Unable to unmount /mnt/sdb: False.')
+                    comt = ('Unable to unmount {0}: False.'.format(name))
                     umount = ('Forced unmount and mount because'
                               ' options (noowners) changed')
                     ret.update({'comment': comt, 'result': False,
@@ -91,16 +90,19 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(mount.mounted(name, device, 'nfs'),
                                          ret)
 
+                    umount1 = ("Forced unmount because devices don't match. "
+                               "Wanted: {0}, current: {1}, {1}".format(os.path.realpath('/dev/sdb6'), device))
                     comt = ('Unable to unmount')
                     ret.update({'comment': comt, 'result': None,
                                 'changes': {'umount': umount1}})
-                    self.assertDictEqual(mount.mounted(name, '/dev/sdb6',
+                    self.assertDictEqual(mount.mounted(name, os.path.realpath('/dev/sdb6'),
                                                        fstype, opts=[]), ret)
 
                 with patch.dict(mount.__salt__, {'mount.active': mock_emt,
                                                  'mount.mount': mock_str,
                                                  'mount.set_automaster': mock}):
-                    with patch.dict(mount.__opts__, {'test': True}):
+                    with patch.dict(mount.__opts__, {'test': True}), \
+                            patch('os.path.exists', MagicMock(return_value=False)):
                         comt = ('{0} does not exist and would not be created'.format(name))
                         ret.update({'comment': comt, 'changes': {}})
                         self.assertDictEqual(mount.mounted(name, device,
@@ -119,14 +121,16 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                             self.assertDictEqual(mount.mounted(name, device,
                                                                fstype), ret)
 
-                    with patch.dict(mount.__opts__, {'test': True}):
+                    with patch.dict(mount.__opts__, {'test': True}), \
+                            patch('os.path.exists', MagicMock(return_value=False)):
                         comt = ('{0} does not exist and would neither be created nor mounted. '
                                 '{0} needs to be written to the fstab in order to be made persistent.'.format(name))
                         ret.update({'comment': comt, 'result': None})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
 
-                    with patch.dict(mount.__opts__, {'test': False}):
+                    with patch.dict(mount.__opts__, {'test': False}), \
+                            patch('os.path.exists', MagicMock(return_value=False)):
                         comt = ('{0} not present and not mounted. '
                                 'Entry already exists in the fstab.'.format(name))
                         ret.update({'comment': comt, 'result': True})

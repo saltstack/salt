@@ -92,3 +92,8 @@ tests/integration/cloud/providers/pki/minions
 
 # Ignore tox virtualenvs
 /.tox/
+
+# Kitchen tests files
+.kitchen/
+.bundle/
+Gemfile.lock
