@@ -107,6 +107,15 @@ Salt CLI.
 
     salt myminion docker.create image=foo/bar:baz command=/path/to/command start=True
 
+Use SaltSSH Minions like regular Master-Minions
+-----------------------------------------------
+
+The Master process can now also call SSH minions as if they were connected to
+the master using ZeroMQ.  By setting `enable_ssh_minions: True` in the the
+master config file, the master will create a SaltSSH client process which
+connects to the minion and returns the output for the `salt` commandline to use
+like a regular minion. This can be used anywhere the LocalClient is used.
+
 Comparison Operators in Package Installation
 --------------------------------------------
 

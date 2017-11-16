@@ -96,6 +96,18 @@ The user to run the Salt processes
 
 .. conf_master:: ret_port
 
+``enable_ssh``
+--------------
+
+Default: ``False``
+
+Tell the master to also use SaltSSH when running commands against minions.
+
+.. code-block:: yaml
+
+    enable_ssh: True
+    
+
 ``ret_port``
 ------------
 
