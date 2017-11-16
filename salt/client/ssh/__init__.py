@@ -668,6 +668,8 @@ class SSH(object):
                             [jid, 'ret', host],
                             'job'))
                 for _, data in six.iteritems(ret):
+                    if not isinstance(data, dict):
+                        continue
                     self.event.fire_event(
                             data,
                             salt.utils.event.tagify(
@@ -783,6 +785,8 @@ class SSH(object):
                             [jid, 'ret', host],
                             'job'))
                 for _, data in six.iteritems(ret):
+                    if not isinstance(data, dict):
+                        continue
                     self.event.fire_event(
                             data,
                             salt.utils.event.tagify(
