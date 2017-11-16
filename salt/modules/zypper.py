@@ -20,7 +20,6 @@ import re
 import os
 import time
 import datetime
-import copy
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
@@ -1865,7 +1864,7 @@ def search(criteria, refresh=False, **kwargs):
     out = {}
     for solvable in solvables:
         out[solvable.getAttribute('name')] = dict()
-        for k,v in solvable.attributes.items():
+        for k, v in solvable.attributes.items():
             out[solvable.getAttribute('name')][k] = v
 
     return out
@@ -2122,6 +2121,7 @@ def list_installed_patches():
     '''
     return _get_patches(installed_only=True)
 
+
 def list_provides(**kwargs):
     '''
     List package provides currently installed as a dict.
@@ -2143,6 +2143,7 @@ def list_provides(**kwargs):
         __context__['pkg.list_provides'] = ret
 
     return ret
+
 
 def resolve_capabilities(pkgs, refresh, **kwargs):
     '''
