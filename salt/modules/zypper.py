@@ -2187,13 +2187,13 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
         if kwargs.get('resolve_capabilities', False):
             try:
                 search(name, match='exact')
-            except CommandExecutionError as e:
+            except CommandExecutionError:
                 # no package this such a name found
                 # search for a package which provides this name
                 result = search(name, provides=True, match='exact')
-                if len(result.keys()) == 1:
+                if len(result) == 1:
                     name = result.keys()[0]
-                elif len(result.keys()) > 1:
+                elif len(result) > 1:
                     log.warn("Found ambiguous match for capability '{0}'.".format(pkg))
 
         if version:
