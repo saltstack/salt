@@ -238,6 +238,7 @@ execution modules
     mac_user
     mac_xattr
     makeconf
+    mandrill
     marathon
     match
     mattermost
@@ -406,6 +407,7 @@ execution modules
     supervisord
     suse_apache
     svn
+    swarm
     swift
     sysbench
     sysfs

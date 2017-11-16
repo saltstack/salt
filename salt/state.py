@@ -66,12 +66,16 @@ log = logging.getLogger(__name__)
 # by salt in this state module and not on the actual state module function
 STATE_REQUISITE_KEYWORDS = frozenset([
     u'onchanges',
+    u'onchanges_any',
     u'onfail',
+    u'onfail_any',
     u'onfail_stop',
     u'prereq',
     u'prerequired',
     u'watch',
+    u'watch_any',
     u'require',
+    u'require_any',
     u'listen',
     ])
 STATE_REQUISITE_IN_KEYWORDS = frozenset([
@@ -2150,7 +2154,17 @@ class State(object):
                     low[u'require'] = low.pop(u'watch')
             else:
                 present = True
+        if u'watch_any' in low:
+            if u'{0}.mod_watch'.format(low[u'state']) not in self.states:
+                if u'require_any' in low:
+                    low[u'require_any'].extend(low.pop(u'watch_any'))
+                else:
+                    low[u'require_any'] = low.pop(u'watch_any')
+            else:
+                present = True
         if u'require' in low:
+            present = True
+        if u'require_any' in low:
             present = True
         if u'prerequired' in low:
             present = True
@@ -2158,17 +2172,25 @@ class State(object):
             present = True
         if u'onfail' in low:
             present = True
+        if u'onfail_any' in low:
+            present = True
         if u'onchanges' in low:
+            present = True
+        if u'onchanges_any' in low:
             present = True
         if not present:
             return u'met', ()
         self.reconcile_procs(running)
         reqs = {
                 u'require': [],
+                u'require_any': [],
                 u'watch': [],
+                u'watch_any': [],
                 u'prereq': [],
                 u'onfail': [],
-                u'onchanges': []}
+                u'onfail_any': [],
+                u'onchanges': [],
+                u'onchanges_any': []}
         if pre:
             reqs[u'prerequired'] = []
         for r_state in reqs:
@@ -2213,42 +2235,58 @@ class State(object):
                         return u'unmet', ()
         fun_stats = set()
         for r_state, chunks in six.iteritems(reqs):
-            if r_state == u'prereq':
+            req_stats = set()
+            if r_state.startswith(u'prereq') and not r_state.startswith(u'prerequired'):
                 run_dict = self.pre
             else:
                 run_dict = running
             for chunk in chunks:
                 tag = _gen_tag(chunk)
                 if tag not in run_dict:
-                    fun_stats.add(u'unmet')
+                    req_stats.add(u'unmet')
                     continue
                 if run_dict[tag].get(u'proc'):
                     # Run in parallel, first wait for a touch and then recheck
                     time.sleep(0.01)
                     return self.check_requisite(low, running, chunks, pre)
-                if r_state == u'onfail':
+                if r_state.startswith(u'onfail'):
                     if run_dict[tag][u'result'] is True:
-                        fun_stats.add(u'onfail')  # At least one state is OK
+                        req_stats.add(u'onfail')  # At least one state is OK
                         continue
                 else:
                     if run_dict[tag][u'result'] is False:
-                        fun_stats.add(u'fail')
+                        req_stats.add(u'fail')
                         continue
-                if r_state == u'onchanges':
+                if r_state.startswith(u'onchanges'):
                     if not run_dict[tag][u'changes']:
-                        fun_stats.add(u'onchanges')
+                        req_stats.add(u'onchanges')
                     else:
-                        fun_stats.add(u'onchangesmet')
+                        req_stats.add(u'onchangesmet')
                     continue
-                if r_state == u'watch' and run_dict[tag][u'changes']:
-                    fun_stats.add(u'change')
+                if r_state.startswith(u'watch') and run_dict[tag][u'changes']:
+                    req_stats.add(u'change')
                     continue
-                if r_state == u'prereq' and run_dict[tag][u'result'] is None:
-                    fun_stats.add(u'premet')
-                if r_state == u'prereq' and not run_dict[tag][u'result'] is None:
-                    fun_stats.add(u'pre')
+                if r_state.startswith(u'prereq') and run_dict[tag][u'result'] is None:
+                    if not r_state.startswith(u'prerequired'):
+                        req_stats.add(u'premet')
+                if r_state.startswith(u'prereq') and not run_dict[tag][u'result'] is None:
+                    if not r_state.startswith(u'prerequired'):
+                        req_stats.add(u'pre')
                 else:
-                    fun_stats.add(u'met')
+                    req_stats.add(u'met')
+            if r_state.endswith(u'_any'):
+                if u'met' in req_stats or u'change' in req_stats:
+                    if u'fail' in req_stats:
+                        req_stats.remove(u'fail')
+                if u'onchangesmet' in req_stats:
+                    if u'onchanges' in req_stats:
+                        req_stats.remove(u'onchanges')
+                    if u'fail' in req_stats:
+                        req_stats.remove(u'fail')
+                if u'onfail' in req_stats:
+                    if u'fail' in req_stats:
+                        req_stats.remove(u'onfail')
+            fun_stats.update(req_stats)
 
         if u'unmet' in fun_stats:
             status = u'unmet'
@@ -2319,7 +2357,15 @@ class State(object):
         tag = _gen_tag(low)
         if not low.get(u'prerequired'):
             self.active.add(tag)
-        requisites = [u'require', u'watch', u'prereq', u'onfail', u'onchanges']
+        requisites = [u'require',
+                      u'require_any',
+                      u'watch',
+                      u'watch_any',
+                      u'prereq',
+                      u'onfail',
+                      u'onfail_any',
+                      u'onchanges',
+                      u'onchanges_any']
         if not low.get(u'__prereq__'):
             requisites.append(u'prerequired')
             status, reqs = self.check_requisite(low, running, chunks, pre=True)
@@ -2792,6 +2838,8 @@ class BaseHighState(object):
             opts[u'default_top'] = mopts.get(u'default_top', opts.get(u'default_top'))
             opts[u'state_events'] = mopts.get(u'state_events')
             opts[u'state_aggregate'] = mopts.get(u'state_aggregate', opts.get(u'state_aggregate', False))
+            opts[u'jinja_env'] = mopts.get(u'jinja_env', {})
+            opts[u'jinja_sls_env'] = mopts.get(u'jinja_sls_env', {})
             opts[u'jinja_lstrip_blocks'] = mopts.get(u'jinja_lstrip_blocks', False)
             opts[u'jinja_trim_blocks'] = mopts.get(u'jinja_trim_blocks', False)
         return opts

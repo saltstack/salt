@@ -6,11 +6,9 @@ salt-ssh testing
 from __future__ import absolute_import
 
 # Import salt testing libs
-from tests.support.unit import skipIf
 from tests.support.case import SSHCase
 
 
-@skipIf(True, 'Not ready for production')
 class SSHTest(SSHCase):
     '''
     Test general salt-ssh functionality
