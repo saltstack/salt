@@ -1486,7 +1486,7 @@ def installed(
     # check if capabilities should be checked and modify the requested packages
     # accordingly.
     if pkgs:
-        (pkgs, was_refreshed) = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
+        pkgs, was_refreshed = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
         if was_refreshed:
             refresh = False
 
@@ -2018,7 +2018,7 @@ def downloaded(name,
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
 
-    (pkgs, was_refreshed) = _resolve_capabilities(pkgs, **kwargs)
+    pkgs, was_refreshed = _resolve_capabilities(pkgs, **kwargs)
     if was_refreshed:
         refresh = False
 
@@ -2371,7 +2371,7 @@ def latest(
 
     # check if capabilities should be checked and modify the requested packages
     # accordingly.
-    (desired_pkgs, was_refreshed) = _resolve_capabilities(desired_pkgs, refresh=refresh, **kwargs)
+    desired_pkgs, was_refreshed = _resolve_capabilities(desired_pkgs, refresh=refresh, **kwargs)
     if was_refreshed:
         refresh = False
 
@@ -2923,7 +2923,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
 
 
     if isinstance(refresh, bool):
-        (pkgs, was_refreshed) = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
+        pkgs, was_refreshed = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
         if was_refreshed:
             refresh = False
         try:
