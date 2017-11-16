@@ -962,6 +962,54 @@ check the configuration for the correct format and only load if the validation p
         beacons:
           wtmp: []
 
+
+New requisites available in state compiler
+------------------------------------------
+
+- ``require_any``
+The use of ``require_any`` demands that one of the required states executes before the
+dependent state. The state containing the ``require_any`` requisite is defined as the
+dependent state. The states specified in the ``require_any`` statement are defined as the
+required states. If at least one of the required state's execution succeeds, the dependent state
+will then execute. If at least one of the required state's execution fails, the dependent state
+will not execute.
+
+- ``watch_any``
+The state containing the ``watch_any`` requisite is defined as the watching
+state. The states specified in the ``watch_any`` statement are defined as the watched
+states. When the watched states execute, they will return a dictionary containing
+a key named "changes".
+
+If the "result" of any of the watched states is ``True``, the watching state *will
+execute normally*, and if all of them are ``False``, the watching state will never run.
+This part of ``watch`` mirrors the functionality of the ``require`` requisite.
+
+If the "result" of any of the watched states is ``True`` *and* the "changes"
+key contains a populated dictionary (changes occurred in the watched state),
+then the ``watch`` requisite can add additional behavior. This additional
+behavior is defined by the ``mod_watch`` function within the watching state
+module. If the ``mod_watch`` function exists in the watching state module, it
+will be called *in addition to* the normal watching state. The return data
+from the ``mod_watch`` function is what will be returned to the master in this
+case; the return data from the main watching function is discarded.
+
+If the "changes" key contains an empty dictionary, the ``watch`` requisite acts
+exactly like the ``require`` requisite (the watching state will execute if
+"result" is ``True``, and fail if "result" is ``False`` in the watched state).
+
+- ``onchanges_any``
+The ``onchanges_any`` requisite makes a state only apply one of the required states
+generates changes, and if one of the watched state's "result" is ``True``. This can be
+a useful way to execute a post hook after changing aspects of a system.
+
+- ``onfail_any``
+The ``onfail_any`` requisite allows for reactions to happen strictly as a response
+to the failure of at least one other state. This can be used in a number of ways, such as
+executing a second attempt to set up a service or begin to execute a separate
+thread of states because of a failure.
+
+The ``onfail_any`` requisite is applied in the same way as ``require_any`` and ``watch_any``:
+
 Deprecations
 ------------
 

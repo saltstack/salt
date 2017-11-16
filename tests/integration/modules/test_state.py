@@ -23,6 +23,9 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 # Import 3rd-party libs
 from salt.ext import six
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
@@ -698,6 +701,237 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             ret,
             ['A recursive requisite was found, SLS "requisites.require_recursion_error1" ID "B" ID "A"']
         )
+
+    def test_requisites_require_any(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result = {
+            'cmd_|-A_|-echo A_|-run': {
+                '__run_num__': 3,
+                'comment': 'Command "echo A" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-B_|-echo B_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo B" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-C_|-/bin/false_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "/bin/false" run',
+                'result': False,
+                'changes': True,
+            },
+            'cmd_|-D_|-echo D_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "echo D" run',
+                'result': True,
+                'changes': True,
+            },
+        }
+        ret = self.run_function('state.sls', mods='requisites.require_any')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result, result)
+
+    def test_requisites_require_any_fail(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        ret = self.run_function('state.sls', mods='requisites.require_any_fail')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertIn('One or more requisite failed',
+                      result['cmd_|-D_|-echo D_|-run']['comment'])
+
+    def test_requisites_watch_any(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result = {
+            'cmd_|-A_|-true_|-wait': {
+                '__run_num__': 4,
+                'comment': 'Command "true" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-B_|-true_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "true" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-C_|-false_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "false" run',
+                'result': False,
+                'changes': True,
+            },
+            'cmd_|-D_|-true_|-run': {
+                '__run_num__': 2,
+                'comment': 'Command "true" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-E_|-true_|-wait': {
+                '__run_num__': 9,
+                'comment': 'Command "true" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-F_|-true_|-run': {
+                '__run_num__': 5,
+                'comment': 'Command "true" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-G_|-false_|-run': {
+                '__run_num__': 6,
+                'comment': 'Command "false" run',
+                'result': False,
+                'changes': True,
+            },
+            'cmd_|-H_|-false_|-run': {
+                '__run_num__': 7,
+                'comment': 'Command "false" run',
+                'result': False,
+                'changes': True,
+            },
+        }
+        ret = self.run_function('state.sls', mods='requisites.watch_any')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result, result)
+
+    def test_requisites_watch_any_fail(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        ret = self.run_function('state.sls', mods='requisites.watch_any_fail')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertIn('One or more requisite failed',
+                      result['cmd_|-A_|-true_|-wait']['comment'])
+
+    def test_requisites_onchanges_any(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result = {
+            'cmd_|-another_changing_state_|-echo "Changed!"_|-run': {
+                '__run_num__': 1,
+                'changes': True,
+                'comment': 'Command "echo "Changed!"" run',
+                'result': True
+            },
+            'cmd_|-changing_state_|-echo "Changed!"_|-run': {
+                '__run_num__': 0,
+                'changes': True,
+                'comment': 'Command "echo "Changed!"" run',
+                'result': True
+            },
+            'cmd_|-test_one_changing_states_|-echo "Success!"_|-run': {
+                '__run_num__': 4,
+                'changes': True,
+                'comment': 'Command "echo "Success!"" run',
+                'result': True
+            },
+            'cmd_|-test_two_non_changing_states_|-echo "Should not run"_|-run': {
+                '__run_num__': 5,
+                'changes': False,
+                'comment': 'State was not run because none of the onchanges reqs changed',
+                'result': True
+            },
+            'pip_|-another_non_changing_state_|-mock_|-installed': {
+                '__run_num__': 3,
+                'changes': False,
+                'comment': 'Python package mock was already installed\nAll packages were successfully installed',
+                'result': True
+            },
+            'pip_|-non_changing_state_|-mock_|-installed': {
+                '__run_num__': 2,
+                'changes': False,
+                'comment': 'Python package mock was already installed\nAll packages were successfully installed',
+                'result': True
+            }
+        }
+        ret = self.run_function('state.sls', mods='requisites.onchanges_any')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result, result)
+
+    def test_requisites_onfail_any(self):
+        '''
+        Call sls file containing several require_in and require.
+
+        Ensure that some of them are failing and that the order is right.
+        '''
+        expected_result = {
+            'cmd_|-a_|-exit 0_|-run': {
+                '__run_num__': 0,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-b_|-exit 1_|-run': {
+                '__run_num__': 1,
+                'changes': True,
+                'comment': 'Command "exit 1" run',
+                'result': False
+            },
+            'cmd_|-c_|-exit 0_|-run': {
+                '__run_num__': 2,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-d_|-echo itworked_|-run': {
+                '__run_num__': 3,
+                'changes': True,
+                'comment': 'Command "echo itworked" run',
+                'result': True},
+            'cmd_|-e_|-exit 0_|-run': {
+                '__run_num__': 4,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-f_|-exit 0_|-run': {
+                '__run_num__': 5,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-g_|-exit 0_|-run': {
+                '__run_num__': 6,
+                'changes': True,
+                'comment': 'Command "exit 0" run',
+                'result': True
+            },
+            'cmd_|-h_|-echo itworked_|-run': {
+                '__run_num__': 7,
+                'changes': False,
+                'comment': 'State was not run because onfail req did not change',
+                'result': True
+            }
+        }
+        ret = self.run_function('state.sls', mods='requisites.onfail_any')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result, result)
 
     def test_requisites_full_sls(self):
         '''
