@@ -976,7 +976,7 @@ class Cloud(object):
 
         return ret
 
-    def destroy(self, names, cached=False):
+    def destroy(self, names, cached=False, **kwargs):
         '''
         Destroy the named VMs
         '''
@@ -1041,7 +1041,7 @@ class Cloud(object):
                     self.clouds[fun],
                     __active_provider_name__=':'.join([alias, driver])
                 ):
-                    ret = self.clouds[fun](name)
+                    ret = self.clouds[fun](name, kwargs)
                 if alias not in processed:
                     processed[alias] = {}
                 if driver not in processed[alias]:
