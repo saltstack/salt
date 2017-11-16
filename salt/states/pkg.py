@@ -888,18 +888,16 @@ def _resolve_capabilities(pkgs, refresh=False, **kwargs):
     ``resolve_capabilities`` to True.
 
     Return the input dictionary with replaced capability names and as
-    second return value a bool which indicate if a refresh was run.
+    second return value a bool which say if a refresh need to be run.
 
     In case of ``resolve_capabilities`` is False (disabled) or not
     supported by the implementation the input is returned unchanged.
     '''
-    was_refreshed = False
     if not pkgs or 'pkg.resolve_capabilities' not in __salt__:
-        return (pkgs, was_refreshed)
+        return pkgs, refresh
 
     ret = __salt__['pkg.resolve_capabilities'](pkgs, refresh=refresh, **kwargs)
-    was_refreshed = refresh
-    return (ret, was_refreshed)
+    return ret, False
 
 
 def installed(
@@ -1486,9 +1484,7 @@ def installed(
     # check if capabilities should be checked and modify the requested packages
     # accordingly.
     if pkgs:
-        pkgs, was_refreshed = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
-        if was_refreshed:
-            refresh = False
+        pkgs, refresh = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
 
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
@@ -2018,9 +2014,7 @@ def downloaded(name,
     if 'downloadonly' in kwargs:
         del kwargs['downloadonly']
 
-    pkgs, was_refreshed = _resolve_capabilities(pkgs, **kwargs)
-    if was_refreshed:
-        refresh = False
+    pkgs, _refresh = _resolve_capabilities(pkgs, **kwargs)
 
     # Only downloading not yet downloaded packages
     targets = _find_download_targets(name,
@@ -2371,9 +2365,7 @@ def latest(
 
     # check if capabilities should be checked and modify the requested packages
     # accordingly.
-    desired_pkgs, was_refreshed = _resolve_capabilities(desired_pkgs, refresh=refresh, **kwargs)
-    if was_refreshed:
-        refresh = False
+    desired_pkgs, refresh = _resolve_capabilities(desired_pkgs, refresh=refresh, **kwargs)
 
     try:
         avail = __salt__['pkg.latest_version'](*desired_pkgs,
@@ -2923,7 +2915,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
 
 
     if isinstance(refresh, bool):
-        pkgs, was_refreshed = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
+        pkgs, refresh = _resolve_capabilities(pkgs, refresh=refresh, **kwargs)
         if was_refreshed:
             refresh = False
         try:
