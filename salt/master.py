@@ -1958,7 +1958,7 @@ class ClearFuncs(object):
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         # Send it!
-        if self.opts[u'enable_ssh'] is True:
+        if self.opts[u'enable_ssh_minions'] is True:
             log.debug('Use SSHClient for rostered minions')
             ssh = salt.client.ssh.client.SSHClient()
             ssh_minions = ssh._prep_ssh(**clear_load).targets.keys()

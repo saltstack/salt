@@ -1185,7 +1185,7 @@ VALID_OPTS = {
     'schedule': dict,
 
     # Enable calling ssh minions from the salt master
-    'enable_ssh': bool,
+    'enable_ssh_minions': bool,
 }
 
 # default configurations
@@ -1803,6 +1803,7 @@ DEFAULT_MASTER_OPTS = {
     },
     'schedule': {},
     'enable_ssh': False,
+    'enable_ssh_minions': False,
 }
 
 

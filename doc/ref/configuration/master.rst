@@ -96,8 +96,8 @@ The user to run the Salt processes
 
 .. conf_master:: ret_port
 
-``enable_ssh``
---------------
+``enable_ssh_minions``
+----------------------
 
 Default: ``False``
 
@@ -105,8 +105,12 @@ Tell the master to also use SaltSSH when running commands against minions.
 
 .. code-block:: yaml
 
-    enable_ssh: True
-    
+    enable_ssh_minions: True
+
+.. note::
+
+    Cross minion type communication is still not possible.  The SaltMine and
+    publish.publish do not work between minion types.
 
 ``ret_port``
 ------------
