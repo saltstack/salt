@@ -214,7 +214,7 @@ class SSH(object):
     def __init__(self, opts):
         self.__parsed_rosters = {SSH.ROSTER_UPDATE_FLAG: True}
         pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
-        if os.path.isfile(pull_sock) and HAS_ZMQ:
+        if os.path.exists(pull_sock) and HAS_ZMQ:
             self.event = salt.utils.event.get_event(
                     'master',
                     opts['sock_dir'],
@@ -667,6 +667,12 @@ class SSH(object):
                         salt.utils.event.tagify(
                             [jid, 'ret', host],
                             'job'))
+                for _, data in six.iteritems(ret):
+                    self.event.fire_event(
+                            data,
+                            salt.utils.event.tagify(
+                                [jid, 'ret', host],
+                                'job'))
             yield ret
 
     def cache_job(self, jid, id_, ret, fun):
@@ -776,6 +782,12 @@ class SSH(object):
                         salt.utils.event.tagify(
                             [jid, 'ret', host],
                             'job'))
+                for _, data in six.iteritems(ret):
+                    self.event.fire_event(
+                            data,
+                            salt.utils.event.tagify(
+                                [jid, 'ret', host],
+                                'job'))
         if self.opts.get('static'):
             salt.output.display_output(
                     sret,
