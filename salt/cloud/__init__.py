@@ -361,7 +361,7 @@ class CloudClient(object):
             mapper.run_map(dmap)
         )
 
-    def destroy(self, names):
+    def destroy(self, names, **kwargs):
         '''
         Destroy the named VMs
         '''
