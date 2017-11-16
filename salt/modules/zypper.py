@@ -2178,8 +2178,8 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
     ret = list()
     for pkg in pkgs:
         if isinstance(pkg, dict):
-            for name, version in pkg.items():
-                break
+            name = next(iter(pkg))
+            version = pkg[name]
         else:
             name = pkg
             version = None
