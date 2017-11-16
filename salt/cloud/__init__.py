@@ -1037,6 +1037,7 @@ class Cloud(object):
             log.info('Destroying in non-parallel mode.')
             for alias, driver, name in vms_to_destroy:
                 fun = '{0}.destroy'.format(driver)
+                log.debug(fun)
                 with context.func_globals_inject(
                     self.clouds[fun],
                     __active_provider_name__=':'.join([alias, driver])
