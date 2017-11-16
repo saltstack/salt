@@ -2602,8 +2602,8 @@ class State(object):
                                chunk['name'] == listen_to:
                                 listen_to = {chunk['state']: chunk['__id__']}
                                 found = True
-                            if not found:
-                                continue
+                        if not found:
+                            continue
                     for lkey, lval in six.iteritems(listen_to):
                         if (lkey, lval) not in crefs:
                             rerror = {_l_tag(lkey, lval):
