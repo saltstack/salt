@@ -845,6 +845,47 @@ class Schedule(object):
                     if key is not 'kwargs':
                         kwargs['__pub_{0}'.format(key)] = copy.deepcopy(val)
 
+            # Only include these when running runner modules
+            if self.opts['__role'] == 'master':
+                jid = salt.utils.jid.gen_jid()
+                tag = salt.utils.event.tagify(jid, prefix='salt/scheduler/')
+        
+                event = salt.utils.event.get_event(
+                        self.opts['__role'],
+                        self.opts['sock_dir'],
+                        self.opts['transport'],
+                        opts=self.opts,
+                        listen=False)
+        
+                namespaced_event = salt.utils.event.NamespacedEvent(
+                    event,
+                    tag,
+                    print_func=None
+                )
+        
+                func_globals = {
+                    '__jid__': jid,
+                    '__user__': salt.utils.get_user(),
+                    '__tag__': tag,
+                    '__jid_event__': weakref.proxy(namespaced_event),
+                }
+                self_functions = copy.copy(self.functions)
+                salt.utils.lazy.verify_fun(self_functions, func)
+
+                # Inject some useful globals to *all* the function's global
+                # namespace only once per module-- not per func
+                completed_funcs = []
+
+                for mod_name in six.iterkeys(self_functions):
+                    if '.' not in mod_name:
+                        continue
+                    mod, _ = mod_name.split('.', 1)
+                    if mod in completed_funcs:
+                        continue
+                    completed_funcs.append(mod)
+                    for global_key, value in six.iteritems(func_globals):
+                        self.functions[mod_name].__globals__[global_key] = value
+
             ret['return'] = self.functions[func](*args, **kwargs)
 
             # runners do not provide retcode
