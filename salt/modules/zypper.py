@@ -2190,11 +2190,15 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
             except CommandExecutionError:
                 # no package this such a name found
                 # search for a package which provides this name
-                result = search(name, provides=True, match='exact')
-                if len(result) == 1:
-                    name = result.keys()[0]
-                elif len(result) > 1:
-                    log.warn("Found ambiguous match for capability '{0}'.".format(pkg))
+                try:
+                    result = search(name, provides=True, match='exact')
+                    if len(result) == 1:
+                        name = result.keys()[0]
+                    elif len(result) > 1:
+                        log.warn("Found ambiguous match for capability '{0}'.".format(pkg))
+                except CommandExecutionError:
+                    # when search throw an exception stay with original name and version
+                    pass
 
         if version:
             ret.append({name: version})
