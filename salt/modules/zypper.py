@@ -1171,10 +1171,7 @@ def install(name=None,
         fromrepoopt = ''
     cmd_install = ['install', '--auto-agree-with-licenses']
 
-    if kwargs.get('resolve_capabilities', False):
-        cmd_install.append('--capability')
-    else:
-        cmd_install.append('--name')
+    cmd_install.append(kwargs.get('resolve_capabilities') and '--capability' or '--name')
 
     if not refresh:
         cmd_install.insert(0, '--no-refresh')
