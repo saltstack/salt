@@ -1206,7 +1206,7 @@ def install(name=None,
         __zypper__(no_repo_failure=ignore_repo_failure).call(*cmd)
 
     __context__.pop('pkg.list_pkgs', None)
-    __context__.pop('pkg.list_list_provides', None)
+    __context__.pop('pkg.list_provides', None)
     new = list_pkgs(attr=diff_attr) if not downloadonly else list_downloaded()
 
     # Handle packages which report multiple new versions
@@ -1324,7 +1324,7 @@ def upgrade(refresh=True,
 
     __zypper__(systemd_scope=_systemd_scope()).noraise.call(*cmd_update)
     __context__.pop('pkg.list_pkgs', None)
-    __context__.pop('pkg.list_list_provides', None)
+    __context__.pop('pkg.list_provides', None)
     new = list_pkgs()
 
     # Handle packages which report multiple new versions
@@ -1374,7 +1374,7 @@ def _uninstall(name=None, pkgs=None):
         targets = targets[500:]
 
     __context__.pop('pkg.list_pkgs', None)
-    __context__.pop('pkg.list_list_provides', None)
+    __context__.pop('pkg.list_provides', None)
     ret = salt.utils.data.compare_dicts(old, list_pkgs())
 
     if errors:
@@ -2129,22 +2129,20 @@ def list_provides(**kwargs):
     List package provides currently installed as a dict.
     {'<provided_name>': ['<package_name', 'package_name', ...]}
     '''
-    if 'pkg.list_provides' in __context__:
-        cached = __context__['pkg.list_provides']
-        return cached
+    ret = __context__.get('pkg.list_provides')
+    if not ret:
+        cmd = ['rpm', '-qa', '--queryformat', '[%{PROVIDES}_|-%{NAME}\n]']
+        ret = dict()
+        for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
+            provide, realname = line.split('_|-')
 
-    cmd = ['rpm', '-qa', '--queryformat', '[%{PROVIDES}_|-%{NAME}\n]']
-    ret = {}
-    for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
-        provide, realname = line.split('_|-')
+            if provide == realname:
+                continue
+            if provide not in ret:
+                ret[provide] = list()
+            ret[provide].append(realname)
 
-        if provide == realname:
-            continue
-        if provide not in ret:
-            ret[provide] = list()
-        ret[provide].append(realname)
-
-    __context__['pkg.list_list_provides'] = ret
+        __context__['pkg.list_provides'] = ret
 
     return ret
 
