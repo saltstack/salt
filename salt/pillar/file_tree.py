@@ -269,14 +269,14 @@ def _construct_pillar(top_dir,
                 log.error('file_tree: %s: not a regular file', file_path)
                 continue
 
-            contents = ''
+            contents = b''
             try:
                 with salt.utils.files.fopen(file_path, 'rb') as fhr:
                     buf = fhr.read(__opts__['file_buffer_size'])
                     while buf:
                         contents += buf
                         buf = fhr.read(__opts__['file_buffer_size'])
-                    if contents.endswith('\n') \
+                    if contents.endswith(b'\n') \
                             and _check_newline(prefix,
                                                file_name,
                                                keep_newline):
