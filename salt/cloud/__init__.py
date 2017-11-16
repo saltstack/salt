@@ -365,7 +365,8 @@ class CloudClient(object):
         '''
         Destroy the named VMs
         '''
-
+        log.debug('Destroy debug entering')
+        log.debug(kwargs)
         if kwargs is None:
             kwargs = {}
 
