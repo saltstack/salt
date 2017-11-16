@@ -909,7 +909,7 @@ def destroy(name, call=None, kwargs=None):
     #Get volumes before the server is deleted
     if 'delete_volumes' in kwargs:
         attached_volumes = conn.get_attached_volumes(datacenter_id=datacenter_id, server_id=node['id'])        
-    
+    log.debug(kwargs)
     #conn.delete_server(datacenter_id=datacenter_id, server_id=node['id'])
 
     #The server is deleted and now is safe to delete the volumes
