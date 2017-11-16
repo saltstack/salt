@@ -867,7 +867,7 @@ def create(vm_):
         raise SaltCloudSystemExit('A valid IP address was not found.')
 
 
-def destroy(name, call=None, kwargs=None)):
+def destroy(name, call=None, kwargs=None):
     '''
     destroy a machine by name
 
