@@ -586,6 +586,32 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         #result = self.normalize_ret(ret)
         #self.assertEqual(expected_result, result)
 
+    def test_watch_in(self):
+        '''
+        test watch_in requisite when there is a success
+        '''
+        ret = self.run_function('state.sls', mods='requisites.watch_in')
+        out = iter(ret)
+        f_state = next(out)
+        s_state = next(out)
+
+        self.assertEqual('Watch statement fired.', ret[f_state]['comment'])
+        self.assertEqual('Something pretended to change',
+                         ret[s_state]['changes']['testing']['new'])
+
+    def test_watch_in_failure(self):
+        '''
+        test watch_in requisite when there is a failure
+        '''
+        ret = self.run_function('state.sls', mods='requisites.watch_in_failure')
+        out = iter(ret)
+        f_state = next(out)
+        s_state = next(out)
+
+        self.assertEqual(False, ret[f_state]['result'])
+        self.assertEqual('One or more requisite failed: requisites.watch_in_failure.return_changes',
+                         ret[s_state]['comment'])
+
     def normalize_ret(self, ret):
         '''
         Normalize the return to the format that we'll use for result checking
