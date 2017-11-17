@@ -1266,7 +1266,7 @@ ARGS = {10}\n'''.format(self.minion_config,
         self.argv = _convert_args(self.argv)
         log.debug(
             'Performing shimmed, blocking command as follows:\n%s',
-            ' '.join(self.argv)
+            ' '.join([six.text_type(arg) for arg in self.argv])
         )
         cmd_str = self._cmd_str()
         stdout, stderr, retcode = self.shim_cmd(cmd_str)
