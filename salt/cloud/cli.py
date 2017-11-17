@@ -217,7 +217,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
             try:
                 if self.print_confirm(msg):
-                    ret = mapper.destroy(names, cached=True, kwargs)
+                    ret = mapper.destroy(names, cached=True, kwargs=kwargs)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error destroying machines: {0}'
                 self.handle_exception(msg, exc)
