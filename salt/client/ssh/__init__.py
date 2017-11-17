@@ -663,6 +663,7 @@ class SSH(object):
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
                 _, data = next(six.iteritems(ret))
+                data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
                 self.event.fire_event(
                     data,
                     salt.utils.event.tagify(
@@ -773,6 +774,7 @@ class SSH(object):
                         self.opts)
             if self.event:
                 _, data = next(six.iteritems(ret))
+                data['jid'] = jid  # make the jid in the payload the same as the jid in the tag
                 self.event.fire_event(
                     data,
                     salt.utils.event.tagify(
