@@ -706,7 +706,7 @@ Note these can be defined in the pillar for a minion as well.
 
 Default: ``60``
 
-The number of seconds a mine update runs.
+The number of minutes between mine updates.
 
 .. code-block:: yaml
 
@@ -1196,7 +1196,7 @@ be able to execute a certain module. The ``sys`` module is built into the minion
 and cannot be disabled.
 
 This setting can also tune the minion. Because all modules are loaded into system
-memory, disabling modules will lover the minion's memory footprint.
+memory, disabling modules will lower the minion's memory footprint.
 
 Modules should be specified according to their file name on the system and not by
 their virtual name. For example, to disable ``cmd``, use the string ``cmdmod`` which
@@ -1664,14 +1664,18 @@ output for states that failed or states that have changes.
 
 Default: ``full``
 
-The state_output setting changes if the output is the full multi line
-output for each changed state if set to 'full', but if set to 'terse'
-the output will be shortened to a single line.
+The state_output setting controls which results will be output full multi line:
+
+* ``full``, ``terse`` - each state will be full/terse
+* ``mixed`` - only states with errors will be full
+* ``changes`` - states with changes and errors will be full
+
+``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
+when set, the state ID will be used as name in the output.
 
 .. code-block:: yaml
 
     state_output: full
-
 
 .. conf_minion:: state_output_diff
 
@@ -2383,6 +2387,7 @@ Default: ``10``
 The number of workers for the runner/wheel in the reactor.
 
 .. code-block:: yaml
+
     reactor_worker_threads: 10
 
 .. conf_minion:: reactor_worker_hwm
@@ -2404,11 +2409,14 @@ Thread Settings
 
 .. conf_minion:: multiprocessing
 
+``multiprocessing``
+-------
+
 Default: ``True``
 
-If `multiprocessing` is enabled when a minion receives a
+If ``multiprocessing`` is enabled when a minion receives a
 publication a new process is spawned and the command is executed therein.
-Conversely, if `multiprocessing` is disabled the new publication will be run
+Conversely, if ``multiprocessing`` is disabled the new publication will be run
 executed in a thread.
 
 
@@ -2416,6 +2424,23 @@ executed in a thread.
 
     multiprocessing: True
 
+.. conf_minion:: process_count_max
+
+``process_count_max``
+-------
+
+.. versionadded:: Oxygen
+
+Default: ``-1``
+
+Limit the maximum amount of processes or threads created by ``salt-minion``.
+This is useful to avoid resource exhaustion in case the minion receives more
+publications than it is able to handle, as it limits the number of spawned
+processes or threads. ``-1`` is the default and disables the limit.
+
+.. code-block:: yaml
+
+    process_count_max: -1
 
 .. _minion-logging-settings:
 

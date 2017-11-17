@@ -22,9 +22,9 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import Salt libs
 import salt.minion
-import salt.utils
 import salt.utils.files
 import salt.utils.network
+import salt.utils.platform
 from salt.syspaths import CONFIG_DIR
 from salt import config as sconfig
 from salt.exceptions import (
@@ -453,7 +453,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             tempdir = tempfile.mkdtemp(dir=TMP)
             master_config = os.path.join(tempdir, 'master')
 
-            with salt.utils.fopen(master_config, 'w') as fp_:
+            with salt.utils.files.fopen(master_config, 'w') as fp_:
                 fp_.write(
                     'id_function:\n'
                     '  test.echo:\n'
@@ -537,7 +537,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             tempdir = tempfile.mkdtemp(dir=TMP)
             minion_config = os.path.join(tempdir, 'minion')
 
-            with salt.utils.fopen(minion_config, 'w') as fp_:
+            with salt.utils.files.fopen(minion_config, 'w') as fp_:
                 fp_.write(
                     'id_function:\n'
                     '  test.echo:\n'
@@ -727,8 +727,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Tests passing in valid provider and profile config files successfully
         '''
         providers = {'test-provider':
-                         {'digital_ocean':
-                              {'driver': 'digital_ocean', 'profiles': {}}}}
+                         {'digitalocean':
+                              {'driver': 'digitalocean', 'profiles': {}}}}
         overrides = {'test-profile':
                          {'provider': 'test-provider',
                           'image': 'Ubuntu 12.10 x64',
@@ -736,7 +736,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                      'conf_file': PATH}
         ret = {'test-profile':
                    {'profile': 'test-profile',
-                    'provider': 'test-provider:digital_ocean',
+                    'provider': 'test-provider:digitalocean',
                     'image': 'Ubuntu 12.10 x64',
                     'size': '512MB'}}
         self.assertEqual(sconfig.apply_vm_profiles_config(providers,

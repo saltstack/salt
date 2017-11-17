@@ -93,7 +93,7 @@ def _validate_partition_boundary(boundary):
     '''
     try:
         for unit in VALID_UNITS:
-            if boundary.endswith(unit):
+            if str(boundary).endswith(unit):
                 return
         int(boundary)
     except Exception:

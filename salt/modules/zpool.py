@@ -19,10 +19,21 @@ from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'zpool'
 __func_alias__ = {
     'import_': 'import',
     'list_': 'list',
 }
+
+
+def __virtual__():
+    '''
+    Only load when the platform has zfs support
+    '''
+    if __grains__['zfs_support']:
+        return __virtualname__
+    else:
+        return (False, "The zpool module cannot be loaded: zfs not supported")
 
 
 @salt.utils.decorators.memoize
@@ -56,15 +67,6 @@ def _check_mkfile():
     Looks to see if mkfile is present on the system
     '''
     return salt.utils.path.which('mkfile')
-
-
-def __virtual__():
-    '''
-    Provides zpool.
-    '''
-    if _check_zpool():
-        return 'zpool'
-    return (False, "Module zpool: zpool not found")
 
 
 def healthy():

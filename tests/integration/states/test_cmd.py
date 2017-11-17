@@ -105,7 +105,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(sls)
         # We must assert against the comment here to make sure the comment reads that the
         # command "echo "hello"" was run. This ensures that we made it to the last unless
-        # command in the state. If the comment reads "unless execution succeeded", or similar,
+        # command in the state. If the comment reads "unless condition is true", or similar,
         # then the unless state run bailed out after the first unless command succeeded,
         # which is the bug we're regression testing for.
         self.assertEqual(sls['cmd_|-cmd_run_unless_multiple_|-echo "hello"_|-run']['comment'],

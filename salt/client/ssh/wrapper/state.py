@@ -13,7 +13,11 @@ import logging
 # Import salt libs
 import salt.client.ssh.shell
 import salt.client.ssh.state
-import salt.utils
+import salt.utils.args
+import salt.utils.data
+import salt.utils.files
+import salt.utils.hashutils
+import salt.utils.platform
 import salt.utils.thin
 import salt.roster
 import salt.state
@@ -100,7 +104,7 @@ def sls(mods, saltenv=u'base', test=None, exclude=None, **kwargs):
             __pillar__,
             st_kwargs[u'id_'],
             roster_grains)
-    trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__[u'hash_type'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__[u'hash_type'])
     cmd = u'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__[u'thin_dir'],
             test,
@@ -125,7 +129,7 @@ def sls(mods, saltenv=u'base', test=None, exclude=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error(u"JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(str(e))
@@ -177,7 +181,7 @@ def low(data, **kwargs):
             __pillar__,
             st_kwargs[u'id_'],
             roster_grains)
-    trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__[u'hash_type'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__[u'hash_type'])
     cmd = u'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
             __opts__[u'thin_dir'],
             trans_tar_sum,
@@ -201,7 +205,7 @@ def low(data, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error(u"JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(str(e))
@@ -250,7 +254,7 @@ def high(data, **kwargs):
             __pillar__,
             st_kwargs[u'id_'],
             roster_grains)
-    trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__[u'hash_type'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__[u'hash_type'])
     cmd = u'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
             __opts__[u'thin_dir'],
             trans_tar_sum,
@@ -274,7 +278,7 @@ def high(data, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error(u"JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(str(e))
@@ -303,6 +307,143 @@ def apply_(mods=None,
     if mods:
         return sls(mods, **kwargs)
     return highstate(**kwargs)
+
+
+def request(mods=None,
+            **kwargs):
+    '''
+    .. versionadded:: 2017.7.3
+
+    Request that the local admin execute a state run via
+    `salt-call state.run_request`
+    All arguments match state.apply
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.request
+        salt '*' state.request test
+        salt '*' state.request test,pkgs
+    '''
+    kwargs['test'] = True
+    ret = apply_(mods, **kwargs)
+    notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
+    serial = salt.payload.Serial(__opts__)
+    req = check_request()
+    req.update({kwargs.get('name', 'default'): {
+            'test_run': ret,
+            'mods': mods,
+            'kwargs': kwargs
+            }
+        })
+    cumask = os.umask(0o77)
+    try:
+        if salt.utils.platform.is_windows():
+            # Make sure cache file isn't read-only
+            __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+        with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
+            serial.dump(req, fp_)
+    except (IOError, OSError):
+        msg = 'Unable to write state request file {0}. Check permission.'
+        log.error(msg.format(notify_path))
+    os.umask(cumask)
+    return ret
+
+
+def check_request(name=None):
+    '''
+    .. versionadded:: 2017.7.3
+
+    Return the state request information, if any
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.check_request
+    '''
+    notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
+    serial = salt.payload.Serial(__opts__)
+    if os.path.isfile(notify_path):
+        with salt.utils.files.fopen(notify_path, 'rb') as fp_:
+            req = serial.load(fp_)
+        if name:
+            return req[name]
+        return req
+    return {}
+
+
+def clear_request(name=None):
+    '''
+    .. versionadded:: 2017.7.3
+
+    Clear out the state execution request without executing it
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.clear_request
+    '''
+    notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
+    serial = salt.payload.Serial(__opts__)
+    if not os.path.isfile(notify_path):
+        return True
+    if not name:
+        try:
+            os.remove(notify_path)
+        except (IOError, OSError):
+            pass
+    else:
+        req = check_request()
+        if name in req:
+            req.pop(name)
+        else:
+            return False
+        cumask = os.umask(0o77)
+        try:
+            if salt.utils.platform.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+            with salt.utils.files.fopen(notify_path, 'w+b') as fp_:
+                serial.dump(req, fp_)
+        except (IOError, OSError):
+            msg = 'Unable to write state request file {0}. Check permission.'
+            log.error(msg.format(notify_path))
+        os.umask(cumask)
+    return True
+
+
+def run_request(name='default', **kwargs):
+    '''
+    .. versionadded:: 2017.7.3
+
+    Execute the pending state request
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.run_request
+    '''
+    req = check_request()
+    if name not in req:
+        return {}
+    n_req = req[name]
+    if 'mods' not in n_req or 'kwargs' not in n_req:
+        return {}
+    req[name]['kwargs'].update(kwargs)
+    if 'test' in n_req['kwargs']:
+        n_req['kwargs'].pop('test')
+    if req:
+        ret = apply_(n_req['mods'], **n_req['kwargs'])
+        try:
+            os.remove(os.path.join(__opts__['cachedir'], 'req_state.p'))
+        except (IOError, OSError):
+            pass
+        return ret
+    return {}
 
 
 def highstate(test=None, **kwargs):
@@ -353,7 +494,7 @@ def highstate(test=None, **kwargs):
             __pillar__,
             st_kwargs[u'id_'],
             roster_grains)
-    trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__[u'hash_type'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__[u'hash_type'])
     cmd = u'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__[u'thin_dir'],
             test,
@@ -378,7 +519,7 @@ def highstate(test=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error(u"JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(str(e))
@@ -402,7 +543,7 @@ def top(topfn, test=None, **kwargs):
     __pillar__.update(kwargs.get(u'pillar', {}))
     st_kwargs = __salt__.kwargs
     __opts__[u'grains'] = __grains__
-    if salt.utils.test_mode(test=test, **kwargs):
+    if salt.utils.args.test_mode(test=test, **kwargs):
         __opts__[u'test'] = True
     else:
         __opts__[u'test'] = __opts__.get(u'test', None)
@@ -433,7 +574,7 @@ def top(topfn, test=None, **kwargs):
             __pillar__,
             st_kwargs[u'id_'],
             roster_grains)
-    trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__[u'hash_type'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__[u'hash_type'])
     cmd = u'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
             __opts__[u'thin_dir'],
             test,
@@ -458,7 +599,7 @@ def top(topfn, test=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error(u"JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(str(e))
@@ -519,7 +660,7 @@ def show_sls(mods, saltenv=u'base', test=None, **kwargs):
     __pillar__.update(kwargs.get(u'pillar', {}))
     __opts__[u'grains'] = __grains__
     opts = copy.copy(__opts__)
-    if salt.utils.test_mode(test=test, **kwargs):
+    if salt.utils.args.test_mode(test=test, **kwargs):
         opts[u'test'] = True
     else:
         opts[u'test'] = __opts__.get(u'test', None)
@@ -562,7 +703,7 @@ def show_low_sls(mods, saltenv=u'base', test=None, **kwargs):
     __opts__[u'grains'] = __grains__
 
     opts = copy.copy(__opts__)
-    if salt.utils.test_mode(test=test, **kwargs):
+    if salt.utils.args.test_mode(test=test, **kwargs):
         opts[u'test'] = True
     else:
         opts[u'test'] = __opts__.get(u'test', None)
@@ -651,7 +792,7 @@ def single(fun, name, test=None, **kwargs):
     opts = copy.deepcopy(__opts__)
 
     # Set test mode
-    if salt.utils.test_mode(test=test, **kwargs):
+    if salt.utils.args.test_mode(test=test, **kwargs):
         opts[u'test'] = True
     else:
         opts[u'test'] = __opts__.get(u'test', None)
@@ -695,7 +836,7 @@ def single(fun, name, test=None, **kwargs):
             roster_grains)
 
     # Create a hash so we can verify the tar on the target system
-    trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__[u'hash_type'])
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__[u'hash_type'])
 
     # We use state.pkg to execute the "state package"
     cmd = u'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
@@ -728,7 +869,7 @@ def single(fun, name, test=None, **kwargs):
 
     # Read in the JSON data and return the data structure
     try:
-        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+        return json.loads(stdout, object_hook=salt.utils.data.decode_dict)
     except Exception as e:
         log.error(u"JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(str(e))

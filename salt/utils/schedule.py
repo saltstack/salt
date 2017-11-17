@@ -337,7 +337,6 @@ import copy
 
 # Import Salt libs
 import salt.config
-import salt.utils  # Can be removed once appendproctitle and daemonize_if are moved
 import salt.utils.args
 import salt.utils.error
 import salt.utils.event
@@ -779,7 +778,7 @@ class Schedule(object):
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
 
-        salt.utils.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
+        salt.utils.process.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
 
         if not self.standalone:
             proc_fn = os.path.join(
@@ -818,7 +817,7 @@ class Schedule(object):
             log_setup.setup_multiprocessing_logging()
 
         # Don't *BEFORE* to go into try to don't let it triple execute the finally section.
-        salt.utils.daemonize_if(self.opts)
+        salt.utils.process.daemonize_if(self.opts)
 
         # TODO: Make it readable! Splt to funcs, remove nested try-except-finally sections.
         try:
@@ -1152,7 +1151,8 @@ class Schedule(object):
                     # Sort the list of "whens" from earlier to later schedules
                     _when.sort()
 
-                    for i in _when:
+                    # Copy the list so we can loop through it
+                    for i in copy.deepcopy(_when):
                         if i < now and len(_when) > 1:
                             # Remove all missed schedules except the latest one.
                             # We need it to detect if it was triggered previously.

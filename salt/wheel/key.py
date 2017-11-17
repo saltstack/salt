@@ -36,7 +36,7 @@ import logging
 # Import salt libs
 from salt.key import get_key
 import salt.crypt
-import salt.utils  # Can be removed once pem_finger is moved
+import salt.utils.crypt
 import salt.utils.files
 import salt.utils.platform
 from salt.utils.sanitizers import clean
@@ -315,7 +315,7 @@ def finger_master(hash_type=None):
     if hash_type is None:
         hash_type = __opts__['hash_type']
 
-    fingerprint = salt.utils.pem_finger(
+    fingerprint = salt.utils.crypt.pem_finger(
         os.path.join(__opts__['pki_dir'], keyname), sum_type=hash_type)
     return {'local': {keyname: fingerprint}}
 

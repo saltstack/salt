@@ -12,6 +12,7 @@ import logging
 import os
 import posixpath
 import re
+import string
 import struct
 import sys
 
@@ -19,6 +20,7 @@ import sys
 import salt.utils.args
 import salt.utils.platform
 import salt.utils.stringutils
+from salt.exceptions import CommandNotFoundError
 from salt.utils.decorators import memoize as real_memoize
 from salt.utils.decorators.jinja import jinja_filter
 
@@ -120,6 +122,11 @@ def readlink(path):
         # comes out in 8.3 form; convert it to LFN to make it look nicer
         target = win32file.GetLongPathName(target)
     except pywinerror as exc:
+        # If target is on a UNC share, the decoded target will be in the format
+        # "UNC\hostanme\sharename\additional\subdirs\under\share". So, in
+        # these cases, return the target path in the proper UNC path format.
+        if target.startswith('UNC\\'):
+            return re.sub(r'^UNC\\+', r'\\\\', target)
         # if file is not found (i.e. bad symlink), return it anyway like on *nix
         if exc.winerror == 2:
             return target
@@ -308,3 +315,32 @@ def join(*parts, **kwargs):
                 ret = pathlib.join(root.decode('UTF-8'),
                                    *[x.decode('UTF-8') for x in stripped])
     return pathlib.normpath(ret)
+
+
+def check_or_die(command):
+    '''
+    Simple convenience function for modules to use for gracefully blowing up
+    if a required tool is not available in the system path.
+
+    Lazily import `salt.modules.cmdmod` to avoid any sort of circular
+    dependencies.
+    '''
+    if command is None:
+        raise CommandNotFoundError('\'None\' is not a valid command.')
+
+    if not which(command):
+        raise CommandNotFoundError('\'{0}\' is not in the path'.format(command))
+
+
+def sanitize_win_path(winpath):
+    '''
+    Remove illegal path characters for windows
+    '''
+    intab = '<>:|?*'
+    outtab = '_' * len(intab)
+    trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
+    if isinstance(winpath, six.string_types):
+        winpath = winpath.translate(trantab)
+    elif isinstance(winpath, six.text_type):
+        winpath = winpath.translate(dict((ord(c), u'_') for c in intab))
+    return winpath

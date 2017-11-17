@@ -31,7 +31,6 @@ from tests.support.mock import (
 import yaml
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 import salt.utils.platform
 import salt.states.file as filestate
@@ -815,7 +814,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         ret.update({
                             'comment': comt,
                             'result': None,
-                            'pchanges': p_chg
+                            'pchanges': p_chg,
+                            'changes': {'/etc/grub.conf': {'directory': 'new'}}
                         })
                         self.assertDictEqual(filestate.directory(name,
                                                                  user=user,
@@ -826,7 +826,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         with patch.object(os.path, 'isdir', mock_f):
                             comt = ('No directory to create {0} in'
                                     .format(name))
-                            ret.update({'comment': comt, 'result': False})
+                            ret.update({'comment': comt, 'result': False, 'changes': {}})
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user, group=group),
                                                  ret)
@@ -1182,7 +1182,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     ret.update({'name': name})
                     with patch.object(salt.utils.files, 'fopen',
                                       MagicMock(mock_open(read_data=''))):
-                        with patch.dict(filestate.__utils__, {'files.is_text_file': mock_f}):
+                        with patch.dict(filestate.__utils__, {'files.is_text': mock_f}):
                             with patch.dict(filestate.__opts__, {'test': True}):
                                 change = {'diff': 'Replace binary file'}
                                 comt = ('File {0} is set to be updated'

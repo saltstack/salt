@@ -27,13 +27,14 @@ else:
     USE_IMPORTLIB = False
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
 import salt.utils.http
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yamlencoding
 import salt.utils.locales
 import salt.utils.hashutils
+import salt.utils.stringutils
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
@@ -94,6 +95,41 @@ class AliasedModule(object):
         return getattr(self.wrapped, name)
 
 
+def get_context(template, line, num_lines=5, marker=None):
+    '''
+    Returns debugging context around a line in a given string
+
+    Returns:: string
+    '''
+    template_lines = template.splitlines()
+    num_template_lines = len(template_lines)
+
+    # in test, a single line template would return a crazy line number like,
+    # 357.  do this sanity check and if the given line is obviously wrong, just
+    # return the entire template
+    if line > num_template_lines:
+        return template
+
+    context_start = max(0, line - num_lines - 1)  # subt 1 for 0-based indexing
+    context_end = min(num_template_lines, line + num_lines)
+    error_line_in_context = line - context_start - 1  # subtr 1 for 0-based idx
+
+    buf = []
+    if context_start > 0:
+        buf.append('[...]')
+        error_line_in_context += 1
+
+    buf.extend(template_lines[context_start:context_end])
+
+    if context_end < num_template_lines:
+        buf.append('[...]')
+
+    if marker:
+        buf[error_line_in_context] += marker
+
+    return u'---\n{0}\n---'.format(u'\n'.join(buf))
+
+
 def wrap_tmpl_func(render_str):
 
     def render_tmpl(tmplsrc,
@@ -152,7 +188,7 @@ def wrap_tmpl_func(render_str):
                         ValueError,
                         OSError,
                         IOError) as exc:
-                    if salt.utils.is_bin_file(tmplsrc):
+                    if salt.utils.files.is_binary(tmplsrc):
                         # Template is a bin file, return the raw file
                         return dict(result=True, data=tmplsrc)
                     log.error(
@@ -170,8 +206,13 @@ def wrap_tmpl_func(render_str):
             if six.PY2:
                 output = output.encode(SLS_ENCODING)
             if salt.utils.platform.is_windows():
+                newline = False
+                if output.endswith(('\n', os.linesep)):
+                    newline = True
                 # Write out with Windows newlines
                 output = os.linesep.join(output.splitlines())
+                if newline:
+                    output += os.linesep
 
         except SaltRenderError as exc:
             log.error("Rendering exception occurred: {0}".format(exc))
@@ -275,7 +316,7 @@ def _get_jinja_error(trace, context=None):
             out = '\n{0}\n'.format(msg.splitlines()[0])
             with salt.utils.files.fopen(template_path) as fp_:
                 template_contents = fp_.read()
-            out += salt.utils.get_context(
+            out += get_context(
                 template_contents,
                 line,
                 marker='    <======================')
@@ -295,7 +336,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         # http://jinja.pocoo.org/docs/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
 
-    if tmplstr.endswith('\n'):
+    if tmplstr.endswith(os.linesep):
         newline = True
 
     if not saltenv:
@@ -314,16 +355,40 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
     env_args['extensions'].append(salt.utils.jinja.SerializerExtension)
 
+    opt_jinja_env = opts.get('jinja_env', {})
+    opt_jinja_sls_env = opts.get('jinja_sls_env', {})
+
+    opt_jinja_env = opt_jinja_env if isinstance(opt_jinja_env, dict) else {}
+    opt_jinja_sls_env = opt_jinja_sls_env if isinstance(opt_jinja_sls_env, dict) else {}
+
     # Pass through trim_blocks and lstrip_blocks Jinja parameters
     # trim_blocks removes newlines around Jinja blocks
     # lstrip_blocks strips tabs and spaces from the beginning of
     # line to the start of a block.
     if opts.get('jinja_trim_blocks', False):
         log.debug('Jinja2 trim_blocks is enabled')
-        env_args['trim_blocks'] = True
+        log.warning('jinja_trim_blocks is deprecated and will be removed in a future release, please use jinja_env and/or jinja_sls_env instead')
+        opt_jinja_env['trim_blocks'] = True
+        opt_jinja_sls_env['trim_blocks'] = True
     if opts.get('jinja_lstrip_blocks', False):
         log.debug('Jinja2 lstrip_blocks is enabled')
-        env_args['lstrip_blocks'] = True
+        log.warning('jinja_lstrip_blocks is deprecated and will be removed in a future release, please use jinja_env and/or jinja_sls_env instead')
+        opt_jinja_env['lstrip_blocks'] = True
+        opt_jinja_sls_env['lstrip_blocks'] = True
+
+    def opt_jinja_env_helper(opts, optname):
+        for k, v in six.iteritems(opts):
+            k = k.lower()
+            if hasattr(jinja2.defaults, k.upper()):
+                log.debug('Jinja2 environment {0} was set to {1} by {2}'.format(k, v, optname))
+                env_args[k] = v
+            else:
+                log.warning('Jinja2 environment {0} is not recognized'.format(k))
+
+    if 'sls' in context and context['sls'] != '':
+        opt_jinja_env_helper(opt_jinja_sls_env, 'jinja_sls_env')
+    else:
+        opt_jinja_env_helper(opt_jinja_env, 'jinja_env')
 
     if opts.get('allow_undefined', False):
         jinja_env = jinja2.Environment(**env_args)
@@ -339,7 +404,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = salt.utils.jinja.show_full_context
 
-    jinja_env.tests['list'] = salt.utils.is_list
+    jinja_env.tests['list'] = salt.utils.data.is_list
 
     decoded_context = {}
     for key, value in six.iteritems(context):
@@ -405,7 +470,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
     if newline:
-        output += '\n'
+        output += os.linesep
 
     return output
 

@@ -21,7 +21,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.config
 import salt.loader
-import salt.utils
+import salt.utils.hashutils
 import salt.utils.odict
 import salt.utils.platform
 import salt.modules.state as state
@@ -135,6 +135,9 @@ class MockState(object):
             data = data
             ret = ret
             return True
+
+        def requisite_in(self, data):  # pylint: disable=unused-argument
+            return data, []
 
     class HighState(object):
         '''
@@ -283,7 +286,7 @@ class MockTarFile(object):
     '''
         Mock tarfile class
     '''
-    path = "/tmp"
+    path = os.sep + "tmp"
 
     def __init__(self):
         pass
@@ -961,36 +964,32 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         '''
             Test to execute a packaged state run
         '''
+        tar_file = os.sep + os.path.join('tmp', 'state_pkg.tgz')
         mock = MagicMock(side_effect=[False, True, True, True, True, True, True, True])
         with patch.object(os.path, 'isfile', mock), \
                 patch('salt.modules.state.tarfile', MockTarFile), \
                 patch('salt.modules.state.json', MockJson()):
-            self.assertEqual(state.pkg("/tmp/state_pkg.tgz", "", "md5"), {})
+            self.assertEqual(state.pkg(tar_file, "", "md5"), {})
 
             mock = MagicMock(side_effect=[False, 0, 0, 0, 0])
-            with patch.object(salt.utils, 'get_hash', mock):
-                self.assertDictEqual(state.pkg("/tmp/state_pkg.tgz", "", "md5"),
-                                     {})
+            with patch.object(salt.utils.hashutils, 'get_hash', mock):
+                # Verify hash
+                self.assertDictEqual(state.pkg(tar_file, "", "md5"), {})
 
-                self.assertDictEqual(state.pkg("/tmp/state_pkg.tgz", 0, "md5"),
-                                     {})
+                # Verify file outside intended root
+                self.assertDictEqual(state.pkg(tar_file, 0, "md5"), {})
 
                 MockTarFile.path = ""
                 MockJson.flag = True
                 with patch('salt.utils.files.fopen', mock_open()):
-                    self.assertListEqual(state.pkg("/tmp/state_pkg.tgz",
-                                                   0,
-                                                   "md5"),
-                                         [True])
+                    self.assertListEqual(state.pkg(tar_file, 0, "md5"), [True])
 
                 MockTarFile.path = ""
                 MockJson.flag = False
                 if six.PY2:
                     with patch('salt.utils.files.fopen', mock_open()), \
                             patch.dict(state.__utils__, {'state.check_result': MagicMock(return_value=True)}):
-                        self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
-                                                  0, "md5"))
+                        self.assertTrue(state.pkg(tar_file, 0, "md5"))
                 else:
                     with patch('salt.utils.files.fopen', mock_open()):
-                        self.assertTrue(state.pkg("/tmp/state_pkg.tgz",
-                                                  0, "md5"))
+                        self.assertTrue(state.pkg(tar_file, 0, "md5"))

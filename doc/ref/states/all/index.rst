@@ -31,6 +31,7 @@ state modules
     boto_apigateway
     boto_asg
     boto_cfn
+    boto_cloudfront
     boto_cloudtrail
     boto_cloudwatch_alarm
     boto_cloudwatch_event
@@ -187,6 +188,7 @@ state modules
     openstack_config
     openvswitch_bridge
     openvswitch_port
+    opsgenie
     pagerduty
     pagerduty_escalation_policy
     pagerduty_schedule
@@ -266,6 +268,7 @@ state modules
     tuned
     uptime
     user
+    vagrant
     vault
     vbox_guest
     victorops

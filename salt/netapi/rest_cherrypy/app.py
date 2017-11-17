@@ -71,12 +71,12 @@ A REST API for Salt
     log_access_file
         Path to a file to write HTTP access logs.
 
-        .. versionaddedd:: 2016.11.0
+        .. versionadded:: 2016.11.0
 
     log_error_file
         Path to a file to write HTTP error logs.
 
-        .. versionaddedd:: 2016.11.0
+        .. versionadded:: 2016.11.0
 
     ssl_crt
         The path to a SSL certificate. (See below)
@@ -591,11 +591,14 @@ logger = logging.getLogger(__name__)
 import cherrypy
 try:
     from cherrypy.lib import cpstats
-except ImportError:
+except AttributeError:
     cpstats = None
     logger.warn('Import of cherrypy.cpstats failed. '
         'Possible upstream bug: '
         'https://github.com/cherrypy/cherrypy/issues/1444')
+except ImportError:
+    cpstats = None
+    logger.warn('Import of cherrypy.cpstats failed.')
 
 import yaml
 # pylint: enable=import-error, 3rd-party-module-not-gated
@@ -603,7 +606,6 @@ import yaml
 # Import Salt libs
 import salt
 import salt.auth
-import salt.utils
 import salt.utils.event
 import salt.utils.stringutils
 from salt.ext import six

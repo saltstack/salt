@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+'''
+Module to work with salt formula defaults files
+
+'''
+
 from __future__ import absolute_import
 import json
 import logging
@@ -6,7 +11,7 @@ import os
 import yaml
 
 import salt.fileclient
-import salt.utils
+import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 import salt.utils.files
 import salt.utils.url
@@ -97,7 +102,7 @@ def get(key, default=''):
 
     # Fetch value
     if key:
-        return salt.utils.traverse_dict_and_list(defaults, key, default)
+        return salt.utils.data.traverse_dict_and_list(defaults, key, default)
     else:
         return defaults
 

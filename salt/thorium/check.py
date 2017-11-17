@@ -9,7 +9,7 @@ of having a command execution get gated by a check state via a requisite.
 from __future__ import absolute_import
 import logging
 
-import salt.utils
+import salt.utils.stringutils
 
 log = logging.getLogger(__file__)
 
@@ -299,7 +299,7 @@ def event(name):
            'result': False}
 
     for event in __events__:
-        if salt.utils.expr_match(event['tag'], name):
+        if salt.utils.stringutils.expr_match(event['tag'], name):
             ret['result'] = True
 
     return ret
