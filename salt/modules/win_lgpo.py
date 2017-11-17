@@ -39,6 +39,7 @@ Current known limitations
 '''
 # Import Python libs
 from __future__ import absolute_import
+from __future__ import unicode_literals
 import io
 import os
 import logging
@@ -48,10 +49,11 @@ import ctypes
 import time
 
 # Import Salt libs
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.utils.dictupdate as dictupdate
 import salt.utils.files
 import salt.utils.platform
-import salt.utils.dictupdate as dictupdate
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -708,7 +710,9 @@ class _policy_info(object):
                         'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': {
                             'Function': '_in_range_inclusive',
-                            'Args': {'min': 0, 'max': 86313600}
+                            'Args': {'min': 1,
+                                     'max': 86313600,
+                                     'zero_value': 0xffffffff}
                         },
                         'NetUserModal': {
                             'Modal': 0,
@@ -716,7 +720,9 @@ class _policy_info(object):
                         },
                         'Transform': {
                             'Get': '_seconds_to_days',
-                            'Put': '_days_to_seconds'
+                            'Put': '_days_to_seconds',
+                            'GetArgs': {'zero_value': 0xffffffff},
+                            'PutArgs': {'zero_value': 0xffffffff}
                         },
                     },
                     'MinPasswordAge': {
@@ -748,7 +754,7 @@ class _policy_info(object):
                         },
                     },
                     'PasswordComplexity': {
-                        'Policy': 'Passwords must meet complexity requirements',
+                        'Policy': 'Password must meet complexity requirements',
                         'lgpo_section': self.password_policy_gpedit_path,
                         'Settings': self.enabled_one_disabled_zero.keys(),
                         'Secedit': {
@@ -2367,7 +2373,10 @@ class _policy_info(object):
         '''
         converts a number of seconds to days
         '''
+        zero_value = kwargs.get('zero_value', 0)
         if val is not None:
+            if val == zero_value:
+                return 0
             return val / 86400
         else:
             return 'Not Defined'
@@ -2377,7 +2386,10 @@ class _policy_info(object):
         '''
         converts a number of days to seconds
         '''
+        zero_value = kwargs.get('zero_value', 0)
         if val is not None:
+            if val == 0:
+                return zero_value
             return val * 86400
         else:
             return 'Not Defined'
@@ -2489,9 +2501,11 @@ class _policy_info(object):
     def _in_range_inclusive(cls, val, **kwargs):
         '''
         checks that a value is in an inclusive range
+        The value for 0 used by Max Password Age is actually 0xffffffff
         '''
-        minimum = 0
-        maximum = 1
+        minimum = kwargs.get('min', 0)
+        maximum = kwargs.get('max', 1)
+        zero_value = kwargs.get('zero_value', 0)
 
         if isinstance(val, six.string_types):
             if val.lower() == 'not defined':
@@ -2501,12 +2515,8 @@ class _policy_info(object):
                     val = int(val)
                 except ValueError:
                     return False
-        if 'min' in kwargs:
-            minimum = kwargs['min']
-        if 'max' in kwargs:
-            maximum = kwargs['max']
         if val is not None:
-            if val >= minimum and val <= maximum:
+            if minimum <= val <= maximum or val == zero_value:
                 return True
             else:
                 return False
@@ -2638,11 +2648,7 @@ class _policy_info(object):
         or values
         '''
         log.debug('item == {0}'.format(item))
-        value_lookup = False
-        if 'value_lookup' in kwargs:
-            value_lookup = kwargs['value_lookup']
-        else:
-            value_lookup = False
+        value_lookup = kwargs.get('value_lookup', False)
         if 'lookup' in kwargs:
             for k, v in six.iteritems(kwargs['lookup']):
                 if value_lookup:
@@ -4081,7 +4087,7 @@ def _write_regpol_data(data_to_write,
             gpt_ini_data = ''
             if os.path.exists(gpt_ini_path):
                 with salt.utils.files.fopen(gpt_ini_path, 'rb') as gpt_file:
-                    gpt_ini_data = gpt_file.read()
+                    gpt_ini_data = salt.utils.stringutils.to_str(gpt_file.read())
             if not _regexSearchRegPolData(r'\[General\]\r\n', gpt_ini_data):
                 gpt_ini_data = '[General]\r\n' + gpt_ini_data
             if _regexSearchRegPolData(r'{0}='.format(re.escape(gpt_extension)), gpt_ini_data):
@@ -4136,7 +4142,7 @@ def _write_regpol_data(data_to_write,
                         gpt_ini_data[general_location.end():])
             if gpt_ini_data:
                 with salt.utils.files.fopen(gpt_ini_path, 'wb') as gpt_file:
-                    gpt_file.write(gpt_ini_data)
+                    gpt_file.write(salt.utils.stringutils.to_bytes(gpt_ini_data))
         except Exception as e:
             msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
                     gpt_ini_path, e)
@@ -5374,7 +5380,7 @@ def set_(computer_policy=None, user_policy=None,
                                     _regedits[regedit]['policy']['Registry']['Type'])
                         else:
                             _ret = __salt__['reg.delete_value'](
-                                    _regedits[regedit]['polic']['Registry']['Hive'],
+                                    _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'])
                         if not _ret:

@@ -156,7 +156,7 @@ def create_file_system(name,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.create_file_system efs-name generalPurpose
     '''
@@ -222,7 +222,7 @@ def create_mount_target(filesystemid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.create_mount_target filesystemid subnetid
     '''
@@ -269,7 +269,7 @@ def create_tags(filesystemid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.create_tags
     '''
@@ -301,7 +301,7 @@ def delete_file_system(filesystemid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.delete_file_system filesystemid
     '''
@@ -335,7 +335,7 @@ def delete_mount_target(mounttargetid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.delete_mount_target mounttargetid
     '''
@@ -363,7 +363,7 @@ def delete_tags(filesystemid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.delete_tags
     '''
@@ -398,7 +398,7 @@ def get_file_systems(filesystemid=None,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.get_file_systems efs-id
     '''
@@ -454,7 +454,7 @@ def get_mount_targets(filesystemid=None,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.get_mount_targets
     '''
@@ -493,7 +493,7 @@ def get_tags(filesystemid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.get_tags efs-id
     '''
@@ -527,7 +527,7 @@ def set_security_groups(mounttargetid,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' boto_efs.set_security_groups my-mount-target-id my-sec-group
     '''

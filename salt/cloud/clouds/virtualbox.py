@@ -198,7 +198,9 @@ def list_nodes_full(kwargs=None, call=None):
     This is because some functions both within Salt and 3rd party will break if an expected field is not present.
     This function is normally called with the -F option:
 
+
     .. code-block:: bash
+
         salt-cloud -F
 
 
@@ -244,6 +246,7 @@ def list_nodes(kwargs=None, call=None):
     This function is normally called with the -Q option:
 
     .. code-block:: bash
+
         salt-cloud -Q
 
 
