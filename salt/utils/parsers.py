@@ -2157,9 +2157,12 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                         self.config['arg'].append([])
                             else:
                                 self.config['arg'][cmd_index].append(arg)
-                        if len(self.config['fun']) != len(self.config['arg']):
+                        if len(self.config['fun']) > len(self.config['arg']):
                             self.exit(42, 'Cannot execute compound command without '
                                           'defining all arguments.\n')
+                        elif len(self.config['fun']) < len(self.config['arg']):
+                            self.exit(42, 'Cannot execute compound command with more '
+                                          'arguments than commands.\n')
                     # parse the args and kwargs before sending to the publish
                     # interface
                     for i in range(len(self.config['arg'])):
