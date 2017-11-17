@@ -980,11 +980,10 @@ class Cloud(object):
         '''
         Destroy the named VMs
         '''
-        log.debug('Line 983 delete')
-        log.debug(kwargs)
+       
         processed = {}
         names = set(names)
-        matching = self.get_running_by_names(names, cached=cached)
+        matching = self.get_running_by_names(names, cached=cached, kwargs=kwargs)
         vms_to_destroy = set()
         parallel_data = []
         for alias, drivers in six.iteritems(matching):
@@ -1038,8 +1037,7 @@ class Cloud(object):
         else:
             log.info('Destroying in non-parallel mode.')
             for alias, driver, name in vms_to_destroy:
-                fun = '{0}.destroy'.format(driver)
-                log.debug(fun)
+                fun = '{0}.destroy'.format(driver)              
                 with context.func_globals_inject(
                     self.clouds[fun],
                     __active_provider_name__=':'.join([alias, driver])
