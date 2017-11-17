@@ -334,6 +334,7 @@ import errno
 import random
 import yaml
 import copy
+import weakref
 
 # Import Salt libs
 import salt.config
@@ -849,20 +850,20 @@ class Schedule(object):
             if self.opts['__role'] == 'master':
                 jid = salt.utils.jid.gen_jid()
                 tag = salt.utils.event.tagify(jid, prefix='salt/scheduler/')
-        
+
                 event = salt.utils.event.get_event(
                         self.opts['__role'],
                         self.opts['sock_dir'],
                         self.opts['transport'],
                         opts=self.opts,
                         listen=False)
-        
+
                 namespaced_event = salt.utils.event.NamespacedEvent(
                     event,
                     tag,
                     print_func=None
                 )
-        
+
                 func_globals = {
                     '__jid__': jid,
                     '__user__': salt.utils.get_user(),
