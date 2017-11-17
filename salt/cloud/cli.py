@@ -208,9 +208,16 @@ class SaltCloud(parsers.SaltCloudParser):
                     for name in vms:
                         msg += '      {0}\n'.format(name)
                         names.add(name)
+            kwargs = {}
+            for name in names:
+                if '=' in name:
+                    # This is obviously not a machine name, treat it as a kwarg
+                    key, value = name.split('=', 1)
+                    kwargs[key] = value
+
             try:
                 if self.print_confirm(msg):
-                    ret = mapper.destroy(names, cached=True)
+                    ret = mapper.destroy(names, cached=True, kwargs)
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was an error destroying machines: {0}'
                 self.handle_exception(msg, exc)
