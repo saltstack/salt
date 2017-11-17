@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
- Namecheap management
+Namecheap domains management
 
  .. versionadded:: 2017.7.0
 
@@ -73,7 +73,7 @@ def reactivate(domain_name):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt 'my-minion' namecheap_domains.reactivate my-domain-name
 

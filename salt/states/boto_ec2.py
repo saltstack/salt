@@ -984,7 +984,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
     '''
     Ensure an EC2 instance does not exist (is stopped and removed).
 
-    .. versionupdated:: 2016.11.0
+    .. versionchanged:: 2016.11.0
 
     name
         (string) - The name of the state definition.
@@ -1010,6 +1010,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
     YAML example fragment:
 
     .. code-block:: yaml
+
         - filters:
             vpc-id: vpc-abcdef12
 
@@ -1230,6 +1231,7 @@ def volumes_tagged(name, tag_maps, authoritative=False, region=None, key=None,
     YAML example fragment:
 
     .. code-block:: yaml
+
         - filters:
             attachment.instance_id: i-abcdef12
           tags:
