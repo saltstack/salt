@@ -983,7 +983,7 @@ class Cloud(object):
        
         processed = {}
         names = set(names)
-        matching = self.get_running_by_names(names, cached=cached, kwargs=kwargs)
+        matching = self.get_running_by_names(names, cached=cached)
         vms_to_destroy = set()
         parallel_data = []
         for alias, drivers in six.iteritems(matching):
