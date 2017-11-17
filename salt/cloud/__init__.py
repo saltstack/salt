@@ -981,6 +981,7 @@ class Cloud(object):
         Destroy the named VMs
         '''
         log.debug('Line 983 delete')
+        log.debug(kwargs)
         processed = {}
         names = set(names)
         matching = self.get_running_by_names(names, cached=cached)
