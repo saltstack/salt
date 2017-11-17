@@ -209,6 +209,7 @@ class SaltCloud(parsers.SaltCloudParser):
                     for name in vms:
                         msg += '      {0}\n'.format(name)
                         names.add(name)
+            log.debug(matching)
             log.debug(names)
             kwargs = {}
             for name in names:
