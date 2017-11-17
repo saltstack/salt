@@ -374,7 +374,7 @@ class CloudClient(object):
         if isinstance(names, str):
             names = names.split(',')
         return salt.utils.simple_types_filter(
-            mapper.destroy(names, kwargs=kwargs)
+            mapper.destroy(names, kwargs)
         )
 
     def create(self, provider, names, **kwargs):
