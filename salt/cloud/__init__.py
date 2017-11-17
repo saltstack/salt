@@ -370,7 +370,7 @@ class CloudClient(object):
         if kwargs is None:
             kwargs = {}
 
-        mapper = salt.cloud.Map(self._opts_defaults(destroy=True, **kwargs=None))        
+        mapper = salt.cloud.Map(self._opts_defaults(destroy=True, kwargs=None))        
         if isinstance(names, str):
             names = names.split(',')
         return salt.utils.simple_types_filter(
