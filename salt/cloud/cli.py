@@ -210,13 +210,14 @@ class SaltCloud(parsers.SaltCloudParser):
                         msg += '      {0}\n'.format(name)
                         names.add(name)
            
+           #Try to read a kwarg
             kwargs = {}         
             for name in self.config.get('names', None):
                 if '=' in name:
                     # This is obviously not a machine name, treat it as a kwarg
                     key, value = name.split('=', 1)
                     kwargs[key] = value
-            log.debug(kwargs)
+            
             try:
                 if self.print_confirm(msg):
                     ret = mapper.destroy(names, cached=True, kwargs=kwargs)

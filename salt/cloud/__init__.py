@@ -1044,7 +1044,7 @@ class Cloud(object):
                     self.clouds[fun],
                     __active_provider_name__=':'.join([alias, driver])
                 ):
-                    ret = self.clouds[fun](name, kwargs)
+                    ret = self.clouds[fun](name, kwargs=kwargs)
                 if alias not in processed:
                     processed[alias] = {}
                 if driver not in processed[alias]:
