@@ -4399,7 +4399,7 @@ def describe_keypairs(kwargs=None, call=None):
 
 def describe_securitygroups(kwargs=None, call=None):
     '''
-    list SecurityGroups
+    list SecurityGroups based on location
     '''
     if call != 'function':
         log.error(
