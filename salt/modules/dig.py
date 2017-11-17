@@ -6,8 +6,8 @@ The 'dig' command line tool must be installed in order to use this module.
 from __future__ import absolute_import
 
 # Import salt libs
-import salt.utils
 import salt.utils.network
+import salt.utils.path
 
 # Import python libs
 import logging
@@ -22,7 +22,7 @@ def __virtual__():
     '''
     Only load module if dig binary is present
     '''
-    if salt.utils.which('dig'):
+    if salt.utils.path.which('dig'):
         return __virtualname__
     return (False, 'The dig execution module cannot be loaded: '
             'the dig binary is not in the path.')

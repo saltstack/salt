@@ -115,9 +115,8 @@ import re
 import sys
 
 # Import salt libs
-import salt.utils
 import salt.utils.jid
-import salt.ext.six as six
+from salt.ext import six
 
 # Import third party libs
 try:
@@ -170,7 +169,7 @@ def _format_job_instance(job):
            'Arguments': json.loads(job.get('arg', '[]')),
            # unlikely but safeguard from invalid returns
            'Target': job.get('tgt', 'unknown-target'),
-           'Target-type': job.get('tgt_type', []),
+           'Target-type': job.get('tgt_type', 'list'),
            'User': job.get('user', 'root')}
     # TODO: Add Metadata support when it is merged from develop
     return ret
@@ -189,7 +188,7 @@ def _gen_jid(cur):
     '''
     Generate an unique job id
     '''
-    jid = salt.utils.jid.gen_jid()
+    jid = salt.utils.jid.gen_jid(__opts__)
     sql = '''SELECT jid FROM jids WHERE jid = %s'''
     cur.execute(sql, (jid,))
     data = cur.fetchall()

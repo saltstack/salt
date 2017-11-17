@@ -19,7 +19,7 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import SaltSystemExit
 
 log = logging.getLogger(__name__)
@@ -186,7 +186,7 @@ def object_to_dict(obj):
         ret = obj
     else:
         ret = {}
-        for item in dir(obj):
+        for item in obj.__dict__:
             if item.startswith('_'):
                 continue
             # This is ugly, but inspect.isclass() doesn't seem to work

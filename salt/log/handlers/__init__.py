@@ -117,7 +117,7 @@ class RotatingFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.Rotatin
         '''
         handled = False
 
-        # Can't use "salt.utils.is_windows()" in this file
+        # Can't use "salt.utils.platform.is_windows()" in this file
         if (sys.platform.startswith('win') and
                 logging.raiseExceptions and
                 sys.stderr):  # see Python issue 13807

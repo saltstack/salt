@@ -21,8 +21,9 @@ from tests.support.unit import skipIf
 from tests.support.paths import TMP
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
 import salt.utils.event
+import salt.utils.files
 
 
 class StateRunnerTest(ShellCase):
@@ -80,6 +81,57 @@ class StateRunnerTest(ShellCase):
         self.assertFalse(os.path.exists('/tmp/ewu-2016-12-13'))
         self.assertNotEqual(code, 0)
 
+    def test_orchestrate_target_exists(self):
+        '''
+        test orchestration when target exists
+        while using multiple states
+        '''
+        ret = self.run_run('state.orchestrate orch.target-exists')
+
+        first = ['          ID: core',
+                 '    Function: salt.state',
+                 '      Result: True']
+
+        second = ['          ID: test-state',
+                 '    Function: salt.state',
+                 '      Result: True']
+
+        third = ['          ID: cmd.run',
+                 '    Function: salt.function',
+                 '      Result: True']
+
+        ret_out = [first, second, third]
+
+        for out in ret_out:
+            for item in out:
+                self.assertIn(item, ret)
+
+    def test_orchestrate_target_doesnt_exists(self):
+        '''
+        test orchestration when target doesnt exist
+        while using multiple states
+        '''
+        ret = self.run_run('state.orchestrate orch.target-doesnt-exists')
+
+        first = ['No minions matched the target. No command was sent, no jid was assigned.',
+                 '          ID: core',
+                 '    Function: salt.state',
+                 '      Result: False']
+
+        second = ['          ID: test-state',
+                 '    Function: salt.state',
+                 '      Result: True']
+
+        third = ['          ID: cmd.run',
+                 '    Function: salt.function',
+                 '      Result: True']
+
+        ret_out = [first, second, third]
+
+        for out in ret_out:
+            for item in out:
+                self.assertIn(item, ret)
+
     def test_state_event(self):
         '''
         test to ensure state.event
@@ -101,7 +153,7 @@ class StateRunnerTest(ShellCase):
         server_thread.join()
 
 
-@skipIf(salt.utils.is_windows(), '*NIX-only test')
+@skipIf(salt.utils.platform.is_windows(), '*NIX-only test')
 class OrchEventTest(ShellCase):
     '''
     Tests for orchestration events
@@ -153,14 +205,14 @@ class OrchEventTest(ShellCase):
         })
 
         state_sls = os.path.join(self.base_env, 'test_state.sls')
-        with salt.utils.fopen(state_sls, 'w') as fp_:
+        with salt.utils.files.fopen(state_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 date:
                   cmd.run
             '''))
 
         orch_sls = os.path.join(self.base_env, 'test_orch.sls')
-        with salt.utils.fopen(orch_sls, 'w') as fp_:
+        with salt.utils.files.fopen(orch_sls, 'w') as fp_:
             fp_.write(textwrap.dedent('''
                 date_cmd:
                   salt.state:

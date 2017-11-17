@@ -47,14 +47,16 @@ except ImportError:
     HAS_CSV = False
 
 # Import salt libs
-import salt.utils
 import salt.utils.files
 import salt.utils.itertools
+import salt.utils.odict
+import salt.utils.path
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import StringIO
 
@@ -120,7 +122,7 @@ def __virtual__():
     if not HAS_CSV:
         return False
     for util in utils:
-        if not salt.utils.which(util):
+        if not salt.utils.path.which(util):
             if not _find_pg_binary(util):
                 return (False, '{0} was not found'.format(util))
     return True
@@ -133,10 +135,10 @@ def _find_pg_binary(util):
     Helper function to locate various psql related binaries
     '''
     pg_bin_dir = __salt__['config.option']('postgres.bins_dir')
-    util_bin = salt.utils.which(util)
+    util_bin = salt.utils.path.which(util)
     if not util_bin:
         if pg_bin_dir:
-            return salt.utils.which(os.path.join(pg_bin_dir, util))
+            return salt.utils.path.which(os.path.join(pg_bin_dir, util))
     else:
         return util_bin
 
@@ -171,7 +173,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
         password = __salt__['config.option']('postgres.pass')
     if password is not None:
         pgpassfile = salt.utils.files.mkstemp(text=True)
-        with salt.utils.fopen(pgpassfile, 'w') as fp_:
+        with salt.utils.files.fopen(pgpassfile, 'w') as fp_:
             fp_.write('{0}:{1}:*:{2}:{3}'.format(
                 'localhost' if not host or host.startswith('/') else host,
                 port if port else '*',
@@ -227,7 +229,7 @@ def _run_initdb(name,
 
     if password is not None:
         pgpassfile = salt.utils.files.mkstemp(text=True)
-        with salt.utils.fopen(pgpassfile, 'w') as fp_:
+        with salt.utils.files.fopen(pgpassfile, 'w') as fp_:
             fp_.write('{0}'.format(password))
             __salt__['file.chown'](pgpassfile, runas, '')
         cmd.extend([
@@ -884,8 +886,8 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         for date_key in ('expiry time',):
             try:
                 retrow[date_key] = datetime.datetime.strptime(
-                    row['date_key'], '%Y-%m-%d %H:%M:%S')
-            except (ValueError, KeyError):
+                    row[date_key], '%Y-%m-%d %H:%M:%S')
+            except ValueError:
                 retrow[date_key] = None
         retrow['defaults variables'] = row['defaults variables']
         if return_password:
@@ -1005,7 +1007,7 @@ def _maybe_encrypt_password(role,
         password = str(password)
     if encrypted and password and not password.startswith('md5'):
         password = "md5{0}".format(
-            hashlib.md5(salt.utils.to_bytes('{0}{1}'.format(password, role))).hexdigest())
+            hashlib.md5(salt.utils.stringutils.to_bytes('{0}{1}'.format(password, role))).hexdigest())
     return password
 
 
@@ -1023,6 +1025,7 @@ def _role_cmd_args(name,
                    groups=None,
                    replication=None,
                    rolepassword=None,
+                   valid_until=None,
                    db_role=None):
     if createuser is not None and superuser is None:
         superuser = createuser
@@ -1039,6 +1042,7 @@ def _role_cmd_args(name,
         encrypted = _DEFAULT_PASSWORDS_ENCRYPTION
     skip_passwd = False
     escaped_password = ''
+    escaped_valid_until = ''
     if not (
         rolepassword is not None
         # first is passwd set
@@ -1056,6 +1060,10 @@ def _role_cmd_args(name,
             _maybe_encrypt_password(name,
                                     rolepassword.replace('\'', '\'\''),
                                     encrypted=encrypted))
+    if isinstance(valid_until, six.string_types) and bool(valid_until):
+        escaped_valid_until = '\'{0}\''.format(
+            valid_until.replace('\'', '\'\''),
+        )
     skip_superuser = False
     if bool(db_role) and bool(superuser) == bool(db_role['superuser']):
         skip_superuser = True
@@ -1079,6 +1087,10 @@ def _role_cmd_args(name,
         {'flag': 'PASSWORD', 'test': bool(rolepassword),
          'skip': skip_passwd,
          'addtxt': escaped_password},
+        {'flag': 'VALID UNTIL',
+         'test': bool(valid_until),
+         'skip': valid_until is None,
+         'addtxt': escaped_valid_until},
     )
     for data in flags:
         sub_cmd = _add_role_flag(sub_cmd, **data)
@@ -1108,6 +1120,7 @@ def _role_create(name,
                  inherit=None,
                  replication=None,
                  rolepassword=None,
+                 valid_until=None,
                  typ_='role',
                  groups=None,
                  runas=None):
@@ -1136,7 +1149,8 @@ def _role_create(name,
         superuser=superuser,
         groups=groups,
         replication=replication,
-        rolepassword=rolepassword
+        rolepassword=rolepassword,
+        valid_until=valid_until
     ))
     ret = _psql_prepare_and_run(['-c', sub_cmd],
                                 runas=runas, host=host, user=user, port=port,
@@ -1162,6 +1176,7 @@ def user_create(username,
                 superuser=None,
                 replication=None,
                 rolepassword=None,
+                valid_until=None,
                 groups=None,
                 runas=None):
     '''
@@ -1173,7 +1188,7 @@ def user_create(username,
 
         salt '*' postgres.user_create 'username' user='user' \\
                 host='hostname' port='port' password='password' \\
-                rolepassword='rolepassword'
+                rolepassword='rolepassword' valid_until='valid_until'
     '''
     return _role_create(username,
                         typ_='user',
@@ -1192,6 +1207,7 @@ def user_create(username,
                         superuser=superuser,
                         replication=replication,
                         rolepassword=rolepassword,
+                        valid_until=valid_until,
                         groups=groups,
                         runas=runas)
 
@@ -1213,6 +1229,7 @@ def _role_update(name,
                  superuser=None,
                  replication=None,
                  rolepassword=None,
+                 valid_until=None,
                  groups=None,
                  runas=None):
     '''
@@ -1248,6 +1265,7 @@ def _role_update(name,
         groups=groups,
         replication=replication,
         rolepassword=rolepassword,
+        valid_until=valid_until,
         db_role=role
     ))
     ret = _psql_prepare_and_run(['-c', sub_cmd],
@@ -1274,6 +1292,7 @@ def user_update(username,
                 connlimit=None,
                 replication=None,
                 rolepassword=None,
+                valid_until=None,
                 groups=None,
                 runas=None):
     '''
@@ -1285,7 +1304,7 @@ def user_update(username,
 
         salt '*' postgres.user_update 'username' user='user' \\
                 host='hostname' port='port' password='password' \\
-                rolepassword='rolepassword'
+                rolepassword='rolepassword' valid_until='valid_until'
     '''
     return _role_update(username,
                         user=user,
@@ -1304,6 +1323,7 @@ def user_update(username,
                         superuser=superuser,
                         replication=replication,
                         rolepassword=rolepassword,
+                        valid_until=valid_until,
                         groups=groups,
                         runas=runas)
 
@@ -1954,7 +1974,7 @@ def schema_create(dbname, name, owner=None,
     '''
 
     # check if schema exists
-    if schema_exists(dbname, name,
+    if schema_exists(dbname, name, user=user,
                      db_user=db_user, db_password=db_password,
                      db_host=db_host, db_port=db_port):
         log.info('\'{0}\' already exists in \'{1}\''.format(name, dbname))
@@ -2009,7 +2029,7 @@ def schema_remove(dbname, name,
     '''
 
     # check if schema exists
-    if not schema_exists(dbname, name,
+    if not schema_exists(dbname, name, user=None,
                          db_user=db_user, db_password=db_password,
                          db_host=db_host, db_port=db_port):
         log.info('Schema \'{0}\' does not exist in \'{1}\''.format(name, dbname))
@@ -2023,7 +2043,7 @@ def schema_remove(dbname, name,
         maintenance_db=dbname,
         host=db_host, user=db_user, port=db_port, password=db_password)
 
-    if not schema_exists(dbname, name,
+    if not schema_exists(dbname, name, user,
                          db_user=db_user, db_password=db_password,
                          db_host=db_host, db_port=db_port):
         return True
@@ -2032,7 +2052,7 @@ def schema_remove(dbname, name,
         return False
 
 
-def schema_exists(dbname, name,
+def schema_exists(dbname, name, user=None,
                   db_user=None, db_password=None,
                   db_host=None, db_port=None):
     '''
@@ -2050,6 +2070,9 @@ def schema_exists(dbname, name,
     name
        Schema name we look for
 
+    user
+        The system user the operation should be performed on behalf of
+
     db_user
         database username if different from config or default
 
@@ -2064,14 +2087,14 @@ def schema_exists(dbname, name,
 
     '''
     return bool(
-        schema_get(dbname, name,
+        schema_get(dbname, name, user=user,
                    db_user=db_user,
                    db_host=db_host,
                    db_port=db_port,
                    db_password=db_password))
 
 
-def schema_get(dbname, name,
+def schema_get(dbname, name, user=None,
                db_user=None, db_password=None,
                db_host=None, db_port=None):
     '''
@@ -2089,6 +2112,9 @@ def schema_get(dbname, name,
     name
        Schema name we look for
 
+    user
+        The system user the operation should be performed on behalf of
+
     db_user
         database username if different from config or default
 
@@ -2101,7 +2127,7 @@ def schema_get(dbname, name,
     db_port
         Database port if different from config or default
     '''
-    all_schemas = schema_list(dbname,
+    all_schemas = schema_list(dbname, user=user,
                               db_user=db_user,
                               db_host=db_host,
                               db_port=db_port,
@@ -2113,7 +2139,7 @@ def schema_get(dbname, name,
         return False
 
 
-def schema_list(dbname,
+def schema_list(dbname, user=None,
                 db_user=None, db_password=None,
                 db_host=None, db_port=None):
     '''
@@ -2127,6 +2153,9 @@ def schema_list(dbname,
 
     dbname
         Database name we query on
+
+    user
+        The system user the operation should be performed on behalf of
 
     db_user
         database username if different from config or default
@@ -2152,7 +2181,7 @@ def schema_list(dbname,
         'LEFT JOIN pg_roles ON pg_roles.oid = pg_namespace.nspowner '
     ]))
 
-    rows = psql_query(query,
+    rows = psql_query(query, runas=user,
                       host=db_host,
                       user=db_user,
                       port=db_port,

@@ -48,11 +48,11 @@ from os.path import expanduser
 from subprocess import Popen, PIPE
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ def _get_pass_exec():
     """
     Return the pass executable or raise an error
     """
-    pass_exec = salt.utils.which('pass')
+    pass_exec = salt.utils.path.which('pass')
     if pass_exec:
         return pass_exec
     else:

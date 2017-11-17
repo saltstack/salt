@@ -17,7 +17,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 import salt.modules.grains as grainsmod
 import salt.states.grains as grains
 
@@ -62,7 +62,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             grains_file = os.path.join(
                 os.path.dirname(grains.__opts__['conf_file']),
                 'grains')
-        with salt.utils.fopen(grains_file, "r") as grf:
+        with salt.utils.files.fopen(grains_file, "r") as grf:
             grains_data = grf.read()
         self.assertMultiLineEqual(grains_string, grains_data)
 
@@ -78,7 +78,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                     grains_file = os.path.join(
                         os.path.dirname(grains.__opts__['conf_file']), 'grains')
                 cstr = yaml.safe_dump(grains_data, default_flow_style=False)
-                with salt.utils.fopen(grains_file, "w+") as grf:
+                with salt.utils.files.fopen(grains_file, "w+") as grf:
                     grf.write(cstr)
                 yield
 

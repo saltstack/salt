@@ -52,6 +52,7 @@ PYEXEC = 'python{0}.{1}'.format(*sys.version_info)
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, 'mockbin')
 SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
+TMP_PILLAR_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-pillar-tree')
 TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
 TMP_CONF_DIR = os.path.join(TMP, 'config')
 TMP_SUB_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, 'sub-minion')
@@ -81,9 +82,9 @@ SCRIPT_TEMPLATES = {
     ],
     'common': [
         'from salt.scripts import salt_{0}\n',
-        'from salt.utils import is_windows\n\n',
+        'import salt.utils.platform\n\n',
         'if __name__ == \'__main__\':\n',
-        '    if is_windows():\n',
+        '    if salt.utils.platform.is_windows():\n',
         '        import os.path\n',
         '        import py_compile\n',
         '        cfile = os.path.splitext(__file__)[0] + ".pyc"\n',
@@ -110,9 +111,9 @@ class ScriptPathMixin(object):
             log.info('Generating {0}'.format(script_path))
 
             # Late import
-            import salt.utils
+            import salt.utils.files
 
-            with salt.utils.fopen(script_path, 'w') as sfh:
+            with salt.utils.files.fopen(script_path, 'w') as sfh:
                 script_template = SCRIPT_TEMPLATES.get(script_name, None)
                 if script_template is None:
                     script_template = SCRIPT_TEMPLATES.get('common', None)

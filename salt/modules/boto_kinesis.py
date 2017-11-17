@@ -66,15 +66,17 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'boto_kinesis'
+
 
 def __virtual__():
     '''
     Only load if boto3 libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return False, 'The boto_kinesis module could not be loaded: boto libraries not found.'
     __utils__['boto3.assign_funcs'](__name__, 'kinesis')
-    return True
+    return __virtualname__
 
 
 def _get_basic_stream(stream_name, conn):
@@ -439,6 +441,28 @@ def reshard(stream_name, desired_size, force=False,
     return r
 
 
+def list_streams(region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a list of all streams visible to the current account
+
+    CLI example::
+
+        salt myminion boto_kinesis.list_streams
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    streams = []
+    ExclusiveStartStreamName = ''
+    while ExclusiveStartStreamName is not None:
+        args = {'ExclusiveStartStreamName': ExclusiveStartStreamName} if ExclusiveStartStreamName else {}
+        r = _execute_with_retries(conn, 'list_streams', **args)
+        if 'error' in r:
+            return r
+        r = r['result'] if r and r.get('result') else {}
+        streams += r.get('StreamNames', [])
+        ExclusiveStartStreamName = streams[-1] if r.get('HasMoreStreams', False) in (True, 'true') else None
+    return {'result': streams}
+
+
 def _get_next_open_shard(stream_details, shard_id):
     '''
     Return the next open shard after shard_id
@@ -500,10 +524,12 @@ def _execute_with_retries(conn, function, **kwargs):
             else:
                 # ResourceNotFoundException or InvalidArgumentException
                 r['error'] = e.response['Error']
+                log.error(r['error'])
                 r['result'] = None
                 return r
 
     r['error'] = "Tried to execute function {0} {1} times, but was unable".format(function, max_attempts)
+    log.error(r['error'])
     return r
 
 

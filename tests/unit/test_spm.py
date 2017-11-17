@@ -12,7 +12,7 @@ from tests.support.mock import patch, MagicMock
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 import salt.config
-import salt.utils
+import salt.utils.files
 import salt.spm
 
 _F1 = {
@@ -100,7 +100,7 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
             dirname, _ = os.path.split(path)
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
-            with salt.utils.fopen(path, 'w') as f:
+            with salt.utils.files.fopen(path, 'w') as f:
                 f.write(contents)
         return fdir
 
@@ -120,7 +120,7 @@ class SPMTest(TestCase, AdaptedConfigurationTestCaseMixin):
         for path, contents in _F1['contents']:
             path = os.path.join(self.minion_config['file_roots']['base'][0], _F1['definition']['name'], path)
             assert os.path.exists(path)
-            with salt.utils.fopen(path, 'r') as rfh:
+            with salt.utils.files.fopen(path, 'r') as rfh:
                 assert rfh.read() == contents
         # Check database
         with patch('salt.client.Caller', MagicMock(return_value=self.minion_opts)):

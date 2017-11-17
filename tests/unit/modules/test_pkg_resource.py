@@ -18,9 +18,9 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.data
 import salt.modules.pkg_resource as pkg_resource
-import salt.ext.six as six
+from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -99,7 +99,7 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             Test to Common interface for obtaining the version
             of installed packages.
         '''
-        with patch.object(salt.utils, 'is_true', return_value=True):
+        with patch.object(salt.utils.data, 'is_true', return_value=True):
             mock = MagicMock(return_value={'A': 'B'})
             with patch.dict(pkg_resource.__salt__,
                             {'pkg.list_pkgs': mock}):

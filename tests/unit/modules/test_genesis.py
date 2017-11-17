@@ -46,12 +46,59 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(genesis.__salt__, {'disk.blkid': MagicMock(return_value={})}):
                     self.assertEqual(genesis.bootstrap('rpm', 'root', 'dir'), None)
 
-        with patch.object(genesis, '_bootstrap_deb', return_value='A'):
+        common_parms = {'platform': 'deb',
+                        'root': 'root',
+                        'img_format': 'dir',
+                        'arch': 'amd64',
+                        'flavor': 'stable',
+                        'static_qemu': 'qemu'}
+
+        param_sets = [
+
+            {'params': {},
+             'cmd': ['debootstrap', '--foreign', '--arch', 'amd64',
+                     'stable', 'root', 'http://ftp.debian.org/debian/']
+             },
+
+            {'params': {'pkgs': 'vim'},
+             'cmd': ['debootstrap', '--foreign', '--arch', 'amd64',
+                     '--include', 'vim',
+                     'stable', 'root', 'http://ftp.debian.org/debian/']
+             },
+
+            {'params': {'pkgs': 'vim,emacs'},
+             'cmd': ['debootstrap', '--foreign', '--arch', 'amd64',
+                     '--include', 'vim,emacs',
+                     'stable', 'root', 'http://ftp.debian.org/debian/']
+             },
+
+            {'params': {'pkgs': ['vim', 'emacs']},
+             'cmd': ['debootstrap', '--foreign', '--arch', 'amd64',
+                     '--include', 'vim,emacs',
+                     'stable', 'root', 'http://ftp.debian.org/debian/']
+             },
+
+            {'params': {'pkgs': ['vim', 'emacs'], 'exclude_pkgs': ['vim', 'foo']},
+             'cmd': ['debootstrap', '--foreign', '--arch', 'amd64',
+                     '--include', 'vim,emacs', '--exclude', 'vim,foo',
+                     'stable', 'root', 'http://ftp.debian.org/debian/']
+             },
+
+        ]
+
+        for param_set in param_sets:
+
             with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),
                                                'file.rmdir': MagicMock(),
-                                               'file.directory_exists': MagicMock()}):
-                with patch.dict(genesis.__salt__, {'disk.blkid': MagicMock(return_value={})}):
-                    self.assertEqual(genesis.bootstrap('deb', 'root', 'dir'), None)
+                                               'file.directory_exists': MagicMock(),
+                                               'cmd.run': MagicMock(),
+                                               'disk.blkid': MagicMock(return_value={})}):
+                with patch('salt.modules.genesis.salt.utils.path.which', return_value=True):
+                    with patch('salt.modules.genesis.salt.utils.validate.path.is_executable',
+                               return_value=True):
+                        param_set['params'].update(common_parms)
+                        self.assertEqual(genesis.bootstrap(**param_set['params']), None)
+                        genesis.__salt__['cmd.run'].assert_any_call(param_set['cmd'], python_shell=False)
 
         with patch.object(genesis, '_bootstrap_pacman', return_value='A') as pacman_patch:
             with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),
@@ -65,7 +112,7 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for Return which platforms are available
         '''
-        with patch('salt.utils.which', MagicMock(return_value=False)):
+        with patch('salt.utils.path.which', MagicMock(return_value=False)):
             self.assertFalse(genesis.avail_platforms()['deb'])
 
     def test_pack(self):

@@ -21,11 +21,11 @@ import time
 
 import yaml
 
-import salt.utils
+import salt.utils.files
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
 import salt.defaults.exitcodes as exitcodes
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 from tests.support.unit import TestCase
@@ -210,7 +210,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         if not config:
             return
         cpath = self.abs_path(self.config_file_get(config))
-        with salt.utils.fopen(cpath, 'w') as cfo:
+        with salt.utils.files.fopen(cpath, 'w') as cfo:
             cfg = self.config_stringify(config)
             log.debug('Writing configuration for {0} to {1}:\n{2}'.format(self.name, cpath, cfg))
             cfo.write(cfg)
@@ -660,7 +660,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
         '''Generate the script file that calls python objects and libraries.'''
         lines = []
         script_source = os.path.join(CODE_DIR, 'scripts', self.script)
-        with salt.utils.fopen(script_source, 'r') as sso:
+        with salt.utils.files.fopen(script_source, 'r') as sso:
             lines.extend(sso.readlines())
         if lines[0].startswith('#!'):
             lines.pop(0)
@@ -668,7 +668,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
 
         script_path = self.abs_path(os.path.join(self.script_dir, self.script))
         log.debug('Installing "{0}" to "{1}"'.format(script_source, script_path))
-        with salt.utils.fopen(script_path, 'w') as sdo:
+        with salt.utils.files.fopen(script_path, 'w') as sdo:
             sdo.write(''.join(lines))
             sdo.flush()
 
@@ -773,13 +773,23 @@ class TestDaemon(TestProgram):
         if six.PY3:
             cmdline = ' '.join(cmdline)
             for proc in psutils.process_iter():
-                for item in proc.cmdline():
-                    if cmdline in item:
-                        ret.append(proc)
+                try:
+                    for item in proc.cmdline():
+                        if cmdline in item:
+                            ret.append(proc)
+                except psutils.NoSuchProcess:
+                    # Process exited between when process_iter was invoked and
+                    # when we tried to invoke this instance's cmdline() func.
+                    continue
         else:
             cmd_len = len(cmdline)
             for proc in psutils.process_iter():
-                proc_cmdline = proc.cmdline()
+                try:
+                    proc_cmdline = proc.cmdline()
+                except psutils.NoSuchProcess:
+                    # Process exited between when process_iter was invoked and
+                    # when we tried to invoke this instance's cmdline() func.
+                    continue
                 if any((cmdline == proc_cmdline[n:n + cmd_len])
                         for n in range(len(proc_cmdline) - cmd_len + 1)):
                     ret.append(proc)

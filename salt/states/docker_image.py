@@ -40,6 +40,8 @@ import logging
 
 # Import salt libs
 import salt.utils.docker
+import salt.utils.args
+from salt.ext.six.moves import zip
 
 # Enable proper logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -135,13 +137,14 @@ def present(name,
         .. versionadded:: 2016.11.0
 
     sls
-        Allow for building images with ``dockerng.sls_build`` by specify the
-        SLS files to build with. This can be a list or comma-seperated string.
+        Allow for building of image with :py:func:`docker.sls_build
+        <salt.modules.dockermod.sls_build>` by specifying the SLS files with
+        which to build. This can be a list or comma-seperated string.
 
         .. code-block:: yaml
 
             myuser/myimage:mytag:
-              dockerng.image_present:
+              docker_image.present:
                 - sls:
                     - webapp1
                     - webapp2
@@ -151,12 +154,14 @@ def present(name,
         .. versionadded: 2017.7.0
 
     base
-        Base image with which to start ``dockerng.sls_build``
+        Base image with which to start :py:func:`docker.sls_build
+        <salt.modules.dockermod.sls_build>`
 
         .. versionadded: 2017.7.0
 
     saltenv
-        environment from which to pull sls files for ``dockerng.sls_build``.
+        Environment from which to pull SLS files for :py:func:`docker.sls_build
+        <salt.modules.dockermod.sls_build>`
 
         .. versionadded: 2017.7.0
     '''
@@ -169,11 +174,14 @@ def present(name,
         ret['comment'] = 'Only one of \'build\' or \'load\' is permitted.'
         return ret
 
-    # Ensure that we have repo:tag notation
     image = ':'.join(salt.utils.docker.get_repo_tag(name))
-    all_tags = __salt__['docker.list_tags']()
+    resolved_tag = __salt__['docker.resolve_tag'](image)
 
-    if image in all_tags:
+    if resolved_tag is False:
+        # Specified image is not present
+        image_info = None
+    else:
+        # Specified image is present
         if not force:
             ret['result'] = True
             ret['comment'] = 'Image \'{0}\' already present'.format(name)
@@ -185,8 +193,6 @@ def present(name,
                 ret['comment'] = \
                     'Unable to get info for image \'{0}\': {1}'.format(name, exc)
                 return ret
-    else:
-        image_info = None
 
     if build or sls:
         action = 'built'
@@ -197,15 +203,24 @@ def present(name,
 
     if __opts__['test']:
         ret['result'] = None
-        if (image in all_tags and force) or image not in all_tags:
+        if (resolved_tag is not False and force) or resolved_tag is False:
             ret['comment'] = 'Image \'{0}\' will be {1}'.format(name, action)
             return ret
 
     if build:
+        # get the functions default value and args
+        argspec = salt.utils.args.get_function_argspec(__salt__['docker.build'])
+        # Map any if existing args from kwargs into the build_args dictionary
+        build_args = dict(list(zip(argspec.args, argspec.defaults)))
+        for k, v in build_args.items():
+            if k in kwargs.get('kwargs', {}):
+                build_args[k] = kwargs.get('kwargs', {}).get(k)
         try:
-            image_update = __salt__['docker.build'](path=build,
-                                                      image=image,
-                                                      dockerfile=dockerfile)
+            # map values passed from the state to the build args
+            build_args['path'] = build
+            build_args['image'] = image
+            build_args['dockerfile'] = dockerfile
+            image_update = __salt__['docker.build'](**build_args)
         except Exception as exc:
             ret['comment'] = (
                 'Encountered error building {0} as {1}: {2}'
@@ -219,10 +234,10 @@ def present(name,
         if isinstance(sls, list):
             sls = ','.join(sls)
         try:
-            image_update = __salt__['dockerng.sls_build'](name=image,
-                                                          base=base,
-                                                          mods=sls,
-                                                          saltenv=saltenv)
+            image_update = __salt__['docker.sls_build'](name=image,
+                                                        base=base,
+                                                        mods=sls,
+                                                        saltenv=saltenv)
         except Exception as exc:
             ret['comment'] = (
                 'Encountered error using sls {0} for building {1}: {2}'
@@ -252,10 +267,8 @@ def present(name,
                 client_timeout=client_timeout
             )
         except Exception as exc:
-            ret['comment'] = (
-                'Encountered error pulling {0}: {1}'
-                .format(image, exc)
-            )
+            ret['comment'] = \
+                'Encountered error pulling {0}: {1}'.format(image, exc)
             return ret
         if (image_info is not None and image_info['Id'][:12] == image_update
                 .get('Layers', {})
@@ -267,7 +280,7 @@ def present(name,
             # Only add to the changes dict if layers were pulled
             ret['changes'] = image_update
 
-    ret['result'] = image in __salt__['docker.list_tags']()
+    ret['result'] = bool(__salt__['docker.resolve_tag'](image))
 
     if not ret['result']:
         # This shouldn't happen, failure to pull should be caught above
@@ -345,23 +358,16 @@ def absent(name=None, images=None, force=False):
         ret['comment'] = 'One of \'name\' and \'images\' must be provided'
         return ret
     elif images is not None:
-        targets = []
-        for target in images:
-            try:
-                targets.append(':'.join(salt.utils.docker.get_repo_tag(target)))
-            except TypeError:
-                # Don't stomp on images with unicode characters in Python 2,
-                # only force image to be a str if it wasn't already (which is
-                # very unlikely).
-                targets.append(':'.join(salt.utils.docker.get_repo_tag(str(target))))
+        targets = images
     elif name:
-        try:
-            targets = [':'.join(salt.utils.docker.get_repo_tag(name))]
-        except TypeError:
-            targets = [':'.join(salt.utils.docker.get_repo_tag(str(name)))]
+        targets = [name]
 
     pre_tags = __salt__['docker.list_tags']()
-    to_delete = [x for x in targets if x in pre_tags]
+    to_delete = []
+    for target in targets:
+        resolved_tag = __salt__['docker.resolve_tag'](target, tags=pre_tags)
+        if resolved_tag is not False:
+            to_delete.append(resolved_tag)
     log.debug('targets = {0}'.format(targets))
     log.debug('to_delete = {0}'.format(to_delete))
 
