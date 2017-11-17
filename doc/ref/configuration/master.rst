@@ -99,6 +99,7 @@ The user to run the Salt processes
 ``enable_ssh_minions``
 ----------------------
 
+
 Default: ``False``
 
 Tell the master to also use SaltSSH when running commands against minions.

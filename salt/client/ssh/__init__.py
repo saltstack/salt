@@ -662,6 +662,7 @@ class SSH(object):
             host = next(six.iterkeys(ret))
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
+                jobid = jid
                 self.event.fire_event(
                         ret,
                         salt.utils.event.tagify(
@@ -670,6 +671,7 @@ class SSH(object):
                 for _, data in six.iteritems(ret):
                     if not isinstance(data, dict):
                         continue
+                    data['jid'] = jobid
                     self.event.fire_event(
                             data,
                             salt.utils.event.tagify(
@@ -779,6 +781,7 @@ class SSH(object):
                         outputter,
                         self.opts)
             if self.event:
+                jobid = jid
                 self.event.fire_event(
                         ret,
                         salt.utils.event.tagify(
@@ -787,6 +790,7 @@ class SSH(object):
                 for _, data in six.iteritems(ret):
                     if not isinstance(data, dict):
                         continue
+                    data['jid'] = jobid
                     self.event.fire_event(
                             data,
                             salt.utils.event.tagify(
