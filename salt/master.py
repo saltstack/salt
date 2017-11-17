@@ -1965,7 +1965,10 @@ class ClearFuncs(object):
             ssh_minions = ssh._prep_ssh(**clear_load).targets.keys()
             if ssh_minions:
                 minions.extend(ssh_minions)
-                multiprocessing.Process(target=ssh.cmd, kwargs=clear_load).start()
+                def wrap_ssh(**kwargs):
+                    salt.utils.process.daemonize(False)
+                    ssh.cmd(**kwargs)
+                salt.utils.process.SignalHandlingMultiprocessingProcess(target=wrap_ssh, kwargs=clear_load).start()
 
         self._send_pub(payload)
 
