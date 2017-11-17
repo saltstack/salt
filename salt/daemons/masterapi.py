@@ -14,6 +14,7 @@ import time
 import stat
 
 # Import salt libs
+import salt.acl
 import salt.crypt
 import salt.cache
 import salt.client
@@ -183,11 +184,11 @@ def mk_key(opts, user):
         # The username may contain '\' if it is in Windows
         # 'DOMAIN\username' format. Fix this for the keyfile path.
         keyfile = os.path.join(
-            opts['cachedir'], '.{0}_key'.format(user.replace('\\', '_'))
+            opts['key_dir'], '.{0}_key'.format(user.replace('\\', '_'))
         )
     else:
         keyfile = os.path.join(
-            opts['cachedir'], '.{0}_key'.format(user)
+            opts['key_dir'], '.{0}_key'.format(user)
         )
 
     if os.path.exists(keyfile):
@@ -282,46 +283,23 @@ class AutoKey(object):
             return True
 
         # After we've ascertained we're not on windows
-        try:
-            user = self.opts['user']
-            pwnam = pwd.getpwnam(user)
-            uid = pwnam[2]
-            gid = pwnam[3]
-            groups = salt.utils.user.get_gid_list(user, include_default=False)
-        except KeyError:
-            log.error(
-                'Failed to determine groups for user {0}. The user is not '
-                'available.\n'.format(
-                    user
-                )
-            )
-            return False
-
+        groups = salt.utils.user.get_gid_list(self.opts['user'], include_default=False)
         fmode = os.stat(filename)
 
-        if os.getuid() == 0:
-            if fmode.st_uid == uid or fmode.st_gid != gid:
-                return True
-            elif self.opts.get('permissive_pki_access', False) \
-                    and fmode.st_gid in groups:
-                return True
-        else:
-            if stat.S_IWOTH & fmode.st_mode:
-                # don't allow others to write to the file
+        if stat.S_IWOTH & fmode.st_mode:
+            # don't allow others to write to the file
+            return False
+
+        if stat.S_IWGRP & fmode.st_mode:
+            # if the group has write access only allow with permissive_pki_access
+            if not self.opts.get('permissive_pki_access', False):
+                return False
+            elif os.getuid() == 0 and fmode.st_gid not in groups:
+                # if salt is root it has to be in the group that has write access
+                # this gives the group 'permission' to have write access
                 return False
 
-            # check group flags
-            if self.opts.get('permissive_pki_access', False) and stat.S_IWGRP & fmode.st_mode:
-                return True
-            elif stat.S_IWGRP & fmode.st_mode:
-                return False
-
-            # check if writable by group or other
-            if not (stat.S_IWGRP & fmode.st_mode or
-                    stat.S_IWOTH & fmode.st_mode):
-                return True
-
-        return False
+        return True
 
     def check_signing_file(self, keyid, signing_file):
         '''
@@ -492,6 +470,8 @@ class RemoteFuncs(object):
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
         mopts['state_aggregate'] = self.opts['state_aggregate']
+        mopts['jinja_env'] = self.opts['jinja_env']
+        mopts['jinja_sls_env'] = self.opts['jinja_sls_env']
         mopts['jinja_lstrip_blocks'] = self.opts['jinja_lstrip_blocks']
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
@@ -552,7 +532,18 @@ class RemoteFuncs(object):
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
-        match_type = load.get('tgt_type', 'glob')
+        expr_form = load.get('expr_form')
+        if expr_form is not None and 'tgt_type' not in load:
+            salt.utils.warn_until(
+                u'Neon',
+                u'_mine_get: minion {0} uses pre-Nitrogen API key '
+                u'"expr_form". Accepting for backwards compatibility '
+                u'but this is not guaranteed '
+                u'after the Neon release'.format(load['id'])
+            )
+            match_type = expr_form
+        else:
+            match_type = load.get('tgt_type', 'glob')
         if match_type.lower() == 'pillar':
             match_type = 'pillar_exact'
         if match_type.lower() == 'compound':
@@ -1175,88 +1166,50 @@ class LocalFuncs(object):
         )
         minions = _res['minions']
 
-        # Check for external auth calls
-        if extra.get('token', False):
-            # Authenticate
-            token = self.loadauth.authenticate_token(extra)
-            if not token:
-                return ''
-
-            # Get acl from eauth module.
-            auth_list = self.loadauth.get_auth_list(extra, token)
-
-            # Authorize the request
-            if not self.ckminions.auth_check(
-                    auth_list,
-                    load['fun'],
-                    load['arg'],
-                    load['tgt'],
-                    load.get('tgt_type', 'glob'),
-                    minions=minions,
-                    # always accept find_job
-                    whitelist=['saltutil.find_job'],
-                    ):
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
-            load['user'] = token['name']
-            log.debug('Minion tokenized user = "{0}"'.format(load['user']))
-        elif 'eauth' in extra:
-            # Authenticate.
-            if not self.loadauth.authenticate_eauth(extra):
-                return ''
-
-            # Get acl from eauth module.
-            auth_list = self.loadauth.get_auth_list(extra)
-
-            # Authorize the request
-            if not self.ckminions.auth_check(
-                    auth_list,
-                    load['fun'],
-                    load['arg'],
-                    load['tgt'],
-                    load.get('tgt_type', 'glob'),
-                    minions=minions,
-                    # always accept find_job
-                    whitelist=['saltutil.find_job'],
-                    ):
-                log.warning('Authentication failure of type "eauth" occurred.')
-                return ''
-            load['user'] = self.loadauth.load_name(extra)  # The username we are attempting to auth with
-        # Verify that the caller has root on master
+        # Check for external auth calls and authenticate
+        auth_type, err_name, key = self._prep_auth_info(extra)
+        if auth_type == 'user':
+            auth_check = self.loadauth.check_authentication(load, auth_type, key=key)
         else:
-            auth_ret = self.loadauth.authenticate_key(load, self.key)
-            if auth_ret is False:
+            auth_check = self.loadauth.check_authentication(extra, auth_type)
+
+        # Setup authorization list variable and error information
+        auth_list = auth_check.get('auth_list', [])
+        error = auth_check.get('error')
+        err_msg = 'Authentication failure of type "{0}" occurred.'.format(auth_type)
+
+        if error:
+            # Authentication error occurred: do not continue.
+            log.warning(err_msg)
+            return ''
+
+        # All Token, Eauth, and non-root users must pass the authorization check
+        if auth_type != 'user' or (auth_type == 'user' and auth_list):
+            # Authorize the request
+            authorized = self.ckminions.auth_check(
+                auth_list,
+                load['fun'],
+                load['arg'],
+                load['tgt'],
+                load.get('tgt_type', 'glob'),
+                minions=minions,
+                # always accept find_job
+                whitelist=['saltutil.find_job'],
+            )
+
+            if not authorized:
+                # Authorization error occurred. Log warning and do not continue.
+                log.warning(err_msg)
                 return ''
 
-            if auth_ret is not True:
-                if salt.auth.AuthUser(load['user']).is_sudo():
-                    if not self.opts['sudo_acl'] or not self.opts['publisher_acl']:
-                        auth_ret = True
-
-            if auth_ret is not True:
-                # Avoid circular import
-                import salt.utils.master
-                auth_list = salt.utils.master.get_values_of_matching_keys(
-                        self.opts['publisher_acl'],
-                        auth_ret)
-                if not auth_list:
-                    log.warning(
-                        'Authentication failure of type "user" occurred.'
-                    )
-                    return ''
-
-                if not self.ckminions.auth_check(
-                        auth_list,
-                        load['fun'],
-                        load['arg'],
-                        load['tgt'],
-                        load.get('tgt_type', 'glob'),
-                        minions=minions,
-                        # always accept find_job
-                        whitelist=['saltutil.find_job'],
-                        ):
-                    log.warning('Authentication failure of type "user" occurred.')
-                    return ''
+            # Perform some specific auth_type tasks after the authorization check
+            if auth_type == 'token':
+                username = auth_check.get('username')
+                load['user'] = username
+                log.debug('Minion tokenized user = "{0}"'.format(username))
+            elif auth_type == 'eauth':
+                # The username we are attempting to auth with
+                load['user'] = self.loadauth.load_name(extra)
 
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found

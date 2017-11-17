@@ -55,6 +55,7 @@ The new grains added are:
 
 * ``fc_wwn``: Show all fibre channel world wide port names for a host
 * ``iscsi_iqn``: Show the iSCSI IQN name for a host
+* ``swap_total``: Show the configured swap_total for Linux, *BSD, OS X and Solaris/SunOS
 
 Grains Changes
 --------------
@@ -116,6 +117,31 @@ The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and ``te
 Just like ``mixed_id``, these use the state ID as name in the highstate output.
 For more information on these output modes, see the docs for the :mod:`Highstate Outputter <salt.output.highstate>`.
 
+Windows Installer: Changes to existing config handling
+------------------------------------------------------
+Behavior with existing configuration has changed. With previous installers the
+existing config was used and the master and minion id could be modified via the
+installer. It was problematic in that it didn't account for configuration that
+may be defined in the ``minion.d`` directory. This change gives you the option
+via a checkbox to either use the existing config with out changes or the default
+config using values you pass to the installer. If you choose to use the existing
+config then no changes are made. If not, the existing config is deleted, to
+include the ``minion.d`` directory, and the default config is used. A
+command-line switch (``/use-existing-config``) has also been added to control
+this behavior.
+
+Windows Installer: Multi-master configuration
+---------------------------------------------
+The installer now has the ability to apply a multi-master configuration either
+from the gui or the command line. The ``master`` field in the gui can accept
+either a single master or a comma-separated list of masters. The command-line
+switch (``/master=``) can accept the same.
+
+Windows Installer: Command-line help
+------------------------------------
+The Windows installer will now display command-line help when a help switch
+(``/?``) is passed.
+
 Salt Cloud Features
 -------------------
 
@@ -148,11 +174,13 @@ to create it.
 The generated grain information will appear similar to:
 
 .. code-block:: yaml
+
     grains:
       salt-cloud:
         driver: ec2
         provider: my_ec2:ec2
         profile: ec2-web
+
 The generation of salt-cloud grains can be surpressed by the
 option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
 
@@ -385,7 +413,7 @@ signed certificates.  :ref:`Here<new-pywinrm>` for more information.
 DigitalOcean
 ------------
 
-The DigitalOcean driver has been renamed to conform to the companies name.  The
+The DigitalOcean driver has been renamed to conform to the company name.  The
 new driver name is ``digitalocean``.  The old name ``digital_ocean`` and a
 short one ``do`` will still be supported through virtual aliases, this is mostly
 cosmetic.
@@ -394,7 +422,7 @@ Solaris Logical Domains In Virtual Grain
 ----------------------------------------
 
 Support has been added to the ``virtual`` grain for detecting Solaris LDOMs
-running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is 
+running on T-Series SPARC hardware.  The ``virtual_subtype`` grain is
 populated as a list of domain roles.
 
 Lists of comments in state returns
@@ -409,7 +437,7 @@ Beacon configuration changes
 
 In order to remain consistent and to align with other Salt components such as states,
 support for configuring beacons using dictionary based configuration has been deprecated
-in favor of list based configuration.  All beacons have a validation function which will 
+in favor of list based configuration.  All beacons have a validation function which will
 check the configuration for the correct format and only load if the validation passes.
 
 - ``avahi_announce`` beacon
@@ -934,6 +962,54 @@ check the configuration for the correct format and only load if the validation p
         beacons:
           wtmp: []
 
+
+New requisites available in state compiler
+------------------------------------------
+
+- ``require_any``
+The use of ``require_any`` demands that one of the required states executes before the
+dependent state. The state containing the ``require_any`` requisite is defined as the
+dependent state. The states specified in the ``require_any`` statement are defined as the
+required states. If at least one of the required state's execution succeeds, the dependent state
+will then execute. If at least one of the required state's execution fails, the dependent state
+will not execute.
+
+- ``watch_any``
+The state containing the ``watch_any`` requisite is defined as the watching
+state. The states specified in the ``watch_any`` statement are defined as the watched
+states. When the watched states execute, they will return a dictionary containing
+a key named "changes".
+
+If the "result" of any of the watched states is ``True``, the watching state *will
+execute normally*, and if all of them are ``False``, the watching state will never run.
+This part of ``watch`` mirrors the functionality of the ``require`` requisite.
+
+If the "result" of any of the watched states is ``True`` *and* the "changes"
+key contains a populated dictionary (changes occurred in the watched state),
+then the ``watch`` requisite can add additional behavior. This additional
+behavior is defined by the ``mod_watch`` function within the watching state
+module. If the ``mod_watch`` function exists in the watching state module, it
+will be called *in addition to* the normal watching state. The return data
+from the ``mod_watch`` function is what will be returned to the master in this
+case; the return data from the main watching function is discarded.
+
+If the "changes" key contains an empty dictionary, the ``watch`` requisite acts
+exactly like the ``require`` requisite (the watching state will execute if
+"result" is ``True``, and fail if "result" is ``False`` in the watched state).
+
+- ``onchanges_any``
+The ``onchanges_any`` requisite makes a state only apply one of the required states
+generates changes, and if one of the watched state's "result" is ``True``. This can be
+a useful way to execute a post hook after changing aspects of a system.
+
+- ``onfail_any``
+The ``onfail_any`` requisite allows for reactions to happen strictly as a response
+to the failure of at least one other state. This can be used in a number of ways, such as
+executing a second attempt to set up a service or begin to execute a separate
+thread of states because of a failure.
+
+The ``onfail_any`` requisite is applied in the same way as ``require_any`` and ``watch_any``:
+
 Deprecations
 ------------
 
@@ -1070,3 +1146,10 @@ The ``version.py`` file had the following changes:
 Warnings for moving away from the ``env`` option were removed. ``saltenv`` should be
 used instead. The removal of these warnings does not have a behavior change. Only
 the warning text was removed.
+
+Sentry Log Handler
+------------------
+
+Configuring sentry raven python client via ``project``, ``servers``, ``public_key
+and ``secret_key`` is deprecated and won't work with sentry clients > 3.0.
+Instead, the ``dsn`` config param must be used.

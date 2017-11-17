@@ -177,7 +177,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     @tornado.gen.coroutine
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         if not self.auth.authenticated:
-            # Return controle back to the caller, continue when authentication succeeds
+            # Return control back to the caller, continue when authentication succeeds
             yield self.auth.authenticate()
         # Return control to the caller. When send() completes, resume by populating ret with the Future.result
         ret = yield self.message_client.send(
@@ -569,7 +569,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
     @tornado.gen.coroutine
     def handle_message(self, stream, payload):
         '''
-        Handle incoming messages from underylying TCP streams
+        Handle incoming messages from underlying TCP streams
 
         :stream ZMQStream stream: A ZeroMQ stream.
         See http://zeromq.github.io/pyzmq/api/generated/zmq.eventloop.zmqstream.html
@@ -876,7 +876,7 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
 # TODO: unit tests!
 class AsyncReqMessageClient(object):
     '''
-    This class wraps the underylying zeromq REQ socket and gives a future-based
+    This class wraps the underlying zeromq REQ socket and gives a future-based
     interface to sending and recieving messages. This works around the primary
     limitation of serialized send/recv on the underlying socket by queueing the
     message sends in this class. In the future if we decide to attempt to multiplex

@@ -2,14 +2,16 @@
 
 # Import python libs
 from __future__ import absolute_import
-import os
+from jinja2 import Environment, DictLoader, exceptions
 import ast
 import copy
-import tempfile
-import json
 import datetime
+import json
+import os
 import pprint
 import re
+import tempfile
+import yaml
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
@@ -17,27 +19,30 @@ from tests.support.case import ModuleCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from tests.support.paths import TMP_CONF_DIR
 
-# Import salt libs
+# Import Salt libs
 import salt.config
-from salt.ext import six
 import salt.loader
-import salt.utils.files
-from salt.utils import get_context
 from salt.exceptions import SaltRenderError
+
+from salt.ext import six
 from salt.ext.six.moves import builtins
+
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import (
     SaltCacheLoader,
     SerializerExtension,
     ensure_sequence_filter
 )
-from salt.utils.templates import JINJA, render_jinja_tmpl
 from salt.utils.odict import OrderedDict
+from salt.utils.templates import (
+    get_context,
+    JINJA,
+    render_jinja_tmpl
+)
+import salt.utils.files
 import salt.utils.stringutils
 
 # Import 3rd party libs
-import yaml
-from jinja2 import Environment, DictLoader, exceptions
 try:
     import timelib  # pylint: disable=W0611
     HAS_TIMELIB = True
@@ -474,6 +479,67 @@ class TestGetTemplate(TestCase):
             template,
             dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
         )
+
+
+class TestJinjaDefaultOptions(TestCase):
+
+    def __init__(self, *args, **kws):
+        TestCase.__init__(self, *args, **kws)
+        self.local_opts = {
+            'cachedir': TEMPLATES_DIR,
+            'file_client': 'local',
+            'file_ignore_regex': None,
+            'file_ignore_glob': None,
+            'file_roots': {
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+            },
+            'pillar_roots': {
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+            },
+            'fileserver_backend': ['roots'],
+            'hash_type': 'md5',
+            'extension_modules': os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                'extmods'),
+            'jinja_env': {
+                'line_comment_prefix': '##',
+                'line_statement_prefix': '%',
+            },
+        }
+        self.local_salt = {
+             'myvar': 'zero',
+             'mylist': [0, 1, 2, 3],
+        }
+
+    def test_comment_prefix(self):
+
+        template = """
+            %- set myvar = 'one'
+            ## ignored comment 1
+            {{- myvar -}}
+            {%- set myvar = 'two' %} ## ignored comment 2
+            {{- myvar }} ## ignored comment 3
+            %- if myvar == 'two':
+            %- set myvar = 'three'
+            %- endif
+            {{- myvar -}}
+            """
+        rendered = render_jinja_tmpl(template,
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, u'onetwothree')
+
+    def test_statement_prefix(self):
+
+        template = """
+            {%- set mylist = ['1', '2', '3'] %}
+            %- set mylist = ['one', 'two', 'three']
+            %- for item in mylist:
+            {{- item }}
+            %- endfor
+            """
+        rendered = render_jinja_tmpl(template,
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, u'onetwothree')
 
 
 class TestCustomExtensions(TestCase):

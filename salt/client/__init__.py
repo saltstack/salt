@@ -188,11 +188,11 @@ class LocalClient(object):
             # The username may contain '\' if it is in Windows
             # 'DOMAIN\username' format. Fix this for the keyfile path.
             key_user = key_user.replace(u'\\', u'_')
-        keyfile = os.path.join(self.opts[u'cachedir'],
+        keyfile = os.path.join(self.opts[u'key_dir'],
                                u'.{0}_key'.format(key_user))
         try:
             # Make sure all key parent directories are accessible
-            salt.utils.verify.check_path_traversal(self.opts[u'cachedir'],
+            salt.utils.verify.check_path_traversal(self.opts[u'key_dir'],
                                                    key_user,
                                                    self.skip_perm_errors)
             with salt.utils.files.fopen(keyfile, u'r') as key:
@@ -1595,7 +1595,10 @@ class LocalClient(object):
                                          timeout=timeout,
                                          tgt=tgt,
                                          tgt_type=tgt_type,
-                                         expect_minions=(verbose or show_timeout),
+                                         # (gtmanfred) expect_minions is popped here incase it is passed from a client
+                                         # call. If this is not popped, then it would be passed twice to
+                                         # get_iter_returns.
+                                         expect_minions=(kwargs.pop('expect_minions', False) or verbose or show_timeout),
                                          **kwargs
                                          ):
             log.debug(u'return event: %s', ret)
