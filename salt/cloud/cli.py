@@ -209,13 +209,9 @@ class SaltCloud(parsers.SaltCloudParser):
                     for name in vms:
                         msg += '      {0}\n'.format(name)
                         names.add(name)
-            log.debug(matching)
-            log.debug(names)
-            kwargs = {}
-            tnames = mapper.get_vmnames_by_action(self.options.destroy)
-            log.debug(tnames)
-            log.debug(self.config.get('names', None))
-            for name in tnames:
+           
+            kwargs = {}         
+            for name in self.config.get('names', None):
                 if '=' in name:
                     # This is obviously not a machine name, treat it as a kwarg
                     key, value = name.split('=', 1)
