@@ -662,21 +662,12 @@ class SSH(object):
             host = next(six.iterkeys(ret))
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
-                jobid = jid
+                _, data = next(six.iteritems(ret))
                 self.event.fire_event(
-                        ret,
-                        salt.utils.event.tagify(
-                            [jid, 'ret', host],
-                            'job'))
-                for _, data in six.iteritems(ret):
-                    if not isinstance(data, dict):
-                        continue
-                    data['jid'] = jobid
-                    self.event.fire_event(
-                            data,
-                            salt.utils.event.tagify(
-                                [jid, 'ret', host],
-                                'job'))
+                    data,
+                    salt.utils.event.tagify(
+                        [jid, 'ret', host],
+                        'job'))
             yield ret
 
     def cache_job(self, jid, id_, ret, fun):
@@ -781,21 +772,12 @@ class SSH(object):
                         outputter,
                         self.opts)
             if self.event:
-                jobid = jid
+                _, data = next(six.iteritems(ret))
                 self.event.fire_event(
-                        ret,
-                        salt.utils.event.tagify(
-                            [jid, 'ret', host],
-                            'job'))
-                for _, data in six.iteritems(ret):
-                    if not isinstance(data, dict):
-                        continue
-                    data['jid'] = jobid
-                    self.event.fire_event(
-                            data,
-                            salt.utils.event.tagify(
-                                [jid, 'ret', host],
-                                'job'))
+                    data,
+                    salt.utils.event.tagify(
+                        [jid, 'ret', host],
+                        'job'))
         if self.opts.get('static'):
             salt.output.display_output(
                     sret,
