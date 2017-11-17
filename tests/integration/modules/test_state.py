@@ -1263,7 +1263,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.sls', mods='requisites.use_no_state_module')
         self.assertReturnNonEmptySaltType(ret)
         for item, descr in six.iteritems(ret):
-            self.assertEqual(descr['comment'], 'onlyif execution failed')
+            self.assertEqual(descr['comment'], 'onlyif condition is false')
 
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(TMP, 'prod-cheese-file')
