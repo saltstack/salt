@@ -200,6 +200,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.exit(salt.defaults.exitcodes.EX_OK)
 
             msg = 'The following virtual machines are set to be destroyed:\n'
+
             names = set()
             for alias, drivers in six.iteritems(matching):
                 msg += '  {0}:\n'.format(alias)
@@ -208,13 +209,14 @@ class SaltCloud(parsers.SaltCloudParser):
                     for name in vms:
                         msg += '      {0}\n'.format(name)
                         names.add(name)
+            log.debug(names)
             kwargs = {}
             for name in names:
                 if '=' in name:
                     # This is obviously not a machine name, treat it as a kwarg
                     key, value = name.split('=', 1)
                     kwargs[key] = value
-
+            log.debug(kwargs)
             try:
                 if self.print_confirm(msg):
                     ret = mapper.destroy(names, cached=True, kwargs=kwargs)
