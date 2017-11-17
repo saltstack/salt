@@ -976,7 +976,7 @@ class Cloud(object):
 
         return ret
 
-    def destroy(self, names, cached=False, kwargs):
+    def destroy(self, names, cached=False, kwargs=None):
         '''
         Destroy the named VMs
         '''
