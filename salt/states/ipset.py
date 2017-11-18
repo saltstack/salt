@@ -204,7 +204,7 @@ def present(name, entry=None, family='ipv4', **kwargs):
             entry_opts = 'timeout {0} {1}'.format(kwargs['timeout'], entry_opts)
         if 'comment' in kwargs and 'comment' not in entry_opts:
             entry_opts = '{0} comment "{1}"'.format(entry_opts, kwargs['comment'])
-        _entry = ' '.join([entry, entry_opts]).strip()
+        _entry = ' '.join([entry, entry_opts.lstrip()]).strip()
 
         if __salt__['ipset.check'](kwargs['set_name'],
                                    _entry,
