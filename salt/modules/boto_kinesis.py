@@ -445,21 +445,23 @@ def list_streams(region=None, key=None, keyid=None, profile=None):
     '''
     Return a list of all streams visible to the current account
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_kinesis.list_streams
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     streams = []
-    ExclusiveStartStreamName = ''
-    while ExclusiveStartStreamName is not None:
-        args = {'ExclusiveStartStreamName': ExclusiveStartStreamName} if ExclusiveStartStreamName else {}
-        r = _execute_with_retries(conn, 'list_streams', **args)
-        if 'error' in r:
-            return r
-        r = r['result'] if r and r.get('result') else {}
-        streams += r.get('StreamNames', [])
-        ExclusiveStartStreamName = streams[-1] if r.get('HasMoreStreams', False) in (True, 'true') else None
+    exclusive_start_stream_name = ''
+    while exclusive_start_stream_name is not None:
+        args = {'ExclusiveStartStreamName': exclusive_start_stream_name} if exclusive_start_stream_name else {}
+        ret = _execute_with_retries(conn, 'list_streams', **args)
+        if 'error' in ret:
+            return ret
+        ret = ret['result'] if ret and ret.get('result') else {}
+        streams += ret.get('StreamNames', [])
+        exclusive_start_stream_name = streams[-1] if ret.get('HasMoreStreams', False) in (True, 'true') else None
     return {'result': streams}
 
 
