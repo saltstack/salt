@@ -69,7 +69,7 @@ A new data center can be created with the following command:
 
 .. code-block:: bash
 
-    salt-cloud -f create_datacenter profitbricks name=example location=us/las
+    salt-cloud -f create_datacenter profitbricks name=example location=us/las description="my description"
 
 
 Authentication
