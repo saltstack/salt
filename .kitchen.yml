@@ -31,8 +31,8 @@ provisioner:
   log_level: info
   require_chef: false
   remote_states:
-    name: git://github.com/gtmanfred/salt-jenkins.git
-    branch: 2017.7
+    name: git://github.com/saltstack/salt-jenkins.git
+    branch: master
     repo: git
     testingdir: /testing
   salt_copy_filter:

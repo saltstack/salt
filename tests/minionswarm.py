@@ -23,6 +23,7 @@ import uuid
 
 # Import salt libs
 import salt
+import salt.utils.files
 
 # Import third party libs
 import yaml
@@ -255,7 +256,8 @@ class Swarm(object):
             pidfile = '{0}.pid'.format(path)
             try:
                 try:
-                    pid = int(open(pidfile).read().strip())
+                    with salt.utils.files.fopen(pidfile) as fp_:
+                        pid = int(fp_.read().strip())
                     os.kill(pid, signal.SIGTERM)
                 except ValueError:
                     pass
@@ -298,7 +300,7 @@ class MinionSwarm(Swarm):
         data = {}
         if self.opts['config_dir']:
             spath = os.path.join(self.opts['config_dir'], 'minion')
-            with open(spath) as conf:
+            with salt.utils.files.fopen(spath) as conf:
                 data = yaml.load(conf) or {}
         minion_id = '{0}-{1}'.format(
                 self.opts['name'],
@@ -357,7 +359,7 @@ class MinionSwarm(Swarm):
         if self.opts['rand_uuid']:
             data['grains']['uuid'] = str(uuid.uuid4())
 
-        with open(path, 'w+') as fp_:
+        with salt.utils.files.fopen(path, 'w+') as fp_:
             yaml.dump(data, fp_)
         self.confs.add(dpath)
 
@@ -411,7 +413,7 @@ class MasterSwarm(Swarm):
         data = {}
         if self.opts['config_dir']:
             spath = os.path.join(self.opts['config_dir'], 'master')
-            with open(spath) as conf:
+            with salt.utils.files.fopen(spath) as conf:
                 data = yaml.load(conf)
         data.update({
             'log_file': os.path.join(self.conf, 'master.log'),
@@ -421,7 +423,7 @@ class MasterSwarm(Swarm):
         os.makedirs(self.conf)
         path = os.path.join(self.conf, 'master')
 
-        with open(path, 'w+') as fp_:
+        with salt.utils.files.fopen(path, 'w+') as fp_:
             yaml.dump(data, fp_)
 
     def shutdown(self):
