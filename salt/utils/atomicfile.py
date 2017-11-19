@@ -13,7 +13,7 @@ import errno
 import time
 import random
 import shutil
-import salt.ext.six as six
+from salt.ext import six
 
 
 CAN_RENAME_OPEN_FILE = False

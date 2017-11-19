@@ -25,10 +25,9 @@ configuration:
         - web*:
           - test.*
           - pkg.*
-
-WARNING: client_acl and client_acl_blacklist options are deprecated and will be
-removed in the future releases. Use publisher_acl and publisher_acl_blacklist
-instead.
+      # Allow managers to use saltutil module functions
+      manager_.*:
+        - saltutil.*
 
 Permission Issues
 -----------------

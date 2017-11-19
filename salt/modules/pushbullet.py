@@ -75,6 +75,7 @@ def push_note(device=None, title=None, body=None):
     CLI Example:
 
     .. code-block:: bash
+
         salt "*" pushbullet.push_note device="Chrome" title="Example title" body="Example body."
     '''
     spb = _SaltPushbullet(device)

@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-import pyrax
+
+try:
+    import pyrax
+except ImportError:
+    raise
 
 
 class Authenticate(object):

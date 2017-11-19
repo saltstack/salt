@@ -12,7 +12,9 @@ automatically installed salt-cloud for you. Use your distribution's package
 manager to install the ``salt-cloud`` package from the same repo that you
 used to install Salt.  These repos will automatically be setup by Salt Bootstrap.
 
-If there is no salt-cloud package, install with ``pip install salt-cloud``.
+Alternatively, the ``-L`` option can be passed to the `Salt Bootstrap`_ script when
+installing Salt. The ``-L`` option will install ``salt-cloud`` and the required
+``libcloud`` package.
 
 .. _`Salt Bootstrap`: https://github.com/saltstack/salt-bootstrap
 
@@ -100,7 +102,7 @@ a few examples:
       size: m3.large
 
 Notice that the ``provider`` in our profile matches the provider name that we
-defined? That is how Salt Cloud knows how to connect to to a cloud host to
+defined? That is how Salt Cloud knows how to connect to a cloud host to
 create a VM with these attributes.
 
 Create VMs

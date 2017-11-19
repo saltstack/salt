@@ -103,6 +103,21 @@ def info(package, conn=None):
     return formula_def
 
 
+def list_packages(conn=None):
+    '''
+    List files for an installed package
+    '''
+    if conn is None:
+        conn = init()
+
+    ret = []
+    data = conn.execute('SELECT package FROM packages')
+    for pkg in data.fetchall():
+        ret.append(pkg)
+
+    return ret
+
+
 def list_files(package, conn=None):
     '''
     List files for an installed package

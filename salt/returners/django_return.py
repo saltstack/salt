@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-A returner that will infor a Django system that
+A returner that will inform a Django system that
 returns are available using Django's signal system.
 
 https://docs.djangoproject.com/en/dev/topics/signals/
@@ -50,7 +50,7 @@ __virtualname__ = 'django'
 
 def __virtual__():
     if not HAS_DJANGO:
-        return False
+        return False, 'Could not import django returner; django is not installed.'
     return True
 
 
@@ -82,4 +82,4 @@ def prep_jid(nocache=False, passed_jid=None):
     '''
     Do any work necessary to prepare a JID, including sending a custom ID
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

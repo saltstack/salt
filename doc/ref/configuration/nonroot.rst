@@ -1,3 +1,5 @@
+.. _configuration-non-root-user:
+
 ======================================================
 Running the Salt Master/Minion as an Unprivileged User
 ======================================================

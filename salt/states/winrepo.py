@@ -11,7 +11,6 @@ import itertools
 
 # Salt Modules
 import salt.runner
-import salt.utils
 import salt.config
 import salt.syspaths
 
@@ -50,25 +49,8 @@ def genrepo(name, force=False, allow_empty=False):
         os.path.join(salt.syspaths.CONFIG_DIR, 'master')
     )
 
-    if 'win_repo' in master_config:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_repo\' config option is deprecated, please use '
-            '\'winrepo_dir\' instead.'
-        )
-        winrepo_dir = master_config['win_repo']
-    else:
-        winrepo_dir = master_config['winrepo_dir']
-
-    if 'win_repo_mastercachefile' in master_config:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_repo_mastercachefile\' config option is deprecated, '
-            'please use \'winrepo_cachefile\' instead.'
-        )
-        winrepo_cachefile = master_config['win_repo_mastercachefile']
-    else:
-        winrepo_cachefile = master_config['winrepo_cachefile']
+    winrepo_dir = master_config['winrepo_dir']
+    winrepo_cachefile = master_config['winrepo_cachefile']
 
     # We're actually looking for the full path to the cachefile here, so
     # prepend the winrepo_dir

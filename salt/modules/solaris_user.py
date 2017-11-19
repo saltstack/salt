@@ -3,10 +3,12 @@
 Manage users with the useradd command
 
 .. important::
+
     If you feel that Salt should be using this module to manage users on a
     minion, and it is using a different module (or gives an error similar to
     *'user.info' is not available*), see :ref:`here
     <module-provider-override>`.
+
 '''
 
 # Import python libs
@@ -20,8 +22,9 @@ import copy
 import logging
 
 # Import salt libs
-import salt.utils
-import salt.ext.six as six
+import salt.utils.data
+import salt.utils.user
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -109,7 +112,7 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
-    if salt.utils.is_true(kwargs.pop('system', False)):
+    if salt.utils.data.is_true(kwargs.pop('system', False)):
         log.warning('solaris_user module does not support the \'system\' '
                     'argument')
     if kwargs:
@@ -166,7 +169,7 @@ def delete(name, remove=False, force=False):
 
         salt '*' user.delete name remove=True force=True
     '''
-    if salt.utils.is_true(force):
+    if salt.utils.data.is_true(force):
         log.warning(
             'userdel does not support force-deleting user while user is '
             'logged in'
@@ -429,7 +432,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    return salt.utils.get_group_list(name)
+    return salt.utils.user.get_group_list(name)
 
 
 def list_users():

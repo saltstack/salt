@@ -149,7 +149,7 @@ __virtualname__ = 'odbc'
 
 def __virtual__():
     if not HAS_ODBC:
-        return False
+        return False, 'Could not import odbc returner; pyodbc is not installed.'
     return True
 
 
@@ -226,7 +226,7 @@ def save_load(jid, load, minions=None):
     _close_conn(conn)
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''
@@ -329,4 +329,4 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

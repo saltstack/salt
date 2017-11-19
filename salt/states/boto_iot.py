@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 '''
 Manage IoT Objects
-=================
+==================
 
 .. versionadded:: 2016.3.0
 
 Create and destroy IoT objects. Be aware that this interacts with Amazon's services,
 and so may incur charges.
 
-This module uses ``boto3``, which can be installed via package, or pip.
+:depends:
+    - boto
+    - boto3
+
+The dependencies listed above can be installed via package or pip.
 
 This module accepts explicit vpc credentials but can also utilize
 IAM roles assigned to the instance through Instance Profiles. Dynamic
@@ -77,7 +81,7 @@ import time
 import json
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.data
 from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
@@ -367,7 +371,7 @@ def policy_present(name, policyName, policyDocument,
     if isinstance(policyDocument, string_types):
         policyDocument = json.loads(policyDocument)
 
-    r = salt.utils.compare_dicts(describeDict, policyDocument)
+    r = salt.utils.data.compare_dicts(describeDict, policyDocument)
     if bool(r):
         if __opts__['test']:
             msg = 'Policy {0} set to be modified.'.format(policyName)

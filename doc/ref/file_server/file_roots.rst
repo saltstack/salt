@@ -25,6 +25,7 @@ environments are not isolated from each other. This allows for logical
 isolation of environments by the engineer using Salt, but also allows
 for information to be used in multiple environments.
 
+.. _file-roots-directory-overlay:
 
 Directory Overlay
 =================

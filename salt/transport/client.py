@@ -114,7 +114,7 @@ class AsyncReqChannel(AsyncChannel):
             return salt.transport.tcp.AsyncTCPReqChannel(opts, **kwargs)
         elif ttype == 'raet':
             import salt.transport.raet
-            return salt.transport.raet.AsyncRAETReqChannel(opts, **kwargs)
+            return salt.transport.raet.RAETReqChannel(opts, **kwargs)
         elif ttype == 'local':
             import salt.transport.local
             return salt.transport.local.AsyncLocalChannel(opts, **kwargs)

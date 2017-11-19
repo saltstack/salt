@@ -2,7 +2,7 @@
 Release Notes
 =============
 
-See the :doc:`version numbers</topics/releases/version_numbers>` page for more
+See the :ref:`version numbers<version-numbers>` page for more
 information about the version numbering scheme.
 
 Latest Branch Release
@@ -16,13 +16,12 @@ Latest Branch Release
 Previous Releases
 =================
 
-.. after carbon releases, remove carbon from the list below:
-
 .. releasestree::
     :maxdepth: 1
     :glob:
 
-    carbon
+    2017.7.*
+    2016.11.*
     2016.3.*
     2015.8.*
     2015.5.*
@@ -30,6 +29,6 @@ Previous Releases
     2014.1.*
     0.*
 
-.. seealso:: :doc:`Legacy salt-cloud release docs <../cloud/releases/index>`
+.. seealso:: :ref:`Legacy salt-cloud release docs <legacy-salt-cloud-release-notes>`
 
-.. seealso:: :doc:`Legacy salt-api release docs <saltapi/index>`
+.. seealso:: :ref:`Legacy salt-api release docs <legacy-salt-api-release-notes>`

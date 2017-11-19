@@ -10,12 +10,15 @@ import re
 import logging
 
 # Import salt libs
-import salt.utils
-from salt.utils import which as _which
+import salt.utils.args
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.mount
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import filter, zip  # pylint: disable=import-error,redefined-builtin
 
 # Set up logger
@@ -30,7 +33,7 @@ def __virtual__():
     Only load on POSIX-like systems
     '''
     # Disable on Windows, a specific file module exists:
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         return (False, 'The mount module cannot be loaded: not a POSIX-like system.')
     return True
 
@@ -58,7 +61,7 @@ def _active_mountinfo(ret):
 
     blkid_info = __salt__['disk.blkid']()
 
-    with salt.utils.fopen(filename) as ifile:
+    with salt.utils.files.fopen(filename) as ifile:
         for line in ifile:
             comps = line.split()
             device = comps[2].split(':')
@@ -82,7 +85,7 @@ def _active_mountinfo(ret):
                              'root': comps[3],
                              'opts': _resolve_user_group_names(comps[5].split(',')),
                              'fstype': comps[_sep + 1],
-                             'device': device_name,
+                             'device': device_name.replace('\\040', '\\ '),
                              'alt_device': _list.get(comps[4], None),
                              'superopts': _resolve_user_group_names(comps[_sep + 3].split(',')),
                              'device_uuid': device_uuid,
@@ -100,13 +103,34 @@ def _active_mounts(ret):
         msg = 'File not readable {0}'
         raise CommandExecutionError(msg.format(filename))
 
-    with salt.utils.fopen(filename) as ifile:
+    with salt.utils.files.fopen(filename) as ifile:
         for line in ifile:
             comps = line.split()
             ret[comps[1]] = {'device': comps[0],
                              'alt_device': _list.get(comps[1], None),
                              'fstype': comps[2],
                              'opts': _resolve_user_group_names(comps[3].split(','))}
+    return ret
+
+
+def _active_mounts_aix(ret):
+    '''
+    List active mounts on AIX systems
+    '''
+    for line in __salt__['cmd.run_stdout']('mount -p').split('\n'):
+        comps = re.sub(r"\s+", " ", line).split()
+        if comps and comps[0] == 'node' or comps[0] == '--------':
+            continue
+        if len(comps) < 8:
+            ret[comps[1]] = {'device': comps[0],
+                             'fstype': comps[2],
+                             'opts': _resolve_user_group_names(comps[6].split(','))}
+        else:
+            ret[comps[2]] = {'node': comps[0],
+                             'device': comps[1],
+                             'fstype': comps[3],
+                             'opts': _resolve_user_group_names(comps[7].split(','))}
+
     return ret
 
 
@@ -202,6 +226,8 @@ def active(extended=False):
     ret = {}
     if __grains__['os'] == 'FreeBSD':
         _active_mounts_freebsd(ret)
+    elif __grains__['kernel'] == 'AIX':
+        _active_mounts_aix(ret)
     elif __grains__['kernel'] == 'SunOS':
         _active_mounts_solaris(ret)
     elif __grains__['os'] == 'OpenBSD':
@@ -380,7 +406,7 @@ def fstab(config='/etc/fstab'):
     ret = {}
     if not os.path.isfile(config):
         return ret
-    with salt.utils.fopen(config) as ifile:
+    with salt.utils.files.fopen(config) as ifile:
         for line in ifile:
             try:
                 if __grains__['kernel'] == 'SunOS':
@@ -442,7 +468,7 @@ def rm_fstab(name, device, config='/etc/fstab'):
 
     lines = []
     try:
-        with salt.utils.fopen(config, 'r') as ifile:
+        with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
                 try:
                     if criteria.match(line):
@@ -461,7 +487,7 @@ def rm_fstab(name, device, config='/etc/fstab'):
 
     if modified:
         try:
-            with salt.utils.fopen(config, 'w+') as ofile:
+            with salt.utils.files.fopen(config, 'w+') as ofile:
                 ofile.writelines(lines)
         except (IOError, OSError) as exc:
             msg = "Couldn't write to {0}: {1}"
@@ -516,7 +542,7 @@ def set_fstab(
     # preserve arguments for updating
     entry_args = {
         'name': name,
-        'device': device,
+        'device': device.replace('\\ ', '\\040'),
         'fstype': fstype,
         'opts': opts,
         'dump': dump,
@@ -571,7 +597,7 @@ def set_fstab(
         raise CommandExecutionError('Bad config file "{0}"'.format(config))
 
     try:
-        with salt.utils.fopen(config, 'r') as ifile:
+        with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
                 try:
                     if criteria.match(line):
@@ -599,9 +625,9 @@ def set_fstab(
         ret = 'new'
 
     if ret != 'present':  # ret in ['new', 'change']:
-        if not salt.utils.test_mode(test=test, **kwargs):
+        if not salt.utils.args.test_mode(test=test, **kwargs):
             try:
-                with salt.utils.fopen(config, 'w+') as ofile:
+                with salt.utils.files.fopen(config, 'w+') as ofile:
                     # The line was changed, commit it!
                     ofile.writelines(lines)
             except (IOError, OSError):
@@ -699,7 +725,7 @@ def set_vfstab(
         raise CommandExecutionError('Bad config file "{0}"'.format(config))
 
     try:
-        with salt.utils.fopen(config, 'r') as ifile:
+        with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
                 try:
                     if criteria.match(line):
@@ -727,9 +753,9 @@ def set_vfstab(
         ret = 'new'
 
     if ret != 'present':  # ret in ['new', 'change']:
-        if not salt.utils.test_mode(test=test, **kwargs):
+        if not salt.utils.args.test_mode(test=test, **kwargs):
             try:
-                with salt.utils.fopen(config, 'w+') as ofile:
+                with salt.utils.files.fopen(config, 'w+') as ofile:
                     # The line was changed, commit it!
                     ofile.writelines(lines)
             except (IOError, OSError):
@@ -755,7 +781,7 @@ def rm_automaster(name, device, config='/etc/auto_salt'):
     # The entry is present, get rid of it
     lines = []
     try:
-        with salt.utils.fopen(config, 'r') as ifile:
+        with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
                 if line.startswith('#'):
                     # Commented
@@ -788,7 +814,7 @@ def rm_automaster(name, device, config='/etc/auto_salt'):
         raise CommandExecutionError(msg.format(config, str(exc)))
 
     try:
-        with salt.utils.fopen(config, 'w+') as ofile:
+        with salt.utils.files.fopen(config, 'w+') as ofile:
             ofile.writelines(lines)
     except (IOError, OSError) as exc:
         msg = "Couldn't write to {0}: {1}"
@@ -837,7 +863,7 @@ def set_automaster(
         device_fmt = device_fmt.replace(fstype, "")
 
     try:
-        with salt.utils.fopen(config, 'r') as ifile:
+        with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
                 if line.startswith('#'):
                     # Commented
@@ -882,9 +908,9 @@ def set_automaster(
         raise CommandExecutionError(msg.format(config, str(exc)))
 
     if change:
-        if not salt.utils.test_mode(test=test, **kwargs):
+        if not salt.utils.args.test_mode(test=test, **kwargs):
             try:
-                with salt.utils.fopen(config, 'w+') as ofile:
+                with salt.utils.files.fopen(config, 'w+') as ofile:
                     # The line was changed, commit it!
                     ofile.writelines(lines)
             except (IOError, OSError):
@@ -898,7 +924,7 @@ def set_automaster(
             # The right entry is already here
             return 'present'
         else:
-            if not salt.utils.test_mode(test=test, **kwargs):
+            if not salt.utils.args.test_mode(test=test, **kwargs):
                 # The entry is new, add it to the end of the fstab
                 newline = (
                     '{0}\t{1}\t{2}\n'.format(
@@ -906,7 +932,7 @@ def set_automaster(
                )
                 lines.append(newline)
                 try:
-                    with salt.utils.fopen(config, 'w+') as ofile:
+                    with salt.utils.files.fopen(config, 'w+') as ofile:
                         # The line was changed, commit it!
                         ofile.writelines(lines)
                 except (IOError, OSError):
@@ -931,7 +957,7 @@ def automaster(config='/etc/auto_salt'):
     ret = {}
     if not os.path.isfile(config):
         return ret
-    with salt.utils.fopen(config) as ifile:
+    with salt.utils.files.fopen(config) as ifile:
         for line in ifile:
             if line.startswith('#'):
                 # Commented
@@ -1091,12 +1117,12 @@ def is_fuse_exec(cmd):
 
         salt '*' mount.is_fuse_exec sshfs
     '''
-    cmd_path = _which(cmd)
+    cmd_path = salt.utils.path.which(cmd)
 
     # No point in running ldd on a command that doesn't exist
     if not cmd_path:
         return False
-    elif not _which('ldd'):
+    elif not salt.utils.path.which('ldd'):
         raise CommandNotFoundError('ldd')
 
     out = __salt__['cmd.run']('ldd {0}'.format(cmd_path), python_shell=False)
@@ -1126,7 +1152,7 @@ def swaps():
                              'used': (int(comps[3]) - int(comps[4])),
                              'priority': '-'}
     elif __grains__['os'] != 'OpenBSD':
-        with salt.utils.fopen('/proc/swaps') as fp_:
+        with salt.utils.files.fopen('/proc/swaps') as fp_:
             for line in fp_:
                 if line.startswith('Filename'):
                     continue
@@ -1237,3 +1263,91 @@ def is_mounted(name):
         return True
     else:
         return False
+
+
+def read_mount_cache(name):
+    '''
+    .. versionadded:: Oxygen
+
+    Provide information if the path is mounted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.read_mount_cache /mnt/share
+    '''
+    cache = salt.utils.mount.read_cache(__opts__)
+    if cache:
+        if 'mounts' in cache and cache['mounts']:
+            if name in cache['mounts']:
+                return cache['mounts'][name]
+    return {}
+
+
+def write_mount_cache(real_name,
+                      device,
+                      mkmnt,
+                      fstype,
+                      mount_opts):
+    '''
+    .. versionadded:: Oxygen
+
+    Provide information if the path is mounted
+
+    :param real_name:     The real name of the mount point where the device is mounted.
+    :param device:        The device that is being mounted.
+    :param mkmnt:         Whether or not the mount point should be created.
+    :param fstype:        The file system that is used.
+    :param mount_opts:    Additional options used when mounting the device.
+    :return:              Boolean if message was sent successfully.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.write_mount_cache /mnt/share /dev/sda1 False ext4 defaults,nosuid
+    '''
+    cache = salt.utils.mount.read_cache(__opts__)
+
+    if not cache:
+        cache = {}
+        cache['mounts'] = {}
+    else:
+        if 'mounts' not in cache:
+            cache['mounts'] = {}
+
+    cache['mounts'][real_name] = {'device': device,
+                                  'fstype': fstype,
+                                  'mkmnt': mkmnt,
+                                  'opts': mount_opts}
+
+    cache_write = salt.utils.mount.write_cache(cache, __opts__)
+    if cache_write:
+        return True
+    else:
+        raise CommandExecutionError('Unable to write mount cache.')
+
+
+def delete_mount_cache(real_name):
+    '''
+    .. versionadded:: Oxygen
+
+    Provide information if the path is mounted
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.delete_mount_cache /mnt/share
+    '''
+    cache = salt.utils.mount.read_cache(__opts__)
+
+    if cache:
+        if 'mounts' in cache:
+            if real_name in cache['mounts']:
+                del cache['mounts'][real_name]
+                cache_write = salt.utils.mount.write_cache(cache, __opts__)
+                if not cache_write:
+                    raise CommandExecutionError('Unable to write mount cache.')
+    return True

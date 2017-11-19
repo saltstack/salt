@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Allows you to manage proxy settings on minions
-=======================
+==============================================
 
 Setup proxy settings on minions
 
@@ -14,13 +14,12 @@ Setup proxy settings on minions
             - localhost
             - 127.0.0.1
 '''
-
-# Import python libs
+# Import Python libs
 from __future__ import absolute_import
 import logging
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'proxy'
@@ -30,7 +29,7 @@ def __virtual__():
     '''
     Only work on Mac OS and Windows
     '''
-    if salt.utils.is_darwin() or salt.utils.is_windows():
+    if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
         return True
     return False
 
@@ -59,7 +58,8 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
         An array of the domains that should bypass the proxy
 
     network_service
-        The network service to apply the changes to, this only necessary on OSX
+        The network service to apply the changes to, this only necessary on
+        macOS
     '''
     ret = {'name': name,
            'result': True,

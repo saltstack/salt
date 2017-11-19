@@ -10,23 +10,44 @@ The Azure cloud module is used to control access to Microsoft Azure
 :depends:
     * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc5
     * `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32
+    * `Microsoft Azure CLI <https://pypi.python.org/pypi/azure-cli>` >= 2.0.12
 :configuration:
     Required provider parameters:
 
+    if using username and password:
     * ``subscription_id``
     * ``username``
     * ``password``
+
+    if using a service principal:
+    * ``subscription_id``
+    * ``tenant``
+    * ``client_id``
+    * ``secret``
 
 Example ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/azure.conf`` configuration:
 
 .. code-block:: yaml
 
-    my-azure-config:
+    my-azure-config with username and password:
       driver: azure
       subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
       username: larry
       password: 123pass
+
+    Or my-azure-config with service principal:
+      driver: azure
+      subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
+      tenant: ABCDEFAB-1234-ABCD-1234-ABCDEFABCDEF
+      client_id: ABCDEFAB-1234-ABCD-1234-ABCDEFABCDEF
+      secret: XXXXXXXXXXXXXXXXXXXXXXXX
+
+      The Service Principal can be created with the new Azure CLI (https://github.com/Azure/azure-cli) with:
+      az ad sp create-for-rbac -n "http://<yourappname>" --role <role> --scopes <scope>
+      For example, this creates a service principal with 'owner' role for the whole subscription:
+      az ad sp create-for-rbac -n "http://mysaltapp" --role owner --scopes /subscriptions/3287abc8-f98a-c678-3bde-326766fd3617
+      *Note: review the details of Service Principals. Owner role is more than you normally need, and you can restrict scope to a resource group or individual resources.
 '''
 # pylint: disable=E0102
 
@@ -39,25 +60,31 @@ import logging
 import pprint
 import base64
 import yaml
+import collections
 import salt.cache
 import salt.config as config
-import salt.utils
 import salt.utils.cloud
-import salt.ext.six as six
+import salt.utils.data
+import salt.utils.files
+from salt.utils.versions import LooseVersion
+from salt.ext import six
 import salt.version
 from salt.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
 )
+from salt.ext.six.moves import filter
 
 # Import 3rd-party libs
 HAS_LIBS = False
 try:
     import salt.utils.msazure
     from salt.utils.msazure import object_to_dict
-    import azure.storage
-    from azure.common.credentials import UserPassCredentials
+    from azure.common.credentials import (
+        UserPassCredentials,
+        ServicePrincipalCredentials,
+    )
     from azure.mgmt.compute import ComputeManagementClient
     from azure.mgmt.compute.models import (
         CachingTypes,
@@ -70,6 +97,7 @@ try:
         OSDisk,
         OSProfile,
         StorageProfile,
+        SubResource,
         VirtualHardDisk,
         VirtualMachine,
         VirtualMachineSizeTypes,
@@ -78,6 +106,7 @@ try:
     from azure.mgmt.network.models import (
         IPAllocationMethod,
         NetworkInterface,
+        NetworkInterfaceDnsSettings,
         NetworkInterfaceIPConfiguration,
         NetworkSecurityGroup,
         PublicIPAddress,
@@ -87,7 +116,9 @@ try:
     from azure.mgmt.storage import StorageManagementClient
     from azure.mgmt.web import WebSiteManagementClient
     from msrestazure.azure_exceptions import CloudError
-    HAS_LIBS = True
+    from azure.multiapi.storage.v2016_05_31 import CloudStorageAccount
+    from azure.cli import core
+    HAS_LIBS = LooseVersion(core.__version__) >= LooseVersion("2.0.12")
 except ImportError:
     pass
 # pylint: enable=wrong-import-position,wrong-import-order
@@ -116,7 +147,13 @@ def __virtual__():
         return False
 
     if get_dependencies() is False:
-        return False
+        return (
+            False,
+            'The following dependencies are required to use the AzureARM driver: '
+            'Microsoft Azure SDK for Python >= 2.0rc5, '
+            'Microsoft Azure Storage SDK for Python >= 0.32, '
+            'Microsoft Azure CLI >= 2.0.12'
+        )
 
     global cache  # pylint: disable=global-statement,invalid-name
     cache = salt.cache.Cache(__opts__)
@@ -128,11 +165,19 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    return config.is_provider_configured(
+    provider = config.is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        ('subscription_id', 'username', 'password')
-    )
+        ('subscription_id', 'tenant', 'client_id', 'secret')
+        )
+    if provider is False:
+        return config.is_provider_configured(
+            __opts__,
+            __active_provider_name__ or __virtualname__,
+            ('subscription_id', 'username', 'password')
+        )
+    else:
+        return provider
 
 
 def get_dependencies():
@@ -157,17 +202,31 @@ def get_conn(Client=None):
         get_configured_provider(), __opts__, search_global=False
     )
 
-    username = config.get_cloud_config_value(
-        'username',
+    tenant = config.get_cloud_config_value(
+        'tenant',
         get_configured_provider(), __opts__, search_global=False
     )
+    if tenant is not None:
+        client_id = config.get_cloud_config_value(
+            'client_id',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        secret = config.get_cloud_config_value(
+            'secret',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        credentials = ServicePrincipalCredentials(client_id, secret, tenant=tenant)
+    else:
+        username = config.get_cloud_config_value(
+            'username',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        password = config.get_cloud_config_value(
+            'password',
+            get_configured_provider(), __opts__, search_global=False
+        )
+        credentials = UserPassCredentials(username, password)
 
-    password = config.get_cloud_config_value(
-        'password',
-        get_configured_provider(), __opts__, search_global=False
-    )
-
-    credentials = UserPassCredentials(username, password)
     client = Client(
         credentials=credentials,
         subscription_id=subscription_id,
@@ -202,27 +261,12 @@ def avail_locations(conn=None, call=None):  # pylint: disable=unused-argument
 
     ret = {}
     regions = webconn.global_model.get_subscription_geo_regions()
-    for location in regions.value:  # pylint: disable=no-member
+    if hasattr(regions, 'value'):
+        regions = regions.value
+    for location in regions:  # pylint: disable=no-member
         lowername = str(location.name).lower().replace(' ', '')
         ret[lowername] = object_to_dict(location)
     return ret
-
-
-def _cache(bank, key, fun, **kwargs):
-    '''
-    Cache an Azure ARM object
-    '''
-    items = cache.fetch(bank, key)
-    if items is None:
-        items = {}
-        try:
-            item_list = fun(**kwargs)
-        except CloudError as exc:
-            log.warn('There was a cloud error calling {0} with kwargs {1}: {2}'.format(fun, kwargs, exc))
-        for item in item_list:
-            items[item.name] = object_to_dict(item)
-        cache.store(bank, key, items)
-    return items
 
 
 def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
@@ -241,59 +285,79 @@ def avail_images(conn=None, call=None):  # pylint: disable=unused-argument
 
     region = get_location()
     bank = 'cloud/metadata/azurearm/{0}'.format(region)
-    publishers = _cache(
+    publishers = cache.cache(
         bank,
         'publishers',
         compconn.virtual_machine_images.list_publishers,
+        loop_fun=object_to_dict,
+        expire=config.get_cloud_config_value(
+            'expire_publisher_cache', get_configured_provider(),
+            __opts__, search_global=False, default=604800,  # 7 days
+        ),
         location=region,
     )
 
     ret = {}
     for publisher in publishers:
-        pub_bank = os.path.join(bank, 'publishers', publisher)
-        offers = _cache(
+        pub_bank = os.path.join(bank, 'publishers', publisher['name'])
+        offers = cache.cache(
             pub_bank,
             'offers',
             compconn.virtual_machine_images.list_offers,
+            loop_fun=object_to_dict,
+            expire=config.get_cloud_config_value(
+                'expire_offer_cache', get_configured_provider(),
+                __opts__, search_global=False, default=518400,  # 6 days
+            ),
             location=region,
-            publisher_name=publishers[publisher]['name'],
+            publisher_name=publisher['name'],
         )
 
         for offer in offers:
-            offer_bank = os.path.join(pub_bank, 'offers', offer)
-            skus = _cache(
+            offer_bank = os.path.join(pub_bank, 'offers', offer['name'])
+            skus = cache.cache(
                 offer_bank,
                 'skus',
                 compconn.virtual_machine_images.list_skus,
+                loop_fun=object_to_dict,
+                expire=config.get_cloud_config_value(
+                    'expire_sku_cache', get_configured_provider(),
+                    __opts__, search_global=False, default=432000,  # 5 days
+                ),
                 location=region,
-                publisher_name=publishers[publisher]['name'],
-                offer=offers[offer]['name'],
+                publisher_name=publisher['name'],
+                offer=offer['name'],
             )
 
             for sku in skus:
-                sku_bank = os.path.join(offer_bank, 'skus', sku)
-                results = _cache(
+                sku_bank = os.path.join(offer_bank, 'skus', sku['name'])
+                results = cache.cache(
                     sku_bank,
                     'results',
                     compconn.virtual_machine_images.list,
+                    loop_fun=object_to_dict,
+                    expire=config.get_cloud_config_value(
+                        'expire_version_cache', get_configured_provider(),
+                        __opts__, search_global=False, default=345600,  # 4 days
+                    ),
                     location=region,
-                    publisher_name=publishers[publisher]['name'],
-                    offer=offers[offer]['name'],
-                    skus=skus[sku]['name'],
+                    publisher_name=publisher['name'],
+                    offer=offer['name'],
+                    skus=sku['name'],
                 )
 
                 for version in results:
                     name = '|'.join((
-                        publishers[publisher]['name'],
-                        offers[offer]['name'],
-                        skus[sku]['name'],
-                        results[version]['name'],
+                        publisher['name'],
+                        offer['name'],
+                        sku['name'],
+                        version['name'],
                     ))
                     ret[name] = {
-                        'publisher': publishers[publisher]['name'],
-                        'offer': offers[offer]['name'],
-                        'sku': skus[sku]['name'],
-                        'version': results[version]['name'],
+                        'publisher': publisher['name'],
+                        'offer': offer['name'],
+                        'sku': sku['name'],
+                        'version': version['name'],
                     }
     return ret
 
@@ -322,7 +386,7 @@ def avail_sizes(call=None):  # pylint: disable=unused-argument
 
 def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
     '''
-    List VMs on this Azure account
+    List VMs on this Azure Active Provider
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -335,7 +399,18 @@ def list_nodes(conn=None, call=None):  # pylint: disable=unused-argument
         compconn = get_conn()
 
     nodes = list_nodes_full(compconn, call)
+
+    active_resource_group = None
+    try:
+        provider, driver = __active_provider_name__.split(':')
+        active_resource_group = __opts__['providers'][provider][driver]['resource_group']
+    except KeyError:
+        pass
+
     for node in nodes:
+        if active_resource_group is not None:
+            if nodes[node]['resource_group'] != active_resource_group:
+                continue
         ret[node] = {'name': node}
         for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
             ret[node][prop] = nodes[node].get(prop)
@@ -359,14 +434,16 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
     for group in list_resource_groups():
         nodes = compconn.virtual_machines.list(group)
         for node in nodes:
+            private_ips, public_ips = __get_ips_from_node(group, node)
             ret[node.name] = object_to_dict(node)
             ret[node.name]['id'] = node.id
             ret[node.name]['name'] = node.name
             ret[node.name]['size'] = node.hardware_profile.vm_size
             ret[node.name]['state'] = node.provisioning_state
-            ret[node.name]['private_ips'] = node.network_profile.network_interfaces
-            ret[node.name]['public_ips'] = node.network_profile.network_interfaces
+            ret[node.name]['private_ips'] = private_ips
+            ret[node.name]['public_ips'] = public_ips
             ret[node.name]['storage_profile']['data_disks'] = []
+            ret[node.name]['resource_group'] = group
             for disk in node.storage_profile.data_disks:
                 ret[node.name]['storage_profile']['data_disks'].append(make_safe(disk))
             try:
@@ -382,6 +459,30 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
                 except TypeError:
                     ret[node.name]['image'] = None
     return ret
+
+
+def __get_ips_from_node(resource_group, node):
+    '''
+    List private and public IPs from a VM interface
+    '''
+    global netconn  # pylint: disable=global-statement,invalid-name
+    if not netconn:
+        netconn = get_conn(NetworkManagementClient)
+
+    private_ips = []
+    public_ips = []
+    for node_iface in node.network_profile.network_interfaces:
+        node_iface_name = node_iface.id.split('/')[-1]
+        network_interface = netconn.network_interfaces.get(resource_group, node_iface_name)
+        for ip_configuration in network_interface.ip_configurations:
+            if ip_configuration.private_ip_address:
+                private_ips.append(ip_configuration.private_ip_address)
+            if ip_configuration.public_ip_address and ip_configuration.public_ip_address.id:
+                public_iface_name = ip_configuration.public_ip_address.id.split('/')[-1]
+                public_iface = netconn.public_ip_addresses.get(resource_group, public_iface_name)
+                public_ips.append(public_iface.ip_address)
+
+    return private_ips, public_ips
 
 
 def list_resource_groups(conn=None, call=None):  # pylint: disable=unused-argument
@@ -409,7 +510,7 @@ def list_resource_groups(conn=None, call=None):  # pylint: disable=unused-argume
         loop_fun=object_to_dict,
         expire=config.get_cloud_config_value(
             'expire_group_cache', get_configured_provider(),
-            __opts__, search_global=False, default=86400,
+            __opts__, search_global=False, default=14400,
         )
     )
 
@@ -474,7 +575,7 @@ def show_instance(name, resource_group=None, call=None):  # pylint: disable=unus
     data['resource_group'] = resource_group
 
     __utils__['cloud.cache_node'](
-        salt.utils.simple_types_filter(data),
+        salt.utils.data.simple_types_filter(data),
         __active_provider_name__,
         __opts__
     )
@@ -516,7 +617,7 @@ def list_networks(call=None, kwargs=None):  # pylint: disable=unused-argument
                 loop_fun=make_safe,
                 expire=config.get_cloud_config_value(
                     'expire_network_cache', get_configured_provider(),
-                    __opts__, search_global=False, default=86400,
+                    __opts__, search_global=False, default=3600,
                 ),
                 resource_group_name=group,
             )
@@ -566,11 +667,12 @@ def list_subnets(call=None, kwargs=None):  # pylint: disable=unused-argument
     for subnet in subnets:
         ret[subnet.name] = make_safe(subnet)
         ret[subnet.name]['ip_configurations'] = {}
-        for ip_ in subnet.ip_configurations:
-            comps = ip_.id.split('/')
-            name = comps[-1]
-            ret[subnet.name]['ip_configurations'][name] = make_safe(ip_)
-            ret[subnet.name]['ip_configurations'][name]['subnet'] = subnet.name
+        if subnet.ip_configurations:
+            for ip_ in subnet.ip_configurations:
+                comps = ip_.id.split('/')
+                name = comps[-1]
+                ret[subnet.name]['ip_configurations'][name] = make_safe(ip_)
+                ret[subnet.name]['ip_configurations'][name]['subnet'] = subnet.name
         ret[subnet.name]['resource_group'] = kwargs['resource_group']
     return ret
 
@@ -658,11 +760,18 @@ def show_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     data['ip_configurations'] = {}
     for ip_ in iface.ip_configurations:
         data['ip_configurations'][ip_.name] = make_safe(ip_)
-        pubip = netconn.public_ip_addresses.get(
-            kwargs['resource_group'],
-            ip_.name,
-        )
-        data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
+        if ip_.public_ip_address is not None:
+            try:
+                pubip = netconn.public_ip_addresses.get(
+                    kwargs['resource_group'],
+                    ip_.name,
+                )
+                data['ip_configurations'][ip_.name]['public_ip_address']['ip_address'] = pubip.ip_address
+            except Exception as exc:
+                log.warning('There was a cloud error: {0}'.format(exc))
+                log.warning('{0}'.format(type(exc)))
+                continue
+
     return data
 
 
@@ -712,6 +821,9 @@ def list_interfaces(call=None, kwargs=None):  # pylint: disable=unused-argument
         kwargs = {}
 
     if kwargs.get('resource_group') is None:
+        kwargs['resource_group'] = kwargs.get('group')
+
+    if kwargs['resource_group'] is None:
         kwargs['resource_group'] = config.get_cloud_config_value(
             'resource_group', {}, __opts__, search_global=True,
             default=config.get_cloud_config_value(
@@ -728,7 +840,7 @@ def list_interfaces(call=None, kwargs=None):  # pylint: disable=unused-argument
         loop_fun=make_safe,
         expire=config.get_cloud_config_value(
             'expire_interface_cache', get_configured_provider(),
-            __opts__, search_global=False, default=86400,
+            __opts__, search_global=False, default=3600,
         ),
         resource_group_name=kwargs['resource_group']
     )
@@ -766,6 +878,17 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     if kwargs.get('iface_name') is None:
         kwargs['iface_name'] = '{0}-iface0'.format(vm_['name'])
 
+    backend_pools = None
+    if kwargs.get('load_balancer') and kwargs.get('backend_pool'):
+        load_balancer_obj = netconn.load_balancers.get(
+            resource_group_name=kwargs['network_resource_group'],
+            load_balancer_name=kwargs['load_balancer'],
+        )
+        backend_pools = list(filter(
+            lambda backend: backend.name == kwargs['backend_pool'],
+            load_balancer_obj.backend_address_pools,
+        ))
+
     subnet_obj = netconn.subnets.get(
         resource_group_name=kwargs['network_resource_group'],
         virtual_network_name=kwargs['network'],
@@ -774,6 +897,13 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     ip_kwargs = {}
     ip_configurations = None
+
+    if 'private_ip_address' in kwargs.keys():
+        ip_kwargs['private_ip_address'] = kwargs['private_ip_address']
+        ip_kwargs['private_ip_allocation_method'] = IPAllocationMethod.static
+    else:
+        ip_kwargs['private_ip_allocation_method'] = IPAllocationMethod.dynamic
+
     if bool(kwargs.get('public_ip')) is True:
         pub_ip_name = '{0}-ip'.format(kwargs['iface_name'])
         poller = netconn.public_ip_addresses.create_or_update(
@@ -799,7 +929,7 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
                     ip_configurations = [
                         NetworkInterfaceIPConfiguration(
                             name='{0}-ip'.format(kwargs['iface_name']),
-                            private_ip_allocation_method='Dynamic',
+                            load_balancer_backend_address_pools=backend_pools,
                             subnet=subnet_obj,
                             **ip_kwargs
                         )
@@ -816,14 +946,35 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
         ip_configurations = [
             NetworkInterfaceIPConfiguration(
                 name='{0}-ip'.format(kwargs['iface_name']),
-                private_ip_allocation_method='Dynamic',
+                load_balancer_backend_address_pools=backend_pools,
                 subnet=subnet_obj,
+                **ip_kwargs
             )
         ]
 
+    dns_settings = None
+    if kwargs.get('dns_servers') is not None:
+        if isinstance(kwargs['dns_servers'], list):
+            dns_settings = NetworkInterfaceDnsSettings(
+                dns_servers=kwargs['dns_servers'],
+                applied_dns_servers=kwargs['dns_servers'],
+                internal_dns_name_label=None,
+                internal_fqdn=None,
+                internal_domain_name_suffix=None,
+            )
+
+    network_security_group = None
+    if kwargs.get('security_group') is not None:
+        network_security_group = netconn.network_security_groups.get(
+            resource_group_name=kwargs['resource_group'],
+            network_security_group_name=kwargs['security_group'],
+        )
+
     iface_params = NetworkInterface(
         location=kwargs['location'],
+        network_security_group=network_security_group,
         ip_configurations=ip_configurations,
+        dns_settings=dns_settings,
     )
 
     poller = netconn.network_interfaces.create_or_update(
@@ -867,6 +1018,16 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
             'name', vm_, __opts__, search_global=True
         )
 
+    vm_['availability_set_id'] = None
+    if vm_.get('availability_set'):
+        availability_set = compconn.availability_sets.get(
+            resource_group_name=vm_['resource_group'],
+            availability_set_name=vm_['availability_set'],
+        )
+        vm_['availability_set_id'] = SubResource(
+            id=availability_set.id
+        )
+
     os_kwargs = {}
     userdata = None
     userdata_file = config.get_cloud_config_value(
@@ -878,11 +1039,16 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
     else:
         if os.path.exists(userdata_file):
-            with salt.utils.fopen(userdata_file, 'r') as fh_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
+    userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
+
     if userdata is not None:
-        os_kwargs['custom_data'] = base64.b64encode(userdata)
+        try:
+            os_kwargs['custom_data'] = base64.b64encode(userdata)
+        except Exception as exc:
+            log.exception('Failed to encode userdata: %s', exc)
 
     iface_data = create_interface(kwargs=vm_)
     vm_['iface_id'] = iface_data['id']
@@ -919,6 +1085,19 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     for volume in volumes:
         if isinstance(volume, six.string_types):
             volume = {'name': volume}
+
+        # Creating the name of the datadisk if missing in the configuration of the minion
+        # If the "name: name_of_my_disk" entry then we create it with the same logic than the os disk
+        volume.setdefault(
+            'name', volume.get(
+                'name', volume.get('name', '{0}-datadisk{1}'.format(
+                    vm_['name'],
+                    str(lun),
+                    ),
+                )
+            )
+        )
+
         # Use the size keyword to set a size, but you can use either the new
         # azure name (disk_size_gb) or the old (logical_disk_size_in_gb)
         # instead. If none are set, the disk has size 100GB.
@@ -1001,6 +1180,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 ),
                 os_type=os_type,
                 image=source_image,
+                disk_size_gb=vm_.get('os_disk_size_gb', 30)
             ),
             data_disks=data_disks,
             image_reference=img_ref,
@@ -1016,6 +1196,16 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 NetworkInterfaceReference(vm_['iface_id']),
             ],
         ),
+        availability_set=vm_['availability_set_id'],
+    )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        args=__utils__['cloud.filter_event']('requesting', vm_, ['name', 'profile', 'provider', 'driver']),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
     )
 
     poller = compconn.virtual_machines.create_or_update(
@@ -1024,8 +1214,8 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     try:
         poller.wait()
     except CloudError as exc:
-        log.warn('There was a cloud error: {0}'.format(exc))
-        log.warn('This may or may not indicate an actual problem')
+        log.warning('There was a cloud error: {0}'.format(exc))
+        log.warning('This may or may not indicate an actual problem')
 
     try:
         return show_instance(vm_['name'], call='action')
@@ -1047,20 +1237,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1073,8 +1254,8 @@ def create(vm_):
     def _query_ip_address():
         data = request_instance(kwargs=vm_)
         ifaces = data['network_profile']['network_interfaces']
-        iface = ifaces.keys()[0]
-        ip_name = ifaces[iface]['ip_configurations'].keys()[0]
+        iface = list(ifaces)[0]
+        ip_name = list(ifaces[iface]['ip_configurations'])[0]
 
         if vm_.get('public_ip') is True:
             hostname = ifaces[iface]['ip_configurations'][ip_name]['public_ip_address']
@@ -1100,11 +1281,13 @@ def create(vm_):
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure, SaltCloudSystemExit) as exc:
         try:
-            log.warn(exc)
+            log.warning(exc)
         finally:
             raise SaltCloudSystemExit(str(exc))
 
-    hostname = _query_ip_address()
+    # calling _query_ip_address() causes Salt to attempt to build the VM again.
+    #hostname = _query_ip_address()
+    hostname = data
 
     if not hostname or not isinstance(hostname, six.string_types):
         log.error('Failed to get a value for the hostname.')
@@ -1134,11 +1317,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1162,6 +1341,15 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
             'The destroy action must be called with -d, --destroy, '
             '-a or --action.'
         )
+
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
     global compconn  # pylint: disable=global-statement,invalid-name
     if not compconn:
@@ -1256,6 +1444,15 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
                 )
             )
 
+    __utils__['cloud.fire_event'](
+        'event',
+        'destroyed instance',
+        'salt/cloud/{0}/destroyed'.format(name),
+        args={'name': name},
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
+
     return ret
 
 
@@ -1263,7 +1460,7 @@ def make_safe(data):
     '''
     Turn object data into something serializable
     '''
-    return salt.utils.simple_types_filter(object_to_dict(data))
+    return salt.utils.data.simple_types_filter(object_to_dict(data))
 
 
 def create_security_group(call=None, kwargs=None):  # pylint: disable=unused-argument
@@ -1504,9 +1701,14 @@ def pages_to_list(items):
     while True:
         try:
             page = items.next()  # pylint: disable=incompatible-py3-code
-            for item in page:
-                objs.append(item)
+            if isinstance(page, collections.Iterable):
+                for item in page:
+                    objs.append(item)
+            else:
+                objs.append(page)
         except GeneratorExit:
+            break
+        except StopIteration:
             break
     return objs
 
@@ -1537,7 +1739,7 @@ def list_containers(call=None, kwargs=None):  # pylint: disable=unused-argument
     if not storconn:
         storconn = get_conn(StorageManagementClient)
 
-    storageaccount = azure.storage.CloudStorageAccount(
+    storageaccount = CloudStorageAccount(
         config.get_cloud_config_value(
             'storage_account',
             get_configured_provider(), __opts__, search_global=False
@@ -1578,7 +1780,7 @@ def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
             'A container must be specified'
         )
 
-    storageaccount = azure.storage.CloudStorageAccount(
+    storageaccount = CloudStorageAccount(
         config.get_cloud_config_value(
             'storage_account',
             get_configured_provider(), __opts__, search_global=False
@@ -1618,7 +1820,7 @@ def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
             'A blob must be specified'
         )
 
-    storageaccount = azure.storage.CloudStorageAccount(
+    storageaccount = CloudStorageAccount(
         config.get_cloud_config_value(
             'storage_account',
             get_configured_provider(), __opts__, search_global=False

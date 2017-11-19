@@ -36,7 +36,11 @@ import logging
 # Import salt libs
 from salt.key import get_key
 import salt.crypt
-import salt.utils
+import salt.utils.crypt
+import salt.utils.files
+import salt.utils.platform
+from salt.utils.sanitizers import clean
+
 
 __func_alias__ = {
     'list_': 'list',
@@ -272,12 +276,15 @@ def key_str(match):
     return skey.key_str(match)
 
 
-def finger(match):
+def finger(match, hash_type=None):
     '''
     Return the matching key fingerprints. Returns a dictionary.
 
     match
         The key for with to retrieve the fingerprint.
+
+    hash_type
+        The hash algorithm used to calculate the fingerprint
 
     .. code-block:: python
 
@@ -285,8 +292,32 @@ def finger(match):
         {'minions': {'minion1': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
 
     '''
+    if hash_type is None:
+        hash_type = __opts__['hash_type']
+
     skey = get_key(__opts__)
-    return skey.finger(match)
+    return skey.finger(match, hash_type)
+
+
+def finger_master(hash_type=None):
+    '''
+    Return the fingerprint of the master's public key
+
+    hash_type
+        The hash algorithm used to calculate the fingerprint
+
+    .. code-block:: python
+
+        >>> wheel.cmd('key.finger_master')
+        {'local': {'master.pub': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
+    '''
+    keyname = 'master.pub'
+    if hash_type is None:
+        hash_type = __opts__['hash_type']
+
+    fingerprint = salt.utils.crypt.pem_finger(
+        os.path.join(__opts__['pki_dir'], keyname), sum_type=hash_type)
+    return {'local': {keyname: fingerprint}}
 
 
 def gen(id_=None, keysize=2048):
@@ -318,14 +349,22 @@ def gen(id_=None, keysize=2048):
     '''
     if id_ is None:
         id_ = hashlib.sha512(os.urandom(32)).hexdigest()
+    else:
+        id_ = clean.filename(id_)
     ret = {'priv': '',
            'pub': ''}
     priv = salt.crypt.gen_keys(__opts__['pki_dir'], id_, keysize)
     pub = '{0}.pub'.format(priv[:priv.rindex('.')])
-    with salt.utils.fopen(priv) as fp_:
+    with salt.utils.files.fopen(priv) as fp_:
         ret['priv'] = fp_.read()
-    with salt.utils.fopen(pub) as fp_:
+    with salt.utils.files.fopen(pub) as fp_:
         ret['pub'] = fp_.read()
+
+    # The priv key is given the Read-Only attribute. The causes `os.remove` to
+    # fail in Windows.
+    if salt.utils.platform.is_windows():
+        os.chmod(priv, 128)
+
     os.remove(priv)
     os.remove(pub)
     return ret
@@ -371,11 +410,12 @@ def gen_accept(id_, keysize=2048, force=False):
         >>> wheel.cmd('key.list', ['accepted'])
         {'minions': ['foo', 'minion1', 'minion2', 'minion3']}
     '''
+    id_ = clean.id(id_)
     ret = gen(id_, keysize)
     acc_path = os.path.join(__opts__['pki_dir'], 'minions', id_)
     if os.path.isfile(acc_path) and not force:
         return {}
-    with salt.utils.fopen(acc_path, 'w+') as fp_:
+    with salt.utils.files.fopen(acc_path, 'w+') as fp_:
         fp_.write(ret['pub'])
     return ret
 

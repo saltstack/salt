@@ -18,6 +18,31 @@ import re
 from salt.defaults import DEFAULT_TARGET_DELIM
 
 
+def exists(name, delimiter=DEFAULT_TARGET_DELIM):
+    '''
+    Ensure that a grain is set
+
+    name
+        The grain name
+
+    delimiter
+        A delimiter different from the default can be provided.
+
+    Check whether a grain exists. Does not attempt to check or set the value.
+    '''
+    name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Grain exists'}
+    _non_existent = object()
+    existing = __salt__['grains.get'](name, _non_existent)
+    if existing is _non_existent:
+        ret['result'] = False
+        ret['comment'] = 'Grain does not exist'
+    return ret
+
+
 def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     '''
     Ensure that a grain is set
@@ -400,7 +425,11 @@ def append(name, value, convert=False,
            'result': True,
            'comment': ''}
     grain = __salt__['grains.get'](name, None)
-    if grain:
+
+    # Check if bool(grain) is False or if the grain is specified in the minions
+    # grains. Grains can be set to a None value by omitting a value in the
+    # definition.
+    if grain or name in __grains__:
         if isinstance(grain, list):
             if value in grain:
                 ret['comment'] = 'Value {1} is already in the list ' \
@@ -425,7 +454,7 @@ def append(name, value, convert=False,
                                      'added'.format(name, value)
                     ret['changes'] = {'added': value}
                     return ret
-                grain = [grain]
+                grain = [] if grain is None else [grain]
                 grain.append(value)
                 __salt__['grains.setval'](name, grain)
                 ret['comment'] = 'Value {1} was added to grain {0}'\

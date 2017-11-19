@@ -35,6 +35,8 @@ try:
 except ImportError:
     HAS_INFLUXDB = False
 
+import collections
+import json
 import logging
 
 log = logging.getLogger(__name__)
@@ -371,6 +373,28 @@ def retention_policy_exists(database, name, **client_args):
     return False
 
 
+def drop_retention_policy(database, name, **client_args):
+    '''
+    Drop a retention policy.
+
+    database
+        Name of the database for which the retention policy will be dropped.
+
+    name
+        Name of the retention policy to drop.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.drop_retention_policy mydb mypr
+    '''
+    client = _client(**client_args)
+    client.drop_retention_policy(name, database)
+
+    return True
+
+
 def create_retention_policy(database,
                             name,
                             duration,
@@ -461,6 +485,27 @@ def alter_retention_policy(database,
     return True
 
 
+def list_privileges(name, **client_args):
+    '''
+    List privileges from a user.
+
+    name
+        Name of the user from whom privileges will be listed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.list_privileges <name>
+    '''
+    client = _client(**client_args)
+
+    res = {}
+    for item in client.get_list_privileges(name):
+        res[item['database']] = item['privilege'].split()[0].lower()
+    return res
+
+
 def grant_privilege(database, privilege, username, **client_args):
     '''
     Grant a privilege on a database to a user.
@@ -497,3 +542,154 @@ def revoke_privilege(database, privilege, username, **client_args):
     client.revoke_privilege(privilege, database, username)
 
     return True
+
+
+def continuous_query_exists(database, name, **client_args):
+    '''
+    Check if continuous query with given name exists on the database.
+
+    database
+        Name of the database for which the continuous query was
+        defined.
+
+    name
+        Name of the continuous query to check.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.continuous_query_exists metrics default
+    '''
+    if get_continuous_query(database, name, **client_args):
+        return True
+
+    return False
+
+
+def get_continuous_query(database, name, **client_args):
+    '''
+    Get an existing continuous query.
+
+    database
+        Name of the database for which the continuous query was
+        defined.
+
+    name
+        Name of the continuous query to get.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.get_continuous_query mydb cq_month
+    '''
+    client = _client(**client_args)
+
+    try:
+        for db, cqs in client.query('SHOW CONTINUOUS QUERIES').items():
+            if db[0] == database:
+                return next((cq for cq in cqs if cq.get('name') == name))
+    except StopIteration:
+        return {}
+    return {}
+
+
+def create_continuous_query(database, name, query, resample_time=None, coverage_period=None, **client_args):
+    '''
+    Create a continuous query.
+
+    database
+        Name of the database for which the continuous query will be
+        created on.
+
+    name
+        Name of the continuous query to create.
+
+    query
+        The continuous query string.
+
+    resample_time : None
+        Duration between continuous query resampling.
+
+    coverage_period : None
+        Duration specifying time period per sample.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.create_continuous_query mydb cq_month 'SELECT mean(*) INTO mydb.a_month.:MEASUREMENT FROM mydb.a_week./.*/ GROUP BY time(5m), *' '''
+    client = _client(**client_args)
+    full_query = 'CREATE CONTINUOUS QUERY {name} ON {database}'
+    if resample_time:
+        full_query += ' RESAMPLE EVERY {resample_time}'
+    if coverage_period:
+        full_query += ' FOR {coverage_period}'
+    full_query += ' BEGIN {query} END'
+    query = full_query.format(
+        name=name,
+        database=database,
+        query=query,
+        resample_time=resample_time,
+        coverage_period=coverage_period
+    )
+    client.query(query)
+    return True
+
+
+def drop_continuous_query(database, name, **client_args):
+    '''
+    Drop a continuous query.
+
+    database
+        Name of the database for which the continuous query will
+        be drop from.
+
+    name
+        Name of the continuous query to drop.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.drop_continuous_query mydb my_cq
+    '''
+    client = _client(**client_args)
+
+    query = 'DROP CONTINUOUS QUERY {0} ON {1}'.format(name, database)
+    client.query(query)
+    return True
+
+
+def _pull_query_results(resultset):
+    '''
+    Parses a ResultSet returned from InfluxDB into a dictionary of results,
+    grouped by series names and optional JSON-encoded grouping tags.
+    '''
+    _results = collections.defaultdict(lambda: {})
+    for _header, _values in resultset.items():
+        _header, _group_tags = _header
+        if _group_tags:
+            _results[_header][json.dumps(_group_tags)] = [_value for _value in _values]
+        else:
+            _results[_header] = [_value for _value in _values]
+    return dict(sorted(_results.items()))
+
+
+def query(database, query, **client_args):
+    '''
+    Execute a query.
+
+    database
+        Name of the database to query on.
+
+    query
+        InfluxQL query string.
+    '''
+    client = _client(**client_args)
+    _result = client.query(query, database=database)
+
+    if isinstance(_result, collections.Sequence):
+        return [_pull_query_results(_query_result) for _query_result in _result if _query_result]
+    return [_pull_query_results(_result) if _result else {}]

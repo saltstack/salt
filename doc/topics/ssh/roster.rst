@@ -61,6 +61,23 @@ The information which can be stored in a roster ``target`` is the following:
         cmd_umask:   # umask to enforce for the salt-call command. Should be in
                      # octal (so for 0o077 in YAML you would do 0077, or 63)
 
+.. _roster_defaults:
+
+Target Defaults
+---------------
+
+The `roster_defaults` dictionary in the master config is used to set the
+default login variables for minions in the roster so that the same arguments do
+not need to be passed with commandline arguments.
+
+.. code-block:: yaml
+
+    roster_defaults:
+      user: daniel
+      sudo: True
+      priv: /root/.ssh/id_rsa
+      tty: True
+
 thin_dir
 --------
 

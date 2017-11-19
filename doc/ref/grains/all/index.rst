@@ -19,6 +19,7 @@ grains modules
     junos
     marathon
     mdadm
+    metadata
     napalm
     opts
     philips_hue

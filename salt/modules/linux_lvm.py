@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import os.path
 
 # Import salt libs
-import salt.utils
-import salt.ext.six as six
+import salt.utils.path
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
@@ -20,7 +20,7 @@ def __virtual__():
     '''
     Only load the module if lvm is installed
     '''
-    if salt.utils.which('lvm'):
+    if salt.utils.path.which('lvm'):
         return __virtualname__
     return (False, 'The linux_lvm execution module cannot be loaded: the lvm binary is not in the path.')
 
@@ -56,7 +56,7 @@ def fullversion():
     out = __salt__['cmd.run'](cmd).splitlines()
     for line in out:
         comps = line.split(':')
-    ret[comps[0].strip()] = comps[1].strip()
+        ret[comps[0].strip()] = comps[1].strip()
     return ret
 
 
@@ -159,7 +159,7 @@ def vgdisplay(vgname=''):
     return ret
 
 
-def lvdisplay(lvname=''):
+def lvdisplay(lvname='', quiet=False):
     '''
     Return information about the logical volume(s)
 
@@ -174,7 +174,10 @@ def lvdisplay(lvname=''):
     cmd = ['lvdisplay', '-c']
     if lvname:
         cmd.append(lvname)
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if quiet:
+        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='quiet')
+    else:
+        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -205,7 +208,7 @@ def pvcreate(devices, override=True, **kwargs):
     Set a physical device to be used as an LVM physical volume
 
     override
-        Skip devices, if they are already an LVM physical volumes
+        Skip devices, if they are already LVM physical volumes
 
     CLI Examples:
 
@@ -223,13 +226,12 @@ def pvcreate(devices, override=True, **kwargs):
     for device in devices:
         if not os.path.exists(device):
             raise CommandExecutionError('{0} does not exist'.format(device))
-        # Verify pvcreate was successful
         if not pvdisplay(device):
             cmd.append(device)
         elif not override:
             raise CommandExecutionError('Device "{0}" is already an LVM physical volume.'.format(device))
 
-    if not cmd[1:]:
+    if not cmd[2:]:
         # All specified devices are already LVM volumes
         return True
 
@@ -258,7 +260,7 @@ def pvremove(devices, override=True):
     Remove a physical device being used as an LVM physical volume
 
     override
-        Skip devices, if they are already not used as an LVM physical volumes
+        Skip devices, if they are already not used as LVM physical volumes
 
     CLI Examples:
 
@@ -355,6 +357,7 @@ def lvcreate(lvname,
              pv=None,
              thinvolume=False,
              thinpool=False,
+             force=False,
              **kwargs):
     '''
     Create a new logical volume, with option for which physical volume to be used
@@ -399,7 +402,7 @@ def lvcreate(lvname,
             elif k in valid:
                 extra_arguments.extend(['--{0}'.format(k), '{0}'.format(v)])
 
-    cmd = [salt.utils.which('lvcreate')]
+    cmd = [salt.utils.path.which('lvcreate')]
 
     if thinvolume:
         cmd.extend(['--thin', '-n', lvname])
@@ -428,6 +431,9 @@ def lvcreate(lvname,
         cmd.append(pv)
     if extra_arguments:
         cmd.extend(extra_arguments)
+
+    if force:
+        cmd.append('--yes')
 
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     lvdev = '/dev/{0}/{1}'.format(vgname, lvname)

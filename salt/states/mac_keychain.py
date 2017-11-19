@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Installing of certificates to the keychain
-=======================
+==========================================
 
-Install certificats to the OS X keychain
+Install certificats to the macOS keychain
 
 .. code-block:: yaml
 
@@ -13,12 +13,12 @@ Install certificats to the OS X keychain
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python libs
 import logging
 import os
 
-# Import salt libs
-import salt.utils
+# Import Salt libs
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'keychain'
@@ -28,14 +28,14 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return __virtualname__
     return False
 
 
 def installed(name, password, keychain="/Library/Keychains/System.keychain", **kwargs):
     '''
-    Install a p12 certificate file into the OS X keychain
+    Install a p12 certificate file into the macOS keychain
 
     name
         The certificate to install
@@ -100,7 +100,7 @@ def installed(name, password, keychain="/Library/Keychains/System.keychain", **k
 
 def uninstalled(name, password, keychain="/Library/Keychains/System.keychain", keychain_password=None):
     '''
-    Uninstall a p12 certificate file from the OS X keychain
+    Uninstall a p12 certificate file from the macOS keychain
 
     name
         The certificate to uninstall, this can be a path for a .p12 or the friendly

@@ -28,7 +28,9 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres.create_extension' in __salt__
+    if 'postgres.create_extension' not in __salt__:
+        return (False, 'Unable to load postgres module.  Make sure `postgres.bins_dir` is set.')
+    return True
 
 
 def present(name,
@@ -119,14 +121,15 @@ def present(name,
             if flag in mtdata:
                 toupgrade = True
                 mode = 'upgrade'
-    if __opts__['test']:
-        ret['result'] = None
-        if mode:
-            ret['comment'] = 'Extension {0} is set to be {1}ed'.format(
-                name, mode).replace('eed', 'ed')
-        return ret
     cret = None
     if toinstall or toupgrade:
+        if __opts__['test']:
+            ret['result'] = None
+            if mode:
+                ret['comment'] = 'Extension {0} is set to be {1}ed'.format(
+                    name, mode).replace('eed', 'ed')
+            return ret
+
         cret = __salt__['postgres.create_extension'](
             name=name,
             if_not_exists=if_not_exists,

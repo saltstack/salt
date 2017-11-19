@@ -8,7 +8,7 @@ Windows Software Repository
     In 2015.8.0 and later, the Windows Software Repository cache is compiled on
     the Salt Minion, which enables pillar, grains and other things to be
     available during compilation time. To support this new functionality,
-    a next-generation (ng) package repository was created. See See the
+    a next-generation (ng) package repository was created. See the
     :ref:`Changes in Version 2015.8.0 <2015-8-0-winrepo-changes>` for details.
 
 The SaltStack Windows Software Repository provides a package manager and software
@@ -82,11 +82,12 @@ You can query the available version of a package using the Salt pkg module.
 
 .. code-block:: bash
 
-    salt winminion pkg.available_version firefox
+    salt winminion pkg.list_available firefox
 
-    {'firefox': {'15.0.1': 'Mozilla Firefox 15.0.1 (x86 en-US)',
-                 '16.0.2': 'Mozilla Firefox 16.0.2 (x86 en-US)',
-                 '17.0.1': 'Mozilla Firefox 17.0.1 (x86 en-US)'}}
+    winminion:
+        - 15.0.1
+        - 16.0.2
+        - 17.0.1
 
 As you can see, there are three versions of Firefox available for installation.
 You can refer a software package by its ``name`` or its ``full_name`` surround
@@ -140,7 +141,7 @@ packages:
 - 2015.8.0 and later minions: https://github.com/saltstack/salt-winrepo-ng
 - Earlier releases: https://github.com/saltstack/salt-winrepo
 
-By default, these repositories are mirrored to ``/srv/salt/win/repo_ng``
+By default, these repositories are mirrored to ``/srv/salt/win/repo-ng``
 and ``/srv/salt/win/repo``.
 
 This location can be changed in the master config file by setting the
@@ -460,17 +461,37 @@ Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file
         uninstaller: salt://win/repo/7zip/7z920-x64.msi
         uninstall_flags: '/qn /norestart'
 
-:param bool msiexec: This tells salt to use ``msiexec /i`` to install the
+:param msiexec: This tells salt to use ``msiexec /i`` to install the
     package and ``msiexec /x`` to uninstall. This is for `.msi` installations.
+    Possible options are: True, False or path to msiexec on your system
+
+    7zip:
+      '9.20.00.0':
+        installer: salt://win/repo/7zip/7z920-x64.msi
+        full_name: 7-Zip 9.20 (x64 edition)
+        reboot: False
+        install_flags: '/qn /norestart'
+        msiexec: 'C:\Windows\System32\msiexec.exe'
+        uninstaller: salt://win/repo/7zip/7z920-x64.msi
+        uninstall_flags: '/qn /norestart'
+
+:param str arch: This selects which ``msiexec.exe`` to use. Possible values:
+    ``x86``, ``x64``
 
 :param bool allusers: This parameter is specific to `.msi` installations. It
     tells `msiexec` to install the software for all users. The default is True.
 
-:param bool cache_dir: If true, the entire directory where the installer resides
-    will be recursively cached. This is useful for installers that depend on
-    other files in the same directory for installation.
+:param bool cache_dir: If true when installer URL begins with salt://, the
+    entire directory where the installer resides will be recursively cached.
+    This is useful for installers that depend on other files in the same
+    directory for installation.
 
-.. note:: Only applies to salt: installer URLs.
+:param str cache_file:
+    When installer URL begins with salt://, this indicates single file to copy
+    down for use with the installer. Copied to the same location as the
+    installer. Use this over ``cache_dir`` if there are many files in the
+    directory and you only need a specific file and don't want to cache
+    additional files that may reside in the installer directory.
 
 Here's an example for a software package that has dependent files:
 

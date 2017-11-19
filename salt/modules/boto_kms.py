@@ -41,11 +41,11 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 from salt.serializers import json
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.utils.compat
 import salt.utils.odict as odict
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ try:
     # pylint: enable=unused-import
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
-except ImportError:
+except (ImportError, AttributeError):
     HAS_BOTO = False
 
 

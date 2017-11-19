@@ -2,7 +2,7 @@
 '''
 Jinja loading utils to enable a more powerful backend for jinja templates
 
-For Jinja usage information see :ref:`Understanding Jinja <jinja>`.
+For Jinja usage information see :ref:`Understanding Jinja <understanding-jinja>`.
 '''
 
 # Import python libs
@@ -14,7 +14,7 @@ from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
@@ -66,9 +66,12 @@ def render(template_file, saltenv='base', sls='', argline='',
                                           sls=sls,
                                           context=context,
                                           tmplpath=tmplpath,
+                                          proxy=__proxy__,
                                           **kws)
     if not tmp_data.get('result', False):
         raise SaltRenderError(
                 tmp_data.get('data', 'Unknown render error in jinja renderer')
         )
+    if isinstance(tmp_data['data'], bytes):
+        tmp_data['data'] = tmp_data['data'].decode(__salt_system_encoding__)
     return StringIO(tmp_data['data'])

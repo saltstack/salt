@@ -113,6 +113,8 @@ def present(
         name,
         image_id,
         key_name=None,
+        vpc_id=None,
+        vpc_name=None,
         security_groups=None,
         user_data=None,
         cloud_init=None,
@@ -120,6 +122,7 @@ def present(
         kernel_id=None,
         ramdisk_id=None,
         block_device_mappings=None,
+        delete_on_termination=None,
         instance_monitoring=False,
         spot_price=None,
         instance_profile_name=None,
@@ -142,6 +145,16 @@ def present(
     key_name
         Name of the EC2 key pair to use for instances. Key must exist or
         creation of the launch configuration will fail.
+
+    vpc_id
+        The VPC id where the security groups are defined. Only necessary when
+        using named security groups that exist outside of the default VPC.
+        Mutually exclusive with vpc_name.
+
+    vpc_name
+        Name of the VPC where the security groups are defined. Only Necessary
+        when using named security groups that exist outside of the default VPC.
+        Mutually exclusive with vpc_id.
 
     security_groups
         List of Names or security group id’s of the security groups with which
@@ -174,8 +187,10 @@ def present(
             Default is standard.
 
         delete_on_termination
-            Indicates whether to delete the volume on instance termination (true) or
-            not (false).
+            Whether the volume should be explicitly marked for deletion when its instance is
+            terminated (True), or left around (False).  If not provided, or None is explicitly passed,
+            the default AWS behaviour is used, which is True for ROOT volumes of instances, and
+            False for all others.
 
         iops
             For Provisioned IOPS (SSD) volumes only. The number of I/O operations per
@@ -229,9 +244,11 @@ def present(
         raise SaltInvocationError('user_data and cloud_init are mutually'
                                   ' exclusive options.')
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    exists = __salt__['boto_asg.launch_configuration_exists'](name, region,
-                                                              key, keyid,
-                                                              profile)
+    exists = __salt__['boto_asg.launch_configuration_exists'](name,
+                                                              region=region,
+                                                              key=key,
+                                                              keyid=keyid,
+                                                              profile=profile)
     if not exists:
         if __opts__['test']:
             msg = 'Launch configuration set to be created.'
@@ -246,12 +263,15 @@ def present(
             name,
             image_id,
             key_name=key_name,
+            vpc_id=vpc_id,
+            vpc_name=vpc_name,
             security_groups=security_groups,
             user_data=user_data,
             instance_type=instance_type,
             kernel_id=kernel_id,
             ramdisk_id=ramdisk_id,
             block_device_mappings=block_device_mappings,
+            delete_on_termination=delete_on_termination,
             instance_monitoring=instance_monitoring,
             spot_price=spot_price,
             instance_profile_name=instance_profile_name,
@@ -298,16 +318,22 @@ def absent(
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    exists = __salt__['boto_asg.launch_configuration_exists'](name, region,
-                                                              key, keyid,
-                                                              profile)
+    exists = __salt__['boto_asg.launch_configuration_exists'](name,
+                                                              region=region,
+                                                              key=key,
+                                                              keyid=keyid,
+                                                              profile=profile)
     if exists:
         if __opts__['test']:
             ret['comment'] = 'Launch configuration set to be deleted.'
             ret['result'] = None
             return ret
         deleted = __salt__['boto_asg.delete_launch_configuration'](
-            name, region, key, keyid, profile)
+                                                              name,
+                                                              region=region,
+                                                              key=key,
+                                                              keyid=keyid,
+                                                              profile=profile)
         if deleted:
             ret['changes']['old'] = name
             ret['changes']['new'] = None

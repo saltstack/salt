@@ -2,14 +2,19 @@
 '''
 Module for managing dnsmasq
 '''
+
+# Import Python libs
 from __future__ import absolute_import
+import logging
+import os
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
+from salt.exceptions import CommandExecutionError
 
-# Import python libs
-import os
-import logging
+# Import 3rd-party libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -18,8 +23,12 @@ def __virtual__():
     '''
     Only work on POSIX-like systems.
     '''
-    if salt.utils.is_windows():
-        return (False, 'dnsmasq execution module cannot be loaded: only works on non-Windows systems.')
+    if salt.utils.platform.is_windows():
+        return (
+            False,
+            'dnsmasq execution module cannot be loaded: only works on '
+            'non-Windows systems.'
+        )
     return True
 
 
@@ -98,20 +107,28 @@ def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
             if filename.endswith('#') and filename.endswith('#'):
                 continue
             includes.append('{0}/{1}'.format(dnsopts['conf-dir'], filename))
+
+    ret_kwargs = {}
     for key in kwargs:
+        # Filter out __pub keys as they should not be added to the config file
+        # See Issue #34263 for more information
+        if key.startswith('__'):
+            continue
+        ret_kwargs[key] = kwargs[key]
+
         if key in dnsopts:
-            if isinstance(dnsopts[key], str):
+            if isinstance(dnsopts[key], six.string_types):
                 for config in includes:
                     __salt__['file.sed'](path=config,
-                                    before='^{0}=.*'.format(key),
-                                    after='{0}={1}'.format(key, kwargs[key]))
+                                         before='^{0}=.*'.format(key),
+                                         after='{0}={1}'.format(key, kwargs[key]))
             else:
                 __salt__['file.append'](config_file,
-                                    '{0}={1}'.format(key, kwargs[key]))
+                                        '{0}={1}'.format(key, kwargs[key]))
         else:
             __salt__['file.append'](config_file,
                                     '{0}={1}'.format(key, kwargs[key]))
-    return kwargs
+    return ret_kwargs
 
 
 def get_config(config_file='/etc/dnsmasq.conf'):
@@ -148,7 +165,13 @@ def _parse_dnamasq(filename):
     Generic function for parsing dnsmasq files including includes.
     '''
     fileopts = {}
-    with salt.utils.fopen(filename, 'r') as fp_:
+
+    if not os.path.isfile(filename):
+        raise CommandExecutionError(
+            'Error: No such file \'{0}\''.format(filename)
+        )
+
+    with salt.utils.files.fopen(filename, 'r') as fp_:
         for line in fp_:
             if not line.strip():
                 continue
@@ -157,7 +180,7 @@ def _parse_dnamasq(filename):
             if '=' in line:
                 comps = line.split('=')
                 if comps[0] in fileopts:
-                    if isinstance(fileopts[comps[0]], str):
+                    if isinstance(fileopts[comps[0]], six.string_types):
                         temp = fileopts[comps[0]]
                         fileopts[comps[0]] = [temp]
                     fileopts[comps[0]].append(comps[1].strip())

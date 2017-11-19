@@ -6,28 +6,24 @@ Return/control aspects of the grains data
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
-import copy
-import math
 import random
 import logging
 import operator
 import collections
 import json
-import fnmatch
+import math
+import yaml
 from functools import reduce  # pylint: disable=redefined-builtin
 
-# Import 3rd-party libs
-import yaml
+# Import Salt libs
+from salt.ext import six
 import salt.utils.compat
-from salt.utils.odict import OrderedDict
-import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-
-# Import salt libs
-import salt.utils
-import salt.utils.dictupdate
+import salt.utils.data
+import salt.utils.files
+import salt.utils.yamldumper
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
+from salt.ext.six.moves import range
 
 __proxyenabled__ = ['*']
 
@@ -91,7 +87,9 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
 
 
     :param delimiter:
-        Specify an alternate delimiter to use when traversing a nested dict
+        Specify an alternate delimiter to use when traversing a nested dict.
+        This is useful for when the desired key contains a colon. See CLI
+        example below for usage.
 
         .. versionadded:: 2014.7.0
 
@@ -105,20 +103,22 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     .. code-block:: bash
 
         salt '*' grains.get pkg:apache
+        salt '*' grains.get abc::def|ghi delimiter='|'
     '''
     if ordered is True:
         grains = __grains__
     else:
         grains = json.loads(json.dumps(__grains__))
-    return salt.utils.traverse_dict_and_list(grains,
-                                             key,
-                                             default,
-                                             delimiter)
+    return salt.utils.data.traverse_dict_and_list(
+        grains,
+        key,
+        default,
+        delimiter)
 
 
 def has_value(key):
     '''
-    Determine whether a named value exists in the grains dictionary.
+    Determine whether a key exists in the grains dictionary.
 
     Given a grains dictionary that contains the following structure::
 
@@ -134,7 +134,10 @@ def has_value(key):
 
         salt '*' grains.has_value pkg:apache
     '''
-    return True if salt.utils.traverse_dict_and_list(__grains__, key, False) else False
+    return salt.utils.data.traverse_dict_and_list(
+        __grains__,
+        key,
+        KeyError) is not KeyError
 
 
 def items(sanitize=False):
@@ -153,7 +156,7 @@ def items(sanitize=False):
 
         salt '*' grains.items sanitize=True
     '''
-    if salt.utils.is_true(sanitize):
+    if salt.utils.data.is_true(sanitize):
         out = dict(__grains__)
         for key, func in six.iteritems(_SANITIZERS):
             if key in out:
@@ -186,14 +189,15 @@ def item(*args, **kwargs):
 
     try:
         for arg in args:
-            ret[arg] = salt.utils.traverse_dict_and_list(__grains__,
-                                                        arg,
-                                                        default,
-                                                        delimiter)
+            ret[arg] = salt.utils.data.traverse_dict_and_list(
+                __grains__,
+                arg,
+                default,
+                delimiter)
     except KeyError:
         pass
 
-    if salt.utils.is_true(kwargs.get('sanitize')):
+    if salt.utils.data.is_true(kwargs.get('sanitize')):
         for arg, func in six.iteritems(_SANITIZERS):
             if arg in ret:
                 ret[arg] = func(ret[arg])
@@ -235,7 +239,7 @@ def setvals(grains, destructive=False):
         )
 
     if os.path.isfile(gfn):
-        with salt.utils.fopen(gfn, 'rb') as fp_:
+        with salt.utils.files.fopen(gfn, 'rb') as fp_:
             try:
                 grains = yaml.safe_load(fp_.read())
             except yaml.YAMLError as exc:
@@ -251,39 +255,23 @@ def setvals(grains, destructive=False):
         else:
             grains[key] = val
             __grains__[key] = val
-    # Cast defaultdict to dict; is there a more central place to put this?
+    cstr = salt.utils.yamldumper.safe_dump(grains, default_flow_style=False)
     try:
-        yaml_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_representers)
-        yaml_multi_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_multi_representers)
-    except (TypeError, NameError):
-        # This likely means we are running under Python 2.6 which cannot deepcopy
-        # bound methods. Fallback to a modification of deepcopy which can support
-        # this behavior.
-        yaml_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_representers)
-        yaml_multi_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_multi_representers)
-    yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
-            yaml.representer.SafeRepresenter.represent_dict)
-    yaml.representer.SafeRepresenter.add_representer(OrderedDict,
-            yaml.representer.SafeRepresenter.represent_dict)
-    cstr = yaml.safe_dump(grains, default_flow_style=False)
-    yaml.representer.SafeRepresenter.yaml_representers = yaml_reps
-    yaml.representer.SafeRepresenter.yaml_multi_representers = yaml_multi_reps
-    try:
-        with salt.utils.fopen(gfn, 'w+') as fp_:
+        with salt.utils.files.fopen(gfn, 'w+') as fp_:
             fp_.write(cstr)
     except (IOError, OSError):
         msg = 'Unable to write to grains file at {0}. Check permissions.'
         log.error(msg.format(gfn))
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
     try:
-        with salt.utils.flopen(fn_, 'w+') as fp_:
+        with salt.utils.files.flopen(fn_, 'w+') as fp_:
             fp_.write('')
     except (IOError, OSError):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
     if not __opts__.get('local', False):
-        # Sync the grains
-        __salt__['saltutil.sync_grains']()
+        # Refresh the grains
+        __salt__['saltutil.refresh_grains']()
     # Return the grains we just set to confirm everything was OK
     return new_grains
 
@@ -414,7 +402,7 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
 
 def delkey(key):
     '''
-    .. versionadded:: nitrogen
+    .. versionadded:: 2017.7.0
 
     Remove a grain completely from the grain system, this will remove the
     grain key and value
@@ -425,6 +413,7 @@ def delkey(key):
     CLI Example:
 
     .. code-block:: bash
+
         salt '*' grains.delkey key
     '''
     setval(key, None, destructive=True)
@@ -569,44 +558,12 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         salt '*' grains.filter_by '{default: {A: {B: C}, D: E}, F: {A: {B: G}}, H: {D: I}}' 'xxx' '{D: J}' 'F' 'default'
         # next same as above when default='H' instead of 'F' renders {A: {B: C}, D: J}
     '''
-
-    ret = None
-    # Default value would be an empty list if grain not found
-    val = salt.utils.traverse_dict_and_list(__grains__, grain, [])
-
-    # Iterate over the list of grain values to match against patterns in the lookup_dict keys
-    for each in val if isinstance(val, list) else [val]:
-        for key in sorted(lookup_dict):
-            if fnmatch.fnmatchcase(each, key):
-                ret = lookup_dict[key]
-                break
-        if ret is not None:
-            break
-
-    if ret is None:
-        ret = lookup_dict.get(default, None)
-
-    if base and base in lookup_dict:
-        base_values = lookup_dict[base]
-        if ret is None:
-            ret = base_values
-
-        elif isinstance(base_values, collections.Mapping):
-            if not isinstance(ret, collections.Mapping):
-                raise SaltException(
-                    'filter_by default and look-up values must both be dictionaries.')
-            ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
-
-    if merge:
-        if not isinstance(merge, collections.Mapping):
-            raise SaltException('filter_by merge argument must be a dictionary.')
-
-        if ret is None:
-            ret = merge
-        else:
-            salt.utils.dictupdate.update(ret, copy.deepcopy(merge))
-
-    return ret
+    return salt.utils.data.filter_by(lookup_dict=lookup_dict,
+                                     lookup=grain,
+                                     traverse=__grains__,
+                                     merge=merge,
+                                     default=default,
+                                     base=base)
 
 
 def _dict_from_path(path, val, delimiter=DEFAULT_TARGET_DELIM):
@@ -788,6 +745,24 @@ def set(key,
         ret['comment'] = _setval_ret
         ret['result'] = False
     return ret
+
+
+def equals(key, value):
+    '''
+    Used to make sure the minion's grain key/value matches.
+
+    Returns ``True`` if matches otherwise ``False``.
+
+    .. versionadded:: 2017.7.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.equals fqdn <expected_fqdn>
+        salt '*' grains.equals systemd:version 219
+    '''
+    return str(value) == str(get(key))
 
 
 # Provide a jinja function call compatible get aliased as fetch

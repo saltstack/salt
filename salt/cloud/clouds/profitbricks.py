@@ -38,6 +38,14 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       provider: my-profitbricks-config
       # Name of a predefined server size.
       size: Micro Instance
+      # Assign CPU family to server.
+      cpu_family: INTEL_XEON
+      # Number of CPU cores to allocate to node (overrides server size).
+      cores: 4
+      # Amount of RAM in multiples of 256 MB (overrides server size).
+      ram: 4096
+      # The server availability zone.
+      availability_zone: ZONE_1
       # Name or UUID of the HDD image to use.
       image: <UUID>
       # Image alias could be provided instead of image.
@@ -47,10 +55,8 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       disk_size: 40
       # Type of disk (HDD or SSD).
       disk_type: SSD
-      # Number of CPU cores to allocate to node (overrides server size).
-      cores: 4
-      # Amount of RAM in multiples of 256 MB (overrides server size).
-      ram: 4096
+      # Storage availability zone to use.
+      disk_availability_zone: ZONE_2
       # Assign the server to the specified public LAN.
       public_lan: <ID>
       # Assign firewall rules to the network interface.
@@ -61,12 +67,13 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
           port_range_end: 22
       # Assign the server to the specified private LAN.
       private_lan: <ID>
-      # Assign CPU family to server.
-      cpu_family: INTEL_XEON
+      # Enable NAT on the private NIC.
+      nat: true
       # Assign additional volumes to the server.
       volumes:
         data-volume:
           disk_size: 500
+          disk_availability_zone: ZONE_3
         log-volume:
           disk_size: 50
           disk_type: SSD
@@ -94,7 +101,8 @@ import pprint
 import time
 
 # Import salt libs
-import salt.utils
+import salt.utils.cloud
+import salt.utils.files
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -104,14 +112,14 @@ from salt.exceptions import (
     SaltCloudSystemExit
 )
 
-# Import salt.cloud libs
-import salt.utils.cloud
-
+# Import 3rd-party libs
+from salt.ext import six
 try:
     from profitbricks.client import (
         ProfitBricksService, Server,
         NIC, Volume, FirewallRule,
-        Datacenter, LoadBalancer, LAN
+        Datacenter, LoadBalancer, LAN,
+        PBNotFoundError
     )
     HAS_PROFITBRICKS = True
 except ImportError:
@@ -480,7 +488,7 @@ def get_image(vm_):
     )
 
     images = avail_images()
-    for key, value in images.iteritems():
+    for key in six.iterkeys(images):
         if vm_image and vm_image in (images[key]['id'], images[key]['name']):
             return images[key]
 
@@ -532,7 +540,13 @@ def list_nodes(conn=None, call=None):
 
     ret = {}
     datacenter_id = get_datacenter_id()
-    nodes = conn.list_servers(datacenter_id=datacenter_id)
+
+    try:
+        nodes = conn.list_servers(datacenter_id=datacenter_id)
+    except PBNotFoundError:
+        log.error('Failed to get nodes list from datacenter: {0}'.format(
+                  datacenter_id))
+        raise
 
     for item in nodes['items']:
         node = {'id': item['id']}
@@ -648,9 +662,12 @@ def _get_nics(vm_):
         firewall_rules = []
         if 'private_firewall_rules' in vm_:
             firewall_rules = _get_firewall_rules(vm_['private_firewall_rules'])
-        nics.append(NIC(lan=int(vm_['private_lan']),
-                        name='private',
-                        firewall_rules=firewall_rules))
+        nic = NIC(lan=int(vm_['private_lan']),
+                  name='private',
+                  firewall_rules=firewall_rules)
+        if 'nat' in vm_:
+            nic.nat = vm_['nat']
+        nics.append(nic)
     return nics
 
 
@@ -692,8 +709,9 @@ def get_public_keys(vm_):
                 )
             )
         ssh_keys = []
-        for key in open(key_filename).readlines():
-            ssh_keys.append(key)
+        with salt.utils.files.fopen(key_filename) as rfh:
+            for key in rfh.readlines():
+                ssh_keys.append(key)
 
         return ssh_keys
 
@@ -734,6 +752,15 @@ def create(vm_):
 
     if (not 'image' in vm_) and (not 'image_alias' in vm_):
         log.error('The image or image_alias parameter is required.')
+        
+    __utils__['cloud.fire_event'](
+        'event',
+        'starting create',
+        'salt/cloud/{0}/creating'.format(vm_['name']),
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport']
+    )
 
     data = None
     datacenter_id = get_datacenter_id()
@@ -754,7 +781,7 @@ def create(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={'name': vm_['name']},
+        args=__utils__['cloud.filter_event']('requesting', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -849,11 +876,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1027,6 +1050,12 @@ def _get_server(vm_, volumes, nics):
     # Apply component overrides to the size from the cloud profile config
     vm_size = _override_size(vm_)
 
+    # Set the server availability zone from the cloud profile config
+    availability_zone = config.get_cloud_config_value(
+        'availability_zone', vm_, __opts__, default=None,
+        search_global=False
+    )
+
     # Assign CPU family from the cloud profile config
     cpu_family = config.get_cloud_config_value(
         'cpu_family', vm_, __opts__, default=None,
@@ -1037,6 +1066,7 @@ def _get_server(vm_, volumes, nics):
     return Server(
         name=vm_['name'],
         ram=vm_size['ram'],
+        availability_zone=availability_zone,
         cores=vm_size['cores'],
         cpu_family=cpu_family,
         create_volumes=volumes,
@@ -1070,6 +1100,9 @@ def _get_system_volume(vm_):
         #volume.image = None
     else:
         volume.image=get_image(vm_)['id']
+        # Set volume availability zone if defined in the cloud profile
+        if 'disk_availability_zone' in vm_:
+            volume.availability_zone = vm_['disk_availability_zone']
 
     return volume
 
@@ -1080,7 +1113,7 @@ def _get_data_volumes(vm_):
     '''
     ret = []
     volumes = vm_['volumes']
-    for key, value in volumes.iteritems():
+    for key, value in six.iteritems(volumes):
         # Verify the required 'disk_size' property is present in the cloud
         # profile config
         if 'disk_size' not in volumes[key].keys():
@@ -1092,12 +1125,18 @@ def _get_data_volumes(vm_):
             volumes[key]['disk_type'] = 'HDD'
 
         # Construct volume object and assign to a list.
-        ret.append(Volume(
+        volume = Volume(
             name=key,
             size=volumes[key]['disk_size'],
             disk_type=volumes[key]['disk_type'],
             licence_type='OTHER'
-        ))
+        )
+
+        # Set volume availability zone if defined in the cloud profile
+        if 'disk_availability_zone' in volumes[key].keys():
+            volume.availability_zone = volumes[key]['disk_availability_zone']
+
+        ret.append(volume)
 
     return ret
 
@@ -1107,7 +1146,7 @@ def _get_firewall_rules(firewall_rules):
     Construct a list of optional firewall rules from the cloud profile.
     '''
     ret = []
-    for key, value in firewall_rules.iteritems():
+    for key, value in six.iteritems(firewall_rules):
         # Verify the required 'protocol' property is present in the cloud
         # profile config
         if 'protocol' not in firewall_rules[key].keys():

@@ -7,6 +7,7 @@ Scan a netmask or ipaddr for open ssh ports
 from __future__ import absolute_import
 import socket
 import logging
+import copy
 
 # Import salt libs
 import salt.utils.network
@@ -55,6 +56,7 @@ class RosterMatcher(object):
                 pass
         for addr in addrs:
             addr = str(addr)
+            ret[addr] = copy.deepcopy(__opts__.get('roster_defaults', {}))
             log.trace('Scanning host: {0}'.format(addr))
             for port in ports:
                 log.trace('Scanning port: {0}'.format(port))
@@ -64,7 +66,7 @@ class RosterMatcher(object):
                     sock.connect((addr, port))
                     sock.shutdown(socket.SHUT_RDWR)
                     sock.close()
-                    ret[addr] = {'host': addr, 'port': port}
+                    ret[addr].update({'host': addr, 'port': port})
                 except socket.error:
                     pass
         return ret

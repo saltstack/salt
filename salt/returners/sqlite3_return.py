@@ -106,7 +106,7 @@ __virtualname__ = 'sqlite3'
 
 def __virtual__():
     if not HAS_SQLITE3:
-        return False
+        return False, 'Could not import sqlite3 returner; sqlite3 is not installed.'
     return __virtualname__
 
 
@@ -193,7 +193,7 @@ def save_load(jid, load, minions=None):
     _close_conn(conn)
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''
@@ -303,4 +303,4 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

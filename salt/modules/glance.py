@@ -39,15 +39,10 @@ Module for handling openstack glance calls.
 from __future__ import absolute_import
 import re
 
-# Import third party libs
-#import salt.ext.six as six
-
 # Import salt libs
 from salt.exceptions import (
-    #CommandExecutionError,
     SaltInvocationError
     )
-from salt.utils import warn_until
 
 from salt.version import (
     __version__,
@@ -212,9 +207,13 @@ def _add_image(collection, image):
     return collection
 
 
-def image_create(name, location=None, profile=None, visibility=None,
-        container_format='bare', disk_format='raw', protected=None,
-        copy_from=None, is_public=None):
+def image_create(name,
+                 location=None,
+                 profile=None,
+                 visibility=None,
+                 container_format='bare',
+                 disk_format='raw',
+                 protected=None,):
     '''
     Create an image (glance image-create)
 
@@ -222,22 +221,17 @@ def image_create(name, location=None, profile=None, visibility=None,
 
     .. code-block:: bash
 
-        salt '*' glance.image_create name=f16-jeos is_public=true \\
-                 disk_format=qcow2 container_format=ovf \\
-                 copy_from=http://berrange.fedorapeople.org/\
-                    images/2012-02-29/f16-x86_64-openstack-sda.qcow2
+        salt '*' glance.image_create name=f16-jeos \\
+                 disk_format=qcow2 container_format=ovf
 
     CLI Example, new format resembling Glance API v2:
 
     .. code-block:: bash
 
         salt '*' glance.image_create name=f16-jeos visibility=public \\
-                 disk_format=qcow2 container_format=ovf \\
-                 copy_from=http://berrange.fedorapeople.org/\
-                    images/2012-02-29/f16-x86_64-openstack-sda.qcow2
+                 disk_format=qcow2 container_format=ovf
 
-    The parameter 'visibility' defaults to 'public' if neither
-    'visibility' nor 'is_public' is specified.
+    The parameter 'visibility' defaults to 'public' if not specified.
     '''
     kwargs = {}
     # valid options for "visibility":
@@ -247,26 +241,9 @@ def image_create(name, location=None, profile=None, visibility=None,
     # valid options for "disk_format":
     df_list = ['ami', 'ari', 'aki', 'vhd', 'vmdk',
                'raw', 'qcow2', 'vdi', 'iso']
-    # 'location' and 'visibility' are the parameters used in
-    # Glance API v2. For now we have to use v1 for now (see below)
-    # but this modules interface will change in Nitrogen.
-    if copy_from is not None or is_public is not None:
-        warn_until('Nitrogen', 'The parameters \'copy_from\' and '
-            '\'is_public\' are deprecated and will be removed. '
-            'Use \'location\' and \'visibility\' instead.')
-    if is_public is not None and visibility is not None:
-        raise SaltInvocationError('Must only specify one of '
-            '\'is_public\' and \'visibility\'')
-    if copy_from is not None and location is not None:
-        raise SaltInvocationError('Must only specify one of '
-            '\'copy_from\' and \'location\'')
-    if copy_from is not None:
-        kwargs['copy_from'] = copy_from
-    else:
-        kwargs['copy_from'] = location
-    if is_public is not None:
-        kwargs['is_public'] = is_public
-    elif visibility is not None:
+
+    kwargs['copy_from'] = location
+    if visibility is not None:
         if visibility not in v_list:
             raise SaltInvocationError('"visibility" needs to be one ' +
                 'of the following: {0}'.format(', '.join(v_list)))
@@ -377,23 +354,13 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     pformat = pprint.PrettyPrinter(indent=4).pformat
     log.debug('Properties of image {0}:\n{1}'.format(
         image.name, pformat(image)))
-    ret_details = {}
-    # I may want to use this code on Beryllium
-    # until we got 2016.3.0 packages for Ubuntu
-    # so please keep this code until Nitrogen!
-    warn_until('Nitrogen', 'Starting with \'2016.3.0\' image_show() '
-            'will stop wrapping the returned image in another '
-            'dictionary.')
-    if CUR_VER < BORON:
-        ret[image.name] = ret_details
-    else:
-        ret = ret_details
+
     schema = image_schema(profile=profile)
     if len(schema.keys()) == 1:
         schema = schema['image']
-    for key in schema.keys():
+    for key in schema:
         if key in image:
-            ret_details[key] = image[key]
+            ret[key] = image[key]
     return ret
 
 
@@ -407,21 +374,8 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
 
         salt '*' glance.image_list
     '''
-    #try:
     g_client = _auth(profile)
-    #except kstone_exc.Unauthorized:
-    #    return False
-    #
-    # I may want to use this code on Beryllium
-    # until we got 2016.3.0 packages for Ubuntu
-    # so please keep this code until Nitrogen!
-    warn_until('Nitrogen', 'Starting in \'2016.3.0\' image_list() '
-        'will return a list of images instead of a dictionary '
-        'keyed with the images\' names.')
-    if CUR_VER < BORON:
-        ret = {}
-    else:
-        ret = []
+    ret = []
     for image in g_client.images.list():
         if id is None and name is None:
             _add_image(ret, image)
@@ -506,14 +460,6 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
             to_update[key] = value
     g_client = _auth(profile)
     updated = g_client.images.update(image['id'], **to_update)
-    # I may want to use this code on Beryllium
-    # until we got 2016.3.0 packages for Ubuntu
-    # so please keep this code until Nitrogen!
-    warn_until('Nitrogen', 'Starting with \'2016.3.0\' image_update() '
-            'will stop wrapping the returned, updated image in '
-            'another dictionary.')
-    if CUR_VER < BORON:
-        updated = {updated.name: updated}
     return updated
 
 

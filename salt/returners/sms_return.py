@@ -29,11 +29,8 @@ To use the sms returner, append '--return sms' to the salt command.
 
 '''
 from __future__ import absolute_import
-
-
 import logging
 
-import salt.utils
 import salt.returners
 
 log = logging.getLogger(__name__)
@@ -51,8 +48,8 @@ __virtualname__ = 'sms'
 def __virtual__():
     if HAS_TWILIO:
         return __virtualname__
-    else:
-        return False
+
+    return False, 'Could not import sms returner; twilio is not installed.'
 
 
 def _get_options(ret=None):

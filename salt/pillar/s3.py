@@ -20,6 +20,8 @@ options
           kms_keyid: 01234567-89ab-cdef-0123-4567890abcde
           s3_cache_expire: 30
           s3_sync_on_update: True
+          path_style: False
+          https_enable: True
 
 The ``bucket`` parameter specifies the target S3 bucket. It is required.
 
@@ -59,6 +61,12 @@ time of S3 metadata cache file.
 The ``s3_sync_on_update`` parameter defaults to True. It specifies if cache
 is synced on update rather than jit.
 
+The ``path_style`` parameter defaults to False. It specifies whether to use
+path style requests or dns style requests
+
+The ``https_enable`` parameter defaults to True. It specifies whether to use
+https protocol or http protocol
+
 This pillar can operate in two modes, single environment per bucket or multiple
 environments per bucket.
 
@@ -90,14 +98,15 @@ from copy import deepcopy
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import filter
 from salt.ext.six.moves.urllib.parse import quote as _quote
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 from salt.pillar import Pillar
-import salt.utils
+import salt.utils.files
+import salt.utils.hashutils
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -105,7 +114,7 @@ log = logging.getLogger(__name__)
 
 class S3Credentials(object):
     def __init__(self, key, keyid, bucket, service_url, verify_ssl=True,
-                 kms_keyid=None, location=None):
+                 kms_keyid=None, location=None, path_style=False, https_enable=True):
         self.key = key
         self.keyid = keyid
         self.kms_keyid = kms_keyid
@@ -113,6 +122,8 @@ class S3Credentials(object):
         self.service_url = service_url
         self.verify_ssl = verify_ssl
         self.location = location
+        self.path_style = path_style
+        self.https_enable = https_enable
 
 
 def ext_pillar(minion_id,
@@ -128,14 +139,16 @@ def ext_pillar(minion_id,
                service_url=None,
                kms_keyid=None,
                s3_cache_expire=30,  # cache for 30 seconds
-               s3_sync_on_update=True):  # sync cache on update rather than jit
+               s3_sync_on_update=True,  # sync cache on update rather than jit
+               path_style=False,
+               https_enable=True):
 
     '''
     Execute a command and read the output as YAML
     '''
 
     s3_creds = S3Credentials(key, keyid, bucket, service_url, verify_ssl,
-                             kms_keyid, location)
+                             kms_keyid, location, path_style, https_enable)
 
     # normpath is needed to remove appended '/' if root is empty string.
     pillar_dir = os.path.normpath(os.path.join(_get_cache_dir(), environment,
@@ -172,7 +185,7 @@ def ext_pillar(minion_id,
 
     pil = Pillar(opts, __grains__, minion_id, environment)
 
-    compiled_pillar = pil.compile_pillar()
+    compiled_pillar = pil.compile_pillar(ext=False)
 
     return compiled_pillar
 
@@ -265,7 +278,9 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
             verify_ssl=creds.verify_ssl,
             location=creds.location,
             return_bin=False,
-            params={'prefix': prefix})
+            params={'prefix': prefix},
+            path_style=creds.path_style,
+            https_enable=creds.https_enable)
 
     # grab only the files/dirs in the bucket
     def __get_pillar_files_from_s3_meta(s3_meta):
@@ -323,7 +338,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
 
     log.debug('Writing S3 buckets pillar cache file')
 
-    with salt.utils.fopen(cache_file, 'w') as fp_:
+    with salt.utils.files.fopen(cache_file, 'w') as fp_:
         pickle.dump(metadata, fp_)
 
     return metadata
@@ -336,7 +351,7 @@ def _read_buckets_cache_file(cache_file):
 
     log.debug('Reading buckets cache file')
 
-    with salt.utils.fopen(cache_file, 'rb') as fp_:
+    with salt.utils.files.fopen(cache_file, 'rb') as fp_:
         data = pickle.load(fp_)
 
     return data
@@ -388,7 +403,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         file_md5 = "".join(list(filter(str.isalnum, file_meta['ETag']))) \
             if file_meta else None
 
-        cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
+        cached_md5 = salt.utils.hashutils.get_hash(cached_file_path, 'md5')
 
         log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
 
@@ -407,5 +422,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         path=_quote(path),
         local_file=cached_file_path,
         verify_ssl=creds.verify_ssl,
-        location=creds.location
+        location=creds.location,
+        path_style=creds.path_style,
+        https_enable=creds.https_enable
     )

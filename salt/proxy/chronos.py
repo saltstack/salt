@@ -8,7 +8,7 @@ Proxy minion for managing a Chronos cluster.
 Dependencies
 ------------
 
-- :doc:`chronos execution module (salt.modules.chronos) </ref/modules/all/salt.modules.chronos>`
+- :mod:`chronos execution module (salt.modules.chronos) <salt.modules.chronos>`
 
 Pillar
 ------
@@ -62,7 +62,7 @@ def ping():
             decode=True,
         )
         log.debug(
-            'chronos.info returned succesfully: %s',
+            'chronos.info returned successfully: %s',
             response,
         )
         if 'dict' in response:

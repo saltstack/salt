@@ -5,13 +5,13 @@ Grains for Cisco NX OS Switches Proxy minions
 .. versionadded: 2016.11.0
 
 For documentation on setting up the nxos proxy minion look in the documentation
-for :doc:`salt.proxy.nxos</ref/proxy/all/salt.proxy.nxos>`.
+for :mod:`salt.proxy.nxos<salt.proxy.nxos>`.
 '''
 # Import Python Libs
 from __future__ import absolute_import
 
 # Import Salt Libs
-import salt.utils
+import salt.utils.platform
 import salt.modules.nxos
 
 import logging
@@ -23,7 +23,7 @@ __virtualname__ = 'nxos'
 
 def __virtual__():
     try:
-        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'nxos':
+        if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'nxos':
             return __virtualname__
     except KeyError:
         pass

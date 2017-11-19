@@ -4,8 +4,8 @@ Control Modjk via the Apache Tomcat "Status" worker
 (http://tomcat.apache.org/connectors-doc/reference/status.html)
 
 Below is an example of the configuration needed for this module. This
-configuration data can be placed either in :doc:`grains
-</topics/targeting/grains>` or :doc:`pillar </topics/pillar/index>`.
+configuration data can be placed either in :ref:`grains
+<targeting-grains>` or :ref:`pillar <salt-pillars>`.
 
 If using grains, this can be accomplished :ref:`statically
 <static-custom-grains>` or via a :ref:`grain module <writing-grains>`.
@@ -34,6 +34,7 @@ from __future__ import absolute_import
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module
+from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext.six.moves.urllib.request import (
         HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
@@ -330,7 +331,7 @@ def bulk_stop(workers, lbn, profile='default'):
 
     ret = {}
 
-    if isinstance(workers, str):
+    if isinstance(workers, six.string_types):
         workers = workers.split(',')
 
     for worker in workers:
@@ -359,7 +360,7 @@ def bulk_activate(workers, lbn, profile='default'):
 
     ret = {}
 
-    if isinstance(workers, str):
+    if isinstance(workers, six.string_types):
         workers = workers.split(',')
 
     for worker in workers:
@@ -388,7 +389,7 @@ def bulk_disable(workers, lbn, profile='default'):
 
     ret = {}
 
-    if isinstance(workers, str):
+    if isinstance(workers, six.string_types):
         workers = workers.split(',')
 
     for worker in workers:
@@ -417,7 +418,7 @@ def bulk_recover(workers, lbn, profile='default'):
 
     ret = {}
 
-    if isinstance(workers, str):
+    if isinstance(workers, six.string_types):
         workers = workers.split(',')
 
     for worker in workers:

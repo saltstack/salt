@@ -13,13 +13,14 @@ import traceback
 # Import salt libs
 import salt.crypt
 import salt.payload
-import salt.utils
-import salt.utils.network
+import salt.utils.args
 import salt.utils.event
+import salt.utils.network
+import salt.utils.versions
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 MINE_INTERNAL_KEYWORDS = frozenset([
     '__pub_user',
@@ -80,7 +81,7 @@ def _mine_get(load, opts):
     return ret
 
 
-def update(clear=False):
+def update(clear=False, mine_functions=None):
     '''
     Execute the configured functions and send the data back up to the master.
     The functions to be executed are merged from the master config, pillar and
@@ -93,6 +94,34 @@ def update(clear=False):
             - eth0
           disk.usage: []
 
+    This function accepts the following arguments:
+
+    clear: False
+        Boolean flag specifying whether updating will clear the existing
+        mines, or will update. Default: `False` (update).
+
+    mine_functions
+        Update the mine data on certain functions only.
+        This feature can be used when updating the mine for functions
+        that require refresh at different intervals than the rest of
+        the functions specified under `mine_functions` in the
+        minion/master config or pillar.
+        A potential use would be together with the `scheduler`, for example:
+
+        .. code-block:: yaml
+
+            schedule:
+              lldp_mine_update:
+                function: mine.update
+                kwargs:
+                    mine_functions:
+                      net.lldp: []
+                hours: 12
+
+        In the example above, the mine for `net.lldp` would be refreshed
+        every 12 hours, while  `network.ip_addrs` would continue to be updated
+        as specified in `mine_interval`.
+
     The function cache will be populated with information from executing these
     functions
 
@@ -102,9 +131,17 @@ def update(clear=False):
 
         salt '*' mine.update
     '''
-    m_data = __salt__['config.merge']('mine_functions', {})
-    # If we don't have any mine functions configured, then we should just bail out
-    if not m_data:
+    m_data = {}
+    if not mine_functions:
+        m_data = __salt__['config.merge']('mine_functions', {})
+        # If we don't have any mine functions configured, then we should just bail out
+        if not m_data:
+            return
+    elif mine_functions and isinstance(mine_functions, list):
+        m_data = dict((fun, {}) for fun in mine_functions)
+    elif mine_functions and isinstance(mine_functions, dict):
+        m_data = mine_functions
+    else:
         return
 
     data = {}
@@ -161,12 +198,12 @@ def send(func, *args, **kwargs):
         salt '*' mine.send network.ip_addrs eth0
         salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     mine_func = kwargs.pop('mine_function', func)
     if mine_func not in __salt__:
         return False
     data = {}
-    arg_data = salt.utils.arg_lookup(__salt__[mine_func])
+    arg_data = salt.utils.args.arg_lookup(__salt__[mine_func])
     func_data = copy.deepcopy(kwargs)
     for ind, _ in enumerate(arg_data.get('args', [])):
         try:
@@ -174,9 +211,10 @@ def send(func, *args, **kwargs):
         except IndexError:
             # Safe error, arg may be in kwargs
             pass
-    f_call = salt.utils.format_call(__salt__[mine_func],
-                                    func_data,
-                                    expected_extra_kws=MINE_INTERNAL_KEYWORDS)
+    f_call = salt.utils.args.format_call(
+        __salt__[mine_func],
+        func_data,
+        expected_extra_kws=MINE_INTERNAL_KEYWORDS)
     for arg in args:
         if arg not in f_call['args']:
             f_call['args'].append(arg)
@@ -203,20 +241,24 @@ def send(func, *args, **kwargs):
     return _mine_send(load, __opts__)
 
 
-def get(tgt, fun, expr_form='glob', exclude_minion=False):
+def get(tgt,
+        fun,
+        tgt_type='glob',
+        exclude_minion=False,
+        expr_form=None):
     '''
-    Get data from the mine based on the target, function and expr_form
+    Get data from the mine based on the target, function and tgt_type
 
     Targets can be matched based on any standard matching system that can be
-    matched on the master via these keywords::
+    matched on the master via these keywords:
 
-        glob
-        pcre
-        grain
-        grain_pcre
-        compound
-        pillar
-        pillar_pcre
+    - glob
+    - pcre
+    - grain
+    - grain_pcre
+    - compound
+    - pillar
+    - pillar_pcre
 
     Note that all pillar matches, whether using the compound matching system or
     the pillar matching system, will be exact matches, with globbing disabled.
@@ -230,7 +272,7 @@ def get(tgt, fun, expr_form='glob', exclude_minion=False):
 
         salt '*' mine.get '*' network.interfaces
         salt '*' mine.get 'os:Fedora' network.interfaces grain
-        salt '*' mine.get 'os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
+        salt '*' mine.get 'G@os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
 
     .. seealso:: Retrieving Mine data from Pillar and Orchestrate
 
@@ -241,13 +283,24 @@ def get(tgt, fun, expr_form='glob', exclude_minion=False):
         :py:func:`saltutil.runner <salt.modules.saltutil.runner>` module. For
         example:
 
-        .. code-block:: yaml
+        .. code-block:: jinja
 
             {% set minion_ips = salt.saltutil.runner('mine.get',
                 tgt='*',
                 fun='network.ip_addrs',
                 tgt_type='glob') %}
     '''
+    # remember to remove the expr_form argument from this function when
+    # performing the cleanup on this deprecation.
+    if expr_form is not None:
+        salt.utils.versions.warn_until(
+            'Fluorine',
+            'the target type should be passed using the \'tgt_type\' '
+            'argument instead of \'expr_form\'. Support for using '
+            '\'expr_form\' will be removed in Salt Fluorine.'
+        )
+        tgt_type = expr_form
+
     if __opts__['file_client'] == 'local':
         ret = {}
         is_target = {'glob': __salt__['match.glob'],
@@ -259,7 +312,7 @@ def get(tgt, fun, expr_form='glob', exclude_minion=False):
                      'compound': __salt__['match.compound'],
                      'pillar': __salt__['match.pillar'],
                      'pillar_pcre': __salt__['match.pillar_pcre'],
-                     }[expr_form](tgt)
+                     }[tgt_type](tgt)
         if is_target:
             data = __salt__['data.get']('mine_cache')
             if isinstance(data, dict) and fun in data:
@@ -270,7 +323,7 @@ def get(tgt, fun, expr_form='glob', exclude_minion=False):
             'id': __opts__['id'],
             'tgt': tgt,
             'fun': fun,
-            'expr_form': expr_form,
+            'tgt_type': tgt_type,
     }
     ret = _mine_get(load, __opts__)
     if exclude_minion:
@@ -356,7 +409,7 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
         cidrs = cidr_
 
     # Get docker info
-    cmd = 'dockerng.ps'
+    cmd = 'docker.ps'
     docker_hosts = get('*', cmd)
 
     proxy_lists = {}

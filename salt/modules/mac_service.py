@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-The service module for Mac OS X
+The service module for macOS
 .. versionadded:: 2016.3.0
 '''
 from __future__ import absolute_import
@@ -9,15 +9,18 @@ from __future__ import absolute_import
 import os
 import re
 import plistlib
-from distutils.version import LooseVersion
 
 # Import salt libs
-import salt.utils
 import salt.utils.decorators as decorators
+import salt.utils.files
+import salt.utils.path
+import salt.utils.platform
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Import 3rd party libs
-import salt.ext.six as six
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'service'
@@ -29,23 +32,23 @@ __func_alias__ = {
 
 def __virtual__():
     '''
-    Only for Mac OS X with launchctl
+    Only for macOS with launchctl
     '''
-    if not salt.utils.is_darwin():
+    if not salt.utils.platform.is_darwin():
         return (False, 'Failed to load the mac_service module:\n'
-                       'Only available on Mac OS X systems.')
+                       'Only available on macOS systems.')
 
-    if not salt.utils.which('launchctl'):
+    if not salt.utils.path.which('launchctl'):
         return (False, 'Failed to load the mac_service module:\n'
                        'Required binary not found: "launchctl"')
 
-    if not salt.utils.which('plutil'):
+    if not salt.utils.path.which('plutil'):
         return (False, 'Failed to load the mac_service module:\n'
                        'Required binary not found: "plutil"')
 
-    if LooseVersion(__grains__['osrelease']) < LooseVersion('10.11'):
+    if _LooseVersion(__grains__['osrelease']) < _LooseVersion('10.11'):
         return (False, 'Failed to load the mac_service module:\n'
-                       'Requires OS X 10.11 or newer')
+                       'Requires macOS 10.11 or newer')
 
     return __virtualname__
 
@@ -87,7 +90,7 @@ def _available_services():
                 try:
                     # This assumes most of the plist files
                     # will be already in XML format
-                    with salt.utils.fopen(file_path):
+                    with salt.utils.files.fopen(file_path):
                         plist = plistlib.readPlist(true_path)
 
                 except Exception:
@@ -100,7 +103,7 @@ def _available_services():
                         plist = plistlib.readPlistFromString(plist_xml)
                     else:
                         plist = plistlib.readPlistFromBytes(
-                            salt.utils.to_bytes(plist_xml))
+                            salt.utils.stringutils.to_bytes(plist_xml))
 
                 try:
                     available_services[plist.Label.lower()] = {
@@ -308,7 +311,7 @@ def start(name, runas=None):
     Start a launchd service.  Raises an error if the service fails to start
 
     .. note::
-        To start a service in Mac OS X the service must be enabled first. Use
+        To start a service in macOS the service must be enabled first. Use
         ``service.enable`` to enable the service.
 
     :param str name: Service label, file name, or full path
@@ -337,7 +340,7 @@ def stop(name, runas=None):
     Stop a launchd service.  Raises an error if the service fails to stop
 
     .. note::
-        Though ``service.stop`` will unload a service in Mac OS X, the service
+        Though ``service.stop`` will unload a service in macOS, the service
         will start on next boot unless it is disabled. Use ``service.disable``
         to disable the service
 

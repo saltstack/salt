@@ -19,7 +19,9 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.files
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 try:
     import salt.utils.pycrypto
@@ -267,7 +269,7 @@ def set_password(name, password, use_usermod=False):
     ``SALTsalt`` is the 8-character crpytographic salt. Valid characters in the
     salt are ``.``, ``/``, and any alphanumeric character.
 
-    Keep in mind that the $6 represents a sha512 hash, if your OS is using a
+    Keep in mind that the $7 represents a sha512 hash, if your OS is using a
     different hashing algorithm this needs to be changed accordingly
 
     CLI Example:
@@ -276,7 +278,7 @@ def set_password(name, password, use_usermod=False):
 
         salt '*' shadow.set_password root '$1$UYCIxa628.9qXjpQCjM4a..'
     '''
-    if not salt.utils.is_true(use_usermod):
+    if not salt.utils.data.is_true(use_usermod):
         # Edit the shadow file directly
         # ALT Linux uses tcb to store password hashes. More information found
         # in manpage (http://docs.altlinux.org/manpages/tcb.5.html)
@@ -288,8 +290,9 @@ def set_password(name, password, use_usermod=False):
         if not os.path.isfile(s_file):
             return ret
         lines = []
-        with salt.utils.fopen(s_file, 'rb') as fp_:
+        with salt.utils.files.fopen(s_file, 'rb') as fp_:
             for line in fp_:
+                line = salt.utils.stringutils.to_str(line)
                 comps = line.strip().split(':')
                 if comps[0] != name:
                     lines.append(line)
@@ -299,13 +302,13 @@ def set_password(name, password, use_usermod=False):
                 comps[2] = str(changed_date.days)
                 line = ':'.join(comps)
                 lines.append('{0}\n'.format(line))
-        with salt.utils.fopen(s_file, 'w+') as fp_:
+        with salt.utils.files.fopen(s_file, 'w+') as fp_:
             fp_.writelines(lines)
         uinfo = info(name)
         return uinfo['passwd'] == password
     else:
         # Use usermod -p (less secure, but more feature-complete)
-        cmd = 'usermod -p {0} {1}'.format(name, password)
+        cmd = 'usermod -p {0} {1}'.format(password, name)
         __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='quiet')
         uinfo = info(name)
         return uinfo['passwd'] == password
@@ -364,3 +367,18 @@ def set_expire(name, expire):
     '''
     cmd = 'chage -E {0} {1}'.format(expire, name)
     return not __salt__['cmd.run'](cmd, python_shell=False)
+
+
+def list_users():
+    '''
+    .. versionadded:: Oxygen
+
+    Return a list of all shadow users
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.list_users
+    '''
+    return sorted([user.sp_nam for user in spwd.getspall()])

@@ -1,3 +1,5 @@
+.. _troubleshooting-salt-master:
+
 ===============================
 Troubleshooting the Salt Master
 ===============================
@@ -27,8 +29,8 @@ What Ports does the Master Need Open?
 For the master, TCP ports 4505 and 4506 need to be open. If you've put both
 your Salt master and minion in debug mode and don't see an acknowledgment
 that your minion has connected, it could very well be a firewall interfering
-with the connection. See our :doc:`firewall configuration
-</topics/tutorials/firewall>` page for help opening the firewall on various
+with the connection. See our :ref:`firewall configuration
+<firewall>` page for help opening the firewall on various
 platforms.
 
 If you've opened the correct TCP ports and still aren't seeing connections,
@@ -139,7 +141,7 @@ If the master seems to be unresponsive, a SIGUSR1 can be passed to the
 salt-master threads to display what piece of code is executing. This debug
 information can be invaluable in tracking down bugs.
 
-To pass a SIGUSR1 to the master, first make sure the minion is running in the
+To pass a SIGUSR1 to the master, first make sure the master is running in the
 foreground. Stop the service if it is running as a daemon, and start it in the
 foreground like so:
 

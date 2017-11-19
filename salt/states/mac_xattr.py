@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Allows you to manage extended attributes on files or directories
-=======================
+================================================================
 
-Install, enable and disable assitive access on OS X minions
+Install, enable and disable assistive access on macOS minions
 
 .. code-block:: yaml
 

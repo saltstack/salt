@@ -11,6 +11,8 @@ proxy modules
     :template: autosummary.rst.tmpl
 
     chronos
+    cisconso
+    dummy
     esxi
     fx2
     junos

@@ -8,9 +8,9 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import map, range
-import salt.utils
+import salt.utils.path
 
 # Import third-party libs
 if six.PY3:
@@ -108,7 +108,7 @@ def __virtual__():
     '''
     Only load the module if ipset is installed
     '''
-    if salt.utils.which('ipset'):
+    if salt.utils.path.which('ipset'):
         return True
     return (False, 'The ipset execution modules cannot be loaded: ipset binary not in path.')
 
@@ -117,7 +117,7 @@ def _ipset_cmd():
     '''
     Return correct command
     '''
-    return salt.utils.which('ipset')
+    return salt.utils.path.which('ipset')
 
 
 def version():
@@ -585,7 +585,8 @@ def _parse_members(settype, members):
 def _parse_member(settype, member, strict=False):
     subtypes = settype.split(':')[1].split(',')
 
-    parts = member.split(' ')
+    all_parts = member.split(' ', 1)
+    parts = all_parts[0].split(',')
 
     parsed_member = []
     for i in range(len(subtypes)):
@@ -610,8 +611,8 @@ def _parse_member(settype, member, strict=False):
 
         parsed_member.append(part)
 
-    if len(parts) > len(subtypes):
-        parsed_member.append(' '.join(parts[len(subtypes):]))
+    if len(all_parts) > 1:
+        parsed_member.append(all_parts[1])
 
     return parsed_member
 

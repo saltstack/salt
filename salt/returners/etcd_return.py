@@ -77,7 +77,6 @@ try:
 except ImportError:
     HAS_LIBS = False
 
-import salt.utils
 import salt.utils.jid
 
 log = logging.getLogger(__name__)
@@ -90,7 +89,10 @@ def __virtual__():
     '''
     Only return if python-etcd is installed
     '''
-    return __virtualname__ if HAS_LIBS else False
+    if HAS_LIBS:
+        return __virtualname__
+
+    return False, 'Could not import etcd returner; python-etcd is not installed.'
 
 
 def _get_conn(opts, profile=None):
@@ -150,7 +152,7 @@ def save_load(jid, load, minions=None):
     )
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''
@@ -220,4 +222,4 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid(__opts__)

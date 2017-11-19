@@ -14,7 +14,7 @@ import os
 import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
@@ -25,52 +25,9 @@ def __virtual__():
     '''
     Only load the module if htpasswd is installed
     '''
-    if salt.utils.which('htpasswd'):
+    if salt.utils.path.which('htpasswd'):
         return __virtualname__
     return (False, 'The htpasswd execution mdule cannot be loaded: htpasswd binary not in path.')
-
-
-def useradd_all(pwfile, user, password, opts='', runas=None):
-    '''
-    Add a user to htpasswd file using the htpasswd command. If the htpasswd
-    file does not exist, it will be created.
-
-    .. deprecated:: Nitrogen
-
-    pwfile
-        Path to htpasswd file
-
-    user
-        User name
-
-    password
-        User password
-
-    opts
-        Valid options that can be passed are:
-
-            - `n`  Don't update file; display results on stdout.
-            - `m`  Force MD5 encryption of the password (default).
-            - `d`  Force CRYPT encryption of the password.
-            - `p`  Do not encrypt the password (plaintext).
-            - `s`  Force SHA encryption of the password.
-
-    runas
-        The system user to run htpasswd command with
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' webutil.useradd /etc/httpd/htpasswd larry badpassword
-        salt '*' webutil.useradd /etc/httpd/htpasswd larry badpass opts=ns
-    '''
-    salt.utils.warn_until('Nitrogen',
-                          '\'htpasswd.useradd_all\' has been deprecated in favor of \'htpasswd.useradd\'. '
-                          'It\'s functionality will be removed in Salt Nitrogen. '
-                          'Please migrate to using \'useradd\' instead of \'useradd_all\'.')
-
-    return useradd(pwfile, user, password, opts=opts, runas=runas)
 
 
 def useradd(pwfile, user, password, opts='', runas=None):

@@ -17,7 +17,7 @@ a minion process that "proxies" communication from the Salt Master. The master
 does not know nor care that the target is not a "real" Salt Minion.
 
 More in-depth conceptual reading on Proxy Minions can be found in the
-:doc:`Proxy Minion </topics/proxyminion/index>` section of Salt's
+:ref:`Proxy Minion <proxy-minion>` section of Salt's
 documentation.
 
 
@@ -105,6 +105,7 @@ look like this:
         - first_password
         - second_password
         - third_password
+      credstore: <path to credential store>
 
 proxytype
 ^^^^^^^^^
@@ -130,9 +131,9 @@ one password in this list is required.
 The proxy integration will try the passwords listed in order. It is
 configured this way so you can have a regular password and the password you
 may be updating for an ESXi host either via the
-:doc:`vsphere.update_host_password </ref/modules/all/salt.modules.vsphere>`
+:mod:`vsphere.update_host_password <salt.modules.vsphere.update_host_password>`
 execution module function or via the
-:doc:`esxi.password_present </ref/modules/all/salt.states.esxi>` state
+:mod:`esxi.password_present <salt.states.esxi.password_present>` state
 function. This way, after the password is changed, you should not need to
 restart the proxy minion--it should just pick up the the new password
 provided in the list. You can then change pillar at will to move that
@@ -168,6 +169,18 @@ port
 If the ESXi host is not using the default port, set this value to an
 alternate port. Default is ``443``.
 
+credstore
+^^^^^^^^^
+If the ESXi host is using an untrusted SSL certificate, set this value to
+the file path where the credential store is located. This file is passed to
+``esxcli``. Default is ``<HOME>/.vmware/credstore/vicredentials.xml`` on Linux
+and ``<APPDATA>/VMware/credstore/vicredentials.xml`` on Windows.
+
+.. note::
+
+    ``HOME`` variable is sometimes not set for processes running as system
+    services. If you want to rely on the default credential store location,
+    make sure ``HOME`` is set for the proxy process.
 
 Salt Proxy
 ----------
@@ -225,7 +238,7 @@ Note that you don't need to provide credentials or an ip/hostname. Salt
 knows to use the credentials you stored in Pillar.
 
 It's important to understand how this particular proxy works.
-:doc:`Salt.modules.vsphere </ref/modules/all/salt.modules.vsphere>` is a
+:mod:`Salt.modules.vsphere <salt.modules.vsphere>` is a
 standard Salt execution module. If you pull up the docs for it you'll see
 that almost every function in the module takes credentials and a target
 host. When credentials and a host aren't passed, Salt runs commands
@@ -243,15 +256,15 @@ Proxy Minion.
 
 Because of the presence of the shim, to lookup documentation for what
 functions you can use to interface with the ESXi host, you'll want to
-look in :doc:`salt.modules.vsphere </ref/modules/all/salt.modules.vsphere>`
-instead of :doc:`salt.modules.esxi </ref/modules/all/salt.modules.esxi>`.
+look in :mod:`salt.modules.vsphere <salt.modules.vsphere>`
+instead of :mod:`salt.modules.esxi <salt.modules.esxi>`.
 
 
 States
 ------
 
 Associated states are thoroughly documented in
-:doc:`salt.states.esxi </ref/states/all/salt.states.esxi>`. Look there
+:mod:`salt.states.esxi <salt.states.esxi>`. Look there
 to find an example structure for Pillar as well as an example ``.sls`` file
 for standing up an ESXi host from scratch.
 
@@ -260,13 +273,22 @@ for standing up an ESXi host from scratch.
 # Import Python Libs
 from __future__ import absolute_import
 import logging
+import os
 
 # Import Salt Libs
-from salt.exceptions import SaltSystemExit
+from salt.exceptions import SaltSystemExit, InvalidConfigError
+from salt.config.schemas.esxi import EsxiProxySchema
+from salt.utils.dictupdate import merge
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ['esxi']
 
+# External libraries
+try:
+    import jsonschema
+    HAS_JSONSCHEMA = True
+except ImportError:
+    HAS_JSONSCHEMA = False
 
 # Variables are scoped to this module so we can have persistent data
 # across calls to fns in here.
@@ -275,7 +297,6 @@ DETAILS = {}
 
 # Set up logging
 log = logging.getLogger(__file__)
-
 # Define the module's virtual name
 __virtualname__ = 'esxi'
 
@@ -284,7 +305,7 @@ def __virtual__():
     '''
     Only load if the ESXi execution module is available.
     '''
-    if 'vsphere.system_info' in __salt__:
+    if HAS_JSONSCHEMA:
         return __virtualname__
 
     return False, 'The ESXi Proxy Minion module did not load.'
@@ -296,31 +317,104 @@ def init(opts):
     ESXi devices, the host, login credentials, and, if configured,
     the protocol and port are cached.
     '''
-    if 'host' not in opts['proxy']:
-        log.critical('No \'host\' key found in pillar for this proxy.')
-        return False
-    if 'username' not in opts['proxy']:
-        log.critical('No \'username\' key found in pillar for this proxy.')
-        return False
-    if 'passwords' not in opts['proxy']:
-        log.critical('No \'passwords\' key found in pillar for this proxy.')
-        return False
-
-    host = opts['proxy']['host']
-
-    # Get the correct login details
+    log.debug('Initting esxi proxy module in process \'{}\''
+              ''.format(os.getpid()))
+    log.debug('Validating esxi proxy input')
+    schema = EsxiProxySchema.serialize()
+    log.trace('esxi_proxy_schema = {}'.format(schema))
+    proxy_conf = merge(opts.get('proxy', {}), __pillar__.get('proxy', {}))
+    log.trace('proxy_conf = {0}'.format(proxy_conf))
     try:
-        username, password = find_credentials(host)
-    except SaltSystemExit as err:
-        log.critical('Error: {0}'.format(err))
-        return False
+        jsonschema.validate(proxy_conf, schema)
+    except jsonschema.exceptions.ValidationError as exc:
+        raise InvalidConfigError(exc)
 
-    # Set configuration details
-    DETAILS['host'] = host
-    DETAILS['username'] = username
-    DETAILS['password'] = password
-    DETAILS['protocol'] = opts['proxy'].get('protocol', 'https')
-    DETAILS['port'] = opts['proxy'].get('port', '443')
+    DETAILS['proxytype'] = proxy_conf['proxytype']
+    if ('host' not in proxy_conf) and ('vcenter' not in proxy_conf):
+        log.critical('Neither \'host\' nor \'vcenter\' keys found in pillar '
+                     'for this proxy.')
+        return False
+    if 'host' in proxy_conf:
+        # We have started the proxy by connecting directly to the host
+        if 'username' not in proxy_conf:
+            log.critical('No \'username\' key found in pillar for this proxy.')
+            return False
+        if 'passwords' not in proxy_conf:
+            log.critical('No \'passwords\' key found in pillar for this proxy.')
+            return False
+        host = proxy_conf['host']
+
+        # Get the correct login details
+        try:
+            username, password = find_credentials(host)
+        except SaltSystemExit as err:
+            log.critical('Error: {0}'.format(err))
+            return False
+
+        # Set configuration details
+        DETAILS['host'] = host
+        DETAILS['username'] = username
+        DETAILS['password'] = password
+        DETAILS['protocol'] = proxy_conf.get('protocol')
+        DETAILS['port'] = proxy_conf.get('port')
+        return True
+
+    if 'vcenter' in proxy_conf:
+        vcenter = proxy_conf['vcenter']
+        if not proxy_conf.get('esxi_host'):
+            log.critical('No \'esxi_host\' key found in pillar for this proxy.')
+        DETAILS['esxi_host'] = proxy_conf['esxi_host']
+        # We have started the proxy by connecting via the vCenter
+        if 'mechanism' not in proxy_conf:
+            log.critical('No \'mechanism\' key found in pillar for this proxy.')
+            return False
+        mechanism = proxy_conf['mechanism']
+        # Save mandatory fields in cache
+        for key in ('vcenter', 'mechanism'):
+            DETAILS[key] = proxy_conf[key]
+
+        if mechanism == 'userpass':
+            if 'username' not in proxy_conf:
+                log.critical('No \'username\' key found in pillar for this '
+                             'proxy.')
+                return False
+            if 'passwords' not in proxy_conf and \
+                len(proxy_conf['passwords']) > 0:
+
+                log.critical('Mechanism is set to \'userpass\' , but no '
+                             '\'passwords\' key found in pillar for this '
+                             'proxy.')
+                return False
+            for key in ('username', 'passwords'):
+                DETAILS[key] = proxy_conf[key]
+        elif mechanism == 'sspi':
+            if 'domain' not in proxy_conf:
+                log.critical('Mechanism is set to \'sspi\' , but no '
+                             '\'domain\' key found in pillar for this proxy.')
+                return False
+            if 'principal' not in proxy_conf:
+                log.critical('Mechanism is set to \'sspi\' , but no '
+                             '\'principal\' key found in pillar for this '
+                             'proxy.')
+                return False
+            for key in ('domain', 'principal'):
+                DETAILS[key] = proxy_conf[key]
+
+        if mechanism == 'userpass':
+            # Get the correct login details
+            log.debug('Retrieving credentials and testing vCenter connection'
+                      ' for mehchanism \'userpass\'')
+            try:
+                username, password = find_credentials(DETAILS['vcenter'])
+                DETAILS['password'] = password
+            except SaltSystemExit as err:
+                log.critical('Error: {0}'.format(err))
+                return False
+
+    # Save optional
+    DETAILS['protocol'] = proxy_conf.get('protocol', 'https')
+    DETAILS['port'] = proxy_conf.get('port', '443')
+    DETAILS['credstore'] = proxy_conf.get('credstore')
 
 
 def grains():
@@ -344,8 +438,9 @@ def grains_refresh():
 
 def ping():
     '''
-    Check to see if the host is responding. Returns False if the host didn't
-    respond, True otherwise.
+    Returns True if connection is to be done via a vCenter (no connection is attempted).
+    Check to see if the host is responding when connecting directly via an ESXi
+    host.
 
     CLI Example:
 
@@ -353,15 +448,19 @@ def ping():
 
         salt esxi-host test.ping
     '''
-    # find_credentials(DETAILS['host'])
-    try:
-        __salt__['vsphere.system_info'](host=DETAILS['host'],
-                                        username=DETAILS['username'],
-                                        password=DETAILS['password'])
-    except SaltSystemExit as err:
-        log.warning(err)
-        return False
-
+    if DETAILS.get('esxi_host'):
+        return True
+    else:
+        # TODO Check connection if mechanism is SSPI
+        if DETAILS['mechanism'] == 'userpass':
+            find_credentials(DETAILS['host'])
+            try:
+                __salt__['vsphere.system_info'](host=DETAILS['host'],
+                                                username=DETAILS['username'],
+                                                password=DETAILS['password'])
+            except SaltSystemExit as err:
+                log.warning(err)
+                return False
     return True
 
 
@@ -376,9 +475,9 @@ def shutdown():
 def ch_config(cmd, *args, **kwargs):
     '''
     This function is called by the
-    :doc:`salt.modules.esxi.cmd </ref/modules/all/salt.modules.esxi>` shim.
+    :mod:`salt.modules.esxi.cmd <salt.modules.esxi.cmd>` shim.
     It then calls whatever is passed in ``cmd`` inside the
-    :doc:`salt.modules.vsphere </ref/modules/all/salt.modules.vsphere>` module.
+    :mod:`salt.modules.vsphere <salt.modules.vsphere>` module.
     Passes the return through from the vsphere module.
 
     cmd
@@ -392,7 +491,7 @@ def ch_config(cmd, *args, **kwargs):
 
     '''
     # Strip the __pub_ keys...is there a better way to do this?
-    for k in kwargs.keys():
+    for k in kwargs:
         if k.startswith('__pub_'):
             kwargs.pop(k)
 
@@ -401,6 +500,7 @@ def ch_config(cmd, *args, **kwargs):
     kwargs['password'] = DETAILS['password']
     kwargs['port'] = DETAILS['port']
     kwargs['protocol'] = DETAILS['protocol']
+    kwargs['credstore'] = DETAILS['credstore']
 
     if 'vsphere.' + cmd not in __salt__:
         return {'retcode': -1, 'message': 'vsphere.' + cmd + ' is not available.'}
@@ -446,3 +546,14 @@ def _grains(host, protocol=None, port=None):
                                           port=port)
     GRAINS_CACHE.update(ret)
     return GRAINS_CACHE
+
+
+def is_connected_via_vcenter():
+    return True if 'vcenter' in DETAILS else False
+
+
+def get_details():
+    '''
+    Return the proxy details
+    '''
+    return DETAILS

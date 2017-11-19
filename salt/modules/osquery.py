@@ -10,7 +10,8 @@ from __future__ import absolute_import
 import json
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
+import salt.utils.platform
 
 import logging
 log = logging.getLogger(__name__)
@@ -26,17 +27,17 @@ __virtualname__ = 'osquery'
 
 
 def __virtual__():
-    if salt.utils.which('osqueryi'):
+    if salt.utils.path.which('osqueryi'):
         return __virtualname__
     return (False, 'The osquery execution module cannot be loaded: '
-            'osqueryi binary is not in the path.')
+                   'osqueryi binary is not in the path.')
 
 
 def _table_attrs(table):
     '''
     Helper function to find valid table attributes
     '''
-    cmd = 'osqueryi --json "pragma table_info({0})"'.format(table)
+    cmd = ['osqueryi'] + ['--json'] + ['pragma table_info{0}'.format(table)]
     res = __salt__['cmd.run_all'](cmd)
     if res['retcode'] == 0:
         attrs = []
@@ -55,13 +56,13 @@ def _osquery(sql, format='json'):
         'result': True,
     }
 
-    cmd = 'osqueryi --json "{0}"'.format(sql)
+    cmd = ['osqueryi'] + ['--json'] + [sql]
     res = __salt__['cmd.run_all'](cmd)
-    if res['retcode'] == 0:
-        ret['data'] = json.loads(res['stdout'])
-    else:
+    if res['stderr']:
         ret['result'] = False
         ret['error'] = res['stderr']
+    else:
+        ret['data'] = json.loads(res['stdout'])
     return ret
 
 
@@ -657,9 +658,9 @@ def alf(attrs=None, where=None):
 
         salt '*' osquery.alf
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='alf', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def alf_exceptions(attrs=None, where=None):
@@ -672,9 +673,9 @@ def alf_exceptions(attrs=None, where=None):
 
         salt '*' osquery.alf_exceptions
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='alf_exceptions', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def alf_explicit_auths(attrs=None, where=None):
@@ -687,9 +688,9 @@ def alf_explicit_auths(attrs=None, where=None):
 
         salt '*' osquery.alf_explicit_auths
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='alf_explicit_auths', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def alf_services(attrs=None, where=None):
@@ -702,9 +703,9 @@ def alf_services(attrs=None, where=None):
 
         salt '*' osquery.alf_services
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='alf_services', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def apps(attrs=None, where=None):
@@ -717,9 +718,9 @@ def apps(attrs=None, where=None):
 
         salt '*' osquery.apps
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='apps', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def certificates(attrs=None, where=None):
@@ -732,9 +733,9 @@ def certificates(attrs=None, where=None):
 
         salt '*' osquery.certificates
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='certificates', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def chrome_extensions(attrs=None, where=None):
@@ -747,9 +748,9 @@ def chrome_extensions(attrs=None, where=None):
 
         salt '*' osquery.chrome_extensions
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='chrome_extensions', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def firefox_addons(attrs=None, where=None):
@@ -762,9 +763,9 @@ def firefox_addons(attrs=None, where=None):
 
         salt '*' osquery.firefox_addons
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='firefox_addons', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def homebrew_packages(attrs=None, where=None):
@@ -777,9 +778,9 @@ def homebrew_packages(attrs=None, where=None):
 
         salt '*' osquery.homebrew_packages
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='homebrew_packages', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def iokit_devicetree(attrs=None, where=None):
@@ -792,9 +793,9 @@ def iokit_devicetree(attrs=None, where=None):
 
         salt '*' osquery.iokit_devicetree
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='iokit_devicetree', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def iokit_registry(attrs=None, where=None):
@@ -807,9 +808,9 @@ def iokit_registry(attrs=None, where=None):
 
         salt '*' osquery.iokit_registry
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='iokit_registry', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def kernel_extensions(attrs=None, where=None):
@@ -822,9 +823,9 @@ def kernel_extensions(attrs=None, where=None):
 
         salt '*' osquery.kernel_extensions
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='kernel_extensions', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def keychain_items(attrs=None, where=None):
@@ -837,9 +838,9 @@ def keychain_items(attrs=None, where=None):
 
         salt '*' osquery.keychain_items
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='keychain_items', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def launchd(attrs=None, where=None):
@@ -852,9 +853,9 @@ def launchd(attrs=None, where=None):
 
         salt '*' osquery.launchd
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='launchd', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def nfs_shares(attrs=None, where=None):
@@ -867,9 +868,9 @@ def nfs_shares(attrs=None, where=None):
 
         salt '*' osquery.nfs_shares
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='nfs_shares', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def nvram(attrs=None, where=None):
@@ -882,9 +883,9 @@ def nvram(attrs=None, where=None):
 
         salt '*' osquery.nvram
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='nvram', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def preferences(attrs=None, where=None):
@@ -897,9 +898,9 @@ def preferences(attrs=None, where=None):
 
         salt '*' osquery.preferences
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='preferences', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def quarantine(attrs=None, where=None):
@@ -912,9 +913,9 @@ def quarantine(attrs=None, where=None):
 
         salt '*' osquery.quarantine
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='quarantine', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def safari_extensions(attrs=None, where=None):
@@ -927,9 +928,9 @@ def safari_extensions(attrs=None, where=None):
 
         salt '*' osquery.safari_extensions
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='safari_extensions', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def startup_items(attrs=None, where=None):
@@ -942,9 +943,9 @@ def startup_items(attrs=None, where=None):
 
         salt '*' osquery.startup_items
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='startup_items', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def xattr_where_from(attrs=None, where=None):
@@ -957,9 +958,9 @@ def xattr_where_from(attrs=None, where=None):
 
         salt '*' osquery.xattr_where_from
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='xattr_where_from', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def xprotect_entries(attrs=None, where=None):
@@ -972,9 +973,9 @@ def xprotect_entries(attrs=None, where=None):
 
         salt '*' osquery.xprotect_entries
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='xprotect_entries', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def xprotect_reports(attrs=None, where=None):
@@ -987,9 +988,9 @@ def xprotect_reports(attrs=None, where=None):
 
         salt '*' osquery.xprotect_reports
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.platform.is_darwin():
         return _osquery_cmd(table='xprotect_reports', attrs=attrs, where=where)
-    return {'result': False, 'comment': 'Only available on OS X systems.'}
+    return {'result': False, 'comment': 'Only available on macOS systems.'}
 
 
 def file_(attrs=None, where=None):

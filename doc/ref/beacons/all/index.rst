@@ -11,13 +11,18 @@ beacon modules
     :template: autosummary.rst.tmpl
 
     adb
+    avahi_announce
+    bonjour_announce
     btmp
     diskusage
     glxinfo
+    haproxy
     inotify
     journald
     load
+    log
     memusage
+    napalm_beacon
     network_info
     network_settings
     pkg
@@ -27,5 +32,7 @@ beacon modules
     sensehat
     service
     sh
+    status
+    telegram_bot_msg
     twilio_txt_msg
     wtmp

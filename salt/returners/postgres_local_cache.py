@@ -4,14 +4,18 @@ Use a postgresql server for the master job cache. This helps the job cache to
 cope with scale.
 
 .. note::
-    :mod:`returners.postgres <salt.returners.postgres>` is also available if
-    you are not using PostgreSQL as a :ref:`master job cache
-    <external-master-cache>`.  These two modules provide different
-    functionality so you should compare each to see which module best suits
-    your particular needs.
+    There are three PostgreSQL returners.  Any can function as an external
+    :ref:`master job cache <external-job-cache>`. but each has different
+    features.  SaltStack recommends
+    :mod:`returners.pgjsonb <salt.returners.pgjsonb>` if you are working with
+    a version of PostgreSQL that has the appropriate native binary JSON types.
+    Otherwise, review
+    :mod:`returners.postgres <salt.returners.postgres>` and
+    :mod:`returners.postgres_local_cache <salt.returners.postgres_local_cache>`
+    to see which module best suits your particular needs.
 
 :maintainer:    gjredelinghuys@gmail.com
-:maturity:      New
+:maturity:      Stable
 :depends:       psycopg2
 :platform:      all
 
@@ -111,9 +115,8 @@ import re
 import sys
 
 # Import salt libs
-import salt.utils
 import salt.utils.jid
-import salt.ext.six as six
+from salt.ext import six
 
 # Import third party libs
 try:
@@ -123,16 +126,6 @@ except ImportError:
     HAS_POSTGRES = False
 
 log = logging.getLogger(__name__)
-
-# load is the published job
-LOAD_P = '.load.p'
-# the list of minions that the job is targeted to (best effort match on the
-# master side)
-MINIONS_P = '.minions.p'
-# return is the "return" from the minion data
-RETURN_P = 'return.p'
-# out is the "out" from the minion data
-OUT_P = 'out.p'
 
 __virtualname__ = 'postgres_local_cache'
 
@@ -176,7 +169,7 @@ def _format_job_instance(job):
            'Arguments': json.loads(job.get('arg', '[]')),
            # unlikely but safeguard from invalid returns
            'Target': job.get('tgt', 'unknown-target'),
-           'Target-type': job.get('tgt_type', []),
+           'Target-type': job.get('tgt_type', 'list'),
            'User': job.get('user', 'root')}
     # TODO: Add Metadata support when it is merged from develop
     return ret
@@ -195,7 +188,7 @@ def _gen_jid(cur):
     '''
     Generate an unique job id
     '''
-    jid = salt.utils.jid.gen_jid()
+    jid = salt.utils.jid.gen_jid(__opts__)
     sql = '''SELECT jid FROM jids WHERE jid = %s'''
     cur.execute(sql, (jid,))
     data = cur.fetchall()
@@ -239,11 +232,16 @@ def returner(load):
     sql = '''INSERT INTO salt_returns
             (fun, jid, return, id, success)
             VALUES (%s, %s, %s, %s, %s)'''
+    job_ret = {'return': six.text_type(str(load['return']), 'utf-8', 'replace')}
+    if 'retcode' in load:
+        job_ret['retcode'] = load['retcode']
+    if 'success' in load:
+        job_ret['success'] = load['success']
     cur.execute(
         sql, (
             load['fun'],
             load['jid'],
-            json.dumps(six.text_type(str(load['return']), 'utf-8', 'replace')),
+            json.dumps(job_ret),
             load['id'],
             load.get('success'),
         )
@@ -304,7 +302,7 @@ def save_load(jid, clear_load, minions=None):
     _close_conn(conn)
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
     Included for API consistency
     '''
@@ -373,8 +371,12 @@ def get_jid(jid):
     ret = {}
     if data:
         for minion, full_ret in data:
-            ret[minion] = {}
-            ret[minion]['return'] = json.loads(full_ret)
+            ret_data = json.loads(full_ret)
+            if not isinstance(ret_data, dict) or 'return' not in ret_data:
+                # Convert the old format in which the return contains the only return data to the
+                # new that is dict containing 'return' and optionally 'retcode' and 'success'.
+                ret_data = {'return': ret_data}
+            ret[minion] = ret_data
     _close_conn(conn)
     return ret
 

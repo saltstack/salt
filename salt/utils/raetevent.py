@@ -4,6 +4,7 @@ Manage events
 
 This module is used to manage events via RAET
 '''
+# pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
 from __future__ import absolute_import
@@ -17,17 +18,26 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils.event
-from salt.utils import kinds
+import salt.utils.kinds as kinds
 from salt import transport
 from salt import syspaths
-from raet import raeting, nacling
-from raet.lane.stacking import LaneStack
-from raet.lane.yarding import RemoteYard
+
+try:
+    from raet import raeting, nacling
+    from raet.lane.stacking import LaneStack
+    from raet.lane.yarding import RemoteYard
+    HAS_RAET = True
+except ImportError:
+    HAS_RAET = False
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    return HAS_RAET
 
 
 class RAETEvent(object):
@@ -150,7 +160,8 @@ class RAETEvent(object):
         '''
         return raw
 
-    def get_event(self, wait=5, tag='', match_type=None, full=False, no_block=None):
+    def get_event(self, wait=5, tag='', match_type=None, full=False, no_block=None,
+                  auto_reconnect=False):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
@@ -193,12 +204,12 @@ class RAETEvent(object):
                 return None
             return msg
 
-    def iter_events(self, tag='', full=False):
+    def iter_events(self, tag='', full=False, auto_reconnect=False):
         '''
         Creates a generator that continuously listens for events
         '''
         while True:
-            data = self.get_event(tag=tag, full=full)
+            data = self.get_event(tag=tag, full=full, auto_reconnect=auto_reconnect)
             if data is None:
                 continue
             yield data

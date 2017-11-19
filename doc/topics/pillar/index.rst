@@ -12,24 +12,25 @@ Pillar was added to Salt in version 0.9.8
 
 .. note:: Storing sensitive data
 
-    Unlike state tree, pillar data is only available for the targeted
-    minion specified by the matcher type.  This makes it useful for
-    storing sensitive data specific to a particular minion.
+    Pillar data is compiled on the master. Additionally, pillar data for a
+    given minion is only accessible by the minion for which it is targeted in
+    the pillar configuration. This makes pillar useful for storing sensitive
+    data specific to a particular minion.
 
 
 Declaring the Master Pillar
 ===========================
 
-The Salt Master server maintains a pillar_roots setup that matches the
-structure of the file_roots used in the Salt file server. Like the
-Salt file server the ``pillar_roots`` option in the master config is based
-on environments mapping to directories. The pillar data is then mapped to
-minions based on matchers in a top file which is laid out in the same way
-as the state top file. Salt pillars can use the same matcher types as the
-standard top file.
+The Salt Master server maintains a :conf_master:`pillar_roots` setup that
+matches the structure of the :conf_master:`file_roots` used in the Salt file
+server. Like :conf_master:`file_roots`, the :conf_master:`pillar_roots` option
+maps environments to directories. The pillar data is then mapped to minions
+based on matchers in a top file which is laid out in the same way as the state
+top file. Salt pillars can use the same matcher types as the standard :ref:`top
+file <states-top>`.
 
-The configuration for the :conf_master:`pillar_roots` in the master config file
-is identical in behavior and function as :conf_master:`file_roots`:
+conf_master:`pillar_roots` is configured just like :conf_master:`file_roots`.
+For example:
 
 .. code-block:: yaml
 
@@ -89,7 +90,7 @@ by their ``os`` grain:
 
 ``/srv/pillar/packages.sls``
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if grains['os'] == 'RedHat' %}
     apache: httpd
@@ -115,13 +116,13 @@ of ``Foo Industries``.
 Consequently this data can be used from within modules, renderers, State SLS
 files, and more via the shared pillar :ref:`dict <python2:typesmapping>`:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     apache:
       pkg.installed:
         - name: {{ pillar['apache'] }}
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     git:
       pkg.installed:
@@ -149,10 +150,33 @@ And the actual pillar file at '/srv/pillar/common_pillar.sls':
     foo: bar
     boo: baz
 
-Pillar namespace flattened
-==========================
+.. note::
+    When working with multiple pillar environments, assuming that each pillar
+    environment has its own top file, the jinja placeholder ``{{ saltenv }}``
+    can be used in place of the environment name:
 
-The separate pillar files all share the same namespace. Given a ``top.sls`` of:
+    .. code-block:: jinja
+
+        {{ saltenv }}:
+          '*':
+             - common_pillar
+
+    Yes, this is ``{{ saltenv }}``, and not ``{{ pillarenv }}``. The reason for
+    this is because the Pillar top files are parsed using some of the same code
+    which parses top files when :ref:`running states <running-highstate>`, so
+    the pillar environment takes the place of ``{{ saltenv }}`` in the jinja
+    context.
+
+
+Pillar Namespace Flattening
+===========================
+
+The separate pillar SLS files all merge down into a single dictionary of
+key-value pairs. When the same key is defined in multiple SLS files, this can
+result in unexpected behavior if care is not taken to how the pillar SLS files
+are laid out.
+
+For example, given a ``top.sls`` containing the following:
 
 .. code-block:: yaml
 
@@ -161,44 +185,49 @@ The separate pillar files all share the same namespace. Given a ``top.sls`` of:
         - packages
         - services
 
-a ``packages.sls`` file of:
+with ``packages.sls`` containing:
 
 .. code-block:: yaml
 
     bind: bind9
 
-and a ``services.sls`` file of:
+and ``services.sls`` containing:
 
 .. code-block:: yaml
 
     bind: named
 
-Then a request for the ``bind`` pillar will only return ``named``; the
-``bind9`` value is not available. It is better to structure your pillar files
-with more hierarchy. For example your ``package.sls`` file could look like:
+Then a request for the ``bind`` pillar key will only return ``named``. The
+``bind9`` value will be lost, because ``services.sls`` was evaluated later.
+
+.. note::
+    Pillar files are applied in the order they are listed in the top file.
+    Therefore conflicting keys will be overwritten in a 'last one wins' manner!
+    For example, in the above scenario conflicting key values in ``services``
+    will overwrite those in ``packages`` because it's at the bottom of the list.
+
+It can be better to structure your pillar files with more hierarchy. For
+example the ``package.sls`` file could be configured like so:
 
 .. code-block:: yaml
 
     packages:
       bind: bind9
 
-Pillar Namespace Merges
-=======================
+This would make the ``packages`` pillar key a nested dictionary containing a
+``bind`` key.
 
-With some care, the pillar namespace can merge content from multiple pillar
-files under a single key, so long as conflicts are avoided as described above.
+Pillar Dictionary Merging
+=========================
 
-For example, if the above example were modified as follows, the values are
-merged below a single key:
+If the same pillar key is defined in multiple pillar SLS files, and the keys in
+both files refer to nested dictionaries, then the content from these
+dictionaries will be recursively merged.
 
-.. code-block:: yaml
+For example, keeping the ``top.sls`` the same, assume the following
+modifications to the pillar SLS files:
 
-    base:
-      '*':
-        - packages
-        - services
-
-And a ``packages.sls`` file like:
+``packages.sls``:
 
 .. code-block:: yaml
 
@@ -206,7 +235,7 @@ And a ``packages.sls`` file like:
       package-name: bind9
       version: 9.9.5
 
-And a ``services.sls`` file like:
+``services.sls``:
 
 .. code-block:: yaml
 
@@ -214,7 +243,7 @@ And a ``services.sls`` file like:
       port: 53
       listen-on: any
 
-The resulting pillar will be as follows:
+The resulting pillar dictionary will be:
 
 .. code-block:: bash
 
@@ -230,11 +259,9 @@ The resulting pillar will be as follows:
         version:
             9.9.5
 
-.. note::
-    Pillar files are applied in the order they are listed in the top file.
-    Therefore conflicting keys will be overwritten in a 'last one wins' manner!
-    For example, in the above scenario conflicting key values in ``services``
-    will overwrite those in ``packages`` because it's at the bottom of the list.
+Since both pillar SLS files contained a ``bind`` key which contained a nested
+dictionary, the pillar dictionary's ``bind`` key contains the combined contents
+of both SLS files' ``bind`` keys.
 
 Including Other Pillars
 =======================
@@ -266,34 +293,144 @@ With this form, the included file (users.sls) will be nested within the 'users'
 key of the compiled pillar. Additionally, the 'sudo' value will be available
 as a template variable to users.sls.
 
+.. _pillar-in-memory:
 
-Viewing Minion Pillar
-=====================
+In-Memory Pillar Data vs. On-Demand Pillar Data
+===============================================
 
-Once the pillar is set up the data can be viewed on the minion via the
-``pillar`` module, the pillar module comes with functions,
-:mod:`pillar.items <salt.modules.pillar.items>` and :mod:`pillar.raw
-<salt.modules.pillar.raw>`.  :mod:`pillar.items <salt.modules.pillar.items>`
-will return a freshly reloaded pillar and :mod:`pillar.raw
-<salt.modules.pillar.raw>` will return the current pillar without a refresh:
+Since compiling pillar data is computationally expensive, the minion will
+maintain a copy of the pillar data in memory to avoid needing to ask the master
+to recompile and send it a copy of the pillar data each time pillar data is
+requested. This in-memory pillar data is what is returned by the
+:py:func:`pillar.item <salt.modules.pillar.item>`, :py:func:`pillar.get
+<salt.modules.pillar.get>`, and :py:func:`pillar.raw <salt.modules.pillar.raw>`
+functions.
+
+Also, for those writing custom execution modules, or contributing to Salt's
+existing execution modules, the in-memory pillar data is available as the
+``__pillar__`` dunder dictionary.
+
+The in-memory pillar data is generated on minion start, and can be refreshed
+using the :py:func:`saltutil.refresh_pillar
+<salt.modules.saltutil.refresh_pillar>` function:
 
 .. code-block:: bash
 
-    salt '*' pillar.items
+    salt '*' saltutil.refresh_pillar
+
+This function triggers the minion to asynchronously refresh the in-memory
+pillar data and will always return ``None``.
+
+In contrast to in-memory pillar data, certain actions trigger pillar data to be
+compiled to ensure that the most up-to-date pillar data is available. These
+actions include:
+
+- Running states
+- Running :py:func:`pillar.items <salt.modules.pillar.items>`
+
+Performing these actions will *not* refresh the in-memory pillar data. So, if
+pillar data is modified, and then states are run, the states will see the
+updated pillar data, but :py:func:`pillar.item <salt.modules.pillar.item>`,
+:py:func:`pillar.get <salt.modules.pillar.get>`, and :py:func:`pillar.raw
+<salt.modules.pillar.raw>` will not see this data unless refreshed using
+:py:func:`saltutil.refresh_pillar <salt.modules.saltutil.refresh_pillar>`.
+
+.. _pillar-environments:
+
+How Pillar Environments Are Handled
+===================================
+
+When multiple pillar environments are used, the default behavior is for the
+pillar data from all environments to be merged together. The pillar dictionary
+will therefore contain keys from all configured environments.
+
+The :conf_minion:`pillarenv` minion config option can be used to force the
+minion to only consider pillar configuration from a single environment. This
+can be useful in cases where one needs to run states with alternate pillar
+data, either in a testing/QA environment or to test changes to the pillar data
+before pushing them live.
+
+For example, assume that the following is set in the minion config file:
+
+.. code-block:: yaml
+
+    pillarenv: base
+
+This would cause that minion to ignore all other pillar environments besides
+``base`` when compiling the in-memory pillar data. Then, when running states,
+the ``pillarenv`` CLI argument can be used to override the minion's
+:conf_minion:`pillarenv` config value:
+
+.. code-block:: bash
+
+    salt '*' state.apply mystates pillarenv=testing
+
+The above command will run the states with pillar data sourced exclusively from
+the ``testing`` environment, without modifying the in-memory pillar data.
 
 .. note::
-    Prior to version 0.16.2, this function is named ``pillar.data``. This
-    function name is still supported for backwards compatibility.
+    When running states, the ``pillarenv`` CLI option does not require a
+    :conf_minion:`pillarenv` option to be set in the minion config file. When
+    :conf_minion:`pillarenv` is left unset, as mentioned above all configured
+    environments will be combined. Running states with ``pillarenv=testing`` in
+    this case would still restrict the states' pillar data to just that of the
+    ``testing`` pillar environment.
+
+Starting in the 2017.7.0 release, it is possible to pin the pillarenv to the
+effective saltenv, using the :conf_minion:`pillarenv_from_saltenv` minion
+config option. When this is set to ``True``, if a specific saltenv is specified
+when running states, the ``pillarenv`` will be the same. This essentially makes
+the following two commands equivalent:
+
+.. code-block:: bash
+
+    salt '*' state.apply mystates saltenv=dev
+    salt '*' state.apply mystates saltenv=dev pillarenv=dev
+
+However, if a pillarenv is specified, it will override this behavior. So, the
+following command will use the ``qa`` pillar environment but source the SLS
+files from the ``dev`` saltenv:
+
+.. code-block:: bash
+
+    salt '*' state.apply mystates saltenv=dev pillarenv=qa
+
+So, if a ``pillarenv`` is set in the minion config file,
+:conf_minion:`pillarenv_from_saltenv` will be ignored, and passing a
+``pillarenv`` on the CLI will temporarily override
+:conf_minion:`pillarenv_from_saltenv`.
 
 
-Pillar "get" Function
-=====================
+Viewing Pillar Data
+===================
+
+To view pillar data, use the :mod:`pillar <salt.modules.pillar>` execution
+module. This module includes several functions, each of them with their own
+use. These functions include:
+
+- :py:func:`pillar.item <salt.modules.pillar.item>` - Retrieves the value of
+  one or more keys from the :ref:`in-memory pillar datj <pillar-in-memory>`.
+- :py:func:`pillar.items <salt.modules.pillar.items>` - Compiles a fresh pillar
+  dictionary and returns it, leaving the :ref:`in-memory pillar data
+  <pillar-in-memory>` untouched. If pillar keys are passed to this function
+  however, this function acts like :py:func:`pillar.item
+  <salt.modules.pillar.item>` and returns their values from the :ref:`in-memory
+  pillar data <pillar-in-memory>`.
+- :py:func:`pillar.raw <salt.modules.pillar.raw>` - Like :py:func:`pillar.items
+  <salt.modules.pillar.items>`, it returns the entire pillar dictionary, but
+  from the :ref:`in-memory pillar data <pillar-in-memory>` instead of compiling
+  fresh pillar data.
+- :py:func:`pillar.get <salt.modules.pillar.get>` - Described in detail below.
+
+
+The :py:func:`pillar.get <salt.modules.pillar.get>` Function
+============================================================
 
 .. versionadded:: 0.14.0
 
 The :mod:`pillar.get <salt.modules.pillar.get>` function works much in the same
 way as the ``get`` method in a python dict, but with an enhancement: nested
-dict components can be extracted using a `:` delimiter.
+dictonaries can be traversed using a colon as a delimiter.
 
 If a structure like this is in pillar:
 
@@ -330,23 +467,8 @@ This makes handling nested structures much easier.
     'qux')``) to get the salt function, instead of the default dictionary
     behavior.
 
-
-Refreshing Pillar Data
-======================
-
-When pillar data is changed on the master the minions need to refresh the data
-locally. This is done with the ``saltutil.refresh_pillar`` function.
-
-.. code-block:: bash
-
-    salt '*' saltutil.refresh_pillar
-
-This function triggers the minion to asynchronously refresh the pillar and will
-always return ``None``.
-
-
-Set Pillar Data at the Command Line
-===================================
+Setting Pillar Data at the Command Line
+=======================================
 
 Pillar data can be set at the command line like the following example:
 
@@ -354,7 +476,7 @@ Pillar data can be set at the command line like the following example:
 
     salt '*' state.apply pillar='{"cheese": "spam"}'
 
-This will add a Pillar key of ``cheese`` with its value set to ``spam``.
+This will add a pillar key of ``cheese`` with its value set to ``spam``.
 
 .. note::
 
@@ -363,8 +485,219 @@ This will add a Pillar key of ``cheese`` with its value set to ``spam``.
     and will not be restricted to the targeted minions. This may represent
     a security concern in some cases.
 
+.. _pillar-encryption:
 
-Master Config In Pillar
+Pillar Encryption
+=================
+
+Salt's renderer system can be used to decrypt pillar data. This allows for
+pillar items to be stored in an encrypted state, and decrypted during pillar
+compilation.
+
+Encrypted Pillar SLS
+--------------------
+
+.. versionadded:: 2017.7.0
+
+Consider the following pillar SLS file:
+
+.. code-block:: yaml
+
+    secrets:
+      vault:
+        foo: |
+          -----BEGIN PGP MESSAGE-----
+
+          hQEMAw2B674HRhwSAQgAhTrN8NizwUv/VunVrqa4/X8t6EUulrnhKcSeb8sZS4th
+          W1Qz3K2NjL4lkUHCQHKZVx/VoZY7zsddBIFvvoGGfj8+2wjkEDwFmFjGE4DEsS74
+          ZLRFIFJC1iB/O0AiQ+oU745skQkU6OEKxqavmKMrKo3rvJ8ZCXDC470+i2/Hqrp7
+          +KWGmaDOO422JaSKRm5D9bQZr9oX7KqnrPG9I1+UbJyQSJdsdtquPWmeIpamEVHb
+          VMDNQRjSezZ1yKC4kCWm3YQbBF76qTHzG1VlLF5qOzuGI9VkyvlMaLfMibriqY73
+          zBbPzf6Bkp2+Y9qyzuveYMmwS4sEOuZL/PetqisWe9JGAWD/O+slQ2KRu9hNww06
+          KMDPJRdyj5bRuBVE4hHkkP23KrYr7SuhW2vpe7O/MvWEJ9uDNegpMLhTWruGngJh
+          iFndxegN9w==
+          =bAuo
+          -----END PGP MESSAGE-----
+        bar: this was unencrypted already
+        baz: |
+          -----BEGIN PGP MESSAGE-----
+
+          hQEMAw2B674HRhwSAQf+Ne+IfsP2IcPDrUWct8sTJrga47jQvlPCmO+7zJjOVcqz
+          gLjUKvMajrbI/jorBWxyAbF+5E7WdG9WHHVnuoywsyTB9rbmzuPqYCJCe+ZVyqWf
+          9qgJ+oUjcvYIFmH3h7H68ldqbxaAUkAOQbTRHdr253wwaTIC91ZeX0SCj64HfTg7
+          Izwk383CRWonEktXJpientApQFSUWNeLUWagEr/YPNFA3vzpPF5/Ia9X8/z/6oO2
+          q+D5W5mVsns3i2HHbg2A8Y+pm4TWnH6mTSh/gdxPqssi9qIrzGQ6H1tEoFFOEq1V
+          kJBe0izlfudqMq62XswzuRB4CYT5Iqw1c97T+1RqENJCASG0Wz8AGhinTdlU5iQl
+          JkLKqBxcBz4L70LYWyHhYwYROJWjHgKAywX5T67ftq0wi8APuZl9olnOkwSK+wrY
+          1OZi
+          =7epf
+          -----END PGP MESSAGE-----
+        qux:
+          - foo
+          - bar
+          - |
+            -----BEGIN PGP MESSAGE-----
+
+            hQEMAw2B674HRhwSAQgAg1YCmokrweoOI1c9HO0BLamWBaFPTMblOaTo0WJLZoTS
+            ksbQ3OJAMkrkn3BnnM/djJc5C7vNs86ZfSJ+pvE8Sp1Rhtuxh25EKMqGOn/SBedI
+            gR6N5vGUNiIpG5Tf3DuYAMNFDUqw8uY0MyDJI+ZW3o3xrMUABzTH0ew+Piz85FDA
+            YrVgwZfqyL+9OQuu6T66jOIdwQNRX2NPFZqvon8liZUPus5VzD8E5cAL9OPxQ3sF
+            f7/zE91YIXUTimrv3L7eCgU1dSxKhhfvA2bEUi+AskMWFXFuETYVrIhFJAKnkFmE
+            uZx+O9R9hADW3hM5hWHKH9/CRtb0/cC84I9oCWIQPdI+AaPtICxtsD2N8Q98hhhd
+            4M7I0sLZhV+4ZJqzpUsOnSpaGyfh1Zy/1d3ijJi99/l+uVHuvmMllsNmgR+ZTj0=
+            =LrCQ
+            -----END PGP MESSAGE-----
+
+When the pillar data is compiled, the results will be decrypted:
+
+.. code-block:: bash
+
+    # salt myminion pillar.items
+    myminion:
+        ----------
+        secrets:
+            ----------
+            vault:
+                ----------
+                bar:
+                    this was unencrypted already
+                baz:
+                    rosebud
+                foo:
+                    supersecret
+                qux:
+                    - foo
+                    - bar
+                    - baz
+
+Salt must be told what portions of the pillar data to decrypt. This is done
+using the :conf_master:`decrypt_pillar` config option:
+
+.. code-block:: yaml
+
+    decrypt_pillar:
+      - 'secrets:vault': gpg
+
+The notation used to specify the pillar item(s) to be decrypted is the same as
+the one used in :py:func:`pillar.get <salt.modules.pillar.get>` function.
+
+If a different delimiter is needed, it can be specified using the
+:conf_master:`decrypt_pillar_delimiter` config option:
+
+.. code-block:: yaml
+
+    decrypt_pillar:
+      - 'secrets|vault': gpg
+
+    decrypt_pillar_delimiter: '|'
+
+The name of the renderer used to decrypt a given pillar item can be omitted,
+and if so it will fall back to the value specified by the
+:conf_master:`decrypt_pillar_default` config option, which defaults to ``gpg``.
+So, the first example above could be rewritten as:
+
+.. code-block:: yaml
+
+    decrypt_pillar:
+      - 'secrets:vault'
+
+Encrypted Pillar Data on the CLI
+--------------------------------
+
+.. versionadded:: 2016.3.0
+
+The following functions support passing pillar data on the CLI via the
+``pillar`` argument:
+
+- :py:func:`pillar.items <salt.modules.pillar.items>`
+- :py:func:`state.apply <salt.modules.state.apply_>`
+- :py:func:`state.highstate <salt.modules.state.highstate>`
+- :py:func:`state.sls <salt.modules.state.sls>`
+
+Triggerring decryption of this CLI pillar data can be done in one of two ways:
+
+1. Using the ``pillar_enc`` argument:
+
+   .. code-block:: bash
+
+       # salt myminion pillar.items pillar_enc=gpg pillar='{foo: "-----BEGIN PGP MESSAGE-----\n\nhQEMAw2B674HRhwSAQf+OvPqEdDoA2fk15I5dYUTDoj1yf/pVolAma6iU4v8Zixn\nRDgWsaAnFz99FEiFACsAGDEFdZaVOxG80T0Lj+PnW4pVy0OXmXHnY2KjV9zx8FLS\nQxfvmhRR4t23WSFybozfMm0lsN8r1vfBBjbK+A72l0oxN78d1rybJ6PWNZiXi+aC\nmqIeunIbAKQ21w/OvZHhxH7cnIiGQIHc7N9nQH7ibyoKQzQMSZeilSMGr2abAHun\nmLzscr4wKMb+81Z0/fdBfP6g3bLWMJga3hSzSldU9ovu7KR8rDJI1qOlENj3Wm8C\nwTpDOB33kWIKMqiAjY3JFtb5MCHrafyggwQL7cX1+tI+AbSO6kZpbcDfzetb77LZ\nxc5NWnnGK4pGoqq4MAmZshw98RpecSHKMosto2gtiuWCuo9Zn5cV/FbjZ9CTWrQ=\n=0hO/\n-----END PGP MESSAGE-----"}'
+
+   The newlines in this example are specified using a literal ``\n``. Newlines
+   can be replaced with a literal ``\n`` using ``sed``:
+
+   .. code-block:: bash
+
+       $ echo -n bar | gpg --armor --trust-model always --encrypt -r user@domain.tld | sed ':a;N;$!ba;s/\n/\\n/g'
+
+   .. note::
+       Using ``pillar_enc`` will perform the decryption minion-side, so for
+       this to work it will be necessary to set up the keyring in
+       ``/etc/salt/gpgkeys`` on the minion just as one would typically do on
+       the master. The easiest way to do this is to first export the keys from
+       the master:
+
+       .. code-block:: bash
+
+           # gpg --homedir /etc/salt/gpgkeys --export-secret-key -a user@domain.tld >/tmp/keypair.gpg
+
+       Then, copy the file to the minion, setup the keyring, and import:
+
+       .. code-block:: bash
+
+           # mkdir -p /etc/salt/gpgkeys
+           # chmod 0700 /etc/salt/gpgkeys
+           # gpg --homedir /etc/salt/gpgkeys --list-keys
+           # gpg --homedir /etc/salt/gpgkeys --import --allow-secret-key-import keypair.gpg
+
+       The ``--list-keys`` command is run create a keyring in the newly-created
+       directory.
+
+   Pillar data which is decrypted minion-side will still be securely
+   transferred to the master, since the data sent between minion and master is
+   encrypted with the master's public key.
+
+2. Use the :conf_master:`decrypt_pillar` option. This is less flexible in that
+   the pillar key passed on the CLI must be pre-configured on the master, but
+   it doesn't require a keyring to be setup on the minion. One other caveat to
+   this method is that pillar decryption on the master happens at the end of
+   pillar compilation, so if the encrypted pillar data being passed on the CLI
+   needs to be referenced by pillar or ext_pillar *during pillar compilation*,
+   it *must* be decrypted minion-side.
+
+
+Adding New Renderers for Decryption
+-----------------------------------
+
+Those looking to add new renderers for decryption should look at the :mod:`gpg
+<salt.renderers.gpg>` renderer for an example of how to do so. The function
+that performs the decryption should be recursive and be able to traverse a
+mutable type such as a dictionary, and modify the values in-place.
+
+Once the renderer has been written, :conf_master:`decrypt_pillar_renderers`
+should be modified so that Salt allows it to be used for decryption.
+
+If the renderer is being submitted upstream to the Salt project, the renderer
+should be added in `salt/renderers/`_. Additionally, the following should be
+done:
+
+- Both occurrences of :conf_master:`decrypt_pillar_renderers` in
+  `salt/config/__init__.py`_ should be updated to include the name of the new
+  renderer so that it is included in the default value for this config option.
+- The documentation for the :conf_master:`decrypt_pillar_renderers` config
+  option in the `master config file`_ and `minion config file`_ should be
+  updated to show the correct new default value.
+- The commented example for the :conf_master:`decrypt_pillar_renderers` config
+  option in the `master config template`_ should be updated to show the correct
+  new default value.
+
+.. _`salt/renderers/`: https://github.com/saltstack/salt/tree/develop/salt/renderers/
+.. _`salt/config/__init__.py`: https://github.com/saltstack/salt/tree/develop/salt/config/__init__.py
+.. _`master config file`: https://github.com/saltstack/salt/tree/develop/doc/ref/configuration/master.rst
+.. _`minion config file`: https://github.com/saltstack/salt/tree/develop/doc/ref/configuration/minion.rst
+.. _`master config template`: https://github.com/saltstack/salt/tree/develop/conf/master
+
+
+Master Config in Pillar
 =======================
 
 For convenience the data stored in the master configuration file can be made
@@ -372,13 +705,12 @@ available in all minion's pillars. This makes global configuration of services
 and systems very easy but may not be desired if sensitive data is stored in the
 master configuration. This option is disabled by default.
 
-To enable the master config from being added to the pillar set ``pillar_opts``
-to ``True``:
+To enable the master config from being added to the pillar set
+:conf_minion:`pillar_opts` to ``True`` in the minion config file:
 
 .. code-block:: yaml
 
     pillar_opts: True
-
 
 Minion Config in Pillar
 =======================

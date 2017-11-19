@@ -36,7 +36,7 @@ from __future__ import absolute_import
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 
 
 def __virtual__():
@@ -269,5 +269,42 @@ def bootstrap(name, user=None):
     ret['result'] = True
     ret['changes'] = {name: 'Bootstrapped'}
     ret['comment'] = 'Directory was successfully bootstrapped'
+
+    return ret
+
+
+def pruned(name, user=None, env=None):
+    '''
+    .. versionadded:: 2017.7.0
+
+    Cleans up local bower_components directory.
+
+    Will execute 'bower prune' on the specified directory (param: name)
+
+    user
+        The user to run Bower with
+
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Directory \'{0}\' is set to be pruned'.format(
+            name)
+        return ret
+
+    try:
+        call = __salt__['bower.prune'](dir=name, runas=user, env=env)
+    except (CommandNotFoundError, CommandExecutionError) as err:
+        ret['result'] = False
+        ret['comment'] = 'Error pruning \'{0}\': {1}'.format(name, err)
+        return ret
+
+    ret['result'] = True
+    if call:
+        ret['comment'] = 'Directory \'{0}\' was successfully pruned'.format(name)
+        ret['changes'] = {'old': [], 'new': call}
+    else:
+        ret['comment'] = 'No packages were pruned from directory \'{0}\''.format(name)
 
     return ret

@@ -2,17 +2,20 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
+
+# Import Python libs
 from __future__ import absolute_import
+import logging
 
 # Import salt libs
-import salt.utils
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
-
-import logging
-log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'sysctl'
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -63,7 +66,7 @@ def show(config_file=False):
 
     if config_file:
         try:
-            with salt.utils.fopen(config_file, 'r') as f:
+            with salt.utils.files.fopen(config_file, 'r') as f:
                 for line in f.readlines():
                     l = line.strip()
                     if l != "" and not l.startswith("#"):
@@ -138,7 +141,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
     edited = False
     value = str(value)
 
-    with salt.utils.fopen(config, 'r') as ifile:
+    with salt.utils.files.fopen(config, 'r') as ifile:
         for line in ifile:
             if not line.startswith('{0}='.format(name)):
                 nlines.append(line)
@@ -159,7 +162,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
                 edited = True
     if not edited:
         nlines.append("{0}\n".format(_formatfor(name, value, config)))
-    with salt.utils.fopen(config, 'w+') as ofile:
+    with salt.utils.files.fopen(config, 'w+') as ofile:
         ofile.writelines(nlines)
     if config != '/boot/loader.conf':
         assign(name, value)

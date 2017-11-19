@@ -71,7 +71,9 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres.privileges_grant' in __salt__
+    if 'postgres.privileges_grant' not in __salt__:
+        return (False, 'Unable to load postgres module.  Make sure `postgres.bins_dir` is set.')
+    return True
 
 
 def present(name,
@@ -107,6 +109,8 @@ def present(name,
        - database
        - group
        - function
+
+       View permissions should specify `object_type: table`.
 
     privileges
        List of privileges to grant, from the list below:
@@ -228,6 +232,8 @@ def absent(name,
        - database
        - group
        - function
+
+       View permissions should specify `object_type: table`.
 
     privileges
        Comma separated list of privileges to revoke, from the list below:

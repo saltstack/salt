@@ -8,17 +8,17 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.path
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if salt.utils.which('racadm'):
+    if salt.utils.path.which('racadm'):
         return True
 
     return (False, 'The drac execution module cannot be loaded: racadm binary not in path.')
@@ -257,7 +257,7 @@ def create_user(username, password, permissions, users=None):
 
     .. code-block:: bash
 
-        salt dell drac.create_user [USERNAME] [PASSWORD] [PRIVELEGES]
+        salt dell drac.create_user [USERNAME] [PASSWORD] [PRIVILEGES]
         salt dell drac.create_user diana secret login,test_alerts,clear_logs
 
     DRAC Privileges
@@ -320,7 +320,7 @@ def set_permissions(username, permissions, uid=None):
 
     .. code-block:: bash
 
-        salt dell drac.set_permissions [USERNAME] [PRIVELEGES] [USER INDEX - optional]
+        salt dell drac.set_permissions [USERNAME] [PRIVILEGES] [USER INDEX - optional]
         salt dell drac.set_permissions diana login,test_alerts,clear_logs 4
 
     DRAC Privileges
@@ -465,5 +465,5 @@ def server_pxe():
             log.warning('failed to set boot order')
             return False
 
-    log.warning('failed to to configure PXE boot')
+    log.warning('failed to configure PXE boot')
     return False

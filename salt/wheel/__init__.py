@@ -12,8 +12,8 @@ import salt.client.mixins
 import salt.config
 import salt.loader
 import salt.transport
-import salt.utils
 import salt.utils.error
+import salt.utils.zeromq
 
 
 class WheelClient(salt.client.mixins.SyncClientMixin,
@@ -63,7 +63,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
         interface = self.opts['interface']
         if interface == '0.0.0.0':
             interface = '127.0.0.1'
-        master_uri = 'tcp://' + salt.utils.ip_bracket(interface) + \
+        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(interface) + \
                                                       ':' + str(self.opts['ret_port'])
         channel = salt.transport.Channel.factory(self.opts,
                                                  crypt='clear',
@@ -75,7 +75,7 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
                 salt.utils.error.raise_error(**ret['error'])
         return ret
 
-    def cmd_sync(self, low, timeout=None):
+    def cmd_sync(self, low, timeout=None, full_return=False):
         '''
         Execute a wheel function synchronously; eauth is respected
 

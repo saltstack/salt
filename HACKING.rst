@@ -16,14 +16,6 @@ Please review the following questions when creating a pull request:
 
 `<https://docs.saltstack.com/en/develop/topics/development/pull_requests.html>`_
 
-Posting patches to the mailing list
------------------------------------
-
-If you have a patch for Salt, please format it via :command:`git format-patch`
-and send it to the Salt users mailing list. This allows the patch to give you
-the contributor the credit for your patch, and gives the Salt community an
-archive of the patch and a place for discussion.
-
 Contributions Welcome!
 ----------------------
 
@@ -92,7 +84,7 @@ On Debian and derivative systems such as Ubuntu, system requirements can be
 installed by running::
 
     apt-get install -y build-essential libssl-dev python-dev python-m2crypto \
-      python-pip python-virtualenv swig virtualenvwrapper
+      python-pip python-virtualenv virtualenvwrapper
 
 RedHat-based systems
 ````````````````````
@@ -101,26 +93,13 @@ If you are developing using one of these releases, you will want to create your
 virtualenv using the ``--system-site-packages`` option so that these modules
 are available in the virtualenv.
 
-M2Crypto also supplies a fedora_setup.sh script you may use as well if you get
-the following error::
 
-    This openssl-devel package does not work your architecture?. Use the -cpperraswarn option to continue swig processing.
+Installing dependencies on macOS
+````````````````````````````````
 
-You can use it doing the following::
-
-    cd <path-to-your-venv>/build/M2Crypto
-    chmod u+x fedora_setup.sh
-    ./fedora_setup.sh build
-    ./fedora_setup.sh install
-
-
-Installing dependencies on OS X
-```````````````````````````````
-
-One simple way to get all needed dependencies on OS X is to use homebrew,
+One simple way to get all needed dependencies on macOS is to use homebrew,
 and install the following packages::
 
-    brew install swig
     brew install zmq
 
 Afterward the pip commands should run without a hitch. Also be sure to set
@@ -175,14 +154,6 @@ ZeroMQ Transport:
     pip install psutil
     pip install -e .
 
-.. note:: Installing M2Crypto
-
-    You may need ``swig`` and ``libssl-dev`` to build M2Crypto. If you
-    encounter the error ``command 'swig' failed with exit status 1``
-    while installing M2Crypto, try installing it with the following command::
-
-        env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto
-
 
 RAET Transport:
 
@@ -216,7 +187,7 @@ Edit the master config file:
     ``/path/to/your/virtualenv/salt-master.pid``.
 4.  If you are also running a non-development version of Salt you will have to
     change the ``publish_port`` and ``ret_port`` values as well.
-5. On OS X also set max_open_files to 2048.
+5. On xxxOS X also set max_open_files to 2048.
 
 Edit the minion config file:
 
@@ -233,7 +204,7 @@ Edit the minion config file:
     also running a non-development version of Salt, then you will have to
     change the ``master_port`` value in the minion config to match.
 
-.. note:: Using `salt-call` with a :doc:`Standalone Minion </topics/tutorials/standalone_minion>`
+.. note:: Using `salt-call` with a :ref:`Standalone Minion <tutorial-standalone-minion>`
 
     If you plan to run `salt-call` with this self-contained development
     environment in a masterless setup, you should invoke `salt-call` with
@@ -271,6 +242,7 @@ path. This can be done in a couple different ways:
 
 ``NOTE:`` The socket path is limited to 107 characters on Solaris and Linux,
 and 103 characters on BSD-based systems.
+
 File descriptor limit
 ~~~~~~~~~~~~~~~~~~~~~
 

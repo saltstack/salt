@@ -7,7 +7,7 @@ Manage accounts in Samba's passdb using pdbedit
 :depends:       pdbedit
 :platform:      posix
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 
 .. code-block:: yaml
 
@@ -27,7 +27,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-import salt.utils
+import salt.utils.data
 
 log = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ def managed(name, **kwargs):
     if res[name] in ['created']:
         ret['changes'] = res
     elif res[name] in ['updated']:
-        ret['changes'][name] = salt.utils.compare_dicts(
+        ret['changes'][name] = salt.utils.data.compare_dicts(
             saved,
             __salt__['pdbedit.list'](hashes=True)[name],
         )

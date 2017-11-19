@@ -4,13 +4,21 @@ Module for gathering and managing network information
 '''
 from __future__ import absolute_import
 
-# Import salt libs
-import salt.utils
+# Import Python libs
+import re
 import hashlib
 import datetime
 import socket
+
+# Import Salt libs
 import salt.utils.network
+import salt.utils.platform
 import salt.utils.validate.net
+from salt.modules.network import (wol, get_hostname, interface, interface_ip,
+                                  subnets6, ip_in_subnet, convert_cidr,
+                                  calc_net, get_fqdn, ifacestartswith,
+                                  iphexval)
+from salt.utils.functools import namespaced_function as _namespaced_function
 
 try:
     import salt.utils.winapi
@@ -19,6 +27,7 @@ except ImportError:
     HAS_DEPENDENCIES = False
 
 # Import 3rd party libraries
+import salt.ext.six as six  # pylint: disable=W0611
 try:
     import wmi  # pylint: disable=W0611
 except ImportError:
@@ -32,9 +41,28 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows() and HAS_DEPENDENCIES is True:
-        return __virtualname__
-    return (False, "Module win_network: module only works on Windows systems")
+    if not salt.utils.platform.is_windows():
+        return False, "Module win_network: Only available on Windows"
+
+    if not HAS_DEPENDENCIES:
+        return False, "Module win_network: Missing dependencies"
+
+    global wol, get_hostname, interface, interface_ip, subnets6, ip_in_subnet
+    global convert_cidr, calc_net, get_fqdn, ifacestartswith, iphexval
+
+    wol = _namespaced_function(wol, globals())
+    get_hostname = _namespaced_function(get_hostname, globals())
+    interface = _namespaced_function(interface, globals())
+    interface_ip = _namespaced_function(interface_ip, globals())
+    subnets6 = _namespaced_function(subnets6, globals())
+    ip_in_subnet = _namespaced_function(ip_in_subnet, globals())
+    convert_cidr = _namespaced_function(convert_cidr, globals())
+    calc_net = _namespaced_function(calc_net, globals())
+    get_fqdn = _namespaced_function(get_fqdn, globals())
+    ifacestartswith = _namespaced_function(ifacestartswith, globals())
+    iphexval = _namespaced_function(iphexval, globals())
+
+    return __virtualname__
 
 
 def ping(host, timeout=False, return_boolean=False):
@@ -197,6 +225,35 @@ def nslookup(host):
     return ret
 
 
+def get_route(ip):
+    '''
+    Return routing information for given destination ip
+
+    .. versionadded:: 2016.11.5
+
+    CLI Example::
+
+        salt '*' network.get_route 10.10.10.10
+    '''
+    cmd = 'Find-NetRoute -RemoteIPAddress {0}'.format(ip)
+    out = __salt__['cmd.run'](cmd, shell='powershell', python_shell=True)
+    regexp = re.compile(
+        r"^IPAddress\s+:\s(?P<source>[\d\.:]+)?.*"
+        r"^InterfaceAlias\s+:\s(?P<interface>[\w\.\:\-\ ]+)?.*"
+        r"^NextHop\s+:\s(?P<gateway>[\d\.:]+)",
+        flags=re.MULTILINE | re.DOTALL
+    )
+    m = regexp.search(out)
+    ret = {
+        'destination': ip,
+        'gateway': m.group('gateway'),
+        'interface': m.group('interface'),
+        'source': m.group('source')
+    }
+
+    return ret
+
+
 def dig(host):
     '''
     Performs a DNS lookup with dig
@@ -258,7 +315,7 @@ def hw_addr(iface):
     return salt.utils.network.hw_addr(iface)
 
 # Alias hwaddr to preserve backward compat
-hwaddr = salt.utils.alias_function(hw_addr, 'hwaddr')
+hwaddr = salt.utils.functools.alias_function(hw_addr, 'hwaddr')
 
 
 def subnets():
@@ -302,7 +359,7 @@ def ip_addrs(interface=None, include_loopback=False):
     return salt.utils.network.ip_addrs(interface=interface,
                                        include_loopback=include_loopback)
 
-ipaddrs = salt.utils.alias_function(ip_addrs, 'ipaddrs')
+ipaddrs = salt.utils.functools.alias_function(ip_addrs, 'ipaddrs')
 
 
 def ip_addrs6(interface=None, include_loopback=False):
@@ -320,7 +377,7 @@ def ip_addrs6(interface=None, include_loopback=False):
     return salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
 
-ipaddrs6 = salt.utils.alias_function(ip_addrs6, 'ipaddrs6')
+ipaddrs6 = salt.utils.functools.alias_function(ip_addrs6, 'ipaddrs6')
 
 
 def connect(host, port=None, **kwargs):

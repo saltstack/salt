@@ -94,6 +94,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       private_vlan: 396
       private_network: True
       private_ssh: True
+      # Use a dedicated host instead of cloud
+      dedicated_host_id: 1234
       # May be used _instead_of_ image
       global_identifier: 320d8be5-46c0-dead-cafe-13e3c51
 
@@ -280,6 +282,15 @@ configuration.
 This ID can be queried using the `list_vlans` function, as described below. This
 setting is optional.
 
+If this setting is set to `None`, salt-cloud will connect to the private ip of
+the server.
+
+.. note::
+
+    If this setting is not provided and the server is not built with a public
+    vlan, `private_ssh` or `private_wds` will need to be set to make sure that
+    salt-cloud attempts to connect to the private ip.
+
 private_vlan
 ------------
 If it is necessary for an instance to be created within a specific backend VLAN,
@@ -295,12 +306,12 @@ If a server is to only be used internally, meaning it does not have a public
 VLAN associated with it, this value would be set to True. This setting is
 optional. The default is False.
 
-private_ssh
------------
+private_ssh or private_wds
+--------------------------
 Whether to run the deploy script on the server using the public IP address
-or the private IP address. If set to True, Salt Cloud will attempt to SSH into
-the new server using the private IP address. The default is False. This
-settiong is optional.
+or the private IP address. If set to True, Salt Cloud will attempt to SSH or
+WinRM into the new server using the private IP address. The default is False.
+This settiong is optional.
 
 global_identifier
 -----------------
@@ -325,9 +336,21 @@ it can be verified with Salt:
 
     # salt 'myserver.example.com' test.ping
 
-
-Cloud Profiles
+Dedicated Host
 ~~~~~~~~~~~~~~
+Soflayer allows the creation of new VMs in a dedicated host. This means that
+you can order and pay a fixed amount for a bare metal dedicated host and use
+it to provision as many VMs as you can fit in there. If you want your VMs to
+be launched in a dedicated host, instead of Sofltayer's cloud, set the
+``dedicated_host_id`` parameter in your profile.
+
+dedicated_host_id
+-----------------
+The id of the dedicated host where the VMs should be created. If not set, VMs
+will be created in Softlayer's cloud instead.
+
+Bare metal Profiles
+~~~~~~~~~~~~~~~~~~~
 Set up an initial profile at ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml

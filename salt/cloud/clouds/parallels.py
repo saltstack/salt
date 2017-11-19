@@ -27,7 +27,6 @@ import pprint
 import logging
 
 # Import Salt libs
-import salt.utils
 from salt._compat import ElementTree as ET
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.error import URLError
@@ -50,6 +49,9 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+
+# Import 3rd-party libs
+from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -257,7 +259,9 @@ def create_node(vm_):
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        args={'kwargs': data},
+        args={
+            'kwargs': __utils__['cloud.filter_event']('requesting', data, list(data)),
+        },
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -280,20 +284,11 @@ def create(vm_):
     except AttributeError:
         pass
 
-    # Since using "provider: <provider-engine>" is deprecated, alias provider
-    # to use driver: "driver: <provider-engine>"
-    if 'provider' in vm_:
-        vm_['driver'] = vm_.pop('provider')
-
     __utils__['cloud.fire_event'](
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('creating', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -364,11 +359,7 @@ def create(vm_):
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        args={
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        args=__utils__['cloud.filter_event']('created', vm_, ['name', 'profile', 'provider', 'driver']),
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -408,7 +399,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         args = {}
 
     kwargs = {'data': data}
-    if isinstance(data, str) and '<?xml' in data:
+    if isinstance(data, six.string_types) and '<?xml' in data:
         kwargs['headers'] = {
             'Content-type': 'application/xml',
         }

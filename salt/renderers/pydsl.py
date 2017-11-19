@@ -113,11 +113,10 @@ two examples `ls -la` is the `name` argument.
 
 Finally, a :ref:`requisite-declaration` object with its
 :ref:`requisite-reference`'s can be created by invoking one of the
-requisite methods (see :doc:`State Requisites
-</ref/states/requisites>`) on either a :ref:`function-declaration`
-object or a :ref:`state-declaration` object. The return value of a
-requisite call is also a :ref:`function-declaration` object, so you
-can chain several requisite calls together.
+requisite methods (see :ref:`State Requisites <requisites>`) on either a
+:ref:`function-declaration` object or a :ref:`state-declaration` object.
+The return value of a requisite call is also a :ref:`function-declaration`
+object, so you can chain several requisite calls together.
 
 Arguments to a requisite call can be a list of :ref:`state-declaration` objects
 and/or a set of keyword arguments whose names are state modules and values are
@@ -286,7 +285,7 @@ sls module as if it was never defined.
 
 Integration with the stateconf renderer
 -----------------------------------------
-The :doc:`salt.renderers.stateconf` renderer offers a few interesting features that
+The :mod:`salt.renderers.stateconf` renderer offers a few interesting features that
 can be leveraged by the `pydsl` renderer. In particular, when using with the `pydsl`
 renderer, we are interested in `stateconf`'s sls namespacing feature (via dot-prefixed
 id declarations), as well as, the automatic `start` and `goal` states generation.
@@ -337,9 +336,10 @@ For example:
 '''
 from __future__ import absolute_import
 
-import imp
+import types
+import salt.utils.pydsl as pydsl
+import salt.utils.stringutils
 from salt.ext.six import exec_
-from salt.utils import pydsl
 from salt.utils.pydsl import PyDslError
 from salt.exceptions import SaltRenderError
 
@@ -347,12 +347,14 @@ __all__ = ['render']
 
 
 def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, **kws):
-    mod = imp.new_module(sls)
+    sls = salt.utils.stringutils.to_str(sls)
+    mod = types.ModuleType(sls)
     # Note: mod object is transient. It's existence only lasts as long as
     #       the lowstate data structure that the highstate in the sls file
     #       is compiled to.
 
-    mod.__name__ = sls
+    # __name__ can't be assigned a unicode
+    mod.__name__ = str(sls)  # future lint: disable=non-unicode-string
 
     # to workaround state.py's use of copy.deepcopy(chunk)
     mod.__deepcopy__ = lambda x: mod

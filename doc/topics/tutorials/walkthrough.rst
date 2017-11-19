@@ -1,3 +1,5 @@
+.. _tutorial-salt-walk-through:
+
 ==================
 Salt in 10 Minutes
 ==================
@@ -34,7 +36,7 @@ Installing Salt
 ---------------
 
 SaltStack has been made to be very easy to install and get started. The
-:doc:`installation documents </topics/installation/index>` contain instructions
+:ref:`installation documents <installation>` contain instructions
 for all supported platforms.
 
 Starting Salt
@@ -85,7 +87,7 @@ greatly increasing the command output:
 
 The Salt Master needs to bind to two TCP network ports on the system. These ports
 are ``4505`` and ``4506``. For more in depth information on firewalling these ports,
-the firewall tutorial is available :doc:`here </topics/tutorials/firewall>`.
+the firewall tutorial is available :ref:`here <firewall>`.
 
 .. _master-dns:
 
@@ -118,7 +120,7 @@ Setting up a Salt Minion
     assumes that the minion will be connected to the master, for information on
     how to run a master-less minion please see the master-less quick-start guide:
 
-    :doc:`Masterless Minion Quickstart </topics/tutorials/quickstart>`
+    :ref:`Masterless Minion Quickstart <masterless-quickstart>`
 
 Now that the master can be found, start the minion in the same way as the
 master; with the platform init system or via the command line directly:
@@ -243,8 +245,8 @@ The ``*`` is the target, which specifies all minions.
 ``test.ping`` tells the minion to run the :py:func:`test.ping
 <salt.modules.test.ping>` function.
 
-In the case of ``test.ping``, ``test`` refers to a :doc:`execution module
-</ref/modules/index>`.  ``ping`` refers to the :py:func:`ping
+In the case of ``test.ping``, ``test`` refers to a :ref:`execution module
+<writing-execution-modules>`.  ``ping`` refers to the :py:func:`ping
 <salt.modules.test.ping>` function contained in the aforementioned ``test``
 module.
 
@@ -292,7 +294,7 @@ This will display a very large list of available functions and documentation on
 them.
 
 .. note::
-    Module documentation is also available :doc:`on the web </ref/modules/all/index>`.
+    Module documentation is also available :ref:`on the web <all-salt.modules>`.
 
 These functions cover everything from shelling out to package management to
 manipulating database servers. They comprise a powerful system management API
@@ -302,14 +304,13 @@ of Salt.
 .. note::
 
     Salt comes with many plugin systems. The functions that are available via
-    the ``salt`` command are called :doc:`Execution Modules
-    </ref/modules/all/index>`.
+    the ``salt`` command are called :ref:`Execution Modules <all-salt.modules>`.
 
 
 Helpful Functions to Know
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The :doc:`cmd </ref/modules/all/salt.modules.cmdmod>` module contains
+The :mod:`cmd <salt.modules.cmdmod>` module contains
 functions to shell out on minions, such as :mod:`cmd.run
 <salt.modules.cmdmod.run>` and :mod:`cmd.run_all
 <salt.modules.cmdmod.run_all>`:
@@ -330,7 +331,7 @@ same salt functions. This means that ``pkg.install`` will install packages via
     Some custom Linux spins and derivatives of other distributions are not properly
     detected by Salt. If the above command returns an error message saying that
     ``pkg.install`` is not available, then you may need to override the pkg
-    provider. This process is explained :doc:`here </ref/states/providers>`.
+    provider. This process is explained :ref:`here <state-providers>`.
 
 The :mod:`network.interfaces <salt.modules.network.interfaces>` function will
 list all interfaces on a minion, along with their IP addresses, netmasks, MAC
@@ -380,7 +381,7 @@ minion log. More information on ``salt-call`` and how to use it can be found
 Grains
 ~~~~~~
 
-Salt uses a system called :doc:`Grains <../targeting/grains>` to build up
+Salt uses a system called :ref:`Grains <targeting-grains>` to build up
 static data about minions. This data includes information about the operating
 system that is running, CPU architecture and much more. The grains system is
 used throughout Salt to deliver platform data to many components and to users.
@@ -396,7 +397,7 @@ function.
 
 
 Targeting
-~~~~~~~~~~
+~~~~~~~~~
 
 Salt allows for minions to be targeted based on a wide range of criteria.  The
 default targeting system uses globular expressions to match minions, hence if
@@ -412,22 +413,22 @@ Regular Expressions
 
 Grains
     Target based on grains data:
-    :doc:`Targeting with Grains </topics/targeting/grains>`
+    :ref:`Targeting with Grains <targeting-grains>`
 
 Pillar
     Target based on pillar data:
-    :doc:`Targeting with Pillar </ref/pillar/index>`
+    :ref:`Targeting with Pillar <targeting-pillar>`
 
 IP
     Target based on IP address/subnet/range
 
 Compound
     Create logic to target based on multiple targets:
-    :doc:`Targeting with Compound </topics/targeting/compound>`
+    :ref:`Targeting with Compound <targeting-compound>`
 
 Nodegroup
     Target with nodegroups:
-    :doc:`Targeting with Nodegroup </topics/targeting/nodegroups>`
+    :ref:`Targeting with Nodegroup <targeting-nodegroups>`
 
 The concepts of targets are used on the command line with Salt, but also
 function in many other areas as well, including the state system and the
@@ -575,10 +576,10 @@ and that it results in success.
     The `require` option belongs to a family of options called `requisites`.
     Requisites are a powerful component of Salt States, for more information
     on how requisites work and what is available see:
-    :doc:`Requisites</ref/states/requisites>`
+    :ref:`Requisites <requisites>`
 
     Also evaluation ordering is available in Salt as well:
-    :doc:`Ordering States</ref/states/ordering>`
+    :ref:`Ordering States<ordering>`
 
 This new sls formula has a special name --  ``init.sls``. When an SLS formula is
 named ``init.sls`` it inherits the name of the directory path that contains it.
@@ -624,9 +625,9 @@ Next Reading
 Two walk-throughs are specifically recommended at this point. First, a deeper
 run through States, followed by an explanation of Pillar.
 
-1. :doc:`Starting States </topics/tutorials/starting_states>`
+1. :ref:`Starting States <starting-states>`
 
-2. :doc:`Pillar Walkthrough </topics/tutorials/pillar>`
+2. :ref:`Pillar Walkthrough <pillar-walk-through>`
 
 An understanding of Pillar is extremely helpful in using States.
 
@@ -637,10 +638,10 @@ Getting Deeper Into States
 Two more in-depth States tutorials exist, which delve much more deeply into States
 functionality.
 
-1. :doc:`How Do I Use Salt States? </topics/tutorials/starting_states>`, covers much
+1. :ref:`How Do I Use Salt States? <starting-states>`, covers much
    more to get off the ground with States.
 
-2. The :doc:`States Tutorial</topics/tutorials/states_pt1>` also provides a
+2. The :ref:`States Tutorial<states-tutorial>` also provides a
    fantastic introduction.
 
 These tutorials include much more in-depth information including templating
@@ -653,17 +654,17 @@ So Much More!
 This concludes the initial Salt walk-through, but there are many more things still
 to learn! These documents will cover important core aspects of Salt:
 
-- :doc:`Pillar</topics/pillar/index>`
+- :ref:`Pillar<pillar>`
 
-- :doc:`Job Management</topics/jobs/index>`
+- :ref:`Job Management<jobs>`
 
 A few more tutorials are also available:
 
-- :doc:`Remote Execution Tutorial</topics/tutorials/modules>`
+- :ref:`Remote Execution Tutorial<writing-execution-modules>`
 
-- :doc:`Standalone Minion</topics/tutorials/standalone_minion>`
+- :ref:`Standalone Minion<tutorial-standalone-minion>`
 
 This still is only scratching the surface, many components such as the reactor
 and event systems, extending Salt, modular components and more are not covered
 here. For an overview of all Salt features and documentation, look at the
-:doc:`Table of Contents</contents>`.
+:ref:`Table of Contents<table-of-contents>`.

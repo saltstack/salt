@@ -56,7 +56,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.ext.six as six
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 # Import third party libs
@@ -79,7 +79,8 @@ class EtcdUtilWatchTimeout(Exception):
 
 
 class EtcdClient(object):
-    def __init__(self, opts, profile=None):
+    def __init__(self, opts, profile=None,
+                 host=None, port=None, username=None, password=None, ca=None, client_key=None, client_cert=None, **kwargs):
         opts_pillar = opts.get('pillar', {})
         opts_master = opts_pillar.get('master', {})
 
@@ -93,13 +94,13 @@ class EtcdClient(object):
         else:
             self.conf = opts_merged
 
-        host = self.conf.get('etcd.host', '127.0.0.1')
-        port = self.conf.get('etcd.port', 4001)
-        username = self.conf.get('etcd.username')
-        password = self.conf.get('etcd.password')
-        ca_cert = self.conf.get('etcd.ca')
-        cli_key = self.conf.get('etcd.client_key')
-        cli_cert = self.conf.get('etcd.client_cert')
+        host = host or self.conf.get('etcd.host', '127.0.0.1')
+        port = port or self.conf.get('etcd.port', 4001)
+        username = username or self.conf.get('etcd.username')
+        password = password or self.conf.get('etcd.password')
+        ca_cert = ca or self.conf.get('etcd.ca')
+        cli_key = client_key or self.conf.get('etcd.client_key')
+        cli_cert = client_cert or self.conf.get('etcd.client_cert')
 
         auth = {}
         if username and password:
@@ -162,6 +163,9 @@ class EtcdClient(object):
             log.error("etcd: failed to perform 'watch' operation on key {0} due to connection error".format(key))
             return {}
         except ValueError:
+            return {}
+
+        if result is None:
             return {}
 
         if recurse:
@@ -348,8 +352,8 @@ class EtcdClient(object):
         return ret
 
 
-def get_conn(opts, profile=None):
-    client = EtcdClient(opts, profile)
+def get_conn(opts, profile=None, **kwargs):
+    client = EtcdClient(opts, profile, **kwargs)
     return client
 
 

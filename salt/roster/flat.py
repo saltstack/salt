@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import fnmatch
 import re
+import copy
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
@@ -19,6 +20,7 @@ except ImportError:
 
 # Import Salt libs
 import salt.loader
+import salt.config
 from salt.template import compile_template
 from salt.ext.six import string_types
 from salt.roster import get_roster_file
@@ -43,7 +45,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
                            **kwargs)
     conditioned_raw = {}
     for minion in raw:
-        conditioned_raw[str(minion)] = raw[minion]
+        conditioned_raw[str(minion)] = salt.config.apply_sdb(raw[minion])
     rmatcher = RosterMatcher(conditioned_raw, tgt, tgt_type, 'ipv4')
     return rmatcher.targets()
 
@@ -142,10 +144,13 @@ class RosterMatcher(object):
         '''
         Return the configured ip
         '''
+        ret = copy.deepcopy(__opts__.get('roster_defaults', {}))
         if isinstance(self.raw[minion], string_types):
-            return {'host': self.raw[minion]}
-        if isinstance(self.raw[minion], dict):
-            return self.raw[minion]
+            ret.update({'host': self.raw[minion]})
+            return ret
+        elif isinstance(self.raw[minion], dict):
+            ret.update(self.raw[minion])
+            return ret
         return False
 
 

@@ -16,7 +16,10 @@ import logging
 import glob
 
 # Import salt libs
-import salt.utils
+import salt.utils.data
+import salt.utils.files
+import salt.utils.path
+import salt.utils.pkg
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, MinionError
 
@@ -40,7 +43,7 @@ def _check_xbps():
     '''
     Looks to see if xbps-install is present on the system, return full path
     '''
-    return salt.utils.which('xbps-install')
+    return salt.utils.path.which('xbps-install')
 
 
 @decorators.memoize
@@ -87,9 +90,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
         salt '*' pkg.list_pkgs
     '''
-    versions_as_list = salt.utils.is_true(versions_as_list)
+    versions_as_list = salt.utils.data.is_true(versions_as_list)
     # not yet implemented or not applicable
-    if any([salt.utils.is_true(kwargs.get(x)) for x in ('removed', 'purge_desired')]):
+    if any([salt.utils.data.is_true(kwargs.get(x)) for x in ('removed', 'purge_desired')]):
         return {}
 
     cmd = 'xbps-query -l'
@@ -131,7 +134,7 @@ def list_upgrades(refresh=True):
     #     fuse-2.9.4_4 update i686 http://repo.voidlinux.eu/current 298133 91688
     #     xtools-0.34_1 update noarch http://repo.voidlinux.eu/current 21424 10752
 
-    refresh = salt.utils.is_true(refresh)
+    refresh = salt.utils.data.is_true(refresh)
 
     # Refresh repo index before checking for latest version available
     if refresh:
@@ -192,7 +195,7 @@ def latest_version(*names, **kwargs):
     #     xtools-0.34_1 update noarch http://repo.voidlinux.eu/current 21424 10752
     #     Package 'vim' is up to date.
 
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
+    refresh = salt.utils.data.is_true(kwargs.pop('refresh', True))
 
     if len(names) == 0:
         return ''
@@ -261,6 +264,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
+    # Remove rtag file to keep multiple refreshes from happening in pkg states
+    salt.utils.pkg.clear_rtag(__opts__)
     cmd = 'xbps-install -Sy'
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     if call['retcode'] != 0:
@@ -270,7 +275,7 @@ def refresh_db():
 
         raise CommandExecutionError('{0}'.format(comment))
 
-    return {}
+    return True
 
 
 def version(*names, **kwargs):
@@ -324,7 +329,7 @@ def upgrade(refresh=True):
                                      python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.data.compare_dicts(old, new)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(
@@ -419,7 +424,7 @@ def install(name=None, refresh=False, fromrepo=None,
     new = list_pkgs()
 
     _rehash()
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def remove(name=None, pkgs=None, recursive=True, **kwargs):
@@ -428,7 +433,7 @@ def remove(name=None, pkgs=None, recursive=True, **kwargs):
         The name of the package to be deleted.
 
     recursive
-        Also remove dependant packages (not required elsewhere).
+        Also remove dependent packages (not required elsewhere).
         Default mode: enabled.
 
     Multiple Package Options:
@@ -473,7 +478,7 @@ def remove(name=None, pkgs=None, recursive=True, **kwargs):
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
 
-    return salt.utils.compare_dicts(old, new)
+    return salt.utils.data.compare_dicts(old, new)
 
 
 def list_repos():
@@ -549,7 +554,7 @@ def _locate_repo_files(repo, rewrite=False):
 
     for filename in files:
         write_buff = []
-        with salt.utils.fopen(filename, 'r') as cur_file:
+        with salt.utils.files.fopen(filename, 'r') as cur_file:
             for line in cur_file:
                 if regex.match(line):
                     ret_val.append(filename)
@@ -557,7 +562,7 @@ def _locate_repo_files(repo, rewrite=False):
                     write_buff.append(line)
         if rewrite and filename in ret_val:
             if len(write_buff) > 0:
-                with salt.utils.fopen(filename, 'w') as rewrite_file:
+                with salt.utils.files.fopen(filename, 'w') as rewrite_file:
                     rewrite_file.write("".join(write_buff))
             else:  # Prune empty files
                 os.remove(filename)
@@ -585,7 +590,7 @@ def add_repo(repo, conffile='/usr/share/xbps.d/15-saltstack.conf'):
 
     if len(_locate_repo_files(repo)) == 0:
         try:
-            with salt.utils.fopen(conffile, 'a+') as conf_file:
+            with salt.utils.files.fopen(conffile, 'a+') as conf_file:
                 conf_file.write('repository='+repo+'\n')
         except IOError:
             return False

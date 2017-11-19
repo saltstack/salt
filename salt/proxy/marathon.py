@@ -8,7 +8,7 @@ Proxy minion for managing a Marathon cluster.
 Dependencies
 ------------
 
-- :doc:`marathon execution module (salt.modules.marathon) </ref/modules/all/salt.modules.marathon>`
+- :mod:`marathon execution module (salt.modules.marathon) <salt.modules.marathon>`
 
 Pillar
 ------
@@ -62,7 +62,7 @@ def ping():
             decode=True,
         )
         log.debug(
-            'marathon.info returned succesfully: %s',
+            'marathon.info returned successfully: %s',
             response,
         )
         if 'text' in response and response['text'].strip() == 'pong':
