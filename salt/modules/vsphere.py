@@ -7550,9 +7550,10 @@ def _apply_advanced_config(config_spec, advanced_config, vm_extra_config=None):
         raise salt.exceptions.ArgumentValueError('The specified \'advanced_configs\' configuration'
                                       ' option cannot be parsed, please check the parameters')
     for key, value in six.iteritems(advanced_config):
-        for option in vm_extra_config:
-            if option.key == key and option.value == str(value):
-                continue
+        if vm_extra_config:
+            for option in vm_extra_config:
+                if option.key == key and option.value == str(value):
+                    continue
         else:
             option = vim.option.OptionValue(key=key, value=value)
             config_spec.extraConfig.append(option)
@@ -8495,6 +8496,10 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore, place
               switch_type: distributed or standard
               adapter_type: vmxnet3 or vmxnet, vmxnet2, vmxnet3, e1000, e1000e
               mac: '00:11:22:33:44:55'
+              connectable:
+                allow_guest_control: True
+                connected: True
+                start_connected: True
 
         disks
         .. code-block:: bash
@@ -8527,6 +8532,7 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore, place
                 filename: 'service_uri'
               connectable:
                 allow_guest_control: True
+                connected: True
                 start_connected: True
               yield: False
 
@@ -8540,6 +8546,7 @@ def create_vm(vm_name, cpu, memory, image, version, datacenter, datastore, place
                 path: path_to_iso
               connectable:
                 allow_guest_control: True
+                connected: True
                 start_connected: True
 
     advanced_config
@@ -8845,6 +8852,7 @@ def get_vm_config(name, datacenter=None, objects=True, service_instance=None):
             interface['adapter'] = device.deviceInfo.label
             interface['adapter_type'] = salt.utils.vmware.get_network_adapter_object_type(device)
             interface['connectable'] = {'allow_guest_control': device.connectable.allowGuestControl,
+                                        'connected': device.connectable.connected,
                                         'start_connected': device.connectable.startConnected}
             interface['mac'] = device.macAddress
             if isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
@@ -8878,6 +8886,7 @@ def get_vm_config(name, datacenter=None, objects=True, service_instance=None):
                 drive['device_type'] = 'datastore_iso_file'
                 drive['datastore_iso_file'] = {'path': device.backing.fileName}
             drive['connectable'] = {'allow_guest_control': device.connectable.allowGuestControl,
+                                    'connected': device.connectable.connected,
                                     'start_connected': device.connectable.startConnected}
             if objects:
                 drive['key'] = device.key
@@ -8900,6 +8909,7 @@ def get_vm_config(name, datacenter=None, objects=True, service_instance=None):
                 port['type'] = 'device'
             port['yield'] = device.yieldOnPoll
             port['connectable'] = {'allow_guest_control': device.connectable.allowGuestControl,
+                                   'connected': device.connectable.connected,
                                    'start_connected': device.connectable.startConnected}
             if objects:
                 port['key'] = device.key
