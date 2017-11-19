@@ -509,7 +509,7 @@ def destroy(zpool, force=False):
     '''
     ret = {}
     ret[zpool] = {}
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
     else:
         zpool_cmd = _check_zpool()
@@ -555,7 +555,7 @@ def scrub(zpool, stop=False, pause=False):
     '''
     ret = {}
     ret[zpool] = {}
-    if exists(zpool):
+    if __salt__['zpool.exists'](zpool):
         zpool_cmd = _check_zpool()
         if stop:
             action = '-s '
@@ -651,7 +651,7 @@ def create(zpool, *vdevs, **kwargs):
     ret = {}
 
     # Check if the pool_name is already being used
-    if exists(zpool):
+    if __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool already exists'
         return ret
 
@@ -741,7 +741,7 @@ def add(zpool, *vdevs, **kwargs):
     ret = {}
 
     # check for pool
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
@@ -794,7 +794,7 @@ def attach(zpool, device, new_device, force=False):
     dlist = []
 
     # check for pool
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
@@ -856,7 +856,7 @@ def detach(zpool, device):
     dlist = []
 
     # check for pool
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
@@ -923,11 +923,11 @@ def split(zpool, newzpool, **kwargs):
     ret = {}
 
     # Check if the pool_name is already being used
-    if exists(newzpool):
+    if __salt__['zpool.exists'](newzpool):
         ret[newzpool] = 'storage pool already exists'
         return ret
 
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exists'
         return ret
 
@@ -996,7 +996,7 @@ def replace(zpool, old_device, new_device=None, force=False):
     '''
     ret = {}
     # Make sure pool is there
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
@@ -1109,7 +1109,7 @@ def export(*pools, **kwargs):
         return ret
 
     for pool in pools:
-        if not exists(pool):
+        if not __salt__['zpool.exists'](pool):
             ret[pool] = 'storage pool does not exist'
         else:
             pool_present.append(pool)
@@ -1224,7 +1224,7 @@ def import_(zpool=None, new_name=None, **kwargs):
             ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         if zpool:
-            ret[zpool if not new_name else new_name] = 'imported' if exists(zpool if not new_name else new_name) else 'not found'
+            ret[zpool if not new_name else new_name] = 'imported' if __salt__['zpool.exists'](zpool if not new_name else new_name) else 'not found'
         else:
             ret = True
     return ret
@@ -1259,7 +1259,7 @@ def online(zpool, *vdevs, **kwargs):
     dlist = []
 
     # Check if the pool_name exists
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
@@ -1315,7 +1315,7 @@ def offline(zpool, *vdevs, **kwargs):
     ret = {}
 
     # Check if the pool_name exists
-    if not exists(zpool):
+    if not __salt__['zpool.exists'](zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
