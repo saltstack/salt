@@ -1015,15 +1015,15 @@ def get_network_adapter_type(adapter_type):
     adpater_type
         The adapter type from which to obtain the network adapter type.
     '''
-    if adapter_type == "vmxnet":
+    if adapter_type == 'vmxnet':
         return vim.vm.device.VirtualVmxnet()
-    elif adapter_type == "vmxnet2":
+    elif adapter_type == 'vmxnet2':
         return vim.vm.device.VirtualVmxnet2()
-    elif adapter_type == "vmxnet3":
+    elif adapter_type == 'vmxnet3':
         return vim.vm.device.VirtualVmxnet3()
-    elif adapter_type == "e1000":
+    elif adapter_type == 'e1000':
         return vim.vm.device.VirtualE1000()
-    elif adapter_type == "e1000e":
+    elif adapter_type == 'e1000e':
         return vim.vm.device.VirtualE1000e()
 
 
@@ -1886,6 +1886,53 @@ def list_datastores(service_instance):
         The Service Instance Object from which to obtain datastores.
     '''
     return list_objects(service_instance, vim.Datastore)
+
+
+def get_datastore_files(service_instance, directory, datastores, container_object, browser_spec):
+    '''
+    Get the files with a given browser specification from the datastore.
+
+    service_instance
+        The Service Instance Object from which to obtain datastores.
+
+    directory
+        The name of the directory where we would like to search
+
+    datastores
+        Name of the datastores
+
+    container_object
+        The base object for searches
+
+    browser_spec
+        BrowserSpec object which defines the search criteria
+
+    return
+        list of vim.host.DatastoreBrowser.SearchResults objects
+    '''
+
+    files = []
+    datastore_objects = get_datastores(service_instance, container_object, datastore_names=datastores)
+    for datobj in datastore_objects:
+        try:
+            task = datobj.browser.SearchDatastore_Task(datastorePath='[{}] {}'.format(datobj.name, directory),
+                                                       searchSpec=browser_spec)
+        except vim.fault.NoPermission as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(
+                'Not enough permissions. Required privilege: '
+                '{}'.format(exc.privilegeId))
+        except vim.fault.VimFault as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareApiError(exc.msg)
+        except vmodl.RuntimeFault as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareRuntimeError(exc.msg)
+        try:
+            files.append(salt.utils.vmware.wait_for_task(task, directory, 'query virtual machine files'))
+        except salt.exceptions.VMwareFileNotFoundError:
+            pass
+    return files
 
 
 def get_datastores(service_instance, reference, datastore_names=None,
@@ -3004,6 +3051,9 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
         raise salt.exceptions.VMwareApiError(
             'Not enough permissions. Required privilege: '
             '{}'.format(exc.privilegeId))
+    except vim.fault.FileNotFound as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareFileNotFoundError(exc.msg)
     except vim.fault.VimFault as exc:
         log.exception(exc)
         raise salt.exceptions.VMwareApiError(exc.msg)
@@ -3027,6 +3077,9 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
             raise salt.exceptions.VMwareApiError(
                 'Not enough permissions. Required privilege: '
                 '{}'.format(exc.privilegeId))
+        except vim.fault.FileNotFound as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareFileNotFoundError(exc.msg)
         except vim.fault.VimFault as exc:
             log.exception(exc)
             raise salt.exceptions.VMwareApiError(exc.msg)
@@ -3051,6 +3104,9 @@ def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='de
             raise salt.exceptions.VMwareApiError(
                 'Not enough permissions. Required privilege: '
                 '{}'.format(exc.privilegeId))
+        except vim.fault.FileNotFound as exc:
+            log.exception(exc)
+            raise salt.exceptions.VMwareFileNotFoundError(exc.msg)
         except vim.fault.VimFault as exc:
             log.exception(exc)
             raise salt.exceptions.VMwareApiError(exc.msg)
@@ -3237,6 +3293,26 @@ def get_placement(service_instance, datacenter, placement=None):
     return (resourcepool_object, placement_object)
 
 
+def convert_to_kb(unit, size):
+    '''
+    Converts the given size to KB based on the unit, returns a long integer.
+
+    unit
+        Unit of the size eg. GB; Note: to VMware a GB is the same as GiB = 1024MiB
+    size
+        Number which represents the size
+    '''
+    if unit.lower() == 'gb':
+        target_size = size * 1024L * 1024L
+    elif unit.lower() == 'mb':
+        target_size = size * 1024L
+    elif unit.lower() == 'kb':
+        target_size = long(size)
+    else:
+        raise salt.exceptions.ArgumentValueError('The unit is not specified')
+    return {'size': target_size, 'unit': 'KB'}
+
+
 def power_cycle_vm(virtual_machine, action='on'):
     '''
     Powers on/off a virtual machine specified by it's name.
@@ -3287,7 +3363,52 @@ def power_cycle_vm(virtual_machine, action='on'):
     return virtual_machine
 
 
-def register_vm(datacenter, name, vmx_path, host=None, resourcepool=None):
+def create_vm(vm_name, vm_config_spec, folder_object, resourcepool_object, host_object=None):
+    '''
+    Creates virtual machine from config spec
+
+    vm_name
+        Virtual machine name to be created
+
+    vm_config_spec
+        Virtual Machine Config Spec object
+
+    folder_object
+        vm Folder managed object reference
+
+    resourcepool_object
+        Resource pool object where the machine will be created
+
+    host_object
+        Host object where the machine will ne placed (optional)
+
+    return
+        Virtual Machine managed object reference
+    '''
+    try:
+        if host_object and isinstance(host_object, vim.HostSystem):
+            task = folder_object.CreateVM_Task(vm_config_spec,
+                                               pool=resourcepool_object,
+                                               host=host_object)
+        else:
+            task = folder_object.CreateVM_Task(vm_config_spec,
+                                               pool=resourcepool_object)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
+    vm_object = wait_for_task(task, vm_name, 'CreateVM Task', 10, 'info')
+    return vm_object
+
+
+def register_vm(datacenter, name, vmx_path, resourcepool_object, host_object=None):
     '''
     Registers a virtual machine to the inventory with the given vmx file, on success
     it returns the vim.VirtualMachine managed object reference
@@ -3301,43 +3422,33 @@ def register_vm(datacenter, name, vmx_path, host=None, resourcepool=None):
     vmx_path:
         Full path to the vmx file, datastore name should be included
 
-    host
-        Placement host of the virtual machine, vim.HostSystem object
-
     resourcepool
         Placement resource pool of the virtual machine, vim.ResourcePool object
+
+    host
+        Placement host of the virtual machine, vim.HostSystem object
     '''
-    if resourcepool:
-        try:
+    try:
+        if host_object:
             task = datacenter.vmFolder.RegisterVM_Task(path=vmx_path, name=name,
                                                        asTemplate=False,
-                                                       pool=resourcepool)
-        except vim.fault.NoPermission as exc:
-            log.exception(exc)
-            raise salt.exceptions.VMwareApiError(
-                'Not enough permissions. Required privilege: '
-                '{}'.format(exc.privilegeId))
-        except vim.fault.VimFault as exc:
-            log.exception(exc)
-            raise salt.exceptions.VMwareApiError(exc.msg)
-        except vmodl.RuntimeFault as exc:
-            log.exception(exc)
-            raise salt.exceptions.VMwareRuntimeError(exc.msg)
-    elif host:
-        try:
+                                                       host=host_object,
+                                                       pool=resourcepool_object)
+        else:
             task = datacenter.vmFolder.RegisterVM_Task(path=vmx_path, name=name,
-                                                       asTemplate=False, host=host)
-        except vim.fault.NoPermission as exc:
-            log.exception(exc)
-            raise salt.exceptions.VMwareApiError(
-                'Not enough permissions. Required privilege: '
-                '{}'.format(exc.privilegeId))
-        except vim.fault.VimFault as exc:
-            log.exception(exc)
-            raise salt.exceptions.VMwareApiError(exc.msg)
-        except vmodl.RuntimeFault as exc:
-            log.exception(exc)
-            raise salt.exceptions.VMwareRuntimeError(exc.msg)
+                                                       asTemplate=False,
+                                                       pool=resourcepool_object)
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
+    except vim.fault.VimFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(exc.msg)
+    except vmodl.RuntimeFault as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareRuntimeError(exc.msg)
     try:
         vm_ref = wait_for_task(task, name, 'RegisterVM Task')
     except salt.exceptions.VMwareNotFoundError as exc:
@@ -3345,26 +3456,6 @@ def register_vm(datacenter, name, vmx_path, host=None, resourcepool=None):
                                          'operation, the configuration file '
                                          'was not found: {0}'.format(str(exc)))
     return vm_ref
-
-
-def convert_to_kb(unit, size):
-    '''
-    Converts the given size to KB based on the unit, returns a long integer.
-
-    unit
-        Unit of the size eg. GB; Note: to VMware a GB is the same as GiB = 1024MiB
-    size
-        Number which represents the size
-    '''
-    if unit.lower() == 'gb':
-        target_size = size * 1024L * 1024L
-    elif unit.lower() == 'mb':
-        target_size = size * 1024L
-    elif unit.lower() == 'kb':
-        target_size = long(size)
-    else:
-        raise salt.exceptions.ArgumentValueError('The unit is not specified')
-    return {'size': target_size, 'unit': 'KB'}
 
 
 def update_vm(vm_ref, vm_config_spec):
@@ -3432,6 +3523,11 @@ def unregister_vm(vm_ref):
     log.trace('Destroying vm \'{0}\''.format(vm_name))
     try:
         vm_ref.UnregisterVM()
+    except vim.fault.NoPermission as exc:
+        log.exception(exc)
+        raise salt.exceptions.VMwareApiError(
+            'Not enough permissions. Required privilege: '
+            '{}'.format(exc.privilegeId))
     except vim.fault.VimFault as exc:
         raise salt.exceptions.VMwareApiError(exc.msg)
     except vmodl.RuntimeFault as exc:
