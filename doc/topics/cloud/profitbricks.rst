@@ -65,6 +65,13 @@ A list of existing virtual data centers can be retrieved with the following comm
 
     salt-cloud -f list_datacenters my-profitbricks-config
 
+A new data center can be created with the following command:
+
+.. code-block:: bash
+
+    salt-cloud -f create_datacenter profitbricks name=example location=us/las
+
+
 Authentication
 ==============
 
