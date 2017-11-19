@@ -353,6 +353,9 @@ def get_datacenter_id():
         __opts__,
         search_global=False
     )
+
+    conn = get_conn()
+    
     try:
         conn.get_datacenter(datacenter_id= datacenter_id)
     except PBNotFoundError:
