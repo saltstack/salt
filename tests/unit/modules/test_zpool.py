@@ -154,6 +154,57 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             res = OrderedDict([('mypool', OrderedDict([('readonly', 'off')]))])
             self.assertEqual(res, ret)
 
+    def test_scrub_start(self):
+        '''
+        Tests start of scrub
+        '''
+        ret = {}
+        ret['stdout'] = ""
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        mock_exists = MagicMock(return_value=True)
+
+        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}):
+            with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+                ret = zpool.scrub('mypool')
+                res = OrderedDict([('mypool', OrderedDict([('scrubbing', True)]))])
+                self.assertEqual(res, ret)
+
+    def test_scrub_pause(self):
+        '''
+        Tests pause of scrub
+        '''
+        ret = {}
+        ret['stdout'] = ""
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        mock_exists = MagicMock(return_value=True)
+
+        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}):
+            with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+                ret = zpool.scrub('mypool', pause=True)
+                res = OrderedDict([('mypool', OrderedDict([('scrubbing', False)]))])
+                self.assertEqual(res, ret)
+
+    def test_scrub_stop(self):
+        '''
+        Tests pauze of scrub
+        '''
+        ret = {}
+        ret['stdout'] = ""
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        mock_exists = MagicMock(return_value=True)
+
+        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}):
+            with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+                ret = zpool.scrub('mypool', stop=True)
+                res = OrderedDict([('mypool', OrderedDict([('scrubbing', False)]))])
+                self.assertEqual(res, ret)
+
     def test_split_success(self):
         '''
         Tests split on success
