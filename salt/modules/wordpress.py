@@ -10,8 +10,8 @@ from __future__ import absolute_import
 import collections
 
 # Import Salt Modules
-from salt.ext.six.moves import map
 import salt.utils.path
+from salt.ext.six.moves import map
 
 Plugin = collections.namedtuple('Plugin', 'name status update versino')
 
