@@ -1375,7 +1375,13 @@ def labelclear(device, force=False):
     # Bring all specified devices offline
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     if res['retcode'] != 0:
-        ret[device] = res['stderr'] if 'stderr' in res else res['stdout']
+        ## NOTE: skip the "use '-f' hint"
+        res['stderr'] = res['stderr'].split("\n")
+        if len(res['stderr']) >= 1:
+            if res['stderr'][0].startswith("use '-f'"):
+                del res['stderr'][0]
+        res['stderr'] = "\n".join(res['stderr'])
+        ret[device] = res['stderr'] if 'stderr' in res and res['stderr'] else res['stdout']
     else:
         ret[device] = 'cleared'
     return ret
