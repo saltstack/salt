@@ -36,6 +36,8 @@ Configuration
       password: 123456
       # datacenter is the UUID of a pre-existing virtual data center.
       datacenter: 9e6709a0-6bf9-4bd6-8692-60349c70ce0e
+      # delete_volumes is forcing a deletion of all volumes attached to a server on a deletion of a server
+      delete_volumes: true
       # Connect to public LAN ID 1.
       public_lan: 1
       ssh_public_key: /path/to/id_rsa.pub
