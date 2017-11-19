@@ -347,12 +347,20 @@ def get_datacenter_id():
     '''
     Return datacenter ID from provider configuration
     '''
-    return config.get_cloud_config_value(
+    datacenter_id = config.get_cloud_config_value(
         'datacenter_id',
         get_configured_provider(),
         __opts__,
         search_global=False
     )
+    try:
+        conn.get_datacenter(datacenter_id= datacenter_id)
+    except PBNotFoundError:
+        log.error('Failed to get datacenter: {0}'.format(
+                datacenter_id))
+        raise
+        
+    return datacenter_id
 
 
 def list_loadbalancers(call=None):
