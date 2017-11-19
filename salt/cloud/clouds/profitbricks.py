@@ -355,7 +355,7 @@ def get_datacenter_id():
     )
 
     conn = get_conn()
-    
+
     try:
         conn.get_datacenter(datacenter_id= datacenter_id)
     except PBNotFoundError:
@@ -901,7 +901,7 @@ def create(vm_):
         raise SaltCloudSystemExit('A valid IP address was not found.')
 
 
-def destroy(name, call=None, kwargs=None):
+def destroy(name, call=None):
     '''
     destroy a machine by name
 
@@ -921,10 +921,7 @@ def destroy(name, call=None, kwargs=None):
         raise SaltCloudSystemExit(
             'The destroy action must be called with -d, --destroy, '
             '-a or --action.'
-        )
-
-    if kwargs is None:
-       kwargs = {}
+        )   
 
     __utils__['cloud.fire_event'](
         'event',
@@ -940,14 +937,20 @@ def destroy(name, call=None, kwargs=None):
     node = get_node(conn, name)
     attached_volumes = None
  
+    delete_volumes = config.get_cloud_config_value(
+        'delete_volumes',
+        get_configured_provider(),
+        __opts__,
+        search_global=False
+    )
     #Get volumes before the server is deleted
-    if 'delete_volumes' in kwargs:
+    if delete_volumes:
         attached_volumes = conn.get_attached_volumes(datacenter_id=datacenter_id, server_id=node['id'])        
    
     conn.delete_server(datacenter_id=datacenter_id, server_id=node['id'])
 
     #The server is deleted and now is safe to delete the volumes
-    if 'delete_volumes' in kwargs:        
+    if delete_volumes:        
         for vol in attached_volumes['items']:        
             log.debug('Deleting volume %s' % (vol['id']))
             conn.delete_volume(datacenter_id=datacenter_id, volume_id=vol['id'])
