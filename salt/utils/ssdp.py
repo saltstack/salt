@@ -150,7 +150,7 @@ class SSDPFactory(SSDPBase):
         tries = 0
         slp_time = lambda: 0.5 / random.randint(10, 30)
         slp = slp_time()
-        while tries < 3:
+        while tries < attempts:
             try:
                 self.transport.sendto(data, addr=addr)
                 self.log.debug('Sent successfully')
