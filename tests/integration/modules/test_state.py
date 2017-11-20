@@ -606,13 +606,12 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test watch_in requisite when there is a failure
         '''
         ret = self.run_function('state.sls', mods='requisites.watch_in_failure')
-        out = iter(ret)
-        f_state = next(out)
-        s_state = next(out)
+        fail = 'test_|-return_changes_|-return_changes_|-fail_with_changes'
+        watch = 'test_|-watch_states_|-watch_states_|-succeed_without_changes'
 
-        self.assertEqual(False, ret[f_state]['result'])
+        self.assertEqual(False, ret[fail]['result'])
         self.assertEqual('One or more requisite failed: requisites.watch_in_failure.return_changes',
-                         ret[s_state]['comment'])
+                         ret[watch]['comment'])
 
     def normalize_ret(self, ret):
         '''
