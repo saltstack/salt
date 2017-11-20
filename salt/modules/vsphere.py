@@ -188,7 +188,8 @@ from salt.config.schemas.esxcluster import ESXClusterConfigSchema, \
 from salt.config.schemas.vcenter import VCenterEntitySchema
 from salt.config.schemas.esxi import DiskGroupsDiskIdSchema, \
         VmfsDatastoreSchema, SimpleHostCacheSchema
-from salt.config.schemas.esxvm import ESXVirtualMachineDeleteSchema
+from salt.config.schemas.esxvm import ESXVirtualMachineDeleteSchema, \
+        ESXVirtualMachineUnregisterSchema
 
 
 log = logging.getLogger(__name__)
@@ -8794,7 +8795,10 @@ def get_vm_config(name, datacenter=None, objects=True, service_instance=None):
     current_config['version'] = virtual_machine['config.version']
     current_config['advanced_configs'] = {}
     for extra_conf in virtual_machine['config.extraConfig']:
-        current_config['advanced_configs'][extra_conf.key] = extra_conf.value
+        try:
+            current_config['advanced_configs'][extra_conf.key] = int(extra_conf.value)
+        except ValueError as exc:
+            current_config['advanced_configs'][extra_conf.key] = extra_conf.value
 
     current_config['disks'] = []
     current_config['scsi_devices'] = []
@@ -9404,4 +9408,3 @@ def unregister_vm(name, datacenter, placement=None, power_off=False, service_ins
     salt.utils.vmware.unregister_vm(vm_ref)
     results['unregistered_vm'] = True
     return results
-
