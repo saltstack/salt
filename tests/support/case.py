@@ -210,8 +210,10 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
-        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+    def run_call(self, arg_str, local=False, with_retcode=False, catch_stderr=False):
+        arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
+                                                    self.get_config_dir(), arg_str)
+
         return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
@@ -549,11 +551,12 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
                                catch_stderr=catch_stderr,
                                timeout=60)
 
-    def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
+    def run_call(self, arg_str, local=False, with_retcode=False, catch_stderr=False):
         '''
         Execute salt-call.
         '''
-        arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
+                                                    self.get_config_dir(), arg_str)
         return self.run_script('salt-call',
                                arg_str,
                                with_retcode=with_retcode,
