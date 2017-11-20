@@ -38,16 +38,10 @@ class TelegramReturnerTestCase(TestCase, LoaderModuleMockMixin):
         options = {'chat_id': '',
                    'token': ''}
 
-        class MockRequest(object):
-            """
-            Mock of requests response
-            """
-            def json(self):
-                return {'message_id': ''}
-
         with patch('salt.returners.telegram_return._get_options',
                    MagicMock(return_value=options)), \
-                patch('salt.returners.telegram_return.requests.post',
-                      MagicMock(return_value=MockRequest())):
-
+                patch.dict('salt.returners.telegram_return.__salt__',
+                    {'telegram.post_message': MagicMock(return_value=True)}
+                ):
             self.assertTrue(telegram.returner(ret))
+
