@@ -184,11 +184,11 @@ def mk_key(opts, user):
         # The username may contain '\' if it is in Windows
         # 'DOMAIN\username' format. Fix this for the keyfile path.
         keyfile = os.path.join(
-            opts['cachedir'], '.{0}_key'.format(user.replace('\\', '_'))
+            opts['key_dir'], '.{0}_key'.format(user.replace('\\', '_'))
         )
     else:
         keyfile = os.path.join(
-            opts['cachedir'], '.{0}_key'.format(user)
+            opts['key_dir'], '.{0}_key'.format(user)
         )
 
     if os.path.exists(keyfile):
@@ -470,6 +470,8 @@ class RemoteFuncs(object):
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
         mopts['state_aggregate'] = self.opts['state_aggregate']
+        mopts['jinja_env'] = self.opts['jinja_env']
+        mopts['jinja_sls_env'] = self.opts['jinja_sls_env']
         mopts['jinja_lstrip_blocks'] = self.opts['jinja_lstrip_blocks']
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
@@ -530,7 +532,18 @@ class RemoteFuncs(object):
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
-        match_type = load.get('tgt_type', 'glob')
+        expr_form = load.get('expr_form')
+        if expr_form is not None and 'tgt_type' not in load:
+            salt.utils.warn_until(
+                u'Neon',
+                u'_mine_get: minion {0} uses pre-Nitrogen API key '
+                u'"expr_form". Accepting for backwards compatibility '
+                u'but this is not guaranteed '
+                u'after the Neon release'.format(load['id'])
+            )
+            match_type = expr_form
+        else:
+            match_type = load.get('tgt_type', 'glob')
         if match_type.lower() == 'pillar':
             match_type = 'pillar_exact'
         if match_type.lower() == 'compound':

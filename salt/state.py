@@ -1605,7 +1605,24 @@ class State(object):
                             for ind in items:
                                 if not isinstance(ind, dict):
                                     # Malformed req_in
-                                    continue
+                                    if ind in high:
+                                        _ind_high = [x for x
+                                                     in high[ind]
+                                                     if not x.startswith('__')]
+                                        ind = {_ind_high[0]: ind}
+                                    else:
+                                        found = False
+                                        for _id in iter(high):
+                                            for state in [state for state
+                                                          in iter(high[_id])
+                                                          if not state.startswith('__')]:
+                                                for j in iter(high[_id][state]):
+                                                    if isinstance(j, dict) and 'name' in j:
+                                                        if j['name'] == ind:
+                                                            ind = {state: _id}
+                                                            found = True
+                                        if not found:
+                                            continue
                                 if len(ind) < 1:
                                     continue
                                 pstate = next(iter(ind))
@@ -2579,7 +2596,14 @@ class State(object):
             for key, val in six.iteritems(l_dict):
                 for listen_to in val:
                     if not isinstance(listen_to, dict):
-                        continue
+                        found = False
+                        for chunk in chunks:
+                            if chunk['__id__'] == listen_to or \
+                               chunk['name'] == listen_to:
+                                listen_to = {chunk['state']: chunk['__id__']}
+                                found = True
+                        if not found:
+                            continue
                     for lkey, lval in six.iteritems(listen_to):
                         if (lkey, lval) not in crefs:
                             rerror = {_l_tag(lkey, lval):
@@ -2838,6 +2862,8 @@ class BaseHighState(object):
             opts[u'default_top'] = mopts.get(u'default_top', opts.get(u'default_top'))
             opts[u'state_events'] = mopts.get(u'state_events')
             opts[u'state_aggregate'] = mopts.get(u'state_aggregate', opts.get(u'state_aggregate', False))
+            opts[u'jinja_env'] = mopts.get(u'jinja_env', {})
+            opts[u'jinja_sls_env'] = mopts.get(u'jinja_sls_env', {})
             opts[u'jinja_lstrip_blocks'] = mopts.get(u'jinja_lstrip_blocks', False)
             opts[u'jinja_trim_blocks'] = mopts.get(u'jinja_trim_blocks', False)
         return opts
