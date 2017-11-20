@@ -475,7 +475,7 @@ class VMwareObjectExistsError(VMwareSaltError):
 
 class VMwareMultipleObjectsError(VMwareObjectRetrievalError):
     '''
-    Used when multiple objects were retrieived (and one was expected)
+    Used when multiple objects were retrieved (and one was expected)
     '''
 
 
@@ -503,24 +503,6 @@ class VMwareSystemError(VMwareSaltError):
     '''
 
 
-class VMwareObjectRetrievalException(VMwareSaltError):
-    '''
-    Used when a VMware object is not found
-    '''
-
-
-class VMwareObjectDuplicateException(VMwareSaltError):
-    '''
-    Used when multiple VMware objects exist with the same property and they shouldn't
-    '''
-
-
-class VMwarePowerOnException(VMwareSaltError):
-    '''
-    Used when object is already powered on
-    '''
-
-
 class VMwarePowerOnError(VMwareSaltError):
     '''
     Used when error occurred during power on
@@ -536,10 +518,4 @@ class VMwareVmRegisterError(VMwareSaltError):
 class VMwareVmCreationError(VMwareSaltError):
     '''
     Used when a configuration parameter is incorrect
-    '''
-
-
-class VMwareVmDeviceConfigException(VMwareSaltError):
-    '''
-    Used when a device parameter is incorrect
     '''
